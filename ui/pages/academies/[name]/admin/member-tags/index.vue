@@ -142,7 +142,7 @@ import Swal from 'sweetalert2'
 import MemberTagFormModal from '~/components/learn/member/MemberTagFormModal.vue'
 
 definePageMeta({
-  layout: 'main',
+  layout: 'academy-admin',
 })
 
 interface Tag {
@@ -157,8 +157,8 @@ interface Tag {
 }
 
 const route = useRoute()
-const { $api } = useNuxtApp()
-const { can } = useAcademyRole()
+const api = useApi()
+const { can, fetchMyRole } = useAcademyRole(academyId)
 
 const academyName = computed(() => route.params.name as string)
 const academyId = ref<number | null>(null)
@@ -174,14 +174,19 @@ const canManage = computed(() => can('members.manage'))
 
 onMounted(async () => {
   await fetchAcademyId()
+  await fetchMyRole()
+  if (!can('members.view')) {
+    await navigateTo(`/academies/${academyName.value}/admin`)
+    return
+  }
   await fetchTags()
 })
 
 async function fetchAcademyId() {
   try {
-    const response = await $api.get(`/academies/${academyName.value}`)
-    if (response.data?.academy) {
-      academyId.value = response.data.academy.id
+    const response = await api.get(`/api/academies/${academyName.value}`)
+    if (response?.academy) {
+      academyId.value = response.academy.id
     }
   } catch (error) {
     console.error('Failed to fetch academy:', error)
@@ -192,9 +197,9 @@ async function fetchTags() {
   if (!academyId.value) return
   loading.value = true
   try {
-    const response = await $api.get(`/academies/${academyId.value}/member-tags`)
-    if (response.data?.success) {
-      tags.value = response.data.tags
+    const response = await api.get(`/api/academies/${academyId.value}/member-tags`)
+    if (response?.success) {
+      tags.value = response.tags
     }
   } catch (error) {
     console.error('Failed to fetch tags:', error)
@@ -221,8 +226,8 @@ async function handleFormSubmit(data: { name: string; color: string; description
   
   try {
     if (formMode.value === 'create') {
-      const response = await $api.post(`/academies/${academyId.value}/member-tags`, data)
-      if (response.data?.success) {
+      const response = await api.post(`/api/academies/${academyId.value}/member-tags`, data)
+      if (response?.success) {
         Swal.fire({
           icon: 'success',
           title: 'สำเร็จ',
@@ -233,8 +238,8 @@ async function handleFormSubmit(data: { name: string; color: string; description
         await fetchTags()
       }
     } else if (selectedTag.value) {
-      const response = await $api.patch(`/academies/${academyId.value}/member-tags/${selectedTag.value.id}`, data)
-      if (response.data?.success) {
+      const response = await api.patch(`/api/academies/${academyId.value}/member-tags/${selectedTag.value.id}`, data)
+      if (response?.success) {
         Swal.fire({
           icon: 'success',
           title: 'สำเร็จ',
@@ -264,8 +269,8 @@ async function confirmDelete(tag: Tag) {
 
   if (result.isConfirmed && academyId.value) {
     try {
-      const response = await $api.delete(`/academies/${academyId.value}/member-tags/${tag.id}`)
-      if (response.data?.success) {
+      const response = await api.delete(`/api/academies/${academyId.value}/member-tags/${tag.id}`)
+      if (response?.success) {
         Swal.fire({
           icon: 'success',
           title: 'ลบแล้ว',

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\AcademyMember;
+use App\Models\MemberActivityLog;
 use App\Models\MemberTag;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -56,6 +57,9 @@ class MemberTagController extends Controller
      */
     public function store(Academy $academy, Request $request)
     {
+        if (! $this->canManageMembers($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการแท็กสมาชิก'], 403);
+        }
         $validated = $request->validate([
             'name' => [
                 'required',
@@ -78,6 +82,7 @@ class MemberTagController extends Controller
             'description' => $validated['description'] ?? null,
             'sort_order' => $maxOrder + 1,
         ]);
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_TAG_CREATE, 'description' => 'สร้างแท็ก: '.$tag->name, 'new_values' => ['tag_id' => $tag->id, 'name' => $tag->name, 'color' => $tag->color]]);
 
         return response()->json([
             'success' => true,
@@ -91,6 +96,9 @@ class MemberTagController extends Controller
      */
     public function update(Academy $academy, MemberTag $tag, Request $request)
     {
+        if (! $this->canManageMembers($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการแท็กสมาชิก'], 403);
+        }
         if ($tag->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
@@ -114,6 +122,7 @@ class MemberTagController extends Controller
         ]);
 
         $tag->update($validated);
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_TAG_UPDATE, 'description' => 'แก้ไขแท็ก: '.$tag->name, 'new_values' => $validated]);
 
         return response()->json([
             'success' => true,
@@ -127,6 +136,9 @@ class MemberTagController extends Controller
      */
     public function destroy(Academy $academy, MemberTag $tag)
     {
+        if (! $this->canManageMembers($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการแท็กสมาชิก'], 403);
+        }
         if ($tag->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
@@ -134,6 +146,7 @@ class MemberTagController extends Controller
             ], 404);
         }
 
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_TAG_DELETE, 'description' => 'ลบแท็ก: '.$tag->name, 'old_values' => ['name' => $tag->name, 'member_count' => $tag->members()->count()]]);
         $tag->members()->detach();
         $tag->delete();
 
@@ -200,6 +213,9 @@ class MemberTagController extends Controller
      */
     public function addTagsToMember(Academy $academy, AcademyMember $member, Request $request)
     {
+        if (! $this->canManageMembers($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการแท็กสมาชิก'], 403);
+        }
         if ($member->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
@@ -236,6 +252,9 @@ class MemberTagController extends Controller
      */
     public function removeTagsFromMember(Academy $academy, AcademyMember $member, Request $request)
     {
+        if (! $this->canManageMembers($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการแท็กสมาชิก'], 403);
+        }
         if ($member->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
@@ -261,6 +280,9 @@ class MemberTagController extends Controller
      */
     public function bulkAddTag(Academy $academy, Request $request)
     {
+        if (! $this->canManageMembers($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการแท็กสมาชิก'], 403);
+        }
         $request->validate([
             'member_ids' => 'required|array|min:1',
             'member_ids.*' => 'exists:academy_members,id',
@@ -296,6 +318,7 @@ class MemberTagController extends Controller
                 ];
             }, $validMemberIds->toArray())
         );
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_TAG_ASSIGN, 'description' => "เพิ่มแท็ก '{$tag->name}' ให้สมาชิก {$validMemberIds->count()} คน", 'new_values' => ['tag_id' => $tag->id, 'member_count' => $validMemberIds->count()]]);
 
         return response()->json([
             'success' => true,
@@ -340,5 +363,24 @@ class MemberTagController extends Controller
             'success' => true,
             'colors' => MemberTag::getAvailableColors(),
         ], 200);
+    }
+
+    private function canManageMembers(Academy $academy): bool
+    {
+        $user = auth()->user();
+        if ($academy->user_id === $user->id) {
+            return true;
+        }
+        $member = AcademyMember::where('academy_id', $academy->id)->where('user_id', $user->id)->where('status', 2)->with('academyRole')->first();
+        if (! $member || ! $member->academyRole) {
+            return false;
+        }
+
+        $permissions = $member->academyRole->permissions ?? [];
+        if (in_array('*', $permissions, true)) {
+            return true;
+        }
+
+        return collect($permissions)->contains(fn ($p) => $p === 'members.manage' || $p === 'members.roles.manage' || str_starts_with($p, 'members.manage'));
     }
 }

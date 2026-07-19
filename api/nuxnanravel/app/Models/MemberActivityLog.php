@@ -58,6 +58,14 @@ class MemberActivityLog extends Model
 
     public const ACTION_BULK_ACTION = 'bulk_action';
 
+    public const ACTION_INVITE_LINK_CREATE = 'invite_link_create';
+
+    public const ACTION_INVITE_LINK_UPDATE = 'invite_link_update';
+
+    public const ACTION_INVITE_LINK_DELETE = 'invite_link_delete';
+
+    public const ACTION_INVITE_LINK_TOGGLE = 'invite_link_toggle';
+
     // Role CRUD actions
     public const ACTION_ROLE_CREATE = 'role_create';
 
@@ -68,6 +76,16 @@ class MemberActivityLog extends Model
     public const ACTION_ROLE_ASSIGN = 'role_assign';
 
     public const ACTION_ROLE_BULK_ASSIGN = 'role_bulk_assign';
+
+    public const ACTION_TAG_CREATE = 'tag_create';
+
+    public const ACTION_TAG_UPDATE = 'tag_update';
+
+    public const ACTION_TAG_DELETE = 'tag_delete';
+
+    public const ACTION_TAG_ASSIGN = 'tag_assign';
+
+    public const ACTION_TAG_REMOVE = 'tag_remove';
 
     // Categories
     public const CATEGORY_MEMBER = 'member';
@@ -185,6 +203,11 @@ class MemberActivityLog extends Model
             self::ACTION_DECLINE_INVITE => 'ปฏิเสธคำเชิญ',
             self::ACTION_PROFILE_UPDATE => 'อัพเดทข้อมูลโปรไฟล์',
             self::ACTION_BULK_ACTION => 'ดำเนินการแบบกลุ่ม',
+            self::ACTION_INVITE_LINK_CREATE => 'สร้างลิงก์เชิญ',
+            self::ACTION_INVITE_LINK_UPDATE => 'แก้ไขลิงก์เชิญ',
+            self::ACTION_INVITE_LINK_DELETE => 'ลบลิงก์เชิญ',
+            self::ACTION_INVITE_LINK_TOGGLE => 'เปลี่ยนสถานะลิงก์เชิญ',
+            self::ACTION_TAG_CREATE => 'สร้างแท็ก', self::ACTION_TAG_UPDATE => 'แก้ไขแท็ก', self::ACTION_TAG_DELETE => 'ลบแท็ก', self::ACTION_TAG_ASSIGN => 'เพิ่มแท็กให้สมาชิก', self::ACTION_TAG_REMOVE => 'นำแท็กออกจากสมาชิก',
         ];
 
         return $descriptions[$action] ?? $action;
@@ -213,6 +236,11 @@ class MemberActivityLog extends Model
             self::ACTION_DECLINE_INVITE => 'mdi:email-remove',
             self::ACTION_PROFILE_UPDATE => 'mdi:account-edit',
             self::ACTION_BULK_ACTION => 'mdi:account-group',
+            self::ACTION_INVITE_LINK_CREATE => 'mdi:link-plus',
+            self::ACTION_INVITE_LINK_UPDATE => 'mdi:link-edit',
+            self::ACTION_INVITE_LINK_DELETE => 'mdi:link-off',
+            self::ACTION_INVITE_LINK_TOGGLE => 'mdi:toggle-switch',
+            self::ACTION_TAG_CREATE => 'mdi:tag-plus', self::ACTION_TAG_UPDATE => 'mdi:tag-edit', self::ACTION_TAG_DELETE => 'mdi:tag-remove', self::ACTION_TAG_ASSIGN => 'mdi:tag-plus', self::ACTION_TAG_REMOVE => 'mdi:tag-minus',
         ];
 
         return $icons[$this->action] ?? 'mdi:circle';
@@ -241,6 +269,11 @@ class MemberActivityLog extends Model
             self::ACTION_DECLINE_INVITE => 'gray',
             self::ACTION_PROFILE_UPDATE => 'blue',
             self::ACTION_BULK_ACTION => 'violet',
+            self::ACTION_INVITE_LINK_CREATE => 'green',
+            self::ACTION_INVITE_LINK_UPDATE => 'purple',
+            self::ACTION_INVITE_LINK_DELETE => 'red',
+            self::ACTION_INVITE_LINK_TOGGLE => 'orange',
+            self::ACTION_TAG_CREATE => 'green', self::ACTION_TAG_UPDATE => 'purple', self::ACTION_TAG_DELETE => 'red', self::ACTION_TAG_ASSIGN => 'blue', self::ACTION_TAG_REMOVE => 'orange',
         ];
 
         return $colors[$this->action] ?? 'gray';

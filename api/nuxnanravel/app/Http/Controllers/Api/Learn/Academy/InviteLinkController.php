@@ -21,6 +21,9 @@ class InviteLinkController extends Controller
      */
     public function index(Academy $academy, Request $request)
     {
+        if (! $this->canManageMembers($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการลิงก์เชิญ'], 403);
+        }
         $query = AcademyInviteLink::where('academy_id', $academy->id)
             ->with(['creator:id,name', 'role:id,name,display_name'])
             ->orderBy('created_at', 'desc');
@@ -69,6 +72,9 @@ class InviteLinkController extends Controller
      */
     public function store(Academy $academy, Request $request)
     {
+        if (! $this->canManageMembers($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการลิงก์เชิญ'], 403);
+        }
         $validated = $request->validate([
             'name' => 'nullable|string|max:100',
             'description' => 'nullable|string|max:500',
@@ -114,6 +120,8 @@ class InviteLinkController extends Controller
             'allowed_domains' => $validated['allowed_domains'] ?? null,
         ]);
 
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_INVITE_LINK_CREATE, 'description' => 'สร้างลิงก์เชิญ: '.$link->name, 'new_values' => ['link_id' => $link->id, 'code' => $link->code, 'max_uses' => $link->max_uses]]);
+
         return response()->json([
             'success' => true,
             'message' => 'สร้างลิงก์เชิญเรียบร้อยแล้ว',
@@ -131,6 +139,9 @@ class InviteLinkController extends Controller
      */
     public function update(Academy $academy, AcademyInviteLink $link, Request $request)
     {
+        if (! $this->canManageMembers($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการลิงก์เชิญ'], 403);
+        }
         if ($link->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
@@ -149,6 +160,7 @@ class InviteLinkController extends Controller
         ]);
 
         $link->update($validated);
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_INVITE_LINK_UPDATE, 'description' => 'แก้ไขลิงก์เชิญ: '.$link->name, 'new_values' => $validated]);
 
         return response()->json([
             'success' => true,
@@ -162,6 +174,9 @@ class InviteLinkController extends Controller
      */
     public function destroy(Academy $academy, AcademyInviteLink $link)
     {
+        if (! $this->canManageMembers($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการลิงก์เชิญ'], 403);
+        }
         if ($link->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
@@ -169,6 +184,7 @@ class InviteLinkController extends Controller
             ], 404);
         }
 
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_INVITE_LINK_DELETE, 'description' => 'ลบลิงก์เชิญ: '.$link->name, 'old_values' => ['code' => $link->code, 'use_count' => $link->use_count]]);
         $link->delete();
 
         return response()->json([
@@ -350,6 +366,9 @@ class InviteLinkController extends Controller
      */
     public function toggleActive(Academy $academy, AcademyInviteLink $link)
     {
+        if (! $this->canManageMembers($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการลิงก์เชิญ'], 403);
+        }
         if ($link->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
@@ -358,6 +377,7 @@ class InviteLinkController extends Controller
         }
 
         $link->update(['is_active' => ! $link->is_active]);
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_INVITE_LINK_TOGGLE, 'description' => ($link->is_active ? 'เปิด' : 'ปิด').'ลิงก์เชิญ: '.$link->name]);
 
         return response()->json([
             'success' => true,
@@ -371,6 +391,9 @@ class InviteLinkController extends Controller
      */
     public function resetUseCount(Academy $academy, AcademyInviteLink $link)
     {
+        if (! $this->canManageMembers($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการลิงก์เชิญ'], 403);
+        }
         if ($link->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
@@ -384,5 +407,31 @@ class InviteLinkController extends Controller
             'success' => true,
             'message' => 'รีเซ็ตจำนวนการใช้งานเรียบร้อยแล้ว',
         ], 200);
+    }
+
+    private function canManageMembers(Academy $academy): bool
+    {
+        $user = auth()->user();
+        if ($academy->user_id === $user->id) {
+            return true;
+        }
+        $member = AcademyMember::where('academy_id', $academy->id)
+            ->where('user_id', $user->id)
+            ->where('status', 2)
+            ->with('academyRole')
+            ->first();
+        if (! $member || ! $member->academyRole) {
+            return false;
+        }
+
+        $permissions = $member->academyRole->permissions ?? [];
+
+        if (in_array('*', $permissions, true)) {
+            return true;
+        }
+
+        return in_array('members.manage', $permissions, true)
+            || in_array('members.roles.manage', $permissions, true)
+            || collect($permissions)->contains(fn ($p) => str_starts_with($p, 'members.manage.'));
     }
 }

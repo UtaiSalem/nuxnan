@@ -245,11 +245,14 @@
 import { ref, onMounted } from 'vue'
 import Swal from 'sweetalert2'
 
+definePageMeta({ layout: 'academy-admin' })
+
 const route = useRoute()
-const { $api } = useNuxtApp()
+const api = useApi()
 
 const academyName = route.params.name as string
 const academyId = ref<number | null>(null)
+const { can, fetchMyRole } = useAcademyRole(academyId)
 
 // State
 const links = ref<any[]>([])
@@ -271,9 +274,9 @@ const createForm = ref({
 // Load academy info
 const loadAcademyInfo = async () => {
   try {
-    const response = await $api.get(`/academies/${academyName}`)
-    if (response.data) {
-      academyId.value = response.data.id
+    const response = await api.get(`/api/academies/${academyName}`)
+    if (response.success && response.academy) {
+      academyId.value = response.academy.id
     }
   } catch (error) {
     console.error('Error loading academy:', error)
@@ -286,9 +289,9 @@ const loadLinks = async () => {
   
   loading.value = true
   try {
-    const response = await $api.get(`/academies/${academyId.value}/invite-links`)
-    if (response.data.success) {
-      links.value = response.data.links
+    const response = await api.get(`/api/academies/${academyId.value}/invite-links`)
+    if (response.success) {
+      links.value = response.links
     }
   } catch (error) {
     console.error('Error loading links:', error)
@@ -302,9 +305,9 @@ const loadRoles = async () => {
   if (!academyId.value) return
   
   try {
-    const response = await $api.get(`/academies/${academyId.value}/roles`)
-    if (response.data.success) {
-      availableRoles.value = response.data.roles
+    const response = await api.get(`/api/academies/${academyId.value}/roles`)
+    if (response.success) {
+      availableRoles.value = response.roles
     }
   } catch (error) {
     console.error('Error loading roles:', error)
@@ -317,14 +320,14 @@ const createLink = async () => {
   
   creating.value = true
   try {
-    const response = await $api.post(`/academies/${academyId.value}/invite-links`, createForm.value)
-    if (response.data.success) {
+    const response = await api.post(`/api/academies/${academyId.value}/invite-links`, createForm.value)
+    if (response.success) {
       await Swal.fire({
         icon: 'success',
         title: 'สร้างลิงก์เรียบร้อย',
         html: `<div class="text-center">
-          <img src="${response.data.link.qr_code_url}" class="w-40 h-40 mx-auto mb-2" />
-          <p class="text-sm text-gray-500">${response.data.link.invite_url}</p>
+          <img src="${response.link.qr_code_url}" class="w-40 h-40 mx-auto mb-2" />
+          <p class="text-sm text-gray-500">${response.link.invite_url}</p>
         </div>`,
         confirmButtonText: 'ปิด',
       })
@@ -358,10 +361,10 @@ const resetCreateForm = () => {
 // Toggle active
 const toggleActive = async (link: any) => {
   try {
-    const response = await $api.post(`/academies/${academyId.value}/invite-links/${link.id}/toggle-active`)
-    if (response.data.success) {
-      link.is_active = response.data.is_active
-      link.status = response.data.is_active ? 'active' : 'inactive'
+    const response = await api.post(`/api/academies/${academyId.value}/invite-links/${link.id}/toggle-active`)
+    if (response.success) {
+      link.is_active = response.is_active
+      link.status = response.is_active ? 'active' : 'inactive'
     }
   } catch (error: any) {
     Swal.fire({
@@ -387,8 +390,8 @@ const confirmDelete = async (link: any) => {
 
   if (result.isConfirmed) {
     try {
-      const response = await $api.delete(`/academies/${academyId.value}/invite-links/${link.id}`)
-      if (response.data.success) {
+      const response = await api.delete(`/api/academies/${academyId.value}/invite-links/${link.id}`)
+      if (response.success) {
         loadLinks()
         Swal.fire({
           icon: 'success',
@@ -464,6 +467,12 @@ const getStatusLabel = (status: string) => {
 
 onMounted(async () => {
   await loadAcademyInfo()
+  if (!academyId.value) return
+  await fetchMyRole()
+  if (!can('members.manage')) {
+    await navigateTo(`/academies/${academyName}/admin`)
+    return
+  }
   loadLinks()
   loadRoles()
 })

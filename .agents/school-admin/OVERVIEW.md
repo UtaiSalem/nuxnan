@@ -47,10 +47,10 @@ Legend: 🟢 พร้อมใช้งาน (ผ่านการตรว�
 | # | เมนู | หน้า (`ui/`) | Permission | ไฟล์รอง | สถานะ |
 |---|---|---|---|---|---|
 | **1** | **บทบาทและสิทธิ์** | `admin/roles.vue` | `roles.view` / `roles.manage` | [01-roles-permissions.md](01-roles-permissions.md) | 🟢 S1–S6 done · S7/S8 (dept scope) deferred → เมนู #9 |
-| 2 | สมาชิก | `admin/members.vue` + `admin/members/` | `members.view` / `members.manage` | [02-members.md](02-members.md) | 🟡 planned, awaiting M-S1 audit |
-| 3 | คำขอเข้าร่วม | `admin/requests.vue` | `members.manage` | [03-join-requests.md](03-join-requests.md) | 🟢 S1 done (guard + layout + bulk approve + tests) |
-| 4 | ลิงก์เชิญสมาชิก | `admin/invite-links/` | `members.manage` | 04-invite-links.md | ⚪ |
-| 5 | แท็กสมาชิก | `admin/member-tags/` | `members.manage` | 05-member-tags.md | ⚪ |
+| 2 | สมาชิก | `admin/members.vue` + `admin/members/` | `members.view` / `members.manage` | [02-members.md](02-members.md) | 🟢 M-S1–S7 done · M-S8/S9/S10 deferred |
+| 3 | คำขอเข้าร่วม | `admin/requests.vue` | `members.manage` | [03-join-requests.md](03-join-requests.md) | 🟢 S1 done · deferred: reject reason, pagination, realtime badge |
+| 4 | ลิงก์เชิญสมาชิก | `admin/invite-links/` | `members.manage` | [04-invite-links.md](04-invite-links.md) | 🟢 L-S1–S3 done · deferred: L-S4 edit/filter, L-S5 usage history, L-S6 QR |
+| 5 | แท็กสมาชิก | `admin/member-tags/` | `members.manage` | [05-member-tags.md](05-member-tags.md) | 🟢 T-S1–S3 done · deferred: T-S4 tag members page, T-S5 reorder |
 | 6 | ผู้ปกครอง | `admin/guardians/` | `members.view` | 06-guardians.md | ⚪ |
 | 7 | ตั้งค่าโรงเรียน | `admin/settings.vue` | `settings.manage` | 07-settings.md | ⚪ |
 | 8 | ระบบบริหารโรงเรียน | `admin/school-management.vue` | `settings.manage` | 08-school-management.md | ⚪ |
