@@ -7,6 +7,7 @@ use App\Models\Academy;
 use App\Models\AcademyMember;
 use App\Models\AcademyPermission;
 use App\Models\AcademyRole;
+use App\Models\MemberActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -198,6 +199,7 @@ class AcademyRoleController extends Controller
             'is_system' => false,
             'is_active' => true,
         ]);
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_ROLE_CREATE, 'action_category' => MemberActivityLog::CATEGORY_ROLE, 'new_values' => ['role_id' => $role->id, 'name' => $role->name, 'display_name_th' => $role->display_name_th, 'permissions' => $role->permissions], 'description' => "สร้างบทบาท '{$role->display_name_th}'"]);
 
         return response()->json([
             'success' => true,
@@ -256,6 +258,7 @@ class AcademyRoleController extends Controller
             ], 403);
         }
 
+        $oldValues = $role->only(['display_name_th', 'display_name_en', 'description', 'permissions', 'color', 'icon', 'is_active']);
         $role->update($request->only([
             'display_name_th',
             'display_name_en',
@@ -265,6 +268,8 @@ class AcademyRoleController extends Controller
             'icon',
             'is_active',
         ]));
+        $newValues = $role->fresh()->only(['display_name_th', 'display_name_en', 'description', 'permissions', 'color', 'icon', 'is_active']);
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_ROLE_UPDATE, 'action_category' => MemberActivityLog::CATEGORY_ROLE, 'old_values' => $oldValues, 'new_values' => $newValues, 'description' => "แก้ไขบทบาท '{$role->display_name_th}'"]);
 
         return response()->json([
             'success' => true,
@@ -334,6 +339,7 @@ class AcademyRoleController extends Controller
                 'message' => 'ไม่พบบทบาทเริ่มต้น student — ติดต่อผู้ดูแลระบบ',
             ], 500);
         }
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_ROLE_DELETE, 'action_category' => MemberActivityLog::CATEGORY_ROLE, 'old_values' => array_merge($roleSnapshot, ['reassigned_count' => $reassignedCount]), 'description' => "ลบบทบาท '{$roleSnapshot['display_name_th']}' (โอน {$reassignedCount} สมาชิก)"]);
 
         return response()->json([
             'success' => true,
@@ -384,6 +390,7 @@ class AcademyRoleController extends Controller
             'academy_role_id' => $role->id,
             'role' => $role->name, // Also update the legacy 'role' column
         ]);
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'academy_member_id' => $member->id, 'target_user_id' => $member->user_id, 'action' => MemberActivityLog::ACTION_ROLE_ASSIGN, 'action_category' => MemberActivityLog::CATEGORY_ROLE, 'new_values' => ['role_id' => $role->id, 'role_name' => $role->name], 'description' => "กำหนดบทบาท '{$role->display_name_th}'"]);
 
         return response()->json([
             'success' => true,
@@ -437,6 +444,7 @@ class AcademyRoleController extends Controller
                 'academy_role_id' => $role->id,
                 'role' => $role->name,
             ]);
+        MemberActivityLog::logActivity(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_ROLE_BULK_ASSIGN, 'action_category' => MemberActivityLog::CATEGORY_ROLE, 'new_values' => ['role_id' => $role->id, 'role_name' => $role->name, 'member_ids' => $request->member_ids, 'updated_count' => $updated], 'description' => "กำหนดบทบาท '{$role->display_name_th}' แบบกลุ่ม ({$updated} คน)"]);
 
         return response()->json([
             'success' => true,

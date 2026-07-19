@@ -58,6 +58,17 @@ class MemberActivityLog extends Model
 
     public const ACTION_BULK_ACTION = 'bulk_action';
 
+    // Role CRUD actions
+    public const ACTION_ROLE_CREATE = 'role_create';
+
+    public const ACTION_ROLE_UPDATE = 'role_update';
+
+    public const ACTION_ROLE_DELETE = 'role_delete';
+
+    public const ACTION_ROLE_ASSIGN = 'role_assign';
+
+    public const ACTION_ROLE_BULK_ASSIGN = 'role_bulk_assign';
+
     // Categories
     public const CATEGORY_MEMBER = 'member';
 
@@ -152,6 +163,14 @@ class MemberActivityLog extends Model
      */
     public static function generateDescription(string $action, array $data = []): string
     {
+        $roleDescriptions = [
+            self::ACTION_ROLE_CREATE => 'สร้างบทบาทใหม่', self::ACTION_ROLE_UPDATE => 'แก้ไขบทบาท',
+            self::ACTION_ROLE_DELETE => 'ลบบทบาท', self::ACTION_ROLE_ASSIGN => 'กำหนดบทบาทให้สมาชิก',
+            self::ACTION_ROLE_BULK_ASSIGN => 'กำหนดบทบาทแบบกลุ่ม',
+        ];
+        if (isset($roleDescriptions[$action])) {
+            return $roleDescriptions[$action];
+        }
         $descriptions = [
             self::ACTION_JOIN => 'ส่งคำขอเข้าร่วม',
             self::ACTION_LEAVE => 'ออกจากสถาบัน',
@@ -176,6 +195,10 @@ class MemberActivityLog extends Model
      */
     public function getIconAttribute(): string
     {
+        $roleIcons = [self::ACTION_ROLE_CREATE => 'mdi:shield-plus', self::ACTION_ROLE_UPDATE => 'mdi:shield-edit', self::ACTION_ROLE_DELETE => 'mdi:shield-remove', self::ACTION_ROLE_ASSIGN => 'mdi:badge-account-outline', self::ACTION_ROLE_BULK_ASSIGN => 'mdi:account-group-outline'];
+        if (isset($roleIcons[$this->action])) {
+            return $roleIcons[$this->action];
+        }
         $icons = [
             self::ACTION_JOIN => 'mdi:account-plus',
             self::ACTION_LEAVE => 'mdi:account-remove',
@@ -200,6 +223,10 @@ class MemberActivityLog extends Model
      */
     public function getColorAttribute(): string
     {
+        $roleColors = [self::ACTION_ROLE_CREATE => 'green', self::ACTION_ROLE_UPDATE => 'purple', self::ACTION_ROLE_DELETE => 'red', self::ACTION_ROLE_ASSIGN => 'purple', self::ACTION_ROLE_BULK_ASSIGN => 'violet'];
+        if (isset($roleColors[$this->action])) {
+            return $roleColors[$this->action];
+        }
         $colors = [
             self::ACTION_JOIN => 'blue',
             self::ACTION_LEAVE => 'gray',
