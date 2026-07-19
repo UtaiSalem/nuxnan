@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Academies\AcademyRevenueController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\Learn\Academy\AcademicYearController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyActivityController;
@@ -16,10 +17,10 @@ use App\Http\Controllers\Api\Learn\Academy\AcademyPostCommentController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyPostController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyPostReactionController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyRoleController;
+use App\Http\Controllers\Api\Learn\Academy\AcademyScopeWorkspaceController;
 use App\Http\Controllers\Api\Learn\Academy\ActivitySessionController;
 use App\Http\Controllers\Api\Learn\Academy\AnalyticsController;
 use App\Http\Controllers\Api\Learn\Academy\AnnouncementController;
-use App\Http\Controllers\Api\Learn\Academy\AcademyScopeWorkspaceController;
 use App\Http\Controllers\Api\Learn\Academy\AssetController;
 use App\Http\Controllers\Api\Learn\Academy\BehaviorCategoryController;
 use App\Http\Controllers\Api\Learn\Academy\BehaviorRecordController;
@@ -61,6 +62,7 @@ use App\Http\Controllers\Api\Learn\Academy\StudentLifecycleController;
 use App\Http\Controllers\Api\Learn\Academy\SubjectController;
 use App\Http\Controllers\Api\Learn\Academy\TranscriptController;
 use App\Http\Controllers\Api\Learn\Academy\TuitionFeeController;
+use App\Models\Academy;
 use Illuminate\Support\Facades\Route;
 
 // Public routes for invite links (no auth required for validation)
@@ -980,5 +982,20 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::get('/sessions/{session}', [BehaviorSessionController::class, 'show']);
         Route::post('/sessions/{session}/records', [BehaviorSessionController::class, 'storeRecords']);
         Route::post('/sessions/{session}/close', [BehaviorSessionController::class, 'close']);
+    });
+
+    // ============================================
+    // Academy Revenue Routes (public + admin)
+    // ============================================
+    Route::prefix('{academy}/revenue')->group(function () {
+        Route::get('/support-summary', [AcademyRevenueController::class, 'supportSummary'])->name('api.academy.revenue.support-summary');
+        Route::get('/donations', [AcademyRevenueController::class, 'donations'])->middleware('academy.permission:finance.view')->name('api.academy.revenue.donations');
+        Route::get('/revenue', [AcademyRevenueController::class, 'revenue'])->middleware('academy.permission:finance.view')->name('api.academy.revenue.dashboard');
+        Route::get('/revenue/activity', [AcademyRevenueController::class, 'revenueActivity'])->middleware('academy.permission:finance.view')->name('api.academy.revenue.activity');
+        Route::post('/donations/{donation}/approve', [AcademyRevenueController::class, 'approveDonation'])->middleware('academy.permission:finance.manage')->name('api.academy.revenue.donations.approve');
+        Route::post('/donations/{donation}/reject', [AcademyRevenueController::class, 'rejectDonation'])->middleware('academy.permission:finance.manage')->name('api.academy.revenue.donations.reject');
+        Route::get('/campaigns', [AcademyRevenueController::class, 'campaignsIndex'])->middleware('academy.permission:finance.view')->name('api.academy.revenue.campaigns.index');
+        Route::post('/campaigns', [AcademyRevenueController::class, 'campaignsStore'])->middleware('academy.permission:finance.manage')->name('api.academy.revenue.campaigns.store');
+        Route::patch('/campaigns/{campaign}', [AcademyRevenueController::class, 'campaignsUpdate'])->middleware('academy.permission:finance.manage')->name('api.academy.revenue.campaigns.update');
     });
 });

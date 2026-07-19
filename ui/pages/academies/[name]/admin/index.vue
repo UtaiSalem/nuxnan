@@ -4,6 +4,7 @@
  * หน้า Dashboard หลักของ Admin Panel
  */
 import { Icon } from '@iconify/vue'
+import AcademyAdminRevenueWidget from '~/components/academy/revenue/AcademyAdminRevenueWidget.vue'
 
 definePageMeta({
   layout: 'main',
@@ -231,6 +232,14 @@ const quickActions = computed(() => [
     show: can('reports.view'),
   },
   {
+    title: 'จัดการรายได้',
+    description: 'จัดการการสนับสนุนและแคมเปญโฆษณา',
+    icon: 'fluent:money-hand-24-filled',
+    to: `/academies/${academyName.value}/admin/revenue`,
+    color: 'from-emerald-500 to-emerald-600',
+    show: can('finance.view'),
+  },
+  {
     title: 'ตั้งค่าโรงเรียน',
     description: 'แก้ไขข้อมูลโรงเรียน',
     icon: 'fluent:settings-24-filled',
@@ -347,6 +356,21 @@ const rejectRequest = async (memberId: number) => {
             </NuxtLink>
           </template>
         </div>
+      </div>
+
+      <!-- Revenue Summary -->
+      <div v-if="academyId" class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">สรุปรายได้</h2>
+          <NuxtLink
+            v-if="can('finance.view')"
+            :to="`/academies/${academyName}/admin/revenue`"
+            class="inline-flex items-center gap-1 rounded-full bg-primary-500/10 px-3 py-1 text-xs font-semibold leading-none text-primary-600 transition hover:bg-primary-500/20 dark:text-primary-400"
+          >
+            ดูรายละเอียดรายได้
+          </NuxtLink>
+        </div>
+        <AcademyAdminRevenueWidget :academy-id="academyId" />
       </div>
 
       <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">

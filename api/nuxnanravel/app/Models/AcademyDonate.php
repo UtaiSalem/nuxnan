@@ -42,6 +42,11 @@ class AcademyDonate extends Model
         return $this->belongsTo(User::class, 'approved_by');
     }
 
+    public function reviewer()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
     public function transaction()
     {
         return $this->belongsTo(AcademyPointTransaction::class, 'academy_point_transaction_id');

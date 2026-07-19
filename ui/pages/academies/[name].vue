@@ -10,6 +10,11 @@ import { useCourseGrouping } from '~/composables/useCourseGrouping'
 import CampaignWidget from '~/components/campaign/CampaignWidget.vue'
 import AdvertiseCtaWidget from '~/components/widgets/AdvertiseCtaWidget.vue'
 import AcademyDonationModal from '~/components/donation/AcademyDonationModal.vue'
+import AcademyPublicSupportWidget from '~/components/academy/revenue/AcademyPublicSupportWidget.vue'
+import AcademyAdminRevenueWidget from '~/components/academy/revenue/AcademyAdminRevenueWidget.vue'
+import AcademySupportReviewTable from '~/components/academy/revenue/AcademySupportReviewTable.vue'
+import AcademyCampaignManagementTable from '~/components/academy/revenue/AcademyCampaignManagementTable.vue'
+import AcademyRevenueActivity from '~/components/academy/revenue/AcademyRevenueActivity.vue'
 
 definePageMeta({
   layout: 'main',
@@ -190,6 +195,7 @@ const tabs = computed(() => [
   { id: 'classrooms', label: t('academy.tabs.classrooms'), icon: 'fluent:board-24-regular' },
   { id: 'events', label: t('academy.tabs.events'), icon: 'fluent:calendar-star-24-regular' },
   { id: 'groups', label: t('academy.tabs.groups'), icon: 'fluent:people-community-24-regular' },
+  { id: 'revenue', label: 'รายได้', icon: 'fluent:money-hand-24-regular' },
   { id: 'about', label: t('academy.tabs.about'), icon: 'fluent:info-24-regular' },
 ])
 
@@ -812,6 +818,8 @@ const switchTab = async (tabId: string) => {
     case 'groups':
       if (groups.value.length === 0) await fetchGroups()
       break
+    case 'revenue':
+      break
     case 'about':
       break
   }
@@ -1070,7 +1078,6 @@ watch(() => route.hash, (newHash) => {
 </script>
 
 <template>
-  <button v-if="academy && user?.id !== academy.user_id" class="fixed bottom-6 right-6 z-40 rounded-full bg-primary-600 px-5 py-3 font-semibold text-white shadow-lg" @click="openAcademyDonation">สนับสนุนโรงเรียน / Support this School</button>
   <AcademyDonationModal v-if="academy" v-model:visible="showAcademyDonation" :academy-id="academy.id" :academy-name="academy.name" :academy-owner-id="academy.user_id" />
   <div>
     <!-- Child Route Content (admin, dashboard, etc.) -->
@@ -2320,6 +2327,45 @@ watch(() => route.hash, (newHash) => {
             </div>
           </div>
 
+          <!-- Revenue Tab -->
+          <div v-else-if="currentTab === 'revenue'" class="space-y-5">
+            <template v-if="academy && academy.authIsAcademyAdmin">
+              <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">จัดการรายได้</h2>
+                <NuxtLink
+                  :to="`/academies/${academy.name}/admin/revenue`"
+                  class="inline-flex items-center gap-2 rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-primary-600"
+                >
+                  <Icon icon="fluent:arrow-right-up-24-regular" class="w-4 h-4" />
+                  เปิดหน้าการจัดการรายได้
+                </NuxtLink>
+              </div>
+              <AcademyAdminRevenueWidget :academy-id="academy.id" />
+              <AcademySupportReviewTable :academy-id="academy.id" />
+              <AcademyCampaignManagementTable :academy-id="academy.id" />
+              <AcademyRevenueActivity :academy-id="academy.id" />
+            </template>
+            <template v-else>
+              <div class="rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 p-6 text-white shadow-sm">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p class="text-sm font-semibold text-indigo-100">รายได้ของโรงเรียน</p>
+                    <h2 class="mt-1 text-2xl font-bold">สนับสนุนการเรียนรู้และสร้างรายได้</h2>
+                    <p class="mt-2 max-w-2xl text-sm text-indigo-100">รวมการสนับสนุนแต้มและการสร้างแคมเปญโฆษณาไว้ในที่เดียว</p>
+                  </div>
+                  <button v-if="academy && user?.id !== academy.user_id" type="button" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-indigo-700 shadow-sm transition hover:bg-indigo-50" @click="openAcademyDonation">
+                    <Icon icon="fluent:heart-24-regular" class="h-5 w-5" />
+                    สนับสนุนโรงเรียน
+                  </button>
+                </div>
+              </div>
+              <div class="grid gap-5 xl:grid-cols-2">
+                <AdvertiseCtaWidget v-if="academy" scope-type="academy" :target-id="academy.id" :target-name="academy.name" />
+                <CampaignWidget v-if="academy" scope="academy" :academy-id="academy.id" placement="academy-revenue" />
+              </div>
+            </template>
+          </div>
+
           <div v-else-if="currentTab === 'about'" class="space-y-4">
             <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-5 shadow-sm">
               <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -2394,6 +2440,7 @@ watch(() => route.hash, (newHash) => {
           />
 
           <AdvertiseCtaWidget v-if="academy" scope-type="academy" :target-id="academy.id" :target-name="academy.name" />
+          <AcademyPublicSupportWidget v-if="academy && !academy.authIsAcademyAdmin" :academy-id="academy.id" :name="academy.name" />
           <CampaignWidget v-if="academy" scope="academy" :academy-id="academy.id" placement="academy-sidebar" />
 
           <!-- Upcoming Events -->
@@ -2519,6 +2566,7 @@ watch(() => route.hash, (newHash) => {
           :academy-name="academyName"
         />
         <CampaignWidget v-if="academy" scope="academy" :academy-id="academy.id" placement="academy-mobile-sidebar" />
+        <AcademyPublicSupportWidget v-if="academy && !academy.authIsAcademyAdmin" :academy-id="academy.id" :name="academy.name" />
         <SchoolUpcomingEvents :academy-id="academy.id" @view-all="(() => { switchTab('events'); showMobileRightDrawer = false; })" />
         <SchoolClassroomLeaderboard :academy-id="academy.id" cycle="month" />
       </div>

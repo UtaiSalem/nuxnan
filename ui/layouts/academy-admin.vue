@@ -34,6 +34,28 @@ const toggleMobileSidebar = () => {
 const academyId = ref<number | null>(null)
 const { can, isOwner, isAdmin, isTeacher, fetchMyRole } = useAcademyRole(academyId)
 
+// Revenue badge
+const revenuePendingCount = ref(0)
+const { revenueDashboard, fetchRevenueDashboard } = useAcademyRevenue(academyId)
+
+const loadRevenueBadge = async () => {
+  if (!academyId.value || !can('finance.view')) return
+  try {
+    await fetchRevenueDashboard()
+    if (revenueDashboard.value?.donations?.pending_count) {
+      revenuePendingCount.value = revenueDashboard.value.donations.pending_count
+    }
+  } catch (e) {
+    // silently ignore badge load failure
+  }
+}
+
+watch(academyId, (newId) => {
+  if (newId) {
+    loadRevenueBadge()
+  }
+})
+
 onMounted(async () => {
   try {
     const response: any = await api.get(`/api/academies/${academyName.value}`)
@@ -220,6 +242,18 @@ const menuGroups = computed(() => [
     ]
   },
   {
+    title: 'การเงิน',
+    items: [
+      {
+        icon: 'fluent:money-hand-24-regular',
+        label: 'รายได้',
+        to: `/academies/${academyName.value}/admin/revenue`,
+        permission: 'finance.view',
+        badge: computed(() => revenuePendingCount.value > 0 ? revenuePendingCount.value : null)
+      },
+    ]
+  },
+  {
     title: 'ตั้งค่า',
     items: [
       { 
@@ -341,7 +375,12 @@ watch(
                   ]"
                   :title="!isSidebarOpen ? item.label : ''"
                 >
-                  <Icon :name="item.icon" class="w-5 h-5 shrink-0" />
+                  <div class="relative">
+                    <Icon :name="item.icon" class="w-5 h-5 shrink-0" />
+                    <span v-if="item.badge && isSidebarOpen" class="absolute -top-1.5 -right-2 inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                      {{ item.badge }}
+                    </span>
+                  </div>
                   <span v-if="isSidebarOpen" class="text-sm font-medium">{{ item.label }}</span>
                 </NuxtLink>
               </div>
@@ -386,7 +425,12 @@ watch(
                       : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                   ]"
                 >
-                  <Icon :name="item.icon" class="w-5 h-5" />
+                  <div class="relative">
+                    <Icon :name="item.icon" class="w-5 h-5" />
+                    <span v-if="item.badge" class="absolute -top-1.5 -right-2 inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                      {{ item.badge }}
+                    </span>
+                  </div>
                   <span class="text-sm font-medium">{{ item.label }}</span>
                 </NuxtLink>
               </div>
