@@ -19,7 +19,6 @@ class AcademyDonateService
         if ($pointsAmount < 1) {
             throw new DomainException('Donation must be at least 1 point.');
         }
-        $this->guardOwner($donor, $academy);
         if ($donor->pp < $pointsAmount) {
             throw new DomainException('Insufficient points for this donation.');
         }
@@ -41,7 +40,7 @@ class AcademyDonateService
         $this->guardEnabled($academy);
         if ($cash < 1) {
             throw new DomainException('Cash donation must be at least 1.');
-        } $this->guardOwner($donor, $academy);
+        }
 
         return $this->database->transaction(function () use ($donor, $academy, $cash, $meta, $idempotencyKey, $slip) {
             if ($idempotencyKey && ($old = AcademyDonate::where('idempotency_key', $idempotencyKey)->first())) {
@@ -95,7 +94,7 @@ class AcademyDonateService
     protected function guardOwner(User $user, Academy $academy): void
     {
         if ($user->id === $academy->user_id) {
-            throw new DomainException('Academy owners cannot donate to or approve donations for their own academy.');
+            throw new DomainException('Academy owners cannot approve donations for their own academy.');
         }
     }
 }

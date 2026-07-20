@@ -34,6 +34,63 @@ class StudentCardRequestService
         return $this->buildRequest($academy, $student, null, StudentCardRequestOrigin::Public, $data);
     }
 
+    public function cancelPublic(StudentCardRequest $request): StudentCardRequest
+    {
+        return DB::transaction(function () use ($request) {
+            $locked = StudentCardRequest::query()->lockForUpdate()->findOrFail($request->id);
+            if ($locked->origin !== StudentCardRequestOrigin::Public || $locked->status !== StudentCardRequestStatus::Pending) {
+                throw ValidationException::withMessages(['status' => 'Only pending public requests can be cancelled.']);
+            }
+
+            $locked->update(['status' => StudentCardRequestStatus::Cancelled, 'cancelled_at' => now()]);
+
+            return $locked->fresh();
+        });
+    }
+
+    public function reviewPublic(StudentCardRequest $request, StudentCardRequestStatus $status, ?string $reason = null): StudentCardRequest
+    {
+        return DB::transaction(function () use ($request, $status, $reason) {
+            $locked = StudentCardRequest::query()->lockForUpdate()->findOrFail($request->id);
+            if ($locked->origin !== StudentCardRequestOrigin::Public || $locked->status !== StudentCardRequestStatus::Pending) {
+                throw ValidationException::withMessages(['status' => 'Only pending public requests can be reviewed.']);
+            }
+
+            $locked->update([
+                'status' => $status,
+                'rejection_reason' => $status === StudentCardRequestStatus::Rejected ? $reason : null,
+                'rejected_at' => $status === StudentCardRequestStatus::Rejected ? now() : null,
+                'approved_at' => $status === StudentCardRequestStatus::Approved ? now() : null,
+            ]);
+
+            return $locked->fresh();
+        });
+    }
+
+    public function progressPublic(StudentCardRequest $request, StudentCardRequestStatus $to): StudentCardRequest
+    {
+        return DB::transaction(function () use ($request, $to) {
+            $locked = StudentCardRequest::query()->lockForUpdate()->findOrFail($request->id);
+            $allowed = [
+                StudentCardRequestStatus::Approved->value => StudentCardRequestStatus::InProgress,
+                StudentCardRequestStatus::InProgress->value => StudentCardRequestStatus::Completed,
+            ];
+            if ($locked->origin !== StudentCardRequestOrigin::Public || ($allowed[$locked->status->value] ?? null) !== $to) {
+                throw ValidationException::withMessages(['status' => 'คำร้องนี้ไม่อยู่ในสถานะที่สามารถดำเนินการต่อได้']);
+            }
+
+            $changes = ['status' => $to];
+            if ($to === StudentCardRequestStatus::InProgress) {
+                $changes['started_at'] = now();
+            } else {
+                $changes['completed_at'] = now();
+            }
+            $locked->update($changes);
+
+            return $locked->fresh();
+        });
+    }
+
     private function buildRequest(Academy $academy, Student $student, ?User $actor, StudentCardRequestOrigin $origin, array $data): StudentCardRequest
     {
         if ((int) $student->academy_id !== (int) $academy->id) {

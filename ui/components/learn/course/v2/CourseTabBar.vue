@@ -64,7 +64,7 @@ const activeTab = computed(() => {
 
 const tabs = computed(() => {
   const list = [
-    { id: 16, name: 'รายได้', icon: 'mdi:cash-multiple', href: `/Learn/Courses/${props.courseId}/support`, show: false },
+    { id: 16, name: 'รายได้', icon: 'mdi:cash-multiple', href: `/Learn/Courses/${props.courseId}/support`, show: true },
     { id: 12, name: 'ข้อมูล', icon: 'heroicons:information-circle', href: `/Learn/Courses/${props.courseId}`, show: true },
     { id: 11, name: 'กระดาน', icon: 'codicon:feedback', href: `/Learn/Courses/${props.courseId}/feeds`, show: true },
     { id: 4, name: 'สมาชิก', icon: 'ph:users-four-bold', href: `/Learn/Courses/${props.courseId}/members`, show: props.isCourseAdmin || !!props.courseMemberOfAuth },

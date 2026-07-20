@@ -45,8 +45,16 @@ export function usePublicCardRequest(level: Ref<string> | string, room: Ref<stri
         )
     }
 
+    async function cancelCardRequest(requestId: number, studentId: number) {
+        return await $fetch<{ success: boolean; message: string; status: string }>(
+            `${base.value}/requests/${requestId}/cancel`,
+            { method: 'POST', body: { student_id: studentId } }
+        )
+    }
+
     return {
         submitCardRequest,
         submitBulkCardRequests,
+        cancelCardRequest,
     }
 }

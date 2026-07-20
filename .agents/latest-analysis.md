@@ -1,5 +1,20 @@
 ---
 
+# 2026-07-21 - Redesign SupportDonationModal
+
+- **Status:** Complete
+- **File:** [SupportDonationModal.vue](file:///C:/wamp64/www/nuxnan/ui/components/donation/SupportDonationModal.vue)
+- **Changes:**
+  - Modern Glassmorphism header & dialog backdrop with ambient glow animations.
+  - Interactive 4-step progress indicator bar with step numbers & completed checks.
+  - Glowing visual cards for Point & Cash donation choices.
+  - Quick-preset amount buttons for points and cash.
+  - Drag and drop slip upload area with instant image/PDF preview.
+  - Real-time Live Donor Badge Preview showing avatar, donor name, amount, and message.
+  - Modern receipt summary step & celebratory success state.
+
+---
+
 # 2026-07-18 - ระบบแต้มโฆษณา → โรงเรียน (Academy Ad Revenue) — Phase 1 Foundation
 
 **สถานะ:** เสร็จสิ้น (Phase 1 — Foundation)
@@ -4160,3 +4175,27 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 - User reported academy/course support forms were unusable and requested copying the existing central flow rather than redesigning separate forms.
 - Change: added shared `SupportDonationModal.vue` with the same five-step interaction model (type, amount/payment, details, review, success) and target-aware academy/course API adapters; academy/course modal files now act as thin wrappers.
 - Verification plan: `git diff --check`, Nuxt build/type validation, and manual smoke tests for point and cash support on both academy and course pages.
+
+## 2026-07-20 - Public student-card request cancellation
+
+- Added public cancellation for pending card requests on `/student-card/{level}/{room}`.
+- Backend validates academy, classroom, student id, public origin, and pending status before marking the request cancelled.
+- Frontend adds a confirmation action to `StudentCardItem` and refreshes the classroom list after cancellation.
+- Verification: PHP lint, diff check, and focused Nuxt build/type check.
+
+## 2026-07-20 - Public student-card admin review actions
+
+- Added approve/reject actions to the public classroom admin page for pending public card requests.
+- Backend scopes each review to the requested room and academy, and only allows pending public-origin requests to transition.
+- Frontend refreshes the room list after approval or rejection.
+
+## 2026-07-20 - Public student-card production completion flow
+
+- Added Admin actions for `approved -> in_progress -> completed`.
+- “ทำเสร็จ/ส่งมอบแล้ว” records completion, removing the request from active requests so a new request can be submitted later.
+- Added confirmation dialogs and refreshed classroom data after each transition.
+## 2026-07-20 — Student card public update
+- สาเหตุ: `PUT /api/student-card/update/{student_card}` ถูกครอบด้วย `auth:api` แต่หน้า `/student-card/{level}/{room}` เรียกด้วย `$fetch` โดยไม่มี token
+- แก้ไข: เปิดเฉพาะ update endpoint เป็น public และจำกัด `throttle:10,1`; profile/photo ยังต้อง authenticated
+- UI: เปลี่ยนคำนำหน้าชื่อใน `StudentCardItem.vue` เป็น dropdown
+- ตรวจสอบ: route syntax, PHP formatting และ frontend build

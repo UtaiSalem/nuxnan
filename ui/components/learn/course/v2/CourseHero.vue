@@ -284,7 +284,7 @@ const hasMetadata = computed(() => !!(semesterLabel.value || academicYearLabel.v
             <div class="flex flex-wrap items-center gap-3 shrink-0 w-full sm:w-auto">
               <button
                 type="button"
-                v-if="false && course?.donation_enabled !== false"
+                v-if="course?.donation_enabled !== false"
                 class="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 h-10 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-amber-600 w-full sm:w-auto"
                 @click.stop.prevent="emit('support-course')"
               >

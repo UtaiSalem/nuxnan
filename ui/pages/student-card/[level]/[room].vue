@@ -34,7 +34,7 @@ const {
     removeStudent,
 } = useClassroomManagement(level, room)
 
-const { submitCardRequest, submitBulkCardRequests } = usePublicCardRequest(level, room)
+const { submitCardRequest, submitBulkCardRequests, cancelCardRequest } = usePublicCardRequest(level, room)
 
 const showAddModal = ref(false)
 const showTransferModal = ref(false)
@@ -91,6 +91,28 @@ const openRemoveModal = (student: any) => {
 const openRequestModal = (student: any) => {
     selectedStudent.value = student
     showRequestModal.value = true
+}
+
+const cancelRequest = async (student: any) => {
+    const request = student.active_card_request
+    if (!request?.id || !student.student_id) return
+    const confirmation = await Swal.fire({
+        icon: 'warning',
+        title: 'ยกเลิกคำร้องทำบัตรใหม่?',
+        text: 'คำร้องนี้จะถูกยกเลิกและสามารถส่งคำร้องใหม่ได้ภายหลัง',
+        showCancelButton: true,
+        confirmButtonText: 'ยกเลิกคำร้อง',
+        cancelButtonText: 'ปิด',
+        confirmButtonColor: '#dc2626',
+    })
+    if (!confirmation.isConfirmed) return
+    try {
+        await cancelCardRequest(request.id, student.student_id)
+        await fetchStudents()
+        Swal.fire({ icon: 'success', title: 'ยกเลิกคำร้องแล้ว', timer: 1600, showConfirmButton: false })
+    } catch (error: any) {
+        Swal.fire({ icon: 'error', title: 'ยกเลิกคำร้องไม่สำเร็จ', text: error?.data?.message || 'กรุณาลองใหม่อีกครั้ง' })
+    }
 }
 
 const handleRequestSubmitted = async () => {
@@ -324,6 +346,7 @@ onMounted(() => {
                     @transfer="openTransferModal"
                     @remove="openRemoveModal"
                     @request="openRequestModal"
+                    @cancel-request="cancelRequest"
                     @toggle-select="toggleSelect"
                 />
             </div>

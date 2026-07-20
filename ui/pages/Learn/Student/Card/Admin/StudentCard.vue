@@ -160,7 +160,7 @@ const handleSubmit = async () => {
             birth_date: editForm.birth_date // เพิ่มฟิลด์นี้
         }
 
-        const response = await axios.put(`/student-card/update/${editForm.id}`, payload, {
+        const response = await axios.put(`/student-card/public-update/${props.studentInfo.class_level}/${props.studentInfo.class_section}/${editForm.id}`, payload, {
             headers: {
                 'Content-Type': 'application/json'
             }

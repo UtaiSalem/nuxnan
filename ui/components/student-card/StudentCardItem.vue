@@ -13,7 +13,7 @@ const props = defineProps({
     selected: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['transfer', 'remove', 'request', 'toggle-select'])
+const emit = defineEmits(['transfer', 'remove', 'request', 'cancel-request', 'toggle-select'])
 
 // คำร้องทำบัตรที่ค้างอยู่ของนักเรียนคนนี้ (มาจาก active_card_request ใน API)
 const activeRequest = computed(() => props.studentInfo.active_card_request || null)
@@ -135,7 +135,7 @@ const triggerFileInput = () => fileInput.value?.click()
 const handleSubmit = async () => {
     try {
         isSaving.value = true
-        const response = await $fetch(`${apiBase}/api/student-card/update/${editForm.id}`, {
+        const response = await $fetch(`${apiBase}/api/student-card/public-update/${props.studentInfo.class_level}/${props.studentInfo.class_section}/${editForm.id}`, {
             method: 'PUT',
             body: {
                 national_id: editForm.national_id,
@@ -210,7 +210,7 @@ const studentPrefixName = (prefix) => {
                 <div @click="isEditModalOpen = true" class="absolute z-50 top-0 right-2 text-gray-700 bg-gray-200/60 p-2 rounded-full shadow-md cursor-pointer">
                     <Icon icon="dashicons:edit" width="20" height="20" />
                 </div>
-                <div v-if="canManage || canRequest" class="absolute z-50 top-0 right-12">
+                <div v-if="canManage || canRequest || activeRequest?.status === 'pending'" class="absolute z-50 top-0 right-12">
                     <div @click="isActionMenuOpen = !isActionMenuOpen"
                         class="text-gray-700 bg-gray-200/60 p-2 rounded-full shadow-md cursor-pointer">
                         <Icon icon="heroicons:ellipsis-vertical" width="20" height="20" />
@@ -232,10 +232,12 @@ const studentPrefixName = (prefix) => {
                             <Icon icon="heroicons:credit-card" class="w-4.5 h-4.5 text-blue-600" />
                             ขอทำบัตรใหม่
                         </button>
-                        <div v-else-if="canRequest && activeRequest"
-                            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-amber-700 bg-amber-50/60 cursor-default">
+                        <div v-else-if="activeRequest"
+                            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-amber-700 bg-amber-50/60">
                             <Icon icon="heroicons:clock" class="w-4 h-4" />
                             {{ requestStatusLabel }}
+                            <button v-if="activeRequest.status === 'pending'" @click="isActionMenuOpen = false; emit('cancel-request', studentInfo)"
+                                class="ml-auto text-xs text-red-600 hover:underline">ยกเลิกคำขอทำบัตร</button>
                         </div>
                     </div>
                 </div>
@@ -367,7 +369,14 @@ const studentPrefixName = (prefix) => {
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">คำนำหน้าชื่อ</label>
-                                <input type="text" v-model="editForm.title_name" class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                                <select id="student-title-name" v-model="editForm.title_name" class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                                    <option value="">ไม่ระบุ</option>
+                                    <option value="เด็กชาย">เด็กชาย</option>
+                                    <option value="เด็กหญิง">เด็กหญิง</option>
+                                    <option value="นาย">นาย</option>
+                                    <option value="นางสาว">นางสาว</option>
+                                    <option value="นาง">นาง</option>
+                                </select>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">ชื่อ</label>
@@ -406,7 +415,7 @@ const studentPrefixName = (prefix) => {
             </div>
 
             <!-- Action footer — ระบุชัดว่าปุ่มปฏิบัติการเป็นของบัตรใบนี้ -->
-            <div v-if="canManage || canRequest"
+            <div v-if="canManage || canRequest || activeRequest?.status === 'pending'"
                 class="mt-3 pt-3 border-t border-dashed border-gray-200 flex flex-wrap items-center gap-2">
                 <div class="flex items-center gap-1.5 text-xs text-gray-500 mr-auto min-w-0">
                     <Icon icon="heroicons:identification" class="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -444,13 +453,15 @@ const studentPrefixName = (prefix) => {
                         <Icon icon="heroicons:credit-card" class="w-4 h-4" />
                         ขอทำบัตรใหม่
                     </button>
-                    <span v-else-if="canRequest && activeRequest"
+                    <span v-else-if="activeRequest"
                         class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border"
                         :class="requestStatusClass"
                         :title="requestedAtText ? `ส่งคำร้องเมื่อ ${requestedAtText}` : ''">
                         <Icon icon="heroicons:clock" class="w-4 h-4" />
                         {{ requestStatusLabel }}
                         <span v-if="requestedAtText" class="opacity-70">({{ requestedAtText }})</span>
+                        <button v-if="activeRequest.status === 'pending'" @click="emit('cancel-request', studentInfo)"
+                            class="ml-1 text-red-600 hover:underline">ยกเลิกคำขอทำบัตร</button>
                     </span>
                 </template>
             </div>

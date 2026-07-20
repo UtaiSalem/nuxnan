@@ -697,6 +697,35 @@ class StudentCardController extends Controller
     }
 
     /**
+     * Temporary public update endpoint for the classroom management page.
+     * The card must belong to the level and room supplied by the page.
+     */
+    public function publicUpdate(Request $request, string $level, string $room, StudentCard $student_card)
+    {
+        $student_card->load('student.classroomEnrollments.classroom.academicYear');
+        $requestedLevel = (int) preg_replace('/\D+/', '', $level);
+        $requestedRoom = (string) $room;
+        $belongsToRoom = $student_card->student?->classroomEnrollments
+            ?->contains(function ($enrollment) use ($requestedLevel, $requestedRoom) {
+                $classroom = $enrollment->classroom;
+
+                return $enrollment->status === 'active'
+                    && $classroom?->academicYear?->is_current
+                    && (int) preg_replace('/\D+/', '', (string) $classroom->grade_level) === $requestedLevel
+                    && (string) $classroom->section === $requestedRoom;
+            });
+
+        $cardLevel = (int) preg_replace('/\D+/', '', (string) $student_card->class_level);
+        $cardRoom = (string) $student_card->class_section;
+
+        if (! $belongsToRoom && ($cardLevel !== $requestedLevel || $cardRoom !== $requestedRoom)) {
+            abort(404);
+        }
+
+        return $this->update($request, $student_card, null);
+    }
+
+    /**
      * Create new student card
      */
     public function store($academy, Request $request)

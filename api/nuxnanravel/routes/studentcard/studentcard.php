@@ -30,6 +30,8 @@ Route::prefix('student-card')->name('student-card.')->group(function () {
 
         Route::middleware('throttle:10,1')->group(function () {
             Route::post('/requests', [PublicStudentCardRequestController::class, 'submitRequest'])->name('submit-request');
+            Route::post('/requests/{studentCardRequest}/cancel', [PublicStudentCardRequestController::class, 'cancelRequest'])->name('cancel-request');
+            Route::post('/requests/{studentCardRequest}/{action}', [PublicStudentCardRequestController::class, 'reviewRequest'])->name('review-request');
         });
 
         Route::middleware('throttle:5,1')->group(function () {
@@ -37,12 +39,17 @@ Route::prefix('student-card')->name('student-card.')->group(function () {
         });
     });
 
-    // Student Profile & Updates (Public - but with validation)
+    // Student profile and the main card update endpoint remain authenticated.
     Route::middleware('auth:api')->group(function () {
         Route::get('/profile/{student_card}', [StudentCardController::class, 'profile'])->name('profile');
         Route::put('/update/{student_card}', [StudentCardController::class, 'update'])->name('update');
         Route::delete('/{student_card}/photo', [StudentCardController::class, 'destroyPhoto'])->name('photo.destroy');
     });
+
+    // Temporary public classroom-management endpoint, scoped to the current room.
+    Route::put('/public-update/{level}/{room}/{student_card}', [StudentCardController::class, 'publicUpdate'])
+        ->middleware('throttle:10,1')
+        ->name('public-update');
 
     // Admin Functions (Public - with admin password verification per action)
     Route::prefix('admin')->name('admin.')->group(function () {

@@ -30,6 +30,29 @@ const REQUEST_STATUS_META = {
 }
 const requestStatusMeta = (status) => REQUEST_STATUS_META[status] || { label: status || '-', cls: 'bg-gray-100 text-gray-700 border-gray-200' }
 
+const reviewRequest = async (student, action) => {
+    const request = student.active_card_request
+    if (!request?.id) return
+    const confirmation = await Swal.fire({
+        icon: action === 'approve' ? 'question' : 'warning',
+        title: action === 'approve' ? 'อนุมัติคำขอทำบัตรหรือไม่?' : action === 'reject' ? 'ปฏิเสธคำขอทำบัตรหรือไม่?' : action === 'start' ? 'เริ่มจัดทำบัตรหรือไม่?' : 'ยืนยันว่าทำและส่งมอบบัตรแล้วหรือไม่?',
+        showCancelButton: true,
+        confirmButtonText: action === 'approve' ? 'อนุมัติ' : action === 'reject' ? 'ปฏิเสธ' : action === 'start' ? 'เริ่มจัดทำ' : 'ทำเสร็จและส่งมอบแล้ว',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: action === 'reject' ? '#dc2626' : '#2563eb',
+    })
+    if (!confirmation.isConfirmed) return
+    try {
+        await $fetch(`${apiBase}/api/student-card/${level.value}/${room.value}/requests/${request.id}/${action}`, {
+            method: 'POST',
+        })
+        await fetchStudents()
+        Swal.fire({ icon: 'success', title: action === 'approve' ? 'อนุมัติคำขอแล้ว' : action === 'reject' ? 'ปฏิเสธคำขอแล้ว' : action === 'start' ? 'บันทึกว่าเริ่มจัดทำบัตรแล้ว' : 'บันทึกว่าทำและส่งมอบบัตรแล้ว', timer: 1500, showConfirmButton: false })
+    } catch (error) {
+        Swal.fire({ icon: 'error', title: 'ดำเนินการไม่สำเร็จ', text: error?.data?.message || 'กรุณาลองใหม่อีกครั้ง' })
+    }
+}
+
 const withRequestStudents = computed(() => students.value.filter(s => s.active_card_request))
 const withoutRequestStudents = computed(() => students.value.filter(s => !s.active_card_request))
 
@@ -216,6 +239,12 @@ const downloadCard = async (index, studentNumber) => {
                             คำร้อง: {{ requestStatusMeta(student.active_card_request.status).label }}
                         </span>
                         <span class="text-sm text-gray-500">{{ student.active_card_request.request_type }}</span>
+                        <template v-if="student.active_card_request.status === 'pending'">
+                            <button @click="reviewRequest(student, 'approve')" class="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">อนุมัติ</button>
+                            <button @click="reviewRequest(student, 'reject')" class="px-3 py-1 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700">ปฏิเสธ</button>
+                        </template>
+                        <button v-else-if="student.active_card_request.status === 'approved'" @click="reviewRequest(student, 'start')" class="px-3 py-1 bg-violet-600 text-white rounded-lg text-sm hover:bg-violet-700">เริ่มจัดทำบัตร</button>
+                        <button v-else-if="student.active_card_request.status === 'in_progress'" @click="reviewRequest(student, 'complete')" class="px-3 py-1 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700">ทำเสร็จ/ส่งมอบแล้ว</button>
                     </div>
                     <div class="flex justify-center items-center">
                         <div :id="`card-${index}`" :style="cardBgStyle"

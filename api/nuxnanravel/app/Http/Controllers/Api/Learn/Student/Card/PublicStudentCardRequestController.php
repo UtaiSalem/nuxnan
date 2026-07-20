@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api\Learn\Student\Card;
 
 use App\Enums\StudentCardRequestReason;
+use App\Enums\StudentCardRequestStatus;
 use App\Http\Controllers\Api\Learn\Student\Card\Concerns\ResolvesStudentCardRoom;
 use App\Http\Controllers\Controller;
 use App\Models\Classroom;
 use App\Models\Student;
+use App\Models\StudentCardRequest;
 use App\Services\StudentCardRequestService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -120,6 +122,46 @@ class PublicStudentCardRequestController extends Controller
             'message' => "ส่งคำร้องสำเร็จ {$succeeded} จาก ".count($results).' คน',
             'results' => $results,
         ], $succeeded > 0 ? 201 : 422);
+    }
+
+    public function cancelRequest(Request $request, string $level, string $room, StudentCardRequest $studentCardRequest): JsonResponse
+    {
+        $classroom = $this->resolveClassroomForRequests($level, $room);
+        abort_unless((int) $studentCardRequest->academy_id === (int) $classroom->academy_id, 404);
+        abort_unless((int) $studentCardRequest->classroom_id === (int) $classroom->id, 404);
+
+        $validated = $request->validate(['student_id' => ['required', 'integer']]);
+        abort_unless((int) $studentCardRequest->student_id === (int) $validated['student_id'], 404);
+
+        $cancelled = $this->requestService->cancelPublic($studentCardRequest);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'ยกเลิกคำร้องทำบัตรเรียบร้อยแล้ว',
+            'status' => $cancelled->status,
+        ]);
+    }
+
+    public function reviewRequest(Request $request, string $level, string $room, StudentCardRequest $studentCardRequest, string $action): JsonResponse
+    {
+        $classroom = $this->resolveClassroomForRequests($level, $room);
+        abort_unless((int) $studentCardRequest->academy_id === (int) $classroom->academy_id, 404);
+        abort_unless((int) $studentCardRequest->classroom_id === (int) $classroom->id, 404);
+        abort_unless(in_array($action, ['approve', 'reject', 'start', 'complete'], true), 404);
+
+        $data = $request->validate(['reason' => ['nullable', 'string', 'max:500']]);
+        $reviewed = in_array($action, ['approve', 'reject'], true)
+            ? $this->requestService->reviewPublic(
+                $studentCardRequest,
+                $action === 'approve' ? StudentCardRequestStatus::Approved : StudentCardRequestStatus::Rejected,
+                $data['reason'] ?? null
+            )
+            : $this->requestService->progressPublic(
+                $studentCardRequest,
+                $action === 'start' ? StudentCardRequestStatus::InProgress : StudentCardRequestStatus::Completed
+            );
+
+        return response()->json(['success' => true, 'status' => $reviewed->status]);
     }
 
     private function resolveClassroomForRequests(string $level, string $room): Classroom
