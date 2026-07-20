@@ -308,6 +308,29 @@ const loadDepositRequests = async () => {
   }
 }
 
+// Profile name guard — the backend rejects withdrawals unless the user's
+// profile has a real first/last name (used to verify the payout account owner)
+const myProfile = ref<any>(null)
+const profileNameComplete = computed(() =>
+  !!(myProfile.value?.first_name && myProfile.value?.last_name)
+)
+const profileFullName = computed(() =>
+  [myProfile.value?.first_name, myProfile.value?.last_name].filter(Boolean).join(' ')
+)
+
+const loadMyProfile = async () => {
+  try {
+    const response = await get('/api/profile/me') as any
+    myProfile.value = response.data || null
+    // The payout account name must match the profile name — prefill it
+    if (profileNameComplete.value && !withdrawForm.value.bank_account.account_name) {
+      withdrawForm.value.bank_account.account_name = profileFullName.value
+    }
+  } catch (err) {
+    console.error('Failed to load my profile:', err)
+  }
+}
+
 const loadMyWithdrawals = async () => {
   try {
     myWithdrawalsLoading.value = true
@@ -754,7 +777,8 @@ onMounted(async () => {
     getBalance(),
     loadTransactions(),
     loadDepositRequests(),
-    loadMyWithdrawals()
+    loadMyWithdrawals(),
+    loadMyProfile()
   ])
 })
 </script>
@@ -1285,7 +1309,7 @@ onMounted(async () => {
                   ดูสลิปการโอนเงิน
                 </button>
                 <button
-                  v-if="w.status === 'pending'"
+                  v-if="w.status === 'pending' || w.status === 'under_review'"
                   type="button"
                   class="px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                   :disabled="isProcessing"
@@ -1309,8 +1333,27 @@ onMounted(async () => {
       <BaseCard v-if="activeTab === 'withdraw'">
         <div class="p-2">
           <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-6">ถอนเงิน</h3>
-          
+
           <div class="space-y-6">
+            <!-- Profile name required warning -->
+            <div v-if="myProfile && !profileNameComplete" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+              <div class="flex items-start gap-3">
+                <Icon icon="mdi:account-alert" class="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div class="flex-grow">
+                  <p class="font-medium text-amber-800 dark:text-amber-300">ต้องกรอกชื่อ-นามสกุลจริงในโปรไฟล์ก่อนถอนเงิน</p>
+                  <p class="text-sm text-amber-700 dark:text-amber-400 mt-1">
+                    ระบบใช้ชื่อจริงในโปรไฟล์ตรวจสอบว่าบัญชีรับเงินเป็นของคุณ กรอกครั้งเดียวใช้ได้ตลอด
+                  </p>
+                  <NuxtLink
+                    to="/settings"
+                    class="inline-flex items-center gap-1 mt-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg transition-colors"
+                  >
+                    <Icon icon="mdi:account-edit" class="w-4 h-4" />
+                    ไปกรอกชื่อในหน้าตั้งค่าโปรไฟล์
+                  </NuxtLink>
+                </div>
+              </div>
+            </div>
             <!-- Amount -->
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">จำนวนเงิน</label>
@@ -1433,6 +1476,10 @@ onMounted(async () => {
                 class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 placeholder="ระบุชื่อบัญชี"
               >
+              <p v-if="profileNameComplete" class="text-sm text-gray-500 mt-1">
+                <Icon icon="mdi:information-outline" class="w-4 h-4 inline" />
+                ชื่อบัญชีต้องตรงกับชื่อในโปรไฟล์: <span class="font-medium">{{ profileFullName }}</span>
+              </p>
             </div>
 
             <!-- Fee Preview -->
@@ -1455,6 +1502,7 @@ onMounted(async () => {
             <button 
               class="w-full py-3 bg-gradient-to-r from-red-500 to-rose-500 text-white font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               :disabled="isProcessing
+                || (myProfile && !profileNameComplete)
                 || withdrawForm.amount < WITHDRAW_MIN_AMOUNT
                 || withdrawForm.amount > walletBalance
                 || !withdrawForm.bank_account.account_name

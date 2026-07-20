@@ -15,6 +15,9 @@ class WithdrawTest extends TestCase
     private function actingUser(float $wallet = 5000): array
     {
         $user = User::factory()->create(['wallet' => $wallet]);
+        // Withdrawals require a completed profile whose name matches the
+        // payout account name (see WalletController::withdraw fraud guard).
+        $user->profile()->create(['first_name' => 'สมชาย', 'last_name' => 'ใจดี']);
         $token = JWTAuth::fromUser($user);
 
         return [$user, $token];

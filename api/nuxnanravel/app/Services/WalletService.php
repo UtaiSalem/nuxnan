@@ -504,10 +504,14 @@ class WalletService
     {
         return DB::transaction(function () use ($transaction, $user) {
             $tx = WalletTransaction::whereKey($transaction->id)->lockForUpdate()->first();
-            if (! $tx || $tx->transaction_type !== 'withdraw' || $tx->user_id !== $user->id || $tx->status !== 'pending') {
+            // The owner may cancel while the money has not moved yet: pending or
+            // under_review (mirrors the statuses rejectWithdrawal() accepts).
+            // From 'approved' onwards the admin is already paying out.
+            if (! $tx || $tx->transaction_type !== 'withdraw' || $tx->user_id !== $user->id || ! in_array($tx->status, ['pending', 'under_review'], true)) {
                 return false;
             }
             $account = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+            $oldStatus = $tx->status;
 
             // Money was already deducted from the wallet when the request was
             // created, so a cancellation must refund it with a matching ledger
@@ -519,7 +523,7 @@ class WalletService
                 'metadata' => array_merge($tx->metadata ?? [], ['refund_transaction_id' => $refund->id]),
                 'version' => $tx->version + 1,
             ]);
-            app(AuditLogService::class)->log('withdrawal.cancelled', $tx, ['status' => 'pending'], ['status' => 'cancelled'], 'wallet');
+            app(AuditLogService::class)->log('withdrawal.cancelled', $tx, ['status' => $oldStatus], ['status' => 'cancelled'], 'wallet');
 
             return true;
         });

@@ -83,7 +83,7 @@ class WalletTransaction extends Model
     {
         $allowed = [
             'pending' => ['under_review', 'cancelled'],
-            'under_review' => ['approved', 'rejected'],
+            'under_review' => ['approved', 'rejected', 'cancelled'],
             'approved' => ['processing', 'failed'],
             'processing' => ['paid', 'failed'],
             'paid' => [],

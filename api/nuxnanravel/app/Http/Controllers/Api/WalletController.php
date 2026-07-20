@@ -183,10 +183,11 @@ class WalletController extends Controller
         if (! $profile || empty($profile->first_name) || empty($profile->last_name)) {
             return response()->json([
                 'success' => false,
-                'message' => 'กรุณากรอกชื่อ-นามสกุลใน "ข้อมูลบัญชี" ให้ครบก่อนทำรายการถอนเงิน',
+                'message' => 'ยังถอนเงินไม่ได้ — กรุณากรอก "ชื่อจริง" และ "นามสกุล" ในหน้าตั้งค่าโปรไฟล์ก่อน (ระบบใช้ตรวจสอบว่าบัญชีรับเงินเป็นของคุณ) ข้อมูลในฟอร์มถอนเงินของคุณครบถ้วนแล้ว',
                 'errors' => [
-                    'profile' => ['โปรไฟล์ผู้ใช้ยังไม่สมบูรณ์'],
+                    'profile' => ['โปรไฟล์ยังไม่มีชื่อจริง-นามสกุล'],
                 ],
+                'error_code' => 'profile_name_required',
             ], 422);
         }
 
@@ -335,7 +336,7 @@ class WalletController extends Controller
         if (! $ok) {
             return response()->json([
                 'success' => false,
-                'message' => 'ยกเลิกไม่ได้ — คำขอนี้ถูกรับไปตรวจสอบแล้ว หากต้องการยกเลิกกรุณาติดต่อผู้ดูแลระบบ',
+                'message' => 'ยกเลิกไม่ได้ — คำขอนี้อยู่ระหว่างการโอนเงินหรือดำเนินการเสร็จสิ้นแล้ว หากมีปัญหากรุณาติดต่อผู้ดูแลระบบ',
             ], 422);
         }
 

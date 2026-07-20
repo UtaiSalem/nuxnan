@@ -15,6 +15,9 @@ class UserWithdrawalSelfServiceTest extends TestCase
     private function actingUser(float $wallet = 5000): array
     {
         $user = User::factory()->create(['wallet' => $wallet]);
+        // Withdrawals require a completed profile whose name matches the
+        // payout account name (see WalletController::withdraw fraud guard).
+        $user->profile()->create(['first_name' => 'สมชาย', 'last_name' => 'ใจดี']);
         $token = JWTAuth::fromUser($user);
 
         return [$user, $token];
@@ -94,18 +97,35 @@ class UserWithdrawalSelfServiceTest extends TestCase
         $this->createWithdrawal($token);
     }
 
-    public function test_user_cannot_cancel_withdrawal_after_review_started(): void
+    public function test_user_can_cancel_withdrawal_under_review_and_money_returns(): void
     {
-        [$user, $token] = $this->actingUser();
+        [$user, $token] = $this->actingUser(1000);
         $txId = $this->createWithdrawal($token);
 
         WalletTransaction::whereKey($txId)->update(['status' => 'under_review']);
 
         $this->withHeader('Authorization', "Bearer $token")
             ->postJson("/api/wallet/withdrawals/{$txId}/cancel")
+            ->assertStatus(200)
+            ->assertJsonPath('data.status', 'cancelled');
+
+        $user = $user->fresh();
+        $this->assertEquals('1000.00', (string) $user->wallet);
+        $this->assertEquals('0.00', (string) $user->locked_balance);
+    }
+
+    public function test_user_cannot_cancel_withdrawal_after_approval(): void
+    {
+        [$user, $token] = $this->actingUser();
+        $txId = $this->createWithdrawal($token);
+
+        WalletTransaction::whereKey($txId)->update(['status' => 'approved']);
+
+        $this->withHeader('Authorization', "Bearer $token")
+            ->postJson("/api/wallet/withdrawals/{$txId}/cancel")
             ->assertStatus(422);
 
-        $this->assertSame('under_review', WalletTransaction::find($txId)->status);
+        $this->assertSame('approved', WalletTransaction::find($txId)->status);
     }
 
     public function test_lesson_style_purchase_does_not_block_real_withdrawal(): void
