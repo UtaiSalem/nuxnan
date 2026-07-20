@@ -1,5 +1,23 @@
 # Work Log — nuxnan project
 
+## 2026-07-20 — ผ่อนปรน name guard ถอนเงิน: fallback ไปชื่อบัญชีผู้ใช้ + แก้บั๊กตัดคำนำหน้าไทย
+
+> อาการ: อนุมัติคำขอถอน #575 ไม่ได้ ("ชื่อบัญชีปลายทางไม่ตรงกับชื่อผู้ใช้") ทั้งที่ชื่อตรงกัน ต่างแค่คำนำหน้า (ด.ญ.) — สาเหตุจริงคือโปรไฟล์ผู้ใช้ไม่มีชื่อ-นามสกุล guard เลยบล็อคก่อนเทียบ `users.name` ("พัชรี หนูวงค์") ที่มีค่าอยู่แล้ว
+
+### สถานะ: เสร็จ + commit แล้ว (`71b1c94d`, เทสต์ wallet 43/43 ผ่าน, Pint ผ่าน) — ยังไม่ deploy
+
+**สิ่งที่แก้ (Codex implement, Claude review):**
+- [BankAccountNameMatcher.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/app/Support/BankAccountNameMatcher.php) — แก้บั๊กตัดคำนำหน้า: เรียงยาว→สั้น ("นางสาวพัชรี" ไม่ถูกตัดเหลือ "สาวพัชรี" อีก), ตัดครั้งเดียว, ไม่ตัดชื่อจริงที่ขึ้นต้นคล้ายคำนำหน้า ("นายิกา" ปลอดภัย — เช็คสระ combining mark) + เพิ่ม `matchesFullName()`
+- [AdminWalletController.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/app/Http/Controllers/Api/AdminWalletController.php) — guard ตอน approve และ `attachNameMismatch` fallback ไปเทียบ `users.name` เมื่อโปรไฟล์ไม่มีชื่อ-นามสกุล; `expected_account_name` แสดงชื่อ fallback ให้ UI (ป้ายเตือน/ปุ่มใน pending.vue ปลดล็อคเองผ่าน `name_mismatch`)
+- [WalletController.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/app/Http/Controllers/Api/WalletController.php) — ตอนผู้ใช้สร้างคำขอถอนมีบล็อคแบบเดียวกัน ใส่ fallback เหมือนกัน
+- เทสต์: [BankAccountNameMatcherTest.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/tests/Unit/BankAccountNameMatcherTest.php) (ใหม่) + feature tests เส้นทาง approve/withdraw fallback ใน WithdrawalHardeningTest / WithdrawTest
+
+### Deploy notes
+- deploy โค้ดแล้ว retry approve #575 ได้เลย — ไม่ต้องรัน migration เพิ่มสำหรับงานนี้ (แต่อย่าลืม migration ซ่อมคีย์ของงาน 409 ด้านล่างถ้ายังไม่ได้รัน)
+- trade-off ที่รับไว้: `users.name` ผู้ใช้แก้เองได้ง่ายกว่าข้อมูลโปรไฟล์ — guard อ่อนลงเล็กน้อยเฉพาะเคสโปรไฟล์ว่าง
+
+---
+
 ## 2026-07-20 — แก้ 409 ปลอมตอน reject คำขอถอนเงิน (#590) + migration ซ่อมคีย์ตาราง wallet
 
 > อาการ: แอดมินกด reject คำขอถอนเงิน #590 บน `api.nuxnan.com` ได้ 409 "มีการแก้ไขรายการพร้อมกัน กรุณาลองใหม่" ทั้งที่ไม่มีใครแก้พร้อมกัน
