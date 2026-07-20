@@ -1,6 +1,9 @@
 export interface AcademySupportSummary {
   approved_points_total: number
   approved_cash_total: number
+  point_balance: number
+  available_point_balance: number
+  total_distributed: number
   supporter_count: number
   ad_revenue_points: number
   campaign_count: number

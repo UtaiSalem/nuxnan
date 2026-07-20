@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
+import PointsBadge from '~/components/Common/PointsBadge.vue'
 
 import CourseActionButton from './CourseActionButton.vue'
 import { useToast } from '~/composables/useToast'
@@ -26,6 +27,16 @@ const config = useRuntimeConfig()
 const courseStore = useCourseStore()
 const api = useApi()
 const toast = useToast()
+const courseIdStr = computed(() => String(props.course?.id ?? ''))
+const { account, fetchAccount } = useCoursePoints(courseIdStr)
+
+onMounted(() => {
+  if (courseIdStr.value) fetchAccount()
+})
+
+const openCourseSupport = () => {
+  if (courseIdStr.value) navigateTo(`/Learn/Courses/${courseIdStr.value}/support`)
+}
 
 // File inputs
 const coverInput = ref<HTMLInputElement | null>(null)
@@ -279,6 +290,7 @@ const hasMetadata = computed(() => !!(semesterLabel.value || academicYearLabel.v
           <!-- Stats + Action (desktop inline) -->
           <div class="flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-3 flex-wrap">
+              <PointsBadge :points="account?.balance ?? null" label="แต้มรายวิชา" @click="openCourseSupport" />
               <slot name="stats" />
             </div>
             <div class="flex flex-wrap items-center gap-3 shrink-0 w-full sm:w-auto">

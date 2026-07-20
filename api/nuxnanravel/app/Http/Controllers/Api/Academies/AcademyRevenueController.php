@@ -27,6 +27,7 @@ class AcademyRevenueController extends Controller
 
     public function supportSummary(Academy $academy): JsonResponse
     {
+        $account = AcademyPointAccount::firstOrCreate(['academy_id' => $academy->id]);
         $approvedDonations = $academy->donations()
             ->whereIn('status', ['approved', 'completed'])
             ->whereNull('deleted_at')
@@ -58,6 +59,9 @@ class AcademyRevenueController extends Controller
             'data' => [
                 'approved_points_total' => $pointsTotal,
                 'approved_cash_total' => $cashTotal,
+                'point_balance' => (int) $account->balance,
+                'available_point_balance' => $account->available_balance,
+                'total_distributed' => (int) $account->total_distributed,
                 'supporter_count' => $supporterCount,
                 'ad_revenue_points' => $adRevenuePoints,
                 'campaign_count' => $campaignCount,

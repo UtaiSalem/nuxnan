@@ -11,6 +11,9 @@ import CampaignWidget from '~/components/campaign/CampaignWidget.vue'
 import AdvertiseCtaWidget from '~/components/widgets/AdvertiseCtaWidget.vue'
 import AcademyDonationModal from '~/components/donation/AcademyDonationModal.vue'
 import AcademyPublicSupportWidget from '~/components/academy/revenue/AcademyPublicSupportWidget.vue'
+import AcademyWalletCard from '~/components/academy/revenue/AcademyWalletCard.vue'
+import AcademySupportCtaWidget from '~/components/academy/revenue/AcademySupportCtaWidget.vue'
+import PointsBadge from '~/components/Common/PointsBadge.vue'
 
 definePageMeta({
   layout: 'main',
@@ -28,6 +31,7 @@ const openAcademyDonation = () => { if (!user.value) navigateTo(`/login?return=$
 
 // State
 const academy = ref<any>(null)
+const { supportSummary, isLoading: supportSummaryLoading, fetchSupportSummary } = useAcademyRevenue(computed(() => academy.value?.id ?? null))
 const courses = ref<any[]>([])
 const courseFilters = ref({
   education_level: '',
@@ -815,6 +819,7 @@ const switchTab = async (tabId: string) => {
       if (groups.value.length === 0) await fetchGroups()
       break
     case 'revenue':
+      if (supportSummary.value === null) await fetchSupportSummary()
       break
     case 'about':
       break
@@ -1071,6 +1076,13 @@ watch(() => route.hash, (newHash) => {
     switchTab(hash)
   }
 })
+
+// The header badge needs the summary on initial load; fetch once the academy id exists
+watch(() => academy.value?.id, (id) => {
+  if (id && supportSummary.value === null) {
+    fetchSupportSummary()
+  }
+})
 </script>
 
 <template>
@@ -1170,6 +1182,7 @@ watch(() => route.hash, (newHash) => {
               
               <!-- Stats -->
               <div class="flex flex-wrap gap-2.5">
+                <PointsBadge :points="supportSummary?.point_balance ?? null" :loading="supportSummaryLoading" label="แต้มโรงเรียน" @click="switchTab('revenue')" />
                 <div class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/90 px-3 py-2 text-sm text-gray-600 shadow-sm dark:border-gray-700 dark:bg-vikinger-dark-100 dark:text-gray-300">
                   <Icon :icon="getAcademyTypeInfo(academy.type).icon" :class="['h-4 w-4', getAcademyTypeInfo(academy.type).color]" />
                   <span class="font-medium">{{ getAcademyTypeInfo(academy.type).label }}</span>
@@ -2326,14 +2339,15 @@ watch(() => route.hash, (newHash) => {
           <!-- Revenue Tab -->
           <div v-else-if="currentTab === 'revenue'" class="space-y-5">
             <div class="space-y-5">
-              <div class="rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 p-6 text-white shadow-sm">
+              <AcademyWalletCard :summary="supportSummary" :loading="supportSummaryLoading" />
+              <div class="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 to-sky-50 p-6 shadow-sm dark:border-violet-900/40 dark:from-slate-900 dark:to-indigo-950/40">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p class="text-sm font-semibold text-indigo-100">รายได้ของโรงเรียน</p>
-                    <h2 class="mt-1 text-2xl font-bold">สนับสนุนการเรียนรู้และสร้างรายได้</h2>
-                    <p class="mt-2 max-w-2xl text-sm text-indigo-100">รวมการสนับสนุนแต้มและการสร้างแคมเปญโฆษณาไว้ในที่เดียว</p>
+                    <p class="text-sm font-semibold text-violet-500 dark:text-violet-300">รายได้ของโรงเรียน</p>
+                    <h2 class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">สนับสนุนการเรียนรู้และสร้างรายได้</h2>
+                    <p class="mt-2 max-w-2xl text-sm text-gray-600 dark:text-gray-300">รวมการสนับสนุนแต้มและการสร้างแคมเปญโฆษณาไว้ในที่เดียว</p>
                   </div>
-                  <button v-if="academy" type="button" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-indigo-700 shadow-sm transition hover:bg-indigo-50" @click="openAcademyDonation">
+                  <button v-if="academy" type="button" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-violet-700" @click="openAcademyDonation">
                     <Icon icon="fluent:heart-24-regular" class="h-5 w-5" />
                     สนับสนุนโรงเรียน
                   </button>
@@ -2403,6 +2417,8 @@ watch(() => route.hash, (newHash) => {
         
         <!-- Right Sidebar -->
         <aside class="hidden min-[1421px]:block min-[1421px]:sticky min-[1421px]:top-[86px] min-[1421px]:space-y-6">
+          <AcademySupportCtaWidget v-if="academy" :academy-id="academy.id" :academy-name="academy.name" @donate="openAcademyDonation" />
+
           <!-- Quick Stats -->
           <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-5 shadow-sm">
             <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -2531,6 +2547,7 @@ watch(() => route.hash, (newHash) => {
     <!-- Right Mobile Drawer -->
     <CommonSidebarDrawer v-model:open="showMobileRightDrawer" side="right" title="Stats & activity">
       <div v-if="academy" class="space-y-6">
+        <AcademySupportCtaWidget v-if="academy" :academy-id="academy.id" :academy-name="academy.name" @donate="() => { showMobileRightDrawer = false; openAcademyDonation() }" />
         <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <Icon icon="fluent:data-bar-horizontal-24-regular" class="w-5 h-5 text-vikinger-purple" />

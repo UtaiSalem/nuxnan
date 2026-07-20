@@ -19,6 +19,7 @@ import MemberedCoursesWidget from '~/components/widgets/MemberedCoursesWidget.vu
 import MyCoursesWidget from '~/components/widgets/MyCoursesWidget.vue'
 import CampaignWidget from '~/components/campaign/CampaignWidget.vue'
 import AdvertiseCtaWidget from '~/components/widgets/AdvertiseCtaWidget.vue'
+import CourseSupportCtaWidget from '~/components/learn/course/v2/CourseSupportCtaWidget.vue'
 
 // Feed-specific sidebars
 import CourseFeedLeftSidebar from '~/components/learn/course/v2/CourseFeedLeftSidebar.vue'
@@ -230,6 +231,7 @@ usePageLayoutWidgets({
     </Teleport>
 
     <Teleport to="#right-widgets-slot">
+      <CourseSupportCtaWidget />
       <!-- Feed-specific right sidebar -->
       <CourseFeedRightSidebar
         v-if="isCourseBoardRoute && course"

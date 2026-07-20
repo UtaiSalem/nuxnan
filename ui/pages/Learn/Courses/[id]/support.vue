@@ -32,21 +32,21 @@ onMounted(load)
 
 <template>
   <div class="space-y-6">
-    <section class="rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 p-6 text-white shadow-lg">
+    <section class="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 to-sky-50 p-6 shadow-sm dark:border-violet-900/40 dark:from-slate-900 dark:to-indigo-950/40">
       <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <p class="text-sm font-bold text-white/80">Course Revenue</p>
-          <h1 class="mt-1 text-2xl font-black">รายได้</h1>
-          <p class="mt-2 text-sm text-white/85">รวมการสนับสนุนแต้มสะสมและรายได้จากการโฆษณาไว้ในหน้าเดียว</p>
+          <p class="text-sm font-semibold text-violet-500 dark:text-violet-300">Course Revenue</p>
+          <h1 class="mt-1 text-2xl font-black text-gray-900 dark:text-white">รายได้</h1>
+          <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">รวมการสนับสนุนแต้มสะสมและรายได้จากการโฆษณาไว้ในหน้าเดียว</p>
         </div>
         <div class="flex flex-wrap gap-3">
-          <button v-if="course?.donation_enabled !== false" type="button" class="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 font-bold text-orange-600 shadow" @click="showDonationModal = true">
+          <button v-if="course?.donation_enabled !== false" type="button" class="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-3 font-bold text-white shadow hover:bg-violet-700" @click="showDonationModal = true">
             <Icon icon="mdi:hand-heart" class="h-5 w-5" /> บริจาคแต้ม
           </button>
-          <NuxtLink :to="`/earn/advertise/create?scope=course&course_id=${courseId}`" class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 font-bold text-white shadow hover:bg-indigo-700">
+          <NuxtLink :to="`/earn/advertise/create?scope=course&course_id=${courseId}`" class="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-white px-5 py-3 font-bold text-violet-600 hover:bg-violet-50 dark:border-violet-900/40 dark:bg-transparent dark:text-violet-300">
             <Icon icon="mdi:bullhorn-outline" class="h-5 w-5" /> สร้างแคมเปญโฆษณา
           </NuxtLink>
-          <NuxtLink to="/earn/advertise" class="inline-flex items-center gap-2 rounded-xl border border-white/50 px-5 py-3 font-bold text-white hover:bg-white/10">
+          <NuxtLink to="/earn/advertise" class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-5 py-3 font-bold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
             <Icon icon="mdi:play-circle-outline" class="h-5 w-5" /> ดูโฆษณาเพื่อรับรายได้
           </NuxtLink>
         </div>

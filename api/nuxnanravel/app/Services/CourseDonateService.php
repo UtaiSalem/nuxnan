@@ -21,9 +21,6 @@ class CourseDonateService
         if ($pointsAmount < 1) {
             throw new DomainException('Donation must be at least 1 point.');
         }
-        if ($donor->id === $course->user_id) {
-            throw new DomainException('Course owners cannot donate to their own course.');
-        }
         if ($donor->pp < $pointsAmount) {
             throw new DomainException('Insufficient points for this donation.');
         }
@@ -45,9 +42,6 @@ class CourseDonateService
         }
         if ($amount < 1) {
             throw new DomainException('Cash donation must be at least 1.');
-        }
-        if ($donor->id === $course->user_id) {
-            throw new DomainException('Course owners cannot donate to their own course.');
         }
 
         return DB::transaction(function () use ($donor, $course, $amount, $meta, $key, $slip) {
