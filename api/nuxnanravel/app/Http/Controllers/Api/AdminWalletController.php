@@ -288,6 +288,13 @@ class AdminWalletController extends Controller
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }
 
+        if ($e instanceof \PDOException) {
+            report($e);
+            throw $e;
+        }
+
+        report($e);
+
         return response()->json(['success' => false, 'message' => 'มีการแก้ไขรายการพร้อมกัน กรุณาลองใหม่'], 409);
     }
 
