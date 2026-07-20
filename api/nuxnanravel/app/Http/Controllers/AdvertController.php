@@ -17,8 +17,19 @@ class AdvertController extends Controller
 {
     public function index()
     {
+        // The public advertising page is also the campaign showcase. Keep approved
+        // campaigns visible after their delivery budget is exhausted so advertisers
+        // can see the support history and social proof of the platform.
         return response()->json([
-            'adverts' => AdvertResource::collection(Advert::with('advertiser')->where('status', 1)->where('remaining_views', '>', 0)->orderBy('remaining_views', 'DESC')->latest()->paginate()),
+            'adverts' => AdvertResource::collection(
+                Advert::with('advertiser')
+                    ->where('status', 1)
+                    ->where(function ($query) {
+                        $query->whereNull('scope_type')->orWhere('scope_type', 'public');
+                    })
+                    ->latest()
+                    ->paginate()
+            ),
         ]);
     }
 

@@ -29,13 +29,13 @@ class CampaignDeliveryService
                     $direct->where('scope_type', 'course')->where('course_id', $courseId);
                 })->orWhere(function (Builder $inherited) use ($academyId) {
                     $inherited->where('scope_type', 'academy')->where('academy_id', $academyId);
-                })->orWhere('scope_type', 'public');
+                });
             });
         }
 
         if ($scope === 'academy' && $academyId) {
             return $query->where(function (Builder $q) use ($academyId) {
-                $q->where('scope_type', 'public')->orWhere(function (Builder $academy) use ($academyId) {
+                $q->where(function (Builder $academy) use ($academyId) {
                     $academy->where('scope_type', 'academy')->where('academy_id', $academyId);
                 })->orWhere(function (Builder $course) use ($academyId) {
                     $course->where('scope_type', 'course')->where('academy_id', $academyId)->where('inherit_to_academy', true);

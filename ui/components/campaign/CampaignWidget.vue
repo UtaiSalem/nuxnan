@@ -42,6 +42,18 @@ const completedIds = new Set<number>()
 
 const scopeLabel = computed(() => ({ public: 'สาธารณะ', academy: 'โรงเรียน', course: 'รายวิชา' }[props.scope]))
 
+const campaignCreateLink = computed(() => {
+  if (props.scope === 'academy' && props.academyId) {
+    return { path: '/earn/advertise/create', query: { scope_type: 'academy', academy_id: props.academyId } }
+  }
+
+  if (props.scope === 'course' && props.courseId) {
+    return { path: '/earn/advertise/create', query: { scope_type: 'course', course_id: props.courseId, academy_id: props.academyId || undefined } }
+  }
+
+  return '/earn/advertise'
+})
+
 function idempotencyKey(campaign: Campaign) {
   return `campaign-view-${campaign.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
@@ -127,7 +139,9 @@ onMounted(loadCampaigns)
         <p class="text-[10px] font-bold uppercase tracking-wider text-indigo-500">{{ scopeLabel }}</p>
         <h3 class="font-bold text-gray-900 dark:text-white">โฆษณาและการสนับสนุน</h3>
       </div>
-      <NuxtLink to="/earn/advertise" class="text-xs text-blue-500 hover:underline">ดูทั้งหมด</NuxtLink>
+      <NuxtLink :to="campaignCreateLink" class="text-xs text-blue-500 hover:underline">
+        {{ props.scope === 'public' ? 'ดูทั้งหมด' : 'ลงโฆษณาในพื้นที่นี้' }}
+      </NuxtLink>
     </div>
 
     <div v-if="isLoading" class="space-y-3">

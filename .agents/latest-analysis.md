@@ -4107,3 +4107,56 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 - Proposed route/menu: add `/academies/{name}/admin/advertising` (or the repository's chosen equivalent) with a quick-action card labeled “จัดการโฆษณา”; reuse the existing campaign management component after extracting page-level state and add admin-only campaign filters, create/edit/stop actions, payment/review/status columns, and links back to Revenue.
 - Permission matrix: `finance.view` can view campaigns and performance; `finance.manage` can create/update/stop campaigns and review payment-related actions. Public users must never see the admin menu or management endpoint data. Backend must remain authoritative and verify academy scope plus permission.
 - Verification plan: route visibility tests, API 403 tests for normal users, cross-academy authorization tests, campaign create/update/stop tests, frontend build/type checks, and manual desktop/mobile smoke tests.
+# 2026-07-20 - Remove Support a Course navigation item
+
+- Removed the `Support a Course` item from `ui/layouts/main.vue` navigation.
+- Course support functionality on course detail pages remains unchanged.
+- Verification: inspected the resulting diff and searched the navigation source.
+# 2026-07-20 - Analysis: academy/course donation and advertising scopes
+
+- Donation has two separate systems: legacy user-to-user `/supports/donates` used by `/earn/donates`, and newer academy/course donation APIs with point/cash flows, idempotency, point ledgers, enable flags, and admin review.
+- Academy/course donation endpoints already exist, but the main donation discovery page does not yet target academy/course entities; dedicated modal/components and public school/course pages do.
+- Advertising campaigns already model `public`, `academy`, and `course` scopes, target IDs, course-to-academy inheritance, target search endpoints, delivery filtering, and academy/course management endpoints.
+- High-risk gap: `CampaignAuthorizationService::canCreate()` currently allows any authenticated user to create academy-scoped campaigns when an academy exists, and course-scoped campaigns without checking ownership/admin permission. Target lookup endpoints also expose all academies/courses to authenticated users.
+- Recommendation: unify donation discovery around an explicit target type/id, enforce target-owner/admin policies server-side, define revenue/point allocation and approval state per scope, then add focused API/UI tests for owner, non-owner, cross-academy, disabled target, duplicate/idempotency, and inherited campaign cases.
+
+# 2026-07-20 - Add advertiser campaign history to `/earn/advertise`
+
+- Root cause confirmed: the page previously loaded only public active adverts from `/api/advertises`; advertiser history is exposed by authenticated `/api/campaigns/manage`.
+- Change: the main advertising page now loads the authenticated user's campaign history and displays review status, budget, delivered views, loading, and empty states while preserving the public advert feed and management page.
+- Verification: run the focused Nuxt build; manual smoke testing requires a logged-in user with campaign data.
+
+# 2026-07-20 - Public advertising campaign showcase
+
+- Requirement clarified: `/earn/advertise` must show approved campaigns even when `remaining_views` is zero, so prior advertiser support remains visible as social proof.
+- Implementation: public `AdvertController::index()` no longer filters out exhausted approved campaigns; the card marks completed campaigns and the page prevents attempting to view them.
+- Verification plan: run Laravel Pint on the controller, `git diff --check`, and the Nuxt build; confirm pending/rejected campaigns remain excluded by `status = 1`.
+
+# 2026-07-20 - School-scoped support and advertising isolation
+
+- Requirement: academy donations and advertisements should use the central flows but be visible only within the relevant school page; public pages already have their own central support/ad inventory.
+- Findings: academy donation modal and revenue APIs already exist; academy campaign delivery was incorrectly including `public` campaigns, and the legacy public advert endpoint did not exclude academy-scoped records.
+- Change: public legacy advert listing now accepts only null/public scope; academy campaign delivery now returns academy campaigns plus opted-in inherited course campaigns, excluding public campaigns.
+- Remaining verification: focused API tests for public exclusion and academy inclusion/inheritance, plus manual school-page smoke tests for donation and ad creation/viewing.
+
+# 2026-07-20 - Plan: unified central, school, and course support/advertising UX
+
+- User decision: central, academy, and course flows should share the same interaction model; only the target context and visibility scope should differ.
+- Current state: academy and course donation modals/APIs already exist; `CampaignWidget` already accepts `public`, `academy`, and `course` scopes; campaign creation supports `scope_type`, `academy_id`, and `course_id`; school revenue management has donation and campaign tabs. The main inconsistency is duplicated UI/labels/flow and mixed visibility/inheritance rules.
+- Recommended architecture: one reusable support surface and one reusable advertising surface with typed target context (`public`, `academy`, `course`), shared step/status/card components, and server-authoritative scope filtering/authorization.
+- Plan phases: contract audit and target policy; shared UI primitives; central adapter; academy adapter; course adapter; history/status views; permissions and privacy; migration/backfill; tests and staged rollout.
+- Key decisions to preserve: public pages show only public campaigns; academy pages show academy campaigns plus explicitly inherited course campaigns; course pages show direct course campaigns plus explicitly inherited academy campaigns; pending/rejected financial records remain private to authorized managers.
+- Risks: duplicated legacy donation/advertising models, course-to-academy inheritance ambiguity, ownership checks in campaign authorization, anonymous donor privacy, and public endpoints accidentally leaking scoped records.
+
+# 2026-07-20 - Immediate academy/course UI usability fix
+
+- User reported academy and course support/advertising UI unusable.
+- Root UI issue found: shared `CampaignWidget` always linked its contextual action back to public `/earn/advertise`, discarding academy/course target context.
+- Change: contextual widget action now links to `/earn/advertise/create` with locked `scope_type`, target ID, and academy ID for academy/course pages; public scope retains the public listing link.
+- Verification: source-level diff check; Nuxt build attempted but timed out after 124 seconds without emitted error output.
+
+# 2026-07-20 - Immediate support form replacement
+
+- User reported academy/course support forms were unusable and requested copying the existing central flow rather than redesigning separate forms.
+- Change: added shared `SupportDonationModal.vue` with the same five-step interaction model (type, amount/payment, details, review, success) and target-aware academy/course API adapters; academy/course modal files now act as thin wrappers.
+- Verification plan: `git diff --check`, Nuxt build/type validation, and manual smoke tests for point and cash support on both academy and course pages.

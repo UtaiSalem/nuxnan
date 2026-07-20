@@ -1,5 +1,8 @@
 <template>
-  <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow cursor-pointer" @click="$emit('click', advert)">
+  <div class="relative bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow cursor-pointer" @click="$emit('click', advert)">
+      <div v-if="advert.remaining_views <= 0" class="absolute right-2 top-2 z-10 rounded-full bg-gray-800/80 px-2.5 py-1 text-xs font-semibold text-white">
+          แคมเปญสิ้นสุดแล้ว
+      </div>
       
       <!-- Header: Profile -->
       <div class="p-3 flex items-center gap-3">

@@ -156,6 +156,15 @@ function loadMore() {
 function handleAdClick(advert: any) {
     if (!advert) return
 
+    if (advert.remaining_views <= 0) {
+        Swal.fire({
+            icon: 'info',
+            title: 'แคมเปญสิ้นสุดแล้ว',
+            text: 'โฆษณานี้แสดงเพื่อเป็นประวัติการสนับสนุน และไม่สามารถรับชมซ้ำได้'
+        })
+        return
+    }
+
     if (!authStore.isAuthenticated) {
         Swal.fire({
             icon: 'warning',

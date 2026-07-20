@@ -238,8 +238,7 @@ usePageLayoutWidgets({
 
       <!-- Default right widgets (non-feed pages) -->
       <template v-if="!isCourseBoardRoute">
-        <AdvertiseCtaWidget v-if="course" scope-type="course" :target-id="course.id" :target-name="course.name || course.title" />
-        <CampaignWidget v-if="course" scope="course" :academy-id="course.academy_id" :course-id="course.id" placement="course-sidebar" />
+        <!-- Support and revenue widgets are temporarily hidden while this feature is offline. -->
         <!-- Course-related widgets moved here on the lessons index page -->
         <CourseInstructorWidget v-if="course && isCourseLessonsIndexRoute" :course="course" :owner="course.user" :show-lessons-menu="false" />
 

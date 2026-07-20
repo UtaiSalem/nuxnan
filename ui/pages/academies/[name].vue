@@ -195,7 +195,6 @@ const tabs = computed(() => [
   { id: 'classrooms', label: t('academy.tabs.classrooms'), icon: 'fluent:board-24-regular' },
   { id: 'events', label: t('academy.tabs.events'), icon: 'fluent:calendar-star-24-regular' },
   { id: 'groups', label: t('academy.tabs.groups'), icon: 'fluent:people-community-24-regular' },
-  { id: 'revenue', label: 'รายได้', icon: 'fluent:money-hand-24-regular' },
   { id: 'about', label: t('academy.tabs.about'), icon: 'fluent:info-24-regular' },
 ])
 
@@ -2328,7 +2327,7 @@ watch(() => route.hash, (newHash) => {
           </div>
 
           <!-- Revenue Tab -->
-          <div v-else-if="currentTab === 'revenue'" class="space-y-5">
+          <div v-else-if="currentTab === 'revenue' && false" class="space-y-5">
             <template v-if="academy && academy.authIsAcademyAdmin">
               <div class="flex items-center justify-between">
                 <h2 class="text-lg font-semibold text-gray-900 dark:text-white">จัดการรายได้</h2>
@@ -2439,9 +2438,7 @@ watch(() => route.hash, (newHash) => {
             :academy-name="academyName"
           />
 
-          <AdvertiseCtaWidget v-if="academy" scope-type="academy" :target-id="academy.id" :target-name="academy.name" />
           <AcademyPublicSupportWidget v-if="academy && !academy.authIsAcademyAdmin" :academy-id="academy.id" :name="academy.name" />
-          <CampaignWidget v-if="academy" scope="academy" :academy-id="academy.id" placement="academy-sidebar" />
 
           <!-- Upcoming Events -->
           <SchoolUpcomingEvents :academy-id="academy.id" @view-all="switchTab('events')" />
@@ -2565,7 +2562,6 @@ watch(() => route.hash, (newHash) => {
           :academy-id="academy.id"
           :academy-name="academyName"
         />
-        <CampaignWidget v-if="academy" scope="academy" :academy-id="academy.id" placement="academy-mobile-sidebar" />
         <AcademyPublicSupportWidget v-if="academy && !academy.authIsAcademyAdmin" :academy-id="academy.id" :name="academy.name" />
         <SchoolUpcomingEvents :academy-id="academy.id" @view-all="(() => { switchTab('events'); showMobileRightDrawer = false; })" />
         <SchoolClassroomLeaderboard :academy-id="academy.id" cycle="month" />
