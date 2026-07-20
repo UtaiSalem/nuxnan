@@ -19,10 +19,17 @@ class BankAccountNameMatcher
 
         $s = mb_strtolower(trim($value), 'UTF-8');
 
-        foreach (self::PREFIXES as $prefix) {
-            if (str_starts_with($s, $prefix.' ') || str_starts_with($s, $prefix)) {
-                $s = trim(mb_substr($s, mb_strlen($prefix, 'UTF-8'), null, 'UTF-8'));
+        $prefixes = self::PREFIXES;
+        usort($prefixes, fn (string $a, string $b): int => mb_strlen($b, 'UTF-8') <=> mb_strlen($a, 'UTF-8'));
+        foreach ($prefixes as $prefix) {
+            if (! str_starts_with($s, $prefix)) {
+                continue;
             }
+            $rest = mb_substr($s, mb_strlen($prefix, 'UTF-8'), null, 'UTF-8');
+            if (str_ends_with($prefix, '.') || $rest === '' || preg_match('/^\s/u', $rest) || ! preg_match('/^\p{M}/u', $rest)) {
+                $s = trim($rest);
+            }
+            break;
         }
 
         // Collapse whitespace.
@@ -46,5 +53,16 @@ class BankAccountNameMatcher
         }
 
         return str_contains($account, $first) && str_contains($account, $last);
+    }
+
+    public static function matchesFullName(?string $fullName, ?string $accountName): bool
+    {
+        $full = self::normalize($fullName);
+        $account = self::normalize($accountName);
+        if ($full === '' || $account === '') {
+            return false;
+        }
+
+        return $full === $account || str_contains($account, $full);
     }
 }

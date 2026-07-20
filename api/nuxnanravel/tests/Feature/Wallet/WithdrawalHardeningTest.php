@@ -40,6 +40,47 @@ class WithdrawalHardeningTest extends TestCase
         return $this->service->withdraw($user, $amount, 'bank_transfer', $this->bankAccount());
     }
 
+    private function createEmptyProfileUser(string $destinationName): User
+    {
+        $user = User::factory()->create(['wallet' => 5000, 'name' => 'พัชรี หนูวงค์']);
+        $user->profile()->create(['first_name' => '', 'last_name' => '']);
+        $this->service->withdraw($user, '100', 'bank_transfer', [
+            'bank_name' => 'kbank',
+            'account_number' => '1234567890',
+            'account_name' => $destinationName,
+        ]);
+
+        return $user;
+    }
+
+    public function test_admin_approval_uses_display_name_when_profile_name_is_empty(): void
+    {
+        $user = $this->createEmptyProfileUser('ด.ญ.พัชรี หนูวงค์');
+        $tx = WalletTransaction::where('user_id', $user->id)->latest('id')->firstOrFail();
+        $admin = User::factory()->create();
+        $admin->assignRole('ADMIN');
+
+        $response = $this->actingAs($admin, 'api')
+            ->postJson("/api/admin/wallet/withdrawals/{$tx->id}/approve");
+
+        $response->assertStatus(200);
+        $this->assertSame('approved', $tx->fresh()->status);
+    }
+
+    public function test_admin_approval_rejects_non_matching_display_name_when_profile_is_empty(): void
+    {
+        $user = $this->createEmptyProfileUser('สมชาย ใจดี');
+        $tx = WalletTransaction::where('user_id', $user->id)->latest('id')->firstOrFail();
+        $admin = User::factory()->create();
+        $admin->assignRole('ADMIN');
+
+        $response = $this->actingAs($admin, 'api')
+            ->postJson("/api/admin/wallet/withdrawals/{$tx->id}/approve");
+
+        $response->assertStatus(422);
+        $this->assertSame('pending', $tx->fresh()->status);
+    }
+
     /** C1: a failed payout must refund the money (wallet + compensating ledger). */
     public function test_failed_withdrawal_refunds_money_with_ledger_entry(): void
     {

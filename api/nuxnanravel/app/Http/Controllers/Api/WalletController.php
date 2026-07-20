@@ -180,7 +180,8 @@ class WalletController extends Controller
         // Fraud guard: the payout account name must match the user's own legal
         // name on file. A user without a completed profile cannot withdraw.
         $profile = $user->profile()->first();
-        if (! $profile || empty($profile->first_name) || empty($profile->last_name)) {
+        $hasProfile = ! empty($profile?->first_name) && ! empty($profile?->last_name);
+        if (! $hasProfile && empty($user->name)) {
             return response()->json([
                 'success' => false,
                 'message' => 'ยังถอนเงินไม่ได้ — กรุณากรอก "ชื่อจริง" และ "นามสกุล" ในหน้าตั้งค่าโปรไฟล์ก่อน (ระบบใช้ตรวจสอบว่าบัญชีรับเงินเป็นของคุณ) ข้อมูลในฟอร์มถอนเงินของคุณครบถ้วนแล้ว',
@@ -191,7 +192,10 @@ class WalletController extends Controller
             ], 422);
         }
 
-        if (! BankAccountNameMatcher::matches($profile->first_name, $profile->last_name, $validated['bank_account']['account_name'])) {
+        $matches = $hasProfile
+            ? BankAccountNameMatcher::matches($profile->first_name, $profile->last_name, $validated['bank_account']['account_name'])
+            : BankAccountNameMatcher::matchesFullName($user->name, $validated['bank_account']['account_name']);
+        if (! $matches) {
             return response()->json([
                 'success' => false,
                 'message' => 'ชื่อบัญชีผู้รับเงินต้องตรงกับชื่อ-นามสกุลของเจ้าของบัญชีผู้ใช้งาน',

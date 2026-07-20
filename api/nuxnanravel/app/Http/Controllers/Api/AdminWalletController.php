@@ -246,7 +246,11 @@ class AdminWalletController extends Controller
         $accountName = $accountName ?? ($transaction->metadata['bank_account']['account_name'] ?? null);
         $firstName = $transaction->user?->profile?->first_name;
         $lastName = $transaction->user?->profile?->last_name;
-        if (empty($firstName) || empty($lastName) || ! BankAccountNameMatcher::matches($firstName, $lastName, $accountName)) {
+        $hasProfile = ! empty($firstName) && ! empty($lastName);
+        $matches = $hasProfile
+            ? BankAccountNameMatcher::matches($firstName, $lastName, $accountName)
+            : BankAccountNameMatcher::matchesFullName($transaction->user?->name, $accountName);
+        if (! $matches) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่สามารถอนุมัติได้ เนื่องจากชื่อบัญชีปลายทางไม่ตรงกับชื่อ-นามสกุลของผู้ใช้',
@@ -435,10 +439,12 @@ class AdminWalletController extends Controller
         $lastName = $profile->last_name ?? null;
 
         $hasProfile = ! empty($firstName) && ! empty($lastName);
-        $matches = $hasProfile && BankAccountNameMatcher::matches($firstName, $lastName, $accountName);
+        $matches = $hasProfile
+            ? BankAccountNameMatcher::matches($firstName, $lastName, $accountName)
+            : BankAccountNameMatcher::matchesFullName($transaction->user?->name, $accountName);
 
         $transaction->setAttribute('name_mismatch', ! $matches);
-        $transaction->setAttribute('expected_account_name', $hasProfile ? trim($firstName.' '.$lastName) : null);
+        $transaction->setAttribute('expected_account_name', $hasProfile ? trim($firstName.' '.$lastName) : $transaction->user?->name);
         $transaction->setAttribute('has_profile', $hasProfile);
     }
 

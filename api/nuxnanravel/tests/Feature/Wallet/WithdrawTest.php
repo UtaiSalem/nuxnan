@@ -23,6 +23,26 @@ class WithdrawTest extends TestCase
         return [$user, $token];
     }
 
+    public function test_withdraw_uses_display_name_when_profile_name_is_empty(): void
+    {
+        $user = User::factory()->create(['wallet' => 5000, 'name' => 'พัชรี หนูวงค์']);
+        $user->profile()->create(['first_name' => '', 'last_name' => '']);
+        $token = JWTAuth::fromUser($user);
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->postJson('/api/wallet/withdraw', [
+                'amount' => 100,
+                'method' => 'bank_transfer',
+                'bank_account' => [
+                    'bank_name' => 'kbank',
+                    'account_number' => '1234567890',
+                    'account_name' => 'ด.ญ.พัชรี หนูวงค์',
+                ],
+            ]);
+
+        $response->assertStatus(200)->assertJson(['success' => true]);
+    }
+
     public function test_withdraw_via_bank_transfer_creates_pending_with_destination_type_bank(): void
     {
         [$user, $token] = $this->actingUser();
