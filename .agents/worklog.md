@@ -1,5 +1,32 @@
 # Work Log — nuxnan project
 
+## 2026-07-20 — แก้ 409 ปลอมตอน reject คำขอถอนเงิน (#590) + migration ซ่อมคีย์ตาราง wallet
+
+> อาการ: แอดมินกด reject คำขอถอนเงิน #590 บน `api.nuxnan.com` ได้ 409 "มีการแก้ไขรายการพร้อมกัน กรุณาลองใหม่" ทั้งที่ไม่มีใครแก้พร้อมกัน
+
+### สถานะ: โค้ดเสร็จ + commit แล้ว (เทสต์ wallet 38/38 ผ่าน, Pint ผ่าน) — **ยังไม่ deploy ขึ้น prod**
+
+**Root cause (ยืนยันด้วยการจำลอง reject #590 ใน transaction ที่ rollback บนเครื่องนี้):**
+- `AdminWalletController::mapWithdrawalException` เวอร์ชันที่ deploy อยู่ catch `\DomainException|\RuntimeException` → ตอบ 409 ทันที**โดยไม่ log** — แต่ `QueryException` ของ Laravel สืบทอดจาก `PDOException` → `RuntimeException` ดังนั้น **DB error จริงทุกตัวถูกกลบเป็น 409 ปลอม**
+- ต้นตอจริงบน prod: ตาราง `wallet_transactions` สูญ PRIMARY KEY / AUTO_INCREMENT จากการ import dump (ตระกูลเดียวกับเคส `telescope_entries` และ `user_usage_events` ที่ซ่อมไปก่อนหน้า) ทำให้ INSERT รายการ refund ใน `WalletService::refundWithdrawalToWallet` ล้ม → QueryException → 409 ปลอม
+- บนเครื่องนี้ (local) migration ซ่อมรันไปแล้ว จึง reject #590 สำเร็จปกติ — prod ยังพังเพราะยังไม่ได้ทั้ง migration และ controller fix
+
+**สิ่งที่แก้ (Codex ทำงานตามแผน, Claude review ทุกขั้น):**
+- `c78ed6c3` — migration [2026_07_20_000001_repair_wallet_and_orphaned_table_keys.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/database/migrations/2026_07_20_000001_repair_wallet_and_orphaned_table_keys.php) ซ่อม PK/AI/index/FK ของ `wallet_transactions`, `wallet_deposit_requests`, `xp_events`, `videos`, `user_stats_recalculation_logs`, `visitor_counters` + **preflight** ตรวจ NULL/duplicate id, duplicate `idempotency_key`, orphaned FK ทุกตารางก่อน ALTER ใดๆ — คอลัมน์ FK แบบ SET NULL จะ auto-null orphan พร้อม Log::warning, กรณีอื่น abort พร้อมรายงานครบทุกตารางในรอบเดียว (idempotent, MySQL-only)
+- `5b95ca5b` — [AdminWalletController.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/app/Http/Controllers/Api/AdminWalletController.php) `mapWithdrawalException` report + rethrow `PDOException` (ออกเป็น 500 พร้อม log จริง) และ report ก่อนตอบ 409; เพิ่ม [WithdrawalErrorMappingTest.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/tests/Feature/Wallet/WithdrawalErrorMappingTest.php) 3 เทสต์ล็อค contract: QueryException→500, RuntimeException→409, DomainException→422
+
+### ✅ ตรวจแล้ว
+- เทสต์ใหม่ 3/3 + ชุด wallet เดิม (WithdrawTest, WithdrawalHardeningTest, WithdrawalPayoutProofTest, WalletReconciliationTest) 35/35 — รวม 38 ผ่านหมด, Pint ผ่าน
+- commit สะอาด ไม่ปนไฟล์ student-card/course ที่ค้างอยู่ใน working tree
+
+### 🚀 Deploy notes (prod `api.nuxnan.com`) — ต้องทำตามลำดับ
+1. Deploy โค้ด 2 commits ข้างต้น
+2. รัน `php artisan migrate` — ถ้า preflight fail จะได้รายการ ตาราง/คอลัมน์/จำนวน/ตัวอย่าง id ที่มีปัญหา → แก้ข้อมูลตามรายงานแล้วรันซ้ำ (migration รันซ้ำได้ปลอดภัย)
+3. Retry reject withdrawal #590 ใน admin UI — ควรสำเร็จ หรือถ้ายังพังจะได้ 500 พร้อม stack trace จริงใน `laravel.log` แทน 409 ปลอม
+- หมายเหตุ: บนเครื่องนี้ migration ถูกบันทึกว่ารันแล้ว (`repair_migration_ran = true`) ไม่ต้องรันซ้ำ
+
+---
+
 ## 2026-07-18 — ย้ายปุ่มสนับสนุนวิชา (Course Donation) ไปยัง Course Profile (CourseHero)
 - **สถานะ:** เสร็จสิ้น (แก้ไขโค้ดและรัน build ผ่าน exit 0)
 - **สิ่งที่ทำ:**
