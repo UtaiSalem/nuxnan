@@ -1,23 +1,50 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useApi } from '@/composables/useApi'
 import { useSweetAlert } from '@/composables/useSweetAlert'
 import ImageLightbox from '~/components/play/feed/ImageLightbox.vue'
+import LessonQuizCompletionCard from './LessonQuizCompletionCard.vue'
+
+interface NextLesson {
+  id: number
+  title: string
+}
 
 interface Props {
   questions: any[]
   lessonId: number
   isCreator?: boolean
+  /** บทเรียนนี้ถูกทำเครื่องหมาย "อ่านแล้ว" หรือยัง */
+  lessonCompleted?: boolean
+  hasAssignments?: boolean
+  assignmentCount?: number
+  /**
+   * tri-state: object = มีบทถัดไป, null = รู้แน่ชัดว่าเป็นบทสุดท้าย,
+   * undefined = ยังไม่รู้ (รายการบทเรียนยังไม่ถูกโหลด)
+   * จงใจไม่ตั้ง default ใน withDefaults เพราะ Vue จะแปลง undefined เป็น default ทิ้งสถานะ "ยังไม่รู้"
+   */
+  nextLesson?: NextLesson | null
+  togglingProgress?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  isCreator: false,
+  lessonCompleted: false,
+  hasAssignments: false,
+  assignmentCount: 0,
+  togglingProgress: false,
+})
 
 const emit = defineEmits<{
   'update:questions': [questions: any[]]
   'create': []
   'edit': [question: any]
   'delete': [question: any]
+  'mark-complete': []
+  'go-assignments': []
+  'go-next-lesson': []
+  'go-progress': []
 }>()
 
 const api = useApi()
@@ -36,57 +63,211 @@ const answerResults = ref<Record<number, { is_correct: boolean, points: number, 
 // Track submitting state
 const submitting = ref<Record<number, boolean>>({})
 
+/**
+ * สรุปผลจาก backend (quiz_summary) — อาจไม่มีถ้า API ยังไม่ deploy
+ * จึง fallback ไปใช้ค่าที่คำนวณฝั่ง client เสมอ
+ */
+const serverSummary = ref<any | null>(null)
+
+// กันไม่ให้โมดัลฉลองเด้งซ้ำภายใน session เดียวกัน
+const celebrationShown = ref(false)
+
+/** timer ของการสลับตัวเลือกหลังตอบผิด (question id -> handle) */
+const retryTimers: Record<number, ReturnType<typeof setTimeout>> = {}
+
+const clearRetryTimer = (questionId: number) => {
+    const handle = retryTimers[questionId]
+    if (handle !== undefined) {
+        clearTimeout(handle)
+        delete retryTimers[questionId]
+    }
+}
+
+const clearAllRetryTimers = () => {
+    Object.keys(retryTimers).forEach(key => clearRetryTimer(Number(key)))
+}
+
+/** ล้าง key ของคำถามที่ถูกลบไปแล้ว ไม่งั้นตัวนับจะทะลุจำนวนข้อจริง (เช่น "ข้อ 3/2") */
+const pruneStaleKeys = (validIds: Set<number>) => {
+    const maps: Record<number, any>[] = [
+        answerResults.value,
+        selectedAnswers.value,
+        submitting.value,
+    ]
+    maps.forEach(map => {
+        Object.keys(map).forEach(key => {
+            if (!validIds.has(Number(key))) delete map[Number(key)]
+        })
+    })
+    Object.keys(retryTimers).forEach(key => {
+        if (!validIds.has(Number(key))) clearRetryTimer(Number(key))
+    })
+}
+
 // Initialize and sync questions
 watch(() => props.questions, (newVal) => {
-    if (newVal) {
-        localQuestions.value = JSON.parse(JSON.stringify(newVal))
-        
-        // Restore persisted answers
-        newVal.forEach(q => {
-            if (q.user_answer) {
-                // Restore result feedback (ถูก/ผิด)
-                answerResults.value[q.id] = {
-                    is_correct: !!q.user_answer.is_correct,
-                    points: q.user_answer.points || 0,
-                    message: q.user_answer.is_correct ? 'ถูกต้อง!' : 'ยังไม่ถูกต้อง'
-                }
-                // Restore selected answer เฉพาะข้อที่ถูก (ข้อผิดให้ลองใหม่ได้)
-                if (q.user_answer.is_correct) {
-                    selectedAnswers.value[q.id] = q.user_answer.answer_id
-                }
-            }
-        })
+    const list = newVal || []
+    localQuestions.value = JSON.parse(JSON.stringify(list))
+
+    const validIds = new Set<number>(list.map((q: any) => Number(q.id)))
+    pruneStaleKeys(validIds)
+
+    // ชุดคำถามเปลี่ยน (ผู้สอนเพิ่ม/ลบข้อ) → สรุปผลชุดเดิมจาก server ใช้ไม่ได้แล้ว
+    const summaryTotal = serverSummary.value?.total_questions
+    if (typeof summaryTotal === 'number' && summaryTotal !== list.length) {
+        serverSummary.value = null
     }
-}, { immediate: true, deep: true })
+    if (list.length === 0) celebrationShown.value = false
 
-const answeredCount = computed(() => {
-    const ids = new Set(Object.keys(answerResults.value).map(Number))
-    props.questions?.forEach(q => { if (q.user_answer) ids.add(q.id) })
-    return ids.size
-})
-
-const earnedPoints = computed(() => {
-    let total = 0
-    // From current session
-    Object.values(answerResults.value).forEach((r: any) => { if (r.is_correct) total += (r.points || 0) })
-    // From persisted (not yet in session answerResults)
-    props.questions?.forEach(q => {
-        if (q.user_answer?.is_correct && !answerResults.value[q.id]) {
-            total += (q.user_answer.points || 0)
+    // Restore persisted answers
+    list.forEach((q: any) => {
+        if (q.user_answer) {
+            // Restore result feedback (ถูก/ผิด)
+            answerResults.value[q.id] = {
+                is_correct: !!q.user_answer.is_correct,
+                points: q.user_answer.points || 0,
+                message: q.user_answer.is_correct ? 'ถูกต้อง!' : 'ยังไม่ถูกต้อง'
+            }
+            // Restore selected answer เฉพาะข้อที่ถูก (ข้อผิดให้ลองใหม่ได้)
+            if (q.user_answer.is_correct) {
+                selectedAnswers.value[q.id] = q.user_answer.answer_id
+            }
         }
     })
-    return total
-})
+}, { immediate: true, deep: true })
+
+const isQuestionCorrect = (q: any) =>
+    !!(answerResults.value[q.id]?.is_correct || q.user_answer?.is_correct)
+
+const isQuestionAnswered = (q: any) =>
+    !!answerResults.value[q.id] || !!q.user_answer
+
+/** นับจาก props.questions เท่านั้น เพื่อไม่ให้ค่าจากคำถามที่ถูกลบไปแล้วทำให้ตัวเลขทะลุ */
+const answeredCount = computed(() =>
+    props.questions?.filter(q => isQuestionAnswered(q)).length || 0
+)
+
+/** คำถามที่ไม่ได้ตั้งคะแนนไว้ ให้นับเป็นข้อละ 1 คะแนน เพื่อให้ "คะแนน" กับ "เปอร์เซ็นต์" ไม่ขัดกัน */
+const questionPoints = (q: any) => Number(q?.points) || 1
+
+const earnedPoints = computed(() =>
+    props.questions?.reduce((sum, q) => {
+        if (!isQuestionCorrect(q)) return sum
+        const awarded = Number(answerResults.value[q.id]?.points ?? q.user_answer?.points) || 0
+        return sum + (awarded > 0 ? awarded : questionPoints(q))
+    }, 0) || 0
+)
 
 const totalPoints = computed(() => {
-    return props.questions?.reduce((sum, q) => sum + (q.points || 1), 0) || 0
+    return props.questions?.reduce((sum, q) => sum + questionPoints(q), 0) || 0
 })
+
+// --- Completion state ---
+const totalQuestions = computed(() => props.questions?.length || 0)
+const remainingCount = computed(() => Math.max(0, totalQuestions.value - answeredCount.value))
 
 // Progress Value
 const progressPercentage = computed(() => {
-    if (!props.questions || props.questions.length === 0) return 0
-    return Math.round((answeredCount.value / props.questions.length) * 100)
+    if (totalQuestions.value === 0) return 0
+    return Math.min(100, Math.round((answeredCount.value / totalQuestions.value) * 100))
 })
+
+const correctCount = computed(() =>
+    props.questions?.filter(q => isQuestionCorrect(q)).length || 0
+)
+
+/** ข้อที่ตอบแล้วแต่ยังไม่ถูก */
+const incorrectQuestions = computed(() =>
+    props.questions?.filter(q => isQuestionAnswered(q) && !isQuestionCorrect(q)) || []
+)
+
+const allAnswered = computed(() => totalQuestions.value > 0 && answeredCount.value >= totalQuestions.value)
+const allCorrect = computed(() => totalQuestions.value > 0 && correctCount.value >= totalQuestions.value)
+
+/**
+ * ตัวเลขที่โชว์บนการ์ดสรุป
+ *
+ * หลัก: ยึด "แหล่งเดียว" ต่อคู่ตัวเลขเสมอ ห้ามผสม server กับ client ในคู่เดียวกัน
+ * ไม่งั้นจะเรนเดอร์ค่าที่ขัดกันเอง เช่น "ตอบถูก 4/3 ข้อ"
+ * ถ้า server ส่งมาไม่ครบคู่ (หรือส่งค่าที่ใช้ไม่ได้) ให้ถอยไปใช้ client ทั้งคู่
+ */
+const useServerCounts = computed(() => {
+    const s = serverSummary.value
+    return typeof s?.correct_count === 'number'
+        && typeof s?.total_questions === 'number'
+        && s.total_questions === totalQuestions.value
+})
+
+const displayCorrectCount = computed(() =>
+    useServerCounts.value ? Number(serverSummary.value.correct_count) : correctCount.value
+)
+const displayTotalQuestions = computed(() =>
+    useServerCounts.value ? Number(serverSummary.value.total_questions) : totalQuestions.value
+)
+
+/**
+ * backend คิดคะแนนรวมจาก points ของคำถาม ถ้าผู้สอนตั้ง points = 0 ทุกข้อจะได้ total_points = 0
+ * → ใช้ค่าจาก server ไม่ได้ (จะโชว์ "0/0" และ 0% ทั้งที่ตอบถูกหมด) ให้ถอยไปใช้ค่าฝั่ง client
+ */
+const useServerPoints = computed(() => {
+    const s = serverSummary.value
+    return typeof s?.earned_points === 'number'
+        && typeof s?.total_points === 'number'
+        && s.total_points > 0
+})
+
+const displayEarnedPoints = computed(() =>
+    useServerPoints.value ? Number(serverSummary.value.earned_points) : earnedPoints.value
+)
+const displayTotalPoints = computed(() =>
+    useServerPoints.value ? Number(serverSummary.value.total_points) : totalPoints.value
+)
+
+const displayPercentage = computed(() => {
+    const raw = displayTotalPoints.value > 0
+        ? Math.round((displayEarnedPoints.value / displayTotalPoints.value) * 100)
+        : 0
+    const pct = Math.min(100, Math.max(0, raw))
+    // ตอบถูกครบทุกข้อแล้วต้องไม่โชว์ 0% (เกิดได้ถ้าทุกข้อไม่ได้ตั้งคะแนน)
+    if (allCorrect.value && pct <= 0) return 100
+    return pct
+})
+
+// --- Celebration modal ---
+const showCelebration = ref(false)
+
+const closeCelebration = () => {
+    showCelebration.value = false
+}
+
+const triggerCelebration = () => {
+    if (props.isCreator || celebrationShown.value) return
+    celebrationShown.value = true
+    showCelebration.value = true
+}
+
+// --- Next-step actions ---
+const handleMarkComplete = () => emit('mark-complete')
+const handleGoAssignments = () => {
+    closeCelebration()
+    emit('go-assignments')
+}
+const handleGoNextLesson = () => {
+    closeCelebration()
+    emit('go-next-lesson')
+}
+const handleGoProgress = () => {
+    closeCelebration()
+    emit('go-progress')
+}
+
+const scrollToFirstIncorrect = async () => {
+    const target = incorrectQuestions.value[0]
+    if (!target) return
+    await nextTick()
+    const el = document.getElementById(`quiz-question-${target.id}`)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
 
 const selectOption = (questionId: number, optionId: number) => {
     // If already correct, forbid changing? Let's stick to "if correct, done".
@@ -108,28 +289,46 @@ const submitAnswer = async (question: any) => {
     if (!answerId) return
 
     submitting.value[question.id] = true
+    // เก็บสถานะก่อนส่ง ไว้ใช้ fallback หา "เพิ่งทำครบ" ถ้า backend ไม่ส่ง quiz_summary
+    const wasAllCorrect = allCorrect.value
     try {
         const response = await api.post(`/api/lessons/${props.lessonId}/questions/${question.id}/answer`, {
           answer_id: answerId
         })
-        
-        const data = response
+
+        const data = response as any
         answerResults.value[question.id] = {
             is_correct: data.is_correct,
             points: data.points,
             message: data.message
         }
-        
+
+        const summary = data?.quiz_summary
+        if (summary && typeof summary === 'object') {
+            serverSummary.value = summary
+        }
+
         if (data.is_correct) {
             swal.toast('ถูกต้อง! เก่งมาก', 'success')
+
+            const justCompleted = summary && typeof summary.just_completed === 'boolean'
+                ? summary.just_completed
+                : (!wasAllCorrect && allCorrect.value)
+
+            if (justCompleted) triggerCelebration()
         } else {
             swal.toast('ยังไม่ถูกต้อง ลองใหม่นะ', 'error')
             
             // Shuffle options for this question to provide variety on retry
+            clearRetryTimer(question.id)
             const qIndex = localQuestions.value.findIndex(q => q.id === question.id)
             if (qIndex !== -1 && localQuestions.value[qIndex].options) {
-                setTimeout(() => {
-                    localQuestions.value[qIndex].options = shuffleArray([...localQuestions.value[qIndex].options])
+                retryTimers[question.id] = setTimeout(() => {
+                    delete retryTimers[question.id]
+                    // ชุดคำถามอาจถูก re-sync ระหว่างรอ → หา index ใหม่ทุกครั้ง
+                    const idx = localQuestions.value.findIndex(q => q.id === question.id)
+                    if (idx === -1 || !localQuestions.value[idx].options) return
+                    localQuestions.value[idx].options = shuffleArray([...localQuestions.value[idx].options])
                     selectedAnswers.value[question.id] = 0 // Clear selection
                 }, 1000)
             }
@@ -180,6 +379,44 @@ const closeLightbox = () => {
     lightboxIndex.value = 0
 }
 
+// --- Celebration modal a11y (escape / focus / body scroll lock) ---
+const celebrationCloseBtn = ref<HTMLButtonElement | null>(null)
+let previousBodyOverflow = ''
+
+const onCelebrationKeydown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+        event.stopPropagation()
+        closeCelebration()
+    }
+}
+
+const unlockBodyScroll = () => {
+    if (typeof document === 'undefined') return
+    document.body.style.overflow = previousBodyOverflow
+}
+
+watch(showCelebration, async (open) => {
+    if (typeof document === 'undefined') return
+
+    if (open) {
+        previousBodyOverflow = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+        document.addEventListener('keydown', onCelebrationKeydown)
+        await nextTick()
+        celebrationCloseBtn.value?.focus()
+    } else {
+        document.removeEventListener('keydown', onCelebrationKeydown)
+        unlockBodyScroll()
+    }
+})
+
+onUnmounted(() => {
+    clearAllRetryTimers()
+    if (typeof document === 'undefined') return
+    document.removeEventListener('keydown', onCelebrationKeydown)
+    if (showCelebration.value) unlockBodyScroll()
+})
+
 
 
 </script>
@@ -187,7 +424,7 @@ const closeLightbox = () => {
 <template>
   <div class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
     <!-- Header -->
-    <div class="flex flex-col gap-4 mb-6">
+    <div class="mb-4">
       <div class="flex items-center justify-between">
         <h3 class="flex items-center gap-2 text-xl font-bold text-gray-900 dark:text-white">
             <Icon icon="fluent:quiz-new-24-filled" class="w-6 h-6 text-orange-600" />
@@ -207,21 +444,42 @@ const closeLightbox = () => {
             เพิ่มคำถาม
         </button>
       </div>
+    </div>
 
-       <!-- Progress Bar (Student Only) -->
-       <div v-if="!isCreator && hasQuestions" class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
-            <div 
-                class="bg-orange-600 h-2.5 rounded-full transition-all duration-500 ease-out" 
-                :style="{ width: `${progressPercentage}%` }"
-            ></div>
-      </div>
-      <div v-if="!isCreator && hasQuestions" class="text-right text-sm text-gray-500 dark:text-gray-400">
-        ความคืบหน้า: {{ progressPercentage }}%
-      </div>
+    <!-- Sticky Progress Header (Student Only) -->
+    <div
+        v-if="!isCreator && hasQuestions"
+        class="sticky top-36 z-20 mb-6 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700
+               bg-white/90 dark:bg-gray-800/90 backdrop-blur shadow-sm"
+      >
+        <div class="flex items-center justify-between gap-3 mb-2">
+          <p class="text-sm font-semibold text-gray-900 dark:text-white">
+            ข้อ {{ answeredCount }}<span class="text-gray-400 dark:text-gray-500">/{{ totalQuestions }}</span>
+          </p>
+          <p class="text-xs sm:text-sm font-medium">
+            <span v-if="remainingCount > 0" class="text-orange-600 dark:text-orange-400">
+              เหลืออีก {{ remainingCount }} ข้อ
+            </span>
+            <span v-else-if="allCorrect" class="text-green-600 dark:text-green-400 flex items-center gap-1">
+              <Icon icon="fluent:checkmark-circle-24-filled" class="w-4 h-4" />
+              ทำครบแล้ว
+            </span>
+            <span v-else class="text-amber-600 dark:text-amber-400">
+              ยังเหลือ {{ incorrectQuestions.length }} ข้อที่ยังไม่ถูก
+            </span>
+          </p>
+        </div>
+        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
+          <div
+            class="h-2.5 rounded-full transition-all duration-500 ease-out"
+            :class="allCorrect ? 'bg-green-500' : 'bg-orange-600'"
+            :style="{ width: `${progressPercentage}%` }"
+          ></div>
+        </div>
     </div>
 
     <!-- Score Summary (Student Only, showing when there's progress) -->
-    <div v-if="!isCreator && hasQuestions && answeredCount > 0"
+    <div v-if="!isCreator && hasQuestions && answeredCount > 0 && !allCorrect"
          class="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 
                 rounded-xl p-4 border border-orange-200 dark:border-orange-800 mb-6">
       <div class="flex items-center justify-between">
@@ -246,9 +504,10 @@ const closeLightbox = () => {
     <!-- Student View: Active Quiz List (Using localQuestions) -->
     <div v-if="!isCreator && hasQuestions" class="space-y-8">
         <div 
-          v-for="(question, index) in localQuestions" 
+          v-for="(question, index) in localQuestions"
           :key="question.id"
-          class="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm transition-all hover:shadow-md"
+          :id="`quiz-question-${question.id}`"
+          class="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm transition-all hover:shadow-md scroll-mt-40"
         >
             <div class="flex items-start gap-5">
                 <!-- Question Number -->
@@ -346,6 +605,54 @@ const closeLightbox = () => {
                 </div>
             </div>
         </div>
+
+        <!-- Completion Card (ตอบถูกครบทุกข้อ) -->
+        <LessonQuizCompletionCard
+            v-if="allCorrect"
+            :earned-points="displayEarnedPoints"
+            :total-points="displayTotalPoints"
+            :correct-count="displayCorrectCount"
+            :total-questions="displayTotalQuestions"
+            :percentage="displayPercentage"
+            :lesson-completed="lessonCompleted"
+            :has-assignments="hasAssignments"
+            :assignment-count="assignmentCount"
+            :next-lesson="nextLesson"
+            :toggling-progress="togglingProgress"
+            @mark-complete="handleMarkComplete"
+            @go-assignments="handleGoAssignments"
+            @go-next-lesson="handleGoNextLesson"
+            @go-progress="handleGoProgress"
+        />
+
+        <!-- ตอบครบทุกข้อแล้ว แต่ยังมีข้อที่ผิดค้างอยู่ -->
+        <div
+            v-else-if="allAnswered && incorrectQuestions.length > 0"
+            class="mt-8 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-6"
+        >
+            <div class="flex items-start gap-4">
+                <div class="flex-shrink-0 p-3 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                    <Icon icon="fluent:warning-24-filled" class="w-7 h-7" />
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h4 class="text-lg font-bold text-amber-800 dark:text-amber-300">
+                        ยังเหลือ {{ incorrectQuestions.length }} ข้อที่ยังตอบไม่ถูก
+                    </h4>
+                    <p class="mt-1 text-sm text-amber-700 dark:text-amber-400/90">
+                        คุณตอบครบทุกข้อแล้ว แต่ยังมีบางข้อที่ยังไม่ถูกต้อง ลองตอบใหม่อีกครั้งเพื่อทำแบบทดสอบให้ครบสมบูรณ์
+                    </p>
+                    <button
+                        type="button"
+                        class="mt-4 w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full
+                               bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-md transition-all active:scale-95"
+                        @click="scrollToFirstIncorrect"
+                    >
+                        <Icon icon="fluent:arrow-down-24-filled" class="w-5 h-5" />
+                        ไปยังข้อที่ยังไม่ถูก
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Admin Question List (Legacy / Creator Mode) - Keeps using props.questions -->
@@ -431,12 +738,65 @@ const closeLightbox = () => {
         </div>
     </div>
     
-    <ImageLightbox 
+    <ImageLightbox
         :show="showLightbox"
         :images="lightboxImages"
         :initial-index="lightboxIndex"
         @close="closeLightbox"
     />
+
+    <!-- Celebration Modal (เด้งครั้งแรกที่ทำครบเท่านั้น) -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition ease-out duration-200"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition ease-in duration-150"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div
+          v-if="showCelebration"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="quiz-celebration-title"
+          class="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+          @click.self="closeCelebration"
+        >
+          <div class="w-full sm:max-w-lg max-h-[92vh] overflow-y-auto p-3 sm:p-0">
+            <LessonQuizCompletionCard
+              class="shadow-2xl"
+              variant="modal"
+              title-id="quiz-celebration-title"
+              :earned-points="displayEarnedPoints"
+              :total-points="displayTotalPoints"
+              :correct-count="displayCorrectCount"
+              :total-questions="displayTotalQuestions"
+              :percentage="displayPercentage"
+              :lesson-completed="lessonCompleted"
+              :has-assignments="hasAssignments"
+              :assignment-count="assignmentCount"
+              :next-lesson="nextLesson"
+              :toggling-progress="togglingProgress"
+              @mark-complete="handleMarkComplete"
+              @go-assignments="handleGoAssignments"
+              @go-next-lesson="handleGoNextLesson"
+              @go-progress="handleGoProgress"
+            />
+            <button
+              ref="celebrationCloseBtn"
+              type="button"
+              class="mt-3 w-full py-3 rounded-xl font-medium text-white bg-white/15 hover:bg-white/25
+                     backdrop-blur border border-white/20 transition-colors
+                     focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              @click="closeCelebration"
+            >
+              ปิดหน้าต่างนี้
+            </button>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 

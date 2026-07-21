@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import LessonAssignmentSection from './LessonAssignmentSection.vue'
 import AssignmentFormModal from './AssignmentFormModal.vue'
@@ -30,6 +31,8 @@ const emit = defineEmits<{
 // Avatar composable
 const { getAvatarUrl } = useAvatar()
 const authStore = useAuthStore()
+const courseStore = useCourseStore()
+const router = useRouter()
 const api = useApi()
 const swal = useSweetAlert()
 
@@ -195,6 +198,102 @@ const handleQuestionSubmit = (question: any) => {
 
 const updateQuestions = (newQuestions: any[]) => {
     props.lesson.questions = newQuestions
+}
+
+// --- Quiz next-step navigation ---
+/**
+ * courseStore.lessons เป็น singleton ที่อาจค้างข้อมูลของรายวิชาอื่น (เช่นเปิดบทเรียนจาก feed)
+ * จึงต้อง filter ให้เหลือเฉพาะบทของรายวิชานี้ก่อนเสมอ
+ */
+const fetchedLessons = ref<any[]>([])
+
+const courseLessons = computed(() => {
+  const courseId = Number(props.lesson.course_id)
+  if (!courseId) return []
+  const source = [...(courseStore.lessons || []), ...fetchedLessons.value]
+  const seen = new Set<number>()
+  return source
+    .filter((l: any) => {
+      if (Number(l.course_id) !== courseId) return false
+      if (seen.has(Number(l.id))) return false
+      seen.add(Number(l.id))
+      return true
+    })
+    .sort((a: any, b: any) => {
+      // store ไม่ได้ sort ให้ → เรียงเองด้วย order แล้ว fallback เป็น id
+      const orderA = a.order ?? Number.MAX_SAFE_INTEGER
+      const orderB = b.order ?? Number.MAX_SAFE_INTEGER
+      if (orderA !== orderB) return orderA - orderB
+      return (a.id ?? 0) - (b.id ?? 0)
+    })
+})
+
+/**
+ * tri-state — สำคัญมากเพราะ UI ใช้แยกว่าจะพูดว่า "นี่เป็นบทเรียนสุดท้ายแล้ว" ได้ไหม
+ *   object    = มีบทถัดไป
+ *   null      = รู้แน่ชัดว่าเป็นบทสุดท้าย
+ *   undefined = ยังไม่รู้ (รายการบทเรียนยังไม่โหลด หรือโหลดมาแล้วไม่มีบทนี้อยู่ในลิสต์)
+ */
+const nextLesson = computed(() => {
+  const list = courseLessons.value
+  if (list.length === 0) return undefined
+
+  const index = list.findIndex((l: any) => Number(l.id) === Number(props.lesson.id))
+  if (index === -1) return undefined
+  if (index >= list.length - 1) return null
+
+  const next = list[index + 1]
+  if (!next) return null
+  return { id: next.id, title: next.title || 'บทเรียนถัดไป' }
+})
+
+/** โหลดรายการบทเรียนแบบ lazy เมื่อผู้เรียนเปิดแท็บแบบทดสอบ (จุดเดียวที่ต้องใช้ nextLesson) */
+const lessonsRequested = ref(false)
+const ensureCourseLessonsLoaded = async () => {
+  if (lessonsRequested.value) return
+  const courseId = Number(props.lesson.course_id)
+  if (!courseId || courseLessons.value.length > 0) return
+
+  lessonsRequested.value = true
+  try {
+    // จงใจไม่เรียก courseStore.fetchLessons เพราะมันเขียนทับ lessons ของ store (singleton)
+    // ซึ่งอาจกำลังถูกใช้โดยรายวิชาอื่นอยู่ → เก็บผลไว้ใน local ref แทน
+    const response: any = await api.get(`/api/courses/${courseId}/lessons`)
+    const payload = response?.lessons || response?.data || response
+    const list = Array.isArray(payload) ? payload : payload?.data || []
+    fetchedLessons.value = list.map((l: any) => ({ ...l, course_id: l.course_id ?? courseId }))
+  } catch (error) {
+    console.error('Failed to load course lessons for next-step navigation:', error)
+    lessonsRequested.value = false
+  }
+}
+
+const selectTab = (tab: TabType) => {
+  activeTab.value = tab
+  if (tab === 'quiz') ensureCourseLessonsLoaded()
+}
+
+const goToAssignments = () => {
+  activeTab.value = 'assignment'
+  nextTick(() => {
+    document.getElementById(`lesson-${props.lesson.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  })
+}
+
+const goToNextLesson = () => {
+  const target = nextLesson.value
+  if (!target) return
+  const el = document.getElementById(`lesson-${target.id}`)
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    return
+  }
+  // บทเรียนถัดไปไม่ได้อยู่ในหน้านี้ (เช่นเปิดจากหน้าอื่น) → ไปหน้ารายการบทเรียนพร้อม anchor
+  router.push(`/Learn/Courses/${props.lesson.course_id}/lessons#lesson-${target.id}`)
+}
+
+const goToMyProgress = () => {
+  router.push(`/Learn/Courses/${props.lesson.course_id}/my-progress`)
 }
 
 const handleAssignmentSubmit = (newAssignment: any) => {
@@ -623,7 +722,7 @@ const submitReply = async (parentComment: any) => {
       <button
         v-for="tab in tabs"
         :key="tab.id"
-        @click="activeTab = tab.id"
+        @click="selectTab(tab.id)"
         class="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-sm transition-all duration-200"
         :class="[
           activeTab === tab.id
@@ -1088,9 +1187,18 @@ const submitReply = async (parentComment: any) => {
             :questions="lesson.questions || []"
             :lesson-id="lesson.id"
             :is-creator="isCreator"
+            :lesson-completed="isCompleted"
+            :has-assignments="hasAssignments"
+            :assignment-count="assignmentCount"
+            :next-lesson="nextLesson"
+            :toggling-progress="isTogglingProgress"
             @create="openCreateQuestion"
             @edit="openEditQuestion"
             @update:questions="updateQuestions"
+            @mark-complete="toggleProgress"
+            @go-assignments="goToAssignments"
+            @go-next-lesson="goToNextLesson"
+            @go-progress="goToMyProgress"
         />
       </div>
     </div>

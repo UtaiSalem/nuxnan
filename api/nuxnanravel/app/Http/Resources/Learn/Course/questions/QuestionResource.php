@@ -56,7 +56,13 @@ class QuestionResource extends JsonResource
             'text' => $this->text,
             'type' => $this->type,
             'options' => QuestionOptionResource::collection($this->options),
-            'correct_option_id' => $this->correct_option_id,
+            // Answer key: mirrors the gate QuestionOptionResource applies to
+            // `is_correct` (owner of the question only). Exposing it
+            // unconditionally defeated that gate entirely.
+            'correct_option_id' => $this->when(
+                auth()->check() && $this->user_id === auth()->id(),
+                fn () => $this->correct_option_id
+            ),
             'explanation' => $this->explanation,
             'difficulty_level' => $this->difficulty_level,
             'time_limit' => $this->time_limit,
