@@ -22,12 +22,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // First, remove any existing duplicates (keep the earliest record)
-        if (DB::getDriverName() === 'mysql') {
+        // First, remove any existing duplicates (keep the latest record)
+        if (in_array(DB::getDriverName(), ['mysql', 'mariadb'], true)) {
             DB::statement('
                 DELETE a1 FROM lesson_answer_questions a1
                 INNER JOIN lesson_answer_questions a2
-                WHERE a1.id > a2.id
+                WHERE a1.id < a2.id
                 AND a1.user_id = a2.user_id
                 AND a1.lesson_id = a2.lesson_id
                 AND a1.question_id = a2.question_id
@@ -36,7 +36,7 @@ return new class extends Migration
             DB::statement('
                 DELETE FROM lesson_answer_questions
                 WHERE id NOT IN (
-                    SELECT MIN(id)
+                    SELECT MAX(id)
                     FROM lesson_answer_questions
                     GROUP BY user_id, lesson_id, question_id
                 )

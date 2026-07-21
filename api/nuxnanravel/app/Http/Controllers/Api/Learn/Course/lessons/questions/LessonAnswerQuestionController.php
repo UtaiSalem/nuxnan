@@ -150,17 +150,13 @@ class LessonAnswerQuestionController extends Controller
     }
 
     /**
-     * Detect a duplicate-key violation across drivers (MySQL 1062, SQLite 19).
+     * Detect a duplicate-key violation across drivers (MySQL 1062, SQLite 19/2067).
      */
     private function isUniqueViolation(QueryException $e): bool
     {
-        if ((string) $e->getCode() === '23000') {
-            return true;
-        }
-
         $driverCode = (int) ($e->errorInfo[1] ?? 0);
 
-        return in_array($driverCode, [1062, 19], true);
+        return in_array($driverCode, [1062, 19, 2067], true);
     }
 
     /**

@@ -166,12 +166,18 @@ class CourseScoreService
 
         if (! empty($lessonQuestionIds)) {
             $lessonQuestionResults = DB::table('lesson_answer_questions')
-                ->where('user_id', $userId)
-                ->whereIn('question_id', $lessonQuestionIds)
-                ->where('is_correct', true)
-                ->get(['question_id', 'points']);
+                ->join('questions', 'lesson_answer_questions.question_id', '=', 'questions.id')
+                ->where('lesson_answer_questions.user_id', $userId)
+                ->whereIn('lesson_answer_questions.question_id', $lessonQuestionIds)
+                ->where('lesson_answer_questions.is_correct', true)
+                ->get([
+                    'lesson_answer_questions.question_id',
+                    DB::raw('COALESCE(questions.points, 1) as current_points'),
+                ])
+                // A moved question can have answers under multiple lessons; count it once using current points.
+                ->unique('question_id');
 
-            $breakdown->lessonQuestionEarned = (float) $lessonQuestionResults->sum('points');
+            $breakdown->lessonQuestionEarned = (float) $lessonQuestionResults->sum('current_points');
         }
 
         // 4. External Scores
@@ -223,11 +229,14 @@ class CourseScoreService
             ->groupBy('user_id');
 
         $questionScoresByUser = DB::table('lesson_answer_questions')
-            ->whereIn('user_id', $userIds)
-            ->whereIn('question_id', $struct['lessonQuestionIds'])
-            ->where('is_correct', true)
-            ->select('user_id', 'question_id', 'points')
+            ->join('questions', 'lesson_answer_questions.question_id', '=', 'questions.id')
+            ->whereIn('lesson_answer_questions.user_id', $userIds)
+            ->whereIn('lesson_answer_questions.question_id', $struct['lessonQuestionIds'])
+            ->where('lesson_answer_questions.is_correct', true)
+            ->select('lesson_answer_questions.user_id', 'lesson_answer_questions.question_id', DB::raw('COALESCE(questions.points, 1) as current_points'))
             ->get()
+            // A moved question can have answers under multiple lessons; dedupe before grouping users.
+            ->unique(fn ($answer) => $answer->user_id.':'.$answer->question_id)
             ->groupBy('user_id');
 
         $lessonProgressCountsByUser = DB::table('lesson_progress')
@@ -288,7 +297,8 @@ class CourseScoreService
             // Questions
             $breakdown->lessonQuestionMax = $struct['lessonQuestionMax'];
             $userQuestions = $questionScoresByUser[$userId] ?? collect([]);
-            $breakdown->lessonQuestionEarned = (float) $userQuestions->sum('points');
+            // Sum current question points so edits do not leave earned points on stale snapshots.
+            $breakdown->lessonQuestionEarned = (float) $userQuestions->sum('current_points');
 
             // Lesson Progress
             $userLessonProgress = $lessonProgressCountsByUser[$userId] ?? collect([]);

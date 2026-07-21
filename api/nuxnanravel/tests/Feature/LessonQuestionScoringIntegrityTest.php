@@ -10,6 +10,7 @@ use App\Models\LessonAnswerQuestion;
 use App\Models\Question;
 use App\Models\QuestionOption;
 use App\Models\User;
+use App\Services\CourseScoreService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Resources\MissingValue;
 use Tests\TestCase;
@@ -220,5 +221,54 @@ class LessonQuestionScoringIntegrityTest extends TestCase
         $this->actingAs($this->teacher, 'api');
         $authorPayload = $asAuthor->toArray(request());
         $this->assertSame($this->correctOption->id, $authorPayload['correct_option_id']);
+    }
+
+    public function test_question_moved_between_lessons_is_counted_once(): void
+    {
+        $this->answer($this->lesson->id, $this->question->id, $this->correctOption->id)
+            ->assertStatus(200);
+
+        $this->question->update(['questionable_id' => $this->otherLesson->id]);
+
+        $this->answer($this->otherLesson->id, $this->question->id, $this->correctOption->id)
+            ->assertStatus(200);
+
+        $this->assertDatabaseCount('lesson_answer_questions', 2);
+
+        $studentMember = CourseMember::where('course_id', $this->course->id)
+            ->where('user_id', $this->student->id)
+            ->first();
+        $service = app(CourseScoreService::class);
+
+        $this->assertSame(10.0, $service->computeBreakdown($studentMember)->lessonQuestionEarned);
+        $this->assertSame(
+            10.0,
+            $service->computeBulkBreakdown($this->course, collect([$studentMember]))[$studentMember->id]->lessonQuestionEarned
+        );
+    }
+
+    public function test_question_score_uses_current_points_instead_of_stale_answer_snapshot(): void
+    {
+        $this->foreignQuestion->update(['points' => 0]);
+
+        $this->answer($this->lesson->id, $this->question->id, $this->correctOption->id)
+            ->assertStatus(200);
+
+        $this->question->update(['points' => 4]);
+
+        $this->assertSame(10, (int) LessonAnswerQuestion::first()->points);
+
+        $studentMember = CourseMember::where('course_id', $this->course->id)
+            ->where('user_id', $this->student->id)
+            ->first();
+        $service = app(CourseScoreService::class);
+        $breakdown = $service->computeBreakdown($studentMember);
+
+        $this->assertSame(4.0, $breakdown->lessonQuestionEarned);
+        $this->assertSame(4.0, $breakdown->lessonQuestionMax);
+        $this->assertSame(
+            4.0,
+            $service->computeBulkBreakdown($this->course, collect([$studentMember]))[$studentMember->id]->lessonQuestionEarned
+        );
     }
 }
