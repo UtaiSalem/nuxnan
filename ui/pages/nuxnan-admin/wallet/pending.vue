@@ -843,7 +843,10 @@ onMounted(() => {
                   <span class="font-semibold">{{ getBankAccount(selectedRequestDetails).account_name || '—' }}</span>
                 </div>
               </div>
-              <p class="text-xs pt-1 border-t border-red-200 dark:border-red-900/60 mt-2">
+              <p v-if="selectedRequestDetails?.status === 'approved' || selectedRequestDetails?.status === 'processing'" class="text-xs pt-1 border-t border-red-200 dark:border-red-900/60 mt-2">
+                <strong>ชั่วคราว: อนุญาตให้บันทึกการโอน/แนบสลิปได้</strong> — กรุณาตรวจสอบตัวตนผู้รับเงินด้วยตนเองก่อนโอนทุกครั้ง
+              </p>
+              <p v-else class="text-xs pt-1 border-t border-red-200 dark:border-red-900/60 mt-2">
                 <strong>ปิดกั้นการอนุมัติเพื่อป้องกันการทุจริต</strong> — กรุณาปฏิเสธคำขอนี้และแจ้งให้ผู้ใช้ใช้บัญชีที่เป็นชื่อของตนเอง
               </p>
             </div>
@@ -1008,9 +1011,10 @@ onMounted(() => {
 
             <!-- If state is approved / processing (Needs payout settlement) -->
             <template v-else-if="selectedRequestDetails?.status === 'approved' || selectedRequestDetails?.status === 'processing'">
+              <!-- TEMP: name-mismatch ไม่ปิดกั้นขั้นตอนแนบสลิป (รอเคลียร์ข้อมูลรอบนี้ให้หมดก่อน แล้วจะกลับมาใส่ `hasNameMismatch ||` คืน) -->
               <button
                 @click="openPaidModal(selectedRequestDetails)"
-                :disabled="hasNameMismatch || (isMakerCheckerRequired && isCurrentAdminReviewer)"
+                :disabled="isMakerCheckerRequired && isCurrentAdminReviewer"
                 class="px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 shadow-sm"
               >
                 <Icon icon="fluent:receipt-play-24-regular" class="w-4 h-4" />

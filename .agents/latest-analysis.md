@@ -4183,6 +4183,12 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 - Frontend adds a confirmation action to `StudentCardItem` and refreshes the classroom list after cancellation.
 - Verification: PHP lint, diff check, and focused Nuxt build/type check.
 
+## 2026-07-21 - Wallet withdrawal duplicate error banner
+
+- Root cause: `useWallet.withdraw()` sets the API error in shared `error`, while `Wallet.vue` also copied the same error into `processMessage`, rendering two banners.
+- Change: withdrawal catch clears `processMessage` and leaves the shared error banner as the single visible error; unrelated deposit errors remain unchanged.
+- Verification: inspect focused diff and run frontend validation if available.
+
 ## 2026-07-20 - Public student-card admin review actions
 
 - Added approve/reject actions to the public classroom admin page for pending public card requests.

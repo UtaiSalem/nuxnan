@@ -20,6 +20,7 @@ useHead({
 })
 
 const authStore = useAuthStore()
+const swal = useSweetAlert()
 const { get } = useApi()
 const {
   wallet,
@@ -343,18 +344,73 @@ const loadMyWithdrawals = async () => {
   }
 }
 
-const handleCancelWithdrawal = async (transactionId: number) => {
-  if (!confirm('ต้องการยกเลิกคำขอถอนเงินนี้หรือไม่? เงินจะถูกคืนเข้ากระเป๋าทันที')) return
+const handleCancelWithdrawal = async (transactionIdOrItem: number | any) => {
+  const item = typeof transactionIdOrItem === 'object'
+    ? transactionIdOrItem
+    : myWithdrawals.value.find(w => w.id === transactionIdOrItem)
+  const transactionId = typeof transactionIdOrItem === 'object' ? transactionIdOrItem.id : transactionIdOrItem
+
+  const amountText = item ? formatMoney(item.amount) : ''
+  const destText = item
+    ? (item.destination_type === 'promptpay' || item.metadata?.destination_type === 'promptpay' ? 'พร้อมเพย์' : 'โอนเข้าธนาคาร')
+    : ''
+  const accountNo = item?.metadata?.bank_account?.account_number || ''
+
+  let detailHtml = ''
+  if (item) {
+    detailHtml = `
+      <div class="mt-3 p-3.5 bg-red-50/80 dark:bg-red-950/40 border border-red-200/80 dark:border-red-900/50 rounded-xl text-left text-sm space-y-1.5 font-sans">
+        <div class="flex justify-between items-center">
+          <span class="text-gray-600 dark:text-gray-300">จำนวนเงินถอน:</span>
+          <span class="text-red-600 dark:text-red-400 font-bold text-base">฿${amountText}</span>
+        </div>
+        ${destText ? `
+        <div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+          <span>ช่องทาง:</span>
+          <span class="font-medium text-gray-700 dark:text-gray-300">${destText} ${accountNo ? `(${accountNo})` : ''}</span>
+        </div>` : ''}
+        <div class="pt-1.5 border-t border-red-200/50 dark:border-red-900/30 text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <span>เงินจะถูกโอนคืนเข้ากระเป๋าเงินของคุณทันทีเมื่อยืนยัน</span>
+        </div>
+      </div>
+    `
+  } else {
+    detailHtml = '<p class="text-sm text-gray-500 dark:text-gray-400">เงินจะถูกโอนคืนเข้ากระเป๋าเงินของคุณทันทีเมื่อยกเลิกคำขอถอนเงิน</p>'
+  }
+
+  const confirmed = await swal.confirm(
+    detailHtml,
+    'ยกเลิกคำขอถอนเงิน?',
+    {
+      confirmText: 'ใช่, ยกเลิกคำขอ',
+      cancelText: 'ไม่, เก็บไว้ก่อน',
+      icon: 'warning',
+      isDanger: true
+    }
+  )
+
+  if (!confirmed) return
+
+  swal.showLoading('กำลังยกเลิกคำขอถอนเงิน...')
 
   try {
     isProcessing.value = true
-    await cancelWithdrawal(transactionId)
+    const res: any = await cancelWithdrawal(transactionId)
+    swal.close()
+
+    const successMsg = res?.message || 'ยกเลิกคำขอถอนเงินสำเร็จ ยอดเงินถูกคืนเข้ากระเป๋าของคุณเรียบร้อยแล้ว'
+    await swal.success(successMsg, 'ยกเลิกคำขอสำเร็จ')
+
     processSuccess.value = true
-    processMessage.value = 'ยกเลิกคำขอถอนเงินสำเร็จ เงินถูกคืนเข้ากระเป๋าแล้ว'
+    processMessage.value = successMsg
     await Promise.all([getBalance(), loadMyWithdrawals(), loadTransactions()])
   } catch (err: any) {
+    swal.close()
+    const errMsg = err.message || err.data?.message || 'เกิดข้อผิดพลาดในการยกเลิกคำขอถอนเงิน'
+    await swal.error(errMsg, 'ไม่สามารถยกเลิกคำขอได้')
     processSuccess.value = false
-    processMessage.value = err.message || 'เกิดข้อผิดพลาด'
+    processMessage.value = errMsg
   } finally {
     isProcessing.value = false
   }
@@ -403,17 +459,34 @@ const getWithdrawalStatusClass = (status: string) => {
 }
 
 const handleCancelRequest = async (requestId: number) => {
-  if (!confirm('ต้องการยกเลิกคำขอเติมเงินนี้หรือไม่?')) return
-  
+  const confirmed = await swal.confirm(
+    '<p class="text-sm text-gray-500 dark:text-gray-400">คุณแน่ใจหรือไม่ว่าต้องการยกเลิกคำขอเติมเงินนี้?</p>',
+    'ยกเลิกคำขอเติมเงิน',
+    {
+      confirmText: 'ใช่, ยกเลิกคำขอ',
+      cancelText: 'ไม่, ย้อนกลับ',
+      icon: 'warning',
+      isDanger: true
+    }
+  )
+  if (!confirmed) return
+
+  swal.showLoading('กำลังยกเลิกคำขอเติมเงิน...')
+
   try {
     isProcessing.value = true
     await cancelDepositRequest(requestId)
+    swal.close()
+    await swal.success('ยกเลิกคำขอเติมเงินเรียบร้อยแล้ว', 'ยกเลิกสำเร็จ')
     processSuccess.value = true
     processMessage.value = 'ยกเลิกคำขอเติมเงินสำเร็จ'
     await loadDepositRequests()
   } catch (err: any) {
+    swal.close()
+    const errMsg = err.message || err.data?.message || 'เกิดข้อผิดพลาดในการยกเลิกคำขอเติมเงิน'
+    await swal.error(errMsg, 'ไม่สามารถยกเลิกคำขอได้')
     processSuccess.value = false
-    processMessage.value = err.message || 'เกิดข้อผิดพลาด'
+    processMessage.value = errMsg
   } finally {
     isProcessing.value = false
   }
@@ -506,7 +579,10 @@ const handleWithdraw = async () => {
 
   } catch (err: any) {
     processSuccess.value = false
-    processMessage.value = err.message || 'เกิดข้อผิดพลาด'
+    // `withdraw()` already exposes the API error through the shared `error`
+    // state, which is rendered above the tabs. Avoid rendering the same
+    // withdrawal error again in the per-action message banner.
+    processMessage.value = ''
   } finally {
     isProcessing.value = false
   }
@@ -1313,7 +1389,7 @@ onMounted(async () => {
                   type="button"
                   class="px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                   :disabled="isProcessing"
-                  @click="handleCancelWithdrawal(w.id)"
+                  @click="handleCancelWithdrawal(w)"
                 >
                   <Icon icon="mdi:close-circle" class="w-4 h-4 inline mr-1" />
                   ยกเลิกคำขอ
