@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import PointsBadge from '~/components/Common/PointsBadge.vue'
 
 import CourseActionButton from './CourseActionButton.vue'
 import { useToast } from '~/composables/useToast'
@@ -290,7 +289,21 @@ const hasMetadata = computed(() => !!(semesterLabel.value || academicYearLabel.v
           <!-- Stats + Action (desktop inline) -->
           <div class="flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-3 flex-wrap">
-              <PointsBadge :points="account?.balance ?? null" label="แต้มรายวิชา" @click="openCourseSupport" />
+              <button
+                type="button"
+                class="flex min-w-0 flex-col items-center justify-center gap-3 rounded-xl border border-violet-100 bg-violet-50 p-3 py-3 text-center transition-all hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 dark:border-violet-900/50 dark:bg-violet-900/40"
+                @click="openCourseSupport"
+              >
+                <Icon icon="fluent:sparkle-24-filled" class="h-5 w-5 shrink-0 text-violet-600 dark:text-violet-300" />
+                <div class="flex flex-col items-center">
+                  <span class="text-base font-black leading-none text-gray-900 dark:text-white sm:text-lg">
+                    {{ (account?.balance ?? 0).toLocaleString() }}
+                  </span>
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 sm:text-xs">
+                    แต้มรายวิชา
+                  </span>
+                </div>
+              </button>
               <slot name="stats" />
             </div>
             <div class="flex flex-wrap items-center gap-3 shrink-0 w-full sm:w-auto">

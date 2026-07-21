@@ -6,10 +6,6 @@
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 
-definePageMeta({
-  layout: 'academy-admin'
-})
-
 const route = useRoute()
 const api = useApi()
 const academyName = computed(() => route.params.name as string)

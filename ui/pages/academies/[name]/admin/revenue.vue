@@ -2,7 +2,6 @@
 import { Icon } from '@iconify/vue'
 
 definePageMeta({
-  layout: 'academy-admin',
   ssr: false
 })
 

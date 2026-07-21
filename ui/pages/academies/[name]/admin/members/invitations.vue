@@ -2,7 +2,6 @@
 import { ref, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 
-definePageMeta({ layout: 'academy-admin' })
 const route = useRoute()
 const api = useApi()
 const academyName = String(route.params.name)

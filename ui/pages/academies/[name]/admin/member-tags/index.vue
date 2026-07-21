@@ -141,10 +141,6 @@ import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 import MemberTagFormModal from '~/components/learn/member/MemberTagFormModal.vue'
 
-definePageMeta({
-  layout: 'academy-admin',
-})
-
 interface Tag {
   id: number
   name: string

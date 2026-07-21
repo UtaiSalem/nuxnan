@@ -245,7 +245,6 @@
 import { ref, onMounted } from 'vue'
 import Swal from 'sweetalert2'
 
-definePageMeta({ layout: 'academy-admin' })
 
 const route = useRoute()
 const api = useApi()

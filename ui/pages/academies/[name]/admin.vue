@@ -235,6 +235,12 @@ const menuItems = computed(() => [
         to: `/academies/${academyName.value}/admin/activity-log`,
         show: can('reports.view'),
       },
+      {
+        name: 'รายได้',
+        icon: 'fluent:money-hand-24-regular',
+        to: `/academies/${academyName.value}/admin/revenue`,
+        show: can('finance.view'),
+      },
     ]
   },
   {
