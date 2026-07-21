@@ -39,3 +39,6 @@ Thumbs.db
 /routes_check.txt
 /*.bak
 /*.tmp
+
+# psysh (php artisan tinker) temp dir
+/.psysh-tmp/
