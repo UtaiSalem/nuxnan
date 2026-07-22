@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
+import CourseSupportPanel from '~/components/learn/course/points/CourseSupportPanel.vue'
 
 // Props from parent route
 const props = defineProps<{
@@ -410,9 +411,9 @@ const respondToInvitation = async (accept: boolean) => {
     </div>
 
     <!-- Course points claim section (student-facing; widget hides itself when no campaigns are available) -->
-    <LearnCoursePointsCoursePointClaimWidget
+    <CourseSupportPanel
       v-if="course && !isCourseAdmin"
-      :course-id="course.id"
+      :course="course"
     />
 
     <!-- Curriculum Card -->
