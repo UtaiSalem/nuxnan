@@ -10,6 +10,7 @@ use App\Models\CourseGroup;
 use App\Models\CourseGroupMember;
 use App\Models\CourseMember;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CourseGroupMemberController extends Controller
 {
@@ -228,11 +229,16 @@ class CourseGroupMemberController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Remove a member from the group (admin / course owner action).
+     *
+     * The route param is the target member's user_id — this is what the group
+     * members list on the frontend carries (CourseGroupResource exposes user_id
+     * for every member). Keying on user_id avoids the id-type mismatch between
+     * course_members.id, course_group_members.id and users.id.
      */
-    public function destroy(Course $course, CourseGroup $group, $memberId)
+    public function destroy(Course $course, CourseGroup $group, $userId)
     {
-        // Authorization check
+        // Authorization: course admin/owner OR group admin
         $isCourseAdmin = $course->isAdmin(auth()->user());
         $authMember = CourseGroupMember::where('group_id', $group->id)->where('user_id', auth()->id())->first();
 
@@ -240,26 +246,24 @@ class CourseGroupMemberController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
-        // Try to find by CourseGroupMember ID first, then by user_id
-        $member = CourseGroupMember::find($memberId);
-        if (! $member || $member->group_id !== $group->id) {
-            // Fallback: treat memberId as user_id
-            $member = CourseGroupMember::where('group_id', $group->id)->where('user_id', $memberId)->first();
-        }
+        $removed = DB::transaction(function () use ($course, $group, $userId) {
+            // Remove the group membership row (both approved and pending requests)
+            $deletedGroupMembers = CourseGroupMember::where('course_id', $course->id)
+                ->where('group_id', $group->id)
+                ->where('user_id', $userId)
+                ->delete();
 
-        if (! $member) {
+            // Detach the CourseMember from this group (keep them in the course)
+            $updatedCourseMembers = CourseMember::where('course_id', $course->id)
+                ->where('user_id', $userId)
+                ->where('group_id', $group->id)
+                ->update(['group_id' => null, 'group_member_status' => 0]);
+
+            return $deletedGroupMembers > 0 || $updatedCourseMembers > 0;
+        });
+
+        if (! $removed) {
             return response()->json(['success' => false, 'message' => 'ไม่พบสมาชิกในกลุ่มนี้'], 404);
-        }
-
-        $userId = $member->user_id;
-        $member->delete();
-
-        // Reset CourseMember group info
-        $courseMember = CourseMember::where('course_id', $course->id)->where('user_id', $userId)->first();
-        if ($courseMember && $courseMember->group_id == $group->id) {
-            $courseMember->group_id = null;
-            $courseMember->group_member_status = 0;
-            $courseMember->save();
         }
 
         return response()->json(['success' => true, 'message' => 'ลบสมาชิกเรียบร้อยแล้ว']);
@@ -267,40 +271,28 @@ class CourseGroupMemberController extends Controller
 
     public function leave(Course $course, CourseGroup $group)
     {
-        $user = auth()->user();
-        $member = CourseGroupMember::where('group_id', $group->id)->where('user_id', $user->id)->first();
+        $userId = auth()->id();
 
-        if ($member) {
-            $member->delete();
-        }
+        $left = DB::transaction(function () use ($course, $group, $userId) {
+            // Remove the group membership row (approved or pending)
+            $deletedGroupMembers = CourseGroupMember::where('course_id', $course->id)
+                ->where('group_id', $group->id)
+                ->where('user_id', $userId)
+                ->delete();
 
-        // Reset CourseMember group info
-        $courseMember = CourseMember::where('course_id', $course->id)->where('user_id', $user->id)->first();
-        if ($courseMember && $courseMember->group_id == $group->id) {
-            $courseMember->group_id = null;
-            $courseMember->group_member_status = 0;
-            $courseMember->save();
+            // Detach the CourseMember from this group (keep them in the course)
+            $updatedCourseMembers = CourseMember::where('course_id', $course->id)
+                ->where('user_id', $userId)
+                ->where('group_id', $group->id)
+                ->update(['group_id' => null, 'group_member_status' => 0]);
+
+            return $deletedGroupMembers > 0 || $updatedCourseMembers > 0;
+        });
+
+        if (! $left) {
+            return response()->json(['success' => false, 'message' => 'คุณไม่ได้เป็นสมาชิกในกลุ่มนี้'], 404);
         }
 
         return response()->json(['success' => true, 'message' => 'ออกจากกลุ่มเรียบร้อยแล้ว']);
-    }
-
-    public function unMemberGroup(Course $course, CourseGroup $group, CourseMember $member)
-    {
-        $member->group_id = null;
-        $member->group_member_status = 0;
-        $member->save();
-        $member->refresh();
-
-        // $courseGroupMember = CourseGroupMember::where('group_id', $group->id)->where('user_id', auth()->id())->first();
-        // $courseGroupMember->group_id    = null;
-        // $courseGroupMember->status      = 0;
-        // $courseGroupMember->save();
-
-        return response()->json([
-            'success' => true,
-            'courseMember' => $member,
-            'group' => new CourseGroupResource($group),
-        ], 200);
     }
 }

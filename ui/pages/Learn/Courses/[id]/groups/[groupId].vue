@@ -222,11 +222,12 @@ const removeFromGroup = async (member: any) => {
   const memberName = getMemberName(member)
   if (!confirm(`ยืนยันการนำ "${memberName}" ออกจากกลุ่มนี้? (สมาชิกยังคงอยู่ในรายวิชา)`)) return
 
-  if (!member.id) return
+  // The remove endpoint keys on user_id (matches the members list payload)
+  if (!member.user_id) return
 
-  isRemovingFromGroup.value = member.id
+  isRemovingFromGroup.value = member.user_id
   try {
-    await api.delete(`/api/courses/${course.value.id}/groups/${groupId.value}/members/${member.id}`)
+    await api.delete(`/api/courses/${course.value.id}/groups/${groupId.value}/members/${member.user_id}`)
     await loadGroup()
   } catch (error: any) {
     alert(error.data?.message || 'ไม่สามารถนำสมาชิกออกจากกลุ่มได้')
@@ -660,11 +661,11 @@ onMounted(() => {
                   <div v-if="isCourseAdmin" class="col-span-1 text-center">
                     <button
                       @click.stop="removeFromGroup(member)"
-                      :disabled="isRemovingFromGroup === member.id"
+                      :disabled="isRemovingFromGroup === member.user_id"
                       class="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                       title="นำออกจากกลุ่ม"
                     >
-                      <Icon v-if="isRemovingFromGroup === member.id" icon="svg-spinners:ring-resize" class="w-4 h-4" />
+                      <Icon v-if="isRemovingFromGroup === member.user_id" icon="svg-spinners:ring-resize" class="w-4 h-4" />
                       <Icon v-else icon="heroicons:user-minus" class="w-4 h-4" />
                     </button>
                   </div>
@@ -739,11 +740,11 @@ onMounted(() => {
                     <button
                       v-if="isCourseAdmin"
                       @click.stop="removeFromGroup(member)"
-                      :disabled="isRemovingFromGroup === member.id"
+                      :disabled="isRemovingFromGroup === member.user_id"
                       class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex-shrink-0"
                       title="นำออกจากกลุ่ม"
                     >
-                      <Icon v-if="isRemovingFromGroup === member.id" icon="svg-spinners:ring-resize" class="w-4 h-4" />
+                      <Icon v-if="isRemovingFromGroup === member.user_id" icon="svg-spinners:ring-resize" class="w-4 h-4" />
                       <Icon v-else icon="heroicons:user-minus" class="w-4 h-4" />
                     </button>
                   </div>
@@ -763,11 +764,11 @@ onMounted(() => {
               <button
                 v-if="isCourseAdmin"
                 @click.stop="removeFromGroup(member)"
-                :disabled="isRemovingFromGroup === member.id"
+                :disabled="isRemovingFromGroup === member.user_id"
                 class="absolute top-3 right-3 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                 title="นำออกจากกลุ่ม"
               >
-                <Icon v-if="isRemovingFromGroup === member.id" icon="svg-spinners:ring-resize" class="w-4 h-4" />
+                <Icon v-if="isRemovingFromGroup === member.user_id" icon="svg-spinners:ring-resize" class="w-4 h-4" />
                 <Icon v-else icon="heroicons:user-minus" class="w-4 h-4" />
               </button>
 
