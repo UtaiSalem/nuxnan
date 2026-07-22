@@ -17,7 +17,26 @@ class QuizRewardCampaignController extends Controller
     {
         $this->authorizeCourseAdmin($course);
 
-        return response()->json(['data' => CoursePointCampaign::where('quiz_id', $quiz->id)->where('campaign_type', CoursePointCampaign::CAMPAIGN_TYPE_QUIZ)->whereIn('status', ['active', 'paused'])->first()]);
+        $campaign = CoursePointCampaign::where('quiz_id', $quiz->id)
+            ->where('campaign_type', CoursePointCampaign::CAMPAIGN_TYPE_QUIZ)
+            ->whereIn('status', [CoursePointCampaign::STATUS_ACTIVE, CoursePointCampaign::STATUS_PAUSED])
+            ->with(['claims'])
+            ->first();
+
+        return response()->json([
+            'data' => $campaign ? [
+                'id' => $campaign->id,
+                'points_per_claim' => $campaign->points_per_claim,
+                'max_claims' => $campaign->max_claims,
+                'total_claimed' => $campaign->total_claimed,
+                'remaining' => $campaign->max_claims
+                    ? $campaign->max_claims - $campaign->total_claimed
+                    : null,
+                'status' => $campaign->status,
+                'starts_at' => $campaign->starts_at,
+                'ends_at' => $campaign->ends_at,
+            ] : null,
+        ]);
     }
 
     public function store(Request $request, Course $course, CourseQuiz $quiz)
