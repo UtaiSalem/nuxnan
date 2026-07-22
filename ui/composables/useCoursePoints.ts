@@ -18,6 +18,9 @@ export function useCoursePoints(courseId: Ref<string | number> | string | number
   const transactions = ref<any[]>([])
   const isLoadingAccount = ref(false)
   const isWithdrawing = ref(false)
+  const campaigns = ref<CoursePointCampaign[]>([])
+  const isLoadingCampaigns = ref(false)
+  const isClaiming = ref<number | null>(null)
 
   // Fetch account balance
   const fetchAccount = async () => {
@@ -29,6 +32,30 @@ export function useCoursePoints(courseId: Ref<string | number> | string | number
       console.error('useCoursePoints.fetchAccount', e)
     } finally {
       isLoadingAccount.value = false
+    }
+  }
+
+  const fetchAvailableCampaigns = async () => {
+    isLoadingCampaigns.value = true
+    try {
+      const res = await api.get(`/api/courses/${id.value}/points/campaigns/available`) as { data: CoursePointCampaign[] }
+      campaigns.value = res.data || []
+      return campaigns.value
+    } finally {
+      isLoadingCampaigns.value = false
+    }
+  }
+
+  const claimCampaign = async (campaignId: number) => {
+    isClaiming.value = campaignId
+    try {
+      const res = await api.post(`/api/courses/${id.value}/points/campaigns/${campaignId}/claim`, {}) as any
+      if (res.success) {
+        await Promise.all([fetchAvailableCampaigns(), fetchAccount()])
+      }
+      return res
+    } finally {
+      isClaiming.value = null
     }
   }
 
@@ -89,11 +116,31 @@ export function useCoursePoints(courseId: Ref<string | number> | string | number
     transactions,
     isLoadingAccount,
     isWithdrawing,
+    campaigns,
+    isLoadingCampaigns,
+    isClaiming,
     fetchAccount,
+    fetchAvailableCampaigns,
+    claimCampaign,
     fetchTransactions,
     withdraw,
     fetchLessonReward,
     saveLessonReward,
     cancelLessonReward,
   }
+}
+
+export interface CoursePointCampaign {
+  id: number
+  title: string
+  description: string | null
+  points_per_claim: number
+  max_claims: number | null
+  remaining: number | null
+  total_claimed: number
+  status: 'active' | 'paused' | 'ended' | 'depleted'
+  starts_at: string | null
+  ends_at: string | null
+  claimed_by_auth: boolean
+  can_claim: boolean
 }

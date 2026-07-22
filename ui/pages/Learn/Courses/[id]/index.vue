@@ -409,6 +409,12 @@ const respondToInvitation = async (accept: boolean) => {
       </div>
     </div>
 
+    <!-- Course points claim section (student-facing; widget hides itself when no campaigns are available) -->
+    <LearnCoursePointsCoursePointClaimWidget
+      v-if="course && !isCourseAdmin"
+      :course-id="course.id"
+    />
+
     <!-- Curriculum Card -->
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
       <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
