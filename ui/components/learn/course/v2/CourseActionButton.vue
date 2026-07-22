@@ -15,6 +15,7 @@ const emit = defineEmits(['refresh', 'request-member', 'purchase-course'])
 const api = useApi()
 const isProcessing = ref(false)
 const showPendingMenu = ref(false)
+const showMemberMenu = ref(false)
 
 const approvalStatus = computed(() => props.courseMemberOfAuth?.course_member_status)
 const accessStatus = computed(() => props.courseMemberOfAuth?.status)
@@ -52,19 +53,23 @@ const buttonClasses = computed(() => {
   return 'h-12 px-6'
 })
 
+// Square sizing for the icon-only kebab menu trigger (no horizontal padding)
+const menuButtonClasses = computed(() =>
+  props.variant === 'hero' ? 'h-10 w-10' : 'h-12 w-12'
+)
+
 async function handleAction() {
   if (isProcessing.value) return
 
   // Case: Not a member -> Start enrollment
   if (!props.courseMemberOfAuth) {
     emit('request-member')
-    return
   }
+}
 
-  // Case: Active Member -> Leave course
-  if (accessStatus.value === 1 || accessStatus.value === 'active') {
-    await confirmAndLeave()
-  }
+async function leaveFromMenu() {
+  showMemberMenu.value = false
+  await confirmAndLeave()
 }
 
 async function confirmAndLeave() {
@@ -175,22 +180,46 @@ async function completePayment() {
       <span>กำลังตรวจสอบ...</span>
     </button>
 
-    <!-- Active Member Button -->
-    <button
+    <!-- Active Member: status badge + actions menu (kebab) -->
+    <div
       v-else-if="courseMemberOfAuth && (accessStatus === 1 || accessStatus === 'active')"
-      @click="handleAction"
-      :disabled="isProcessing"
-      class="group flex items-center justify-center gap-2 rounded-xl bg-emerald-500 text-white font-black shadow-lg shadow-emerald-500/20 hover:bg-red-500 transition-all active:scale-95 disabled:opacity-50"
-      :class="[variant === 'standalone' ? 'w-full' : 'w-full sm:w-auto', buttonClasses]"
+      class="relative flex items-stretch gap-2"
+      :class="variant === 'standalone' ? 'w-full' : 'w-full sm:w-auto'"
     >
-      <Icon v-if="isProcessing" icon="svg-spinners:ring-resize" class="w-5 h-5" />
-      <template v-else>
-        <Icon icon="fluent:checkmark-circle-24-filled" class="w-5 h-5 group-hover:hidden" />
-        <Icon icon="majesticons:door-exit-line" class="w-5 h-5 hidden group-hover:block" />
-        <span class="group-hover:hidden">เป็นสมาชิกแล้ว</span>
-        <span class="hidden group-hover:block">ออกจากรายวิชา</span>
-      </template>
-    </button>
+      <div
+        class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 text-white font-black shadow-lg shadow-emerald-500/20"
+        :class="buttonClasses"
+      >
+        <Icon icon="fluent:checkmark-circle-24-filled" class="w-5 h-5" />
+        <span>เป็นสมาชิกแล้ว</span>
+      </div>
+      <button
+        type="button"
+        @click="showMemberMenu = !showMemberMenu"
+        :disabled="isProcessing"
+        aria-label="ตัวเลือกรายวิชา"
+        class="flex shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all active:scale-95 disabled:opacity-50"
+        :class="menuButtonClasses"
+      >
+        <Icon v-if="isProcessing" icon="svg-spinners:ring-resize" class="w-5 h-5" />
+        <Icon v-else icon="heroicons:ellipsis-vertical" class="w-5 h-5" />
+      </button>
+
+      <!-- Dropdown: leave course -->
+      <div v-if="showMemberMenu" class="absolute right-0 top-full mt-2 z-30 min-w-[13rem] overflow-hidden rounded-xl border border-gray-100 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800">
+        <button
+          type="button"
+          @click="leaveFromMenu"
+          :disabled="isProcessing"
+          class="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+        >
+          <Icon v-if="isProcessing" icon="svg-spinners:ring-resize" class="w-5 h-5" />
+          <Icon v-else icon="majesticons:door-exit-line" class="w-5 h-5" />
+          <span>ออกจากรายวิชา</span>
+        </button>
+      </div>
+      <div v-if="showMemberMenu" class="fixed inset-0 z-20" @click="showMemberMenu = false"></div>
+    </div>
 
     <!-- Approved, awaiting payment -->
     <button
