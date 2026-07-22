@@ -21,6 +21,8 @@ export function useCoursePoints(courseId: Ref<string | number> | string | number
   const campaigns = ref<CoursePointCampaign[]>([])
   const isLoadingCampaigns = ref(false)
   const isClaiming = ref<number | null>(null)
+  const ownerCampaigns = ref<CoursePointCampaign[]>([])
+  const isLoadingOwnerCampaigns = ref(false)
 
   // Fetch account balance
   const fetchAccount = async () => {
@@ -45,6 +47,19 @@ export function useCoursePoints(courseId: Ref<string | number> | string | number
       isLoadingCampaigns.value = false
     }
   }
+
+  const fetchOwnerCampaigns = async () => {
+    isLoadingOwnerCampaigns.value = true
+    try {
+      const res = await api.get(`/api/courses/${id.value}/points/campaigns`) as { data: CoursePointCampaign[] }
+      ownerCampaigns.value = res.data || []
+      return ownerCampaigns.value
+    } finally { isLoadingOwnerCampaigns.value = false }
+  }
+
+  const createManualCampaign = (data: Record<string, unknown>) => api.post(`/api/courses/${id.value}/points/campaigns`, data)
+  const pauseCampaign = (campaignId: number) => api.patch(`/api/courses/${id.value}/points/campaigns/${campaignId}/pause`, {})
+  const endCampaign = (campaignId: number) => api.patch(`/api/courses/${id.value}/points/campaigns/${campaignId}/end`, {})
 
   const claimCampaign = async (campaignId: number) => {
     isClaiming.value = campaignId
@@ -111,6 +126,10 @@ export function useCoursePoints(courseId: Ref<string | number> | string | number
     )
   }
 
+  const fetchQuizReward = async (quizId: number) => (await api.get(`/api/courses/${id.value}/quizzes/${quizId}/reward`) as any).data ?? null
+  const saveQuizReward = (quizId: number, data: Record<string, unknown>) => api.post(`/api/courses/${id.value}/quizzes/${quizId}/reward`, data)
+  const cancelQuizReward = (quizId: number) => api.delete(`/api/courses/${id.value}/quizzes/${quizId}/reward`)
+
   return {
     account,
     transactions,
@@ -119,19 +138,29 @@ export function useCoursePoints(courseId: Ref<string | number> | string | number
     campaigns,
     isLoadingCampaigns,
     isClaiming,
+    ownerCampaigns,
+    isLoadingOwnerCampaigns,
     fetchAccount,
     fetchAvailableCampaigns,
+    fetchOwnerCampaigns,
+    createManualCampaign,
+    pauseCampaign,
+    endCampaign,
     claimCampaign,
     fetchTransactions,
     withdraw,
     fetchLessonReward,
     saveLessonReward,
     cancelLessonReward,
+    fetchQuizReward,
+    saveQuizReward,
+    cancelQuizReward,
   }
 }
 
 export interface CoursePointCampaign {
   id: number
+  campaign_type?: string
   title: string
   description: string | null
   points_per_claim: number
