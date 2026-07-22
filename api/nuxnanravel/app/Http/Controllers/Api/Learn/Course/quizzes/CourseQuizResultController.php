@@ -11,6 +11,7 @@ use App\Models\CourseQuizResult;
 use App\Models\UserAnswerQuestion;
 use App\Services\AttendanceEligibilityService;
 use App\Services\ContentVisibilityService;
+use App\Services\CoursePointAccountService;
 use App\Services\UsageEventService;
 use Illuminate\Http\Request;
 
@@ -20,7 +21,7 @@ class CourseQuizResultController extends Controller
 
     protected ContentVisibilityService $visibility;
 
-    public function __construct(AttendanceEligibilityService $eligibilityService, ContentVisibilityService $visibility)
+    public function __construct(AttendanceEligibilityService $eligibilityService, ContentVisibilityService $visibility, protected CoursePointAccountService $coursePointService)
     {
         $this->eligibilityService = $eligibilityService;
         $this->visibility = $visibility;
@@ -150,9 +151,15 @@ class CourseQuizResultController extends Controller
             }
         }
 
+        $reward = null;
+        if ($request->has('finalize') && $request->finalize == true && $data['percentage'] >= 100) {
+            $reward = $this->coursePointService->grantQuizCompletionReward($quiz, $user, "quiz_reward:{$quiz->id}:{$user->id}");
+        }
+
         return response()->json([
             'success' => true,
             'quizResult' => $result,
+            'reward' => $reward,
         ]);
     }
 }
