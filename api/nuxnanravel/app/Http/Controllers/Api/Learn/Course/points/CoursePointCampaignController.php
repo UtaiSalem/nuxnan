@@ -47,9 +47,22 @@ class CoursePointCampaignController extends Controller
         // ตรวจว่า campaign เป็นของ course นี้
         abort_if($campaign->course_id !== $course->id, 404);
 
-        $result = $this->service->claimCampaign($campaign->id, auth()->user());
+        $result = $this->service->claimManualCampaign($campaign->id, auth()->user());
 
         return response()->json($result, $result['success'] ? 200 : 422);
+    }
+
+    public function available(Course $course)
+    {
+        $user = auth()->user();
+        $enrolled = $course->courseMembers()->where('user_id', $user->id)->exists();
+        $data = CoursePointCampaign::where('course_id', $course->id)->where('campaign_type', CoursePointCampaign::CAMPAIGN_TYPE_MANUAL)->get()->filter(fn ($campaign) => $campaign->isClaimable())->map(function ($campaign) use ($user, $enrolled) {
+            $claimed = $campaign->claims()->where('user_id', $user->id)->exists();
+
+            return ['id' => $campaign->id, 'title' => $campaign->title, 'description' => $campaign->description, 'points_per_claim' => $campaign->points_per_claim, 'max_claims' => $campaign->max_claims, 'remaining' => $campaign->max_claims ? max(0, $campaign->max_claims - $campaign->total_claimed) : null, 'total_claimed' => $campaign->total_claimed, 'status' => $campaign->status, 'starts_at' => $campaign->starts_at, 'ends_at' => $campaign->ends_at, 'claimed_by_auth' => $claimed, 'can_claim' => $enrolled && ! $claimed && (! $campaign->max_claims || $campaign->total_claimed < $campaign->max_claims)];
+        })->values();
+
+        return response()->json(['data' => $data]);
     }
 
     public function pause(Course $course, CoursePointCampaign $campaign)

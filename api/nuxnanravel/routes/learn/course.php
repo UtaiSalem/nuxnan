@@ -34,6 +34,7 @@ use App\Http\Controllers\Api\Learn\Course\members\CourseMemberGradeProgressContr
 use App\Http\Controllers\Api\Learn\Course\points\CoursePointAccountController;
 use App\Http\Controllers\Api\Learn\Course\points\CoursePointCampaignController;
 use App\Http\Controllers\Api\Learn\Course\points\LessonRewardCampaignController;
+use App\Http\Controllers\Api\Learn\Course\points\QuizRewardCampaignController;
 use App\Http\Controllers\Api\Learn\Course\posts\CoursePostCommentController;
 use App\Http\Controllers\Api\Learn\Course\posts\CoursePostCommentReactionController;
 use App\Http\Controllers\Api\Learn\Course\posts\CoursePostController;
@@ -65,6 +66,7 @@ Route::middleware(['auth:api', 'verified'])->group(function () {
         Route::get('/transactions', [CoursePointAccountController::class, 'transactions'])->name('course.points.transactions');
         Route::post('/withdraw', [CoursePointAccountController::class, 'withdraw'])->name('course.points.withdraw');
         Route::get('/campaigns', [CoursePointCampaignController::class, 'index'])->name('course.points.campaigns.index');
+        Route::get('/campaigns/available', [CoursePointCampaignController::class, 'available'])->name('course.points.campaigns.available');
         Route::post('/campaigns', [CoursePointCampaignController::class, 'store'])->name('course.points.campaigns.store');
         Route::patch('/campaigns/{campaign}/pause', [CoursePointCampaignController::class, 'pause'])->name('course.points.campaigns.pause');
         Route::patch('/campaigns/{campaign}/end', [CoursePointCampaignController::class, 'end'])->name('course.points.campaigns.end');
@@ -76,6 +78,11 @@ Route::middleware(['auth:api', 'verified'])->group(function () {
         Route::get('/', [LessonRewardCampaignController::class, 'show'])->name('course.lessons.reward.show');
         Route::post('/', [LessonRewardCampaignController::class, 'store'])->name('course.lessons.reward.store');
         Route::delete('/', [LessonRewardCampaignController::class, 'destroy'])->name('course.lessons.reward.destroy');
+    });
+    Route::prefix('/courses/{course}/quizzes/{quiz}/reward')->group(function () {
+        Route::get('/', [QuizRewardCampaignController::class, 'show']);
+        Route::post('/', [QuizRewardCampaignController::class, 'store']);
+        Route::delete('/', [QuizRewardCampaignController::class, 'destroy']);
     });
 
     Route::post('/courses/{course}/purchase', [CourseMarketplaceController::class, 'purchase'])->name('courses.purchase');
