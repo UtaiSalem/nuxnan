@@ -27,6 +27,8 @@ class CoursePointCampaign extends Model
 
     const CAMPAIGN_TYPE_LESSON = 'lesson_completion';
 
+    const CAMPAIGN_TYPE_QUIZ = 'quiz_completion';
+
     public function isClaimable(): bool
     {
         if ($this->status !== self::STATUS_ACTIVE) {
@@ -53,5 +55,10 @@ class CoursePointCampaign extends Model
     public function lesson(): BelongsTo
     {
         return $this->belongsTo(Lesson::class);
+    }
+
+    public function quiz(): BelongsTo
+    {
+        return $this->belongsTo(CourseQuiz::class);
     }
 }
