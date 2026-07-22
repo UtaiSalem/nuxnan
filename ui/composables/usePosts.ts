@@ -283,9 +283,7 @@ export const usePosts = () => {
       if (response.success && response.activity) {
         feedStore.addPost(response.activity)
         // Update user points
-        if (authStore.user) {
-          authStore.user.pp -= 180
-        }
+        authStore.deductPoints(180)
       }
 
       return response

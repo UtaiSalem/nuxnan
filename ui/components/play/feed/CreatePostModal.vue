@@ -338,7 +338,7 @@ const createPost = async () => {
   if (isSubmitting.value) return
   
   // Check points for all contexts (backend requires 180 PP for all post types)
-  if (authStore.user && (authStore.user?.pp ?? 0) < 180) {
+  if (authStore.user && authStore.points < 180) {
     swal.warning('คุณมีแต้มสะสมไม่พอสำหรับการโพสต์ กรุณาสะสมแต้มสะสมอย่างน้อย 180 แต้ม', 'แต้มไม่พอ')
     return
   }
@@ -1128,8 +1128,8 @@ const removeTaggedFriend = (friendId) => {
                         <Icon icon="fluent:gift-24-regular" class="w-4 h-4" />
                         <span>ผู้ร่วมโหวตจะได้รับแต้มรางวัลโดยอัตโนมัติ!</span>
                       </div>
-                      <p v-if="authStore.user && authStore.user.pp < (180 + pollPointsPool)" class="text-xs text-red-500 font-bold mt-2">
-                        ! คุณมีแต้มไม่เพียงพอ (ปัจจุบัน {{ authStore.user.pp }} แต้ม)
+                      <p v-if="authStore.user && authStore.points < (180 + pollPointsPool)" class="text-xs text-red-500 font-bold mt-2">
+                        ! คุณมีแต้มไม่เพียงพอ (ปัจจุบัน {{ authStore.points }} แต้ม)
                       </p>
                     </div>
                   </div>

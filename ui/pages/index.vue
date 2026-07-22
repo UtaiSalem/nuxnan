@@ -135,9 +135,7 @@ const handleGetDonate = async (donateId: number, idx: number) => {
         showConfirmButton: false,
         timer: 1500,
       })
-      if (authStore.user && typeof (authStore.user as any).pp !== 'undefined') {
-        (authStore.user as any).pp += response.donate_point || 270
-      }
+      authStore.addPoints(response.donate_point || 270)
       if (welcomeData.value?.donates) {
         welcomeData.value.donates[idx].remaining_points = response.donate.remaining_points
         if (welcomeData.value.donates[idx].remaining_points <= 0) {

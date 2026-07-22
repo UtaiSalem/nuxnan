@@ -77,7 +77,7 @@ const joiningGroupId = ref<number | null>(null)
 // Join group
 const handleJoin = async (groupId: number) => {
   // Check Points first
-  const userPP = authStore.user?.pp || 0
+  const userPP = authStore.points
   const tuitionFees = course?.value?.tuition_fees || 0
 
   if (userPP < tuitionFees) {

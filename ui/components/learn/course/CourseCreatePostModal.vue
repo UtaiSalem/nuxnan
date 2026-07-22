@@ -4,6 +4,7 @@
  */
 import { Icon } from '@iconify/vue'
 import { ref, computed, watch } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 
 const props = defineProps({
   show: {
@@ -23,6 +24,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'post-created'])
 
 const { user } = useAuth()
+const authStore = useAuthStore()
 const api = useApi()
 const swal = useSweetAlert()
 
@@ -485,8 +487,8 @@ const formatFileSize = (bytes) => {
                         <Icon icon="fluent:gift-24-regular" class="w-4 h-4" />
                         <span>ผู้ร่วมโหวตจะได้รับแต้มรางวัลโดยอัตโนมัติ!</span>
                       </div>
-                      <p v-if="user && user.pp < (180 + pollPointsPool)" class="text-xs text-red-500 font-bold mt-2">
-                        ! คุณมีแต้มไม่เพียงพอ (ปัจจุบัน {{ user.pp }} แต้ม)
+                      <p v-if="user && authStore.points < (180 + pollPointsPool)" class="text-xs text-red-500 font-bold mt-2">
+                        ! คุณมีแต้มไม่เพียงพอ (ปัจจุบัน {{ authStore.points }} แต้ม)
                       </p>
                     </div>
                   </div>

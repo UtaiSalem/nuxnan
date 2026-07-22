@@ -179,8 +179,8 @@ const toggleLike = async () => {
       swal.error(response.message || 'ไม่สามารถกดถูกใจได้')
     } else {
       // Update auth user points
-      if (authStore.user) {
-        authStore.user.pp = response.user_pp ?? authStore.user.pp
+      if (response.user_pp != null) {
+        authStore.setPoints(response.user_pp)
       }
     }
   } catch (error) {

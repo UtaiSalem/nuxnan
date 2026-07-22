@@ -356,7 +356,7 @@ const submitForm = async () => {
   }
 
   if (isLoggedIn && currentPaymentMethod === 'points') {
-    const pointsBalance = authStore.user?.pp || 0
+    const pointsBalance = authStore.points
     const requiredPoints = amount * 100
 
     if (pointsBalance < requiredPoints) {
@@ -478,7 +478,7 @@ const submitForm = async () => {
           confirmButtonColor: '#8b5cf6',
         })
         if (authStore.user) {
-          authStore.user.pp = (authStore.user.pp || 0) - requiredPoints
+          authStore.deductPoints(requiredPoints)
         }
       } else {
         showSuccessModal.value = true
@@ -852,7 +852,7 @@ watch(() => authStore.user, async (user) => {
                 <button
                   type="button"
                   @click="paymentMethod = 'points'"
-                  :disabled="(authStore.user?.pp || 0) < pointsRequired"
+                  :disabled="authStore.points < pointsRequired"
                   :class="[
                     'p-4 rounded-xl border-2 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed',
                     paymentMethod === 'points'
@@ -867,7 +867,7 @@ watch(() => authStore.user, async (user) => {
                     <div>
                       <p class="font-medium text-gray-900 dark:text-white">แต้มสะสม</p>
                       <p class="text-xs text-purple-600 dark:text-purple-400 font-semibold">
-                        {{ (authStore.user?.pp || 0).toLocaleString() }} แต้ม
+                        {{ authStore.points.toLocaleString() }} แต้ม
                       </p>
                     </div>
                   </div>

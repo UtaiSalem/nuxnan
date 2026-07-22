@@ -162,7 +162,7 @@ const submitVote = async () => {
       
       // If points were earned, update auth store
       if (response.points_earned && response.points_earned > 0) {
-        authStore.user.pp += response.points_earned
+        authStore.addPoints(response.points_earned)
         swal.success(`โหวตสำเร็จ! คุณได้รับ ${response.points_earned} แต้ม`, 'โหวตสำเร็จ')
       } else {
         toast.success(response.message || 'โหวตสำเร็จ!')

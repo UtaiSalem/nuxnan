@@ -190,15 +190,7 @@ const handleGetDonate = async (donateId: number, idx: number) => {
         timer: 1500,
       })
 
-      if (authStore.user) {
-        // Assuming user.pp or user.wallet is the field. The legacy code used 'pp'.
-        // We'll update both if unsure, or check the interface. 
-        // Based on legacy: usePage().props.auth.user.pp += 270
-        // We will assert it exists or check type.
-         if (typeof (authStore.user as any).pp !== 'undefined') {
-            (authStore.user as any).pp += (response.donate_point || 270);
-         }
-      }
+      authStore.addPoints(response.donate_point || 270)
 
       if (welcomeData.value && welcomeData.value.donates) {
         welcomeData.value.donates[idx].remaining_points = response.donate.remaining_points

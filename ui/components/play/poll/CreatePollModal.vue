@@ -138,7 +138,7 @@ const createNewPoll = async () => {
   const totalPointsNeeded = 180 + pollPointsPool.value
   
   // Check if user has enough points
-  if (authStore.user && authStore.user.pp < totalPointsNeeded) {
+  if (authStore.user && authStore.points < totalPointsNeeded) {
     swal.error(`คุณมีแต้มไม่เพียงพอ (ต้องการทั้งหมด ${totalPointsNeeded} แต้ม)`, 'แต้มไม่พอ')
     return
   }
@@ -429,8 +429,8 @@ watch(() => props.show, (newVal) => {
                     <Icon icon="fluent:gift-24-regular" class="w-4 h-4" />
                     <span>ผู้ร่วมโหวตจะได้รับแต้มรางวัลโดยอัตโนมัติ!</span>
                   </div>
-                  <p v-if="authStore.user && authStore.user.pp < (180 + pollPointsPool)" class="text-xs text-red-500 font-bold mt-2">
-                    ! คุณมีแต้มไม่เพียงพอ (ปัจจุบัน {{ authStore.user.pp }} แต้ม)
+                  <p v-if="authStore.user && authStore.points < (180 + pollPointsPool)" class="text-xs text-red-500 font-bold mt-2">
+                    ! คุณมีแต้มไม่เพียงพอ (ปัจจุบัน {{ authStore.points }} แต้ม)
                   </p>
                 </div>
               </div>
