@@ -3,11 +3,13 @@ import { Icon } from '@iconify/vue'
 // import { VueDatePicker } from '@vuepic/vue-datepicker';
 // import '@vuepic/vue-datepicker/dist/main.css'
 import Swal from 'sweetalert2'
+import QuizRewardForm from '~/components/learn/course/points/QuizRewardForm.vue'
 
 const route = useRoute()
 const courseId = route.params.id
 const quizId = route.params.quizId
 const api = useApi()
+const { account, fetchAccount } = useCoursePoints(courseId)
 
 definePageMeta({
   middleware: ['auth', async (to) => {
@@ -101,6 +103,7 @@ const fetchData = async () => {
 
 onMounted(() => {
     fetchData()
+    fetchAccount()
 })
 
 // Validation with per-field errors
@@ -533,6 +536,10 @@ const deleteQuestion = async (qId: number) => {
                 ตั้งค่าทั่วไป
                 <div v-if="activeTab === 'settings'" class="absolute bottom-0 left-0 w-full h-0.5 bg-purple-600 dark:bg-purple-400"></div>
             </button>
+            <button @click="activeTab = 'reward'" :class="['px-6 py-3 font-medium text-sm focus:outline-none transition-colors relative', activeTab === 'reward' ? 'text-purple-600 dark:text-purple-400' : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-300']">
+                รางวัลแต้ม
+                <div v-if="activeTab === 'reward'" class="absolute bottom-0 left-0 w-full h-0.5 bg-purple-600 dark:bg-purple-400"></div>
+            </button>
             <button 
                 @click="activeTab = 'questions'"
                 :class="['px-6 py-3 font-medium text-sm focus:outline-none transition-colors relative', activeTab === 'questions' ? 'text-purple-600 dark:text-purple-400' : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-300']"
@@ -842,5 +849,8 @@ const deleteQuestion = async (qId: number) => {
         </div>
     </div>
 
+    <div v-show="activeTab === 'reward'" class="p-4 sm:p-6">
+        <QuizRewardForm :course-id="courseId" :quiz-id="Number(quizId)" :available-balance="account?.available_balance || 0" />
+    </div>
   </div>
 </template>
