@@ -3,7 +3,9 @@ import CourseDonationModal from '~/components/donation/CourseDonationModal.vue'
 import CoursePointClaimCard from '~/components/learn/course/points/CoursePointClaimCard.vue'
 import type { CourseDonation } from '~/composables/useCourseDonations'
 
-const props = defineProps<{ course: any }>()
+const props = withDefaults(defineProps<{ course: any; isCourseAdmin?: boolean }>(), {
+  isCourseAdmin: false,
+})
 
 const authStore = useAuthStore()
 const sweetAlert = useSweetAlert()
@@ -13,10 +15,12 @@ const donations = ref<CourseDonation[]>([])
 const {
   account,
   campaigns,
+  ownerCampaigns,
   isClaiming,
   isLoadingCampaigns,
   fetchAccount,
   fetchAvailableCampaigns,
+  fetchOwnerCampaigns,
   claimCampaign,
 } = useCoursePoints(computed(() => props.course.id))
 const { fetchCourseDonations } = useCourseDonations()
@@ -30,7 +34,7 @@ const showClaimSection = computed(() => isLoadingCampaigns.value || campaigns.va
 const loadSupportData = async () => {
   await Promise.all([
     fetchAccount(),
-    fetchAvailableCampaigns(),
+    props.isCourseAdmin ? fetchOwnerCampaigns() : fetchAvailableCampaigns(),
     fetchCourseDonations(Number(props.course.id), { per_page: 5 }).then((response: any) => {
       donations.value = response?.data || []
     }),
@@ -55,13 +59,16 @@ onMounted(loadSupportData)
         <h2 class="text-lg font-bold text-gray-900 dark:text-white">สนับสนุน &amp; รับแต้ม</h2>
       </div>
       <button
-        v-if="course.donation_enabled !== false"
+        v-if="!isCourseAdmin && course.donation_enabled !== false"
         type="button"
         class="rounded-xl bg-vikinger-purple px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
         @click="showDonationModal = true"
       >
         บริจาคแต้ม
       </button>
+      <NuxtLink v-else-if="isCourseAdmin" :to="`/courses/${course.id}/wallet/campaigns`" class="rounded-xl bg-vikinger-purple px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90">
+        จัดการแคมเปญ
+      </NuxtLink>
     </header>
 
     <div class="mt-5 grid grid-cols-2 gap-3 border-y border-gray-100 py-4 dark:border-gray-700">
@@ -69,13 +76,31 @@ onMounted(loadSupportData)
       <div><p class="text-xs text-gray-500 dark:text-gray-400">จำนวนผู้สนับสนุน</p><p class="mt-1 text-xl font-bold text-gray-900 dark:text-white">{{ approvedPointDonations.length }}</p></div>
     </div>
 
-    <section v-if="showClaimSection" class="mt-5 border-b border-gray-100 pb-5 dark:border-gray-700">
+    <section v-if="!isCourseAdmin && showClaimSection" class="mt-5 border-b border-gray-100 pb-5 dark:border-gray-700">
       <h3 class="mb-3 flex items-center gap-2 font-bold text-gray-900 dark:text-white"><Icon icon="mdi:star-circle" class="h-5 w-5 text-vikinger-purple" />รับแต้ม</h3>
       <div v-if="isLoadingCampaigns" class="h-24 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-700" />
       <div v-else-if="campaigns.length" class="grid gap-3">
         <CoursePointClaimCard v-for="campaign in campaigns" :key="campaign.id" :campaign="campaign" :is-claiming="isClaiming === campaign.id" @claim="claim" />
       </div>
       <p v-else class="text-sm text-gray-500 dark:text-gray-400">มีแต้มในกองทุน รอเจ้าของวิชาเปิดให้รับ</p>
+    </section>
+
+    <section v-if="isCourseAdmin && (ownerCampaigns.length > 0 || fundBalance > 0)" class="mt-5 border-b border-gray-100 pb-5 dark:border-gray-700">
+      <template v-if="ownerCampaigns.length > 0">
+        <h3 class="mb-3 font-bold text-gray-900 dark:text-white">แคมเปญของคุณ</h3>
+        <div class="space-y-2">
+          <div v-for="campaign in ownerCampaigns" :key="campaign.id" class="flex items-center justify-between gap-3 rounded-xl bg-gray-50 px-3 py-2.5 dark:bg-gray-900/40">
+            <span class="min-w-0 truncate text-sm text-gray-700 dark:text-gray-200">{{ campaign.title }}</span>
+            <span class="shrink-0 text-xs text-gray-500 dark:text-gray-400">{{ campaign.points_per_claim }} แต้ม · <span class="rounded-full bg-gray-200 px-2 py-0.5 dark:bg-gray-700">{{ campaign.status }}</span> · {{ campaign.total_claimed }}{{ campaign.max_claims ? `/${campaign.max_claims}` : '' }} ผู้รับ</span>
+          </div>
+        </div>
+        <NuxtLink :to="`/courses/${course.id}/wallet/campaigns`" class="mt-3 block text-sm font-semibold text-vikinger-purple hover:underline">จัดการทั้งหมด</NuxtLink>
+      </template>
+      <div v-else class="rounded-xl bg-vikinger-purple/10 p-5 text-center">
+        <h3 class="font-bold text-gray-900 dark:text-white">มีแต้มในกองทุนยังไม่ได้เปิดให้รับ</h3>
+        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">สร้างแคมเปญเพื่อให้นักเรียนกดรับแต้ม</p>
+        <NuxtLink :to="`/courses/${course.id}/wallet/campaigns`" class="mt-4 inline-flex rounded-xl bg-vikinger-purple px-5 py-3 font-semibold text-white transition hover:opacity-90">สร้างแคมเปญ</NuxtLink>
+      </div>
     </section>
 
     <section class="mt-5">
@@ -90,6 +115,6 @@ onMounted(loadSupportData)
     </section>
 
     <NuxtLink :to="`/Learn/Courses/${course.id}/support`" class="mt-5 block text-center text-sm font-semibold text-vikinger-purple hover:underline">ดูทั้งหมด</NuxtLink>
-    <CourseDonationModal v-model:visible="showDonationModal" :course-id="Number(course.id)" :course-name="course.name" :course-owner-id="Number(course.user_id)" :balance="authStore.user?.points ?? authStore.user?.pp" @update:visible="loadSupportData" />
+    <CourseDonationModal v-if="!isCourseAdmin" v-model:visible="showDonationModal" :course-id="Number(course.id)" :course-name="course.name" :course-owner-id="Number(course.user_id)" :balance="authStore.user?.points ?? authStore.user?.pp" @update:visible="loadSupportData" />
   </section>
 </template>

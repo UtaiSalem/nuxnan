@@ -412,8 +412,9 @@ const respondToInvitation = async (accept: boolean) => {
 
     <!-- Course points claim section (student-facing; widget hides itself when no campaigns are available) -->
     <CourseSupportPanel
-      v-if="course && !isCourseAdmin"
+      v-if="course"
       :course="course"
+      :is-course-admin="isCourseAdmin"
     />
 
     <!-- Curriculum Card -->
