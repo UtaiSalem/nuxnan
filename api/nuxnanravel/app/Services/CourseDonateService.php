@@ -19,9 +19,6 @@ class CourseDonateService
         if (! $course->donationEnabled()) {
             throw new DomainException('Donations disabled for this course');
         }
-        if ($donor->id === $course->user_id) {
-            throw new DomainException('You cannot donate to your own course.');
-        }
         if ($pointsAmount < 1) {
             throw new DomainException('Donation must be at least 1 point.');
         }

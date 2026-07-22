@@ -53,14 +53,26 @@ class CourseDonateTest extends TestCase
         $this->assertSame(1, CourseDonate::where('idempotency_key', 'idem-key-1')->count());
     }
 
-    public function test_self_donation_blocked(): void
+    public function test_owner_can_point_donate_to_own_course(): void
     {
         $owner = User::factory()->create(['pp' => 500]);
         $course = $this->makeCourse($owner);
         $service = app(CourseDonateService::class);
 
-        $this->expectException(\DomainException::class);
         $service->createPointDonation($owner, $course, 100, [], null);
+
+        $this->assertSame(400, (int) $owner->fresh()->pp);
+        $this->assertSame(100, (int) CoursePointAccount::where('course_id', $course->id)->first()->balance);
+    }
+
+    public function test_cash_self_donation_blocked(): void
+    {
+        $owner = User::factory()->create();
+        $course = $this->makeCourse($owner);
+        $service = app(CourseDonateService::class);
+
+        $this->expectException(\DomainException::class);
+        $service->createCashDonation($owner, $course, 200.00, ['payment_method' => 'bank_transfer'], null, null);
     }
 
     public function test_insufficient_pp_returns_error(): void

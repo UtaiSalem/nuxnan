@@ -11,7 +11,8 @@ class StoreCashDonationRequest extends FormRequest
     {
         // Course maps to CoursePolicy (which has no `donate` ability), so invoke
         // the CourseDonatePolicy directly instead of Gate::allows('donate', ...).
-        return app(CourseDonatePolicy::class)->donate($this->user(), $this->route('course'));
+        return app(CourseDonatePolicy::class)->donate($this->user(), $this->route('course'))
+            && $this->user()?->id !== $this->route('course')?->user_id;
     }
 
     public function rules(): array
