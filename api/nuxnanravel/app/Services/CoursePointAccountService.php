@@ -3,10 +3,12 @@
 namespace App\Services;
 
 use App\Models\Course;
+use App\Models\CourseMember;
 use App\Models\CoursePointAccount;
 use App\Models\CoursePointCampaign;
 use App\Models\CoursePointCampaignClaim;
 use App\Models\CoursePointTransaction;
+use App\Models\CourseQuiz;
 use App\Models\Lesson;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -303,20 +305,52 @@ class CoursePointAccountService
         });
     }
 
+    public function createQuizRewardCampaign(int $courseId, int $quizId, array $data, int $createdBy): array
+    {
+        return DB::transaction(function () use ($courseId, $quizId, $data, $createdBy) {
+            $account = CoursePointAccount::firstOrCreate(['course_id' => $courseId], ['balance' => 0, 'total_earned' => 0, 'total_withdrawn' => 0, 'total_distributed' => 0, 'reserved_balance' => 0, 'commission_rate' => 0.0000, 'minimum_withdrawal' => CoursePointAccount::MINIMUM_WITHDRAWAL]);
+            $account = CoursePointAccount::where('course_id', $courseId)->lockForUpdate()->firstOrFail();
+            if (CoursePointCampaign::where('course_id', $courseId)->where('quiz_id', $quizId)->where('campaign_type', CoursePointCampaign::CAMPAIGN_TYPE_QUIZ)->whereIn('status', [CoursePointCampaign::STATUS_ACTIVE, CoursePointCampaign::STATUS_PAUSED])->exists()) {
+                return ['success' => false, 'message' => 'Quiz reward campaign already exists'];
+            }
+            $reserve = ($data['max_claims'] ?? 0) * $data['points_per_claim'];
+            if ($reserve && ! $account->canReserve($reserve)) {
+                return ['success' => false, 'message' => 'แต้มไม่พอสำหรับจองแคมเปญ'];
+            }
+            $campaign = CoursePointCampaign::create(['course_point_account_id' => $account->id, 'course_id' => $courseId, 'quiz_id' => $quizId, 'campaign_type' => CoursePointCampaign::CAMPAIGN_TYPE_QUIZ, 'title' => $data['title'] ?? 'รางวัลทำแบบทดสอบ', 'description' => $data['description'] ?? null, 'points_per_claim' => $data['points_per_claim'], 'max_claims' => $data['max_claims'] ?? null, 'eligible_type' => 'all_enrolled', 'starts_at' => $data['starts_at'] ?? null, 'ends_at' => $data['ends_at'] ?? null, 'status' => CoursePointCampaign::STATUS_ACTIVE, 'created_by' => $createdBy]);
+            if ($reserve) {
+                $this->reserve($account, $reserve, $campaign->id, $createdBy);
+            }
+
+            return ['success' => true, 'campaign' => $campaign];
+        });
+    }
+
     // ─── 5. Auto-Grant Lesson Reward ───
 
     public function grantLessonCompletionReward(Lesson $lesson, User $student, ?string $idempotencyKey = null): array
     {
-        $campaign = CoursePointCampaign::where('lesson_id', $lesson->id)
-            ->where('campaign_type', CoursePointCampaign::CAMPAIGN_TYPE_LESSON)
-            ->where('status', CoursePointCampaign::STATUS_ACTIVE)
-            ->first();
-
+        $campaign = CoursePointCampaign::where('lesson_id', $lesson->id)->where('campaign_type', CoursePointCampaign::CAMPAIGN_TYPE_LESSON)->where('status', CoursePointCampaign::STATUS_ACTIVE)->first();
         if (! $campaign || ! $campaign->isClaimable()) {
             return ['rewarded' => false, 'reason' => 'no_active_campaign'];
         }
 
-        return DB::transaction(function () use ($campaign, $lesson, $student, $idempotencyKey) {
+        return $this->grantCampaignClaim($campaign, $student, 'lesson_completion', 'lesson_completion_reward', $lesson->id, "Lesson reward: {$lesson->title}", $idempotencyKey, ['lesson_id' => $lesson->id]);
+    }
+
+    public function grantQuizCompletionReward(CourseQuiz $quiz, User $student, ?string $idempotencyKey = null): array
+    {
+        $campaign = CoursePointCampaign::where('quiz_id', $quiz->id)->where('campaign_type', CoursePointCampaign::CAMPAIGN_TYPE_QUIZ)->where('status', CoursePointCampaign::STATUS_ACTIVE)->first();
+        if (! $campaign || ! $campaign->isClaimable()) {
+            return ['rewarded' => false, 'reason' => 'no_active_campaign'];
+        }
+
+        return $this->grantCampaignClaim($campaign, $student, 'quiz_completion', 'quiz_completion_reward', $quiz->id, "Quiz reward: {$quiz->title}", $idempotencyKey, ['quiz_id' => $quiz->id]);
+    }
+
+    protected function grantCampaignClaim(CoursePointCampaign $campaign, User $student, string $txSource, string $earnReason, int $earnRefId, string $earnDescription, ?string $idempotencyKey = null, array $extraCourseTxMeta = []): array
+    {
+        return DB::transaction(function () use ($campaign, $student, $txSource, $earnReason, $earnRefId, $earnDescription, $idempotencyKey, $extraCourseTxMeta) {
             if ($idempotencyKey && ($existing = CoursePointTransaction::where('idempotency_key', $idempotencyKey)->first())) {
                 return ['rewarded' => true, 'points_received' => $existing->amount, 'campaign_title' => $campaign->title];
             }
@@ -363,15 +397,15 @@ class CoursePointAccountService
 
             $courseTx = CoursePointTransaction::create([
                 'course_point_account_id' => $account->id,
-                'course_id' => $lesson->course_id,
-                'lesson_id' => $lesson->id,
+                'course_id' => $campaign->course_id,
+                'lesson_id' => $extraCourseTxMeta['lesson_id'] ?? null,
                 'user_id' => $student->id,
                 'type' => CoursePointTransaction::TYPE_STUDENT_CLAIM,
                 'amount' => $amount,
                 'balance_before' => $balanceBefore,
                 'balance_after' => $balanceAfter,
                 'related_campaign_id' => $campaign->id,
-                'metadata' => ['source' => 'lesson_completion'],
+                'metadata' => array_merge(['source' => $txSource], $extraCourseTxMeta),
                 'created_by' => $student->id,
                 'idempotency_key' => $idempotencyKey,
             ]);
@@ -379,9 +413,9 @@ class CoursePointAccountService
             $userTx = $this->pointsService->earn(
                 $student,
                 $amount,
-                'lesson_completion_reward',
-                $lesson->id,
-                "รางวัลอ่านจบบทเรียน: {$lesson->title}",
+                $earnReason,
+                $earnRefId,
+                $earnDescription,
                 ['campaign_id' => $campaign->id],
             );
 
@@ -466,10 +500,27 @@ class CoursePointAccountService
         return CoursePointAccount::where('course_id', $courseId)->first();
     }
 
+    public function claimManualCampaign(int $campaignId, User $student): array
+    {
+        $campaign = CoursePointCampaign::findOrFail($campaignId);
+        if ($campaign->campaign_type !== CoursePointCampaign::CAMPAIGN_TYPE_MANUAL) {
+            return ['success' => false, 'message' => 'Campaign is not manual'];
+        }
+        if (! CourseMember::where('course_id', $campaign->course_id)->where('user_id', $student->id)->exists()) {
+            return ['success' => false, 'message' => 'ต้องเข้าร่วมรายวิชาก่อน'];
+        }
+        if (! $campaign->isClaimable()) {
+            return ['success' => false, 'message' => 'Campaign is not claimable'];
+        }
+        $result = $this->grantCampaignClaim($campaign, $student, 'manual_claim', 'course_manual_claim', $campaign->id, "Campaign reward: {$campaign->title}");
+
+        return ['success' => $result['rewarded'], 'message' => $result['rewarded'] ? 'รับแต้มสำเร็จ' : ($result['reason'] ?? 'ไม่สามารถรับแต้มได้'), 'points_received' => $result['points_received'] ?? null, 'user_new_points' => $result['rewarded'] ? $student->fresh()->pp : null];
+    }
+
     // Wrap claimCampaign legacy support
     public function claimCampaign(int $campaignId, User $student): array
     {
         // Re-use logic or just redirect to specific claim
-        return $this->grantLessonCompletionReward(CoursePointCampaign::find($campaignId)->lesson ?? new Lesson, $student);
+        return $this->claimManualCampaign($campaignId, $student);
     }
 }
