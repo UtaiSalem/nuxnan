@@ -43,6 +43,12 @@ onMounted(load)
           <button v-if="course?.donation_enabled !== false" type="button" class="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-3 font-bold text-white shadow hover:bg-violet-700" @click="showDonationModal = true">
             <Icon icon="mdi:hand-heart" class="h-5 w-5" /> บริจาคแต้ม
           </button>
+          <NuxtLink v-if="isCourseAdmin" :to="`/courses/${courseId}/wallet/campaigns`" class="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-3 font-bold text-white shadow hover:bg-violet-700">
+            <Icon icon="mdi:star-circle-outline" class="h-5 w-5" /> สร้างแคมเปญแต้ม
+          </NuxtLink>
+          <NuxtLink v-if="isCourseAdmin" :to="`/courses/${courseId}/wallet`" class="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-white px-5 py-3 font-bold text-violet-600 hover:bg-violet-50 dark:border-violet-900/40 dark:bg-transparent dark:text-violet-300">
+            <Icon icon="mdi:wallet-outline" class="h-5 w-5" /> จัดการกระเป๋าแต้ม
+          </NuxtLink>
           <NuxtLink :to="`/earn/advertise/create?scope=course&course_id=${courseId}`" class="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-white px-5 py-3 font-bold text-violet-600 hover:bg-violet-50 dark:border-violet-900/40 dark:bg-transparent dark:text-violet-300">
             <Icon icon="mdi:bullhorn-outline" class="h-5 w-5" /> สร้างแคมเปญโฆษณา
           </NuxtLink>
