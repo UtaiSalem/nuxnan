@@ -65,14 +65,16 @@ class CourseDonateTest extends TestCase
         $this->assertSame(100, (int) CoursePointAccount::where('course_id', $course->id)->first()->balance);
     }
 
-    public function test_cash_self_donation_blocked(): void
+    public function test_owner_can_cash_donate_to_own_course(): void
     {
         $owner = User::factory()->create();
         $course = $this->makeCourse($owner);
         $service = app(CourseDonateService::class);
 
-        $this->expectException(\DomainException::class);
-        $service->createCashDonation($owner, $course, 200.00, ['payment_method' => 'bank_transfer'], null, null);
+        $donation = $service->createCashDonation($owner, $course, 200.00, ['payment_method' => 'bank_transfer'], null, null);
+
+        $this->assertSame(CourseDonate::STATUS_PENDING, $donation->status);
+        $this->assertNull(CoursePointAccount::where('course_id', $course->id)->first());
     }
 
     public function test_insufficient_pp_returns_error(): void

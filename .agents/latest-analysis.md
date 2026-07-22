@@ -1,5 +1,20 @@
 ---
 
+# 2026-07-21 - Modernize Member Withdrawal Request Cancellation Notifications & Push
+
+- **Status:** Complete & Pushed (`a34aca17` -> `origin/main`)
+- **Files:**
+  - [Wallet.vue](file:///C:/wamp64/www/nuxnan/ui/pages/Earn/Wallet.vue)
+  - [withdraw.vue](file:///C:/wamp64/www/nuxnan/ui/pages/courses/%5Bid%5D/wallet/withdraw.vue)
+- **Changes:**
+  - Replaced native `confirm()` and `alert()` calls with modern, dark-mode compatible **SweetAlert2** dialogs.
+  - Implemented rich HTML transaction summary card inside the confirmation modal (showing withdrawal amount, payout destination, and refund terms).
+  - Added non-blocking loading spinner (`swal.showLoading(...)`) during async API call processing.
+  - Added clean success dialogs (`swal.success(...)`) and error handling dialogs (`swal.error(...)`).
+  - Successfully committed and pushed to remote branch `origin/main`.
+
+---
+
 # 2026-07-21 - Redesign SupportDonationModal
 
 - **Status:** Complete
