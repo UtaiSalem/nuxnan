@@ -7,6 +7,7 @@ use App\Models\CourseDonate;
 use App\Models\User;
 use DomainException;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 
 class CourseDonateService
@@ -17,6 +18,9 @@ class CourseDonateService
     {
         if (! $course->donationEnabled()) {
             throw new DomainException('Donations disabled for this course');
+        }
+        if ($donor->id === $course->user_id) {
+            throw new DomainException('You cannot donate to your own course.');
         }
         if ($pointsAmount < 1) {
             throw new DomainException('Donation must be at least 1 point.');
@@ -40,9 +44,16 @@ class CourseDonateService
         if (! $course->donationEnabled()) {
             throw new DomainException('Donations disabled for this course');
         }
+        if ($donor->id === $course->user_id) {
+            throw new DomainException('You cannot donate to your own course.');
+        }
         if ($amount < 1) {
             throw new DomainException('Cash donation must be at least 1.');
         }
+
+        // $meta comes from the request's validated data, which includes the raw
+        // `slip` UploadedFile. Drop it so the JSON `metadata` column can encode.
+        $meta = Arr::except($meta, ['slip']);
 
         return DB::transaction(function () use ($donor, $course, $amount, $meta, $key, $slip) {
             if ($key && ($old = CourseDonate::where('idempotency_key', $key)->first())) {

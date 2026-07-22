@@ -8,6 +8,8 @@ use App\Models\Role;
 use App\Models\User;
 use App\Services\AcademyDonateService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AcademyDonationEndpointsTest extends TestCase
@@ -29,6 +31,22 @@ class AcademyDonationEndpointsTest extends TestCase
         $response = $this->actingAs($donor, 'api')->postJson("/api/academies/{$academy->id}/donations/points", ['points_amount' => 100]);
         $response->assertCreated()->assertJsonPath('data.donation_type', 'point');
         $this->assertEquals(900, $donor->fresh()->pp);
+    }
+
+    public function test_cash_donation_accepts_anonymous_sent_as_multipart_string(): void
+    {
+        [, $donor, $academy] = $this->makeAcademy();
+        Storage::fake('local');
+
+        // Multipart form data serializes booleans as the strings "true"/"false".
+        $response = $this->actingAs($donor, 'api')->post("/api/academies/{$academy->id}/donations/cash", [
+            'cash_amount' => 100,
+            'payment_method' => 'bank_transfer',
+            'anonymous' => 'true',
+            'slip' => UploadedFile::fake()->image('slip.jpg'),
+        ]);
+
+        $response->assertSuccessful()->assertJsonPath('data.anonymous', true);
     }
 
     public function test_unauthenticated_request_returns_401(): void

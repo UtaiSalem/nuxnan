@@ -39,7 +39,9 @@ const error = ref('')
 const result = ref<any>(null)
 const fieldErrors = ref<Record<string, string[]>>({})
 
-const userBalance = computed(() => props.balance ?? auth.user?.pp ?? 0)
+// The /api/me UserResource exposes the spendable balance as `points` (mapped
+// from the users.pp column); keep `pp` as a fallback for any runtime-written value.
+const userBalance = computed(() => props.balance ?? auth.user?.points ?? auth.user?.pp ?? 0)
 
 const pointPresets = [50, 100, 300, 500, 1000, 2500]
 const cashPresets = [50, 100, 300, 500, 1000, 2000]
@@ -184,7 +186,9 @@ async function submit() {
       form.append('payment_method', paymentMethod.value)
       if (reference.value) form.append('payment_reference', reference.value)
       if (purpose.value) form.append('purpose', purpose.value)
-      form.append('anonymous', String(anonymous.value))
+      // Multipart form values are strings; Laravel's `boolean` rule rejects
+      // "true"/"false" but accepts "1"/"0".
+      form.append('anonymous', anonymous.value ? '1' : '0')
       if (displayName.value) form.append('donor_display_name', displayName.value)
       response = props.scope === 'academy'
         ? await academyApi.sendCashDonation(props.targetId, form)

@@ -8,6 +8,7 @@ use App\Models\User;
 use DomainException;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Arr;
 
 class AcademyDonateService
 {
@@ -16,6 +17,9 @@ class AcademyDonateService
     public function createPointDonation(User $donor, Academy $academy, int $pointsAmount, array $meta, ?string $idempotencyKey): AcademyDonate
     {
         $this->guardEnabled($academy);
+        if ($donor->id === $academy->user_id) {
+            throw new DomainException('You cannot donate to your own academy.');
+        }
         if ($pointsAmount < 1) {
             throw new DomainException('Donation must be at least 1 point.');
         }
@@ -38,9 +42,16 @@ class AcademyDonateService
     public function createCashDonation(User $donor, Academy $academy, float $cash, array $meta, ?string $idempotencyKey, ?UploadedFile $slip): AcademyDonate
     {
         $this->guardEnabled($academy);
+        if ($donor->id === $academy->user_id) {
+            throw new DomainException('You cannot donate to your own academy.');
+        }
         if ($cash < 1) {
             throw new DomainException('Cash donation must be at least 1.');
         }
+
+        // $meta comes from the request's validated data, which includes the raw
+        // `slip` UploadedFile. Drop it so the JSON `metadata` column can encode.
+        $meta = Arr::except($meta, ['slip']);
 
         return $this->database->transaction(function () use ($donor, $academy, $cash, $meta, $idempotencyKey, $slip) {
             if ($idempotencyKey && ($old = AcademyDonate::where('idempotency_key', $idempotencyKey)->first())) {

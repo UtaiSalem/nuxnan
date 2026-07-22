@@ -9,6 +9,8 @@ use App\Models\CoursePointTransaction;
 use App\Models\User;
 use App\Services\CourseDonateService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class CourseDonateTest extends TestCase
@@ -70,6 +72,24 @@ class CourseDonateTest extends TestCase
 
         $this->expectException(\DomainException::class);
         $service->createPointDonation($donor, $course, 100, [], null);
+    }
+
+    public function test_cash_donation_endpoint_accepts_anonymous_sent_as_multipart_string(): void
+    {
+        $owner = User::factory()->create();
+        $donor = User::factory()->create(['pp' => 500]);
+        $course = Course::factory()->create(['user_id' => $owner->id, 'donation_enabled' => true, 'status' => 1]);
+        Storage::fake('local');
+
+        // Multipart form data serializes booleans as the strings "true"/"false".
+        $response = $this->actingAs($donor, 'api')->post("/api/courses/{$course->id}/donations/cash", [
+            'cash_amount' => 100,
+            'payment_method' => 'bank_transfer',
+            'anonymous' => 'true',
+            'slip' => UploadedFile::fake()->image('slip.jpg'),
+        ]);
+
+        $response->assertSuccessful()->assertJsonPath('data.anonymous', true);
     }
 
     public function test_cash_donation_creates_pending_row_and_does_not_credit_account(): void

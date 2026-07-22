@@ -43,7 +43,7 @@ const showDonationModal = ref(false)
       :course-id="Number(course.id)"
       :course-name="course.name"
       :course-owner-id="Number(course.user_id)"
-      :balance="authStore.user?.pp"
+      :balance="authStore.user?.points ?? authStore.user?.pp"
     />
   </div>
 </template>

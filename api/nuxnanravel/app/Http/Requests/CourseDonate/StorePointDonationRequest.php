@@ -2,14 +2,16 @@
 
 namespace App\Http\Requests\CourseDonate;
 
+use App\Policies\CourseDonatePolicy;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Gate;
 
 class StorePointDonationRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return Gate::allows('donate', $this->route('course'));
+        // Course maps to CoursePolicy (which has no `donate` ability), so invoke
+        // the CourseDonatePolicy directly instead of Gate::allows('donate', ...).
+        return app(CourseDonatePolicy::class)->donate($this->user(), $this->route('course'));
     }
 
     public function rules(): array

@@ -281,7 +281,7 @@ watch(courseId, (newId) => {
           <NuxtPage />
         </template>
       </CoursePageShell>
-      <CourseDonationModal v-model:visible="showDonationModal" :course-id="Number(course.id)" :course-name="course.name" :course-owner-id="Number(course.user_id)" :balance="authStore.user?.pp" />
+      <CourseDonationModal v-model:visible="showDonationModal" :course-id="Number(course.id)" :course-name="course.name" :course-owner-id="Number(course.user_id)" :balance="authStore.user?.points ?? authStore.user?.pp" />
 
       <!-- Modals -->
       <CourseEditModal
