@@ -508,7 +508,7 @@ class CoursePointAccountService
         return CoursePointAccount::where('course_id', $courseId)->first();
     }
 
-    public function claimManualCampaign(int $campaignId, User $student, ?int $viewedDonorId = null, ?int $viewedDonationId = null): array
+    public function claimManualCampaign(int $campaignId, User $student, ?int $viewedDonorId = null, ?int $viewedDonationId = null, ?int $viewedAdId = null): array
     {
         $campaign = CoursePointCampaign::findOrFail($campaignId);
         if ($campaign->campaign_type !== CoursePointCampaign::CAMPAIGN_TYPE_MANUAL) {
@@ -520,7 +520,7 @@ class CoursePointAccountService
         if (! $campaign->isClaimable()) {
             return ['success' => false, 'message' => 'Campaign is not claimable'];
         }
-        $extraClaimFields = $viewedDonorId || $viewedDonationId ? ['viewed_donor_id' => $viewedDonorId, 'viewed_donation_id' => $viewedDonationId, 'viewed_at' => now()] : [];
+        $extraClaimFields = $viewedDonorId || $viewedDonationId || $viewedAdId ? ['viewed_donor_id' => $viewedDonorId, 'viewed_donation_id' => $viewedDonationId, 'viewed_ad_id' => $viewedAdId, 'viewed_at' => now()] : [];
         $result = $this->grantCampaignClaim($campaign, $student, 'manual_claim', 'course_manual_claim', $campaign->id, "Campaign reward: {$campaign->title}", null, [], $extraClaimFields);
 
         return ['success' => $result['rewarded'], 'message' => $result['rewarded'] ? 'รับแต้มสำเร็จ' : ($result['reason'] ?? 'ไม่สามารถรับแต้มได้'), 'points_received' => $result['points_received'] ?? null, 'user_new_points' => $result['rewarded'] ? $student->fresh()->pp : null];

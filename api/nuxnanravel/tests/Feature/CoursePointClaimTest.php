@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Advert;
 use App\Models\Course;
 use App\Models\CourseDonate;
 use App\Models\CourseMember;
@@ -62,6 +63,27 @@ class CoursePointClaimTest extends TestCase
         $this->assertTrue($result['success']);
         $this->assertDatabaseHas('course_point_campaign_claims', ['campaign_id' => $campaign->id, 'viewed_donor_id' => $donor->id, 'viewed_donation_id' => $donation->id]);
         $this->assertSame(10, $donation->fresh()->remaining_points);
+    }
+
+    public function test_view_returns_ad_when_no_donation(): void
+    {
+        [, $course, , $campaign, $student] = $this->fixture(100, null);
+        $ad = Advert::factory()->create(['user_id' => $student->id, 'advertiser_id' => $student->id, 'scope_type' => 'course', 'course_id' => $course->id, 'academy_id' => $course->academy_id, 'active_from' => now()->subMinute(), 'active_until' => now()->addMinute(), 'duration' => 5]);
+        $this->actingAs($student, 'api')->postJson("/api/courses/{$course->id}/points/campaigns/{$campaign->id}/view")->assertOk()->assertJsonPath('mode', 'ad')->assertJsonPath('ad.id', $ad->id);
+    }
+
+    public function test_view_returns_empty_fallback_when_no_donation_no_ad(): void
+    {
+        [, $course, , $campaign, $student] = $this->fixture(100, null);
+        $this->actingAs($student, 'api')->postJson("/api/courses/{$course->id}/points/campaigns/{$campaign->id}/view")->assertOk()->assertJsonPath('mode', 'empty')->assertJsonPath('view_duration_seconds', 10);
+    }
+
+    public function test_claim_records_viewed_ad(): void
+    {
+        [$service, $course, , $campaign, $student] = $this->fixture(100, null);
+        $ad = Advert::factory()->create(['user_id' => $student->id, 'advertiser_id' => $student->id, 'scope_type' => 'course', 'course_id' => $course->id, 'remaining_views' => 1]);
+        $this->assertTrue($service->claimManualCampaign($campaign->id, $student, null, null, $ad->id)['success']);
+        $this->assertDatabaseHas('course_point_campaign_claims', ['campaign_id' => $campaign->id, 'viewed_ad_id' => $ad->id]);
     }
 
     public function test_non_enrolled_user_is_blocked(): void

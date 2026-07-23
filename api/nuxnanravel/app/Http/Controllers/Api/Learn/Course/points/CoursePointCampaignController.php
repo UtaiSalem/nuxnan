@@ -6,13 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\CourseDonate;
 use App\Models\CoursePointCampaign;
+use App\Services\Campaign\CampaignDeliveryService;
 use App\Services\CoursePointAccountService;
 use Illuminate\Http\Request;
 
 class CoursePointCampaignController extends Controller
 {
     public function __construct(
-        protected CoursePointAccountService $service
+        protected CoursePointAccountService $service,
+        protected CampaignDeliveryService $delivery
     ) {}
 
     // GET /courses/{course}/points/campaigns
@@ -51,8 +53,9 @@ class CoursePointCampaignController extends Controller
         $data = $request->validate([
             'viewed_donor_id' => 'nullable|integer|exists:users,id',
             'viewed_donation_id' => 'nullable|integer|exists:course_donates,id',
+            'viewed_ad_id' => 'nullable|integer|exists:adverts,id',
         ]);
-        $result = $this->service->claimManualCampaign($campaign->id, auth()->user(), $data['viewed_donor_id'] ?? null, $data['viewed_donation_id'] ?? null);
+        $result = $this->service->claimManualCampaign($campaign->id, auth()->user(), $data['viewed_donor_id'] ?? null, $data['viewed_donation_id'] ?? null, $data['viewed_ad_id'] ?? null);
 
         return response()->json($result, $result['success'] ? 200 : 422);
     }
@@ -73,12 +76,26 @@ class CoursePointCampaignController extends Controller
             ->first();
         $donor = $donation?->donor;
 
+        if (! $donation) {
+            $ad = $this->delivery->query('course', $course->academy_id, $course->id)->orderBy('created_at')->with('advertiser')->first();
+            if ($ad) {
+                return response()->json([
+                    'mode' => 'ad', 'donor' => null, 'donation' => null,
+                    'ad' => ['id' => $ad->id, 'media_image' => $ad->media_image, 'media_link' => $ad->media_link, 'title' => $ad->title, 'description' => $ad->description, 'duration' => $ad->duration, 'advertiser' => $ad->advertiser ? ['name' => $ad->advertiser->name, 'avatar' => $ad->advertiser->profile_photo_url] : null],
+                    'expected_points' => $campaign->points_per_claim, 'campaign_title' => $campaign->title, 'view_duration_seconds' => $ad->duration,
+                ]);
+            }
+        }
+
         return response()->json([
+            'mode' => $donation ? 'donor' : 'empty',
             'donor' => $donor ? ['id' => $donor->id, 'name' => $donor->name, 'username' => $donor->username, 'avatar' => $donor->avatar, 'personal_code' => $donor->personal_code, 'profile' => $donor->profile] : null,
             'donation' => $donation ? ['id' => $donation->id, 'points_amount' => $donation->points_amount, 'remaining_points' => $donation->remaining_points, 'purpose' => $donation->purpose, 'created_at' => $donation->created_at, 'anonymous' => $donation->anonymous, 'donor_display_name' => $donation->donor_display_name] : null,
             'expected_points' => $campaign->points_per_claim,
             'campaign_title' => $campaign->title,
             'view_duration_seconds' => 10,
+            'course_avatar' => $donation ? null : ($course->image ?? $course->avatar ?? $course->cover ?? null),
+            'course_title' => $donation ? null : ($course->name ?? $course->title),
         ]);
     }
 
