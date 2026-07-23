@@ -1,0 +1,21 @@
+<script setup lang="ts">
+const props = defineProps<{ visible: boolean; courseId: number | string; availableBalance: number }>()
+const emit = defineEmits<{ 'update:visible': [boolean]; created: [] }>()
+const { createManualCampaign } = useCoursePoints(computed(() => props.courseId))
+const swal = useSweetAlert()
+const title = ref(''); const description = ref(''); const points = ref<number | null>(null); const limited = ref(false); const maxClaims = ref<number | null>(null); const startsAt = ref(''); const endsAt = ref(''); const loading = ref(false); const error = ref('')
+const reserve = computed(() => (limited.value && points.value && maxClaims.value) ? points.value * maxClaims.value : 0)
+const insufficient = computed(() => reserve.value > props.availableBalance)
+const close = () => emit('update:visible', false)
+const submit = async () => {
+  error.value = ''
+  if (!title.value.trim() || !points.value || points.value < 1 || (limited.value && (!maxClaims.value || maxClaims.value < 1))) { error.value = 'กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน'; return }
+  if (insufficient.value) { error.value = 'แต้มในกองทุนไม่เพียงพอสำหรับแคมเปญนี้'; return }
+  loading.value = true
+  try { await createManualCampaign({ title: title.value, description: description.value || null, points_per_claim: points.value, max_claims: limited.value ? maxClaims.value : null, starts_at: startsAt.value || null, ends_at: endsAt.value || null }); swal.toast('สร้างแคมเปญสำเร็จ'); emit('created'); close(); title.value = ''; description.value = ''; points.value = null; maxClaims.value = null } catch (e: any) { error.value = e.data?.message || 'ไม่สามารถสร้างแคมเปญได้' } finally { loading.value = false }
+}
+</script>
+<template>
+  <Transition name="modal-fade"><div v-if="visible" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" @click.self="close"><Transition name="modal-slide" appear><div class="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-800"><div class="flex items-center justify-between"><h2 class="text-xl font-bold text-gray-900 dark:text-white">สร้างแคมเปญ</h2><button type="button" class="text-2xl text-gray-400" @click="close">×</button></div><form class="mt-5 space-y-4" @submit.prevent="submit"><input v-model="title" required placeholder="ชื่อแคมเปญ *" class="w-full rounded-3xl border border-gray-200 p-3 dark:border-gray-600 dark:bg-slate-700" /><textarea v-model="description" placeholder="รายละเอียด" rows="3" class="w-full rounded-3xl border border-gray-200 p-3 dark:border-gray-600 dark:bg-slate-700" /><input v-model.number="points" required min="1" type="number" placeholder="แต้มต่อการรับ *" class="w-full rounded-3xl border border-gray-200 p-3 dark:border-gray-600 dark:bg-slate-700" /><label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200"><input v-model="limited" type="checkbox" class="rounded" /> จำกัดจำนวนผู้รับ</label><input v-if="limited" v-model.number="maxClaims" min="1" type="number" placeholder="จำนวนผู้รับสูงสุด" class="w-full rounded-3xl border border-gray-200 p-3 dark:border-gray-600 dark:bg-slate-700" /><div class="grid grid-cols-2 gap-3"><input v-model="startsAt" type="datetime-local" class="w-full rounded-3xl border border-gray-200 p-3 text-sm dark:border-gray-600 dark:bg-slate-700" /><input v-model="endsAt" type="datetime-local" class="w-full rounded-3xl border border-gray-200 p-3 text-sm dark:border-gray-600 dark:bg-slate-700" /></div><p v-if="limited" class="rounded-2xl bg-amber-50 p-3 text-sm text-amber-700">กันแต้มไว้ {{ reserve.toLocaleString() }} แต้ม จาก {{ availableBalance.toLocaleString() }} แต้ม</p><p v-if="error" class="text-sm text-red-600">{{ error }}</p><button :disabled="loading || insufficient" class="w-full rounded-3xl bg-gradient-to-r from-violet-500 via-pink-500 to-amber-400 p-3 font-bold text-white disabled:opacity-50">{{ loading ? 'กำลังสร้าง...' : 'สร้างแคมเปญ' }}</button></form></div></Transition></div></Transition>
+</template>
+<style scoped>.modal-fade-enter-active,.modal-fade-leave-active{transition:opacity .2s}.modal-fade-enter-from,.modal-fade-leave-to{opacity:0}.modal-slide-enter-active,.modal-slide-leave-active{transition:transform .25s cubic-bezier(.4,0,.2,1)}.modal-slide-enter-from,.modal-slide-leave-to{transform:translateY(1rem) scale(.95)}</style>
