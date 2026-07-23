@@ -33,10 +33,7 @@ onMounted(async () => {
     <CourseSupportPanel v-if="course" :course="course" :is-course-admin="isCourseAdmin" />
 
     <section v-if="isCourseAdmin" class="rounded-2xl bg-white p-5 shadow-sm dark:bg-vikinger-dark-200">
-      <div class="mb-4 flex items-center justify-between gap-4">
-        <h2 class="font-black">ประวัติการรับแต้ม (เต็ม)</h2>
-        <NuxtLink :to="`/courses/${courseId}/wallet`" class="text-sm font-semibold text-violet-600 hover:text-violet-700 dark:text-violet-300">กระเป๋าแต้ม →</NuxtLink>
-      </div>
+      <h2 class="mb-4 font-black">ประวัติการรับแต้ม (เต็ม)</h2>
       <div v-if="!transactions.length" class="py-8 text-center text-sm text-slate-500">ยังไม่มีประวัติรายการ</div>
       <div v-for="transaction in transactions" :key="transaction.id" class="flex items-center justify-between border-b border-slate-100 py-3 text-sm last:border-0 dark:border-slate-700">
         <span class="truncate">{{ transaction.description || transaction.type || 'รายการแต้ม' }}</span>
