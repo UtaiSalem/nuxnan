@@ -24,9 +24,9 @@ class CourseDonate extends Model
 
     public const STATUS_COMPLETED = 'completed';
 
-    protected $fillable = ['course_id', 'donor_id', 'donor_display_name', 'donation_type', 'points_amount', 'cash_amount', 'currency', 'status', 'purpose', 'anonymous', 'slip_path', 'payment_method', 'payment_reference', 'idempotency_key', 'version', 'course_point_transaction_id', 'approved_by', 'reviewed_at', 'rejection_reason', 'metadata'];
+    protected $fillable = ['course_id', 'donor_id', 'donor_display_name', 'donation_type', 'points_amount', 'remaining_points', 'cash_amount', 'currency', 'status', 'purpose', 'anonymous', 'slip_path', 'payment_method', 'payment_reference', 'idempotency_key', 'version', 'course_point_transaction_id', 'approved_by', 'reviewed_at', 'rejection_reason', 'metadata'];
 
-    protected $casts = ['points_amount' => 'integer', 'cash_amount' => 'decimal:4', 'anonymous' => 'boolean', 'metadata' => 'array', 'reviewed_at' => 'datetime'];
+    protected $casts = ['points_amount' => 'integer', 'remaining_points' => 'integer', 'cash_amount' => 'decimal:4', 'anonymous' => 'boolean', 'metadata' => 'array', 'reviewed_at' => 'datetime'];
 
     public function course()
     {
