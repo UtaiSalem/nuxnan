@@ -63,7 +63,7 @@ export function useCoursePoints(courseId: Ref<string | number> | string | number
 
   const viewCampaign = (campaignId: number) => api.post(`/api/courses/${id.value}/points/campaigns/${campaignId}/view`, {})
 
-  const claimCampaign = async (campaignId: number, viewed?: { viewed_donor_id?: number, viewed_donation_id?: number }) => {
+  const claimCampaign = async (campaignId: number, viewed?: { viewed_donor_id?: number, viewed_donation_id?: number, viewed_ad_id?: number }) => {
     isClaiming.value = campaignId
     try {
       const res = await api.post(`/api/courses/${id.value}/points/campaigns/${campaignId}/claim`, viewed || {}) as any
