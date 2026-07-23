@@ -20,4 +20,9 @@ class CoursePointCampaignClaim extends Model
     {
         return $this->belongsTo(CourseDonate::class, 'viewed_donation_id');
     }
+
+    public function viewedAd(): BelongsTo
+    {
+        return $this->belongsTo(Advert::class, 'viewed_ad_id');
+    }
 }
