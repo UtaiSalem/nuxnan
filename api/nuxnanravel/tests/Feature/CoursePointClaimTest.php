@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Course;
+use App\Models\CourseDonate;
 use App\Models\CourseMember;
 use App\Models\CoursePointAccount;
 use App\Models\CoursePointCampaign;
@@ -38,6 +39,29 @@ class CoursePointClaimTest extends TestCase
 
         $this->assertFalse($result['success']);
         $this->assertSame(1, CoursePointCampaignClaim::where('campaign_id', $campaign->id)->count());
+    }
+
+    public function test_view_returns_oldest_donation_with_remaining(): void
+    {
+        [, $course, , $campaign, $student] = $this->fixture(100, null);
+        $donor = User::factory()->create(['name' => 'FIFO Donor']);
+        $old = CourseDonate::create(['course_id' => $course->id, 'donor_id' => $donor->id, 'donation_type' => 'point', 'points_amount' => 20, 'remaining_points' => 7, 'status' => 'approved', 'created_at' => now()->subMinute()]);
+        CourseDonate::create(['course_id' => $course->id, 'donor_id' => $donor->id, 'donation_type' => 'point', 'points_amount' => 30, 'remaining_points' => 30, 'status' => 'approved']);
+
+        $this->actingAs($student, 'api')->postJson("/api/courses/{$course->id}/points/campaigns/{$campaign->id}/view")
+            ->assertOk()->assertJsonPath('donation.id', $old->id)->assertJsonPath('donation.remaining_points', 7);
+    }
+
+    public function test_claim_records_viewed_donor_and_decrements_donation(): void
+    {
+        [$service, $course, , $campaign, $student] = $this->fixture(100, null);
+        $donor = User::factory()->create();
+        $donation = CourseDonate::create(['course_id' => $course->id, 'donor_id' => $donor->id, 'donation_type' => 'point', 'points_amount' => 100, 'remaining_points' => 60, 'status' => 'approved']);
+        $result = $service->claimManualCampaign($campaign->id, $student, $donor->id, $donation->id);
+
+        $this->assertTrue($result['success']);
+        $this->assertDatabaseHas('course_point_campaign_claims', ['campaign_id' => $campaign->id, 'viewed_donor_id' => $donor->id, 'viewed_donation_id' => $donation->id]);
+        $this->assertSame(10, $donation->fresh()->remaining_points);
     }
 
     public function test_non_enrolled_user_is_blocked(): void

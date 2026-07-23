@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Learn\Course\points;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
+use App\Models\CourseDonate;
 use App\Models\CoursePointCampaign;
 use App\Services\CoursePointAccountService;
 use Illuminate\Http\Request;
@@ -42,14 +43,43 @@ class CoursePointCampaignController extends Controller
     }
 
     // POST /courses/{course}/points/campaigns/{campaign}/claim
-    public function claim(Course $course, CoursePointCampaign $campaign)
+    public function claim(Request $request, Course $course, CoursePointCampaign $campaign)
     {
         // ตรวจว่า campaign เป็นของ course นี้
         abort_if($campaign->course_id !== $course->id, 404);
 
-        $result = $this->service->claimManualCampaign($campaign->id, auth()->user());
+        $data = $request->validate([
+            'viewed_donor_id' => 'nullable|integer|exists:users,id',
+            'viewed_donation_id' => 'nullable|integer|exists:course_donates,id',
+        ]);
+        $result = $this->service->claimManualCampaign($campaign->id, auth()->user(), $data['viewed_donor_id'] ?? null, $data['viewed_donation_id'] ?? null);
 
         return response()->json($result, $result['success'] ? 200 : 422);
+    }
+
+    public function view(Course $course, CoursePointCampaign $campaign)
+    {
+        abort_if($campaign->course_id !== $course->id, 404);
+        abort_unless($campaign->isClaimable(), 422);
+        abort_unless($course->courseMembers()->where('user_id', auth()->id())->exists(), 403);
+        abort_if($campaign->claims()->where('user_id', auth()->id())->exists(), 422);
+
+        $donation = CourseDonate::with('donor.profile')
+            ->where('course_id', $course->id)
+            ->where('donation_type', CourseDonate::TYPE_POINT)
+            ->whereIn('status', [CourseDonate::STATUS_APPROVED, CourseDonate::STATUS_COMPLETED])
+            ->where('remaining_points', '>', 0)
+            ->orderBy('created_at')
+            ->first();
+        $donor = $donation?->donor;
+
+        return response()->json([
+            'donor' => $donor ? ['id' => $donor->id, 'name' => $donor->name, 'username' => $donor->username, 'avatar' => $donor->avatar, 'personal_code' => $donor->personal_code, 'profile' => $donor->profile] : null,
+            'donation' => $donation ? ['id' => $donation->id, 'points_amount' => $donation->points_amount, 'remaining_points' => $donation->remaining_points, 'purpose' => $donation->purpose, 'created_at' => $donation->created_at, 'anonymous' => $donation->anonymous, 'donor_display_name' => $donation->donor_display_name] : null,
+            'expected_points' => $campaign->points_per_claim,
+            'campaign_title' => $campaign->title,
+            'view_duration_seconds' => 10,
+        ]);
     }
 
     public function available(Course $course)

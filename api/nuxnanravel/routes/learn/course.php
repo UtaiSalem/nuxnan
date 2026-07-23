@@ -71,6 +71,7 @@ Route::middleware(['auth:api', 'verified'])->group(function () {
         Route::patch('/campaigns/{campaign}/pause', [CoursePointCampaignController::class, 'pause'])->name('course.points.campaigns.pause');
         Route::patch('/campaigns/{campaign}/end', [CoursePointCampaignController::class, 'end'])->name('course.points.campaigns.end');
         Route::post('/campaigns/{campaign}/claim', [CoursePointCampaignController::class, 'claim'])->name('course.points.campaigns.claim');
+        Route::post('/campaigns/{campaign}/view', [CoursePointCampaignController::class, 'view'])->name('course.points.campaigns.view');
     });
 
     // Lesson Reward Campaign

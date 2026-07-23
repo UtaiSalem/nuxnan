@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Course;
+use App\Models\CourseDonate;
 use App\Models\CourseMember;
 use App\Models\CoursePointAccount;
 use App\Models\CoursePointCampaign;
@@ -348,9 +349,9 @@ class CoursePointAccountService
         return $this->grantCampaignClaim($campaign, $student, 'quiz_completion', 'quiz_completion_reward', $quiz->id, "Quiz reward: {$quiz->title}", $idempotencyKey, ['quiz_id' => $quiz->id]);
     }
 
-    protected function grantCampaignClaim(CoursePointCampaign $campaign, User $student, string $txSource, string $earnReason, int $earnRefId, string $earnDescription, ?string $idempotencyKey = null, array $extraCourseTxMeta = []): array
+    protected function grantCampaignClaim(CoursePointCampaign $campaign, User $student, string $txSource, string $earnReason, int $earnRefId, string $earnDescription, ?string $idempotencyKey = null, array $extraCourseTxMeta = [], array $extraClaimFields = []): array
     {
-        return DB::transaction(function () use ($campaign, $student, $txSource, $earnReason, $earnRefId, $earnDescription, $idempotencyKey, $extraCourseTxMeta) {
+        return DB::transaction(function () use ($campaign, $student, $txSource, $earnReason, $earnRefId, $earnDescription, $idempotencyKey, $extraCourseTxMeta, $extraClaimFields) {
             if ($idempotencyKey && ($existing = CoursePointTransaction::where('idempotency_key', $idempotencyKey)->first())) {
                 return ['rewarded' => true, 'points_received' => $existing->amount, 'campaign_title' => $campaign->title];
             }
@@ -419,14 +420,21 @@ class CoursePointAccountService
                 ['campaign_id' => $campaign->id],
             );
 
-            CoursePointCampaignClaim::create([
+            CoursePointCampaignClaim::create(array_merge([
                 'campaign_id' => $campaign->id,
                 'user_id' => $student->id,
                 'points_amount' => $amount,
                 'points_transaction_id' => $userTx->id,
                 'course_point_transaction_id' => $courseTx->id,
                 'claimed_at' => now(),
-            ]);
+            ], $extraClaimFields));
+
+            if (! empty($extraClaimFields['viewed_donation_id'])) {
+                $donation = CourseDonate::lockForUpdate()->find($extraClaimFields['viewed_donation_id']);
+                if ($donation) {
+                    $donation->update(['remaining_points' => max(0, $donation->remaining_points - min($amount, $donation->remaining_points))]);
+                }
+            }
 
             $campaign->increment('total_claimed');
             $campaign->increment('total_points_claimed', $amount);
@@ -500,7 +508,7 @@ class CoursePointAccountService
         return CoursePointAccount::where('course_id', $courseId)->first();
     }
 
-    public function claimManualCampaign(int $campaignId, User $student): array
+    public function claimManualCampaign(int $campaignId, User $student, ?int $viewedDonorId = null, ?int $viewedDonationId = null): array
     {
         $campaign = CoursePointCampaign::findOrFail($campaignId);
         if ($campaign->campaign_type !== CoursePointCampaign::CAMPAIGN_TYPE_MANUAL) {
@@ -512,7 +520,8 @@ class CoursePointAccountService
         if (! $campaign->isClaimable()) {
             return ['success' => false, 'message' => 'Campaign is not claimable'];
         }
-        $result = $this->grantCampaignClaim($campaign, $student, 'manual_claim', 'course_manual_claim', $campaign->id, "Campaign reward: {$campaign->title}");
+        $extraClaimFields = $viewedDonorId || $viewedDonationId ? ['viewed_donor_id' => $viewedDonorId, 'viewed_donation_id' => $viewedDonationId, 'viewed_at' => now()] : [];
+        $result = $this->grantCampaignClaim($campaign, $student, 'manual_claim', 'course_manual_claim', $campaign->id, "Campaign reward: {$campaign->title}", null, [], $extraClaimFields);
 
         return ['success' => $result['rewarded'], 'message' => $result['rewarded'] ? 'รับแต้มสำเร็จ' : ($result['reason'] ?? 'ไม่สามารถรับแต้มได้'), 'points_received' => $result['points_received'] ?? null, 'user_new_points' => $result['rewarded'] ? $student->fresh()->pp : null];
     }
