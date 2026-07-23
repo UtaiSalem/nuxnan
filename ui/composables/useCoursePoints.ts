@@ -61,10 +61,12 @@ export function useCoursePoints(courseId: Ref<string | number> | string | number
   const pauseCampaign = (campaignId: number) => api.patch(`/api/courses/${id.value}/points/campaigns/${campaignId}/pause`, {})
   const endCampaign = (campaignId: number) => api.patch(`/api/courses/${id.value}/points/campaigns/${campaignId}/end`, {})
 
-  const claimCampaign = async (campaignId: number) => {
+  const viewCampaign = (campaignId: number) => api.post(`/api/courses/${id.value}/points/campaigns/${campaignId}/view`, {})
+
+  const claimCampaign = async (campaignId: number, viewed?: { viewed_donor_id?: number, viewed_donation_id?: number }) => {
     isClaiming.value = campaignId
     try {
-      const res = await api.post(`/api/courses/${id.value}/points/campaigns/${campaignId}/claim`, {}) as any
+      const res = await api.post(`/api/courses/${id.value}/points/campaigns/${campaignId}/claim`, viewed || {}) as any
       if (res.success) {
         await Promise.all([fetchAvailableCampaigns(), fetchAccount()])
       }
@@ -147,6 +149,7 @@ export function useCoursePoints(courseId: Ref<string | number> | string | number
     pauseCampaign,
     endCampaign,
     claimCampaign,
+    viewCampaign,
     fetchTransactions,
     withdraw,
     fetchLessonReward,
