@@ -1,120 +1,27 @@
 <script setup lang="ts">
+import type { Ref } from 'vue'
 import CourseDonationModal from '~/components/donation/CourseDonationModal.vue'
 import CoursePointClaimCard from '~/components/learn/course/points/CoursePointClaimCard.vue'
+import CampaignCreateModal from '~/components/learn/course/points/CampaignCreateModal.vue'
+import CampaignManageModal from '~/components/learn/course/points/CampaignManageModal.vue'
+import WithdrawModal from '~/components/learn/course/points/WithdrawModal.vue'
 import type { CourseDonation } from '~/composables/useCourseDonations'
-
-const props = withDefaults(defineProps<{ course: any; isCourseAdmin?: boolean }>(), {
-  isCourseAdmin: false,
-})
-
-const authStore = useAuthStore()
-const sweetAlert = useSweetAlert()
-const showDonationModal = ref(false)
-const donations = ref<CourseDonation[]>([])
-
-const {
-  account,
-  campaigns,
-  ownerCampaigns,
-  isClaiming,
-  isLoadingCampaigns,
-  fetchAccount,
-  fetchAvailableCampaigns,
-  fetchOwnerCampaigns,
-  claimCampaign,
-} = useCoursePoints(computed(() => props.course.id))
-const { fetchCourseDonations } = useCourseDonations()
-
-const approvedPointDonations = computed(() => donations.value.filter((donation) => (
-  donation.donation_type === 'point' && ['approved', 'completed'].includes(donation.status)
-)))
-const fundBalance = computed(() => account.value?.balance ?? 0)
-const showClaimSection = computed(() => isLoadingCampaigns.value || campaigns.value.length > 0 || fundBalance.value > 0)
-
-const loadSupportData = async () => {
-  await Promise.all([
-    fetchAccount(),
-    props.isCourseAdmin ? fetchOwnerCampaigns() : fetchAvailableCampaigns(),
-    fetchCourseDonations(Number(props.course.id), { per_page: 5 }).then((response: any) => {
-      donations.value = response?.data || []
-    }),
-  ])
-}
-
-const claim = async (id: number) => {
-  const result = await claimCampaign(id) as any
-  if (result?.success) sweetAlert.toast(`+${result.points_received} แต้ม!`)
-}
-
+const props = withDefaults(defineProps<{ course: any; isCourseAdmin?: boolean }>(), { isCourseAdmin: false })
+const authStore = useAuthStore(); const sweetAlert = useSweetAlert(); const showDonationModal = ref(false); const showCreate = ref(false); const showManage = ref(false); const showWithdraw = ref(false); const donations = ref<CourseDonation[]>([]); const claimBump = ref(false)
+const { account, campaigns, ownerCampaigns, isClaiming, isLoadingCampaigns, fetchAccount, fetchAvailableCampaigns, fetchOwnerCampaigns, claimCampaign } = useCoursePoints(computed(() => props.course.id)); const { fetchCourseDonations } = useCourseDonations()
+const approvedPointDonations = computed(() => donations.value.filter(d => d.donation_type === 'point' && ['approved', 'completed'].includes(d.status))); const fundBalance = computed(() => account.value?.balance ?? 0); const distributed = computed(() => account.value?.total_distributed ?? 0); const showClaimSection = computed(() => isLoadingCampaigns.value || campaigns.value.length > 0 || fundBalance.value > 0); const manualCampaigns = computed(() => ownerCampaigns.value.filter(c => c.campaign_type === 'manual_claim')); const hasActiveManual = computed(() => manualCampaigns.value.some(c => c.status === 'active'))
+const useCountUp = (target: Ref<number>) => { const display = ref(0); let frame = 0; watch(target, value => { const from = display.value; const start = performance.now(); cancelAnimationFrame(frame); const tick = (now: number) => { const p = Math.min(1, (now - start) / 600); display.value = Math.round(from + (value - from) * (1 - Math.pow(1 - p, 3))); if (p < 1) frame = requestAnimationFrame(tick) }; frame = requestAnimationFrame(tick) }, { immediate: true }); return display }
+const balanceDisplay = useCountUp(fundBalance); const supportersDisplay = useCountUp(computed(() => approvedPointDonations.value.length)); const distributedDisplay = useCountUp(distributed)
+const loadSupportData = async () => { await Promise.all([fetchAccount(), props.isCourseAdmin ? fetchOwnerCampaigns() : fetchAvailableCampaigns(), fetchCourseDonations(Number(props.course.id), { per_page: 5 }).then((r: any) => { donations.value = r?.data || [] })]) }
+const claim = async (id: number) => { const result = await claimCampaign(id) as any; if (result?.success) { sweetAlert.toast(`+${result.points_received} แต้ม!`); claimBump.value = true; setTimeout(() => claimBump.value = false, 800) } }
 onMounted(loadSupportData)
 </script>
-
 <template>
-  <section class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6">
-    <header class="flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-3">
-        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-vikinger-purple/10 text-vikinger-purple">
-          <Icon icon="mdi:hand-heart-outline" class="h-6 w-6" />
-        </span>
-        <h2 class="text-lg font-bold text-gray-900 dark:text-white">สนับสนุน &amp; รับแต้ม</h2>
-      </div>
-      <button
-        v-if="!isCourseAdmin && course.donation_enabled !== false"
-        type="button"
-        class="rounded-xl bg-vikinger-purple px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
-        @click="showDonationModal = true"
-      >
-        บริจาคแต้ม
-      </button>
-      <NuxtLink v-else-if="isCourseAdmin" :to="`/courses/${course.id}/wallet/campaigns`" class="rounded-xl bg-vikinger-purple px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90">
-        จัดการแคมเปญ
-      </NuxtLink>
-    </header>
-
-    <div class="mt-5 grid grid-cols-2 gap-3 border-y border-gray-100 py-4 dark:border-gray-700">
-      <div><p class="text-xs text-gray-500 dark:text-gray-400">แต้มในกองทุน</p><p class="mt-1 text-xl font-bold text-gray-900 dark:text-white">{{ fundBalance }} แต้ม</p></div>
-      <div><p class="text-xs text-gray-500 dark:text-gray-400">จำนวนผู้สนับสนุน</p><p class="mt-1 text-xl font-bold text-gray-900 dark:text-white">{{ approvedPointDonations.length }}</p></div>
-    </div>
-
-    <section v-if="!isCourseAdmin && showClaimSection" class="mt-5 border-b border-gray-100 pb-5 dark:border-gray-700">
-      <h3 class="mb-3 flex items-center gap-2 font-bold text-gray-900 dark:text-white"><Icon icon="mdi:star-circle" class="h-5 w-5 text-vikinger-purple" />รับแต้ม</h3>
-      <div v-if="isLoadingCampaigns" class="h-24 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-700" />
-      <div v-else-if="campaigns.length" class="grid gap-3">
-        <CoursePointClaimCard v-for="campaign in campaigns" :key="campaign.id" :campaign="campaign" :is-claiming="isClaiming === campaign.id" @claim="claim" />
-      </div>
-      <p v-else class="text-sm text-gray-500 dark:text-gray-400">มีแต้มในกองทุน รอเจ้าของวิชาเปิดให้รับ</p>
-    </section>
-
-    <section v-if="isCourseAdmin && (ownerCampaigns.length > 0 || fundBalance > 0)" class="mt-5 border-b border-gray-100 pb-5 dark:border-gray-700">
-      <template v-if="ownerCampaigns.length > 0">
-        <h3 class="mb-3 font-bold text-gray-900 dark:text-white">แคมเปญของคุณ</h3>
-        <div class="space-y-2">
-          <div v-for="campaign in ownerCampaigns" :key="campaign.id" class="flex items-center justify-between gap-3 rounded-xl bg-gray-50 px-3 py-2.5 dark:bg-gray-900/40">
-            <span class="min-w-0 truncate text-sm text-gray-700 dark:text-gray-200">{{ campaign.title }}</span>
-            <span class="shrink-0 text-xs text-gray-500 dark:text-gray-400">{{ campaign.points_per_claim }} แต้ม · <span class="rounded-full bg-gray-200 px-2 py-0.5 dark:bg-gray-700">{{ campaign.status }}</span> · {{ campaign.total_claimed }}{{ campaign.max_claims ? `/${campaign.max_claims}` : '' }} ผู้รับ</span>
-          </div>
-        </div>
-        <NuxtLink :to="`/courses/${course.id}/wallet/campaigns`" class="mt-3 block text-sm font-semibold text-vikinger-purple hover:underline">จัดการทั้งหมด</NuxtLink>
-      </template>
-      <div v-else class="rounded-xl bg-vikinger-purple/10 p-5 text-center">
-        <h3 class="font-bold text-gray-900 dark:text-white">มีแต้มในกองทุนยังไม่ได้เปิดให้รับ</h3>
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">สร้างแคมเปญเพื่อให้นักเรียนกดรับแต้ม</p>
-        <NuxtLink :to="`/courses/${course.id}/wallet/campaigns`" class="mt-4 inline-flex rounded-xl bg-vikinger-purple px-5 py-3 font-semibold text-white transition hover:opacity-90">สร้างแคมเปญ</NuxtLink>
-      </div>
-    </section>
-
-    <section class="mt-5">
-      <h3 class="font-bold text-gray-900 dark:text-white">ผู้สนับสนุนล่าสุด</h3>
-      <div v-if="approvedPointDonations.length" class="mt-3 space-y-2">
-        <div v-for="donation in approvedPointDonations" :key="donation.id" class="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2.5 dark:bg-gray-900/40">
-          <span class="text-sm text-gray-700 dark:text-gray-200">{{ donation.donor_display_name || 'ผู้สนับสนุนไม่ประสงค์ออกนาม' }}</span>
-          <span class="text-sm font-bold text-vikinger-purple">{{ donation.points_amount }} แต้ม</span>
-        </div>
-      </div>
-      <p v-else class="mt-3 text-sm text-gray-500 dark:text-gray-400">ยังไม่มีผู้สนับสนุน</p>
-    </section>
-
-    <NuxtLink :to="`/Learn/Courses/${course.id}/support`" class="mt-5 block text-center text-sm font-semibold text-vikinger-purple hover:underline">ดูทั้งหมด</NuxtLink>
-    <CourseDonationModal v-if="!isCourseAdmin" v-model:visible="showDonationModal" :course-id="Number(course.id)" :course-name="course.name" :course-owner-id="Number(course.user_id)" :balance="authStore.user?.points ?? authStore.user?.pp" @update:visible="loadSupportData" />
-  </section>
+<section class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6"><header class="flex flex-wrap items-center justify-between gap-3"><div class="flex items-center gap-3"><span class="flex h-11 w-11 items-center justify-center rounded-xl bg-vikinger-purple/10 text-vikinger-purple"><Icon icon="mdi:hand-heart-outline" class="h-6 w-6" /></span><h2 class="text-lg font-bold text-gray-900 dark:text-white">สนับสนุน &amp; รับแต้ม</h2></div><button v-if="!isCourseAdmin && course.donation_enabled !== false" type="button" class="rounded-xl bg-vikinger-purple px-4 py-2 text-sm font-semibold text-white" @click="showDonationModal = true">บริจาคแต้ม</button></header>
+<div class="mt-5 grid grid-cols-3 gap-3 border-y border-gray-100 py-4 dark:border-gray-700"><div><p class="text-xs text-gray-500">แต้มในกองทุน</p><p class="mt-1 text-xl font-bold text-gray-900 transition dark:text-white" :class="claimBump ? 'animate-pulse scale-110' : ''">{{ balanceDisplay.toLocaleString() }} แต้ม</p></div><div><p class="text-xs text-gray-500">ผู้สนับสนุน</p><p class="mt-1 text-xl font-bold text-gray-900 dark:text-white">{{ supportersDisplay.toLocaleString() }}</p></div><div><p class="text-xs text-gray-500">แจกแล้ว</p><p class="mt-1 text-xl font-bold text-gray-900 dark:text-white">{{ distributedDisplay.toLocaleString() }}</p></div></div>
+<template v-if="isCourseAdmin"><p class="mt-5 text-sm text-gray-500 dark:text-gray-400">กองทุนของคุณเก็บแต้มจากผู้สนับสนุน — สร้างแคมเปญเพื่อแจกให้นักเรียนกดรับ</p><div class="mt-3 grid gap-3 sm:grid-cols-3"><button v-for="action in [{ icon: 'mdi:star-plus-outline', title: 'สร้างแคมเปญ', description: 'เปลี่ยนแต้มในกองทุนเป็นการ์ดให้นักเรียนกดรับ', click: () => showCreate = true }, { icon: 'mdi:playlist-star', title: 'จัดการแคมเปญ', description: 'พัก/จบแคมเปญที่กำลังใช้อยู่', click: () => showManage = true }, { icon: 'mdi:bank-transfer-out', title: 'ถอนแต้ม', description: 'ถอนแต้มออกเป็นแต้มส่วนตัว', click: () => showWithdraw = true }]" :key="action.title" type="button" class="group relative cursor-pointer rounded-2xl border border-gray-200 bg-white p-5 text-left transition hover:-translate-y-1 hover:border-vikinger-purple hover:shadow-lg dark:border-gray-700 dark:bg-gray-800/60" @click="action.click"><Icon :icon="action.icon" class="h-10 w-10 text-vikinger-purple" /><b class="mt-3 block text-gray-900 dark:text-white">{{ action.title }}</b><span class="mt-1 block text-xs text-gray-500">{{ action.description }}</span><template v-if="action.title === 'สร้างแคมเปญ' && fundBalance > 0 && !hasActiveManual"><span class="absolute right-4 top-4 h-3 w-3 rounded-full bg-yellow-400"><span class="absolute inset-0 h-3 w-3 animate-ping rounded-full bg-yellow-400" /></span><small class="mt-3 inline-block rounded-full bg-yellow-100 px-2 py-1 text-xs text-yellow-700">รอเปิดให้รับ</small></template></button></div></template>
+<section v-if="!isCourseAdmin && showClaimSection" class="mt-5 border-b border-gray-100 pb-5 dark:border-gray-700"><h3 class="mb-3 flex items-center gap-2 font-bold text-gray-900 dark:text-white"><Icon icon="mdi:star-circle" class="h-5 w-5 text-vikinger-purple" />รับแต้ม</h3><div v-if="isLoadingCampaigns" class="h-24 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-700" /><div v-else-if="campaigns.length" class="grid gap-3"><CoursePointClaimCard v-for="campaign in campaigns" :key="campaign.id" :campaign="campaign" :is-claiming="isClaiming === campaign.id" @claim="claim" /></div><p v-else class="text-sm text-gray-500">แต้มในกองทุนกำลังรอเจ้าของวิชาเปิดให้รับ ✨</p></section>
+<section class="mt-5"><h3 class="font-bold text-gray-900 dark:text-white">ผู้สนับสนุนล่าสุด</h3><TransitionGroup name="donate-list" tag="div" class="mt-3 space-y-2"><div v-for="donation in approvedPointDonations" :key="donation.id" class="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2.5 dark:bg-gray-900/40"><span class="text-sm text-gray-700 dark:text-gray-200">{{ donation.donor_display_name || 'ผู้สนับสนุนไม่ประสงค์ออกนาม' }}</span><span class="text-sm font-bold text-vikinger-purple">{{ donation.points_amount }} แต้ม</span></div></TransitionGroup><p v-if="!approvedPointDonations.length" class="mt-3 text-sm text-gray-500">ยังไม่มีคนสนับสนุน ลองแชร์คอร์สให้เพื่อนดูสิ 🚀</p></section>
+<CourseDonationModal v-if="!isCourseAdmin" v-model:visible="showDonationModal" :course-id="Number(course.id)" :course-name="course.name" :course-owner-id="Number(course.user_id)" :balance="authStore.user?.points ?? authStore.user?.pp" @update:visible="loadSupportData" /><CampaignCreateModal v-if="isCourseAdmin" v-model:visible="showCreate" :course-id="course.id" :available-balance="account?.available_balance || 0" @created="loadSupportData" /><CampaignManageModal v-if="isCourseAdmin" v-model:visible="showManage" :course-id="course.id" @updated="loadSupportData" /><WithdrawModal v-if="isCourseAdmin" v-model:visible="showWithdraw" :course-id="course.id" @updated="loadSupportData" /></section>
 </template>
+<style scoped>.donate-list-enter-active,.donate-list-leave-active{transition:all .3s ease}.donate-list-enter-from,.donate-list-leave-to{opacity:0;transform:translateY(8px)}</style>
