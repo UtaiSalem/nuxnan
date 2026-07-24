@@ -355,7 +355,7 @@ onMounted(() => {
                 </td>
                 <td class="p-5">
                   <button
-                    v-if="donate.slip"
+                    v-if="donate.payment_method === 'slip'"
                     @click="viewSlip(donate)"
                     class="w-12 h-16 rounded-xl overflow-hidden border-2 border-white dark:border-slate-700 shadow-lg hover:scale-110 transition-transform"
                   >

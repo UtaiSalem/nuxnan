@@ -68,7 +68,7 @@ class Donate extends Model
 
     public function getSlipAttribute($value)
     {
-        return $value ? '/storage/images/donates/'.$value : null;
+        return null;
     }
 
     public function getTransferDateAttribute($value)

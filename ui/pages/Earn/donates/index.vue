@@ -51,10 +51,8 @@ interface Donate {
   amounts?: string | number
   total_points: number | string
   remaining_points: number | string
-  slip?: string | null
   transfer_date?: string | null
   transfer_time?: string | null
-  donor_email?: string | null
   donation_purpose?: string | null
   payment_method?: string | null
   transaction_id?: string | null

@@ -290,7 +290,7 @@ class DonateController extends Controller
 
             return response()->json([
                 'success' => false,
-                'donate' => $donate,
+                'donate' => new DonateResource($donate->load('donor')),
                 'message' => $statusMessage,
                 'pending_approval' => $donate->status === 0,
             ]);
@@ -299,7 +299,7 @@ class DonateController extends Controller
         if ($donate->remaining_points < 270) {
             return response()->json([
                 'success' => false,
-                'donate' => $donate,
+                'donate' => new DonateResource($donate->load('donor')),
                 'message' => 'การสนับสนุนนี้หมดแล้ว',
             ]);
         }
@@ -316,7 +316,7 @@ class DonateController extends Controller
                 if ($todayReceiveCount >= 10) {
                     return response()->json([
                         'success' => false,
-                        'donate' => $donate,
+                        'donate' => new DonateResource($donate->load('donor')),
                         'message' => 'คุณได้รับแต้มจากการสนับสนุนนี้ครบ 10 ครั้งแล้วในวันนี้ กรุณารอวันใหม่',
                         'daily_limit_reached' => true,
                         'today_count' => $todayReceiveCount,
@@ -347,13 +347,13 @@ class DonateController extends Controller
 
                 return response()->json([
                     'success' => true,
-                    'donate' => $donate,
+                    'donate' => new DonateResource($donate->load('donor')),
                     'activity' => new ActivityResource($activity),
                 ]);
             } else {
                 return response()->json([
                     'success' => false,
-                    'donate' => $donate,
+                    'donate' => new DonateResource($donate->load('donor')),
                     'message' => 'การสนับสนุนนี้หมดแล้ว',
                 ]);
             }
@@ -430,7 +430,7 @@ class DonateController extends Controller
                 'created_at',
                 'updated_at',
             ])
-            ->whereIn('status', [0, 1])
+            ->where('status', 1)
             ->where('remaining_points', '>', 0)
             ->latest()
             ->take(10)

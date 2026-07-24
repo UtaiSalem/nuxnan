@@ -84,8 +84,8 @@ const refundCampaigns = computed(() => {
   return campaigns.value.filter(c => c.review_status === 'rejected')
 })
 
-async function viewSlip(slipName, advertId) {
-  const { blob } = await api.getBlob(`/api/advertises/${advertId || slipName}/slip`)
+async function viewSlip(advertId) {
+  const { blob } = await api.getBlob(`/api/advertises/${advertId}/slip`)
   selectedSlipUrl.value = URL.createObjectURL(blob)
   showSlipModal.value = true
 }
@@ -339,7 +339,7 @@ onMounted(() => {
                 </div>
 
                 <div class="flex gap-2">
-                  <button v-if="c.slip" @click="viewSlip(c.slip)" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5">
+                  <button v-if="c.slip" @click="viewSlip(c.id)" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5">
                     <Icon icon="solar:document-bold" />
                     ดูสลิป
                   </button>
@@ -397,7 +397,7 @@ onMounted(() => {
                   <td class="p-4 text-xs space-y-0.5">
                     <div v-if="c.slip" class="text-gray-500 dark:text-gray-400">
                       <p>วันที่โอนในสลิป: {{ c.transfer_date }} ({{ c.transfer_time }})</p>
-                      <button @click="viewSlip(c.slip)" class="text-blue-500 hover:underline flex items-center gap-1 mt-1 font-bold">
+                      <button @click="viewSlip(c.id)" class="text-blue-500 hover:underline flex items-center gap-1 mt-1 font-bold">
                         <Icon icon="solar:document-bold" class="w-3.5 h-3.5" />
                         ดูสลิปที่โอนเข้ามา
                       </button>
