@@ -87,7 +87,7 @@ class CampaignController extends Controller
         $data = $request->validated();
         $type = CampaignType::from($data['campaign_type']);
         $mediaFilename = $request->hasFile('media_image') ? $this->storeFile($request, 'media_image', 'images/adverts/medias') : null;
-        $slipFilename = $request->hasFile('slip') ? $this->storeFile($request, 'slip', 'images/adverts/slips') : null;
+        $slipFilename = $request->hasFile('slip') ? $this->storeFile($request, 'slip', 'images/adverts/slips', 'local') : null;
 
         // Course-scoped campaigns must carry their owning academy so academy widgets can inherit them.
         $academyId = $data['academy_id'] ?? null;
@@ -321,9 +321,9 @@ class CampaignController extends Controller
         return response()->json(['success' => true, 'campaign' => new CampaignResource($campaign->load(['advertiser', 'academy', 'course', 'reviewer']))]);
     }
 
-    private function storeFile(StoreCampaignRequest $request, string $key, string $directory): string
+    private function storeFile(StoreCampaignRequest $request, string $key, string $directory, string $disk = 'public'): string
     {
-        return basename($request->file($key)->store($directory, 'public'));
+        return basename($request->file($key)->store($directory, $disk));
     }
 
     private function ipHash(Request $request): ?string

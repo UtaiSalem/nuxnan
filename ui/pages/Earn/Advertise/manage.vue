@@ -90,8 +90,9 @@ const filteredCampaigns = computed(() => {
   })
 })
 
-function viewSlip(slipName: string) {
-  selectedSlipUrl.value = `${apiBase}/storage/images/adverts/slips/${slipName}`
+async function viewSlip(slipName: string, advertId?: number) {
+  const { blob } = await api.getBlob(`/api/advertises/${advertId || slipName}/slip`)
+  selectedSlipUrl.value = URL.createObjectURL(blob)
   showSlipModal.value = true
 }
 

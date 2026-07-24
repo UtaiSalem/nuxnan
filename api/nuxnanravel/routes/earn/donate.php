@@ -72,6 +72,7 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified', 'pl
     Route::get('/', [DonateController::class, 'index'])->name('admin.support.donate.index');
     Route::post('/bulk-review', [DonateController::class, 'bulkReview'])->name('admin.support.donate.bulk');
     Route::get('/{donate}', [DonateController::class, 'show'])->name('admin.support.donate.show');
+    Route::get('/{donate}/slip', [DonateController::class, 'downloadSlip'])->name('admin.support.donate.slip');
     Route::patch('/{donate}', [DonateController::class, 'update'])->name('admin.support.donate.update');
     Route::delete('/{donate}', [DonateController::class, 'destroy'])->name('admin.support.donate.destroy');
     Route::patch('/{donate}/receive', [DonateController::class, 'receive'])->name('admin.support.donate.receive');

@@ -84,8 +84,9 @@ const refundCampaigns = computed(() => {
   return campaigns.value.filter(c => c.review_status === 'rejected')
 })
 
-function viewSlip(slipName) {
-  selectedSlipUrl.value = `${apiBase}/storage/images/adverts/slips/${slipName}`
+async function viewSlip(slipName, advertId) {
+  const { blob } = await api.getBlob(`/api/advertises/${advertId || slipName}/slip`)
+  selectedSlipUrl.value = URL.createObjectURL(blob)
   showSlipModal.value = true
 }
 

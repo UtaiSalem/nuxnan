@@ -10,6 +10,7 @@ use App\Http\Resources\UserResource;
 use App\Models\Activity;
 use App\Models\Donate;
 use App\Models\User;
+use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -117,11 +118,6 @@ class DonateController extends Controller
     {
         $user = auth()->user() ?? auth('api')->user();
 
-        // If user is not authenticated but user_id is sent (for Slip payment via Web)
-        if (! $user && $request->has('user_id') && $request->input('payment_method') === 'slip') {
-            $user = User::find($request->input('user_id'));
-        }
-
         $isAnonymousRequested = $request->boolean('is_anonymous', false);
         $isAnonymous = $isAnonymousRequested || ! $user;
         $paymentMethod = $request->input('payment_method', 'slip');
@@ -133,7 +129,7 @@ class DonateController extends Controller
             'transfer_time' => 'required',
             'payment_method' => 'nullable|in:slip,wallet,points',
             'donor_name' => 'nullable|string|max:255',
-            'slip' => ($isAnonymous || $paymentMethod === 'slip') ? 'required|image|mimes:jpg,jpeg,png,gif,svg|max:2048' : 'nullable|image|mimes:jpg,jpeg,png,gif,svg|max:2048',
+            'slip' => ($isAnonymous || $paymentMethod === 'slip') ? 'required|image|mimes:jpg,jpeg,png,gif|max:2048' : 'nullable|image|mimes:jpg,jpeg,png,gif|max:2048',
         ];
 
         $validated = $request->validate($rules);
@@ -151,7 +147,7 @@ class DonateController extends Controller
             if ($request->hasFile('slip')) {
                 $slip_file = $request->file('slip');
                 $slip_filename = uniqid().'.'.$slip_file->getClientOriginalExtension();
-                Storage::disk('public')->putFileAs('images/donates', $slip_file, $slip_filename);
+                Storage::disk('local')->putFileAs('images/donates', $slip_file, $slip_filename);
             }
 
             $donate = new Donate;
@@ -377,7 +373,7 @@ class DonateController extends Controller
     public function allAvailableDonates()
     {
         $donates = Donate::latest()
-            ->whereIn('status', [0, 1])
+            ->where('status', 1)
             ->with(['donor'])
             ->paginate(12);
 
@@ -401,6 +397,17 @@ class DonateController extends Controller
                 ],
             ],
         ]);
+    }
+
+    public function downloadSlip(Donate $donate)
+    {
+        $user = auth()->user();
+        abort_unless($user && ($user->isSuperAdmin() || $user->hasAnyRole(['ADMIN', 'PLEARND_ADMIN'])), 403);
+        $path = 'images/donates/'.basename((string) $donate->getRawOriginal('slip'));
+        abort_unless($donate->getRawOriginal('slip') && Storage::disk('local')->exists($path), 404);
+        app(AuditLogService::class)->log('donation.slip_viewed', $donate, [], [], 'earn', ['admin_id' => $user->id]);
+
+        return Storage::disk('local')->response($path, basename($path));
     }
 
     /**
