@@ -130,7 +130,7 @@ class CampaignSystemTest extends TestCase
         // Use adminToken (bypasses check authorization and triggers validator 422 directly)
         // 1. Scope public but sending academy_id should fail validation
         $payload = [
-            'campaign_type' => 'support',
+            'campaign_type' => 'advertisement',
             'scope_type' => 'public',
             'academy_id' => $academy->id,
             'budget_amount' => 500.00,
@@ -142,7 +142,7 @@ class CampaignSystemTest extends TestCase
 
         // 2. Scope academy but missing academy_id should fail validation
         $payload = [
-            'campaign_type' => 'support',
+            'campaign_type' => 'advertisement',
             'scope_type' => 'academy',
             'budget_amount' => 500.00,
             'payment_method' => 'wallet',
@@ -275,149 +275,6 @@ class CampaignSystemTest extends TestCase
     }
 
     /** @test */
-    public function it_splits_support_revenue_70_20_10_correctly_to_accounts(): void
-    {
-        $academyOwner = User::factory()->create([
-            'email' => 'academy_owner@nuxnan.com',
-            'email_verified_at' => now(),
-            'wallet' => 1000.00,
-        ]);
-        $instructor = User::factory()->create([
-            'email' => 'instructor@nuxnan.com',
-            'email_verified_at' => now(),
-            'wallet' => 1000.00,
-        ]);
-
-        $academy = Academy::factory()->create(['user_id' => $academyOwner->id]);
-        $course = Course::factory()->create([
-            'instructor_id' => $instructor->id,
-            'user_id' => $instructor->id,
-            'academy_id' => $academy->id,
-        ]);
-
-        $campaign = $this->createAdvert([
-            'campaign_type' => CampaignType::SUPPORT,
-            'scope_type' => CampaignScopeType::COURSE,
-            'academy_id' => $academy->id,
-            'course_id' => $course->id,
-            'amounts' => 1000,
-            'budget_amount' => 1000.00, // 1000 THB budget
-            'exchange_points' => 1000 * 1080, // supporter earns points at the course rate
-            'payment_status' => CampaignPaymentStatus::PAID,
-            'review_status' => CampaignReviewStatus::PENDING,
-            'duration' => 0,
-            'total_views' => 0,
-            'remaining_views' => 0,
-        ]);
-
-        $supporterPpBefore = (int) $this->user->fresh()->pp;
-
-        // Platform account starts with 1000.00 (from admin)
-        $this->admin->refresh();
-        $this->assertEquals(1000.00, (float) $this->admin->wallet);
-
-        // Approve it
-        $response = $this->withHeaders([
-            'Authorization' => "Bearer {$this->adminToken}",
-        ])->patchJson("/api/campaigns/{$campaign->id}/review", [
-            'action' => 'approve',
-        ]);
-        $response->assertStatus(200);
-
-        // Check wallet balances:
-        // Academy Owner should get 70% of 1000.00 = 700 THB -> 1700.00
-        $academyOwner->refresh();
-        $this->assertEquals(1700.00, (float) $academyOwner->wallet);
-
-        // Instructor should get 20% of 1000.00 = 200 THB -> 1200.00
-        $instructor->refresh();
-        $this->assertEquals(1200.00, (float) $instructor->wallet);
-
-        // Platform Admin should get 10% of 1000.00 = 100 THB -> 1100.00
-        $this->admin->refresh();
-        $this->assertEquals(1100.00, (float) $this->admin->wallet);
-
-        // Supporter earns the configured points in exchange for their contribution
-        $this->assertEquals($supporterPpBefore + (1000 * 1080), (int) $this->user->fresh()->pp);
-
-        // Distribution is recorded exactly once
-        $campaign->refresh();
-        $this->assertNotNull($campaign->distributed_at);
-    }
-
-    /** @test */
-    public function it_does_not_double_distribute_support_when_paused_then_reapproved(): void
-    {
-        $academyOwner = User::factory()->create(['email_verified_at' => now(), 'wallet' => 1000.00]);
-        $academy = Academy::factory()->create(['user_id' => $academyOwner->id]);
-
-        $campaign = $this->createAdvert([
-            'campaign_type' => CampaignType::SUPPORT,
-            'scope_type' => CampaignScopeType::ACADEMY,
-            'academy_id' => $academy->id,
-            'amounts' => 500,
-            'budget_amount' => 500.00,
-            'payment_status' => CampaignPaymentStatus::PAID,
-            'review_status' => CampaignReviewStatus::PENDING,
-            'duration' => 0,
-            'total_views' => 0,
-            'remaining_views' => 0,
-        ]);
-
-        $approve = fn () => $this->withHeaders(['Authorization' => "Bearer {$this->adminToken}"])
-            ->patchJson("/api/campaigns/{$campaign->id}/review", ['action' => 'approve']);
-        $pause = fn () => $this->withHeaders(['Authorization' => "Bearer {$this->adminToken}"])
-            ->patchJson("/api/campaigns/{$campaign->id}/review", ['action' => 'pause']);
-
-        $approve()->assertStatus(200);
-        // Academy owner (70% + 20% instructor share, no instructor) = 90% of 500 = 450 -> 1450
-        $academyOwner->refresh();
-        $this->assertEquals(1450.00, (float) $academyOwner->wallet);
-
-        // Pause then re-approve must NOT distribute funds again
-        $pause()->assertStatus(200);
-        $approve()->assertStatus(200);
-
-        $academyOwner->refresh();
-        $this->assertEquals(1450.00, (float) $academyOwner->wallet);
-    }
-
-    /** @test */
-    public function it_blocks_reject_after_support_was_distributed(): void
-    {
-        $academyOwner = User::factory()->create(['email_verified_at' => now(), 'wallet' => 1000.00]);
-        $academy = Academy::factory()->create(['user_id' => $academyOwner->id]);
-
-        $campaign = $this->createAdvert([
-            'campaign_type' => CampaignType::SUPPORT,
-            'scope_type' => CampaignScopeType::ACADEMY,
-            'academy_id' => $academy->id,
-            'amounts' => 500,
-            'budget_amount' => 500.00,
-            'payment_status' => CampaignPaymentStatus::PAID,
-            'review_status' => CampaignReviewStatus::PENDING,
-            'duration' => 0,
-            'total_views' => 0,
-            'remaining_views' => 0,
-        ]);
-
-        $this->withHeaders(['Authorization' => "Bearer {$this->adminToken}"])
-            ->patchJson("/api/campaigns/{$campaign->id}/review", ['action' => 'approve'])
-            ->assertStatus(200);
-
-        // Rejecting an already-distributed campaign is not allowed (would create money without clawback)
-        $this->withHeaders(['Authorization' => "Bearer {$this->adminToken}"])
-            ->patchJson("/api/campaigns/{$campaign->id}/review", ['action' => 'reject', 'rejection_reason' => 'too late'])
-            ->assertStatus(422);
-
-        $campaign->refresh();
-        $this->assertEquals(CampaignReviewStatus::APPROVED, $campaign->review_status);
-        $this->assertEquals(CampaignPaymentStatus::PAID, $campaign->payment_status);
-        $academyOwner->refresh();
-        $this->assertEquals(1450.00, (float) $academyOwner->wallet);
-    }
-
-    /** @test */
     public function it_isolates_academy_campaigns_and_respects_course_inherit_toggle(): void
     {
         $academyA = Academy::factory()->create(['user_id' => $this->admin->id]);
@@ -485,13 +342,13 @@ class CampaignSystemTest extends TestCase
     public function it_does_not_round_decimals_for_campaign_budget(): void
     {
         $campaign = $this->createAdvert([
-            'campaign_type' => CampaignType::SUPPORT,
+            'campaign_type' => CampaignType::ADVERTISEMENT,
             'scope_type' => CampaignScopeType::PUBLIC,
             'amounts' => 99,
             'budget_amount' => 99.55,
-            'duration' => 0,
-            'total_views' => 0,
-            'remaining_views' => 0,
+            'duration' => 10,
+            'total_views' => 100,
+            'remaining_views' => 100,
         ]);
 
         $campaign->refresh();
@@ -577,8 +434,12 @@ class CampaignSystemTest extends TestCase
         ] as $scope) {
             $response = $this->withHeaders(['Authorization' => "Bearer {$this->userToken}"])
                 ->postJson('/api/campaigns', array_merge([
-                    'campaign_type' => 'support',
-                    'budget_amount' => 1,
+                    'campaign_type' => 'advertisement',
+                    'title' => 'Test Advertisement',
+                    'duration' => 10,
+                    'total_views' => 100,
+                    'media_image' => UploadedFile::fake()->image('ad.png'),
+                    'budget_amount' => 100,
                     'payment_method' => 'wallet',
                 ], $scope));
 

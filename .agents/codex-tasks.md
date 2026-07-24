@@ -154,11 +154,58 @@ completion_notes: risk:scan (RiskScanCommand) scheduled dailyAt 03:00 in routes/
 
 ---
 
-## BATCH B–E — Backlog (queued — อย่าเพิ่งแตะ)
+## BATCH B — DS1 ยุบ `campaign_type=support` (adverts = โฆษณาอย่างเดียว)
 
-> Claude จะปลดเป็น `pending` ทีละ batch หลัง verify batch ก่อนหน้า
+### TASK-B1 — ลบ support campaign type ทั้งระบบ
 
-- **BATCH B — DS1** ยุบ `campaign_type=support`: ลบ support branch ใน `CampaignController::store`/`review`(distributeSupport)/`StoreCampaignRequest`/`SupportPaymentService`/`CampaignType` enum + เช็ค `AcademyRevenueController` → adverts เหลือ "โฆษณา" อย่างเดียว (บั๊กจ่ายซ้ำ ~190% หายเอง) — **state-machine refactor ต้องระวัง**
+```yaml
+id: TASK-B1
+assigned_to: codex
+status: done
+priority: high
+type: backend
+completed_at: 2026-07-25
+completion_notes: |
+  Codex removed SUPPORT enum case, distributeSupport method, support branches in
+  CampaignController::store/review (kept payWithWallet/markSlipPending + state machine),
+  StoreCampaignRequest support validation, and AcademyRevenueController Rule::in.
+  Claude verify caught Codex had COMMENTED OUT (not deleted) 3 support tests in
+  CampaignSystemTest (lines 277-417) — deleted the dead block. grep clean.
+  CampaignSystemTest 13/13, AcademyRevenueTest 15/15, Pint clean. DB had 0 support rows.
+```
+
+**บริบท (DS1):** `campaign_type=support` ทับซ้อนกับ `course_donates`/`academy_donates` และมีบั๊กจ่ายซ้ำ ~190% (แจก pp + wallet 70/20/10 พร้อมกัน) → ยุบทิ้ง เหลือแค่ `advertisement` · **ยืนยันแล้ว DB มี 0 support rows** (49 adverts เป็น advertisement ทั้งหมด) จึงลบ enum case ได้ปลอดภัย
+
+**⚠️ กฎเหล็ก — ห้ามลบเกินขอบเขต:**
+- **ห้ามลบ** `SupportPaymentService::payWithWallet` และ `markSlipPending` — เป็นกลไกจ่ายเงินของ **โฆษณา** ด้วย (`CampaignController::store` เรียกทั้งสองสำหรับ ad) ลบแล้วสร้างโฆษณาพัง
+- **ห้ามลบ/เปลี่ยนชื่อ** class `SupportPaymentService` (churn imports) — แค่ลบ method `distributeSupport`
+- **ห้ามลบ** คอลัมน์ `exchange_points`/`distributed_at` ใน DB (ปล่อยไว้, ค่าใหม่ = 0/null)
+- คง state machine ใน `review()` (approve/reject/pause + refundWallet) — แค่เอา distribute ออก
+
+**จุดแก้ (อ่านทุกไฟล์ก่อน):**
+1. `app/Enums/CampaignType.php` — ลบ `case SUPPORT = 'support';` (เหลือ ADVERTISEMENT)
+2. `app/Services/Campaign/SupportPaymentService.php` — ลบ method `distributeSupport()` ทั้งเมธอด (บรรทัด ~44-142) + ลบ imports ที่ใช้เฉพาะในนั้นถ้าเหลือค้าง (CampaignScopeType, CampaignType) — เก็บ payWithWallet/markSlipPending
+3. `app/Http/Controllers/Api/Campaign/CampaignController.php`:
+   - `store()`: `exchange_points` (บรรทัด ~117-119) `$type === SUPPORT ? ... : 0` → เหลือ `'exchange_points' => 0,` · ลบตัวแปร `$pointsRate` (บรรทัด ~98) ที่ตายแล้ว · เก็บ payWithWallet/markSlipPending branch (payment_method)
+   - `review()`: ลบบรรทัด `$payments->distributeSupport($campaign);` (~220) · ถ้า `SupportPaymentService $payments` ไม่ถูกใช้ที่อื่นใน review() แล้ว ให้ลบ param ออกจาก signature ของ `review()` (store() ยังใช้ $payments อยู่ — คงไว้)
+4. `app/Http/Requests/Campaign/StoreCampaignRequest.php` — ลบ 2 บล็อก `$type === 'support'` ใน `withValidator` (บรรทัด ~73-78) · `campaign_type` Rule::in(CampaignType::cases()) จะแคบเหลือ advertisement เองหลังแก้ enum
+5. `app/Http/Controllers/Api/Academies/AcademyRevenueController.php` — **มี store path ที่ 2**: บรรทัด ~312 `Rule::in(['advertisement', 'support'])` → `Rule::in(['advertisement'])` · อ่านทั้งเมธอด store นั้น ถ้ามี logic เฉพาะ support (exchange_points/distributeSupport) ให้เอาออกด้วย
+
+**หลังแก้ — grep ยืนยันไม่มี reference ค้าง:**
+- `grep -rn "distributeSupport\|CampaignType::SUPPORT\|'support'\|\"support\"" app` → ต้องไม่เหลือใน campaign path (donation "support summary" เป็นคนละความหมาย ไม่ต้องแตะ)
+
+**Tests:** รัน `php artisan test tests/Feature/Campaign/CampaignSystemTest.php tests/Feature/AcademyRevenueTest.php` — ถ้ามีเทสต์ support campaign จะพัง ให้ลบ/ปรับเทสต์นั้นให้สอดคล้อง (support ไม่มีแล้ว) **แต่ห้ามลบเทสต์ advertisement/state-machine**
+
+**Acceptance:**
+- [ ] สร้าง advertisement campaign ได้ปกติ (ทั้ง wallet + slip) — payWithWallet/markSlipPending ยังทำงาน
+- [ ] ไม่มี code path สร้าง support campaign ได้อีก (ทั้ง 2 store)
+- [ ] grep ไม่เหลือ reference support ใน campaign path
+- [ ] CampaignSystemTest + AcademyRevenueTest เขียว, Pint clean
+
+---
+
+## BATCH C–E — Backlog (queued — อย่าเพิ่งแตะ)
+
 - **BATCH C — DS7** เปิด guest บริจาค: ผ่อน auth ที่ slip path ของ course/academy donation + lock beneficiary ฝั่ง server (donor_id=null เมื่อ guest) — guest **โฆษณา** ไม่รวม (epic D4 แยก)
 - **BATCH D — DS8** สร้าง `AcademyPointWithdrawal` (migration+model+service+controller+policy+FormRequests+routes) mirror `CoursePointWithdrawal`: จ่าย pp เข้า academy owner, ไม่มี payout-proof (DS5), maker-checker คงไว้ — **งานสร้างใหม่ชุดใหญ่**
 - **BATCH E — DS2** verify ad delivery pipeline + revenue split (student 60/course 25/academy 10/platform 5) ด้วยข้อมูลทดสอบ (0 rows = ไม่เคยรันจริง) — เขียน feature test
@@ -175,6 +222,10 @@ completion_notes: risk:scan (RiskScanCommand) scheduled dailyAt 03:00 in routes/
 | TASK-A4 | done | Claude (proof removed; endpoints test green) |
 | TASK-A5 | done | Claude (RiskScanCommand exists; schedule added) |
 
-**Batch A verify:** donation+withdrawal suite 48/48 pass · Pint clean on all 10 changed files · Codex hung on turn-finalize after applying 6 source edits (all correct); Claude finished 4 test alignments (forced by DS6/DS5) + task-file bookkeeping.
+**Batch A verify:** donation+withdrawal suite 48/48 pass · Pint clean on all 10 changed files · Codex hung on turn-finalize after applying 6 source edits (all correct); Claude finished 4 test alignments (forced by DS6/DS5) + task-file bookkeeping. **Committed 7e7dd110.**
 
-**Last updated:** 2026-07-25 · **Updated by:** Claude (Batch A verified, ready to commit)
+| TASK-B1 | done | Claude (diff surgical; deleted commented-out support tests; 13+15 green; grep clean) |
+
+**Batch B verify:** DS1 support removal — Codex clean diff (shared ad plumbing preserved), but had commented-out 3 support tests instead of deleting; Claude removed the dead block. CampaignSystemTest 13/13 + AcademyRevenueTest 15/15 · Pint clean.
+
+**Last updated:** 2026-07-25 · **Updated by:** Claude (Batch B verified, ready to commit)

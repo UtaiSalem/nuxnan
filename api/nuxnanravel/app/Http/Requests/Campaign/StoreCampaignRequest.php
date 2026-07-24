@@ -70,12 +70,6 @@ class StoreCampaignRequest extends FormRequest
                     $validator->errors()->add('course_id', 'รายวิชาไม่ได้อยู่ในโรงเรียนที่ระบุ');
                 }
             }
-            if ($type === 'support' && $this->input('media_image')) {
-                $validator->errors()->add('media_image', 'support ไม่รองรับสื่อโฆษณา');
-            }
-            if ($type === 'support' && (float) $this->input('budget_amount', 0) < 1) {
-                $validator->errors()->add('budget_amount', 'งบสนับสนุนขั้นต่ำ 1 บาท');
-            }
             if ($type === 'advertisement' && $this->filled(['duration', 'total_views', 'budget_amount'])) {
                 $expected = app(CampaignPricingService::class)->advertisement((int) $this->total_views, (int) $this->duration);
                 if (abs((float) $this->budget_amount - $expected) > 0.01) {

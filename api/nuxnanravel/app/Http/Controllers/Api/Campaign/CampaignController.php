@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\Campaign;
 use App\Enums\ActivityType;
 use App\Enums\CampaignPaymentStatus;
 use App\Enums\CampaignReviewStatus;
-use App\Enums\CampaignType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Campaign\RecordImpressionRequest;
 use App\Http\Requests\Campaign\RecordViewRequest;
@@ -85,7 +84,6 @@ class CampaignController extends Controller
     public function store(StoreCampaignRequest $request, SupportPaymentService $payments): JsonResponse
     {
         $data = $request->validated();
-        $type = CampaignType::from($data['campaign_type']);
         $mediaFilename = $request->hasFile('media_image') ? $this->storeFile($request, 'media_image', 'images/adverts/medias') : null;
         $slipFilename = $request->hasFile('slip') ? $this->storeFile($request, 'slip', 'images/adverts/slips', 'local') : null;
 
@@ -95,14 +93,12 @@ class CampaignController extends Controller
             $academyId = $academyId ?: Course::whereKey($data['course_id'])->value('academy_id');
         }
 
-        $pointsRate = (int) config('campaign.points_rate.'.($data['scope_type'] === 'public' ? 'platform' : $data['scope_type']), 1080);
-
-        $campaign = DB::transaction(function () use ($request, $data, $type, $mediaFilename, $slipFilename, $payments, $academyId, $pointsRate) {
+        $campaign = DB::transaction(function () use ($request, $data, $mediaFilename, $slipFilename, $payments, $academyId) {
             $campaign = new Advert;
             $campaign->forceFill([
                 'user_id' => $request->user()->id,
                 'advertiser_id' => $request->user()->id,
-                'campaign_type' => $type,
+                'campaign_type' => $data['campaign_type'],
                 'scope_type' => $data['scope_type'],
                 'academy_id' => $academyId,
                 'course_id' => $data['course_id'] ?? null,
@@ -114,9 +110,7 @@ class CampaignController extends Controller
                 'media_image' => $mediaFilename ?? '',
                 'amounts' => $data['budget_amount'],
                 'budget_amount' => $data['budget_amount'],
-                'exchange_points' => $type === CampaignType::SUPPORT
-                    ? (int) round((float) $data['budget_amount'] * $pointsRate)
-                    : 0,
+                'exchange_points' => 0,
                 'duration' => $data['duration'] ?? 0,
                 'total_views' => $data['total_views'] ?? 0,
                 'remaining_views' => $data['total_views'] ?? 0,
@@ -182,7 +176,7 @@ class CampaignController extends Controller
         return response()->json(['success' => true, 'campaigns' => CampaignResource::collection(Advert::with(['advertiser', 'academy', 'course', 'reviewer'])->where('course_id', $course->id)->latest()->paginate(20))]);
     }
 
-    public function review(ReviewCampaignRequest $request, Advert $campaign, CampaignRefundService $refunds, SupportPaymentService $payments): JsonResponse
+    public function review(ReviewCampaignRequest $request, Advert $campaign, CampaignRefundService $refunds): JsonResponse
     {
         $action = $request->string('action')->toString();
         $current = $campaign->review_status?->value;
@@ -217,7 +211,6 @@ class CampaignController extends Controller
                 $campaign->payment_status = CampaignPaymentStatus::PAID;
             }
             $campaign->save();
-            $payments->distributeSupport($campaign);
         } else {
             $campaign->save();
         }
