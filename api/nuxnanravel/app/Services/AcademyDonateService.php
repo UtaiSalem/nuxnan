@@ -39,10 +39,10 @@ class AcademyDonateService
         });
     }
 
-    public function createCashDonation(User $donor, Academy $academy, float $cash, array $meta, ?string $idempotencyKey, ?UploadedFile $slip): AcademyDonate
+    public function createCashDonation(?User $donor, Academy $academy, float $cash, array $meta, ?string $idempotencyKey, ?UploadedFile $slip): AcademyDonate
     {
         $this->guardEnabled($academy);
-        if ($donor->id === $academy->user_id) {
+        if ($donor && $donor->id === $academy->user_id) {
             throw new DomainException('You cannot donate to your own academy.');
         }
         if ($cash < 1) {
@@ -58,7 +58,7 @@ class AcademyDonateService
                 return $old;
             }
 
-            return AcademyDonate::create(['academy_id' => $academy->id, 'donor_id' => $donor->id, 'donor_display_name' => $meta['donor_display_name'] ?? null, 'donation_type' => AcademyDonate::TYPE_CASH, 'cash_amount' => $cash, 'currency' => $meta['currency'] ?? 'THB', 'status' => AcademyDonate::STATUS_PENDING, 'purpose' => $meta['purpose'] ?? null, 'anonymous' => $meta['anonymous'] ?? false, 'slip_path' => $slip?->store('private/academy-donation-slips/'.now()->format('Y/m')), 'payment_method' => $meta['payment_method'] ?? null, 'payment_reference' => $meta['payment_reference'] ?? null, 'metadata' => $meta, 'idempotency_key' => $idempotencyKey]);
+            return AcademyDonate::create(['academy_id' => $academy->id, 'donor_id' => $donor?->id, 'donor_display_name' => $meta['donor_display_name'] ?? null, 'donation_type' => AcademyDonate::TYPE_CASH, 'cash_amount' => $cash, 'currency' => $meta['currency'] ?? 'THB', 'status' => AcademyDonate::STATUS_PENDING, 'purpose' => $meta['purpose'] ?? null, 'anonymous' => $meta['anonymous'] ?? false, 'slip_path' => $slip?->store('private/academy-donation-slips/'.now()->format('Y/m')), 'payment_method' => $meta['payment_method'] ?? null, 'payment_reference' => $meta['payment_reference'] ?? null, 'metadata' => $meta, 'idempotency_key' => $idempotencyKey]);
         });
     }
 

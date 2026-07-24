@@ -204,9 +204,63 @@ completion_notes: |
 
 ---
 
-## BATCH C–E — Backlog (queued — อย่าเพิ่งแตะ)
+## BATCH C — DS7 เปิด guest บริจาคเงินสด (course/academy)
 
-- **BATCH C — DS7** เปิด guest บริจาค: ผ่อน auth ที่ slip path ของ course/academy donation + lock beneficiary ฝั่ง server (donor_id=null เมื่อ guest) — guest **โฆษณา** ไม่รวม (epic D4 แยก)
+### TASK-C1 — guest cash donation (slip) + throttle + null-safe donor
+
+```yaml
+id: TASK-C1
+assigned_to: codex
+status: done
+priority: high
+type: backend
+completed_at: 2026-07-25
+completion_notes: |
+  Cash donation routes (course+academy) moved to throttle:6,1 group (no auth); points stay authed.
+  CourseDonatePolicy + AcademyDonatePolicy donate() now ?User (guest allowed if enabled + public;
+  owner still blocked). createCashDonation ?User + donor_id => donor?->id + null-safe self-guard.
+  New GuestDonationTest: guest cash 201/donor_id null, guest points 401, disabled/private 403,
+  authed regression, throttle 429. Claude-verified diff + route:list + 38/38 green + Pint. Clean (no cruft).
+```
+
+**บริบท (DS7 — locked):** เปิดให้ผู้ใช้ที่ยังไม่ล็อกอิน (guest) บริจาค **เงินสด (slip) เท่านั้น** ให้ course/academy ได้ · **บริจาคแต้ม (points) ยังต้อง auth** (ใช้ pp ต้องมี user) · `donor_id` = null เมื่อ guest (schema nullable อยู่แล้ว) · beneficiary ล็อกจาก route param อยู่แล้ว · guest **โฆษณา** ไม่รวม (epic D4)
+
+**⚠️ Security — endpoint ใหม่รับ upload แบบไม่ auth = ต้องกัน abuse:**
+- เพิ่ม `throttle:6,1` (6 req/นาที/IP) ที่ route guest cash donation ทั้ง 2
+- guest บริจาคได้เฉพาะ course/academy ที่ **donationEnabled() = true และเป็น public** (status ไม่ใช่ private) — บังคับผ่าน policy (guest บริจาคให้ห้อง/คอร์สส่วนตัวไม่ได้)
+- slip ยังเก็บ private disk เหมือนเดิม (ไม่แตะ)
+
+**จุดแก้ (อ่านทุกไฟล์ก่อน):**
+1. `routes/earn/donate.php` — ย้าย 2 route ออกจาก group `['auth:api', jetstream, 'verified']` (บรรทัด ~15-29):
+   - `POST /courses/{course}/donations/cash` (CourseDonationController@storeCash)
+   - `POST /academies/{academy}/donations/cash` (AcademyDonationController@storeCash)
+   - ไปไว้ใน group ใหม่ **ไม่มี auth** + `->middleware('throttle:6,1')` · **route อื่นคงเดิม** (points, mine, showFor, allocations, withdrawals ยัง auth)
+2. `app/Http/Requests/CourseDonate/StoreCashDonationRequest.php` — `authorize()` ต้องผ่านสำหรับ guest: เรียก `app(CourseDonatePolicy::class)->donate($this->user(), $this->route('course'))` (policy รับ null ได้หลังแก้ข้อ 4)
+3. `app/Http/Requests/AcademyDonate/StoreCashDonationRequest.php` — `authorize()` `Gate::allows('donate', $this->route('academy'))` ต้องผ่านสำหรับ guest (policy/gate รับ null — ดูข้อ 4)
+4. **Policies null-safe:**
+   - `app/Policies/CourseDonatePolicy.php` `donate(?User $user, Course $course)`: `return $course->donationEnabled() && ($course->status != 2 || ($user && ($user->id === $course->user_id || $course->members()->whereKey($user->id)->exists())));`
+   - academy 'donate' gate/policy: **หาให้เจอ** (`grep -rn "function donate\|'donate'\|Gate::define" app/Policies app/Providers`) — ทำ signature `?User $user` + logic เดียวกัน (enabled + public academy หรือ member/owner; guest = public+enabled เท่านั้น)
+5. **Services null-safe donor:**
+   - `app/Services/CourseDonateService.php` `createCashDonation(?User $donor, ...)`: `donor_id => $donor?->id`
+   - `app/Services/AcademyDonateService.php` `createCashDonation(?User $donor, ...)`: `donor_id => $donor?->id` + guard self-donation null-safe: `if ($donor && $donor->id === $academy->user_id)`
+6. Controllers `storeCash` — `$r->user()` คืน `?User` อยู่แล้ว ไม่ต้องแก้ (แค่ยืนยัน service รับ null ได้)
+
+**Tests (เพิ่มใหม่ ไฟล์ `tests/Feature/GuestDonationTest.php`):**
+- guest POST cash → 201, `donor_id === null`, status pending
+- guest POST **points** → 401 (ยัง auth)
+- guest บริจาคให้ course/academy ที่ donation ปิด → 403
+- authed user cash donation ยังทำงาน (regression)
+- (ถ้าทำได้) เกิน throttle → 429
+
+**Acceptance:**
+- [ ] guest บริจาคเงินสด course+academy ได้ (donor_id null), points ยัง 401
+- [ ] policy กัน guest บริจาคห้อง/คอร์ส private หรือ donation ปิด
+- [ ] throttle:6,1 ที่ route guest
+- [ ] เทสต์เดิม donation ทั้งหมดเขียว + เทสต์ guest ใหม่เขียว, Pint clean
+
+---
+
+## BATCH D–E — Backlog (queued — อย่าเพิ่งแตะ)
 - **BATCH D — DS8** สร้าง `AcademyPointWithdrawal` (migration+model+service+controller+policy+FormRequests+routes) mirror `CoursePointWithdrawal`: จ่าย pp เข้า academy owner, ไม่มี payout-proof (DS5), maker-checker คงไว้ — **งานสร้างใหม่ชุดใหญ่**
 - **BATCH E — DS2** verify ad delivery pipeline + revenue split (student 60/course 25/academy 10/platform 5) ด้วยข้อมูลทดสอบ (0 rows = ไม่เคยรันจริง) — เขียน feature test
 
@@ -226,6 +280,10 @@ completion_notes: |
 
 | TASK-B1 | done | Claude (diff surgical; deleted commented-out support tests; 13+15 green; grep clean) |
 
-**Batch B verify:** DS1 support removal — Codex clean diff (shared ad plumbing preserved), but had commented-out 3 support tests instead of deleting; Claude removed the dead block. CampaignSystemTest 13/13 + AcademyRevenueTest 15/15 · Pint clean.
+**Batch B verify:** DS1 support removal — Codex clean diff (shared ad plumbing preserved), but had commented-out 3 support tests instead of deleting; Claude removed the dead block. CampaignSystemTest 13/13 + AcademyRevenueTest 15/15 · Pint clean. **Committed 3ba3435c.**
 
-**Last updated:** 2026-07-25 · **Updated by:** Claude (Batch B verified, ready to commit)
+| TASK-C1 | done | Claude (route:list split verified; strong guest tests 38/38; Pint clean) |
+
+**Batch C verify:** DS7 guest cash donation — Codex clean (routes throttled, policies null-safe, strong GuestDonationTest). route:list confirms cash public+throttled, points authed. 38/38 across 5 donation files · Pint clean. No cruft this round.
+
+**Last updated:** 2026-07-25 · **Updated by:** Claude (Batch C verified, ready to commit)

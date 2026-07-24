@@ -36,7 +36,7 @@ class CourseDonateService
         });
     }
 
-    public function createCashDonation(User $donor, Course $course, float $amount, array $meta, ?string $key, ?UploadedFile $slip): CourseDonate
+    public function createCashDonation(?User $donor, Course $course, float $amount, array $meta, ?string $key, ?UploadedFile $slip): CourseDonate
     {
         if (! $course->donationEnabled()) {
             throw new DomainException('Donations disabled for this course');
@@ -55,7 +55,7 @@ class CourseDonateService
             }
             $path = $slip?->store('private/course-donation-slips/'.now()->format('Y/m'));
 
-            return CourseDonate::create(['course_id' => $course->id, 'donor_id' => $donor->id, 'donor_display_name' => $meta['donor_display_name'] ?? null, 'donation_type' => CourseDonate::TYPE_CASH, 'cash_amount' => $amount, 'currency' => $meta['currency'] ?? 'THB', 'status' => CourseDonate::STATUS_PENDING, 'purpose' => $meta['purpose'] ?? null, 'anonymous' => $meta['anonymous'] ?? false, 'slip_path' => $path, 'payment_method' => $meta['payment_method'], 'payment_reference' => $meta['payment_reference'] ?? null, 'metadata' => $meta, 'idempotency_key' => $key]);
+            return CourseDonate::create(['course_id' => $course->id, 'donor_id' => $donor?->id, 'donor_display_name' => $meta['donor_display_name'] ?? null, 'donation_type' => CourseDonate::TYPE_CASH, 'cash_amount' => $amount, 'currency' => $meta['currency'] ?? 'THB', 'status' => CourseDonate::STATUS_PENDING, 'purpose' => $meta['purpose'] ?? null, 'anonymous' => $meta['anonymous'] ?? false, 'slip_path' => $path, 'payment_method' => $meta['payment_method'], 'payment_reference' => $meta['payment_reference'] ?? null, 'metadata' => $meta, 'idempotency_key' => $key]);
         });
     }
 

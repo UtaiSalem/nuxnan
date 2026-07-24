@@ -14,11 +14,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified'])->group(function () {
     Route::post('/courses/{course}/donations/points', [CourseDonationController::class, 'storePoint'])->name('course.donation.point');
-    Route::post('/courses/{course}/donations/cash', [CourseDonationController::class, 'storeCash'])->name('course.donation.cash');
     Route::get('/me/course-donations', [CourseDonationController::class, 'mine']);
     Route::get('/courses/{course}/donations', [CourseDonationController::class, 'showForCourse']);
     Route::post('/academies/{academy}/donations/points', [AcademyDonationController::class, 'storePoint']);
-    Route::post('/academies/{academy}/donations/cash', [AcademyDonationController::class, 'storeCash']);
     Route::get('/me/academy-donations', [AcademyDonationController::class, 'mine']);
     Route::get('/academies/{academy}/donations', [AcademyDonationController::class, 'showForAcademy']);
     Route::post('/academies/{academy}/allocations', [AcademyAllocationController::class, 'store']);
@@ -26,6 +24,10 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified'])->g
     Route::post('/courses/{course}/withdrawals', [CoursePointWithdrawalController::class, 'store']);
     Route::get('/courses/{course}/withdrawals', [CoursePointWithdrawalController::class, 'index']);
     Route::post('/course-withdrawals/{withdrawal}/cancel', [CoursePointWithdrawalController::class, 'cancel']);
+});
+Route::middleware('throttle:6,1')->group(function () {
+    Route::post('/courses/{course}/donations/cash', [CourseDonationController::class, 'storeCash'])->name('course.donation.cash');
+    Route::post('/academies/{academy}/donations/cash', [AcademyDonationController::class, 'storeCash']);
 });
 Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified', 'plearnd_admin'])->prefix('/plearnd-admin/academy-donations')->group(function () {
     Route::get('/', [AcademyDonationAdminController::class, 'index']);
