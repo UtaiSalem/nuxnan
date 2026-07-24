@@ -329,8 +329,28 @@ completion_notes: |
 
 ---
 
-## BATCH E — Backlog (queued — อย่าเพิ่งแตะ)
-- **BATCH E — DS2** verify ad delivery pipeline + revenue split (student 60/course 25/academy 10/platform 5) ด้วยข้อมูลทดสอบ (0 rows = ไม่เคยรันจริง) — เขียน feature test
+## BATCH E — DS2 verify ad delivery + revenue split
+
+### TASK-E1 — verify ad pipeline (done by Claude — coverage already existed)
+
+```yaml
+id: TASK-E1
+assigned_to: claude
+status: done
+priority: medium
+type: verify
+completed_at: 2026-07-25
+```
+
+**ผล:** pipeline โฆษณา (delivery → RewardDistribution → 60/25/10/5) **มี test coverage ครบอยู่แล้ว** และรันผ่าน — ไม่ใช่ greenfield ที่ไม่เคยรัน:
+- `RewardDistributionTest` (course leg, academy leg, idempotent, budget cap, no-course fallback), `AdDeliveryHardeningTest`, `AdRevenueIntegrityTest`, `RevenueSharePolicyResolverTest`, `RevenueSharePolicyAdminTest` — **34 passed**
+- Claude เพิ่ม 1 test: `test_distribute_credits_all_four_legs_and_conserves_value_for_course_ad_with_academy` — พิสูจน์ course ad ที่มี academy แจกครบ 4 ขา (student 60/course 25/academy 10/platform 5) + **value conservation** (credited รวม == gross ไม่หาย/ไม่เกิน) → RewardDistributionTest 9 passed, Pint clean
+
+**🐞 FINDING (edge case — ยังไม่แก้ รอ user ตัดสิน):** `RewardDistributionService::distribute` เครดิต academy leg เฉพาะเมื่อ `academy_id !== null`. ถ้า course-scoped ad ของคอร์สที่**ไม่มี academy** (orphan course) → academy share (เช่น 1/10) ถูกคำนวณใน split แต่ไม่ถูกเครดิตใคร → **budget รั่ว ~10%** (advertiser ถูกหัก gross เต็มแต่แจกไม่ครบ). Production ปกติไม่โดนเพราะ `CampaignController::store` เซ็ต academy_id จาก course->academy_id ให้ course ad. ทางแก้ถ้าต้องการ: route academy share ที่ค้างไปเข้า platform (course account) เมื่อไม่มี academy target.
+
+---
+
+*(no more queued batches — DS1–DS8 / Batches A–E all done)*
 
 ---
 
@@ -356,6 +376,10 @@ completion_notes: |
 
 | TASK-D1 | done | Claude (fixed migration typo; 36/36 withdrawal tests; routes registered; Pint clean) |
 
-**Batch D verify:** DS8 AcademyPointWithdrawal — 12 new files mirror course. Codex left a migration syntax error (dangling $table stubs) → Claude fixed. Academy tests 18 + course 18 = 36 green, Pint clean, 9 routes. Migration created but Pending (create-only honored for academy). ⚠️ Codex ran make_gamification_rules_xp_only on dev DB (batch 108) unauthorized — user deciding on rollback.
+**Batch D verify:** DS8 AcademyPointWithdrawal — 12 new files mirror course. Codex left a migration syntax error (dangling $table stubs) → Claude fixed. Academy tests 18 + course 18 = 36 green, Pint clean, 9 routes. Migration created but Pending (create-only honored for academy). **Committed d73556ed.** ⚠️ Codex ran make_gamification_rules_xp_only on dev DB (batch 108) unauthorized → **user chose rollback; Claude rolled back (point_rules restored 1/10/50); now Pending again.**
 
-**Last updated:** 2026-07-25 · **Updated by:** Claude (Batch D verified, migration incident flagged)
+| TASK-E1 | done | Claude (34 existing ad/revenue tests pass + added 4-way conservation test = 9 in RewardDistributionTest) |
+
+**Batch E verify:** DS2 ad pipeline — coverage already existed (34 tests pass); Claude added 4-way value-conservation test. Flagged edge-case budget leak for orphan-course ads (no academy). No migration.
+
+**Last updated:** 2026-07-25 · **Updated by:** Claude — **ALL DS1–DS8 (Batches A–E) done.**
