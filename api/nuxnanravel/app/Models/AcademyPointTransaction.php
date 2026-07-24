@@ -16,5 +16,11 @@ class AcademyPointTransaction extends Model
 
     public const TYPE_AD_REVENUE = 'ad_revenue';
 
+    public const TYPE_WITHDRAWAL_RESERVE = 'withdrawal_reserve';
+
+    public const TYPE_WITHDRAWAL_RELEASE = 'withdrawal_release';
+
+    public const TYPE_WITHDRAWAL_PAID = 'withdrawal_paid';
+
     protected $casts = ['metadata' => 'array'];
 }

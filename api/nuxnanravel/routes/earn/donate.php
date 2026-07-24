@@ -2,10 +2,12 @@
 
 use App\Http\Controllers\Api\Academies\AcademyAllocationController;
 use App\Http\Controllers\Api\Academies\AcademyDonationController;
+use App\Http\Controllers\Api\Academies\AcademyPointWithdrawalController;
 use App\Http\Controllers\Api\Courses\CourseDonationController;
 use App\Http\Controllers\Api\Courses\CoursePointWithdrawalController;
 use App\Http\Controllers\Api\Earn\DonateController;
 use App\Http\Controllers\Api\PlearndAdmin\AcademyDonationAdminController;
+use App\Http\Controllers\Api\PlearndAdmin\AcademyPointWithdrawalAdminController;
 use App\Http\Controllers\Api\PlearndAdmin\CourseDonationAdminController;
 use App\Http\Controllers\Api\PlearndAdmin\CoursePointWithdrawalAdminController;
 use App\Http\Controllers\Api\PlearndAdmin\RevenueSharePolicyController;
@@ -24,6 +26,17 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified'])->g
     Route::post('/courses/{course}/withdrawals', [CoursePointWithdrawalController::class, 'store']);
     Route::get('/courses/{course}/withdrawals', [CoursePointWithdrawalController::class, 'index']);
     Route::post('/course-withdrawals/{withdrawal}/cancel', [CoursePointWithdrawalController::class, 'cancel']);
+    Route::post('/academies/{academy}/withdrawals', [AcademyPointWithdrawalController::class, 'store']);
+    Route::get('/academies/{academy}/withdrawals', [AcademyPointWithdrawalController::class, 'index']);
+    Route::post('/academy-withdrawals/{withdrawal}/cancel', [AcademyPointWithdrawalController::class, 'cancel']);
+});
+Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified', 'plearnd_admin'])->prefix('/plearnd-admin/academy-withdrawals')->group(function () {
+    Route::get('/', [AcademyPointWithdrawalAdminController::class, 'index']);
+    Route::get('/{withdrawal}', [AcademyPointWithdrawalAdminController::class, 'show']);
+    Route::patch('/{withdrawal}/review', [AcademyPointWithdrawalAdminController::class, 'review']);
+    Route::patch('/{withdrawal}/approve', [AcademyPointWithdrawalAdminController::class, 'approve']);
+    Route::patch('/{withdrawal}/reject', [AcademyPointWithdrawalAdminController::class, 'reject']);
+    Route::patch('/{withdrawal}/mark-paid', [AcademyPointWithdrawalAdminController::class, 'markPaid']);
 });
 Route::middleware('throttle:6,1')->group(function () {
     Route::post('/courses/{course}/donations/cash', [CourseDonationController::class, 'storeCash'])->name('course.donation.cash');

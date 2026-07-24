@@ -260,8 +260,76 @@ completion_notes: |
 
 ---
 
-## BATCH D–E — Backlog (queued — อย่าเพิ่งแตะ)
-- **BATCH D — DS8** สร้าง `AcademyPointWithdrawal` (migration+model+service+controller+policy+FormRequests+routes) mirror `CoursePointWithdrawal`: จ่าย pp เข้า academy owner, ไม่มี payout-proof (DS5), maker-checker คงไว้ — **งานสร้างใหม่ชุดใหญ่**
+## BATCH D — DS8 สร้าง AcademyPointWithdrawal (mirror CoursePointWithdrawal)
+
+### TASK-D1 — academy withdrawal subsystem (pp → academy owner, no payout-proof)
+
+```yaml
+id: TASK-D1
+assigned_to: codex
+status: done
+priority: high
+type: backend
+completed_at: 2026-07-25
+completion_notes: |
+  Full AcademyPointWithdrawal subsystem mirrored from course: migration (no payout_proof),
+  model, service (pp->academy owner via earn 'academy_withdrawal', ledger to
+  academy_point_transactions, maker-checker), owner+admin controllers, policy (registered in
+  AppServiceProvider), 5 FormRequests (MarkPaid no proof), Resource, 9 routes, 3 new tx type consts.
+  Claude-verify FIXED Codex migration typo (dangling $table stubs where payout_proof cols removed)
+  + reverted Codex's stray latest-analysis.md edit.
+  ⚠️ INCIDENT: Codex ran `php artisan migrate` on DEV DB → applied make_gamification_rules_xp_only
+  (batch 108) despite "create-only" rule. Academy migration stayed Pending (syntax err blocked it).
+  Awaiting user decision on rollback. Academy migration NOT run on dev.
+  Tests: academy 18 (10 service + 8 endpoint) + course 18 = 36 green. Pint clean.
+```
+
+**บริบท (DS8):** โรงเรียนรับบริจาคเข้า `academy_point_account` แล้วต้องถอนตรงได้ (ไม่ต้อง allocate ลงวิชาก่อน) → สร้างระบบถอนของ academy **ขนานกับ course** จ่ายเป็น **pp เข้าเจ้าของโรงเรียน** (`academy->user_id`), **ไม่มี payout-proof** (DS5), **maker-checker คงไว้** (DS3/DS5)
+
+**⚠️ MIGRATION: สร้างไฟล์เท่านั้น — ห้ามรัน `php artisan migrate` บน DB dev** (user รันเอง) · **รันเทสต์ได้** (RefreshDatabase migrate test DB แยก ไม่แตะ MySQL local)
+
+**วิธีทำ: mirror ไฟล์ course → academy ตรงๆ แล้วปรับ delta ด้านล่าง** (อ่าน template course ก่อนทุกไฟล์)
+
+**ไฟล์ template (course) → สร้างใหม่ (academy):**
+| course template | academy ใหม่ |
+|---|---|
+| `database/migrations/2026_07_18_300001_create_course_point_withdrawal_requests_table.php` | `database/migrations/2026_07_25_000001_create_academy_point_withdrawal_requests_table.php` |
+| `app/Models/CoursePointWithdrawalRequest.php` | `app/Models/AcademyPointWithdrawalRequest.php` |
+| `app/Services/CoursePointWithdrawalService.php` | `app/Services/AcademyPointWithdrawalService.php` |
+| `app/Http/Controllers/Api/Courses/CoursePointWithdrawalController.php` | `app/Http/Controllers/Api/Academies/AcademyPointWithdrawalController.php` |
+| `app/Http/Controllers/Api/PlearndAdmin/CoursePointWithdrawalAdminController.php` | `app/Http/Controllers/Api/PlearndAdmin/AcademyPointWithdrawalAdminController.php` |
+| `app/Policies/CoursePointWithdrawalPolicy.php` | `app/Policies/AcademyPointWithdrawalPolicy.php` |
+| `app/Http/Requests/CoursePointWithdrawal/{Store…,Review,Approve,Reject,MarkPaid}Request.php` | `app/Http/Requests/AcademyPointWithdrawal/{Store…,Review,Approve,Reject,MarkPaid}Request.php` |
+| `app/Http/Resources/CoursePointWithdrawal/CoursePointWithdrawalResource.php` | `app/Http/Resources/AcademyPointWithdrawal/AcademyPointWithdrawalResource.php` |
+| `tests/Feature/CoursePointWithdrawalTest.php` + `…EndpointsTest.php` | `tests/Feature/AcademyPointWithdrawalTest.php` + `…EndpointsTest.php` |
+
+**DELTA ที่ต้องเปลี่ยนจาก course:**
+1. **Migration:** FK `academy_id`→academies, `academy_point_account_id`→academy_point_accounts, `academy_point_transaction_id`→academy_point_transactions · **ตัดคอลัมน์ `payout_proof_path/original_name/mime/size` ทิ้ง** (DS5) · เปลี่ยนชื่อ index/FK เป็น `apwr_` (ห้ามชนชื่อ course) · index `['academy_id','status','created_at']`, `['requested_by','created_at']`
+2. **Model:** ตัด fillable/casts ของ `payout_proof_*` · relation `academy()`→Academy, `account()`→AcademyPointAccount(`academy_point_account_id`), `transaction()`→AcademyPointTransaction(`academy_point_transaction_id`) · statuses + `canTransitionTo` เหมือน course เป๊ะ
+3. **AcademyPointTransaction (แก้ไฟล์เดิม):** เพิ่ม const `TYPE_WITHDRAWAL_RESERVE='withdrawal_reserve'`, `TYPE_WITHDRAWAL_RELEASE='withdrawal_release'`, `TYPE_WITHDRAWAL_PAID='withdrawal_paid'`
+4. **Service:** source = `AcademyPointAccount::where('academy_id',…)` · **ledger เขียนลง academy_point_transactions ด้วยคอลัมน์จริง**: `academy_point_account_id`, `academy_id`, `user_id`, `type`, `amount`, `balance_before`, `balance_after`, `created_by`, `metadata` (⚠️ ไม่มี `course_id`/`course_point_account_id`) · request() ตรวจสิทธิ์ `$academy->user_id === $requester->id || $academy->isAdmin($requester)` · min = `AcademyPointAccount::MINIMUM_WITHDRAWAL`/`canWithdraw` · **markPaid: ตัด param `array $proofData`** (signature `(request, payer, ?paymentReference)`) จ่าย `points->earn($request->requester, $amount, 'academy_withdrawal', $request->academy_id, 'Academy withdrawal payout', ['academy_point_transaction_id'=>$tx->id])` · config `config('wallet.academy_withdraw.maker_checker_threshold', 5000)` + `config('wallet.academy_withdraw.maker_checker_disabled', false)` (ใช้ default ได้ ไม่ต้องแก้ config)
+5. **Admin controller markPaid:** เรียก `service->markPaid($withdrawal, $r->user(), $r->input('payment_reference'))` (ไม่มี proof)
+6. **MarkPaidRequest:** rules มีแค่ `payment_reference` (ไม่มี proof)
+7. **Resource:** ตัด field proof/has_proof ทิ้ง
+8. **Policy:** `viewAny(User,Academy)`, `view(User,AcademyPointWithdrawalRequest)`, `moderate` — mirror
+9. **AppServiceProvider (แก้ไฟล์เดิม):** เพิ่ม `use App\Models\AcademyPointWithdrawalRequest;` `use App\Policies\AcademyPointWithdrawalPolicy;` + `Gate::policy(AcademyPointWithdrawalRequest::class, AcademyPointWithdrawalPolicy::class);` ใน boot() (ถัดจาก CoursePointWithdrawal)
+10. **Routes (`routes/earn/donate.php`):**
+    - owner (ใน group `['auth:api', jetstream, 'verified']`): `POST /academies/{academy}/withdrawals` (store), `GET /academies/{academy}/withdrawals` (index), `POST /academy-withdrawals/{withdrawal}/cancel`
+    - admin (ใน group `[…'plearnd_admin']` prefix `/plearnd-admin/academy-withdrawals`): GET `/`, GET `/{withdrawal}`, PATCH `/{withdrawal}/review|approve|reject|mark-paid`
+    - import controller ใหม่ทั้ง 2 ที่หัวไฟล์
+
+**Tests:** mirror course withdrawal tests → academy (request/reserve, review→approve→mark-paid จ่าย pp เข้า owner, maker-checker กันคนเดียวทำหลาย step, reject/cancel release reserve, below-min 422). ใช้ AcademyPointAccount ที่มี balance พอ
+
+**Acceptance:**
+- [ ] migration ไฟล์ใหม่ (ไม่รันบน dev) · schema academy ครบ ไม่มี payout_proof
+- [ ] owner ถอน → review → approve → mark-paid แล้ว pp เข้า academy owner, ledger academy_point_transactions ครบ (reserve/release/paid), reserved_balance/balance/total_withdrawn ถูกต้อง
+- [ ] maker-checker กันคนเดียวทำ 2 บทบาทเมื่อเกิน threshold
+- [ ] ไม่มี proof ทุกจุด · Policy ทำงาน (owner เห็นของตัวเอง)
+- [ ] เทสต์ academy withdrawal ใหม่เขียว + course withdrawal เดิมยังเขียว, Pint clean
+
+---
+
+## BATCH E — Backlog (queued — อย่าเพิ่งแตะ)
 - **BATCH E — DS2** verify ad delivery pipeline + revenue split (student 60/course 25/academy 10/platform 5) ด้วยข้อมูลทดสอบ (0 rows = ไม่เคยรันจริง) — เขียน feature test
 
 ---
@@ -284,6 +352,10 @@ completion_notes: |
 
 | TASK-C1 | done | Claude (route:list split verified; strong guest tests 38/38; Pint clean) |
 
-**Batch C verify:** DS7 guest cash donation — Codex clean (routes throttled, policies null-safe, strong GuestDonationTest). route:list confirms cash public+throttled, points authed. 38/38 across 5 donation files · Pint clean. No cruft this round.
+**Batch C verify:** DS7 guest cash donation — Codex clean (routes throttled, policies null-safe, strong GuestDonationTest). route:list confirms cash public+throttled, points authed. 38/38 across 5 donation files · Pint clean. No cruft this round. **Committed 8e70db9f.**
 
-**Last updated:** 2026-07-25 · **Updated by:** Claude (Batch C verified, ready to commit)
+| TASK-D1 | done | Claude (fixed migration typo; 36/36 withdrawal tests; routes registered; Pint clean) |
+
+**Batch D verify:** DS8 AcademyPointWithdrawal — 12 new files mirror course. Codex left a migration syntax error (dangling $table stubs) → Claude fixed. Academy tests 18 + course 18 = 36 green, Pint clean, 9 routes. Migration created but Pending (create-only honored for academy). ⚠️ Codex ran make_gamification_rules_xp_only on dev DB (batch 108) unauthorized — user deciding on rollback.
+
+**Last updated:** 2026-07-25 · **Updated by:** Claude (Batch D verified, migration incident flagged)
