@@ -1,0 +1,105 @@
+# ระบบสร้างรายได้ระดับโรงเรียน/รายวิชา (School Tier) — เอกสารสโคป
+
+> ต้นแบบ: [`public-tier-monetization.md`](./public-tier-monetization.md) — ระดับสาธารณะตัดสินครบแล้ว 15 มติ
+> ขอบเขต: `course_*` (รายวิชา) + `academy_*` (โรงเรียน) + revenue share + fund model
+> สถานะ: **วิเคราะห์คู่ขนานระหว่าง Codex ทำเฟส 0 ของสาธารณะ** (2026-07-24) — ยังไม่ตัดสิน รอ discuss แบบเดียวกับสาธารณะ
+
+---
+
+## 1. สถานะจริง — **Greenfield 100%**
+
+| ตาราง | rows |
+|---|---|
+| `course_point_accounts` · `course_donates` · `course_point_campaigns` · `course_point_campaign_claims` · `course_point_transactions` · `course_point_withdrawal_requests` | **0 ทุกตาราง** |
+| `academy_donates` · `academy_point_transactions` · `academy_point_rules` | **0 ทุกตาราง** |
+| `academy_point_accounts` | 1 (seed) |
+| `revenue_share_policies` | 1 (seed platform 60/25/10/5) |
+| `adverts` ที่ `scope_type` = course/academy | **0** (ทั้ง 49 เป็น public) |
+
+→ **ไม่มีข้อมูลจริงเลย** ต่างจากสาธารณะที่มีประวัติ 6,131 การดู + 30,444 การกดรับ
+→ ระดับโรงเรียน = งาน**ออกแบบ** ล้วน ไม่มีหนี้/บั๊กข้อมูลค้างต้องล้าง (ยกเว้นบั๊กโค้ดที่ยังไม่เคยรัน)
+
+---
+
+## 2. แผนที่การไหลของเงิน (โครงที่สร้างไว้แล้ว)
+
+```
+                    ┌─────────── เงินเข้า (บริจาค point/cash, ส่วนแบ่งโฆษณา, allocate) ───────────┐
+                    ▼                                                                              ▼
+          academy_point_account ──(AcademyAllocationService)──▶ course_point_account
+             │  ▲                                                    │  ▲
+      academy_donates                                          course_donates
+      (point→ทันที / cash→admin)                              (point→ทันที / cash→admin)
+                                                                    │
+                                                                    ▼
+                                                    CoursePointWithdrawalRequest
+                                                    (state machine เต็ม + maker-checker + payout proof)
+                                                                    │
+                                                                    ▼
+                                              earn() → pp ของเจ้าของวิชา ──(convert 1200:1)──▶ wallet ──▶ ธนาคาร
+```
+
+**จุดสำคัญเชิงสถาปัตยกรรม:**
+- **โรงเรียนถอนเป็นเงินโดยตรงไม่ได้** — ไม่มี route/service ถอนของ academy มีแค่ donations + allocations → กองทุนโรงเรียนเป็น **pass-through** ต้อง allocate ลงรายวิชาก่อน แล้วรายวิชาจึงถอน
+- **การถอนของรายวิชาจ่ายออกเป็น pp** (`CoursePointWithdrawalService.php:110` `earn(...'course_withdrawal'...)`) ไม่ใช่เงินสด → เจ้าของแปลง pp→wallet เอง (นี่คือ D3 ของสาธารณะที่ยังกำกวม: บังคับแนบสลิปการโอนแต่จ่ายเป็น pp)
+- Revenue share มี 4 scope: `platform > academy > course > campaign` resolve most-specific-first (`RevenueSharePolicyResolver`)
+
+---
+
+## 3. Mapping: มติสาธารณะ → โรงเรียน (reuse / new / ต่าง)
+
+| มติสาธารณะ | เทียบระดับโรงเรียน | สถานะ |
+|---|---|---|
+| D1 โมเดลโฆษณา (จ่าย pp ได้เงิน) | โฆษณา scope=course/academy ใช้ **delivery pipeline + RevenueSharePolicy** (คนละสูตรกับ legacy public!) | ⚠️ **ต่าง** — public คงสูตร legacy, school ใช้ pipeline ใหม่ 60/25/10/5 |
+| D2 กดรับแต้ม | รายวิชามี `CoursePointCampaign` (manual/lesson/quiz) + `CampaignClaimModal` 3 โหมด | ✅ สร้างแล้ว แต่โหมด donor พัง (P0 #1 สาธารณะ) |
+| D2.1 พารามิเตอร์ 220/30/20 | รายวิชาใช้ `points_per_claim` ต่อแคมเปญ (เจ้าของตั้งเอง) ไม่ใช่ 270 ตายตัว | ⚠️ **ต่าง** — ต้องตัดสินว่า split ผู้กด/ผู้แนะนำ/แพลตฟอร์มใช้กับรายวิชาไหม |
+| D2.2 เพดานสองชั้น | รายวิชามี `max_claims` + กัน 1 คน/แคมเปญ แต่ไม่มีเพดาน/วัน | ⚠️ ต้องเพิ่มเพดาน/วันไหม |
+| D3 รับรองหนี้เดิม | ไม่มีหนี้เดิม (0 rows) | ✅ ไม่เกี่ยว |
+| D6 สลิป→private | course/academy donation slip → `slip_path` เก็บ **private อยู่แล้ว** (`private/course-donation-slips/`) | ✅ **ดีกว่าสาธารณะ** — school ทำถูกตั้งแต่แรก |
+| D9 เงินโอนผิด→เครดิต wallet | ต้องใช้กติกาเดียวกัน | 🔸 ตัดสินรวม |
+| D11 เกม/กิจกรรม→XP | lesson/quiz reward = fund-backed (D11.2) → **นี่คือกลไกระดับรายวิชาที่ D11.2 อ้างถึง** | ✅ สะพานเชื่อม |
+| P0 #8g จ่ายซ้ำ | เกิดที่ระดับรายวิชา (point_rules mint + CoursePointCampaign) | ✅ อยู่ในงาน D11.2 แล้ว |
+| P1 #13 scope leak | `getMoreAdvertisings` ไม่กรอง scope → โฆษณาโรงเรียนรั่วเข้า public | 🔴 **ต้องแก้ก่อนเปิดโฆษณาโรงเรียน** |
+
+---
+
+## 4. สิ่งที่ต่างจากสาธารณะ — ต้องตัดสินใจ (ยังไม่ถาม user)
+
+1. **สมาชิกภาพ:** course/academy donation **บังคับ login+verified** (ต่างจากสาธารณะ D1 ที่สลิป anonymous ได้) — จะเปิด guest บริจาค/โฆษณาระดับโรงเรียนไหม? (guest advertiser D4 สาธารณะเป็นต้นแบบ)
+2. **สูตรโฆษณาไม่ตรงกัน:** public = legacy (ผู้ชมจ่าย pp ได้เงิน) · school = pipeline ใหม่ (RevenueSharePolicy 60/25/10/5) — จะให้ 2 ชั้นใช้สูตรเดียวกันไหม หรือยอมให้ต่าง?
+3. **แคมเปญ `support` (campaign_type=support):** ที่ระดับ course/academy มี**บั๊กจ่ายซ้ำ ~190%** (SupportPaymentService ให้ pp + แจกเงิน 70/20/10 พร้อมกัน) — ทับซ้อนกับ course_donates/academy_donates → **ยุบ support ทิ้งไหม?**
+4. **การถอนของรายวิชา = pp หรือเงินสด?** (D3 สาธารณะยังค้าง) — โค้ดจ่าย pp แต่ UX บังคับสลิปโอน
+5. **โรงเรียนถอนเงินได้ไหม?** ตอนนี้ทำไม่ได้ (pass-through เท่านั้น) — ถ้าต้องการต้องสร้าง `AcademyPointWithdrawalRequest` ขนาน
+6. **split การกดรับ:** สาธารณะ 220/30/20 มาจากอัตราตายตัว 1080/270 — รายวิชาเจ้าของตั้ง `points_per_claim` เอง จะหักส่วนแพลตฟอร์ม/ผู้แนะนำจากแต่ละการกดรับไหม หรือกองทุนรายวิชาจ่ายเต็ม?
+
+---
+
+## 5. สิ่งที่สร้างไว้แล้ว (reuse ได้ทันที) vs ที่ยังขาด
+
+**✅ สร้างแล้ว (ครบกว่าสาธารณะมาก):**
+- `course_point_account` + ledger เต็ม (`course_point_transactions` มี type ครบ: donation/ad_revenue/claim/reserve/release/withdrawal)
+- `CoursePointCampaign` 3 แบบ (manual/lesson/quiz) + reserve/release + กันกดซ้ำ + เช็คยอดพอ
+- `CoursePointWithdrawalService` state machine เต็ม (pending→reviewing→approved→paid) + maker-checker + payout proof (private disk)
+- `RevenueSharePolicy` + resolver (4 scope, versioned, sum=100 guard)
+- `AcademyAllocationService` (academy→course, idempotent, locked)
+- `FraudDetectionService` (self-donation, velocity, negative balance) — แต่ไม่ถูก schedule (P1 #18 สาธารณะ)
+- admin UI ครบ: course-donations, academy-donations, course-withdrawals, revenue-share-policies, risk-events
+
+**❌ ยังขาด:**
+- โฆษณา scope=course/academy ยังไม่เคยถูกสร้าง/ทดสอบจริง (0 rows) — ต้อง verify delivery + revenue split ทำงานจริง
+- academy withdrawal path (ถ้าตัดสินว่าต้องมี)
+- reconciliation ที่ตั้ง baseline ใหม่ (เพราะ pp ledger ระดับ user ยังมีปัญหา 92% ไม่มีบรรทัด — P0 #8d สาธารณะ)
+- การเชื่อม lesson/quiz reward ให้เป็นทางเดียว (D11.2) — ตอนนี้จ่ายซ้ำกับ point_rules
+
+---
+
+## 6. ลำดับที่แนะนำ (หลังสาธารณะเฟส 0–3 เสร็จ)
+
+1. **รากฐานร่วม** (ออกแบบทีเดียวครอบทั้ง 2 ชั้น): `config/economy.php` SSOT, ledger fix (#8d), PP-mint policy (D11)
+2. ตัดสิน 6 ข้อใน §4
+3. แก้ scope leak #13 ก่อนเปิดโฆษณาโรงเรียน
+4. verify course/academy ad delivery + revenue split ด้วยข้อมูลทดสอบ (เพราะ 0 rows = ไม่เคยรันจริง)
+5. เชื่อม lesson/quiz reward เป็นทางเดียว (D11.2)
+6. academy withdrawal (ถ้าตัดสินว่าต้องมี)
+
+> **หมายเหตุ:** ระดับโรงเรียนโค้ดครบกว่าสาธารณะมาก (state machine, ledger, revenue share ทำไว้หมดแล้ว) แต่**ไม่เคยรันจริงเลย** — ความเสี่ยงหลักคือบั๊กที่ซ่อนอยู่ในโค้ดที่ยังไม่เคยถูกใช้ ไม่ใช่หนี้ข้อมูล
