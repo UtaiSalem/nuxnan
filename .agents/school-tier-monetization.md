@@ -76,9 +76,9 @@
 - **DS5:** ถอนวิชา = pp เข้าเจ้าของ (ภายใน) → **ลบ payout-proof slip requirement ที่ `markPaid`** (การโอนเงินจริง+KYC+สลิป เกิดตอนเจ้าของถอน wallet→ธนาคาร ที่มีอยู่แล้ว) · maker-checker คงไว้ได้
 - **DS6:** บริจาคเข้ากองทุนวิชา — **บริจาคแต้ม (pp) = 1:1 ไม่หัก** (แพลตฟอร์มเก็บ spread ตอนสร้าง pp ไปแล้ว) · **บริจาคเงินสด (slip) = X×1080 pp หัก spread 10% เหมือน public** → **ต้องแก้บั๊ก cash 1:1 ที่มีอยู่** (`CourseDonateService::approve` / `AcademyDonateService::approve` credit `(int)cash_amount` 1:1)
 
-### เลื่อนไปทำทีหลัง (lean, ยังไม่ล็อค)
-- **guest ระดับโรงเรียน** (บริจาค/โฆษณา) — ต้อง `course_donates.donor_id`/`adverts.user_id` nullable + tracking link เหมือน public D4
-- **academy ถอนเงินตรง** — คง pass-through (allocate→วิชาถอน) เพิ่ม `AcademyPointWithdrawalRequest` ทีหลังถ้าต้องการ
+### DS7–DS8 (user, 2026-07-24 — ล็อคครบแล้ว)
+- **DS7 guest ระดับโรงเรียน:** **บริจาค → เปิด guest เลย** (schema พร้อม `course_donates.donor_id`/`academy_donates.donor_id` = nullable อยู่แล้ว) แค่ผ่อน auth ที่ slip path + lock beneficiary (course/academy) ฝั่ง server · **โฆษณา → มัดรวม epic D4** (public guest-advertiser) เพราะ `adverts.user_id` = NOT NULL ต้อง migrate + tracking link ชุดเดียวกัน
+- **DS8 academy ถอนเงินตรง:** **สร้าง `AcademyPointWithdrawal`** (table + model + service + admin controller + policy + FormRequests) ขนานกับ `CoursePointWithdrawal` — จ่าย pp เข้า academy owner (ตาม DS3), ไม่มี payout-proof (ตาม DS5), maker-checker คงไว้ → โรงเรียนรับบริจาคแล้วถอนตรงได้ ไม่ต้องอ้อมผ่านวิชา
 
 ## 5b. แผน implement โรงเรียน (ตัดสินครบ 6 มติ)
 **Prerequisite:** แก้ scope leak #13 (`getMoreAdvertisings` ไม่กรอง scope) ก่อนเปิดโฆษณาโรงเรียน — ไม่งั้นโฆษณา ร.ร. รั่วเข้า public
@@ -88,7 +88,11 @@
 4. **DS5** ลบ payout-proof requirement ที่ `CoursePointWithdrawalAdminController::markPaid` + FormRequest
 5. **DS2** verify ad delivery pipeline + revenue split (student 60/course 25/academy 10/platform 5) ด้วยข้อมูลทดสอบ (0 rows = ไม่เคยรัน)
 6. **DS3/DS4** = คงเดิม ไม่แตะ
-7. schedule `risk:scan` (P1 #18 — ยกมาจาก public ด้วย)
+7. **DS7** เปิด guest บริจาค: ผ่อน auth ที่ slip path ของ course/academy donation + lock beneficiary ฝั่ง server (donor_id = null เมื่อ guest) · guest โฆษณา → epic D4 แยก
+8. **DS8** สร้าง `AcademyPointWithdrawal` (mirror CoursePointWithdrawal, pp→owner, ไม่มี payout-proof)
+9. schedule `risk:scan` (P1 #18 — ยกมาจาก public ด้วย)
+
+**สรุปประเภทงาน:** ลบ/แก้ (DS1, DS6, #1, DS5, #13) = เร็ว · เปิด flag (DS7 บริจาค) = เร็ว · สร้างใหม่ (DS8 academy withdrawal) = งานจริง 1 ชุด · verify (DS2 ad pipeline) = ต้องมีข้อมูลทดสอบ · epic แยก (guest advertiser D4 = public+school) = รอบใหญ่ต่างหาก
 
 ## 4. (เดิม) สิ่งที่ต่างจากสาธารณะ — decided ด้านบนแล้ว §4b
 
