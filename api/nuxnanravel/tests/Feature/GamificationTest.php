@@ -7,6 +7,7 @@ use App\Models\GamificationRuleLog;
 use App\Models\PointRule;
 use App\Models\User;
 use App\Models\UserUsageEvent;
+use App\Services\GamificationService;
 use App\Services\ActivitySummaryService;
 use App\Services\GamificationRuleEngine;
 use App\Services\UsageEventService;
@@ -47,6 +48,44 @@ class GamificationTest extends TestCase
             ->where('event_type', 'quiz_pass')
             ->where('source_id', $quizId)
             ->count());
+    }
+
+    public function test_gamification_quiz_pass_awards_xp_without_platform_pp(): void
+    {
+        PointRule::create([
+            'rule_key' => 'quiz_pass', 'rule_name' => 'Quiz pass', 'action_type' => 'earn',
+            'source_type' => 'quiz_pass', 'base_amount' => 0, 'multiplier' => 1,
+            'xp_amount' => 500, 'is_active' => true,
+        ]);
+        $user = User::factory()->create(['pp' => 0, 'xp' => 0]);
+
+        UsageEventService::fire($user, UsageEventType::QUIZ_PASS->value, 'quiz', 301);
+
+        $user->refresh();
+        $this->assertSame(0.0, (float) $user->pp);
+        $this->assertSame(500, (int) $user->xp);
+    }
+
+    public function test_points_earn_endpoint_is_not_available_to_normal_users(): void
+    {
+        $user = User::factory()->create(['pp' => 0]);
+
+        $this->actingAs($user, 'api')->postJson('/api/points/earn', [
+            'source_type' => 'game_snake', 'amount' => 999,
+        ])->assertNotFound();
+
+        $this->assertSame(0.0, (float) $user->fresh()->pp);
+    }
+
+    public function test_streak_bonus_awards_xp_without_platform_pp(): void
+    {
+        $user = User::factory()->create(['pp' => 0, 'xp' => 0]);
+
+        app(GamificationService::class)->recordActivity($user);
+
+        $user->refresh();
+        $this->assertSame(0.0, (float) $user->pp);
+        $this->assertSame(10, (int) $user->xp);
     }
 
     public function test_lesson_complete_awards_xp_once_per_source()
