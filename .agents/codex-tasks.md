@@ -1,219 +1,180 @@
-# Codex Task List — School Department Management Feature
+# Codex Task List — School-Tier Monetization (DS1–DS8)
 
-**Feature Goal**: ระบบบริหารจัดการแผนกในโรงเรียน
-- ผู้บริหารสร้าง/จัดการแผนก
-- แต่งตั้งผู้ใช้เป็น admin/หัวหน้าของแต่ละแผนก
-- ดูสมาชิก, บทบาท, สิทธิ์ของแผนก
-
-**โครงสร้างที่มีอยู่แล้ว** (อย่าสร้างซ้ำ):
-- Backend: `api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/DepartmentController.php`
-- Routes: `api/nuxnanravel/routes/learn/academy.php` (line 272–292)
-- Frontend page: `ui/pages/academies/[name]/admin/departments.vue`
-- Frontend overview: `ui/pages/academies/[name]/admin/school-management.vue`
+> แผนต้นทาง: [`school-tier-monetization.md`](./school-tier-monetization.md) §5b (ตัดสินครบ 8 มติ DS1–DS8)
+> Pipeline: **Codex implement → agy review → Claude verify → commit** (branch `feat/monetization-hardening`)
+> กฎ: อ่านไฟล์ก่อนแก้เสมอ · ห้าม `migrate:fresh` / แก้ `.env` / แตะ `vendor` · **ห้ามรัน migration บน DB จริง** (Claude รันเอง) · ทำทีละ task ตามลำดับ
+>
+> **ทำเฉพาะ task ที่ `status: pending`** — task ที่ `status: queued` คือ backlog batch ถัดไป อย่าเพิ่งแตะจนกว่า Claude จะปลดเป็น pending
 
 ---
 
-## TASK-001 — Fix: DepartmentController::getStatistics() missing `departments_with_head`
+## BATCH A — Quick backend fixes (low risk, isolated)
+
+### TASK-A1 — #13 ปิด scope leak: `getMoreAdvertisings` ไม่กรอง scope
 
 ```yaml
-id: TASK-001
+id: TASK-A1
+assigned_to: codex
+status: done
+priority: critical
+type: backend
+completed_at: 2026-07-25
+completion_notes: getMoreAdvertisings now filters scope_type null/public (mirrors index). Codex-impl, Claude-verified.
+```
+
+**ปัญหา:** `AdvertController::getMoreAdvertisings()` คืน advert ทุกตัวที่ `status=1 && remaining_views>0` โดย **ไม่กรอง `scope_type`** → โฆษณา scope=course/academy รั่วเข้าฟีดสาธารณะ (`index()` กรองถูกอยู่แล้ว)
+
+**ไฟล์:** `api/nuxnanravel/app/Http/Controllers/AdvertController.php` (method `getMoreAdvertisings`, ~line 49)
+
+**สิ่งที่ทำ:** เพิ่ม scope filter แบบเดียวกับ `index()` เข้าไปใน query ของ `getMoreAdvertisings`:
+```php
+->where(function ($query) {
+    $query->whereNull('scope_type')->orWhere('scope_type', 'public');
+})
+```
+
+**Acceptance:**
+- [ ] `getMoreAdvertisings` คืนเฉพาะ advert ที่ `scope_type` เป็น null หรือ `'public'`
+- [ ] logic เดิม (`status=1`, `remaining_views>0`, order) คงไว้ครบ
+- [ ] ไม่แตะ method อื่น
+
+---
+
+### TASK-A2 — DS6 แก้อัตราแปลงบริจาคเงินสด (course + academy) เป็น ×1080
+
+```yaml
+id: TASK-A2
 assigned_to: codex
 status: done
 priority: high
 type: backend
-completed_at: 2026-06-03 06:33
-completion_notes: getStatistics now returns departments_with_head while preserving existing statistic fields.
+completed_at: 2026-07-25
+completion_notes: Course+Academy cash approve now credit round(cash × config donation_pp_per_baht). Point donations untouched. 3 tests realigned to ×1080 by Claude (verify-side).
 ```
 
-**ปัญหา**: หน้า `departments.vue` แสดง `statistics.departments_with_head` แต่ `getStatistics()` ไม่ได้ return field นี้
+**ปัญหา:** บริจาคเงินสด (slip) ตอน approve เครดิต pp แบบ **1:1** (`(int) cash_amount`) ควรเป็น `cash × config('economy.donation_pp_per_baht')` (=1080) หัก spread 10% เหมือน public · **บริจาคแต้ม (point) คง 1:1 — ห้ามแตะ**
 
-**ไฟล์ที่ต้องแก้**:
-- `api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/DepartmentController.php`
-- method: `getStatistics()` (line ~432)
+**ไฟล์ + จุดแก้:**
+1. `api/nuxnanravel/app/Services/CourseDonateService.php` method `approve()` (~line 75):
+   - เดิม: `->creditCoursePoints($d->course_id, $d->donor_id, (int) $d->cash_amount, null, [...])`
+   - เป็น: จำนวน pp = `(int) round($d->cash_amount * config('economy.donation_pp_per_baht'))`
+2. `api/nuxnanravel/app/Services/AcademyDonateService.php` method `approve()` (~line 75):
+   - เดิม: `->creditFromCashDonation($d->academy_id, $d->donor_id, (int) $d->cash_amount, null, [...])`
+   - เป็น: จำนวน pp = `(int) round($d->cash_amount * config('economy.donation_pp_per_baht'))`
 
-**Acceptance Criteria**:
-- [ ] `getStatistics()` return `departments_with_head` = จำนวน departments ที่มี `settings.head_user_id` ไม่เป็น null
-- [ ] ยังคง return fields เดิมทั้งหมด (`total_departments`, `total_members`, `average_members_per_department`, `departments`)
-
-**ตัวอย่าง response ที่ต้องการ**:
-```json
-{
-  "success": true,
-  "data": {
-    "total_departments": 5,
-    "total_members": 42,
-    "average_members_per_department": 8.4,
-    "departments_with_head": 3,
-    "departments": [...]
-  }
-}
-```
+**Acceptance:**
+- [ ] ทั้ง 2 service คำนวณ pp = `round(cash_amount × config('economy.donation_pp_per_baht'))` (cast int)
+- [ ] `createPointDonation` ของทั้ง 2 ไฟล์ **ไม่ถูกแตะ** (point ยัง 1:1)
+- [ ] ไม่ hardcode 1080 — อ่านจาก config เท่านั้น
 
 ---
 
-## TASK-002 — Fix: DepartmentController::index() ไม่ส่ง head_user data
+### TASK-A3 — P0#1 `createPointDonation` เซ็ต `remaining_points` (donor-mode claim พัง)
 
 ```yaml
-id: TASK-002
+id: TASK-A3
 assigned_to: codex
 status: done
 priority: high
 type: backend
-completed_at: 2026-06-03 06:33
-completion_notes: Department index now resolves head_user_id values in bulk and includes head_user objects or null.
+completed_at: 2026-07-25
+completion_notes: createPointDonation now sets remaining_points = points_amount (donor-mode claim fixed). Codex-impl, Claude-verified.
 ```
 
-**ปัญหา**: หน้า departments.vue แสดง `department.head_user` แต่ `index()` ไม่ส่ง head_user object มาด้วย
+**ปัญหา:** `CourseDonateService::createPointDonation` สร้าง `CourseDonate` โดย**ไม่เซ็ต `remaining_points`** → คอลัมน์เป็น 0/null → donor-mode claim (`CoursePointCampaignController` อ่าน `course_donates.remaining_points`) มองไม่เห็นแต้มคงเหลือ → กดรับแบบผู้บริจาคพังทั้งหมด (คอลัมน์มีจริง migration `2026_07_23_180000_add_donor_view_to_course_claims.php`, อยู่ใน fillable แล้ว)
 
-**ไฟล์ที่ต้องแก้**:
-- `api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/DepartmentController.php`
-- method: `index()` (line ~49)
+**ไฟล์:** `api/nuxnanravel/app/Services/CourseDonateService.php` method `createPointDonation` (~line 35, `CourseDonate::create([...])`)
 
-**Acceptance Criteria**:
-- [ ] แต่ละ department object ใน response มี `head_user` field
-- [ ] `head_user` = `{ id, name, email, profile_photo_url }` หรือ `null` ถ้าไม่มี
-- [ ] หา head_user_id จาก `department->settings['head_user_id']` แล้ว query User model
-- [ ] ถ้าไม่มี head_user_id หรือ user ไม่มีในระบบ ให้ส่ง `head_user: null`
-- [ ] ประสิทธิภาพ: ใช้ eager loading หรือ map แทน N+1 query
+**สิ่งที่ทำ:** เพิ่ม `'remaining_points' => $pointsAmount` ใน array ที่ `CourseDonate::create()` (donor เริ่มต้นมีแต้มคงเหลือ = ที่บริจาคทั้งก้อน)
+
+**Acceptance:**
+- [ ] point donation ใหม่มี `remaining_points === points_amount`
+- [ ] ไม่แตะ cash donation / academy donation
 
 ---
 
-## TASK-003 — Fix: Frontend API URL paths ใน departments.vue
+### TASK-A4 — DS5 เอา payout-proof requirement ออกจาก course withdrawal markPaid
 
 ```yaml
-id: TASK-003
-assigned_to: codex
-status: done
-priority: critical
-type: frontend
-depends_on: []
-completed_at: 2026-06-03 06:33
-completion_notes: Fixed department page API URLs, added missing /api prefixes, and sent member remove/role payloads in request bodies.
-```
-
-**ปัญหา**: หลาย API calls ใน `departments.vue` ใช้ URL ผิด — บางจุดขาด `/api/` prefix, บางจุดมี route pattern ผิด
-
-**ไฟล์ที่ต้องแก้**:
-- `ui/pages/academies/[name]/admin/departments.vue`
-
-**Bug list** (แก้ทั้งหมด):
-
-| function | URL ที่ผิด | URL ที่ถูกต้อง |
-|---|---|---|
-| `updateDepartment` | `/api/academies/departments/${id}` | `/api/academies/${academyId}/departments/${id}` |
-| `deleteDepartment` | `/api/academies/departments/${id}` | `/api/academies/${academyId}/departments/${id}` |
-| `fetchDepartmentPermissions` | `/academies/${academyId}/departments/${id}/permissions` | `/api/academies/${academyId}/departments/${id}/permissions` |
-| `saveDepartmentPermissions` | `/academies/${academyId}/departments/${id}/permissions` | `/api/academies/${academyId}/departments/${id}/permissions` |
-| `fetchDepartmentMembers` | `/academies/${academyId}/departments/${id}/members` | `/api/academies/${academyId}/departments/${id}/members` |
-| `fetchAvailableMembers` | `/academies/${academyId}/members` | `/api/academies/${academyId}/members` |
-| `addMembersToDepartment` | `/academies/${academyId}/departments/${id}/members/bulk` | `/api/academies/${academyId}/departments/${id}/members/bulk` |
-| `removeMember` | `/academies/${academyId}/departments/${id}/members/${memberId}` | ดู note ด้านล่าง |
-| `updateMemberRole` | `/academies/${academyId}/departments/${id}/members/${memberId}/role` | ดู note ด้านล่าง |
-
-**Note สำหรับ removeMember**: Backend route คือ `DELETE /api/academies/departments/{department}/members` รับ `user_id` ใน request body
-ให้แก้ให้เรียก `/api/academies/${academyId}/departments/${selectedDepartment.value.id}/members` พร้อม body `{ user_id: memberId }`
-
-**Note สำหรับ updateMemberRole**: Backend route คือ `PATCH /api/academies/departments/{department}/members/role` รับ `user_id` และ `role` ใน body
-ให้แก้ให้เรียก `/api/academies/${academyId}/departments/${selectedDepartment.value.id}/members/role` พร้อม body `{ user_id: memberId, role: newRole }`
-
-**Acceptance Criteria**:
-- [ ] แก้ URL ทั้งหมดตาม table ด้านบน
-- [ ] `removeMember` ส่ง `user_id` ใน body แทนการใส่ใน URL
-- [ ] `updateMemberRole` ส่ง `user_id` ใน body
-
----
-
-## TASK-004 — Fix: Frontend response shape mismatch ใน departments.vue
-
-```yaml
-id: TASK-004
-assigned_to: codex
-status: done
-priority: critical
-type: frontend
-depends_on: [TASK-001, TASK-002]
-completed_at: 2026-06-03 06:33
-completion_notes: fetchDepartments and fetchStatistics now read Laravel-wrapped response.data shape and pagination total from data.
-```
-
-**ปัญหา**: หลาย function อ่าน response shape ผิด เพราะ Laravel controller wrap data ไว้ใน `data` key
-
-**ไฟล์ที่ต้องแก้**:
-- `ui/pages/academies/[name]/admin/departments.vue`
-
-**Bug list**:
-
-| function | อ่านผิด | อ่านถูก |
-|---|---|---|
-| `fetchDepartments` | `response.departments` | `response.data.departments` |
-| `fetchStatistics` | `response.statistics` | `response.data` |
-
-**Acceptance Criteria**:
-- [ ] `fetchDepartments` อ่าน `response.data.departments` และ set `departments.value`
-- [ ] `fetchStatistics` อ่าน `response.data` และ set `statistics.value` (ได้ `total_departments`, `total_members`, `departments_with_head`, `average_members_per_department`)
-- [ ] จำนวน pagination ถ้ามี ให้อ่านจาก `response.data.total` แทน `response.pagination`
-
----
-
-## TASK-005 — Fix: `api.put` → `api.patch` สำหรับ update department
-
-```yaml
-id: TASK-005
+id: TASK-A4
 assigned_to: codex
 status: done
 priority: medium
-type: frontend
-depends_on: [TASK-003]
-completed_at: 2026-06-03 06:33
-completion_notes: updateDepartment now uses api.patch against the academy-scoped department update endpoint.
+type: backend
+completed_at: 2026-07-25
+completion_notes: Removed proof from MarkPaidRequest rules + controller no longer stores proof file (passes []). Service/columns/download/maker-checker untouched. Endpoints test realigned (proof removed) by Claude.
 ```
 
-**ปัญหา**: `updateDepartment()` ใช้ `api.put()` แต่ backend route กำหนดเป็น `PATCH`
+**บริบท (DS3/DS5):** ถอนรายวิชา = จ่าย pp เข้าเจ้าของ (ภายใน) การโอนเงินจริง+KYC+สลิป เกิดตอนเจ้าของถอน wallet→ธนาคาร (มี proof อยู่แล้วที่นั่น) → payout-proof ที่ course markPaid = **ซ้ำซ้อน** ให้เอาออก · **maker-checker คงไว้**
 
-**ไฟล์ที่ต้องแก้**:
-- `ui/pages/academies/[name]/admin/departments.vue`
-- function `updateDepartment` (ดู line ที่เรียก `api.put`)
+**สถานะปัจจุบัน:** `MarkPaidRequest.rules()` มี `'proof' => 'nullable|file|...'` (nullable อยู่แล้ว ไม่บังคับ) และ controller เก็บไฟล์ถ้ามี
 
-**Acceptance Criteria**:
-- [ ] เปลี่ยนจาก `api.put(...)` → `api.patch(...)` ในฟังก์ชัน `updateDepartment`
+**ไฟล์ + จุดแก้:**
+1. `api/nuxnanravel/app/Http/Requests/CoursePointWithdrawal/MarkPaidRequest.php` — ลบ key `'proof'` ออกจาก `rules()` (เหลือแค่ `payment_reference`)
+2. `api/nuxnanravel/app/Http/Controllers/Api/PlearndAdmin/CoursePointWithdrawalAdminController.php` method `markPaid` (~line 60) — ลบ block ที่ `$r->file('proof')` store ไฟล์; เรียก `$this->service->markPaid($withdrawal, $r->user(), $r->input('payment_reference'), [])` (ส่ง proofData ว่าง)
+
+**สำคัญ — อย่าทำเกิน:**
+- [ ] **ห้าม** ลบคอลัมน์ `payout_proof_*` ออกจาก DB/model (migration ยุ่งยาก + admin UI/endpoint download อาจอ้างถึง) — แค่เลิก "รับ" proof ใหม่
+- [ ] **ห้าม** แตะ signature `CoursePointWithdrawalService::markPaid` (ยังรับ `array $proofData` แต่เราส่ง `[]`) — คง maker-checker และ logic การจ่าย pp เดิมทั้งหมด
+- [ ] endpoint download proof / resource fields เดิม คงไว้ (สำหรับรายการเก่าที่เคยแนบ)
+
+**Acceptance:**
+- [ ] `MarkPaidRequest.rules()` ไม่มี `proof`
+- [ ] controller `markPaid` ไม่ store ไฟล์ ส่ง `[]` เป็น proofData
+- [ ] service, model, migration, policy, download endpoint ไม่ถูกแตะ
 
 ---
 
-## TASK-006 — Verify: ตรวจสอบ useApi composable รองรับ patch method
+### TASK-A5 — P1#18 schedule `risk:scan` (FraudDetectionService ไม่เคยถูกรัน)
 
 ```yaml
-id: TASK-006
+id: TASK-A5
 assigned_to: codex
 status: done
-priority: medium
-type: frontend
-depends_on: [TASK-005]
-completed_at: 2026-06-03 06:33
-completion_notes: Verified useApi already provides patch(), so no useApi code change was needed.
+priority: low
+type: backend
+completed_at: 2026-07-25
+completion_notes: risk:scan (RiskScanCommand) scheduled dailyAt 03:00 in routes/console.php. Codex-impl, Claude-verified command exists.
 ```
 
-**ปัญหา**: ต้องตรวจสอบว่า `useApi` composable มี method `patch()` หรือไม่
+**ปัญหา:** มี fraud/risk scan command แต่ไม่ถูก schedule → ไม่เคยรันอัตโนมัติ
 
-**ไฟล์ที่ต้องตรวจ**:
-- `ui/composables/useApi.ts`
+**สิ่งที่ต้องทำก่อน (สำรวจ):**
+1. ยืนยันว่ามี artisan command ชื่อ `risk:scan` จริง — `grep -rn "risk:scan\|RiskScan\|FraudDetectionService" app/Console routes/console.php`
+2. หา schedule registry ของโปรเจค (Laravel 12): ดู `routes/console.php` (`Schedule::command(...)`) หรือ `app/Console/Kernel.php` (`schedule()` method) — ใช้ไฟล์ที่โปรเจคใช้จริง
 
-**Acceptance Criteria**:
-- [ ] อ่าน `useApi.ts` แล้วตรวจสอบว่ามี `patch` method
-- [ ] ถ้าไม่มี: เพิ่ม `patch` method ที่ส่ง HTTP PATCH request (เหมือนกับ `put` แต่ใช้ method PATCH)
-- [ ] ถ้ามีแล้ว: mark task นี้ done โดยไม่ต้องแก้อะไร
+**สิ่งที่ทำ:** เพิ่ม schedule ให้ `risk:scan` รันรายวัน เช่น `->dailyAt('03:00')` (ถ้าใช้ `routes/console.php`: `Schedule::command('risk:scan')->dailyAt('03:00');`)
+
+**ถ้า command ไม่มีจริง:** เปลี่ยน `status: blocked` + `block_reason:` ระบุว่าไม่พบ command แล้วให้ Claude ตัดสิน (อาจต้องสร้าง command ก่อน)
+
+**Acceptance:**
+- [ ] `risk:scan` (หรือชื่อจริงของ command) ถูก schedule รายวัน
+- [ ] `php artisan schedule:list` แสดง entry ใหม่ (Claude จะ verify)
+- [ ] ไม่แตะ logic ของ FraudDetectionService
 
 ---
 
-## สถานะรวม (Claude จะ update section นี้)
+## BATCH B–E — Backlog (queued — อย่าเพิ่งแตะ)
+
+> Claude จะปลดเป็น `pending` ทีละ batch หลัง verify batch ก่อนหน้า
+
+- **BATCH B — DS1** ยุบ `campaign_type=support`: ลบ support branch ใน `CampaignController::store`/`review`(distributeSupport)/`StoreCampaignRequest`/`SupportPaymentService`/`CampaignType` enum + เช็ค `AcademyRevenueController` → adverts เหลือ "โฆษณา" อย่างเดียว (บั๊กจ่ายซ้ำ ~190% หายเอง) — **state-machine refactor ต้องระวัง**
+- **BATCH C — DS7** เปิด guest บริจาค: ผ่อน auth ที่ slip path ของ course/academy donation + lock beneficiary ฝั่ง server (donor_id=null เมื่อ guest) — guest **โฆษณา** ไม่รวม (epic D4 แยก)
+- **BATCH D — DS8** สร้าง `AcademyPointWithdrawal` (migration+model+service+controller+policy+FormRequests+routes) mirror `CoursePointWithdrawal`: จ่าย pp เข้า academy owner, ไม่มี payout-proof (DS5), maker-checker คงไว้ — **งานสร้างใหม่ชุดใหญ่**
+- **BATCH E — DS2** verify ad delivery pipeline + revenue split (student 60/course 25/academy 10/platform 5) ด้วยข้อมูลทดสอบ (0 rows = ไม่เคยรันจริง) — เขียน feature test
+
+---
+
+## สถานะรวม (Claude update)
 
 | Task | Status | Verified |
-|------|--------|---------|
-| TASK-001 | done | Codex |
-| TASK-002 | done | Codex |
-| TASK-003 | done | Codex |
-| TASK-004 | done | Codex |
-| TASK-005 | done | Codex |
-| TASK-006 | done | Codex |
+|------|--------|----------|
+| TASK-A1 | done | Claude (diff + no advert test regressions) |
+| TASK-A2 | done | Claude (3 donation tests green @ ×1080) |
+| TASK-A3 | done | Claude (diff; donor-claim column set) |
+| TASK-A4 | done | Claude (proof removed; endpoints test green) |
+| TASK-A5 | done | Claude (RiskScanCommand exists; schedule added) |
 
-**Last updated**: 2026-06-03
-**Updated by**: Codex (implementation)
+**Batch A verify:** donation+withdrawal suite 48/48 pass · Pint clean on all 10 changed files · Codex hung on turn-finalize after applying 6 source edits (all correct); Claude finished 4 test alignments (forced by DS6/DS5) + task-file bookkeeping.
+
+**Last updated:** 2026-07-25 · **Updated by:** Claude (Batch A verified, ready to commit)

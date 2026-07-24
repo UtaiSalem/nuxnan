@@ -48,7 +48,9 @@ class AdvertController extends Controller
 
     public function getMoreAdvertisings()
     {
-        $adverts = Advert::with('advertiser')->where('status', 1)->where('remaining_views', '>', 0)->orderBy('remaining_views', 'DESC')->latest()->paginate();
+        $adverts = Advert::with('advertiser')->where('status', 1)->where('remaining_views', '>', 0)->where(function ($query) {
+            $query->whereNull('scope_type')->orWhere('scope_type', 'public');
+        })->orderBy('remaining_views', 'DESC')->latest()->paginate();
 
         return response()->json([
             'success' => true,

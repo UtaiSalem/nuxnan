@@ -36,6 +36,7 @@ Schedule::command('wallet:reconcile')
 
 Schedule::command('course-points:cleanup-reservations')->everyFiveMinutes();
 Schedule::command('reconcile:all --emit-risk')->dailyAt('03:00')->timezone('Asia/Bangkok');
+Schedule::command('risk:scan')->dailyAt('03:00');
 
 // Telescope — auto-prune entries older than 48 hours to prevent DB bloat.
 Schedule::command('telescope:prune --hours=48')->dailyAt('04:00');

@@ -72,7 +72,7 @@ class AcademyDonateService
             $d = AcademyDonate::whereKey($donation->id)->lockForUpdate()->firstOrFail();
             if ($d->status !== 'pending') {
                 throw new DomainException('Donation is no longer pending.');
-            }             $tx = $this->academyPoints->creditFromCashDonation($d->academy_id, $d->donor_id, (int) $d->cash_amount, null, ['note' => $note, 'related_academy_donate_id' => $d->id]);
+            }             $tx = $this->academyPoints->creditFromCashDonation($d->academy_id, $d->donor_id, (int) round($d->cash_amount * config('economy.donation_pp_per_baht')), null, ['note' => $note, 'related_academy_donate_id' => $d->id]);
             $d->update(['status' => 'completed', 'academy_point_transaction_id' => $tx->id, 'approved_by' => $admin->id, 'reviewed_at' => now(), 'version' => $d->version + 1]);
 
             return $d->fresh();

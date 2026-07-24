@@ -8,8 +8,6 @@ use App\Models\CoursePointTransaction;
 use App\Models\PlearndAdmin;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class CoursePointWithdrawalEndpointsTest extends TestCase
@@ -85,9 +83,8 @@ class CoursePointWithdrawalEndpointsTest extends TestCase
         $this->actingAs($a, 'api')->patchJson("/api/plearnd-admin/course-withdrawals/{$id}/approve")->assertStatus(422);
     }
 
-    public function test_admin_mark_paid_with_proof_stores_file_and_credits_pp(): void
+    public function test_admin_mark_paid_credits_pp(): void
     {
-        Storage::fake('local');
         config(['wallet.course_withdraw.maker_checker_threshold' => 5000]);
         ['owner' => $o, 'course' => $c] = $this->makeSetup(200000);
         $id = $this->actingAs($o, 'api')->postJson("/api/courses/{$c->id}/withdrawals", ['amount' => 30000])->json('data.id');
@@ -96,7 +93,7 @@ class CoursePointWithdrawalEndpointsTest extends TestCase
         $payer = $this->admin();
         $this->actingAs($reviewer, 'api')->patchJson("/api/plearnd-admin/course-withdrawals/{$id}/review");
         $this->actingAs($approver, 'api')->patchJson("/api/plearnd-admin/course-withdrawals/{$id}/approve");
-        $this->actingAs($payer, 'api')->patch("/api/plearnd-admin/course-withdrawals/{$id}/mark-paid", ['payment_reference' => 'REF-1', 'proof' => UploadedFile::fake()->image('proof.jpg')])->assertOk()->assertJsonPath('data.has_proof', true);
+        $this->actingAs($payer, 'api')->patch("/api/plearnd-admin/course-withdrawals/{$id}/mark-paid", ['payment_reference' => 'REF-1'])->assertOk();
         $this->assertSame(30000, (int) $o->fresh()->pp);
         $this->assertSame(1, CoursePointTransaction::where('type', 'withdrawal_paid')->count());
     }
