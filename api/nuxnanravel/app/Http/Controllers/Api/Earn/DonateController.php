@@ -11,8 +11,10 @@ use App\Models\Activity;
 use App\Models\Donate;
 use App\Models\User;
 use App\Services\AuditLogService;
+use App\Services\PointsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class DonateController extends Controller
@@ -143,6 +145,10 @@ class DonateController extends Controller
         }
 
         try {
+            DB::beginTransaction();
+            if ($user) {
+                $user = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+            }
             $slip_filename = null;
             if ($request->hasFile('slip')) {
                 $slip_file = $request->file('slip');
@@ -167,7 +173,7 @@ class DonateController extends Controller
             $donate->transfer_date = Carbon::parse($request->transfer_date);
             $donate->transfer_time = $validated['transfer_time'];
             $donate->slip = $slip_filename ?? '';
-            $donate->remaining_points = $validated['amounts'] * 1080;
+            $donate->remaining_points = $validated['amounts'] * config('economy.donation_pp_per_baht');
             $donate->payment_method = $paymentMethod;
 
             // จัดการตาม payment_method
@@ -180,6 +186,8 @@ class DonateController extends Controller
                 case 'wallet':
                     // หักจาก wallet
                     if ($user->wallet < $validated['amounts']) {
+                        DB::rollBack();
+
                         return response()->json([
                             'success' => false,
                             'message' => 'ยอดเงินในกระเป๋าไม่เพียงพอ',
@@ -192,8 +200,10 @@ class DonateController extends Controller
 
                 case 'points':
                     // หักจากแต้มสะสม (pp) - อัตราแลกเปลี่ยน: 1 บาท = 100 แต้ม
-                    $pointsRequired = $validated['amounts'] * 100;
+                    $pointsRequired = $validated['amounts'] * config('economy.donation_pp_per_baht');
                     if ($user->pp < $pointsRequired) {
+                        DB::rollBack();
+
                         return response()->json([
                             'success' => false,
                             'message' => 'แต้มสะสมไม่เพียงพอ',
@@ -201,12 +211,16 @@ class DonateController extends Controller
                             'points_required' => $pointsRequired,
                         ], 402);
                     }
-                    $user->decrement('pp', $pointsRequired);
+                    $pointsService = app(PointsService::class);
+                    if (! $pointsService->spend($user, $pointsRequired, 'donation_payment', $donate->id)) {
+                        throw new \RuntimeException('แต้มสะสมไม่เพียงพอ');
+                    }
                     $donate->status = 1; // Approved
                     break;
             }
 
             $donate->save();
+            DB::commit();
 
             return response()->json([
                 'success' => true,
@@ -216,6 +230,8 @@ class DonateController extends Controller
             ]);
 
         } catch (\Throwable $th) {
+            DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => 'เกิดข้อผิดพลาด: '.$th->getMessage(),
@@ -280,85 +296,101 @@ class DonateController extends Controller
     // get donate
     public function getDonate(Donate $donate)
     {
-        // ตรวจสอบสถานะการอนุมัติ (status: 0=รอ, 1=อนุมัติ, 2=ปฏิเสธ)
-        if ($donate->status !== 1) {
-            $statusMessage = match ($donate->status) {
-                0 => 'การสนับสนุนนี้ยังรอการตรวจสอบและอนุมัติจากแอดมิน',
-                2 => 'การสนับสนุนนี้ถูกปฏิเสธ',
-                default => 'การสนับสนุนนี้ยังไม่พร้อมใช้งาน',
-            };
-
-            return response()->json([
-                'success' => false,
-                'donate' => new DonateResource($donate->load('donor')),
-                'message' => $statusMessage,
-                'pending_approval' => $donate->status === 0,
-            ]);
-        }
-
-        if ($donate->remaining_points < 270) {
-            return response()->json([
-                'success' => false,
-                'donate' => new DonateResource($donate->load('donor')),
-                'message' => 'การสนับสนุนนี้หมดแล้ว',
-            ]);
-        }
         try {
-            if ($donate->remaining_points > 269) {
-                $authUser = auth()->user();
+            return DB::transaction(function () use ($donate) {
+                $donate = Donate::whereKey($donate->id)->lockForUpdate()->firstOrFail();
+                // ตรวจสอบสถานะการอนุมัติ (status: 0=รอ, 1=อนุมัติ, 2=ปฏิเสธ)
+                if ($donate->status !== 1) {
+                    $statusMessage = match ($donate->status) {
+                        0 => 'การสนับสนุนนี้ยังรอการตรวจสอบและอนุมัติจากแอดมิน',
+                        2 => 'การสนับสนุนนี้ถูกปฏิเสธ',
+                        default => 'การสนับสนุนนี้ยังไม่พร้อมใช้งาน',
+                    };
 
-                // ตรวจสอบจำนวนครั้งที่รับแต้มจาก donate นี้ในวันนี้ (จำกัด 10 ครั้ง/คน/วัน/การสนับสนุน)
-                $todayReceiveCount = $donate->recipients()
-                    ->where('user_id', $authUser->id)
-                    ->whereDate('donate_recipients.created_at', Carbon::today())
-                    ->count();
-
-                if ($todayReceiveCount >= 10) {
                     return response()->json([
                         'success' => false,
                         'donate' => new DonateResource($donate->load('donor')),
-                        'message' => 'คุณได้รับแต้มจากการสนับสนุนนี้ครบ 10 ครั้งแล้วในวันนี้ กรุณารอวันใหม่',
-                        'daily_limit_reached' => true,
-                        'today_count' => $todayReceiveCount,
+                        'message' => $statusMessage,
+                        'pending_approval' => $donate->status === 0,
                     ]);
                 }
 
-                $donate->recipients()->attach($authUser->id);
-
-                $donate->decrement('remaining_points', 270);
-
-                $authUser->increment('pp', 240);
-
-                $suggesterCode = $authUser->suggester_code ?? 99999999;
-
-                $suggester = User::where('personal_code', $authUser->suggester_code)->first();
-
-                if ($suggester) {
-                    $suggester->increment('pp', 30);
+                if ($donate->remaining_points < config('economy.claim_cost')) {
+                    return response()->json([
+                        'success' => false,
+                        'donate' => new DonateResource($donate->load('donor')),
+                        'message' => 'การสนับสนุนนี้หมดแล้ว',
+                    ]);
                 }
+                if ($donate->remaining_points >= config('economy.claim_cost')) {
+                    $authUser = User::whereKey(auth()->id())->lockForUpdate()->firstOrFail();
 
-                $activity = new Activity;
-                $activity->user_id = $authUser->id;
-                $activity->activity_type = ActivityType::RECEIVE_DONATION->value;
-                $activity->activityable()->associate($donate->donateRecipients()->where('user_id', $authUser->id)->latest()->first());
-                $activity->save();
+                    // ตรวจสอบจำนวนครั้งที่รับแต้มจาก donate นี้ในวันนี้ (จำกัด 10 ครั้ง/คน/วัน/การสนับสนุน)
+                    $todayReceiveCount = $donate->recipients()
+                        ->where('user_id', $authUser->id)
+                        ->whereDate('donate_recipients.created_at', Carbon::today())
+                        ->count();
 
-                $donate->refresh();
+                    if ($todayReceiveCount >= config('economy.claim_cap_per_donation_per_day')) {
+                        return response()->json([
+                            'success' => false,
+                            'donate' => new DonateResource($donate->load('donor')),
+                            'message' => 'คุณได้รับแต้มจากการสนับสนุนนี้ครบ '.config('economy.claim_cap_per_donation_per_day').' ครั้งแล้วในวันนี้ กรุณารอวันใหม่',
+                            'daily_limit_reached' => true,
+                            'today_count' => $todayReceiveCount,
+                        ]);
+                    }
 
-                return response()->json([
-                    'success' => true,
-                    'donate' => new DonateResource($donate->load('donor')),
-                    'activity' => new ActivityResource($activity),
-                ]);
-            } else {
-                return response()->json([
-                    'success' => false,
-                    'donate' => new DonateResource($donate->load('donor')),
-                    'message' => 'การสนับสนุนนี้หมดแล้ว',
-                ]);
-            }
+                    $globalReceiveCount = DB::table('donate_recipients')
+                        ->where('user_id', $authUser->id)
+                        ->whereDate('created_at', Carbon::today())
+                        ->count();
+                    if ($globalReceiveCount >= config('economy.claim_cap_total_per_day')) {
+                        return response()->json(['success' => false, 'donate' => new DonateResource($donate->load('donor')), 'message' => 'คุณได้รับแต้มจากการสนับสนุนทั้งหมดครบ '.config('economy.claim_cap_total_per_day').' ครั้งแล้วในวันนี้ กรุณารอวันใหม่', 'daily_limit_reached' => true, 'today_count' => $globalReceiveCount]);
+                    }
+
+                    $platform = User::where('personal_code', config('economy.platform_personal_code'))->lockForUpdate()->first();
+                    if (! $platform) {
+                        throw new \RuntimeException('ไม่พบบัญชีแพลตฟอร์มสำหรับรับแต้มสนับสนุน');
+                    }
+
+                    $donate->recipients()->attach($authUser->id);
+
+                    $donate->decrement('remaining_points', config('economy.claim_cost'));
+
+                    $pointsService = app(PointsService::class);
+                    $pointsService->earn($authUser, config('economy.claim_reward_claimer'), 'donation_claim', $donate->id);
+                    $suggester = User::where('personal_code', $authUser->suggester_code)->lockForUpdate()->first();
+                    if ($suggester && $suggester->id !== $authUser->id) {
+                        $pointsService->earn($suggester, config('economy.claim_reward_suggester'), 'donation_referral', $donate->id);
+                    } else {
+                        $pointsService->earn($platform, config('economy.claim_reward_suggester'), 'donation_platform_fallback', $donate->id);
+                        $platform = User::whereKey($platform->id)->lockForUpdate()->firstOrFail();
+                    }
+                    $pointsService->earn($platform, config('economy.claim_reward_platform'), 'donation_platform', $donate->id);
+
+                    $activity = new Activity;
+                    $activity->user_id = $authUser->id;
+                    $activity->activity_type = ActivityType::RECEIVE_DONATION->value;
+                    $activity->activityable()->associate($donate->donateRecipients()->where('user_id', $authUser->id)->latest()->first());
+                    $activity->save();
+
+                    $donate->refresh();
+
+                    return response()->json([
+                        'success' => true,
+                        'donate' => new DonateResource($donate->load('donor')),
+                        'activity' => new ActivityResource($activity),
+                    ]);
+                } else {
+                    return response()->json([
+                        'success' => false,
+                        'donate' => new DonateResource($donate->load('donor')),
+                        'message' => 'การสนับสนุนนี้หมดแล้ว',
+                    ]);
+                }
+            });
         } catch (\Throwable $th) {
-            // throw $th;
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่สามารถสนับสนุนได้',
