@@ -129,7 +129,7 @@ class CourseAssignmentController extends Controller
             'increase_points' => 'nullable',
             'decrease_points' => 'nullable',
             'status' => 'required|string',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         $assignment = $course->assignments()->create([
@@ -198,7 +198,7 @@ class CourseAssignmentController extends Controller
             'increase_points' => 'nullable',
             'decrease_points' => 'nullable',
             'status' => 'required|string',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         $assignment->update([

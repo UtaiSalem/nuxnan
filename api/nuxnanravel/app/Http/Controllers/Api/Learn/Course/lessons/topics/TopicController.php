@@ -30,7 +30,7 @@ class TopicController extends Controller
             'content' => ['nullable', 'string'],
             'youtube_url' => ['nullable', 'string', 'url:https'],
             'min_read' => ['nullable', 'integer', 'min:0', 'max:9999'],
-            'images.*' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:10240'],
+            'images.*' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:10240'],
         ]);
 
         $topic = DB::transaction(function () use ($lesson, $validatedData) {
@@ -112,7 +112,7 @@ class TopicController extends Controller
             'content' => ['nullable', 'string'],
             'youtube_url' => ['nullable', 'string', 'url:https'],
             'min_read' => ['nullable', 'integer', 'min:0', 'max:9999'],
-            'images.*' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:10240'],
+            'images.*' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:10240'],
         ]);
 
         DB::transaction(function () use ($lesson, $topic, $validatedData) {

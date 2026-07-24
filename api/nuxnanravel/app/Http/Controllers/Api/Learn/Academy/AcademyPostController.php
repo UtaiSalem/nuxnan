@@ -56,7 +56,7 @@ class AcademyPostController extends Controller
         $validatedData = $request->validate([
             'content' => 'nullable|string|max:1000',
             'images' => 'array|max:4',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:5120',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120',
             'posted_as_group_id' => 'nullable|integer|exists:academy_groups,id',
             'post_type' => 'nullable|string|in:regular,announcement,event,director,attendance,achievement',
             'target_audience' => 'nullable|array',

@@ -57,7 +57,7 @@ class CoursePostCommentController extends Controller
 
             $validatedData = $request->validate([
                 'content' => 'nullable|string',
-                'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             ]);
 
             $newComment = $course_post->post_comments()->create([

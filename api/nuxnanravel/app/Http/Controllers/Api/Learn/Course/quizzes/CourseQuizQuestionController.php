@@ -21,7 +21,7 @@ class CourseQuizQuestionController extends Controller
             'points' => 'required|integer',
             'pp_fine' => 'nullable|integer',
             'images' => 'nullable|array',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         $new_question = $quiz->questions()->create([
@@ -106,7 +106,7 @@ class CourseQuizQuestionController extends Controller
             'points' => 'required|integer',
             'pp_fine' => 'nullable|integer',
             'images' => 'nullable|array',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         $question->update([

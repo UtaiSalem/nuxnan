@@ -85,7 +85,7 @@ class CoursePostController extends Controller
         try {
             $validatedData = $request->validate([
                 'content' => 'nullable|string|max:5000',
-                'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:4048|nullable',
+                'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:4048|nullable',
                 'group_id' => 'nullable|exists:course_groups,id',
                 'poll_points_pool' => 'nullable|integer|min:0',
             ]);
@@ -246,7 +246,7 @@ class CoursePostController extends Controller
         $validatedData = $request->validate([
             'content' => 'required|string|max:5000',
             'privacy_settings' => 'nullable|integer|in:1,2,3',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:4048|nullable',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:4048|nullable',
             'remove_images' => 'nullable|array',
             'remove_images.*' => 'integer',
         ]);

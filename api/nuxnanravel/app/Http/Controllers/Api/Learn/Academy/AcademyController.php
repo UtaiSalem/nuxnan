@@ -62,8 +62,8 @@ class AcademyController extends Controller
             'address' => 'required|string',
             'autoAcceptMember' => 'required|string',
             'membershipFees' => 'required|integer',
-            'logo' => 'image|mimes:jpg,jpeg,png,gif,svg',
-            'cover' => 'image|mimes:jpg,jpeg,png,gif,svg',
+            'logo' => 'image|mimes:jpg,jpeg,png,gif',
+            'cover' => 'image|mimes:jpg,jpeg,png,gif',
         ]);
 
         // return $validated['autoAcceptMember'] === true ? true: false;
@@ -307,7 +307,7 @@ class AcademyController extends Controller
     public function updateAcademyLogo(Academy $academy, Request $request)
     {
         $validated = $request->validate([
-            'logo' => 'required|image|mimes:jpg,jpeg,png,gif,svg',
+            'logo' => 'required|image|mimes:jpg,jpeg,png,gif',
         ]);
 
         if ($academy->logo && ($academy->logo !== 'default_logo.png')) {
@@ -328,7 +328,7 @@ class AcademyController extends Controller
     public function updateAcademyCover(Academy $academy, Request $request)
     {
         $validated = $request->validate([
-            'cover' => 'required|image|mimes:jpg,jpeg,png,gif,svg',
+            'cover' => 'required|image|mimes:jpg,jpeg,png,gif',
         ]);
 
         if ($academy->cover && ($academy->cover !== 'default_cover.png')) {
