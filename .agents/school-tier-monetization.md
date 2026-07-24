@@ -63,7 +63,34 @@
 
 ---
 
-## 4. สิ่งที่ต่างจากสาธารณะ — ต้องตัดสินใจ (ยังไม่ถาม user)
+## 4b. มติที่ล็อคแล้ว (user, 2026-07-24)
+
+| # | มติ | ผลต่อ implementation |
+|---|---|---|
+| **DS1** | **ยุบ `campaign_type=support` ทิ้ง** — บริจาคผ่าน `course_donates`/`academy_donates` เท่านั้น | ลบ support path ใน `SupportPaymentService::distributeSupport`/`payWithWallet`, `CampaignController::store` (support branch), `StoreCampaignRequest` (type=support) → `adverts` เหลือ "โฆษณา" อย่างเดียว · แก้บั๊กจ่ายซ้ำ ~190% หายเอง |
+| **DS2** | **โฆษณาโรงเรียนใช้ delivery pipeline + RevenueSharePolicy** (student 60 / course 25 / academy 10 / platform 5 เข้ากองทุนวิชา) — ต่างจาก public โดยตั้งใจ | ใช้ `AdDeliveryService` + `RewardDistributionService` (สร้างแล้ว) · **ต้อง verify จริงเพราะ 0 rows ไม่เคยรัน** · public คง legacy แยก |
+| **DS3** | **ถอนเงินรายวิชา = จ่าย pp เข้าเจ้าของ** (คงโค้ดปัจจุบัน `CoursePointWithdrawalService::markPaid`) เจ้าของแปลง pp→wallet→ธนาคารเอง | ⚠️ **payout-proof slip ที่ markPaid บังคับอยู่ = ซ้ำซ้อน** (การโอนเงินจริงเกิดที่ wallet withdrawal ที่มี KYC แล้ว) → เสนอลบ requirement นี้ (รอ confirm — ดู §4c) |
+| **DS4** | **การกดรับแต้มรายวิชา: ไม่หักส่วนแบ่ง** จ่าย `points_per_claim` เต็มให้ผู้เรียน | คง `grantCampaignClaim` เดิม (ไม่ใส่ platform/suggester cut แบบ public) · แพลตฟอร์มได้จากขาโฆษณา 5% เท่านั้นในระดับวิชา |
+
+## 4c. มติเพิ่มเติม (user, 2026-07-24)
+- **DS5:** ถอนวิชา = pp เข้าเจ้าของ (ภายใน) → **ลบ payout-proof slip requirement ที่ `markPaid`** (การโอนเงินจริง+KYC+สลิป เกิดตอนเจ้าของถอน wallet→ธนาคาร ที่มีอยู่แล้ว) · maker-checker คงไว้ได้
+- **DS6:** บริจาคเข้ากองทุนวิชา — **บริจาคแต้ม (pp) = 1:1 ไม่หัก** (แพลตฟอร์มเก็บ spread ตอนสร้าง pp ไปแล้ว) · **บริจาคเงินสด (slip) = X×1080 pp หัก spread 10% เหมือน public** → **ต้องแก้บั๊ก cash 1:1 ที่มีอยู่** (`CourseDonateService::approve` / `AcademyDonateService::approve` credit `(int)cash_amount` 1:1)
+
+### เลื่อนไปทำทีหลัง (lean, ยังไม่ล็อค)
+- **guest ระดับโรงเรียน** (บริจาค/โฆษณา) — ต้อง `course_donates.donor_id`/`adverts.user_id` nullable + tracking link เหมือน public D4
+- **academy ถอนเงินตรง** — คง pass-through (allocate→วิชาถอน) เพิ่ม `AcademyPointWithdrawalRequest` ทีหลังถ้าต้องการ
+
+## 5b. แผน implement โรงเรียน (ตัดสินครบ 6 มติ)
+**Prerequisite:** แก้ scope leak #13 (`getMoreAdvertisings` ไม่กรอง scope) ก่อนเปิดโฆษณาโรงเรียน — ไม่งั้นโฆษณา ร.ร. รั่วเข้า public
+1. **DS1** ยุบ `campaign_type=support`: ลบ support branch ใน `CampaignController::store`/`StoreCampaignRequest`/`SupportPaymentService` → adverts = โฆษณาอย่างเดียว (บั๊กจ่ายซ้ำหายเอง)
+2. **DS6** แก้ cash donation rate: `CourseDonateService::approve`/`AcademyDonateService::approve` เปลี่ยน `(int)cash_amount` → `cash_amount × config('economy.donation_pp_per_baht')` (point donation คง 1:1)
+3. **P0 #1** `CourseDonateService::createPointDonation` เซ็ต `remaining_points = points_amount` (donor-mode claim ถึงจะทำงาน)
+4. **DS5** ลบ payout-proof requirement ที่ `CoursePointWithdrawalAdminController::markPaid` + FormRequest
+5. **DS2** verify ad delivery pipeline + revenue split (student 60/course 25/academy 10/platform 5) ด้วยข้อมูลทดสอบ (0 rows = ไม่เคยรัน)
+6. **DS3/DS4** = คงเดิม ไม่แตะ
+7. schedule `risk:scan` (P1 #18 — ยกมาจาก public ด้วย)
+
+## 4. (เดิม) สิ่งที่ต่างจากสาธารณะ — decided ด้านบนแล้ว §4b
 
 1. **สมาชิกภาพ:** course/academy donation **บังคับ login+verified** (ต่างจากสาธารณะ D1 ที่สลิป anonymous ได้) — จะเปิด guest บริจาค/โฆษณาระดับโรงเรียนไหม? (guest advertiser D4 สาธารณะเป็นต้นแบบ)
 2. **สูตรโฆษณาไม่ตรงกัน:** public = legacy (ผู้ชมจ่าย pp ได้เงิน) · school = pipeline ใหม่ (RevenueSharePolicy 60/25/10/5) — จะให้ 2 ชั้นใช้สูตรเดียวกันไหม หรือยอมให้ต่าง?
