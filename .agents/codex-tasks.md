@@ -350,7 +350,66 @@ completed_at: 2026-07-25
 
 ---
 
-*(no more queued batches — DS1–DS8 / Batches A–E all done)*
+## BATCH F — Fix finding #2 (orphan-course ad revenue leak)
+
+### TASK-F1 — conserve value: fold untargeted ad-revenue legs into platform
+
+```yaml
+id: TASK-F1
+assigned_to: codex
+status: done
+priority: high
+type: backend
+completed_at: 2026-07-25
+completion_notes: |
+  distribute() now folds untargeted course/academy legs into platform residual (mutates $split
+  so metadata stays consistent). Placed after $targetCourseId, before crediting. Resolver untouched.
+  Updated 2 leaky tests (orphan course: academy 0/platform 2/platform_earned 2; academy-only:
+  course 0/platform 3/platform_earned 3); 4-way conservation test unchanged. Clean diff.
+  Claude-verified: ad/revenue suite 35 passed, Pint clean. Residual (ad with neither course nor
+  academy = public/legacy) left as-is (out of DS2 scope, documented).
+```
+
+**บริบท:** `RewardDistributionService::distribute` เครดิต course leg เฉพาะเมื่อมี course target, academy leg เฉพาะเมื่อมี `academy_id` → ถ้า target ขาด (course ad ของคอร์สไม่มี academy / academy ad ไม่มี course) share ของขานั้นถูก**คำนวณแต่ไม่ถูกเครดิตใคร** ทั้งที่ budget ถูกหัก gross เต็ม → **budget รั่ว**. `complete()` เรียก distribute ทุก delivery ไม่ gate scope
+
+**หลักการแก้:** ขาที่ไม่มีผู้รับ → **fold เข้า platform residual** (platform เป็น catch-all อยู่แล้ว: `platform = gross - student - course - academy`) เพื่อให้ credited รวม == gross เสมอ (value conservation)
+
+**ไฟล์:** `app/Services/Campaign/RewardDistributionService.php` method `distribute()`
+
+**จุดแก้:** หลังบรรทัดที่คำนวณ `$split = $this->resolver->split($gross, $policy);` และหลังกำหนด `$targetCourseId` (~บรรทัด 58) ก่อน block เครดิต — เพิ่ม **mutate `$split` ให้สอดคล้องกับสิ่งที่เครดิตจริง** (metadata reconciliation จะตรง):
+```php
+// Value conservation: any leg without a beneficiary target folds into the platform
+// residual so the advertiser's full gross is always distributed (never silently lost).
+if ($targetCourseId === null && $split['course'] > 0) {
+    $split['platform'] += $split['course'];
+    $split['course'] = 0;
+}
+if ($academyId === null && $split['academy'] > 0) {
+    $split['platform'] += $split['academy'];
+    $split['academy'] = 0;
+}
+```
+- block เครดิตเดิมใช้เงื่อนไข `$split['course'] > 0` / `$split['academy'] > 0` อยู่แล้ว → ขาที่ถูก zero จะข้ามเอง, platform ที่โตขึ้นจะเข้า course account (ถ้ามี) มิฉะนั้น academy account — **ไม่ต้องแก้ logic เครดิตอื่น** แค่ให้ platform block ใช้ `$split['platform']` ที่โตแล้ว (ซึ่งเดิมก็ใช้ `$split['platform']` อยู่แล้ว)
+- **ห้ามแตะ** `RevenueSharePolicyResolver::split` (คงสูตร) · ห้ามแตะ student leg
+
+**⚠️ residual ที่ยอมรับ (note ไว้ ไม่ต้องแก้):** ถ้าโฆษณาไม่มีทั้ง course และ academy (เช่น public ad ที่หลุดเข้า pipeline นี้) platform ยังไม่มี account ให้ลง → ยังตกได้ แต่ **นอกสโคป DS2** (school ad มี course หรือ academy เสมอ; public ใช้ legacy path)
+
+**Tests — ต้องอัปเดตเทสต์เดิมที่ encode พฤติกรรมรั่ว + คงเทสต์ conservation ใหม่:**
+- `tests/Feature/RewardDistributionTest.php`:
+  - `test_distribute_credits_student_course_and_platform_per_policy` (course, ไม่มี academy): หลัง fix → `splits['academy']` 1→**0**, `splits['platform']` 1→**2**, course account `platform_earned` 1→**2** (student 6 + course 2 คงเดิม) · เพิ่ม assert conservation ถ้าจะครบ
+  - `test_distribute_credits_academy_when_advert_is_academy_scoped` (academy, ไม่มี course): course leg fold → `splits['course']` 2→**0**, `splits['platform']` 1→**3**, academy account `platform_earned` →**3** (student 6, academy balance 1 คงเดิม)
+  - `test_distribute_credits_all_four_legs_and_conserves_value_for_course_ad_with_academy` (มีทั้งคู่): **ไม่มี fold → ต้องยังเขียวเหมือนเดิม** (6/2/1/1)
+  - เทสต์ conservation/idempotent/budget-cap อื่นต้องยังเขียว
+
+**Acceptance:**
+- [ ] course ad ไม่มี academy → academy share เข้า platform_earned ของ course account (ไม่หาย); academy ad ไม่มี course → course share เข้า platform_earned ของ academy account
+- [ ] 4-way (course+academy) ไม่เปลี่ยน (ไม่มี fold)
+- [ ] `splits` ใน metadata สอดคล้องกับที่เครดิตจริง (leg ที่ไม่มี target = 0)
+- [ ] RewardDistributionTest + AdRevenueIntegrityTest + AdDeliveryHardeningTest เขียวทั้งหมด, Pint clean
+
+| TASK-F1 | done | Claude (fold logic verified; ad/revenue suite 35 green; Pint clean) |
+
+**Batch F verify:** finding #2 fixed — RewardDistributionService folds untargeted course/academy legs into platform residual (value conservation). 2 leaky tests updated, 4-way unchanged. 35/35 ad-revenue tests, Pint clean. Residual: ad with no course AND no academy still drops platform (public/legacy, out of DS2 scope).
 
 ---
 
