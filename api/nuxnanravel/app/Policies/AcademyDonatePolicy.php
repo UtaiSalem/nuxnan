@@ -8,9 +8,9 @@ use App\Models\User;
 
 class AcademyDonatePolicy
 {
-    public function donate(User $user, Academy $academy): bool
+    public function donate(?User $user, Academy $academy): bool
     {
-        return $user->id !== $academy->user_id && $academy->donationEnabled();
+        return $academy->donationEnabled() && ($user === null || $user->id !== $academy->user_id);
     }
 
     public function view(User $user, AcademyDonate $donation): bool

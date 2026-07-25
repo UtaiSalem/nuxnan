@@ -77,7 +77,7 @@ class Advert extends Model
 
     public function getSlipAttribute($value)
     {
-        return $value ? '/storage/images/adverts/slips/'.$value : null;
+        return null;
     }
 
     public function viewers(): BelongsToMany

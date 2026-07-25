@@ -309,7 +309,7 @@ class AcademyRevenueController extends Controller
         abort_if($academy->isAdmin($request->user()) === false, 403);
 
         $request->validate([
-            'campaign_type' => ['required', Rule::in(['advertisement', 'support'])],
+            'campaign_type' => ['required', Rule::in(['advertisement'])],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
             'budget_amount' => ['required', 'numeric', 'min:1'],

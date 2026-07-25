@@ -131,7 +131,7 @@ class CourseDonateTest extends TestCase
         $approved = $service->approve($donation, $admin, 'verified slip');
 
         $this->assertSame(CourseDonate::STATUS_COMPLETED, $approved->status);
-        $this->assertSame(200, (int) CoursePointAccount::where('course_id', $course->id)->first()->balance);
+        $this->assertSame((int) round(200 * config('economy.donation_pp_per_baht')), (int) CoursePointAccount::where('course_id', $course->id)->first()->balance);
         $this->assertNotNull($approved->course_point_transaction_id);
         $this->assertSame(1, CoursePointTransaction::where('type', 'donation_cash_credit')->count());
     }

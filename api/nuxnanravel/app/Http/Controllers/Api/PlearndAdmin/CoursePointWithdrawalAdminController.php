@@ -59,12 +59,6 @@ class CoursePointWithdrawalAdminController extends Controller
 
     public function markPaid(MarkPaidRequest $r, CoursePointWithdrawalRequest $withdrawal)
     {
-        $proof = [];
-        if ($file = $r->file('proof')) {
-            $path = $file->store('private/course-withdrawal-proofs/'.now()->format('Y/m'));
-            $proof = ['payout_proof_path' => $path, 'payout_proof_original_name' => $file->getClientOriginalName(), 'payout_proof_mime' => $file->getMimeType(), 'payout_proof_size' => $file->getSize()];
-        }
-
-        return new CoursePointWithdrawalResource($this->service->markPaid($withdrawal, $r->user(), $r->input('payment_reference'), $proof));
+        return new CoursePointWithdrawalResource($this->service->markPaid($withdrawal, $r->user(), $r->input('payment_reference'), []));
     }
 }

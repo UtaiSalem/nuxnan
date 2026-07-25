@@ -38,7 +38,7 @@ const earnPoints = async (amount, description) => {
     if (!authStore.isAuthenticated) return;
 
     try {
-        await $fetch(`${apiBase}/api/points/earn`, {
+        await $fetch(`${apiBase}/api/points/xp/earn`, {
             method: 'POST',
             body: {
                 source_type: 'game_snake',

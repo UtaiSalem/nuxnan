@@ -48,61 +48,6 @@ export const usePoints = () => {
   }
   
   /**
-   * Earn points (PP)
-   */
-  const earn = async (data: {
-    source_type: string
-    source_id?: number
-    amount: number
-    description?: string
-    metadata?: Record<string, any>
-  }) => {
-    try {
-      isLoading.value = true
-      error.value = null
-      
-      const response = await $fetch(`${apiBase.value}/api/points/earn`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authStore.token}`,
-        },
-        body: data,
-      }) as any
-      
-      if (response.success) {
-        // Update auth store
-        if (response.data) {
-          authStore.addPoints(response.data.points_earned || 0)
-        }
-        
-        // Check for achievements
-        if (response.data.achievements_unlocked && response.data.achievements_unlocked.length > 0) {
-          // Show achievement notifications
-          response.data.achievements_unlocked.forEach((achievement: any) => {
-            showAchievementNotification(achievement)
-          })
-        }
-        
-        return response.data
-      } else {
-        throw new Error(response.message || 'Failed to earn points')
-      }
-    } catch (err: any) {
-      error.value = err.message || 'Failed to earn points'
-      console.error('Earn points error:', err)
-      
-      // Rollback points in auth store
-      if (data.amount) {
-        authStore.rollback(data.amount)
-      }
-      
-      throw err
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  /**
    * Earn XP (do not modify PP/points)
    */
   const earnXp = async (data: {
@@ -425,7 +370,6 @@ export const usePoints = () => {
     
     // Methods
     getBalance,
-    earn,
     earnXp,
     spend,
     transfer,

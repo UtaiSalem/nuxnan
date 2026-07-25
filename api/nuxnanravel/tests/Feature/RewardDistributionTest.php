@@ -62,12 +62,44 @@ class RewardDistributionTest extends TestCase
         $splits = $data['result']['reward']['splits'];
         $this->assertSame(6, $splits['student']);   // 60% of 10
         $this->assertSame(2, $splits['course']);    // 25% of 10
-        $this->assertSame(1, $splits['platform']);  // 5% of 10, plus remainder
+        $this->assertSame(0, $splits['academy']);  // no academy target; folded into platform
+        $this->assertSame(2, $splits['platform']);  // 5% + academy share
         $this->assertSame(6, (int) $data['viewer']->fresh()->pp - 1000);
         $account = CoursePointAccount::where('course_id', $course->id)->first();
         $this->assertSame(2, (int) $account->balance);
-        $this->assertSame(1, (int) $account->platform_earned);
+        $this->assertSame(2, (int) $account->platform_earned);
         $this->assertSame(1, CoursePointTransaction::where('type', 'ad_revenue')->count());
+    }
+
+    public function test_distribute_credits_all_four_legs_and_conserves_value_for_course_ad_with_academy(): void
+    {
+        // Production course-scoped ads inherit their course's academy_id, so all four
+        // legs (student 60 / course 25 / academy 10 / platform 5) are non-zero at once.
+        $academy = Academy::factory()->create();
+        $course = Course::factory()->create(['academy_id' => $academy->id]);
+        $data = $this->completeDelivery($course->id, $academy->id, budget: 1000, duration: 10);
+
+        $this->assertTrue($data['result']['valid']);
+        $splits = $data['result']['reward']['splits'];
+        $this->assertSame(6, $splits['student']);   // 60% of 10
+        $this->assertSame(2, $splits['course']);    // 25% of 10 (floor)
+        $this->assertSame(1, $splits['academy']);   // 10% of 10
+        $this->assertSame(1, $splits['platform']);  // 5% + remainder
+
+        // Value conservation: every allocated leg is actually credited; nothing minted or lost.
+        $gross = $splits['student'] + $splits['course'] + $splits['academy'] + $splits['platform'];
+        $this->assertSame(10, $gross);
+        $courseAccount = CoursePointAccount::where('course_id', $course->id)->first();
+        $academyAccount = AcademyPointAccount::where('academy_id', $academy->id)->first();
+        $creditedTotal = ((int) $data['viewer']->fresh()->pp - 1000) // student
+            + (int) $courseAccount->balance                          // course leg
+            + (int) $academyAccount->balance                         // academy leg
+            + (int) $courseAccount->platform_earned;                 // platform (on course account)
+        $this->assertSame($gross, $creditedTotal);
+        $this->assertSame(6, (int) $data['viewer']->fresh()->pp - 1000);
+        $this->assertSame(2, (int) $courseAccount->balance);
+        $this->assertSame(1, (int) $academyAccount->balance);
+        $this->assertSame(1, (int) $courseAccount->platform_earned);
     }
 
     public function test_distribute_credits_academy_when_advert_is_academy_scoped(): void
@@ -79,7 +111,8 @@ class RewardDistributionTest extends TestCase
         $splits = $data['result']['reward']['splits'];
         $this->assertSame(6, $splits['student']);    // 60% of 10
         $this->assertSame(1, $splits['academy']);    // 10% of 10
-        $this->assertSame(1, $splits['platform']);   // 5% of 10, plus remainder
+        $this->assertSame(0, $splits['course']);     // no course target; folded into platform
+        $this->assertSame(3, $splits['platform']);   // 5% + course share
 
         // No course ledger activity for an academy-scoped ad
         $this->assertSame(0, CoursePointTransaction::where('type', 'ad_revenue')->count());
@@ -88,6 +121,7 @@ class RewardDistributionTest extends TestCase
         $academyAccount = AcademyPointAccount::where('academy_id', $academy->id)->first();
         $this->assertNotNull($academyAccount);
         $this->assertSame(1, (int) $academyAccount->balance);
+        $this->assertSame(3, (int) $academyAccount->platform_earned);
         $this->assertSame(1, AcademyPointTransaction::where('type', 'ad_revenue')->count());
         $this->assertSame('ad-'.$data['delivery']->id.'-academy', AcademyPointTransaction::where('type', 'ad_revenue')->first()->idempotency_key);
     }

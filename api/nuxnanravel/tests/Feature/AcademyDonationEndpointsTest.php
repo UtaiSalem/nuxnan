@@ -93,7 +93,7 @@ class AcademyDonationEndpointsTest extends TestCase
         $admin = User::factory()->create();
         $admin->assignRole('SUPER_ADMIN');
         $this->actingAs($admin, 'api')->patchJson("/api/plearnd-admin/academy-donations/{$donation->id}/approve", [])->assertOk();
-        $this->assertEquals(50, AcademyPointAccount::first()->balance);
+        $this->assertEquals((int) round(50 * config('economy.donation_pp_per_baht')), AcademyPointAccount::first()->balance);
     }
 
     public function test_admin_cannot_approve_cash_to_own_academy(): void

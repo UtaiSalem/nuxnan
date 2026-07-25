@@ -30,7 +30,7 @@ class StorePostRequest extends FormRequest
 
             // Images
             'images' => 'nullable|array|max:20',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg,webp|max:4096',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:4096',
             'image_captions' => 'nullable|array|max:20',
             'image_captions.*' => 'nullable|string|max:500',
 
@@ -109,7 +109,7 @@ class StorePostRequest extends FormRequest
             // Images
             'images.max' => 'อัปโหลดรูปภาพได้ไม่เกิน 20 รูป / Maximum 20 images allowed',
             'images.*.image' => 'ไฟล์ต้องเป็นรูปภาพเท่านั้น / File must be an image',
-            'images.*.mimes' => 'รูปภาพต้องเป็นไฟล์ประเภท jpeg, png, jpg, gif, svg หรือ webp / Image must be jpeg, png, jpg, gif, svg, or webp',
+            'images.*.mimes' => 'รูปภาพต้องเป็นไฟล์ประเภท jpeg, png, jpg, gif หรือ webp / Image must be jpeg, png, jpg, gif, or webp',
             'images.*.max' => 'ขนาดรูปภาพต้องไม่เกิน 4MB / Image size must not exceed 4MB',
             'image_captions.*.max' => 'คำบรรยายรูปภาพต้องไม่เกิน 500 ตัวอักษร / Image caption must not exceed 500 characters',
 

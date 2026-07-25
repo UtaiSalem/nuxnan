@@ -262,7 +262,7 @@ class GamificationController extends Controller
             ], 401);
         }
 
-        $result = $this->gamificationService->recordLogin($user);
+        $result = $this->gamificationService->recordActivity($user);
 
         return response()->json([
             'success' => true,

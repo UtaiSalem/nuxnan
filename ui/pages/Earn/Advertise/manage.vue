@@ -90,8 +90,9 @@ const filteredCampaigns = computed(() => {
   })
 })
 
-function viewSlip(slipName: string) {
-  selectedSlipUrl.value = `${apiBase}/storage/images/adverts/slips/${slipName}`
+async function viewSlip(advertId: number) {
+  const { blob } = await api.getBlob(`/api/advertises/${advertId}/slip`)
+  selectedSlipUrl.value = URL.createObjectURL(blob)
   showSlipModal.value = true
 }
 
@@ -304,7 +305,7 @@ onMounted(() => {
                 </td>
                 <!-- Action / Slip image link -->
                 <td class="p-4 text-center">
-                  <button v-if="c.slip" @click="viewSlip(c.slip)" class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full transition-colors" title="ดูสลิปโอนเงิน">
+                  <button v-if="c.slip" @click="viewSlip(c.id)" class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full transition-colors" title="ดูสลิปโอนเงิน">
                     <Icon icon="solar:document-bold" class="w-5 h-5" />
                   </button>
                   <span v-else class="text-xs text-gray-400">Wallet</span>

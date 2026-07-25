@@ -28,7 +28,6 @@ class AdvertResource extends JsonResource
                     'name' => $this->advertiser->name,
                     'avatar' => $this->advertiser->profile_photo_url,
                     'profile_photo_url' => $this->advertiser->profile_photo_url,
-                    'reference_code' => $this->advertiser->reference_code,
                 ];
             }),
             'supporter' => $this->whenLoaded('advertiser', fn () => $this->advertiser?->name),
@@ -39,7 +38,6 @@ class AdvertResource extends JsonResource
             'duration' => $this->duration,
             'total_views' => $this->total_views,
             'remaining_views' => $this->remaining_views,
-            'slip' => $this->slip,
             'status' => $this->status,
             'media_image' => $this->media_image,
             'transfer_date' => $this->transfer_date,

@@ -50,7 +50,7 @@ class AcademyCourseController extends Controller
                 // 'tuition_fees'      => 'nullable|string',
                 // 'price'             => 'nullable|string',
                 // 'status'            => 'required',
-                'cover' => 'nullable|image|mimes:jpg,jpeg,png,gif,svg|max:4096',
+                'cover' => 'nullable|image|mimes:jpg,jpeg,png,gif|max:4096',
             ]);
 
             if ($request->file('cover')) {

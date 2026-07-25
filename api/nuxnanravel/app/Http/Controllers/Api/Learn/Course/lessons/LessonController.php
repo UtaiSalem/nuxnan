@@ -61,7 +61,7 @@ class LessonController extends Controller
             'youtube_url' => ['nullable', 'string'],
             'status' => ['required'],
             // validate the image
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:10240|nullable',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:10240|nullable',
         ]);
 
         $validated['user_id'] = auth()->id();
@@ -158,7 +158,7 @@ class LessonController extends Controller
             'point_tuition_fee' => ['nullable', 'integer'],
             'order' => ['nullable', 'integer'],
             'status' => ['nullable', 'integer'],
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:10240|nullable',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:10240|nullable',
         ]);
 
         $lesson->update([

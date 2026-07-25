@@ -8,6 +8,7 @@ use App\Http\Resources\UserResource;
 use App\Models\Activity;
 use App\Models\Advert;
 use App\Models\User;
+use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,18 @@ use Illuminate\Support\Facades\Storage;
 
 class AdvertController extends Controller
 {
+    public function downloadSlip(Advert $advert)
+    {
+        $user = auth()->user();
+        abort_unless($user && ($user->id === $advert->user_id || $user->isSuperAdmin() || $user->hasAnyRole(['ADMIN', 'PLEARND_ADMIN'])), 403);
+        $filename = basename((string) $advert->getRawOriginal('slip'));
+        $path = 'images/adverts/slips/'.$filename;
+        abort_unless($filename && Storage::disk('local')->exists($path), 404);
+        app(AuditLogService::class)->log('advert.slip_viewed', $advert, [], [], 'earn', ['viewer_id' => $user->id]);
+
+        return Storage::disk('local')->response($path, $filename);
+    }
+
     public function index()
     {
         // The public advertising page is also the campaign showcase. Keep approved
@@ -35,7 +48,9 @@ class AdvertController extends Controller
 
     public function getMoreAdvertisings()
     {
-        $adverts = Advert::with('advertiser')->where('status', 1)->where('remaining_views', '>', 0)->orderBy('remaining_views', 'DESC')->latest()->paginate();
+        $adverts = Advert::with('advertiser')->where('status', 1)->where('remaining_views', '>', 0)->where(function ($query) {
+            $query->whereNull('scope_type')->orWhere('scope_type', 'public');
+        })->orderBy('remaining_views', 'DESC')->latest()->paginate();
 
         return response()->json([
             'success' => true,
@@ -108,8 +123,8 @@ class AdvertController extends Controller
             'total_views' => 'required|integer|min:100|max:100000',
             'transfer_date' => 'required|date',
             'transfer_time' => ['required', 'date_format:H:i'],
-            'slip' => 'nullable|image|mimes:jpg,jpeg,png,gif,svg|max:2048',
-            'media_image' => 'required|mimes:jpg,jpeg,png,gif,svg,mp4,webm,ogg|max:20480',
+            'slip' => 'nullable|image|mimes:jpg,jpeg,png,gif|max:2048',
+            'media_image' => 'required|mimes:jpg,jpeg,png,gif,mp4,webm,ogg|max:20480',
         ]);
 
         try {
@@ -119,7 +134,7 @@ class AdvertController extends Controller
             if ($request->file('slip')) {
                 $slip_file = $request->file('slip');
                 $slip_filename = uniqid().'.'.$slip_file->getClientOriginalExtension();
-                Storage::disk('public')->putFileAs('images/adverts/slips', $slip_file, $slip_filename);
+                Storage::disk('local')->putFileAs('images/adverts/slips', $slip_file, $slip_filename);
             }
             if ($request->file('media_image')) {
                 $media_file = $request->file('media_image');

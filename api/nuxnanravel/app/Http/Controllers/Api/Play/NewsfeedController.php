@@ -32,7 +32,7 @@ class NewsfeedController extends Controller
         return response()->json([
             'peopleMayKnow' => UserResource::collection($peopleMayKnow),
             'pendingFriends' => FriendshipResource::collection($pendingFriends),
-            'donates' => DonateResource::collection(Donate::whereNotIn('status', [2])->orderBy('remaining_points', 'DESC')->latest()->paginate(5)),
+            'donates' => DonateResource::collection(Donate::where('status', 1)->orderBy('remaining_points', 'DESC')->latest()->paginate(5)),
             'advertises' => AdvertResource::collection(Advert::where('status', 1)->where('remaining_views', '>', 0)->orderBy('remaining_views', 'DESC')->latest()->paginate(5)),
         ]);
     }

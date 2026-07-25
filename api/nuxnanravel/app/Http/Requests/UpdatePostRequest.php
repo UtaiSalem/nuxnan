@@ -32,7 +32,7 @@ class UpdatePostRequest extends FormRequest
 
             // Images (new ones to add)
             'images' => 'nullable|array|max:20',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg,webp|max:4096',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:4096',
             'image_captions' => 'nullable|array|max:20',
             'image_captions.*' => 'nullable|string|max:500',
 
@@ -101,7 +101,7 @@ class UpdatePostRequest extends FormRequest
             // Images
             'images.max' => 'อัปโหลดรูปภาพได้ไม่เกิน 20 รูป / Maximum 20 images allowed',
             'images.*.image' => 'ไฟล์ต้องเป็นรูปภาพเท่านั้น / File must be an image',
-            'images.*.mimes' => 'รูปภาพต้องเป็นไฟล์ประเภท jpeg, png, jpg, gif, svg หรือ webp',
+            'images.*.mimes' => 'รูปภาพต้องเป็นไฟล์ประเภท jpeg, png, jpg, gif หรือ webp',
             'images.*.max' => 'ขนาดรูปภาพต้องไม่เกิน 4MB / Image size must not exceed 4MB',
             'delete_images.*.exists' => 'รูปภาพที่ต้องการลบไม่พบ / Image to delete not found',
 

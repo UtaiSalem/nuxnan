@@ -70,7 +70,7 @@ class AcademyDonateTest extends TestCase
         $admin = User::factory()->create();
         $donation = app(AcademyDonateService::class)->createCashDonation($donor, $academy, 50, ['payment_method' => 'bank'], null, null);
         app(AcademyDonateService::class)->approve($donation, $admin, 'ok');
-        $this->assertSame(50, AcademyPointAccount::first()->balance);
+        $this->assertSame((int) round(50 * config('economy.donation_pp_per_baht')), AcademyPointAccount::first()->balance);
     }
 
     public function test_admin_reject_does_not_credit_academy(): void

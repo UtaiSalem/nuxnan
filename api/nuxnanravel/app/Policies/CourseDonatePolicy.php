@@ -8,9 +8,9 @@ use App\Models\User;
 
 class CourseDonatePolicy
 {
-    public function donate(User $user, Course $course): bool
+    public function donate(?User $user, Course $course): bool
     {
-        return $course->donationEnabled() && ($course->status != 2 || $user->id === $course->user_id || $course->members()->whereKey($user->id)->exists());
+        return $course->donationEnabled() && ($course->status != 2 || ($user && ($user->id === $course->user_id || $course->members()->whereKey($user->id)->exists())));
     }
 
     public function view(User $user, CourseDonate $donation): bool

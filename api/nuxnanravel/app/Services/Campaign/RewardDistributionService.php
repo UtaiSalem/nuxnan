@@ -57,6 +57,17 @@ class RewardDistributionService
             $academyId = $advert->academy_id ? (int) $advert->academy_id : null;
             $targetCourseId = $courseId && Course::whereKey($courseId)->exists() ? $courseId : null;
 
+            // Value conservation: any leg without a beneficiary target folds into the platform
+            // residual so the advertiser's full gross is always distributed (never silently lost).
+            if ($targetCourseId === null && $split['course'] > 0) {
+                $split['platform'] += $split['course'];
+                $split['course'] = 0;
+            }
+            if ($academyId === null && $split['academy'] > 0) {
+                $split['platform'] += $split['academy'];
+                $split['academy'] = 0;
+            }
+
             if ($targetCourseId !== null && $split['course'] > 0) {
                 $this->courseAccounts->creditFromAdRevenue($targetCourseId, $sourceUserId, $split['course'], "ad-{$delivery->id}", ['source' => 'ad_revenue', 'delivery_id' => $delivery->id, 'policy_id' => $split['policy_id'], 'policy_version' => $split['policy_version']]);
             }

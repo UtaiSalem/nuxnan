@@ -1,8 +1,8 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 
-const config = useRuntimeConfig()
+const api = useApi()
 
 const props = defineProps({
   donate: {
@@ -19,14 +19,19 @@ const emit = defineEmits(['approved', 'rejected', 'edit', 'delete', 'view-slip']
 
 const showMenu = ref(false)
 
-// Get full slip URL with API base
-const slipUrl = computed(() => {
-  if (!props.donate.slip) return null
-  // If already full URL, return as is
-  if (props.donate.slip.startsWith('http')) return props.donate.slip
-  // Prepend API base
-  return `${config.public.apiBase}${props.donate.slip}`
-})
+const slipUrl = ref<string | null>(null)
+async function loadSlip() {
+  slipUrl.value = null
+  if (!props.donate.id) return
+  try {
+    const { blob } = await api.getBlob(`/api/plearnd-admin/supports/donates/${props.donate.id}/slip`)
+    slipUrl.value = URL.createObjectURL(blob)
+  } catch {
+    slipUrl.value = null
+  }
+}
+onMounted(loadSlip)
+watch(() => props.donate.id, loadSlip)
 
 // Status badge info
 const statusInfo = computed(() => {
@@ -120,7 +125,7 @@ const handleReject = () => {
             {{ donate.donor_name || 'ไม่ประสงค์ออกนาม' }}
           </p>
           <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
-            {{ donate.donor?.email || donate.donor_email || '-' }}
+            {{ donate.donor?.email || '-' }}
           </p>
         </div>
       </div>

@@ -13,6 +13,6 @@ class MarkPaidRequest extends FormRequest
 
     public function rules(): array
     {
-        return ['payment_reference' => 'nullable|string|max:200', 'proof' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120'];
+        return ['payment_reference' => 'nullable|string|max:200'];
     }
 }

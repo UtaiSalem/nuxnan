@@ -560,7 +560,7 @@ class CourseController extends Controller
                 'saleable' => 'nullable|boolean',
                 'price' => 'nullable|numeric|min:0',
                 'status' => 'nullable|string',
-                'cover' => 'nullable|image|mimes:jpg,jpeg,png,gif,svg|max:4096',
+            'cover' => 'nullable|image|mimes:jpg,jpeg,png,gif|max:4096',
             ]);
 
             if ($request->file('cover')) {
@@ -737,7 +737,7 @@ class CourseController extends Controller
         }
 
         $request->validate([
-            'cover' => 'required|image|mimes:jpg,jpeg,png,gif,svg|max:4096',
+            'cover' => 'required|image|mimes:jpg,jpeg,png,gif|max:4096',
         ]);
 
         if ($request->hasFile('cover')) {
@@ -775,7 +775,7 @@ class CourseController extends Controller
         }
 
         $request->validate([
-            'logo' => 'required|image|mimes:jpg,jpeg,png,gif,svg|max:4096',
+            'logo' => 'required|image|mimes:jpg,jpeg,png,gif|max:4096',
         ]);
 
         if ($request->hasFile('logo')) {

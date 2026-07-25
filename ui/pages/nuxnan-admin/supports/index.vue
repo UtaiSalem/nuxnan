@@ -3,6 +3,7 @@ import { ref, onMounted, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import ApproveDonateCard from '~/components/earn/donates/ApproveDonateCard.vue'
 import Swal from 'sweetalert2'
+const api = useApi()
 
 definePageMeta({
   layout: 'nuxnan-admin-layout',
@@ -20,6 +21,11 @@ const selectedDonation = ref(null)
 const showEditModal = ref(false)
 const selectedIds = ref([])
 const processingId = ref(null)
+
+async function viewSlip(donate) {
+  const { blob } = await api.getBlob(`/api/plearnd-admin/supports/donates/${donate.id}/slip`)
+  selectedSlip.value = URL.createObjectURL(blob)
+}
 
 const statusFilters = [
   { value: 'all', label: 'ทั้งหมด', color: 'bg-hopeui-primary-500' },
@@ -349,11 +355,11 @@ onMounted(() => {
                 </td>
                 <td class="p-5">
                   <button
-                    v-if="donate.slip"
-                    @click="selectedSlip = donate.slip.startsWith('http') ? donate.slip : useRuntimeConfig().public.apiBase + donate.slip"
+                    v-if="donate.payment_method === 'slip'"
+                    @click="viewSlip(donate)"
                     class="w-12 h-16 rounded-xl overflow-hidden border-2 border-white dark:border-slate-700 shadow-lg hover:scale-110 transition-transform"
                   >
-                    <img :src="donate.slip.startsWith('http') ? donate.slip : useRuntimeConfig().public.apiBase + donate.slip" class="w-full h-full object-cover" />
+                    <span class="text-white text-xs">View</span>
                   </button>
                   <span v-else class="text-slate-300 font-bold text-xs uppercase italic">No Slip</span>
                 </td>

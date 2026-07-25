@@ -30,7 +30,7 @@ class StoreCampaignRequest extends FormRequest
             'title' => ['required_if:campaign_type,advertisement', 'nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:5000'],
             'media_link' => ['nullable', 'url', 'max:2048'],
-            'media_image' => ['required_if:campaign_type,advertisement', 'file', 'mimes:jpg,jpeg,png,gif,svg,mp4,webm,ogg', 'max:20480'],
+            'media_image' => ['required_if:campaign_type,advertisement', 'file', 'mimes:jpg,jpeg,png,gif,mp4,webm,ogg', 'max:20480'],
             'academy_id' => ['nullable', 'integer', 'exists:academies,id'],
             'course_id' => ['nullable', 'integer', 'exists:courses,id'],
             'inherit_to_academy' => ['nullable', 'boolean'],
@@ -39,7 +39,7 @@ class StoreCampaignRequest extends FormRequest
             'total_views' => ['required_if:campaign_type,advertisement', 'nullable', 'integer', 'min:100', 'max:100000'],
             'budget_amount' => ['required', 'numeric', 'min:0.01'],
             'payment_method' => ['required', Rule::in(['wallet', 'slip'])],
-            'slip' => ['required_if:payment_method,slip', 'nullable', 'image', 'mimes:jpg,jpeg,png,gif,svg', 'max:2048'],
+            'slip' => ['required_if:payment_method,slip', 'nullable', 'image', 'mimes:jpg,jpeg,png,gif', 'max:2048'],
             'transfer_date' => ['required_if:payment_method,slip', 'nullable', 'date'],
             'transfer_time' => ['required_if:payment_method,slip', 'nullable', 'date_format:H:i'],
             'active_from' => ['nullable', 'date'],
@@ -69,12 +69,6 @@ class StoreCampaignRequest extends FormRequest
                 } elseif ($academyId && (int) $course->academy_id !== (int) $academyId) {
                     $validator->errors()->add('course_id', 'รายวิชาไม่ได้อยู่ในโรงเรียนที่ระบุ');
                 }
-            }
-            if ($type === 'support' && $this->input('media_image')) {
-                $validator->errors()->add('media_image', 'support ไม่รองรับสื่อโฆษณา');
-            }
-            if ($type === 'support' && (float) $this->input('budget_amount', 0) < 1) {
-                $validator->errors()->add('budget_amount', 'งบสนับสนุนขั้นต่ำ 1 บาท');
             }
             if ($type === 'advertisement' && $this->filled(['duration', 'total_views', 'budget_amount'])) {
                 $expected = app(CampaignPricingService::class)->advertisement((int) $this->total_views, (int) $this->duration);

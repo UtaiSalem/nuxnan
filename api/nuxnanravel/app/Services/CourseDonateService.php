@@ -32,11 +32,11 @@ class CourseDonateService
             }
             $result = $this->ledger->donatePoints($donor, 'course', $course->id, $pointsAmount, 'course_donation', $key, ['reason' => 'course_donation'] + $meta);
 
-            return CourseDonate::create(['course_id' => $course->id, 'donor_id' => $donor->id, 'donor_display_name' => $meta['donor_display_name'] ?? null, 'donation_type' => CourseDonate::TYPE_POINT, 'points_amount' => $pointsAmount, 'status' => CourseDonate::STATUS_COMPLETED, 'purpose' => $meta['purpose'] ?? null, 'anonymous' => $meta['anonymous'] ?? false, 'course_point_transaction_id' => $result['destination_transaction_id'], 'metadata' => $meta, 'idempotency_key' => $key]);
+            return CourseDonate::create(['course_id' => $course->id, 'donor_id' => $donor->id, 'donor_display_name' => $meta['donor_display_name'] ?? null, 'donation_type' => CourseDonate::TYPE_POINT, 'points_amount' => $pointsAmount, 'remaining_points' => $pointsAmount, 'status' => CourseDonate::STATUS_COMPLETED, 'purpose' => $meta['purpose'] ?? null, 'anonymous' => $meta['anonymous'] ?? false, 'course_point_transaction_id' => $result['destination_transaction_id'], 'metadata' => $meta, 'idempotency_key' => $key]);
         });
     }
 
-    public function createCashDonation(User $donor, Course $course, float $amount, array $meta, ?string $key, ?UploadedFile $slip): CourseDonate
+    public function createCashDonation(?User $donor, Course $course, float $amount, array $meta, ?string $key, ?UploadedFile $slip): CourseDonate
     {
         if (! $course->donationEnabled()) {
             throw new DomainException('Donations disabled for this course');
@@ -55,7 +55,7 @@ class CourseDonateService
             }
             $path = $slip?->store('private/course-donation-slips/'.now()->format('Y/m'));
 
-            return CourseDonate::create(['course_id' => $course->id, 'donor_id' => $donor->id, 'donor_display_name' => $meta['donor_display_name'] ?? null, 'donation_type' => CourseDonate::TYPE_CASH, 'cash_amount' => $amount, 'currency' => $meta['currency'] ?? 'THB', 'status' => CourseDonate::STATUS_PENDING, 'purpose' => $meta['purpose'] ?? null, 'anonymous' => $meta['anonymous'] ?? false, 'slip_path' => $path, 'payment_method' => $meta['payment_method'], 'payment_reference' => $meta['payment_reference'] ?? null, 'metadata' => $meta, 'idempotency_key' => $key]);
+            return CourseDonate::create(['course_id' => $course->id, 'donor_id' => $donor?->id, 'donor_display_name' => $meta['donor_display_name'] ?? null, 'donation_type' => CourseDonate::TYPE_CASH, 'cash_amount' => $amount, 'currency' => $meta['currency'] ?? 'THB', 'status' => CourseDonate::STATUS_PENDING, 'purpose' => $meta['purpose'] ?? null, 'anonymous' => $meta['anonymous'] ?? false, 'slip_path' => $path, 'payment_method' => $meta['payment_method'], 'payment_reference' => $meta['payment_reference'] ?? null, 'metadata' => $meta, 'idempotency_key' => $key]);
         });
     }
 
@@ -72,7 +72,7 @@ class CourseDonateService
             $d = CourseDonate::whereKey($donation->id)->lockForUpdate()->firstOrFail();
             if ($d->status !== CourseDonate::STATUS_PENDING) {
                 throw new DomainException('Donation is no longer pending.');
-            }             $tx = $this->ledger->creditCoursePoints($d->course_id, $d->donor_id, (int) $d->cash_amount, null, ['source' => 'donation_cash', 'note' => $note]);
+            }             $tx = $this->ledger->creditCoursePoints($d->course_id, $d->donor_id, (int) round($d->cash_amount * config('economy.donation_pp_per_baht')), null, ['source' => 'donation_cash', 'note' => $note]);
             $d->update(['status' => CourseDonate::STATUS_COMPLETED, 'course_point_transaction_id' => $tx->id, 'approved_by' => $admin->id, 'reviewed_at' => now(), 'version' => $d->version + 1]);
 
             return $d->fresh();

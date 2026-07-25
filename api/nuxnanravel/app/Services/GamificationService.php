@@ -38,7 +38,8 @@ class GamificationService
 
         // Award streak bonus points
         if ($result['bonus_points'] > 0) {
-            $this->pointsService->earn(
+            $this->pointsService->addXp($user, (int) $result['bonus_points']);
+            /*
                 $user,
                 $result['bonus_points'],
                 'streak_bonus',
@@ -48,7 +49,7 @@ class GamificationService
                     'streak_days' => $result['current_streak'],
                     'bonus_tier' => $streak->streak_tier,
                 ]
-            );
+            */
         }
 
         // Check and update achievements
