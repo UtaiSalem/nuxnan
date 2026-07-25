@@ -22,7 +22,7 @@ const showEditModal = ref(false)
 const selectedIds = ref([])
 const processingId = ref(null)
 
-async function viewSlip(donate: any) {
+async function viewSlip(donate) {
   const { blob } = await api.getBlob(`/api/plearnd-admin/supports/donates/${donate.id}/slip`)
   selectedSlip.value = URL.createObjectURL(blob)
 }
