@@ -4220,3 +4220,59 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 - แก้ไข: เปิดเฉพาะ update endpoint เป็น public และจำกัด `throttle:10,1`; profile/photo ยังต้อง authenticated
 - UI: เปลี่ยนคำนำหน้าชื่อใน `StudentCardItem.vue` เป็น dropdown
 - ตรวจสอบ: route syntax, PHP formatting และ frontend build
+# 2026-07-26 - Academy claim percentage split implementation
+
+- Confirmed user decision: Option A (270 pp ceiling with final partial donation drain) and fixed ratios 77.78% claimer / 11.11% suggester / 7.41% academy / 3.70% platform.
+- Implemented academy point donation minimum 1 pp, claimable preview fields, variable claim cost, rounded percentage split with residual assigned to platform, and response wallet delta from the persisted claim.
+- Touched academy claim service/controller, point donation request/service, economy config, academy claim composable/cards/widget, and support donation modal. Existing uncommitted work in the same files was preserved.
+- No migration changes were made for this request; public-tier claim configuration remains unchanged.
+- Verification: PHP lint passed for touched PHP files; Pint passed and formatted AcademyClaimService. Nuxt build was started but produced no output and was terminated after exceeding the practical wait window; manual/API edge-case QA remains.
+# 2026-07-26 - Re-analysis: academy support-to-claim flow
+
+- End-to-end flow confirmed: school/academy page opens shared support modal; point donations debit donor ledger and create completed `academy_donates` rows with `remaining_points`; cash donations create pending rows with slips and require admin approval; eligible academy members/owners fetch claimable point pools; each claim locks the donation, enforces daily/per-donation caps, splits the drained amount, credits four ledgers, and records `academy_donate_claims`.
+- Key access rule: claiming is not public to every visitor. `AcademyDonatePolicy::claim` allows academy owner or active academy member (`status = 2`).
+- Key operational risks: claimable listing performs per-donation claim-count queries and does not eager-load donor; daily counter/view and claim writes need concurrency tests; cash approval and point completion are separate states; UI must clearly distinguish donor support from claimant reward.
+# 2026-07-26 - Academy claim card urgent layout fix
+
+- Screenshot diagnosis: `AcademyClaimWidget` used `sm:grid-cols-2` inside a narrow school sidebar, shrinking each donor card to roughly half-width and causing Thai text/numbers to wrap vertically.
+- Fix: donor-card loading/list grids now stay single-column until `2xl`; card internals use `min-w-0`, and the claim action becomes full-width on narrow cards while remaining compact on wider layouts.
+- Verification plan: inspect diff and run Nuxt build/manual school-page smoke test if the local authenticated route is available.
+# 2026-07-26 - Academy claim cards separated with infinite loading
+
+- Changed academy claim UI from one parent card containing all donor cards to two independent sections: a compact summary/stat card and a separate donation-list card below it.
+- Added paginated claimable API (`page`, `per_page`, pagination metadata), eager-loaded donors, and preserved a global pool-total calculation for the summary.
+- Added frontend append loading through `IntersectionObserver`; existing claim and refresh flows reset to page one so stale cards do not remain after a claim.
+- Verification: PHP lint and `git diff --check` passed; visual browser smoke test remains recommended on the authenticated academy route.
+# 2026-07-26 - Fix academy claim widget parent width
+
+- Root cause of the continued narrow donor card: the Revenue tab placed `AcademyClaimWidget` and `CampaignWidget` in `xl:grid-cols-2`, so the claim widget occupied only half the content width. The card's internal grid fix alone could not solve this.
+- Wrapped the claim widget in `xl:col-span-2` and added `min-w-0` to both summary/list sections, allowing the independent donation cards and infinite list to use the full revenue content width.
+# 2026-07-26 - Align academy donor cards with public donation presentation
+
+- Reused the public-tier `DonorCard` visual pattern as the source: prominent supporter avatar/name, supporter identifier when available, original support amount, remaining pool, purpose, progress, and clear claim action.
+- Academy-specific behavior remains unchanged: claim preview/split, daily caps, academy endpoint, and academy ledger allocation.
+- Academy claimable response now includes `donor_personal_code` for non-anonymous donors; anonymous donors remain privacy-safe.
+# 2026-07-26 - Academy claim receive modal and animated reward
+
+- Academy claim now follows the public-tier interaction: the card action is labeled `รับแต้ม`, opens a supporter modal, shows the supporter identity, counts down from 10 seconds, and animates the academy-specific claim reward from 0 to the server preview value before submitting the claim.
+- The actual claim API is called only when the countdown completes; cancellation clears timers and does not create a claim. The target is `claimer_reward_preview`, so partial donations are handled without hardcoded 240.
+# 2026-07-26 - Consolidate academy revenue actions and campaigns
+
+- Moved school support and create-campaign actions into `AcademyWalletCard`, making the school revenue card the single action hub.
+- Removed the separate decorative revenue/action banner from the academy Revenue tab.
+- Added `hideWhenEmpty` to `CampaignWidget`; academy campaigns now render below the revenue/claim content only when campaigns exist (while still loading/erroring normally).
+- Existing campaign create flow and academy support modal/API contracts are preserved.
+# 2026-07-26 - Real-time academy support and claim UI updates
+
+- After successful academy donation, the academy page now refreshes `supportSummary` and remounts the claim widget so a newly completed point donation appears immediately without a full page reload.
+- After successful academy claim, the page refreshes the academy revenue summary; the claimant wallet is updated immediately through `authStore.addPoints(result.wallet.delta)`, while remounting the claim widget refreshes daily allowance, claim counts, and donation remaining balances.
+- Claim and donation API contracts are unchanged; this is frontend state synchronization only.
+# 2026-07-27 - Synchronize academy receive countdown and point animation
+
+- Replaced separate countdown/point intervals with one elapsed-time clock in `AcademyDonorCard`.
+- Countdown and animated reward now derive from the same 10,000 ms timeline; at the exact end, countdown reaches 0 and points reach the target preview before the claim request starts.
+# 2026-07-27 - Academy/course campaign flow audit and continuation
+
+- Added supporter purpose text to the academy receive modal so the donor's encouragement is visible during the 10-second receive flow.
+- Audited campaign surfaces: academy Revenue already uses the shared `CampaignWidget`; course shell also uses the same widget. Course sidebar now hides the campaign card when no campaigns exist while retaining its scoped create action.
+- Hardened campaign authorization: academy campaign creation now requires academy admin ownership; course campaign creation now requires course admin ownership and academy/course scope consistency. This closes the prior gap where any authenticated user could create scoped campaigns.

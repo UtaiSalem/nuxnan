@@ -8,11 +8,11 @@ import CourseCard from '~/components/learn/course/CourseCard.vue'
 import EventFormModal from '~/components/academy/events/EventFormModal.vue'
 import { useCourseGrouping } from '~/composables/useCourseGrouping'
 import CampaignWidget from '~/components/campaign/CampaignWidget.vue'
-import AdvertiseCtaWidget from '~/components/widgets/AdvertiseCtaWidget.vue'
 import AcademyDonationModal from '~/components/donation/AcademyDonationModal.vue'
 import AcademyPublicSupportWidget from '~/components/academy/revenue/AcademyPublicSupportWidget.vue'
 import AcademyWalletCard from '~/components/academy/revenue/AcademyWalletCard.vue'
 import AcademySupportCtaWidget from '~/components/academy/revenue/AcademySupportCtaWidget.vue'
+import AcademyClaimWidget from '~/components/academy/points/AcademyClaimWidget.vue'
 import PointsBadge from '~/components/Common/PointsBadge.vue'
 
 definePageMeta({
@@ -32,6 +32,16 @@ const openAcademyDonation = () => { if (!user.value) navigateTo(`/login?return=$
 // State
 const academy = ref<any>(null)
 const { supportSummary, isLoading: supportSummaryLoading, fetchSupportSummary } = useAcademyRevenue(computed(() => academy.value?.id ?? null))
+const claimWidgetKey = ref(0)
+
+async function handleAcademyDonated() {
+  await fetchSupportSummary()
+  claimWidgetKey.value += 1
+}
+
+async function handleAcademyClaimed() {
+  await fetchSupportSummary()
+}
 const courses = ref<any[]>([])
 const courseFilters = ref({
   education_level: '',
@@ -1086,7 +1096,7 @@ watch(() => academy.value?.id, (id) => {
 </script>
 
 <template>
-  <AcademyDonationModal v-if="academy" v-model:visible="showAcademyDonation" :academy-id="academy.id" :academy-name="academy.name" :academy-owner-id="academy.user_id" />
+  <AcademyDonationModal v-if="academy" v-model:visible="showAcademyDonation" :academy-id="academy.id" :academy-name="academy.name" @donated="handleAcademyDonated" />
   <div>
     <!-- Child Route Content (admin, dashboard, etc.) -->
     <NuxtPage v-if="isChildRoute" />
@@ -2339,23 +2349,12 @@ watch(() => academy.value?.id, (id) => {
           <!-- Revenue Tab -->
           <div v-else-if="currentTab === 'revenue'" class="space-y-5">
             <div class="space-y-5">
-              <AcademyWalletCard :summary="supportSummary" :loading="supportSummaryLoading" />
-              <div class="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 to-sky-50 p-6 shadow-sm dark:border-violet-900/40 dark:from-slate-900 dark:to-indigo-950/40">
-                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p class="text-sm font-semibold text-violet-500 dark:text-violet-300">รายได้ของโรงเรียน</p>
-                    <h2 class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">สนับสนุนการเรียนรู้และสร้างรายได้</h2>
-                    <p class="mt-2 max-w-2xl text-sm text-gray-600 dark:text-gray-300">รวมการสนับสนุนแต้มและการสร้างแคมเปญโฆษณาไว้ในที่เดียว</p>
-                  </div>
-                  <button v-if="academy" type="button" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-violet-700" @click="openAcademyDonation">
-                    <Icon icon="fluent:heart-24-regular" class="h-5 w-5" />
-                    สนับสนุนโรงเรียน
-                  </button>
-                </div>
-              </div>
+              <AcademyWalletCard :summary="supportSummary" :loading="supportSummaryLoading" :academy-id="academy?.id" @support="openAcademyDonation" />
               <div class="grid gap-5 xl:grid-cols-2">
-                <AdvertiseCtaWidget v-if="academy" scope-type="academy" :target-id="academy.id" :target-name="academy.name" />
-                <CampaignWidget v-if="academy" scope="academy" :academy-id="academy.id" placement="academy-revenue" />
+                <div v-if="academy && (academy.memberStatus === 2 || academy.authIsAcademyAdmin)" class="min-w-0 xl:col-span-2">
+                  <AcademyClaimWidget :key="claimWidgetKey" :academy-id="academy.id" @claimed="handleAcademyClaimed" />
+                </div>
+                <CampaignWidget v-if="academy" scope="academy" :academy-id="academy.id" placement="academy-revenue" hide-when-empty />
               </div>
             </div>
           </div>

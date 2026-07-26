@@ -46,7 +46,6 @@
       v-model:visible="donationVisible"
       :academy-id="school.id"
       :academy-name="school.name"
-      :academy-owner-id="school.owner_id || 0"
       @donated="donationVisible = false"
     />
   </div>

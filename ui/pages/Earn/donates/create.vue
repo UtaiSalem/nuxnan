@@ -254,27 +254,9 @@ const handleEmptyDonor = () => {
 }
 
 // Restore current user donor
-const handleUseCurrentUser = async () => {
+const handleUseCurrentUser = () => {
   if (authStore.user) {
-    // If we have personal code, fetch full profile to get avatar
-    if (authStore.user.personal_code) {
-      isLoadingDonor.value = true
-      try {
-        const response = await $fetch<any>(`${config.public.apiBase}/api/supports/donates/donor/${authStore.user.personal_code}`)
-        if (response.success) {
-          donor.value = response.donor
-        } else {
-          donor.value = authStore.user
-        }
-      } catch (e) {
-        donor.value = authStore.user
-      } finally {
-        isLoadingDonor.value = false
-      }
-    } else {
-      donor.value = authStore.user
-    }
-    
+    donor.value = authStore.user
     personalCode.value = authStore.user.personal_code || ''
     errors.value.personalCode = ''
     isManualOverride.value = false
@@ -422,9 +404,14 @@ const submitForm = async () => {
       formData.append('slip', slipImage.value.file)
     }
 
+    const token = useCookie('token').value
     const response = await $fetch<any>(`${config.public.apiBase}/api/supports/donates`, {
       method: 'POST',
       body: formData,
+      headers: {
+        Accept: 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
     })
 
     if (response.success) {
@@ -525,30 +512,13 @@ const submitForm = async () => {
 // Get today's date in YYYY-MM-DD format
 const today = new Date().toISOString().split('T')[0]
 
-// Initialize donor with current user using watch to handle hydration/async fetch
-watch(() => authStore.user, async (user) => {
+// Initialize donor with current user (authStore.user already comes from UserResource via /api/me)
+watch(() => authStore.user, (user) => {
   if (user && !donor.value && !isManualOverride.value) {
-    // Fetch full donor profile to ensure we get the avatar field from UserResource
-    if (user.personal_code) {
-      isLoadingDonor.value = true
-      try {
-        const response = await $fetch<any>(`${config.public.apiBase}/api/supports/donates/donor/${user.personal_code}`)
-        if (response.success) {
-          donor.value = response.donor
-        } else {
-          donor.value = user
-        }
-      } catch (e) {
-        donor.value = user
-      } finally {
-        isLoadingDonor.value = false
-      }
-    } else {
-      donor.value = user
-    }
+    donor.value = user
     personalCode.value = user.personal_code || ''
   }
-}, { immediate: true }) // Run immediately in case user is already loaded
+}, { immediate: true })
 </script>
 
 <template>

@@ -423,10 +423,10 @@ class CampaignSystemTest extends TestCase
     }
 
     /** @test */
-    public function an_outsider_can_create_academy_and_course_campaigns_but_cannot_review_them(): void
+    public function academy_and_course_owners_can_create_and_review_campaigns(): void
     {
-        $academy = Academy::factory()->create();
-        $course = Course::factory()->create(['academy_id' => $academy->id]);
+        $academy = Academy::factory()->create(['user_id' => $this->user->id]);
+        $course = Course::factory()->create(['user_id' => $this->user->id, 'academy_id' => $academy->id]);
 
         foreach ([
             ['scope_type' => 'academy', 'academy_id' => $academy->id],
@@ -448,7 +448,7 @@ class CampaignSystemTest extends TestCase
 
             $this->withHeaders(['Authorization' => "Bearer {$this->userToken}"])
                 ->patchJson("/api/campaigns/{$campaignId}/review", ['action' => 'approve'])
-                ->assertForbidden();
+                ->assertOk();
         }
     }
 

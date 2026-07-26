@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Academies\AcademyAllocationController;
+use App\Http\Controllers\Api\Academies\AcademyClaimController;
 use App\Http\Controllers\Api\Academies\AcademyDonationController;
 use App\Http\Controllers\Api\Academies\AcademyPointWithdrawalController;
 use App\Http\Controllers\Api\Courses\CourseDonationController;
@@ -21,6 +22,8 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified'])->g
     Route::post('/academies/{academy}/donations/points', [AcademyDonationController::class, 'storePoint']);
     Route::get('/me/academy-donations', [AcademyDonationController::class, 'mine']);
     Route::get('/academies/{academy}/donations', [AcademyDonationController::class, 'showForAcademy']);
+    Route::get('/academies/{academy}/donations/claimable', [AcademyClaimController::class, 'claimable']);
+    Route::post('/academies/{academy}/donations/{donation}/claim', [AcademyClaimController::class, 'claimFromDonation']);
     Route::post('/academies/{academy}/allocations', [AcademyAllocationController::class, 'store']);
     Route::get('/academies/{academy}/allocations', [AcademyAllocationController::class, 'index']);
     Route::post('/courses/{course}/withdrawals', [CoursePointWithdrawalController::class, 'store']);

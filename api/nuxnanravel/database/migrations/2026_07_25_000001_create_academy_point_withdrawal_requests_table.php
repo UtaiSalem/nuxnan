@@ -11,7 +11,9 @@ return new class extends Migration
         Schema::create('academy_point_withdrawal_requests', function (Blueprint $table) {
             $table->id();
             $table->foreignId('academy_id')->constrained('academies')->cascadeOnDelete();
-            $table->foreignId('academy_point_account_id')->constrained('academy_point_accounts')->cascadeOnDelete();
+            $table->unsignedBigInteger('academy_point_account_id');
+            $table->foreign('academy_point_account_id', 'apwr_apa_id_fk')
+                ->references('id')->on('academy_point_accounts')->cascadeOnDelete();
             $table->foreignId('requested_by')->constrained('users')->cascadeOnDelete();
             $table->unsignedBigInteger('amount');
             $table->string('purpose', 500)->nullable();

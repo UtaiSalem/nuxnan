@@ -10,4 +10,12 @@ return [
     'claim_cap_per_donation_per_day' => 5,
     'claim_cap_total_per_day' => 20,
     'platform_personal_code' => 99999999,
+    'academy_claim_cost' => 270,
+    'academy_claim_max_cost' => 270,
+    'academy_claim_ratio_claimer' => 0.7778,
+    'academy_claim_ratio_suggester' => 0.1111,
+    'academy_claim_ratio_school' => 0.0741,
+    'academy_claim_ratio_platform' => 0.0370,
+    'academy_claim_cap_per_donation_per_day' => 5,
+    'academy_claim_cap_total_per_day' => 20,
 ];

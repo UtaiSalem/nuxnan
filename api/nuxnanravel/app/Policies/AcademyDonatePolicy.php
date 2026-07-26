@@ -4,13 +4,24 @@ namespace App\Policies;
 
 use App\Models\Academy;
 use App\Models\AcademyDonate;
+use App\Models\AcademyMember;
 use App\Models\User;
 
 class AcademyDonatePolicy
 {
     public function donate(?User $user, Academy $academy): bool
     {
-        return $academy->donationEnabled() && ($user === null || $user->id !== $academy->user_id);
+        return $academy->donationEnabled();
+    }
+
+    public function claim(User $user, Academy $academy): bool
+    {
+        if ($user->id === $academy->user_id) {
+            return true;
+        }
+
+        return AcademyMember::where('academy_id', $academy->id)
+            ->where('user_id', $user->id)->where('status', 2)->exists();
     }
 
     public function view(User $user, AcademyDonate $donation): bool

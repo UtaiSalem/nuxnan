@@ -17,9 +17,6 @@ class AcademyDonateService
     public function createPointDonation(User $donor, Academy $academy, int $pointsAmount, array $meta, ?string $idempotencyKey): AcademyDonate
     {
         $this->guardEnabled($academy);
-        if ($donor->id === $academy->user_id) {
-            throw new DomainException('You cannot donate to your own academy.');
-        }
         if ($pointsAmount < 1) {
             throw new DomainException('Donation must be at least 1 point.');
         }
@@ -32,7 +29,7 @@ class AcademyDonateService
                 return $old;
             }
             $result = $this->ledger->donatePoints($donor, 'academy', $academy->id, $pointsAmount, 'academy_donation', $idempotencyKey, $meta);
-            $donation = AcademyDonate::create(['academy_id' => $academy->id, 'donor_id' => $donor->id, 'donor_display_name' => $meta['donor_display_name'] ?? null, 'donation_type' => AcademyDonate::TYPE_POINT, 'points_amount' => $pointsAmount, 'status' => AcademyDonate::STATUS_COMPLETED, 'purpose' => $meta['purpose'] ?? null, 'anonymous' => $meta['anonymous'] ?? false, 'metadata' => $meta, 'idempotency_key' => $idempotencyKey]);
+            $donation = AcademyDonate::create(['academy_id' => $academy->id, 'donor_id' => $donor->id, 'donor_display_name' => $meta['donor_display_name'] ?? null, 'donation_type' => AcademyDonate::TYPE_POINT, 'points_amount' => $pointsAmount, 'remaining_points' => $pointsAmount, 'status' => AcademyDonate::STATUS_COMPLETED, 'purpose' => $meta['purpose'] ?? null, 'anonymous' => $meta['anonymous'] ?? false, 'metadata' => $meta, 'idempotency_key' => $idempotencyKey]);
             $donation->update(['academy_point_transaction_id' => $result['destination_transaction_id']]);
 
             return $donation->fresh();
@@ -42,9 +39,6 @@ class AcademyDonateService
     public function createCashDonation(?User $donor, Academy $academy, float $cash, array $meta, ?string $idempotencyKey, ?UploadedFile $slip): AcademyDonate
     {
         $this->guardEnabled($academy);
-        if ($donor && $donor->id === $academy->user_id) {
-            throw new DomainException('You cannot donate to your own academy.');
-        }
         if ($cash < 1) {
             throw new DomainException('Cash donation must be at least 1.');
         }

@@ -23,7 +23,7 @@ const auth = useAuthStore()
 
 const step = ref(1)
 const type = ref<'point' | 'cash'>('point')
-const points = ref(100)
+const points = ref(props.scope === 'academy' ? 300 : 100)
 const cash = ref<number | null>(null)
 const purpose = ref('')
 const anonymous = ref(false)
@@ -43,7 +43,7 @@ const fieldErrors = ref<Record<string, string[]>>({})
 // from the users.pp column); keep `pp` as a fallback for any runtime-written value.
 const userBalance = computed(() => props.balance ?? auth.user?.points ?? auth.user?.pp ?? 0)
 
-const pointPresets = [50, 100, 300, 500, 1000, 2500]
+const pointPresets = computed(() => props.scope === 'academy' ? [300, 500, 1000, 2500, 5000] : [50, 100, 300, 500, 1000, 2500])
 const cashPresets = [50, 100, 300, 500, 1000, 2000]
 const messagePresets = [
   'ขอเป็นกำลังใจให้โรงเรียนและคณะครูครับ 💖',
@@ -61,7 +61,7 @@ const stepsList = [
 function reset() {
   step.value = 1
   type.value = 'point'
-  points.value = 100
+  points.value = props.scope === 'academy' ? 300 : 100
   cash.value = null
   purpose.value = ''
   anonymous.value = false
@@ -408,6 +408,7 @@ async function submit() {
               <span class="absolute left-4 top-1/2 -translate-y-1/2 text-2xl">💎</span>
               <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 uppercase tracking-wider">แต้ม</span>
             </div>
+                  <p v-if="scope === 'academy'" class="text-xs font-semibold text-amber-400">บริจาคเท่าไหร่ก็ได้ ระบบจะแบ่งสัดส่วนให้อัตโนมัติ</p>
 
             <!-- Quick Presets -->
             <div class="space-y-1.5">
@@ -575,6 +576,7 @@ async function submit() {
             <button
               type="button"
               class="w-2/3 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 py-3 font-bold text-white shadow-lg shadow-indigo-600/30 hover:brightness-110 active:scale-[0.99] transition"
+              :disabled="type === 'point' && points < 1"
               @click="goNextStep"
             >
               ถัดไป: ข้อความให้กำลังใจ

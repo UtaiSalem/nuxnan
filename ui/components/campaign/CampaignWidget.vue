@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useAuthStore } from '~/stores/auth'
+import CampaignCreateModal from '~/components/campaign/CampaignCreateModal.vue'
 
 type CampaignScope = 'public' | 'academy' | 'course'
 
@@ -27,6 +28,7 @@ const props = withDefaults(defineProps<{
   courseId?: number | string | null
   placement?: string
   limit?: number
+  hideWhenEmpty?: boolean
 }>(), { scope: 'public', placement: 'sidebar', limit: 5 })
 
 const api = useApi()
@@ -41,6 +43,11 @@ const isSubmitting = ref(false)
 const completedIds = new Set<number>()
 
 const scopeLabel = computed(() => ({ public: 'สาธารณะ', academy: 'โรงเรียน', course: 'รายวิชา' }[props.scope]))
+
+const showCreateModal = ref(false)
+const canCreateInline = computed(() => props.scope !== 'public' && (props.scope === 'academy' ? !!props.academyId : !!props.courseId))
+const createModalScope = computed<'academy' | 'course'>(() => props.scope === 'course' ? 'course' : 'academy')
+const createModalTargetId = computed(() => props.scope === 'course' ? (props.courseId as number | string) : (props.academyId as number | string))
 
 const campaignCreateLink = computed(() => {
   if (props.scope === 'academy' && props.academyId) {
@@ -133,14 +140,18 @@ onMounted(loadCampaigns)
 </script>
 
 <template>
-  <section class="rounded-2xl bg-white p-4 shadow-sm dark:bg-gray-800" :aria-label="`แคมเปญ${scopeLabel}`">
+  <section v-if="!props.hideWhenEmpty || isLoading || error || campaigns.length" class="rounded-2xl bg-white p-4 shadow-sm dark:bg-gray-800" :aria-label="`แคมเปญ${scopeLabel}`">
     <div class="mb-4 flex items-center justify-between">
       <div>
         <p class="text-[10px] font-bold uppercase tracking-wider text-indigo-500">{{ scopeLabel }}</p>
         <h3 class="font-bold text-gray-900 dark:text-white">โฆษณาและการสนับสนุน</h3>
       </div>
-      <NuxtLink :to="campaignCreateLink" class="text-xs text-blue-500 hover:underline">
-        {{ props.scope === 'public' ? 'ดูทั้งหมด' : 'ลงโฆษณาในพื้นที่นี้' }}
+      <button v-if="canCreateInline" type="button" class="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-300" @click="showCreateModal = true">
+        <Icon icon="heroicons:plus" class="h-3.5 w-3.5" />
+        สร้างแคมเปญ
+      </button>
+      <NuxtLink v-else :to="campaignCreateLink" class="text-xs text-blue-500 hover:underline">
+        ดูทั้งหมด
       </NuxtLink>
     </div>
 
@@ -151,9 +162,17 @@ onMounted(loadCampaigns)
       <Icon icon="fluent:error-circle-24-regular" class="mx-auto mb-2 h-7 w-7 text-red-400" />
       {{ error }}
     </div>
-    <div v-else-if="campaigns.length === 0" class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
-      <Icon icon="fluent:megaphone-off-24-regular" class="mx-auto mb-2 h-7 w-7 opacity-50" />
-      ยังไม่มีแคมเปญในพื้นที่นี้
+    <div v-else-if="campaigns.length === 0" class="rounded-xl border border-dashed border-indigo-200 bg-indigo-50/40 px-4 py-6 text-center dark:border-indigo-900/50 dark:bg-indigo-950/20">
+      <Icon icon="fluent:megaphone-off-24-regular" class="mx-auto mb-2 h-8 w-8 text-indigo-400 opacity-70" />
+      <p class="text-sm text-gray-600 dark:text-gray-300">ยังไม่มีแคมเปญในพื้นที่นี้</p>
+      <button v-if="canCreateInline" type="button" class="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700" @click="showCreateModal = true">
+        <Icon icon="heroicons:plus" class="h-4 w-4" />
+        สร้างแคมเปญแรก
+      </button>
+      <NuxtLink v-else :to="campaignCreateLink" class="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700">
+        <Icon icon="heroicons:plus" class="h-4 w-4" />
+        ดูแคมเปญทั้งหมด
+      </NuxtLink>
     </div>
     <div v-else class="space-y-3">
       <button v-for="campaign in campaigns" :key="campaign.id" type="button" class="w-full overflow-hidden rounded-xl bg-gray-50 text-left transition hover:-translate-y-0.5 hover:shadow-md dark:bg-gray-700/60" @click="openCampaign(campaign)">
@@ -168,6 +187,15 @@ onMounted(loadCampaigns)
         </div>
       </button>
     </div>
+
+    <CampaignCreateModal
+      v-if="canCreateInline"
+      v-model:visible="showCreateModal"
+      :scope-type="createModalScope"
+      :target-id="createModalTargetId"
+      :academy-id="props.scope === 'course' ? (props.academyId ?? null) : null"
+      @created="loadCampaigns"
+    />
 
     <div v-if="selected" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" @click.self="selected = null">
       <div class="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-gray-800">

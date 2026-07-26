@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import SupportDonationModal from './SupportDonationModal.vue'
-defineProps<{ visible: boolean; academyId: number; academyName: string; academyOwnerId: number }>()
+defineProps<{ visible: boolean; academyId: number; academyName: string }>()
 defineEmits<{ 'update:visible': [boolean]; donated: [unknown] }>()
 </script>
 <template>

@@ -2,14 +2,14 @@
 
 namespace App\Http\Requests\AcademyDonate;
 
+use App\Policies\AcademyDonatePolicy;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Gate;
 
 class StoreCashDonationRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return Gate::allows('donate', $this->route('academy'));
+        return app(AcademyDonatePolicy::class)->donate($this->user(), $this->route('academy'));
     }
 
     public function rules(): array
