@@ -54,7 +54,7 @@ class AcademyPostCommentController extends Controller
         try {
             $validatedData = $request->validate([
                 'content' => 'nullable|string',
-            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
                 'parent_comment_id' => 'nullable|exists:academy_post_comments,id',
             ]);
 

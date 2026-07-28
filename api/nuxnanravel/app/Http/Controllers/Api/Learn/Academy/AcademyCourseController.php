@@ -7,6 +7,7 @@ use App\Http\Resources\Learn\Academy\AcademyResource;
 use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Models\Academy;
 use App\Models\Course;
+use App\Models\CourseMember;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -164,7 +165,7 @@ class AcademyCourseController extends Controller
                 'per_page' => $courses->perPage(),
                 'total' => $courses->total(),
             ],
-            'available_filters' => $this->buildAvailableFilters($academy),
+            'available_filters' => $this->buildAvailableFilters($academy, $authUser),
         ];
 
         if ($includeSuccess) {
@@ -186,6 +187,18 @@ class AcademyCourseController extends Controller
     {
         $authUser = auth()->guard('api')->user() ?? auth()->user();
 
+        // Auto-apply current term if requested and not explicitly provided
+        if ($request->boolean('use_current_term') && $request->isNotFilled('academic_year') && $request->isNotFilled('semester')) {
+            $currentYear = $academy->academicYears()->where('is_current', true)->first();
+            if ($currentYear) {
+                $request->merge(['academic_year' => $currentYear->name]);
+                $currentSemester = $currentYear->semesters()->where('is_current', true)->first();
+                if ($currentSemester) {
+                    $request->merge(['semester' => (string) $currentSemester->semester_number]);
+                }
+            }
+        }
+
         $query = $academy->courses()
             ->with([
                 'user',
@@ -202,6 +215,20 @@ class AcademyCourseController extends Controller
             ])
             ->withCount(['courseLessons', 'courseMembers'])
             ->latest();
+
+        if ($request->filled('scope') && $authUser && $request->input('scope') !== 'all') {
+            match ($request->input('scope')) {
+                'learning' => $query->whereHas('courseMembers', fn ($q) => $q->where('user_id', $authUser->id)->where('role', 'student')
+                ),
+                'owned' => $query->where(function ($q) use ($authUser) {
+                    $q->where('user_id', $authUser->id)
+                        ->orWhereHas('courseMembers', fn ($cm) => $cm->where('user_id', $authUser->id)
+                            ->whereIn('role', ['teacher', 'co_teacher'])
+                        );
+                }),
+                default => null,
+            };
+        }
 
         if ($request->filled('education_level') && $request->input('education_level') !== 'all') {
             $query->where('education_level', $request->input('education_level'));
@@ -262,7 +289,68 @@ class AcademyCourseController extends Controller
         return $query;
     }
 
-    protected function buildAvailableFilters(Academy $academy): array
+    protected function resolveSuggestedScope(Academy $academy, $authUser): string
+    {
+        if (! $authUser) {
+            return 'all';
+        }
+
+        $isTeacherOrAdmin = ($academy->user_id === $authUser->id)
+            || $academy->members()->where('user_id', $authUser->id)->whereIn('role', ['owner', 'admin', 'teacher'])->exists()
+            || CourseMember::where('user_id', $authUser->id)
+                ->whereIn('role', ['teacher', 'co_teacher'])
+                ->whereHas('course', fn ($q) => $q->where('academy_id', $academy->id))
+                ->exists();
+
+        if ($isTeacherOrAdmin) {
+            return 'owned';
+        }
+
+        $isStudent = CourseMember::where('user_id', $authUser->id)
+            ->where('role', 'student')
+            ->whereHas('course', fn ($q) => $q->where('academy_id', $academy->id))
+            ->exists();
+
+        if ($isStudent) {
+            return 'learning';
+        }
+
+        return 'all';
+    }
+
+    protected function resolveScopeCounts(Academy $academy, $authUser): array
+    {
+        $allCount = $academy->courses()->count();
+
+        if (! $authUser) {
+            return [
+                'all' => $allCount,
+                'learning' => 0,
+                'owned' => 0,
+            ];
+        }
+
+        $learningCount = $academy->courses()
+            ->whereHas('courseMembers', fn ($q) => $q->where('user_id', $authUser->id)->where('role', 'student'))
+            ->count();
+
+        $ownedCount = $academy->courses()
+            ->where(function ($q) use ($authUser) {
+                $q->where('user_id', $authUser->id)
+                    ->orWhereHas('courseMembers', fn ($cm) => $cm->where('user_id', $authUser->id)
+                        ->whereIn('role', ['teacher', 'co_teacher'])
+                    );
+            })
+            ->count();
+
+        return [
+            'all' => $allCount,
+            'learning' => $learningCount,
+            'owned' => $ownedCount,
+        ];
+    }
+
+    protected function buildAvailableFilters(Academy $academy, $authUser = null): array
     {
         $baseQuery = Course::query()->where('academy_id', $academy->id);
 
@@ -345,11 +433,20 @@ class AcademyCourseController extends Controller
             })
             ->values();
 
+        $currentYear = $academy->academicYears()->where('is_current', true)->first();
+        $currentSemester = $currentYear ? $currentYear->semesters()->where('is_current', true)->first() : null;
+
         return [
             'education_levels' => $educationLevels,
             'education_years' => $educationYears,
             'semesters' => $semesters,
             'academic_years' => $academicYears,
+            'current_term' => $currentYear ? [
+                'academic_year' => $currentYear->name,
+                'semester' => $currentSemester ? (string) $currentSemester->semester_number : null,
+            ] : null,
+            'suggested_scope' => $this->resolveSuggestedScope($academy, $authUser),
+            'scope_counts' => $this->resolveScopeCounts($academy, $authUser),
         ];
     }
 }

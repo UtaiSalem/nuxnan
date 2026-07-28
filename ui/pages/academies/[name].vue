@@ -44,12 +44,14 @@ async function handleAcademyClaimed() {
 }
 const courses = ref<any[]>([])
 const courseFilters = ref({
+  scope: '',
   education_level: '',
   education_year: '',
   semester: '',
   academic_year: '',
   search: '',
 })
+const courseScopeInitialized = ref(false)
 const courseAvailableFilters = ref<any>(null)
 const selectedGroupTab = ref('all')
 const expandedCourseGroups = ref<Record<string, boolean>>({})
@@ -62,6 +64,9 @@ const shortenGroupLabel = (label: string): string => {
     .replace(/^ปวส\. ปี (\d+)$/, 'ปวส.$1')
     .replace(/^ยังไม่ระบุกลุ่มนักเรียน$/, 'ไม่ระบุ')
 }
+
+const { groupCourses } = useCourseGrouping()
+const groupedCourses = computed(() => groupCourses(courses.value))
 
 const courseGroupTabs = computed(() => [
   { key: 'all', label: 'ทั้งหมด', count: courses.value.length },
@@ -239,12 +244,19 @@ const heroStats = computed(() => {
   ].filter((item) => item.value !== null)
 })
 
-const { groupCourses } = useCourseGrouping()
-
-const groupedCourses = computed(() => groupCourses(courses.value))
-
 const hasActiveCourseFilters = computed(() => {
-  return Object.values(courseFilters.value).some((value) => String(value || '').trim().length > 0)
+  const defaultScope = courseAvailableFilters.value?.suggested_scope || ''
+  const defaultYear = courseAvailableFilters.value?.current_term?.academic_year || ''
+  const defaultSemester = courseAvailableFilters.value?.current_term?.semester || ''
+
+  return Boolean(
+    courseFilters.value.education_level ||
+    courseFilters.value.education_year ||
+    courseFilters.value.search.trim() ||
+    (courseFilters.value.scope && courseFilters.value.scope !== defaultScope) ||
+    (courseFilters.value.academic_year && courseFilters.value.academic_year !== defaultYear) ||
+    (courseFilters.value.semester && courseFilters.value.semester !== defaultSemester),
+  )
 })
 
 const getTabCount = (tabId: string) => {
@@ -390,6 +402,11 @@ const fetchAcademy = async () => {
   }
 }
 
+const setScope = async (newScope: string) => {
+  courseFilters.value.scope = newScope
+  await fetchCourses()
+}
+
 const fetchCourses = async () => {
   if (!academy.value) return
   
@@ -399,6 +416,11 @@ const fetchCourses = async () => {
       per_page: '100',
     })
 
+    if (!courseScopeInitialized.value) {
+      params.set('use_current_term', '1')
+    }
+
+    if (courseFilters.value.scope) params.set('scope', courseFilters.value.scope)
     if (courseFilters.value.education_level) params.set('education_level', courseFilters.value.education_level)
     if (courseFilters.value.education_year) params.set('education_year', courseFilters.value.education_year)
     if (courseFilters.value.semester) params.set('semester', courseFilters.value.semester)
@@ -410,6 +432,28 @@ const fetchCourses = async () => {
       const rawCourses = response.courses?.data || response.courses || []
       courses.value = JSON.parse(JSON.stringify(rawCourses))
       courseAvailableFilters.value = JSON.parse(JSON.stringify(response.available_filters || null))
+
+      if (!courseScopeInitialized.value && courseAvailableFilters.value) {
+        const suggested = courseAvailableFilters.value.suggested_scope || ''
+        if (suggested) {
+          courseFilters.value.scope = suggested
+        }
+        if (courseAvailableFilters.value.current_term) {
+          if (courseAvailableFilters.value.current_term.academic_year) {
+            courseFilters.value.academic_year = courseAvailableFilters.value.current_term.academic_year
+          }
+          if (courseAvailableFilters.value.current_term.semester) {
+            courseFilters.value.semester = courseAvailableFilters.value.current_term.semester
+          }
+        }
+        courseScopeInitialized.value = true
+
+        // Re-fetch so displayed courses match the auto-selected scope tab
+        if (suggested && suggested !== 'all') {
+          await fetchCourses()
+          return
+        }
+      }
     }
   } catch (err) {
     console.error('Failed to fetch courses:', err)
@@ -428,10 +472,11 @@ const toggleCourseGroup = (groupKey: string) => {
 const resetCourseFilters = async () => {
   selectedGroupTab.value = 'all'
   courseFilters.value = {
+    scope: courseAvailableFilters.value?.suggested_scope || 'all',
     education_level: '',
     education_year: '',
-    semester: '',
-    academic_year: '',
+    semester: courseAvailableFilters.value?.current_term?.semester || '',
+    academic_year: courseAvailableFilters.value?.current_term?.academic_year || '',
     search: '',
   }
 
@@ -1426,8 +1471,40 @@ watch(() => academy.value?.id, (id) => {
                 </NuxtLink>
               </div>
 
+              <!-- Scope Tabs -->
+              <div v-if="courseScopeInitialized" class="flex flex-wrap items-center gap-2 px-3 pt-3 md:px-4">
+                <button
+                  v-if="courseAvailableFilters?.suggested_scope === 'learning' || (courseAvailableFilters?.scope_counts?.learning ?? 0) > 0"
+                  type="button"
+                  :class="['px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-1.5', courseFilters.scope === 'learning' ? 'bg-vikinger-purple text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-vikinger-dark-100 dark:text-slate-300 dark:hover:bg-vikinger-dark-300']"
+                  @click="setScope('learning')"
+                >
+                  <Icon icon="fluent:hat-graduation-24-regular" class="w-4 h-4" />
+                  กำลังเรียน ({{ courseAvailableFilters?.scope_counts?.learning ?? 0 }})
+                </button>
+
+                <button
+                  v-if="courseAvailableFilters?.suggested_scope === 'owned' || (courseAvailableFilters?.scope_counts?.owned ?? 0) > 0"
+                  type="button"
+                  :class="['px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-1.5', courseFilters.scope === 'owned' ? 'bg-vikinger-purple text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-vikinger-dark-100 dark:text-slate-300 dark:hover:bg-vikinger-dark-300']"
+                  @click="setScope('owned')"
+                >
+                  <Icon icon="fluent:briefcase-24-regular" class="w-4 h-4" />
+                  ที่ฉันสอน ({{ courseAvailableFilters?.scope_counts?.owned ?? 0 }})
+                </button>
+
+                <button
+                  type="button"
+                  :class="['px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-1.5', courseFilters.scope === 'all' ? 'bg-vikinger-purple text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-vikinger-dark-100 dark:text-slate-300 dark:hover:bg-vikinger-dark-300']"
+                  @click="setScope('all')"
+                >
+                  <Icon icon="fluent:grid-24-regular" class="w-4 h-4" />
+                  ทั้งหมด ({{ courseAvailableFilters?.scope_counts?.all ?? 0 }})
+                </button>
+              </div>
+
               <!-- Divider -->
-              <div class="mx-3 border-t border-slate-100 dark:border-gray-700 md:mx-4" />
+              <div class="mx-3 border-t border-slate-100 dark:border-gray-700 md:mx-4 mt-3" />
 
               <!-- Secondary filters -->
               <div class="flex flex-wrap items-center gap-2 p-3 md:p-4">

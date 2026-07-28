@@ -560,7 +560,7 @@ class CourseController extends Controller
                 'saleable' => 'nullable|boolean',
                 'price' => 'nullable|numeric|min:0',
                 'status' => 'nullable|string',
-            'cover' => 'nullable|image|mimes:jpg,jpeg,png,gif|max:4096',
+                'cover' => 'nullable|image|mimes:jpg,jpeg,png,gif|max:4096',
             ]);
 
             if ($request->file('cover')) {

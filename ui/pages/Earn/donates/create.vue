@@ -36,8 +36,8 @@ const isManualOverride = ref(false)
 // Payment method: 'slip' | 'wallet' | 'points'
 const paymentMethod = ref<'slip' | 'wallet' | 'points'>('slip')
 
-// คำนวณแต้มที่ต้องใช้ (อัตรา 1 บาท = 100 แต้ม)
-const pointsRequired = computed(() => totalMoneySupport.value * 100)
+// คำนวณแต้มที่ต้องใช้ (อัตรา 1 บาท = 1,080 แต้ม)
+const pointsRequired = computed(() => totalMoneySupport.value * 1080)
 
 // Name search state
 const searchQuery = ref('')
@@ -848,7 +848,7 @@ watch(() => authStore.user, (user) => {
               <div v-if="paymentMethod === 'points'" class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-3">
                 <p class="text-sm text-purple-700 dark:text-purple-300">
                   <Icon icon="mdi:information" class="w-4 h-4 inline mr-1" />
-                  ต้องใช้ <span class="font-bold">{{ pointsRequired.toLocaleString() }}</span> แต้ม (อัตรา 1 บาท = 100 แต้ม)
+                  ต้องใช้ <span class="font-bold">{{ pointsRequired.toLocaleString() }}</span> แต้ม (อัตรา 1 บาท = 1,080 แต้ม)
                 </p>
               </div>
             </div>

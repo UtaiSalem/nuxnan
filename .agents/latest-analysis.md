@@ -4276,3 +4276,24 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 - Added supporter purpose text to the academy receive modal so the donor's encouragement is visible during the 10-second receive flow.
 - Audited campaign surfaces: academy Revenue already uses the shared `CampaignWidget`; course shell also uses the same widget. Course sidebar now hides the campaign card when no campaigns exist while retaining its scoped create action.
 - Hardened campaign authorization: academy campaign creation now requires academy admin ownership; course campaign creation now requires course admin ownership and academy/course scope consistency. This closes the prior gap where any authenticated user could create scoped campaigns.
+
+---
+
+# 2026-07-28 - Final Locked Specification: Academy Course Scope Filters & Term Auto-Apply
+
+- **Status:** Locked & Specified for Codex Task Execution
+- **Task Specification File:** [codex_task_spec_course_filters.md](file:///C:/Users/Bhupha/.gemini/antigravity-cli/brain/5bdf8174-2500-4ae1-8523-bbc43b064755/codex_task_spec_course_filters.md)
+- **Pre-Verified Key Facts:**
+  1. `AcademicYear` table/model uses column `name` for year string (e.g. `"2567"`) and `is_current` (boolean). Semesters relation uses `semester_number` (string/integer).
+  2. `CourseMember` model uses `role` column with string values `'student'`, `'teacher'`, `'co_teacher'`.
+  3. `Course` model uses `user_id` as creator/owner.
+- **Backend Summary (`AcademyCourseController.php`):**
+  - `buildAvailableFilters()`: Add `current_term` (`academic_year`, `semester`), `suggested_scope` (`'owned'|'learning'|'all'`), and `scope_counts` (`{learning: n, owned: n, all: n}`).
+  - `resolveSuggestedScope()`: Assign `'owned'` for academy owners/admins or teachers/co-teachers; `'learning'` for enrolled students; default `'all'`.
+  - `buildCourseQuery()`: Add scope matching (`'learning'` -> `courseMembers.role = student`, `'owned'` -> creator `user_id` or `courseMembers.role` in `teacher,co_teacher`). Auto-apply `current_term` filters when `use_current_term=1` is requested and no explicit year/semester filters are provided.
+- **Frontend Summary (`ui/pages/academies/[name].vue`):**
+  - Ref `courseFilters` initialized with `scope: ''`.
+  - Initial `fetchCourses()` passes `use_current_term=1`. On response, set `courseFilters.scope = suggested_scope`, `academic_year/semester = current_term.*`, mark `courseScopeInitialized = true` without re-fetching.
+  - UI Scope Tabs rendered above filter row: `[ กำลังเรียน (n) ] [ ที่ฉันสอน (n) ] [ ทั้งหมด (n) ]`. Hide teacher tab for non-teachers/admins.
+  - `resetCourseFilters()` maintains `scope = suggested_scope` and `academic_year/semester = current_term.*`.
+

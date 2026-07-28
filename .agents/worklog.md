@@ -1,5 +1,31 @@
 # Work Log — nuxnan project
 
+## 2026-07-28 — สรุปแผน final (locked) สำหรับ Codex Implement: Academy Course Scope Filters & Term Auto-Apply
+
+### สถานะ: สรุปแผน ล็อก Schema + Method Signature + UI Contract พร้อมส่ง Codex
+
+- **Task Spec File:** [codex_task_spec_course_filters.md](file:///C:/Users/Bhupha/.gemini/antigravity-cli/brain/5bdf8174-2500-4ae1-8523-bbc43b064755/codex_task_spec_course_filters.md)
+- **ไฟล์เป้าหมายที่จะแก้ไข:**
+  - Backend: [AcademyCourseController.php](file:///C:/wamp64/www/nuxnan/api/nuxnanravel/app/Http/Controllers/Api/Learn/Academy/AcademyCourseController.php)
+  - Frontend: [ui/pages/academies/[name].vue](file:///C:/wamp64/www/nuxnan/ui/pages/academies/%5Bname%5D.vue)
+- **ผลการตรวจ Verification Facts จาก DB Models จริง:**
+  1. `AcademicYear`: ใช้คอลัมน์ `name` สำหรับเก็บข้อความปีการศึกษา (เช่น `"2567"`), ใช้ `is_current` (boolean) ในการระบุปีปัจจุบัน, และ `semesters()` ใช้ `semester_number` ( string/integer )
+  2. `CourseMember`: คอลัมน์ `role` มีค่า `'student'`, `'teacher'`, `'co_teacher'`
+  3. `Course`: เจ้าของคอร์ส/ผู้สร้างใช้คอลัมน์ `user_id`
+- **สรุปสิ่งที่ Codex ต้องลงมือทำ:**
+  - **Backend:** 
+    1. ปรับ `buildAvailableFilters()` คืน `current_term`, `suggested_scope`, และ `scope_counts` (`learning`, `owned`, `all`)
+    2. เพิ่ม `resolveSuggestedScope()` คืน `'owned'` (แอดมิน/ครูผู้สอน), `'learning'` (ผู้เรียน), หรือ `'all'`
+    3. ปรับ `buildCourseQuery()` รองรับ `use_current_term=1` ( auto-apply `academic_year` / `semester` หาก frontend ไม่ได้ส่งมา ) และรองรับ `scope` (`learning`, `owned`, `all`)
+  - **Frontend:**
+    1. State `courseFilters.scope` เริ่มต้นเป็น `''` (ยังไม่ initialize)
+    2. `fetchCourses()` ส่ง `use_current_term: 1` ในครั้งแรก หลังได้ response เซ็ต `courseFilters.scope = suggested_scope`, `academic_year/semester = current_term.*` แล้วมาร์ก `courseScopeInitialized = true` (ไม่ re-fetch ซ้ำ)
+    3. แสดง UI Scope Tabs เหนือ filter row: `[ กำลังเรียน (n) ] [ ที่ฉันสอน (n) ] [ ทั้งหมด (n) ]` (ซ่อน tab "ที่ฉันสอน" สำหรับผู้เรียนทั่วไป)
+    4. `resetCourseFilters()` คง `scope` ตาม `suggested_scope` และคง `academic_year/semester` ตาม `current_term`
+
+---
+
+
 ## 2026-07-21 — ปรับปรุงการแจ้งเตือนการยกเลิกคำขอถอนเงินของสมาชิก (Modern Alert & Push)
 
 ### สถานะ: เสร็จสิ้น + commit และ push แล้ว (`a34aca17` -> `origin/main`)

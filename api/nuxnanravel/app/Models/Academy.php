@@ -125,6 +125,11 @@ class Academy extends Model
         return $this->hasMany(Course::class);
     }
 
+    public function academicYears(): HasMany
+    {
+        return $this->hasMany(AcademicYear::class);
+    }
+
     public function academyGroups(): HasMany
     {
         return $this->hasMany(AcademyGroup::class)->orderBy('sort_order')->orderBy('id');
