@@ -357,27 +357,27 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // ============================================
     // Department Management Routes (ฝ่ายงาน)
     // ============================================
-    Route::prefix('{academy}/departments')->group(function () {
+    Route::prefix('{academy}/departments')->middleware('academy.permission:groups.view')->group(function () {
         Route::get('/', [DepartmentController::class, 'index'])->name('api.academy.departments.index');
-        Route::post('/', [DepartmentController::class, 'store'])->name('api.academy.departments.store');
+        Route::post('/', [DepartmentController::class, 'store'])->middleware('academy.permission:groups.manage')->name('api.academy.departments.store');
         Route::get('template', [DepartmentController::class, 'getTemplate'])->name('api.academy.departments.template');
-        Route::post('setup', [DepartmentController::class, 'setupDepartments'])->name('api.academy.departments.setup');
+        Route::post('setup', [DepartmentController::class, 'setupDepartments'])->middleware('academy.permission:groups.manage')->name('api.academy.departments.setup');
         Route::get('statistics', [DepartmentController::class, 'getStatistics'])->name('api.academy.departments.statistics');
     });
 
-    Route::prefix('{academy}/departments/{department}')->group(function () {
+    Route::prefix('{academy}/departments/{department}')->middleware('academy.permission:groups.view')->group(function () {
         Route::get('/', [DepartmentController::class, 'show'])->name('api.academy.departments.show');
-        Route::patch('/', [DepartmentController::class, 'update'])->name('api.academy.departments.update');
-        Route::delete('/', [DepartmentController::class, 'destroy'])->name('api.academy.departments.destroy');
+        Route::patch('/', [DepartmentController::class, 'update'])->middleware('academy.permission:groups.manage')->name('api.academy.departments.update');
+        Route::delete('/', [DepartmentController::class, 'destroy'])->middleware('academy.permission:groups.manage')->name('api.academy.departments.destroy');
         Route::get('members', [DepartmentController::class, 'getMembers'])->name('api.academy.departments.members');
-        Route::post('members', [DepartmentController::class, 'addMember'])->name('api.academy.departments.members.add');
-        Route::post('members/bulk', [DepartmentController::class, 'bulkAddMembers'])->name('api.academy.departments.members.bulk');
-        Route::delete('members', [DepartmentController::class, 'removeMember'])->name('api.academy.departments.members.remove');
-        Route::patch('members/role', [DepartmentController::class, 'updateMemberRole'])->name('api.academy.departments.members.updateRole');
+        Route::post('members', [DepartmentController::class, 'addMember'])->middleware('academy.permission:groups.manage')->name('api.academy.departments.members.add');
+        Route::post('members/bulk', [DepartmentController::class, 'bulkAddMembers'])->middleware('academy.permission:groups.manage')->name('api.academy.departments.members.bulk');
+        Route::delete('members', [DepartmentController::class, 'removeMember'])->middleware('academy.permission:groups.manage')->name('api.academy.departments.members.remove');
+        Route::patch('members/role', [DepartmentController::class, 'updateMemberRole'])->middleware('academy.permission:groups.manage')->name('api.academy.departments.members.updateRole');
 
         // Permission management
         Route::get('permissions', [AcademyGroupPermissionController::class, 'index'])->name('api.academy.departments.permissions.index');
-        Route::put('permissions', [AcademyGroupPermissionController::class, 'update'])->name('api.academy.departments.permissions.update');
+        Route::put('permissions', [AcademyGroupPermissionController::class, 'update'])->middleware('academy.permission:groups.manage')->name('api.academy.departments.permissions.update');
     });
 
     // ============================================

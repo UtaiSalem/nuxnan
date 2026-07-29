@@ -30,9 +30,12 @@ class DepartmentController extends Controller
     }
 
     /**
-     * Ensure the department has the required permission enabled
+     * Ensure the department feature flag is enabled.
+     *
+     * This only checks per-department feature enablement and defaults to enabled
+     * when no permission row exists. User authorization is enforced by route middleware.
      */
-    protected function checkPermission(AcademyGroup $department, string $permissionKey): void
+    protected function ensureDepartmentFeatureEnabled(AcademyGroup $department, string $permissionKey): void
     {
         if (! $this->permissionService->hasPermission($department, $permissionKey)) {
             abort(response()->json([
@@ -161,7 +164,7 @@ class DepartmentController extends Controller
             return $response;
         }
 
-        $this->checkPermission($department, 'departments.view');
+        $this->ensureDepartmentFeatureEnabled($department, 'departments.view');
 
         $department->load(['members:id,name,email,profile_photo_path', 'academy:id,name']);
         $department->loadCount('members');
@@ -193,7 +196,7 @@ class DepartmentController extends Controller
             return $response;
         }
 
-        $this->checkPermission($department, 'departments.manage');
+        $this->ensureDepartmentFeatureEnabled($department, 'departments.manage');
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
@@ -236,7 +239,7 @@ class DepartmentController extends Controller
             return $response;
         }
 
-        $this->checkPermission($department, 'departments.manage');
+        $this->ensureDepartmentFeatureEnabled($department, 'departments.manage');
 
         $membersCount = $department->members()->count();
 
@@ -264,7 +267,7 @@ class DepartmentController extends Controller
             return $response;
         }
 
-        $this->checkPermission($department, 'departments.manage-members');
+        $this->ensureDepartmentFeatureEnabled($department, 'departments.manage-members');
 
         $query = $department->members()
             ->select('users.id', 'users.name', 'users.email', 'users.profile_photo_path')
@@ -314,7 +317,7 @@ class DepartmentController extends Controller
             return $response;
         }
 
-        $this->checkPermission($department, 'departments.manage-members');
+        $this->ensureDepartmentFeatureEnabled($department, 'departments.manage-members');
 
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
@@ -348,7 +351,7 @@ class DepartmentController extends Controller
             return $response;
         }
 
-        $this->checkPermission($department, 'departments.manage-members');
+        $this->ensureDepartmentFeatureEnabled($department, 'departments.manage-members');
 
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
@@ -371,7 +374,7 @@ class DepartmentController extends Controller
             return $response;
         }
 
-        $this->checkPermission($department, 'departments.manage-members');
+        $this->ensureDepartmentFeatureEnabled($department, 'departments.manage-members');
 
         $validated = $request->validate([
             'user_ids' => 'required|array|min:1',
