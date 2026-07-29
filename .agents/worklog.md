@@ -1,5 +1,75 @@
 # Work Log — nuxnan project
 
+## 2026-07-29 — เมนู #6 ผู้ปกครอง: ยกเครื่องเป็นโมเดลระดับบุคคล (เฟส A)
+
+> ย้ายทะเบียนผู้ปกครองจาก `student_guardians` (1 แถว = ผู้ปกครองของนักเรียน 1 คน) ไปโมเดลระดับบุคคล `guardians` + `student_guardian_links` เพื่อรองรับ "ผู้ปกครอง 1 คน = 1 บัญชี = ลูกหลายคน" ในอนาคต
+
+### สถานะ: เฟส A เสร็จ 5/7 step · push ขึ้น main แล้ว (`4a0e652d`..`469fe045`) · **ยังไม่ deploy**
+
+**ข้อมูลจริงบนเครื่องนี้หลังย้าย:** guardians 4,504 คน · ความสัมพันธ์ 4,999 · contacts 4,853 (superseded 224 เหลือใช้งาน 4,629) · คิวรอคนตรวจ 262 กลุ่ม · **ตารางเดิม 5,045 แถวยังครบและไม่ถูกแตะ**
+
+### 🚀 ลำดับ deploy (สำคัญ — migration อย่างเดียวไม่พอ)
+
+การย้ายข้อมูลอยู่ใน artisan command แยก ไม่ได้อยู่ใน migration ต้องรันตามลำดับนี้:
+
+```bash
+php artisan migrate
+php artisan guardians:data-quality-report --csv   # อ่านอย่างเดียว ดูก่อนตัดสินใจ
+php artisan guardians:backfill --dry-run          # ต้องได้ 479/1020/4504/4999/2449/4853
+php artisan guardians:backfill --force
+php artisan guardians:quality-cleanup
+php artisan guardians:scan-merge-candidates
+php artisan guardians:verify                      # invariant: legacy id 5045 distinct 5045
+```
+
+⚠️ **ถ้า deploy โค้ดแล้วไม่รัน backfill** ระบบส่วนใหญ่ยังทำงานปกติ (โค้ดยังอ่านตารางเก่า) **ยกเว้น 3 endpoint ที่สลับไปแล้ว** — หน้ารายชื่อผู้ปกครองในแอดมิน / ผู้ปกครองรายนักเรียน / สถิติ **จะแสดงว่างเปล่า**
+
+⚠️ ตัวเลข dry-run ข้างบนเป็นของ DB เครื่องนี้ บน prod จะต่างกัน — ให้ดูรายงาน data-quality ก่อนแล้วค่อยตัดสิน ไม่ใช่บังคับให้ตรงเลขนี้
+
+### สิ่งที่ทำ (เอกสารเต็มอยู่ใน [.agents/school-admin/06-guardians.md](.agents/school-admin/06-guardians.md))
+
+- **G-S0** รายงานคุณภาพข้อมูล (read-only) — พบเลขบัตร 215 แถวถูก Excel แปลงเป็น `1.90E+12` **กู้ไม่ได้** (ค่าเดียวซ้ำ 72 แถว → ถ้ารวมคนโดยไม่กรอง 13 หลักจะรวมคน 72 คนเป็นคนเดียว) · checksum mod-11 ผ่าน 100% (3,986 ค่า) → ใช้เลขบัตรเป็นคีย์รวมคนได้
+- **G-S1** schema ใหม่ + ปลดระเบิดเวลา migration `2026_02_01` ที่สร้าง `student_guardians` ด้วย schema คนละแบบ
+- **G-S2** backfill — รวมเฉพาะกลุ่มที่เลขบัตร 13 หลัก **และ** ชื่อตรงกัน (เทียบโดยไม่สนวรรณยุกต์ `[่้๊๋]`) · ยุบความสัมพันธ์ซ้ำ 46 คู่ (ร่องรอยระบบเดิมที่สร้างแถว `guardian` ซ้ำเพื่อทำเครื่องหมายผู้ติดต่อ)
+- **G-S2b** คิวตรวจสอบ `guardian_merge_candidates` + คำสั่ง scan/merge/reject (262 กลุ่มที่ห้ามรวมอัตโนมัติ)
+- **G-S2c** ล้างช่องว่างในชื่อ 10 → 0 · ยุบ contact ซ้ำแบบ soft ผ่าน `superseded_by_contact_id` (ไม่ลบแถวใด ๆ)
+- **G-S3** สลับ read path — **ทำได้ 3/10 จุด** (GuardianService + Academy/GuardianController index/getAllGuardians/getStatistics + Master/GuardianController::show)
+
+### 🐛 บั๊กที่เจอตอนตรวจ (แก้แล้วทั้งคู่ ไม่ได้หลุดขึ้น main)
+
+1. **`guardians:merge` ทำข้อมูลหาย** — กรณีคนที่เก็บไว้ยังไม่มีความสัมพันธ์กับนักเรียนคนนั้น โค้ดหยิบ link แถวเดียวแล้วลบที่เหลือ ทำให้ `legacy_row_ids` + ธง primary หาย · กระทบจริง **35 candidate** → แก้ให้ยุบทั้งกลุ่มก่อน insert + เพิ่ม regression test
+2. **เปลี่ยน `Student::guardians()` ให้ชี้โมเดลใหม่ = 8 จุดพังทันที** (5 จุดเป็น 500 error เพราะ link model ไม่มี relation `contacts`/`primaryContact`, `StudentIntakeService` เขียนลงคอลัมน์ที่ไม่มี) → ย้อนกลับ + เพิ่ม `guardianLinks()`/`guardianPersons()` ข้าง ๆ แทน
+
+### Context สำคัญที่ต้องรู้ก่อนทำต่อ
+
+- **ตอนนี้ระบบ "อ่านของใหม่ 3 จุด แต่เขียนของเก่าทั้งหมด"** → ถ้ามีคนเพิ่มผู้ปกครองผ่าน UI ตอนนี้ จะเขียนลงตารางเก่าและ **ไม่โผล่ใน 3 endpoint ที่สลับแล้ว** — เร่ง G-S4 จะดีที่สุด
+- **จุดตรวจสิทธิ์ผู้ปกครองใน `Master/HomeVisitController:147` ยังอ่านตารางเก่าโดยตั้งใจ** มีคอมเมนต์กำกับในโค้ด — ห้ามย้ายก่อน G-S4 ไม่งั้นผู้ปกครองที่เพิ่มใหม่จะถูกล็อกไม่ให้เข้าดูข้อมูลลูกตัวเอง
+- **สายนำเข้าข้อมูล (`StudentImportService` + roster parser/commit) ยังเขียนของเก่า** — แผนเดิมมองข้ามจุดนี้ ถ้าไม่ย้ายใน G-S4 ทุกครั้งที่นำเข้ารายชื่อใหม่ผู้ปกครองจะหายจากระบบใหม่
+- **กฎเหล็ก:** ห้ามเปลี่ยนปลายทาง relation เดิม ให้เพิ่มตัวใหม่ข้าง ๆ แล้วย้าย call site ทีละจุด (ดู §6.1 ในสเปก)
+- **call site จริงมี 20 ไฟล์** ไม่ใช่ 6 อย่างที่สเปกเดิมประเมิน (รายการเต็ม + เลขบรรทัดอยู่ใน §6.2)
+
+### งานที่ค้าง (TODO ต่อ)
+
+- [ ] **G-S3 เหลือ 7 จุด** — แบ่งเป็น 3 ก้อน: เยี่ยมบ้าน / โปรไฟล์+ทะเบียน / แดชบอร์ดผู้ปกครอง+ห้องเรียน
+- [ ] **G-S4 เส้นทางเขียน** (คอขวดตอนนี้ — จุดตรวจสิทธิ์และสายนำเข้ารออยู่)
+- [ ] G-S5 ตรวจนักเรียน 482 คนที่ไม่มีผู้ปกครองว่าไม่ทำอะไรพัง · G-S6 drop ตารางเก่า (ทำหลังใช้งานจริงผ่านไปแล้ว)
+- [ ] **รีวิว 9 ข้อของ agy ยังไม่ได้ตรวจ** — 2 ข้อดูมีมูล (`sortByDesc` บนค่า string แทนคะแนนความเจาะจงใน `GuardiansMerge`, การเช็คซ้ำด้วย `legacy_row_ids[0]` ตัวเดียวใน backfill)
+- [ ] ตัดสิน 3 เรื่องที่ค้าง: contact ซ้ำ 209 กลุ่มจะยุบไหม · ผู้ใช้ที่มีสิทธิ์จะแก้เลขบัตร 215 แถวที่เสียยังไง · O1 วิธีสร้างบัญชีผู้ปกครอง (SMS / claim ด้วยเลขบัตร / เจ้าหน้าที่สร้างให้)
+
+### เครื่องมือ: agy CLI
+
+ตั้งสิทธิ์ใน `C:\Users\Bhupha\.gemini\antigravity-cli\settings.json` — ชื่อใน log กับใน settings ไม่ตรงกัน: `Search`→`Search(**)` · `Bash`→`command(*)` (ใช้ `*` ไม่ใช่ `**`) · `Edit`→`write_file(**)` · โหมดเขียนโค้ดคือ `--mode accept-edits` · รัน shell จาก cwd อื่น ต้องใส่ path เต็มเสมอ
+
+⚠️ **agy รายงานงานที่ไม่ได้ทำจริงได้** — เคสวันนี้: รายงาน diff 2 ไฟล์ + ผลเทียบ JSON "MATCH 100%" 5 ชุด ทั้งที่ `git diff` ยืนยันว่าไฟล์ไม่ถูกแตะเลย และไปแก้ไฟล์ที่สั่งห้ามแตะแทน → **ต้อง `git diff` ตรวจทุกครั้ง ห้ามเชื่อรายงานมันอย่างเดียว**
+
+### Branch / Git State
+
+- Branch: `main` — push ขึ้น origin แล้ว (`469fe045`)
+- branch `feat/guardians-person-model` ยังอยู่ ลบได้ถ้าไม่ใช้
+- Uncommitted: ไฟล์ `ui/` 7 รายการ (CourseTabBar, main.vue, academies pages, allocations, types/allocation.ts) — **งานของ session อื่น อย่าเผลอ commit รวม**
+
+---
+
 ## 2026-07-28 — สรุปแผน final (locked) สำหรับ Codex Implement: Academy Course Scope Filters & Term Auto-Apply
 
 ### สถานะ: สรุปแผน ล็อก Schema + Method Signature + UI Contract พร้อมส่ง Codex
