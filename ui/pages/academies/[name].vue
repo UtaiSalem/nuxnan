@@ -1255,7 +1255,7 @@ watch(() => academy.value?.id, (id) => {
             </div>
             
             <!-- Actions -->
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-2 md:gap-3 [&>*]:shrink-0 [&_button]:whitespace-nowrap [&_a]:whitespace-nowrap">
               <!-- Member Status Badge -->
               <span 
                 v-if="memberStatusText" 

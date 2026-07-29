@@ -5,6 +5,7 @@ import { useUIStore } from '~/stores/ui'
 import { useGamificationStore } from '~/stores/gamification'
 import { useGamification } from '~/composables/useGamification'
 import { useResponsiveSidebar } from '~/composables/useResponsiveSidebar'
+import { useMemberedAcademies } from '~/composables/useMemberedAcademies'
 import QrUniversalQRModal from '~/components/qr/UniversalQRModal.vue'
 import LayoutBottomNav from '~/components/layout/BottomNav.vue'
 import PersonalCodeCard from '~/components/user/PersonalCodeCard.vue'
@@ -68,6 +69,34 @@ const {
 } = useResponsiveSidebar()
 
 const isLeftDrawerOpen = computed(() => !isLeftDrawerCollapsed.value)
+
+// Membered academies (user's affiliated schools)
+const { approved: memberedAcademies, fetch: fetchMemberedAcademies } = useMemberedAcademies()
+
+const sortedMemberedAcademies = computed(() => {
+  return [...memberedAcademies.value].sort((a, b) => {
+    const aGrad = a.graduation_date ? 1 : 0
+    const bGrad = b.graduation_date ? 1 : 0
+    if (aGrad !== bGrad) return aGrad - bGrad
+    return String(a.name || '').localeCompare(String(b.name || ''), 'th')
+  })
+})
+
+const academyLogoUrl = (academy) => {
+  if (!academy?.logo) return '/images/default-avatar.png'
+  return academy.logo
+}
+
+const academyHref = (academy) => {
+  const key = academy.slug || academy.name
+  return `/academies/${encodeURIComponent(key)}`
+}
+
+const isActiveAcademy = (academy) => {
+  const key = academy.slug || academy.name
+  return route.path.startsWith(`/academies/${encodeURIComponent(key)}`)
+    || route.path.startsWith(`/academies/${key}`)
+}
 
 const enableRightSidebar = ref(false)
 const isRightDrawerOpen = ref(false)
@@ -291,6 +320,9 @@ onMounted(async () => {
 
   fetchLeaderboard()
   gamificationStore.fetchProgress()
+  if (authStore.isAuthenticated) {
+    fetchMemberedAcademies()
+  }
 
   // Reset login transition flag once layout is mounted and data is ready
   if (authStore.isLoginTransitioning) {
@@ -892,6 +924,46 @@ const onQRActionComplete = (result) => {
               <Icon icon="mdi:school-outline" class="w-5 h-5" />
               <span class="font-semibold">โรงเรียน</span>
             </NuxtLink>
+
+            <!-- โรงเรียนที่สังกัดของผู้ใช้ -->
+            <div v-if="sortedMemberedAcademies.length" class="ml-4 border-l-2 border-vikinger-purple/30 pl-3 space-y-1">
+              <div
+                class="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider"
+                :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"
+              >
+                โรงเรียนของฉัน
+              </div>
+              <NuxtLink
+                v-for="acad in sortedMemberedAcademies"
+                :key="acad.id"
+                :to="academyHref(acad)"
+                class="flex items-center gap-2 px-2 py-2 rounded-lg transition-all duration-200 text-sm"
+                :class="[
+                  isActiveAcademy(acad)
+                    ? 'bg-vikinger-purple/20 text-vikinger-purple dark:text-vikinger-cyan font-medium'
+                    : isDarkMode
+                    ? 'text-gray-400 hover:bg-vikinger-purple/10 hover:text-vikinger-cyan'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-vikinger-purple',
+                  acad.graduation_date ? 'opacity-60' : '',
+                ]"
+                :title="acad.graduation_date ? `${acad.name} (จบแล้ว)` : acad.name"
+              >
+                <img
+                  :src="academyLogoUrl(acad)"
+                  :alt="acad.name"
+                  class="w-6 h-6 rounded-full object-cover bg-white flex-shrink-0"
+                  @error="(e) => e.target.src = '/images/default-avatar.png'"
+                />
+                <span class="truncate flex-1">{{ acad.name }}</span>
+                <Icon
+                  v-if="acad.graduation_date"
+                  icon="fluent:checkmark-circle-24-regular"
+                  class="w-3.5 h-3.5 flex-shrink-0"
+                  :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"
+                />
+              </NuxtLink>
+            </div>
+
             <NuxtLink
               to="/Learn/Courses"
               class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
@@ -1120,6 +1192,29 @@ const onQRActionComplete = (result) => {
           >
             <Icon icon="mdi:school-outline" class="w-6 h-6" />
           </NuxtLink>
+
+          <!-- โรงเรียนที่สังกัด (collapsed) -->
+          <NuxtLink
+            v-for="acad in sortedMemberedAcademies"
+            :key="`ca-${acad.id}`"
+            :to="academyHref(acad)"
+            :title="acad.graduation_date ? `${acad.name} (จบแล้ว)` : acad.name"
+            class="w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300 border-2"
+            :class="[
+              isActiveAcademy(acad)
+                ? 'border-vikinger-cyan shadow-md'
+                : 'border-transparent hover:border-vikinger-purple',
+              acad.graduation_date ? 'opacity-60' : '',
+            ]"
+          >
+            <img
+              :src="academyLogoUrl(acad)"
+              :alt="acad.name"
+              class="w-9 h-9 rounded-full object-cover bg-white"
+              @error="(e) => e.target.src = '/images/default-avatar.png'"
+            />
+          </NuxtLink>
+
           <NuxtLink
             to="/Learn/Courses"
             class="w-12 h-12 flex items-center justify-center rounded-lg transition-all duration-300"

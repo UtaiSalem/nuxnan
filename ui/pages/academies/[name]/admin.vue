@@ -105,7 +105,7 @@ const menuItems = computed(() => [
         show: can('courses.view') || can('courses.manage'),
       },
       {
-        name: 'Allocations', icon: 'fluent:arrow-swap-24-regular',
+        name: 'จัดสรรแต้ม', icon: 'fluent:arrow-swap-24-regular',
         to: `/academies/${academyName.value}/admin/allocations`, show: can('courses.view') || can('courses.manage'),
       },
       {
