@@ -87,6 +87,22 @@ class MemberActivityLog extends Model
 
     public const ACTION_TAG_REMOVE = 'tag_remove';
 
+    public const ACTION_DEPARTMENT_CREATE = 'department_create';
+
+    public const ACTION_DEPARTMENT_UPDATE = 'department_update';
+
+    public const ACTION_DEPARTMENT_DELETE = 'department_delete';
+
+    public const ACTION_DEPARTMENT_SETUP = 'department_setup';
+
+    public const ACTION_DEPARTMENT_MEMBER_ADD = 'department_member_add';
+
+    public const ACTION_DEPARTMENT_MEMBER_REMOVE = 'department_member_remove';
+
+    public const ACTION_DEPARTMENT_MEMBER_ROLE_CHANGE = 'department_member_role_change';
+
+    public const ACTION_DEPARTMENT_PERMISSION_UPDATE = 'department_permission_update';
+
     // Categories
     public const CATEGORY_MEMBER = 'member';
 

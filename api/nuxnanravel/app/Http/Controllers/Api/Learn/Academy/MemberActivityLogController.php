@@ -229,6 +229,14 @@ class MemberActivityLogController extends Controller
             ['value' => MemberActivityLog::ACTION_ROLE_CHANGE, 'label' => 'เปลี่ยนบทบาท', 'icon' => 'mdi:badge-account'],
             ['value' => MemberActivityLog::ACTION_INVITE, 'label' => 'ส่งคำเชิญ', 'icon' => 'mdi:email-send'],
             ['value' => MemberActivityLog::ACTION_BULK_ACTION, 'label' => 'ดำเนินการแบบกลุ่ม', 'icon' => 'mdi:account-group'],
+            ['value' => MemberActivityLog::ACTION_DEPARTMENT_CREATE, 'label' => 'สร้างฝ่ายงาน', 'icon' => 'mdi:office-building-plus'],
+            ['value' => MemberActivityLog::ACTION_DEPARTMENT_UPDATE, 'label' => 'แก้ไขฝ่ายงาน', 'icon' => 'mdi:office-building-edit'],
+            ['value' => MemberActivityLog::ACTION_DEPARTMENT_DELETE, 'label' => 'ลบฝ่ายงาน', 'icon' => 'mdi:office-building-remove'],
+            ['value' => MemberActivityLog::ACTION_DEPARTMENT_SETUP, 'label' => 'ติดตั้งโครงสร้างฝ่ายงาน', 'icon' => 'mdi:office-building-cog'],
+            ['value' => MemberActivityLog::ACTION_DEPARTMENT_MEMBER_ADD, 'label' => 'เพิ่มสมาชิกเข้าฝ่ายงาน', 'icon' => 'mdi:account-plus'],
+            ['value' => MemberActivityLog::ACTION_DEPARTMENT_MEMBER_REMOVE, 'label' => 'นำสมาชิกออกจากฝ่ายงาน', 'icon' => 'mdi:account-minus'],
+            ['value' => MemberActivityLog::ACTION_DEPARTMENT_MEMBER_ROLE_CHANGE, 'label' => 'เปลี่ยนบทบาทสมาชิกในฝ่ายงาน', 'icon' => 'mdi:badge-account'],
+            ['value' => MemberActivityLog::ACTION_DEPARTMENT_PERMISSION_UPDATE, 'label' => 'ปรับปรุงสิทธิ์ฝ่ายงาน', 'icon' => 'mdi:shield-edit'],
         ];
 
         return response()->json([

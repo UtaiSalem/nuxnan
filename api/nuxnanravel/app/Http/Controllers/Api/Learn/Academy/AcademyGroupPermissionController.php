@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\AcademyGroup;
 use App\Models\AcademyPermission;
+use App\Models\MemberActivityLog;
 use App\Services\AcademyGroupPermissionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -62,7 +63,14 @@ class AcademyGroupPermissionController extends Controller
             'permission_keys.*' => 'string',
         ]);
 
-        $this->permissionService->syncPermissions($department, $validated['permission_keys']);
+        $oldKeys = $this->permissionService->getEnabledPermissions($department)->values()->all();
+        $newKeys = array_values(array_unique($validated['permission_keys']));
+        $this->permissionService->syncPermissions($department, $newKeys);
+        try {
+            MemberActivityLog::logActivity(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_DEPARTMENT_PERMISSION_UPDATE, 'description' => 'ปรับปรุงสิทธิ์ฝ่ายงาน: '.$department->name, 'old_values' => ['permission_keys' => $oldKeys], 'new_values' => ['permission_keys' => $newKeys, 'turned_on' => array_values(array_diff($newKeys, $oldKeys)), 'turned_off' => array_values(array_diff($oldKeys, $newKeys))]]);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return response()->json([
             'success' => true,

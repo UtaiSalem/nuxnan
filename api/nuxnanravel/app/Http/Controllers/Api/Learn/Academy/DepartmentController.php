@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\AcademyGroup;
+use App\Models\MemberActivityLog;
 use App\Models\User;
 use App\Services\AcademyGroupPermissionService;
 use App\Services\SchoolDepartmentSetupService;
@@ -148,6 +149,8 @@ class DepartmentController extends Controller
             ]);
         }
 
+        $this->logActivitySafe(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_DEPARTMENT_CREATE, 'description' => 'สร้างฝ่ายงาน: '.$department->name, 'new_values' => ['department_id' => $department->id, 'name' => $department->name]]);
+
         return response()->json([
             'success' => true,
             'message' => 'สร้างฝ่ายงานสำเร็จ',
@@ -223,6 +226,8 @@ class DepartmentController extends Controller
 
         $department->update($updateData);
 
+        $this->logActivitySafe(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_DEPARTMENT_UPDATE, 'description' => 'แก้ไขฝ่ายงาน: '.$department->name, 'new_values' => $updateData]);
+
         return response()->json([
             'success' => true,
             'message' => 'อัปเดตฝ่ายงานสำเร็จ',
@@ -250,7 +255,9 @@ class DepartmentController extends Controller
             ], 400);
         }
 
+        $deletedName = $department->name;
         $department->delete();
+        $this->logActivitySafe(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_DEPARTMENT_DELETE, 'description' => 'ลบฝ่ายงาน: '.$deletedName, 'old_values' => ['department_id' => $department->id, 'name' => $deletedName]]);
 
         return response()->json([
             'success' => true,
@@ -335,6 +342,7 @@ class DepartmentController extends Controller
         $department->members()->attach($validated['user_id'], [
             'role' => $validated['role'] ?? 'member',
         ]);
+        $this->logActivitySafe(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_DEPARTMENT_MEMBER_ADD, 'description' => 'เพิ่มสมาชิกเข้าฝ่ายงาน: '.$department->name, 'new_values' => ['department_id' => $department->id, 'user_id' => $validated['user_id'], 'role' => $validated['role'] ?? 'member']]);
 
         return response()->json([
             'success' => true,
@@ -358,6 +366,7 @@ class DepartmentController extends Controller
         ]);
 
         $department->members()->detach($validated['user_id']);
+        $this->logActivitySafe(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_DEPARTMENT_MEMBER_REMOVE, 'description' => 'นำสมาชิกออกจากฝ่ายงาน: '.$department->name, 'old_values' => ['department_id' => $department->id, 'user_id' => $validated['user_id']]]);
 
         return response()->json([
             'success' => true,
@@ -396,6 +405,7 @@ class DepartmentController extends Controller
             $department->members()->attach($userId, ['role' => $role]);
             $added++;
         }
+        $this->logActivitySafe(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_DEPARTMENT_MEMBER_ADD, 'description' => "เพิ่มสมาชิกเข้าฝ่ายงาน: {$department->name} จำนวน {$added} คน", 'new_values' => ['department_id' => $department->id, 'member_count' => $added, 'role' => $role]]);
 
         return response()->json([
             'success' => true,
@@ -428,6 +438,7 @@ class DepartmentController extends Controller
             ], 404);
         }
 
+        $oldRole = $department->members()->where('users.id', $validated['user_id'])->first()->pivot->role;
         $department->members()->updateExistingPivot($validated['user_id'], [
             'role' => $validated['role'],
         ]);
@@ -438,6 +449,7 @@ class DepartmentController extends Controller
             $settings['head_user_id'] = $validated['user_id'];
             $department->update(['settings' => $settings]);
         }
+        $this->logActivitySafe(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_DEPARTMENT_MEMBER_ROLE_CHANGE, 'description' => 'เปลี่ยนบทบาทสมาชิกในฝ่ายงาน: '.$department->name, 'old_values' => ['user_id' => $validated['user_id'], 'role' => $oldRole], 'new_values' => ['user_id' => $validated['user_id'], 'role' => $validated['role']]]);
 
         return response()->json([
             'success' => true,
@@ -476,6 +488,7 @@ class DepartmentController extends Controller
         }
 
         $result = $service->setup($academy, auth()->id());
+        $this->logActivitySafe(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_DEPARTMENT_SETUP, 'description' => "ติดตั้งโครงสร้างฝ่ายงาน จำนวน {$result['created']} รายการ", 'new_values' => $result]);
 
         return response()->json([
             'success' => true,
@@ -519,5 +532,14 @@ class DepartmentController extends Controller
                 }),
             ],
         ]);
+    }
+
+    private function logActivitySafe(array $data): void
+    {
+        try {
+            MemberActivityLog::logActivity($data);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 }
