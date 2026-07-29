@@ -187,6 +187,18 @@ class Student extends Model
         return $this->hasMany(StudentGuardian::class);
     }
 
+    public function guardianLinks(): HasMany
+    {
+        return $this->hasMany(StudentGuardianLink::class);
+    }
+
+    public function guardianPersons(): BelongsToMany
+    {
+        return $this->belongsToMany(Guardian::class, 'student_guardian_links', 'student_id', 'guardian_id')
+            ->withPivot(['guardian_type', 'relationship', 'is_primary_contact', 'is_emergency_contact'])
+            ->withTimestamps();
+    }
+
     public function guardiansByCode(): HasMany
     {
         return $this->hasMany(StudentGuardian::class, 'student_code', 'student_id');
