@@ -9,7 +9,9 @@ use App\Models\StudentAddress;
 use App\Models\StudentChangeRequest;
 use App\Models\StudentHealthInfo;
 use App\Models\User;
+use App\Services\GuardianWriteService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class StudentSectionalUpdateTest extends TestCase
@@ -194,5 +196,58 @@ class StudentSectionalUpdateTest extends TestCase
         $response->assertStatus(200);
         $this->assertEquals(190, $health->fresh()->height_cm);
         $this->assertEquals('approved', $changeRequest->fresh()->status);
+    }
+
+    public function test_approving_guardian_person_field_dual_writes(): void
+    {
+        $data = $this->setupStudentAndAcademy();
+        $guardian = app(GuardianWriteService::class)->create($data['student'], [
+            'first_name' => 'Somchai', 'last_name' => 'Jaidee', 'citizen_id' => '1234567890123', 'guardian_type' => 'father', 'relationship' => 'father', 'occupation' => 'เดิม',
+        ]);
+        $request = StudentChangeRequest::create([
+            'academy_id' => $data['academy']->id, 'student_id' => $data['student']->id, 'model_type' => 'StudentGuardian',
+            'model_id' => $guardian->id, 'field' => 'guardian.occupation', 'old_value' => 'เดิม', 'new_value' => 'ครู',
+            'status' => 'pending', 'requested_by' => $data['owner']->id,
+        ]);
+
+        $this->actingAs($data['admin'], 'api')->patchJson("/api/academies/{$data['academy']->id}/students/{$data['student']->id}/change-requests/{$request->id}/approve")->assertOk();
+
+        $this->assertDatabaseHas('student_guardians', ['id' => $guardian->id, 'occupation' => 'ครู']);
+        $personId = DB::table('student_guardian_links')->whereJsonContains('legacy_row_ids', $guardian->id)->value('guardian_id');
+        $this->assertDatabaseHas('guardians', ['id' => $personId, 'occupation' => 'ครู']);
+    }
+
+    public function test_approving_guardian_relationship_field_dual_writes(): void
+    {
+        $data = $this->setupStudentAndAcademy();
+        $guardian = app(GuardianWriteService::class)->create($data['student'], ['first_name' => 'Somchai', 'last_name' => 'Jaidee', 'citizen_id' => '1234567890123', 'guardian_type' => 'father']);
+        $request = StudentChangeRequest::create([
+            'academy_id' => $data['academy']->id, 'student_id' => $data['student']->id, 'model_type' => 'StudentGuardian',
+            'model_id' => $guardian->id, 'field' => 'guardian.guardian_type', 'old_value' => 'father', 'new_value' => 'mother',
+            'status' => 'pending', 'requested_by' => $data['owner']->id,
+        ]);
+
+        $this->actingAs($data['admin'], 'api')->patchJson("/api/academies/{$data['academy']->id}/students/{$data['student']->id}/change-requests/{$request->id}/approve")->assertOk();
+
+        $this->assertDatabaseHas('student_guardians', ['id' => $guardian->id, 'guardian_type' => 'mother']);
+        $this->assertDatabaseHas('student_guardian_links', ['guardian_id' => DB::table('student_guardian_links')->whereJsonContains('legacy_row_ids', $guardian->id)->value('guardian_id'), 'guardian_type' => 'mother']);
+    }
+
+    public function test_approving_student_address_field_keeps_existing_behavior(): void
+    {
+        $data = $this->setupStudentAndAcademy();
+        $address = StudentAddress::create(['student_id' => $data['student']->id, 'academy_id' => $data['academy']->id, 'address_type' => 'current', 'house_number' => '123']);
+        $request = StudentChangeRequest::create(['academy_id' => $data['academy']->id, 'student_id' => $data['student']->id, 'model_type' => 'StudentAddress', 'model_id' => $address->id, 'field' => 'address.house_number', 'old_value' => '123', 'new_value' => '456', 'status' => 'pending', 'requested_by' => $data['owner']->id]);
+
+        $this->actingAs($data['admin'], 'api')->patchJson("/api/academies/{$data['academy']->id}/students/{$data['student']->id}/change-requests/{$request->id}/approve")->assertOk();
+        $this->assertDatabaseHas('student_addresses', ['id' => $address->id, 'house_number' => '456']);
+    }
+
+    public function test_approving_non_whitelisted_model_type_returns_400(): void
+    {
+        $data = $this->setupStudentAndAcademy();
+        $request = StudentChangeRequest::create(['academy_id' => $data['academy']->id, 'student_id' => $data['student']->id, 'model_type' => 'NotAllowed', 'model_id' => 1, 'field' => 'x', 'new_value' => 'x', 'status' => 'pending', 'requested_by' => $data['owner']->id]);
+
+        $this->actingAs($data['admin'], 'api')->patchJson("/api/academies/{$data['academy']->id}/students/{$data['student']->id}/change-requests/{$request->id}/approve")->assertStatus(400);
     }
 }

@@ -35,7 +35,10 @@ class GuardianWriteService
             $link = DB::table('student_guardian_links')->whereJsonContains('legacy_row_ids', $legacy->id)->first();
             if ($link) {
                 Guardian::whereKey($link->guardian_id)->update($this->personData($legacy->student, $data, true));
-                DB::table('student_guardian_links')->where('id', $link->id)->update($this->linkData($data));
+                $linkData = $this->linkData($data);
+                if ($linkData !== []) {
+                    DB::table('student_guardian_links')->where('id', $link->id)->update($linkData);
+                }
                 $person = Guardian::find($link->guardian_id);
                 $this->contacts($legacy, $person, $data, true);
             }
@@ -64,23 +67,27 @@ class GuardianWriteService
     {
         $g = $data['guardian'] ?? $data;
 
-        return array_filter(array_merge([
+        $values = [
             'academy_id' => $student->academy_id, 'student_id' => $student->id, 'student_code' => $student->student_id,
             'guardian_type' => $g['guardian_type'] ?? null, 'citizen_id' => $g['citizen_id'] ?? null,
             'title_prefix' => $g['title_prefix'] ?? null, 'first_name' => $g['first_name'] ?? null, 'last_name' => $g['last_name'] ?? null,
             'occupation' => $g['occupation'] ?? null, 'workplace' => $g['workplace'] ?? null, 'monthly_income' => $g['monthly_income'] ?? null,
             'relationship' => $g['relationship'] ?? null, 'is_primary_contact' => $g['is_primary_contact'] ?? false,
             'is_emergency_contact' => $g['is_emergency_contact'] ?? false, 'status' => $g['status'] ?? 'alive', 'nationality' => $g['nationality'] ?? 'ไทย',
-        ], $update ? [] : []), fn ($v) => $v !== null);
+        ];
+
+        return array_filter($update ? array_intersect_key($values, $g) : $values, fn ($v) => $v !== null);
     }
 
     private function personData(Student $student, array $data, bool $update = false): array
     {
         $g = $data['guardian'] ?? $data;
 
-        return array_filter(['academy_id' => $student->academy_id, 'citizen_id' => $g['citizen_id'] ?? null, 'title_prefix' => $g['title_prefix'] ?? null,
+        $values = ['academy_id' => $student->academy_id, 'citizen_id' => $g['citizen_id'] ?? null, 'title_prefix' => $g['title_prefix'] ?? null,
             'first_name' => $g['first_name'] ?? null, 'last_name' => $g['last_name'] ?? null, 'occupation' => $g['occupation'] ?? null,
-            'workplace' => $g['workplace'] ?? null, 'monthly_income' => $g['monthly_income'] ?? null, 'nationality' => $g['nationality'] ?? 'ไทย', 'status' => $g['status'] ?? 'alive'], fn ($v) => $v !== null);
+            'workplace' => $g['workplace'] ?? null, 'monthly_income' => $g['monthly_income'] ?? null, 'nationality' => $g['nationality'] ?? 'ไทย', 'status' => $g['status'] ?? 'alive'];
+
+        return array_filter($update ? array_intersect_key($values, $g) : $values, fn ($v) => $v !== null);
     }
 
     private function findPerson(Student $student, array $data): ?Guardian

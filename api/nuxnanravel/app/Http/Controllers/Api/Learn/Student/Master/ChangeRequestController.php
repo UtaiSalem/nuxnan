@@ -11,6 +11,7 @@ use App\Models\StudentChangeRequest;
 use App\Models\StudentContact;
 use App\Models\StudentGuardian;
 use App\Models\StudentHealthInfo;
+use App\Services\GuardianWriteService;
 use Illuminate\Http\Request;
 
 class ChangeRequestController extends Controller
@@ -85,7 +86,11 @@ class ChangeRequestController extends Controller
 
         if ($model) {
             $field = str_replace(['address.', 'contact.', 'guardian.', 'health.', 'academic.'], '', $changeRequest->field);
-            $model->update([$field => $changeRequest->new_value]);
+            if ($model instanceof StudentGuardian) {
+                app(GuardianWriteService::class)->update($model, [$field => $changeRequest->new_value]);
+            } else {
+                $model->update([$field => $changeRequest->new_value]);
+            }
         }
 
         $changeRequest->update([

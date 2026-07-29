@@ -97,7 +97,11 @@ class GuardianController extends Controller
             // If setting as primary, unset other primaries
             if ($request->boolean('is_primary_contact')) {
                 StudentGuardian::where('student_id', $student->id)
-                    ->update(['is_primary_contact' => false]);
+                    ->where('is_primary_contact', true)
+                    ->get()
+                    ->each(fn (StudentGuardian $otherGuardian) => $this->guardianWriteService->update($otherGuardian, [
+                        'is_primary_contact' => false,
+                    ]));
             }
 
             $guardian = $this->guardianWriteService->create($student, [
@@ -168,7 +172,11 @@ class GuardianController extends Controller
             if ($request->boolean('is_primary_contact') && ! $guardian->is_primary_contact) {
                 StudentGuardian::where('student_id', $guardian->student_id)
                     ->where('id', '!=', $guardian->id)
-                    ->update(['is_primary_contact' => false]);
+                    ->where('is_primary_contact', true)
+                    ->get()
+                    ->each(fn (StudentGuardian $otherGuardian) => $this->guardianWriteService->update($otherGuardian, [
+                        'is_primary_contact' => false,
+                    ]));
             }
 
             $guardian = $this->guardianWriteService->update($guardian, $validated);
