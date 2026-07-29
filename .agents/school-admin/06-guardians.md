@@ -241,8 +241,22 @@ guardian_contacts                ← remap ให้ชี้ guardians.id (ค�
 | **G-S2c** | **เก็บงานคุณภาพข้อมูล** — ล้างช่องว่างในชื่อ 10 → 0 · ยุบ contact ซ้ำแบบ soft ผ่าน `superseded_by_contact_id` (224 แถว, ไม่ลบข้อมูล, เหลือใช้งาน 4,629) | G-S2 | 1 migration + `guardians:quality-cleanup` | 🟢 **verified 2026-07-29** |
 | **G-S3** | **GuardianService + สลับ read path** — ดู §6.1 (แตกเป็นก้อนย่อย) | G-S2 | service + refactor + tests | 🟡 **3/10 จุด** — `GuardianService` + `Academy/GuardianController` (index/getAllGuardians/getStatistics) + `Master/GuardianController::show` |
 | **G-S4** | **สลับ write path + รวม controller** — เขียนผ่าน service เดียว, **`guardian_type`/`relationship` เป็น optional ตาม D6**, `status` ถูกต้อง (G4), **ปลด `linkUser` ที่ตอบ success ลอย ๆ** (G2) ให้คืน 501 จนกว่าจะถึงเฟส C | G-S3 | refactor + tests | ⚪ |
-| **G-S5** | **ตรวจนักเรียนที่ไม่มีผู้ปกครอง** — ไล่โค้ดเยี่ยมบ้าน / บัตรนักเรียน / ติดต่อฉุกเฉิน / at-risk ว่ารองรับ 482 คนนี้โดยไม่พัง (G13) | G-S3 | รายงาน + patch เท่าที่จำเป็น | ⚪ |
-| **G-S6** | **เก็บกวาด** — ลบ `guardian_id` เก่าที่ `guardian_contacts`, drop `student_guardians` เดิม (**แยก commit ต่างหาก ทำหลังใช้งานจริงผ่านไปแล้ว**) | G-S4, G-S5 | migration | ⚪ |
+| **G-S5** | **ตรวจนักเรียนที่ไม่มีผู้ปกครอง (482 คน)** — ไล่ 9 เส้นทาง (เยี่ยมบ้าน · บัตรนักเรียน · ติดต่อฉุกเฉิน · Parent Dashboard · at-risk · `StudentResource` · `StudentIntakeResource` · `ClassroomController::getStudent` · Student Profile) | — | **รายงาน — ไม่ต้องแก้อะไร** | 🟢 **verified 2026-07-29** |
+| **G-S6** | **เก็บกวาด** — ถอดขาเขียนตารางเก่าออกจาก `GuardianWriteService` · ลบ `guardian_id` เก่าที่ `guardian_contacts` · drop `student_guardians` | **G-S3 ครบทุกจุด (คือหลัง G-S11)** | migration | 🚫 **ทำไม่ได้จนกว่าจุดอ่านจะย้ายครบ** (ดู §6.0) |
+
+### 6.0 🔴 ทำไม G-S3 ที่เหลือถึงต้องรอ G-S11 (ตัดสิน 2026-07-29)
+
+**"JSON เหมือนเดิม" เป็นไปไม่ได้โดยนิยาม** — โมเดลใหม่ให้ข้อมูล*ครบกว่า* เพราะรวมแถวของคนเดียวกันเข้าด้วยกัน
+
+หลักฐานจริง: `ธีรศักดิ์ จันทร์แดง` (person 13513) รวมจาก legacy row 1, 121, 447 (ผู้ปกครองของนักเรียน 3 คน) และ **แต่ละแถวมีเบอร์คนละเบอร์** (`0937087566` / `0843981870` / `0894644119`) — ไม่ใช่เบอร์ซ้ำ จึงไม่ถูก dedupe
+→ หน้าที่เคยเห็นเบอร์เดียวจะเห็น 3 เบอร์ · โครงก็ต่าง (`guardians[]→contacts[]` เทียบกับ `guardianLinks[]→guardian→contacts[]`)
+
+**ผลตัดสิน: ปล่อยจุดอ่านที่กระทบหน้าจอไว้ที่ตารางเก่า แล้วย้ายพร้อมงาน frontend (G-S11)**
+- ไม่มีปัญหาความถูกต้อง เพราะ **dual-write (G-S4) ทำให้ข้อมูลสองฝั่งตรงกันเสมอ**
+- ไม่ทำ compatibility layer เพราะเท่ากับจงใจซ่อนข้อมูลที่มีแล้ว และเป็นโค้ดทิ้ง
+- การเปลี่ยนที่ผู้ใช้เห็นควรทำตอนที่มีคนดูหน้าจอจริง
+
+**⚠️ ผลต่อ G-S6:** drop ตารางเก่า **ทำไม่ได้** จนกว่าจุดอ่านเหล่านี้จะย้ายครบ — เป็นข้อจำกัดทางเทคนิค ไม่ใช่แค่ความระมัดระวัง
 
 ### 6.1 กฎเหล็กของการสลับ read path (เขียนหลังเกิดอุบัติเหตุ 2026-07-29)
 
