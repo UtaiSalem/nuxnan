@@ -97,6 +97,24 @@
 
 ---
 
+## 5.1 ทำไม D-S4 ถึงเปลี่ยนรูป (2026-07-29)
+
+สเปกเดิมเขียนว่า "จำกัดให้สมาชิกฝ่ายเห็นเฉพาะข้อมูลของฝ่ายตน" — **ตรวจแล้วพบว่าผิดรูป**
+
+- คอลัมน์ `scope_type`/`scope_id` มีเฉพาะตาราง *เนื้อหา* (`academy_posts`, `school_announcements`, `academy_scope_tasks`, `academy_scope_files`, `adverts`, `revenue_share_policies`) และมี `AcademyScopeAccessService` บังคับอยู่แล้ว
+- **ไม่มีตารางข้อมูลหลักตารางไหนผูกกับฝ่ายเลย** (นักเรียน ผู้ปกครอง การเข้าเรียน ผลการเรียน บุคลากร ห้องเรียน) — เพราะนักเรียนสังกัด *ห้องเรียน/ระดับชั้น* ไม่ได้สังกัดฝ่าย
+- ในความเป็นจริงฝ่ายมีหน้าที่ **ระดับทั้งโรงเรียน** อยู่แล้ว (งานทะเบียนดูแลทะเบียนทุกคน · ฝ่ายกิจการนักเรียนดูแลนักเรียนทุกคน)
+
+→ การสร้างกลไกจำกัดขอบเขตข้อมูลจึงเป็นการแก้ปัญหาที่ไม่มีอยู่ ด้วยงานที่ต้องแตะเกือบทุกตาราง
+
+**ความเสี่ยงจริงคืออีกเรื่อง:** มีคนเผลอเปิดสิทธิ์ที่ไม่ควรให้ฝ่าย โดยเฉพาะ `roles.*` (สมาชิกฝ่ายสร้าง role ที่มีทุกสิทธิ์แล้วใส่ตัวเอง) และ `groups.manage` (ไปกดเปิดสิทธิ์เพิ่มให้ฝ่ายตัวเอง) — ทั้งสองทางทำให้ระบบสิทธิ์ทั้งระบบไร้ความหมาย
+
+→ D-S4 จึงกลายเป็น **allow-list** ที่ใช้ตรรกะ default-deny (คีย์ใหม่ในอนาคตมอบให้ฝ่ายไม่ได้เอง)
+
+**ผลการจัดหมวด 82 คีย์:** มอบได้ = 17 ตระกูล (`students`, `behavior`, `home_visits`, `attendance`, `school_attendance`, `grades`, `gradebook`, `schedule`, `courses`, `assignments`, `announcements`, `events`, `reports`, `messages`, `teachers`, `staff`, `children`) + `groups.view` + `members.view` · มอบไม่ได้ = `roles.*`, `groups.manage`, `members.manage/invite/roles.manage`, `academy.*`, `settings.*`, `finance.*`, `payments.*` · **ไม่มีคีย์ตกหล่น**
+
+---
+
 ## 6. Implementation Tasks
 
 | Step | Title | Depends | Deliverable | Status |
@@ -104,7 +122,7 @@
 | **D-S1** | **อุดช่องโหว่ (D1+D2)** — `academy.permission:groups.view` ครอบทั้งกลุ่ม + `groups.manage` ทุก route เขียน · เปลี่ยนชื่อ `checkPermission()` → `ensureDepartmentFeatureEnabled()` ให้ความหมายตรงกับพฤติกรรม | — | routes + controller + `DepartmentAuthorizationTest` | 🟢 **verified 2026-07-29** — 15/15 route มี guard · เทสต์ 8 ผ่าน |
 | **D-S2** | **นิยามบทบาทในฝ่าย (D5)** — พบว่า controller validate `in:member,staff,admin,head` อยู่แล้ว เหลือแค่แก้ default ของ DB จาก `'student'` → `'member'` | D-S1 | migration | 🟢 **verified 2026-07-29** (ยุบรวมกับ D-S6) |
 | **D-S3** | **ต่อสิทธิ์ฝ่ายเข้ากับ middleware (D3)** — `AcademyGroupPermissionAccessService` (explicit opt-in: ต้องมีแถว `enabled = true` เท่านั้น) + เรียกใน `CheckAcademyPermission` หลังด่าน role | D-S1, D-S2 | middleware + service + 13 tests | 🟢 **verified 2026-07-29** |
-| **D-S4** | **ขอบเขตข้อมูลของฝ่าย (D4)** — กำหนดว่าสิทธิ์ที่ได้จากฝ่ายมีผลกับข้อมูลชุดไหน (ทั้งโรงเรียน / เฉพาะที่ผูกกับฝ่าย) + helper ให้เมนูอื่นเรียกใช้ | D-S3 | service + tests + docs | ⚪ |
+| **D-S4** | **allow-list สิทธิ์ที่มอบให้ฝ่ายได้** — **เปลี่ยนรูปจากแผนเดิม** (ดู §5.1) · `AcademyPermission::DEPARTMENT_DELEGABLE_FAMILIES` + บังคับ 3 ชั้น: ปฏิเสธตอนบันทึก (422) · intersect ตอนตรวจสิทธิ์ · กรองตอนส่งรายการ | D-S3 | model + 2 service + controller + 5 tests | 🟢 **verified 2026-07-29** |
 | **D-S5** | **Audit log (D7)** — ผูก `MemberActivityLog` กับ CRUD ฝ่ายและสมาชิกฝ่าย | D-S1 | controller + tests | ⚪ |
 | **D-S6** | **นำคนเข้าฝ่าย (D6)** — modal เพิ่มสมาชิกเดิมดึงแค่ 100 คนแรกจาก 3,063 คนแล้วกรองฝั่ง client → **ครู 119 คนอาจไม่โผล่เลย** นี่คือเหตุผลจริงที่สมาชิกฝ่ายมีแค่ 1 คน · แก้เป็นค้นหาฝั่ง server ผ่าน `/members/search` + กรองครู/บุคลากรเป็นค่าเริ่มต้น + เลือกหลายคน + pagination | D-S1 | migration + `departments/index.vue` | 🟢 **verified 2026-07-29** — ค้นหาครูเจอครบ 119/119 |
 | **D-S6b** | **ป้ายบอกว่าอยู่ฝ่ายอื่นแล้ว** — `members/search` ยังไม่ส่งข้อมูลสังกัดฝ่ายมาด้วย ทำให้คนที่กดไม่เห็นว่าครูคนนี้อยู่ฝ่ายอื่นอยู่หรือไม่ก่อนตัดสินใจ ต้องเพิ่ม field (เช่น `department_memberships`) ใน response | D-S6 | BE + FE | ⚪ |

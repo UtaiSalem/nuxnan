@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\AcademyGroup;
+use App\Models\AcademyPermission;
 use App\Services\AcademyGroupPermissionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -31,7 +32,9 @@ class AcademyGroupPermissionController extends Controller
             ], 404);
         }
 
-        $permissions = $this->permissionService->getAllPermissions($department);
+        $permissions = $this->permissionService->getAllPermissions($department)
+            ->whereIn('permission_key', AcademyPermission::departmentDelegableKeys())
+            ->values();
 
         return response()->json([
             'success' => true,

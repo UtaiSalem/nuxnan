@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Academy;
 use App\Models\AcademyGroupMember;
+use App\Models\AcademyPermission;
 use App\Models\User;
 
 class AcademyGroupPermissionAccessService
@@ -17,6 +18,7 @@ class AcademyGroupPermissionAccessService
      */
     public function hasAnyPermission(User $user, Academy $academy, array $permissions): bool
     {
+        $permissions = array_values(array_intersect($permissions, AcademyPermission::departmentDelegableKeys()));
         if ($permissions === []) {
             return false;
         }

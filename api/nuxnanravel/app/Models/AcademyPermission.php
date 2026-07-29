@@ -16,6 +16,35 @@ class AcademyPermission extends Model
         'description',
     ];
 
+    /** Permission families that departments may delegate. New families are denied by default. */
+    private const DEPARTMENT_DELEGABLE_FAMILIES = [
+        'students', 'behavior', 'home_visits', 'attendance', 'school_attendance',
+        'grades', 'gradebook', 'schedule', 'courses', 'assignments', 'announcements',
+        'events', 'reports', 'messages', 'teachers', 'staff', 'children',
+    ];
+
+    /**
+     * roles.* lets department members self-escalate privileges, breaking the permission system.
+     * groups.manage lets a department edit group permissions and indirectly escalate privileges.
+     * members.manage and related members actions add/remove or re-role school members (admin-only).
+     * settings.* and academy.* change school/institution settings.
+     * finance.* and payments.* control money.
+     */
+    public static function departmentDelegableKeys(): array
+    {
+        $keys = array_values(array_filter(
+            array_column(self::getAllPermissions(), 'name'),
+            static fn (string $key): bool => in_array(strtok($key, '.'), self::DEPARTMENT_DELEGABLE_FAMILIES, true)
+        ));
+
+        return array_values(array_unique(array_merge($keys, ['groups.view', 'members.view'])));
+    }
+
+    public static function nonDelegableDepartmentKeys(array $keys): array
+    {
+        return array_values(array_diff($keys, self::departmentDelegableKeys()));
+    }
+
     /**
      * All available academy-level permissions grouped by category
      */

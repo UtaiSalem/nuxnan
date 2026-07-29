@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Models\AcademyGroup;
+use App\Models\AcademyPermission;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 class AcademyGroupPermissionService
 {
@@ -31,6 +33,12 @@ class AcademyGroupPermissionService
      */
     public function syncPermissions(AcademyGroup $group, array $permissionKeys): void
     {
+        if ($group->type === 'department' && ($rejected = AcademyPermission::nonDelegableDepartmentKeys($permissionKeys)) !== []) {
+            throw ValidationException::withMessages([
+                'permission_keys' => ['Non-delegable permission(s): '.implode(', ', $rejected)],
+            ]);
+        }
+
         // Disable all current permissions first (optional approach)
         // Or more efficiently:
 
