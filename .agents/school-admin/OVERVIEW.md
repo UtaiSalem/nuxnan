@@ -54,7 +54,7 @@ Legend: 🟢 พร้อมใช้งาน (ผ่านการตรว�
 | 6 | ผู้ปกครอง | `admin/guardians/` | `guardians.*` (เสนอใหม่) | [06-guardians.md](06-guardians.md) | 🟡 เฟส A: G-S0/S1/S2/S2b/S2c ✅ · G-S3 อ่าน 3/10 จุด · G-S4–S6 ค้าง · เฟส B/C รอ #9 |
 | 7 | ตั้งค่าโรงเรียน | `admin/settings.vue` | `settings.manage` | 07-settings.md | ⚪ |
 | 8 | ระบบบริหารโรงเรียน | `admin/school-management.vue` | `settings.manage` | 08-school-management.md | ⚪ |
-| 9 | ฝ่าย/แผนก | `admin/departments/` | `groups.view` / `groups.manage` | 09-departments.md | ⚪ |
+| **9** | **ฝ่าย/แผนก** | `admin/departments/` | `departments.*` | [09-departments.md](09-departments.md) | 🔴 **กำลังทำ** — สเปกล็อกแล้ว · D-S1 อุดช่องโหว่ route+authz เป็นงานแรก |
 | 10 | ห้องเรียน | `admin/classrooms/` | `groups.view` / `groups.manage` | 10-classrooms.md | 🟡 มีงานเก็บค้าง |
 | 11 | ตารางเรียน | `admin/schedule.vue` | `schedule.view` / `schedule.manage` | 11-schedule.md | ⚪ |
 | 12 | คอร์สเรียน | `admin/courses/` | `courses.view` / `courses.manage` | 12-courses.md | ⚪ |
