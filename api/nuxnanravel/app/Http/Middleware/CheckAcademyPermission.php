@@ -4,12 +4,22 @@ namespace App\Http\Middleware;
 
 use App\Models\Academy;
 use App\Models\AcademyMember;
+use App\Services\AcademyGroupPermissionAccessService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Authorizes academy permissions from the academy role, then explicit group grants.
+ *
+ * Group-derived permissions are not data-scoped until D-S4 is complete. Before
+ * enabling a permission for a group, be aware that its members can see or
+ * modify data across the whole academy.
+ */
 class CheckAcademyPermission
 {
+    public function __construct(private AcademyGroupPermissionAccessService $groupPermissionAccess) {}
+
     public function handle(Request $request, Closure $next, string ...$permissions): Response
     {
         $user = $request->user();
@@ -51,11 +61,14 @@ class CheckAcademyPermission
 
         $role = $member->academyRole;
 
-        if (! $role) {
-            return response()->json(['success' => false, 'message' => 'No role assigned'], 403);
+        if ($role && $role->hasAnyPermission($permissions)) {
+            return $next($request);
         }
 
-        if ($role->hasAnyPermission($permissions)) {
+        // Group permission access is academy-wide until D-S4 adds data scoping.
+        // Before enabling a group permission, note that its members can see or
+        // modify data across the whole academy.
+        if ($this->groupPermissionAccess->hasAnyPermission($user, $academy, $permissions)) {
             return $next($request);
         }
 
