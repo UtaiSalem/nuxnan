@@ -8,12 +8,19 @@ use App\Models\Academy;
 use App\Models\GuardianContact;
 use App\Models\Student;
 use App\Models\StudentGuardian;
+use App\Services\GuardianService;
 use App\Traits\HandlesStudentUpdates;
 use Illuminate\Support\Facades\DB;
 
 class GuardianController extends Controller
 {
+    /**
+     * Reads use GuardianService; store/update/destroy remain on student_guardians until G-S4.
+     * Newly written legacy data is temporarily invisible during this migration window.
+     */
     use HandlesStudentUpdates;
+
+    public function __construct(private GuardianService $guardianService) {}
 
     /**
      * Get student guardian data
@@ -30,10 +37,7 @@ class GuardianController extends Controller
         $this->authorize('update', $student);
 
         try {
-            // Load guardians with contacts using both relationships
-            $guardians = StudentGuardian::where('student_id', $student->id)
-                ->with('contacts')
-                ->get();
+            $guardians = $this->guardianService->forStudent($student);
 
             // Get primary guardian or first guardian
             $guardian = $guardians->first();
@@ -47,16 +51,17 @@ class GuardianController extends Controller
             }
 
             // Get primary contact for this guardian
-            $contact = $guardian->contacts->where('is_primary', true)->first()
-                     ?? $guardian->contacts->first();
+            $contact = $guardian->guardian?->contacts->where('is_primary', true)->first()
+                     ?? $guardian->guardian?->contacts->first();
 
             return response()->json([
                 'success' => true,
                 'data' => [
                     'guardian' => [
                         'id' => $guardian->id,
+                        'guardian_id' => $guardian->guardian_id,
                         'guardian_type' => $guardian->guardian_type,
-                        'citizen_id' => $guardian->citizen_id,
+                        'citizen_id' => $guardian->guardian?->citizen_id,
                         'title_prefix' => $guardian->title_prefix,
                         'first_name' => $guardian->first_name,
                         'last_name' => $guardian->last_name,

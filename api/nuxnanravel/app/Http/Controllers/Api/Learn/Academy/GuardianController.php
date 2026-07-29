@@ -10,6 +10,7 @@ use App\Models\GuardianContact;
 use App\Models\Student;
 use App\Models\StudentGuardian;
 use App\Models\User;
+use App\Services\GuardianService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -18,6 +19,12 @@ use Illuminate\Support\Facades\DB;
  */
 class GuardianController extends Controller
 {
+    /**
+     * Reads use GuardianService. Write methods intentionally remain on student_guardians
+     * until G-S4; newly written legacy data is temporarily invisible to these reads.
+     */
+    public function __construct(private GuardianService $guardianService) {}
+
     /**
      * Get list of guardians for a student
      */
@@ -31,17 +38,14 @@ class GuardianController extends Controller
             ], 404);
         }
 
-        $guardians = StudentGuardian::where('student_id', $student->id)
-            ->with(['contacts', 'primaryContact'])
-            ->orderBy('is_primary_contact', 'desc')
-            ->orderBy('guardian_type')
-            ->get();
+        $guardians = $this->guardianService->forStudent($student);
 
         return response()->json([
             'success' => true,
             'guardians' => $guardians->map(function ($g) {
                 return [
                     'id' => $g->id,
+                    'guardian_id' => $g->guardian_id,
                     'guardian_type' => $g->guardian_type,
                     'full_name' => $g->full_name,
                     'title_prefix' => $g->title_prefix,
@@ -52,9 +56,9 @@ class GuardianController extends Controller
                     'workplace' => $g->workplace,
                     'is_primary_contact' => $g->is_primary_contact,
                     'is_emergency_contact' => $g->is_emergency_contact,
-                    'primary_phone' => $g->primaryContact?->contact_value,
-                    'contacts' => $g->contacts,
-                    'linked_user_id' => $g->user_id ?? null,
+                    'primary_phone' => $g->primary_phone,
+                    'contacts' => $g->guardian?->contacts,
+                    'linked_user_id' => $g->guardian?->user_id ?? null,
                 ];
             }),
         ], 200);
@@ -295,40 +299,19 @@ class GuardianController extends Controller
      */
     public function getAllGuardians(Academy $academy, Request $request)
     {
-        $query = StudentGuardian::whereHas('student', function ($q) use ($academy) {
-            $q->where('academy_id', $academy->id);
-        })->with(['student:id,first_name_th,last_name_th,student_id', 'primaryContact']);
-
-        // Search
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('first_name', 'LIKE', "%{$search}%")
-                    ->orWhere('last_name', 'LIKE', "%{$search}%")
-                    ->orWhereHas('contacts', function ($cq) use ($search) {
-                        $cq->where('contact_value', 'LIKE', "%{$search}%");
-                    });
-            });
-        }
-
-        // Filter by type
-        if ($request->has('type') && $request->type) {
-            $query->where('guardian_type', $request->type);
-        }
-
-        $perPage = min($request->get('per_page', 20), 100);
-        $guardians = $query->orderBy('created_at', 'desc')->paginate($perPage);
+        $guardians = $this->guardianService->listForAcademy($academy, $request->only(['search', 'type', 'per_page']));
 
         return response()->json([
             'success' => true,
             'guardians' => $guardians->map(function ($g) {
                 return [
                     'id' => $g->id,
+                    'guardian_id' => $g->guardian_id,
                     'guardian_type' => $g->guardian_type,
                     'full_name' => $g->full_name,
                     'relationship' => $g->relationship,
                     'is_primary_contact' => $g->is_primary_contact,
-                    'primary_phone' => $g->primaryContact?->contact_value,
+                    'primary_phone' => $g->primary_phone,
                     'student' => $g->student ? [
                         'id' => $g->student->id,
                         'name' => $g->student->first_name_th.' '.$g->student->last_name_th,
@@ -350,25 +333,12 @@ class GuardianController extends Controller
      */
     public function getStatistics(Academy $academy)
     {
-        $stats = StudentGuardian::whereHas('student', function ($q) use ($academy) {
-            $q->where('academy_id', $academy->id);
-        })->selectRaw('guardian_type, count(*) as count')
-            ->groupBy('guardian_type')
-            ->pluck('count', 'guardian_type')
-            ->toArray();
-
-        $total = array_sum($stats);
-        $withContact = StudentGuardian::whereHas('student', function ($q) use ($academy) {
-            $q->where('academy_id', $academy->id);
-        })->whereHas('contacts')->count();
+        $statistics = $this->guardianService->statisticsForAcademy($academy);
 
         return response()->json([
             'success' => true,
             'statistics' => [
-                'total' => $total,
-                'by_type' => $stats,
-                'with_contact' => $withContact,
-                'without_contact' => $total - $withContact,
+                ...$statistics,
             ],
         ], 200);
     }
