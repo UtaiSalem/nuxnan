@@ -51,7 +51,7 @@ Legend: 🟢 พร้อมใช้งาน (ผ่านการตรว�
 | 3 | คำขอเข้าร่วม | `admin/requests.vue` | `members.manage` | [03-join-requests.md](03-join-requests.md) | 🟢 S1 done · deferred: reject reason, pagination, realtime badge |
 | 4 | ลิงก์เชิญสมาชิก | `admin/invite-links/` | `members.manage` | [04-invite-links.md](04-invite-links.md) | 🟢 L-S1–S3 done · deferred: L-S4 edit/filter, L-S5 usage history, L-S6 QR |
 | 5 | แท็กสมาชิก | `admin/member-tags/` | `members.manage` | [05-member-tags.md](05-member-tags.md) | 🟢 T-S1–S3 done · deferred: T-S4 tag members page, T-S5 reorder |
-| 6 | ผู้ปกครอง | `admin/guardians/` | `members.view` | 06-guardians.md | ⚪ |
+| 6 | ผู้ปกครอง | `admin/guardians/` | `guardians.*` (เสนอใหม่) | [06-guardians.md](06-guardians.md) | 🟡 เฟส A: G-S0/S1/S2/S2b/S2c ✅ · G-S3 อ่าน 3/10 จุด · G-S4–S6 ค้าง · เฟส B/C รอ #9 |
 | 7 | ตั้งค่าโรงเรียน | `admin/settings.vue` | `settings.manage` | 07-settings.md | ⚪ |
 | 8 | ระบบบริหารโรงเรียน | `admin/school-management.vue` | `settings.manage` | 08-school-management.md | ⚪ |
 | 9 | ฝ่าย/แผนก | `admin/departments/` | `groups.view` / `groups.manage` | 09-departments.md | ⚪ |
@@ -78,6 +78,15 @@ Legend: 🟢 พร้อมใช้งาน (ผ่านการตรว�
 เริ่มจาก **#1 บทบาทและสิทธิ์** (เป็นรากของทุกอย่าง) แล้วไล่ตามลำดับตัวเลขในตารางด้านบน ยกเว้น #24 แดชบอร์ดทำท้ายสุด
 
 **ไม่ทำงานคู่ขนานข้ามเมนู** — จบเมนูหนึ่งค่อยขึ้นเมนูถัดไป
+
+### ปรับลำดับ (2026-07-29)
+
+**#6 ผู้ปกครอง → เขียนสเปกไว้แล้วแต่ยังไม่ implement, ข้ามไปทำ #9 ฝ่าย/แผนก ก่อน**
+
+เหตุผล: #6 เป็น *งานย่อยระดับฝ่าย* (ใต้ฝ่ายบริหารงานกิจการนักเรียน + งานทะเบียนของฝ่ายวิชาการ) ซึ่งต้องใช้โมเดลสิทธิ์ระดับฝ่ายที่ยังไม่มี — ตัวเดียวกับที่ S7/S8 ของเมนู #1 ถูก defer มารอที่ #9 เมนูที่รอข้างหน้า (#14 บุคลากร, #17 เยี่ยมบ้าน, #18 การเข้าเรียน, #19 ผลการเรียน) ก็ผูกกับฝ่ายแบบเดียวกัน → ตัดสินใจโมเดลทีเดียวที่ #9 แล้วเมนูที่เหลือไหลตามได้ทั้งแถว
+
+**ลำดับใหม่:** #9 → กลับมา #6 (เฟส B/C) → ต่อ #7, #8, #10 …
+รายละเอียดข้อตกลงทั้งหมดของ #6 อยู่ใน [06-guardians.md](06-guardians.md) §0
 
 ---
 
