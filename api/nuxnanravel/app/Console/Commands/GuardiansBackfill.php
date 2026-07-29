@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\SelectsGuardianRelation;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -9,6 +10,8 @@ use Illuminate\Support\Facades\Storage;
 
 class GuardiansBackfill extends Command
 {
+    use SelectsGuardianRelation;
+
     protected $signature = 'guardians:backfill {--force : Apply the backfill; without this option the command is a dry-run} {--dry-run : Explicitly request a dry-run}';
 
     protected $description = 'Backfill guardians and links from legacy student_guardians';
@@ -45,7 +48,8 @@ class GuardiansBackfill extends Command
             return self::SUCCESS;
         }
 
-        DB::transaction(function () use ($groups, $conflicts, $linkGroups): void {
+        $linkMerges = [];
+        DB::transaction(function () use ($groups, $linkGroups, &$linkMerges): void {
             $map = [];
             foreach ($groups as $group) {
                 $ids = collect($group)->pluck('id')->values()->all();
@@ -67,7 +71,6 @@ class GuardiansBackfill extends Command
                     $map[$row->id] = $guardianId;
                 }
             }
-            $linkMerges = [];
             foreach ($linkGroups as $linkGroup) {
                 $first = $linkGroup[0];
                 $latest = collect($linkGroup)->sortByDesc(fn ($r) => [$r->updated_at ?? '', $r->id])->first();
@@ -82,9 +85,9 @@ class GuardiansBackfill extends Command
             foreach ($map as $legacyId => $guardianId) {
                 DB::table('guardian_contacts')->where('guardian_id', $legacyId)->update(['guardian_person_id' => $guardianId]);
             }
-            $this->writeConflicts($conflicts);
-            $this->writeLinkMerges($linkMerges);
         });
+        $this->writeConflicts($conflicts);
+        $this->writeLinkMerges($linkMerges);
         $this->info('Backfill applied successfully.');
 
         return self::SUCCESS;
@@ -100,14 +103,6 @@ class GuardiansBackfill extends Command
         }
 
         return collect($out)->values();
-    }
-
-    private function selectRelation($rows, string $field): ?string
-    {
-        $specific = collect($rows)->filter(fn ($row) => ! in_array(strtolower(trim((string) $row->{$field})), ['', 'guardian', 'other'], true));
-        $pool = $specific->isNotEmpty() ? $specific : collect($rows);
-
-        return $pool->sortByDesc(fn ($row) => [$row->updated_at ?? '', $row->id])->first()->{$field} ?? null;
     }
 
     private function buildGroups($rows): array

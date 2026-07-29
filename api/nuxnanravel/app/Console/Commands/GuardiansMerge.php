@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\SelectsGuardianRelation;
 use App\Models\GuardianMergeCandidate;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -9,6 +10,8 @@ use Illuminate\Support\Facades\Storage;
 
 class GuardiansMerge extends Command
 {
+    use SelectsGuardianRelation;
+
     protected $signature = 'guardians:merge {--candidate=} {--keep=}';
 
     protected $description = 'Merge a reviewed guardian candidate into the selected guardian';
@@ -47,10 +50,10 @@ class GuardiansMerge extends Command
             DB::table('guardians')->where('id', $keepId)->update(['legacy_row_ids' => json_encode($legacy), 'updated_at' => now()]);
             foreach (DB::table('student_guardian_links')->whereIn('guardian_id', $absorbed)->get()->groupBy('student_id') as $studentId => $links) {
                 $existing = DB::table('student_guardian_links')->where(['student_id' => $studentId, 'guardian_id' => $keepId])->first();
-                $source = $links->sortByDesc(fn ($l) => $this->specificity($l->guardian_type, $l->relationship))->first();
+                $source = $this->selectRelationRow($links, 'guardian_type');
                 if ($existing) {
                     $legacyIds = collect(json_decode($existing->legacy_row_ids ?: '[]', true) ?: [])->merge($links->flatMap(fn ($l) => json_decode($l->legacy_row_ids ?: '[]', true) ?: []))->unique()->values()->all();
-                    DB::table('student_guardian_links')->where('id', $existing->id)->update(['is_primary_contact' => (int) ($existing->is_primary_contact || $links->contains('is_primary_contact', 1)), 'is_emergency_contact' => (int) ($existing->is_emergency_contact || $links->contains('is_emergency_contact', 1)), 'guardian_type' => $this->specificity($existing->guardian_type, $source->guardian_type), 'relationship' => $this->specificity($existing->relationship, $source->relationship), 'legacy_row_ids' => json_encode($legacyIds), 'updated_at' => now()]);
+                    DB::table('student_guardian_links')->where('id', $existing->id)->update(['is_primary_contact' => (int) ($existing->is_primary_contact || $links->contains('is_primary_contact', 1)), 'is_emergency_contact' => (int) ($existing->is_emergency_contact || $links->contains('is_emergency_contact', 1)), 'guardian_type' => $this->selectRelation([$existing, ...$links], 'guardian_type'), 'relationship' => $this->selectRelation([$existing, ...$links], 'relationship'), 'legacy_row_ids' => json_encode($legacyIds), 'updated_at' => now()]);
                 } else {
                     $legacyIds = $links->flatMap(fn ($l) => json_decode($l->legacy_row_ids ?: '[]', true) ?: [])->unique()->values()->all();
                     $row = (array) $source;
@@ -58,8 +61,8 @@ class GuardiansMerge extends Command
                     $row['guardian_id'] = $keepId;
                     $row['is_primary_contact'] = (int) $links->contains('is_primary_contact', 1);
                     $row['is_emergency_contact'] = (int) $links->contains('is_emergency_contact', 1);
-                    $row['guardian_type'] = $this->specificity(...$links->pluck('guardian_type')->all());
-                    $row['relationship'] = $this->specificity(...$links->pluck('relationship')->all());
+                    $row['guardian_type'] = $this->selectRelation($links, 'guardian_type');
+                    $row['relationship'] = $this->selectRelation($links, 'relationship');
                     $row['legacy_row_ids'] = json_encode($legacyIds);
                     $row['appointed_at'] = $links->pluck('appointed_at')->filter()->sort()->first();
                     $row['created_at'] = $row['updated_at'] = now();
@@ -81,17 +84,6 @@ class GuardiansMerge extends Command
         });
 
         return self::SUCCESS;
-    }
-
-    private function specificity(?string ...$values): ?string
-    {
-        foreach ($values as $v) {
-            if ($v !== null && ! in_array(strtolower(trim($v)), ['', 'guardian', 'other'], true)) {
-                return $v;
-            }
-        }
-
-        return collect($values)->first(fn ($v) => $v !== null && trim($v) !== '');
     }
 
     private function dedupeContacts(int $guardianId): void

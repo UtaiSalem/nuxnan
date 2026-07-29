@@ -111,6 +111,30 @@ class GuardianMergeCommandsTest extends TestCase
         $this->assertSame(1, (int) $link->is_primary_contact);
     }
 
+    public function test_merge_uses_newest_specific_relation(): void
+    {
+        [$keep, $absorb, $candidate] = $this->guardians();
+        $secondAbsorb = DB::table('guardians')->insertGetId(['first_name' => 'C', 'last_name' => 'C', 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('guardian_merge_candidates')->where('id', $candidate)->update(['guardian_ids' => json_encode([$keep, $absorb, $secondAbsorb])]);
+        DB::table('student_guardian_links')->insert([
+            ['student_id' => 1, 'guardian_id' => $absorb, 'guardian_type' => 'father', 'relationship' => 'father', 'is_primary_contact' => 0, 'is_emergency_contact' => 0, 'created_at' => now()->subDay(), 'updated_at' => now()->subDay()],
+            ['student_id' => 1, 'guardian_id' => $secondAbsorb, 'guardian_type' => 'mother', 'relationship' => 'mother', 'is_primary_contact' => 0, 'is_emergency_contact' => 0, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        $this->artisan('guardians:merge', ['--candidate' => $candidate, '--keep' => $keep])->assertExitCode(0);
+        $this->assertDatabaseHas('student_guardian_links', ['guardian_id' => $keep, 'guardian_type' => 'mother', 'relationship' => 'mother']);
+    }
+
+    public function test_merge_prefers_specific_over_generic_regardless_of_recency(): void
+    {
+        [$keep, $absorb, $candidate] = $this->guardians();
+        DB::table('student_guardian_links')->insert([
+            ['student_id' => 1, 'guardian_id' => $keep, 'guardian_type' => 'guardian', 'relationship' => 'other', 'is_primary_contact' => 0, 'is_emergency_contact' => 0, 'created_at' => now(), 'updated_at' => now()],
+            ['student_id' => 1, 'guardian_id' => $absorb, 'guardian_type' => 'father', 'relationship' => 'father', 'is_primary_contact' => 0, 'is_emergency_contact' => 0, 'created_at' => now()->subDay(), 'updated_at' => now()->subDay()],
+        ]);
+        $this->artisan('guardians:merge', ['--candidate' => $candidate, '--keep' => $keep])->assertExitCode(0);
+        $this->assertDatabaseHas('student_guardian_links', ['guardian_id' => $keep, 'guardian_type' => 'father', 'relationship' => 'father']);
+    }
+
     public function test_merge_moves_and_supersedes_contacts(): void
     {
         [$keep,$absorb,$candidate] = $this->guardians();
