@@ -19,6 +19,7 @@ class StudentIntakeService
     public function __construct(
         private readonly StudentEnrollmentService $enrollmentService,
         private readonly AuditLogService $auditLogService,
+        private readonly GuardianWriteService $guardianWriteService,
     ) {}
 
     /** @return array{student: Student, membership: AcademyMember, enrollment: ClassroomStudent} */
@@ -70,18 +71,16 @@ class StudentIntakeService
                     'previous_grade_level' => $data['previous_school']['grade_level'] ?? null,
                 ]);
 
-                $guardians = collect($data['guardians'] ?? [])->map(function (array $guardian) use ($student, $academy): StudentGuardian {
+                $guardians = collect($data['guardians'] ?? [])->map(function (array $guardian) use ($student, $academy, $operator): StudentGuardian {
                     $contacts = $guardian['contacts'] ?? [];
                     unset($guardian['contacts']);
-                    $created = $student->guardians()->create(array_merge($guardian, [
+                    $created = $this->guardianWriteService->create($student, array_merge($guardian, [
                         'academy_id' => $academy->id,
                         'student_code' => $student->student_id,
                         'status' => $guardian['status'] ?? 'alive',
                         'nationality' => $guardian['nationality'] ?? 'ไทย',
-                    ]));
-                    foreach ($contacts as $contact) {
-                        $created->contacts()->create($contact + ['is_primary' => false, 'is_verified' => false]);
-                    }
+                        'contacts' => array_map(fn (array $contact): array => $contact + ['is_primary' => false, 'is_verified' => false], $contacts),
+                    ]), 'intake', $operator->id);
 
                     return $created;
                 });

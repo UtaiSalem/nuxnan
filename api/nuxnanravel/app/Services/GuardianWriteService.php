@@ -70,7 +70,7 @@ class GuardianWriteService
             'title_prefix' => $g['title_prefix'] ?? null, 'first_name' => $g['first_name'] ?? null, 'last_name' => $g['last_name'] ?? null,
             'occupation' => $g['occupation'] ?? null, 'workplace' => $g['workplace'] ?? null, 'monthly_income' => $g['monthly_income'] ?? null,
             'relationship' => $g['relationship'] ?? null, 'is_primary_contact' => $g['is_primary_contact'] ?? false,
-            'is_emergency_contact' => $g['is_emergency_contact'] ?? false, 'status' => 'alive', 'nationality' => $g['nationality'] ?? 'ไทย',
+            'is_emergency_contact' => $g['is_emergency_contact'] ?? false, 'status' => $g['status'] ?? 'alive', 'nationality' => $g['nationality'] ?? 'ไทย',
         ], $update ? [] : []), fn ($v) => $v !== null);
     }
 
@@ -80,7 +80,7 @@ class GuardianWriteService
 
         return array_filter(['academy_id' => $student->academy_id, 'citizen_id' => $g['citizen_id'] ?? null, 'title_prefix' => $g['title_prefix'] ?? null,
             'first_name' => $g['first_name'] ?? null, 'last_name' => $g['last_name'] ?? null, 'occupation' => $g['occupation'] ?? null,
-            'workplace' => $g['workplace'] ?? null, 'monthly_income' => $g['monthly_income'] ?? null, 'nationality' => $g['nationality'] ?? 'ไทย', 'status' => 'alive'], fn ($v) => $v !== null);
+            'workplace' => $g['workplace'] ?? null, 'monthly_income' => $g['monthly_income'] ?? null, 'nationality' => $g['nationality'] ?? 'ไทย', 'status' => $g['status'] ?? 'alive'], fn ($v) => $v !== null);
     }
 
     private function findPerson(Student $student, array $data): ?Guardian
@@ -110,6 +110,16 @@ class GuardianWriteService
     private function contacts(StudentGuardian $legacy, ?Guardian $person, array $data, bool $update = false): void
     {
         $g = $data['guardian'] ?? $data;
+        foreach ($data['contacts'] ?? [] as $contact) {
+            GuardianContact::create([
+                'guardian_id' => $legacy->id,
+                'guardian_person_id' => $person?->id,
+                'contact_type' => $contact['contact_type'],
+                'contact_value' => $contact['contact_value'],
+                'is_primary' => $contact['is_primary'] ?? false,
+                'is_verified' => $contact['is_verified'] ?? false,
+            ]);
+        }
         $contact = $data['contact'] ?? null;
         if ($contact) {
             GuardianContact::updateOrCreate(['guardian_id' => $legacy->id, 'contact_type' => $contact['contact_type']], ['guardian_person_id' => $person?->id, 'contact_value' => $contact['contact_value'], 'is_primary' => $contact['is_primary'] ?? true, 'is_verified' => false]);
