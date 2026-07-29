@@ -70,6 +70,10 @@ const showAddMemberModal = ref(false)
 const availableMembers = ref<any[]>([])
 const selectedMemberIds = ref<number[]>([])
 const memberRole = ref('member')
+const memberRoleFilter = ref('staff')
+const memberResultsPagination = ref({ current_page: 1, last_page: 1, total: 0 })
+const isLoadingAvailableMembers = ref(false)
+let memberSearchTimer: ReturnType<typeof setTimeout> | null = null
 
 onMounted(async () => {
   try {
@@ -393,19 +397,28 @@ const openAddMemberModal = async () => {
   showAddMemberModal.value = true
   selectedMemberIds.value = []
   memberRole.value = 'member'
+  memberSearchQuery.value = ''
+  memberRoleFilter.value = 'staff'
+  memberResultsPagination.value = { current_page: 1, last_page: 1, total: 0 }
   await fetchAvailableMembers()
 }
 
-// Fetch available members (academy members not in this department)
-const fetchAvailableMembers = async () => {
+// Fetch a server-filtered page of academy members (academy members not in this department)
+const fetchAvailableMembers = async (page = 1) => {
   if (!academyId.value) return
 
+  isLoadingAvailableMembers.value = true
   try {
-    const response: any = await api.get(`/api/academies/${academyId.value}/members`, {
-      query: {
-        status: 2, // Approved members
-        per_page: 100
-      }
+    const query: Record<string, any> = {
+      search: memberSearchQuery.value || undefined,
+      status: 2,
+      page,
+      per_page: 25
+    }
+    if (memberRoleFilter.value === 'staff') query.roles = ['teacher', 'staff']
+
+    const response: any = await api.get(`/api/academies/${academyId.value}/members/search`, {
+      query
     })
 
     if (response.success) {
@@ -413,11 +426,30 @@ const fetchAvailableMembers = async () => {
       availableMembers.value = (response.members || []).filter(
         (m: any) => !existingMemberIds.includes(m.user_id)
       )
+      memberResultsPagination.value = response.pagination || { current_page: page, last_page: page, total: availableMembers.value.length }
     }
   } catch (err) {
     console.error('Failed to fetch available members:', err)
+  } finally {
+    isLoadingAvailableMembers.value = false
   }
 }
+
+const scheduleMemberSearch = () => {
+  if (memberSearchTimer) clearTimeout(memberSearchTimer)
+  memberSearchTimer = setTimeout(() => fetchAvailableMembers(1), 300)
+}
+
+const selectAllMatchingMembers = () => {
+  const ids = availableMembers.value.map((member: any) => member.user_id).filter(Boolean)
+  selectedMemberIds.value = Array.from(new Set([...selectedMemberIds.value, ...ids]))
+}
+
+const clearMemberSelection = () => {
+  selectedMemberIds.value = []
+}
+
+const changeMemberRoleFilter = () => fetchAvailableMembers(1)
 
 // Add members to department
 const addMembersToDepartment = async () => {
@@ -528,15 +560,7 @@ const updateMemberRole = async (memberId: number, newRole: string) => {
   }
 }
 
-// Filtered members for search
-const filteredAvailableMembers = computed(() => {
-  if (!memberSearchQuery.value) return availableMembers.value
-  const query = memberSearchQuery.value.toLowerCase()
-  return availableMembers.value.filter((m: any) => 
-    m.user?.name?.toLowerCase().includes(query) ||
-    m.user?.email?.toLowerCase().includes(query)
-  )
-})
+const filteredAvailableMembers = computed(() => availableMembers.value)
 
 // Role options
 const roleOptions = [
@@ -1016,6 +1040,7 @@ const onSetupSuccess = async () => {
               <Icon name="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 v-model="memberSearchQuery"
+                @input="scheduleMemberSearch"
                 type="text"
                 placeholder="ค้นหาสมาชิก..."
                 class="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-500"
@@ -1023,6 +1048,15 @@ const onSetupSuccess = async () => {
             </div>
             
             <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">กลุ่มสมาชิก</label>
+              <select
+                v-model="memberRoleFilter"
+                @change="changeMemberRoleFilter"
+                class="w-full px-4 py-2.5 mb-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+              >
+                <option value="staff">ครูและเจ้าหน้าที่</option>
+                <option value="all">สมาชิกทุกบทบาท</option>
+              </select>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">บทบาทในแผนก</label>
               <select
                 v-model="memberRole"
@@ -1034,7 +1068,17 @@ const onSetupSuccess = async () => {
           </div>
           
           <div class="flex-1 overflow-y-auto p-5">
-            <div v-if="filteredAvailableMembers.length === 0" class="text-center py-8">
+            <div class="flex items-center justify-between mb-3 text-sm">
+              <span class="text-gray-500 dark:text-gray-400">พบ {{ memberResultsPagination.total }} คน · เลือกแล้ว {{ selectedMemberIds.length }} คน</span>
+              <div class="flex items-center gap-2">
+                <button type="button" @click="selectAllMatchingMembers" class="text-primary-600 hover:text-primary-700 dark:text-primary-400">เลือกทั้งหมดในผลลัพธ์</button>
+                <button type="button" @click="clearMemberSelection" class="text-gray-500 hover:text-gray-700 dark:text-gray-400">ล้างการเลือก</button>
+              </div>
+            </div>
+            <div v-if="isLoadingAvailableMembers" class="text-center py-8">
+              <div class="animate-spin rounded-full h-8 w-8 border-4 border-primary-500 border-t-transparent mx-auto"></div>
+            </div>
+            <div v-else-if="filteredAvailableMembers.length === 0" class="text-center py-8">
               <p class="text-gray-500 dark:text-gray-400">ไม่พบสมาชิก</p>
             </div>
             
@@ -1061,6 +1105,11 @@ const onSetupSuccess = async () => {
                 </div>
               </label>
             </div>
+          </div>
+          <div v-if="memberResultsPagination.last_page > 1" class="px-5 pb-3 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+            <button type="button" :disabled="memberResultsPagination.current_page <= 1" @click="fetchAvailableMembers(memberResultsPagination.current_page - 1)" class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40">ก่อนหน้า</button>
+            <span>หน้า {{ memberResultsPagination.current_page }} / {{ memberResultsPagination.last_page }}</span>
+            <button type="button" :disabled="memberResultsPagination.current_page >= memberResultsPagination.last_page" @click="fetchAvailableMembers(memberResultsPagination.current_page + 1)" class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40">ถัดไป</button>
           </div>
           
           <div class="p-5 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">

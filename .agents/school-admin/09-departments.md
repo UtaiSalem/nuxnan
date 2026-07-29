@@ -102,11 +102,12 @@
 | Step | Title | Depends | Deliverable | Status |
 |---|---|---|---|---|
 | **D-S1** | **อุดช่องโหว่ (D1+D2)** — `academy.permission:groups.view` ครอบทั้งกลุ่ม + `groups.manage` ทุก route เขียน · เปลี่ยนชื่อ `checkPermission()` → `ensureDepartmentFeatureEnabled()` ให้ความหมายตรงกับพฤติกรรม | — | routes + controller + `DepartmentAuthorizationTest` | 🟢 **verified 2026-07-29** — 15/15 route มี guard · เทสต์ 8 ผ่าน |
-| **D-S2** | **นิยามบทบาทในฝ่าย (D5)** — กำหนดค่าที่ใช้ได้ (`head`, `deputy`, `member`) + migration ปรับ default + backfill | D-S1 | migration + model + tests | ⚪ |
+| **D-S2** | **นิยามบทบาทในฝ่าย (D5)** — พบว่า controller validate `in:member,staff,admin,head` อยู่แล้ว เหลือแค่แก้ default ของ DB จาก `'student'` → `'member'` | D-S1 | migration | 🟢 **verified 2026-07-29** (ยุบรวมกับ D-S6) |
 | **D-S3** | **ต่อสิทธิ์ฝ่ายเข้ากับ middleware (D3)** — `CheckAcademyPermission` ตรวจเพิ่ม: ถ้า role ระดับโรงเรียนไม่ผ่าน ให้ดูว่า user เป็นสมาชิกฝ่ายที่มีสิทธิ์นั้นหรือไม่ | D-S1, D-S2 | middleware + service + tests | ⚪ |
 | **D-S4** | **ขอบเขตข้อมูลของฝ่าย (D4)** — กำหนดว่าสิทธิ์ที่ได้จากฝ่ายมีผลกับข้อมูลชุดไหน (ทั้งโรงเรียน / เฉพาะที่ผูกกับฝ่าย) + helper ให้เมนูอื่นเรียกใช้ | D-S3 | service + tests + docs | ⚪ |
 | **D-S5** | **Audit log (D7)** — ผูก `MemberActivityLog` กับ CRUD ฝ่ายและสมาชิกฝ่าย | D-S1 | controller + tests | ⚪ |
-| **D-S6** | **นำคนเข้าฝ่าย (D6)** — เครื่องมือ bulk จากรายชื่อบุคลากร + หน้าจอที่ใช้งานได้จริง | D-S2 | FE + BE | ⚪ |
+| **D-S6** | **นำคนเข้าฝ่าย (D6)** — modal เพิ่มสมาชิกเดิมดึงแค่ 100 คนแรกจาก 3,063 คนแล้วกรองฝั่ง client → **ครู 119 คนอาจไม่โผล่เลย** นี่คือเหตุผลจริงที่สมาชิกฝ่ายมีแค่ 1 คน · แก้เป็นค้นหาฝั่ง server ผ่าน `/members/search` + กรองครู/บุคลากรเป็นค่าเริ่มต้น + เลือกหลายคน + pagination | D-S1 | migration + `departments/index.vue` | 🟢 **verified 2026-07-29** — ค้นหาครูเจอครบ 119/119 |
+| **D-S6b** | **ป้ายบอกว่าอยู่ฝ่ายอื่นแล้ว** — `members/search` ยังไม่ส่งข้อมูลสังกัดฝ่ายมาด้วย ทำให้คนที่กดไม่เห็นว่าครูคนนี้อยู่ฝ่ายอื่นอยู่หรือไม่ก่อนตัดสินใจ ต้องเพิ่ม field (เช่น `department_memberships`) ใน response | D-S6 | BE + FE | ⚪ |
 | **D-S7** | **หน้ารายละเอียดฝ่าย (D8)** — ยกเครื่อง `[id].vue` ตามสกิล `hopeui-port` | D-S6 | FE | ⚪ |
 
 **Rule:** ทุก step ต้อง verify (test/build/ตรวจจริง) ก่อนขึ้น 🟢 · ห้ามเปลี่ยนปลายทาง relation เดิม (กฎจาก #6 §6.1)
