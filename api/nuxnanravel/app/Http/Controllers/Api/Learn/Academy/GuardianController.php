@@ -6,11 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\AcademyMember;
 use App\Models\AcademyRole;
-use App\Models\GuardianContact;
 use App\Models\Student;
 use App\Models\StudentGuardian;
 use App\Models\User;
 use App\Services\GuardianService;
+use App\Services\GuardianWriteService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -23,7 +23,7 @@ class GuardianController extends Controller
      * Reads use GuardianService. Write methods intentionally remain on student_guardians
      * until G-S4; newly written legacy data is temporarily invisible to these reads.
      */
-    public function __construct(private GuardianService $guardianService) {}
+    public function __construct(private GuardianService $guardianService, private GuardianWriteService $guardianWriteService) {}
 
     /**
      * Get list of guardians for a student
@@ -77,7 +77,7 @@ class GuardianController extends Controller
         }
 
         $validated = $request->validate([
-            'guardian_type' => 'required|string|in:father,mother,grandfather,grandmother,uncle,aunt,sibling,other',
+            'guardian_type' => 'nullable|string|in:father,mother,grandfather,grandmother,uncle,aunt,sibling,other',
             'title_prefix' => 'nullable|string|max:20',
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
@@ -93,7 +93,6 @@ class GuardianController extends Controller
             'email' => 'nullable|email|max:100',
         ]);
 
-        DB::beginTransaction();
         try {
             // If setting as primary, unset other primaries
             if ($request->boolean('is_primary_contact')) {
@@ -101,7 +100,7 @@ class GuardianController extends Controller
                     ->update(['is_primary_contact' => false]);
             }
 
-            $guardian = StudentGuardian::create([
+            $guardian = $this->guardianWriteService->create($student, [
                 'student_id' => $student->id,
                 'student_code' => $student->student_id,
                 'guardian_type' => $validated['guardian_type'],
@@ -116,30 +115,10 @@ class GuardianController extends Controller
                 'nationality' => $validated['nationality'] ?? 'ไทย',
                 'is_primary_contact' => $request->boolean('is_primary_contact'),
                 'is_emergency_contact' => $request->boolean('is_emergency_contact'),
-                'status' => 'active',
+                'status' => 'alive',
+                'phone' => $validated['phone'] ?? null,
+                'email' => $validated['email'] ?? null,
             ]);
-
-            // Add phone contact if provided
-            if (! empty($validated['phone'])) {
-                GuardianContact::create([
-                    'guardian_id' => $guardian->id,
-                    'contact_type' => 'phone',
-                    'contact_value' => $validated['phone'],
-                    'is_primary' => true,
-                ]);
-            }
-
-            // Add email contact if provided
-            if (! empty($validated['email'])) {
-                GuardianContact::create([
-                    'guardian_id' => $guardian->id,
-                    'contact_type' => 'email',
-                    'contact_value' => $validated['email'],
-                    'is_primary' => false,
-                ]);
-            }
-
-            DB::commit();
 
             return response()->json([
                 'success' => true,
@@ -147,7 +126,6 @@ class GuardianController extends Controller
                 'guardian' => $guardian->load('contacts'),
             ], 201);
         } catch (\Exception $e) {
-            DB::rollBack();
 
             return response()->json([
                 'success' => false,
@@ -193,9 +171,7 @@ class GuardianController extends Controller
                     ->update(['is_primary_contact' => false]);
             }
 
-            $guardian->update($validated);
-
-            DB::commit();
+            $guardian = $this->guardianWriteService->update($guardian, $validated);
 
             return response()->json([
                 'success' => true,
@@ -203,7 +179,6 @@ class GuardianController extends Controller
                 'guardian' => $guardian->fresh(['contacts']),
             ], 200);
         } catch (\Exception $e) {
-            DB::rollBack();
 
             return response()->json([
                 'success' => false,
@@ -224,22 +199,14 @@ class GuardianController extends Controller
             ], 404);
         }
 
-        DB::beginTransaction();
         try {
-            // Delete contacts first
-            $guardian->contacts()->delete();
-
-            // Delete guardian
-            $guardian->delete();
-
-            DB::commit();
+            $this->guardianWriteService->delete($guardian);
 
             return response()->json([
                 'success' => true,
                 'message' => 'ลบผู้ปกครองเรียบร้อยแล้ว',
             ], 200);
         } catch (\Exception $e) {
-            DB::rollBack();
 
             return response()->json([
                 'success' => false,

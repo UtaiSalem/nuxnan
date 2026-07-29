@@ -9,6 +9,7 @@ use App\Models\GuardianContact;
 use App\Models\Student;
 use App\Models\StudentGuardian;
 use App\Services\GuardianService;
+use App\Services\GuardianWriteService;
 use App\Traits\HandlesStudentUpdates;
 use Illuminate\Support\Facades\DB;
 
@@ -20,7 +21,7 @@ class GuardianController extends Controller
      */
     use HandlesStudentUpdates;
 
-    public function __construct(private GuardianService $guardianService) {}
+    public function __construct(private GuardianService $guardianService, private GuardianWriteService $guardianWriteService) {}
 
     /**
      * Get student guardian data
@@ -125,32 +126,8 @@ class GuardianController extends Controller
             }
 
             // Create guardian directly
-            $guardian = StudentGuardian::create([
-                'student_id' => $student->id,
-                'student_code' => $student->student_id,
-                'guardian_type' => $validatedData['guardian']['guardian_type'],
-                'citizen_id' => $validatedData['guardian']['citizen_id'] ?? null,
-                'title_prefix' => $validatedData['guardian']['title_prefix'] ?? null,
-                'first_name' => $validatedData['guardian']['first_name'],
-                'last_name' => $validatedData['guardian']['last_name'],
-                'occupation' => $validatedData['guardian']['occupation'] ?? null,
-                'workplace' => $validatedData['guardian']['workplace'] ?? null,
-                'monthly_income' => $validatedData['guardian']['monthly_income'] ?? null,
-                'relationship' => $validatedData['guardian']['relationship'] ?? null,
-                'is_primary_contact' => $validatedData['guardian']['is_primary_contact'] ?? false,
-                'is_emergency_contact' => $validatedData['guardian']['is_emergency_contact'] ?? false,
-                'status' => 'alive',
-                'nationality' => 'ไทย',
-            ]);
-
-            // Create contact for guardian
-            $contact = GuardianContact::create([
-                'guardian_id' => $guardian->id,
-                'contact_type' => $validatedData['contact']['contact_type'],
-                'contact_value' => $validatedData['contact']['contact_value'],
-                'is_primary' => $validatedData['contact']['is_primary'] ?? true,
-                'is_verified' => false,
-            ]);
+            $guardian = $this->guardianWriteService->create($student, $validatedData);
+            $contact = $guardian->fresh('contacts')->contacts->first();
 
             DB::commit();
 
@@ -214,7 +191,8 @@ class GuardianController extends Controller
                 'is_primary_contact' => $validatedData['guardian']['is_primary_contact'] ?? false,
                 'is_emergency_contact' => $validatedData['guardian']['is_emergency_contact'] ?? false,
             ];
-            $guardianResult = $this->processFieldUpdates($student, $guardian, 'StudentGuardian', 'guardian', $guardianFields);
+            $guardianResult = ['pending' => []];
+            $guardian = $this->guardianWriteService->update($guardian, $validatedData);
 
             // Get or create primary contact
             $contact = $guardian->contacts->where('is_primary', true)->first()

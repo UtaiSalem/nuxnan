@@ -14,7 +14,7 @@ class UpdateGuardianRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'guardian.guardian_type' => 'required|in:father,mother,guardian,relative',
+            'guardian.guardian_type' => 'nullable|in:father,mother,guardian,relative',
             'guardian.citizen_id' => 'nullable|string|max:13',
             'guardian.title_prefix' => 'nullable|string|max:20',
             'guardian.first_name' => 'required|string|max:100',

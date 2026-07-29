@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Console\Commands\Concerns\SelectsGuardianRelation;
+use App\Support\GuardianNameNormalizer;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -112,8 +113,8 @@ class GuardiansBackfill extends Command
             $citizenId = (string) $row->citizen_id;
             if (preg_match('/^\d{13}$/', $citizenId)) {
                 $namesByCitizen[$citizenId][] = [
-                    $this->normalizeName($row->first_name),
-                    $this->normalizeName($row->last_name),
+                    GuardianNameNormalizer::normalize($row->first_name),
+                    GuardianNameNormalizer::normalize($row->last_name),
                 ];
             }
         }
@@ -132,21 +133,14 @@ class GuardiansBackfill extends Command
                     'merge',
                     $row->academy_id,
                     $citizenId,
-                    $this->normalizeName($row->first_name),
-                    $this->normalizeName($row->last_name),
+                    GuardianNameNormalizer::normalize($row->first_name),
+                    GuardianNameNormalizer::normalize($row->last_name),
                 ])
                 : 'row|'.$row->id;
             $groups[$key][] = $row;
         }
 
         return array_values($groups);
-    }
-
-    private function normalizeName($name): string
-    {
-        $name = preg_replace('/\s+/u', ' ', trim((string) $name));
-
-        return preg_replace('/[\x{0E48}\x{0E49}\x{0E4A}\x{0E4B}]/u', '', $name);
     }
 
     private function conflicts(array $groups): array

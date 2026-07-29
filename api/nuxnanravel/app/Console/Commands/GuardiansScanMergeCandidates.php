@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\GuardianMergeCandidate;
+use App\Support\GuardianNameNormalizer;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -47,6 +48,6 @@ class GuardiansScanMergeCandidates extends Command
 
     private function normalize($value): string
     {
-        return preg_replace('/[\x{0E48}\x{0E49}\x{0E4A}\x{0E4B}]/u', '', preg_replace('/\s+/u', ' ', trim((string) $value)));
+        return GuardianNameNormalizer::normalize($value);
     }
 }
