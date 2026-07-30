@@ -210,6 +210,7 @@ require __DIR__.'/play/shares.php';
 require __DIR__.'/play/photos.php';
 require __DIR__.'/play/videos.php';
 require __DIR__.'/learn/academy.php';
+require __DIR__.'/learn/election.php';
 require __DIR__.'/learn/course.php';
 require __DIR__.'/learn/student.php';
 

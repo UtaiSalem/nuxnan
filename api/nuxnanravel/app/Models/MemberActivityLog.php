@@ -103,6 +103,14 @@ class MemberActivityLog extends Model
 
     public const ACTION_DEPARTMENT_PERMISSION_UPDATE = 'department_permission_update';
 
+    public const ACTION_ELECTION_CREATE = 'election_create';
+
+    public const ACTION_ELECTION_UPDATE = 'election_update';
+
+    public const ACTION_ELECTION_DELETE = 'election_delete';
+
+    public const ACTION_ELECTION_STATUS_CHANGE = 'election_status_change';
+
     // Categories
     public const CATEGORY_MEMBER = 'member';
 

@@ -237,6 +237,10 @@ class MemberActivityLogController extends Controller
             ['value' => MemberActivityLog::ACTION_DEPARTMENT_MEMBER_REMOVE, 'label' => 'นำสมาชิกออกจากฝ่ายงาน', 'icon' => 'mdi:account-minus'],
             ['value' => MemberActivityLog::ACTION_DEPARTMENT_MEMBER_ROLE_CHANGE, 'label' => 'เปลี่ยนบทบาทสมาชิกในฝ่ายงาน', 'icon' => 'mdi:badge-account'],
             ['value' => MemberActivityLog::ACTION_DEPARTMENT_PERMISSION_UPDATE, 'label' => 'ปรับปรุงสิทธิ์ฝ่ายงาน', 'icon' => 'mdi:shield-edit'],
+            ['value' => MemberActivityLog::ACTION_ELECTION_CREATE, 'label' => 'สร้างการเลือกตั้ง', 'icon' => 'mdi:vote'],
+            ['value' => MemberActivityLog::ACTION_ELECTION_UPDATE, 'label' => 'แก้ไขการเลือกตั้ง', 'icon' => 'mdi:vote-outline'],
+            ['value' => MemberActivityLog::ACTION_ELECTION_DELETE, 'label' => 'ลบการเลือกตั้ง', 'icon' => 'mdi:vote-outline'],
+            ['value' => MemberActivityLog::ACTION_ELECTION_STATUS_CHANGE, 'label' => 'เปลี่ยนสถานะการเลือกตั้ง', 'icon' => 'mdi:state-machine'],
         ];
 
         return response()->json([

@@ -92,6 +92,11 @@ class Academy extends Model
         return $this->hasMany(AcademyDonate::class);
     }
 
+    public function elections(): HasMany
+    {
+        return $this->hasMany(Election::class);
+    }
+
     /**
      * Get the academySetting associated with the Academy
      */
