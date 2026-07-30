@@ -70,6 +70,11 @@ Legend: 🟢 พร้อมใช้งาน (ผ่านการตรว�
 | 22 | ประวัติกิจกรรม | `admin/activity-log/` | `reports.view` | 22-activity-log.md | ⚪ |
 | 23 | รายได้ | `admin/revenue.vue` | `finance.view` / `finance.manage` | 23-revenue.md | 🟡 Phase 1 done |
 | **24** | **แดชบอร์ด** | `admin/index.vue` | `academy.view` | 24-dashboard.md | ⚪ (ทำหลังสุด — รวม signal) |
+| **25** | **การเลือกตั้งสภานักเรียน** | `admin/elections/` + `elections/[id]/station.vue` | `elections.view` / `elections.manage` / `elections.station` | [25-elections.md](25-elections.md) | 🔴 **เร่งด่วน** — สเปกล็อกแล้ว (E1–E6) · greenfield 100% · E-S1 เป็นงานแรก |
+| **26** | **เช็คชื่อเข้าร่วมกิจกรรม** | `admin/events/` + หน้า session check-in (ยังไม่มี) | `events.view` / `events.manage` | 26-activity-attendance.md | 🔴 **เร่งด่วน** — backend มีเกือบครบแต่ **0 แถวในทุกตาราง (ไม่เคยรันจริง)** · ยังไม่เขียนสเปก |
+| **27** | **กีฬาสี** | ยังไม่มี | `sports.*` (เสนอใหม่) | 27-sports-day.md | 🔴 **เร่งด่วน** — มีฐานครึ่งเดียว + บั๊กเชิงออกแบบ (`house` ไม่ได้ลงทะเบียน, คะแนนคิดจาก `SUM(users.pp)`) · ยังไม่เขียนสเปก |
+
+> **เมนู #25–#27 เพิ่ม 2026-07-31 ตามคำสั่งเร่งด่วนของเจ้าของโปรเจค** — ทั้งสามเป็นงานของ **ฝ่ายบริหารงานกิจการนักเรียน** และแทรกคิวก่อนเมนูที่เหลือ · ลำดับที่ตกลง: **#25 ก่อน** แล้วค่อย #26 → #27
 
 ---
 
