@@ -359,7 +359,7 @@ Prefix: `/api/academies/{academy}/elections`
 | Step | Title | Depends | Deliverable | Status |
 |---|---|---|---|---|
 | **E-S1** | **Schema + Models + Permission** — 8 migration, 8 model (`ElectionBallot` ต้อง `$incrementing=false` + `$keyType='string'` + `$timestamps=false`), ตระกูล `elections` 3 key + เพิ่มใน `DEPARTMENT_DELEGABLE_FAMILIES` | — | migrations + models + tests | 🟢 **verified 2026-07-31** |
-| **E-S2** | **Election CRUD + State Machine + Audit** — `ElectionService::transitionTo()` บังคับกฎ §3.1 · route ทุกตัวมี guard ตั้งแต่แรก | E-S1 | controller + service + routes + tests | ⚪ |
+| **E-S2** | **Election CRUD + State Machine + Audit** — `ElectionService::transitionTo()` บังคับกฎ §3.1 · route ทุกตัวมี guard ตั้งแต่แรก | E-S1 | controller + service + routes + tests | 🟢 **verified 2026-07-31** |
 | **E-S3** | **รับสมัครพรรค + อนุมัติ + ให้เบอร์** — บังคับ 1 leader/พรรค, 1 คน 1 พรรค, เบอร์ไม่ซ้ำ | E-S2 | controller + service + tests | ⚪ |
 | **E-S4** | **Lock บัญชีผู้มีสิทธิ์** — snapshot จาก `academy_members` status=2 + join ห้องเรียน · idempotent · รายงานตัวเลขแยก student/staff และ **แยกรายชื่อคนที่ไม่มี member_code / ไม่มีบัตร ออกมาให้เห็น** | E-S2 | command + endpoint + tests | ⚪ |
 | **E-S5** | **หน่วยเลือกตั้ง + ออกบัตร** — station CRUD/open/close · `/lookup` (ต่อ `StudentIdentifierResolver` + ค้นด้วยชื่อ) · `/issue` (ล็อกแถว + token hash + TTL) · `/void` | E-S4 | controller + service + tests รวมเคสยิงพร้อมกัน | ⚪ |
@@ -388,6 +388,12 @@ Prefix: `/api/academies/{academy}/elections`
 
 ## 10. Review Log
 
+- **2026-07-31 E-S2** — codex ทำ 2 รอบ, claude ตรวจ → **ผ่านในรอบที่ 2** · เทสต์ 20 ผ่าน (37 assertions) · pint ผ่าน · `route:list --json` ยืนยัน guard ครบ 7/7 (อ่าน `elections.view` · เขียน `elections.manage`) ไม่มี route หลุด
+  - **รอบแรก codex ข้ามข้อเทสต์ทั้งข้อ** (เขียน service/controller/requests/routes ครบแล้วหยุด) ทั้งที่โจทย์ระบุไว้ชัด → ต้องส่งกลับ · **ย้ำบทเรียนเดิม: ตรวจไฟล์จริงเสมอ อย่าเชื่อว่า "เสร็จ" แปลว่าครบ**
+  - **บั๊กที่ claude เจอเองตอนตรวจ (เทสต์ของ codex ไม่ได้ครอบ):** `ElectionController::index()` เขียน `'receipts as receipts_cast_count'` **ไม่มี closure จำกัด `status`** → นับใบเสร็จทุกสถานะรวม `issued`/`void`/`expired` ทั้งที่ตัวเลขนี้คือยอดผู้มาใช้สิทธิ์ → **ยอดจะสูงเกินจริงโดยนับคนที่รับบัตรแล้วไม่ได้ลง** · แก้แล้วทั้ง `index` และ `show` + มีเทสต์ `issued receipt is not counted as cast` คุม
+  - **`transitionTo()` เดิมไม่มีล็อกแถวเลย** (อ่าน→ตรวจ→เขียน นอก transaction) สองคำขอพร้อมกันผ่านด่านได้ทั้งคู่ → แก้เป็น `DB::transaction` + `lockForUpdate()` + **อ่านสถานะใหม่ในล็อก** ตามรูป `CampaignViewService::rewardedView()` · ตรวจด้วยตาแล้วว่าล็อกอยู่ก่อนการอ่าน `$from` จริง ไม่ใช่แค่ห่อ transaction เฉย ๆ
+  - เทสต์ที่สำคัญที่สุดของ step นี้: `reopening a closed ballot box is rejected` · `published is terminal and cannot be cancelled or changed` · `cancelled is terminal` · `show from another academy is not found` (404 ไม่ใช่ 403)
+  - ไฟล์นอกแผนที่ codex แตะเพิ่ม 2 ตัว ตรวจแล้วสมเหตุสมผล: `Academy::elections()` relation และ `require` route file ใน `routes/api.php` (แผนเขียนว่าให้ include จาก `academy.php` — ผลลัพธ์เท่ากันและสะอาดกว่า จึงรับไว้)
 - **2026-07-31 E-S1** — codex ทำ, claude ตรวจ → **ผ่าน** · ยืนยันเองจาก DB จริงไม่ใช่จากรายงาน: `migrate:status` 8/8 `Ran` (batch 117) · `Schema::getColumnListing('election_ballots')` คืน `["uuid","election_id","party_id"]` **พอดี 3 คอลัมน์ ไม่มี timestamp ไม่มีตัวชี้ผู้ลงคะแนน** · unique index ครบทั้ง 6 ตัวตามสเปก · pint passed · เทสต์ 6/6 (13 assertions)
   - **จุดที่เทสต์จับไม่ได้และต้องตรวจด้วยตา:** ระหว่างทาง codex เขียน `'elections'` **ซ้ำสองครั้ง**ทั้งใน `PERMISSIONS` และ `DEPARTMENT_DELEGABLE_FAMILIES` · PHP เก็บ key ตัวหลังเงียบ ๆ → `getAllPermissions()` คืน 85 คีย์ไม่ซ้ำ **เทสต์ทุกตัวจึงผ่านทั้งที่ซอร์สผิด** (เป็นกับดัก: แก้บล็อกแรกในอนาคตจะไม่มีผลอะไรเลย) · codex แก้เองในรอบถัดมาก่อนจบงาน diff สุดท้ายสะอาด
   - **บทเรียน:** สถานะ/รายงานของ codex เชื่อไม่ได้ระหว่างทาง — ไฟล์ถูกเขียนทับหลายรอบ (เห็นเวอร์ชัน minified ก่อน pint ตอน 04:27 แล้วเวอร์ชันจัดรูปแบบแล้วตอน 04:29) → **ต้องตรวจตอนงานจบจริงเท่านั้น** และตรวจจาก DB/เทสต์ ไม่ใช่จาก diff อย่างเดียว
