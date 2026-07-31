@@ -264,5 +264,6 @@
     "search_placeholder": "Search by course name...",
     "loading": "Loading...",
     "empty": "No courses found."
-  }
+  },
+  "elections": { "station": { "title": "Polling station", "name": "Station", "open": "Open", "closed": "Closed", "progress": "Issued: {issued} · Cast: {cast}", "identifyHeading": "Identify voter", "identifyHelp": "Scan a student card, enter a code, or search by name.", "codeLabel": "Card or member code", "codePlaceholder": "Enter code and press Enter", "searchLabel": "Search by name", "searchPlaceholder": "Type a name and press Enter", "scan": "Scan QR code", "invalidQr": "This QR code is not a student card for this academy.", "issue": "Issue ballot", "ballotHeading": "Choose one option", "abstain": "No vote", "confirmPrompt": "Confirm your choice?", "castSuccess": "Your ballot was recorded.", "ballotExpired": "The ballot expired. Please ask the committee for a new one." } }
 }
