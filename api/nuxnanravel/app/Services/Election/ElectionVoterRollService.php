@@ -17,8 +17,31 @@ class ElectionVoterRollService
         if (! in_array($e->status, [Election::STATUS_DRAFT, Election::STATUS_NOMINATION, Election::STATUS_CAMPAIGN], true)) {
             throw new DomainException('ไม่สามารถล็อกบัญชีผู้มีสิทธิ์หลังเริ่มลงคะแนนได้');
         }
-        $eligible = AcademyMember::query()->where('academy_id', $e->academy_id)->where('status', 2)->whereNotNull('user_id');
+        $eligible = AcademyMember::query()
+            ->where('academy_id', $e->academy_id)
+            ->where('status', 2)
+            ->whereNotNull('user_id')
+            ->where(function ($query) {
+                $query->whereNull('student_id')
+                    ->orWhereExists(function ($student) {
+                        $student->selectRaw('1')
+                            ->from('students')
+                            ->whereColumn('students.id', 'academy_members.student_id')
+                            ->where('students.status', 'active');
+                    });
+            });
         $skippedNoUserAccount = AcademyMember::query()->where('academy_id', $e->academy_id)->where('status', 2)->whereNull('user_id')->count();
+        $skippedInactiveStudent = AcademyMember::query()
+            ->where('academy_id', $e->academy_id)
+            ->where('status', 2)
+            ->whereNotNull('user_id')
+            ->whereNotNull('student_id')
+            ->whereNotExists(function ($student) {
+                $student->selectRaw('1')
+                    ->from('students')
+                    ->whereColumn('students.id', 'academy_members.student_id')
+                    ->where('students.status', 'active');
+            })->count();
         $ids = $eligible->pluck('user_id');
         ElectionVoter::where('election_id', $e->id)->whereNotIn('user_id', $ids)->delete();
         $duplicateMemberRows = (clone $eligible)->select('user_id')->groupBy('user_id')->havingRaw('COUNT(*) > 1')->count();
@@ -75,6 +98,7 @@ class ElectionVoterRollService
                 })->count(),
             'duplicate_member_rows' => $duplicateMemberRows,
             'skipped_no_user_account' => $skippedNoUserAccount,
+            'skipped_inactive_student' => $skippedInactiveStudent,
         ];
         $e->update(['voter_roll_locked_at' => now()]);
         MemberActivityLog::logActivity(['academy_id' => $e->academy_id, 'user_id' => $actor->id, 'action' => MemberActivityLog::ACTION_ELECTION_VOTER_ROLL_LOCK, 'description' => 'ล็อกบัญชีผู้มีสิทธิ์เลือกตั้ง', 'new_values' => $counts]);

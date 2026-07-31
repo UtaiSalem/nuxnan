@@ -52,6 +52,79 @@ class ElectionVoterRollTest extends TestCase
         $this->assertNull(ElectionVoter::where('election_id', $e->id)->value('grade_level'));
     }
 
+    public function test_graduated_student_is_not_in_the_roll(): void
+    {
+        [$a, $actor, $e] = $this->context();
+        $student = Student::create(['academy_id' => $a->id, 'student_id' => uniqid('S'), 'first_name_th' => 'Student', 'last_name_th' => 'Test', 'status' => 'graduated']);
+        $user = $this->member($a, ['student_id' => $student->id]);
+
+        app(ElectionVoterRollService::class)->lock($e, $actor);
+
+        $this->assertDatabaseMissing('election_voters', ['election_id' => $e->id, 'user_id' => $user->id]);
+    }
+
+    public function test_transferred_student_is_not_in_the_roll(): void
+    {
+        [$a, $actor, $e] = $this->context();
+        $student = Student::create(['academy_id' => $a->id, 'student_id' => uniqid('S'), 'first_name_th' => 'Student', 'last_name_th' => 'Test', 'status' => 'transferred']);
+        $user = $this->member($a, ['student_id' => $student->id]);
+
+        app(ElectionVoterRollService::class)->lock($e, $actor);
+
+        $this->assertDatabaseMissing('election_voters', ['election_id' => $e->id, 'user_id' => $user->id]);
+    }
+
+    public function test_staff_member_without_student_is_in_the_roll(): void
+    {
+        [$a, $actor, $e] = $this->context();
+        $user = $this->member($a, ['student_id' => null]);
+
+        app(ElectionVoterRollService::class)->lock($e, $actor);
+
+        $this->assertDatabaseHas('election_voters', ['election_id' => $e->id, 'user_id' => $user->id, 'voter_type' => 'staff']);
+    }
+
+    public function test_active_student_is_in_the_roll(): void
+    {
+        [$a, $actor, $e] = $this->context();
+        $student = Student::create(['academy_id' => $a->id, 'student_id' => uniqid('S'), 'first_name_th' => 'Student', 'last_name_th' => 'Test', 'status' => 'active']);
+        $user = $this->member($a, ['student_id' => $student->id]);
+
+        app(ElectionVoterRollService::class)->lock($e, $actor);
+
+        $this->assertDatabaseHas('election_voters', ['election_id' => $e->id, 'user_id' => $user->id, 'voter_type' => 'student']);
+    }
+
+    public function test_skipped_inactive_students_are_counted_separately_from_missing_accounts(): void
+    {
+        [$a, $actor, $e] = $this->context();
+        $graduated = Student::create(['academy_id' => $a->id, 'student_id' => uniqid('S'), 'first_name_th' => 'Student', 'last_name_th' => 'Test', 'status' => 'graduated']);
+        $this->member($a, ['student_id' => $graduated->id]);
+        $noAccountStudent = Student::create(['academy_id' => $a->id, 'student_id' => uniqid('S'), 'first_name_th' => 'Student', 'last_name_th' => 'Test', 'status' => 'graduated']);
+        AcademyMember::create(['academy_id' => $a->id, 'user_id' => null, 'academy_role_id' => AcademyRole::where('academy_id', $a->id)->first()->id, 'status' => 2, 'student_id' => $noAccountStudent->id]);
+
+        $counts = app(ElectionVoterRollService::class)->lock($e, $actor);
+
+        $this->assertSame(1, $counts['skipped_inactive_student']);
+        $this->assertSame(1, $counts['skipped_no_user_account']);
+        $this->assertSame(1, MemberActivityLog::latest()->first()->new_values['skipped_inactive_student']);
+    }
+
+    public function test_query_count_ceiling_holds_with_active_and_graduated_students(): void
+    {
+        [$a, $actor, $e] = $this->context();
+        for ($i = 0; $i < 20; $i++) {
+            $student = Student::create(['academy_id' => $a->id, 'student_id' => uniqid('S'), 'first_name_th' => 'Student', 'last_name_th' => 'Test', 'status' => $i % 2 === 0 ? 'active' : 'graduated']);
+            $this->member($a, ['student_id' => $student->id]);
+        }
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        app(ElectionVoterRollService::class)->lock($e, $actor);
+
+        $this->assertLessThan(40, count(DB::getQueryLog()));
+    }
+
     public function test_duplicate_member_rows_collapse_and_counts_match_persisted_voters(): void
     {
         [$a, $actor, $e] = $this->context();
