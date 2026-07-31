@@ -361,7 +361,7 @@ Prefix: `/api/academies/{academy}/elections`
 | **E-S1** | **Schema + Models + Permission** — 8 migration, 8 model (`ElectionBallot` ต้อง `$incrementing=false` + `$keyType='string'` + `$timestamps=false`), ตระกูล `elections` 3 key + เพิ่มใน `DEPARTMENT_DELEGABLE_FAMILIES` | — | migrations + models + tests | 🟢 **verified 2026-07-31** |
 | **E-S2** | **Election CRUD + State Machine + Audit** — `ElectionService::transitionTo()` บังคับกฎ §3.1 · route ทุกตัวมี guard ตั้งแต่แรก | E-S1 | controller + service + routes + tests | 🟢 **verified 2026-07-31** |
 | **E-S3** | **รับสมัครพรรค + อนุมัติ + ให้เบอร์** — บังคับ 1 leader/พรรค, 1 คน 1 พรรค, เบอร์ไม่ซ้ำ | E-S2 | controller + service + tests | 🟢 **verified 2026-07-31** |
-| **E-S4** | **Lock บัญชีผู้มีสิทธิ์** — snapshot จาก `academy_members` status=2 + join ห้องเรียน · idempotent · รายงานตัวเลขแยก student/staff และ **แยกรายชื่อคนที่ไม่มี member_code / ไม่มีบัตร ออกมาให้เห็น** | E-S2 | command + endpoint + tests | ⚪ |
+| **E-S4** | **Lock บัญชีผู้มีสิทธิ์** — snapshot จาก `academy_members` status=2 + join ห้องเรียน · idempotent · รายงานตัวเลขแยก student/staff และ **แยกรายชื่อคนที่ไม่มี member_code / ไม่มีบัตร ออกมาให้เห็น** | E-S2 | endpoint + service + tests | 🟢 **verified 2026-07-31** |
 | **E-S5** | **หน่วยเลือกตั้ง + ออกบัตร** — station CRUD/open/close · `/lookup` (ต่อ `StudentIdentifierResolver` + ค้นด้วยชื่อ) · `/issue` (ล็อกแถว + token hash + TTL) · `/void` | E-S4 | controller + service + tests รวมเคสยิงพร้อมกัน | ⚪ |
 | **E-S6** | **ลงคะแนน (บัตรลับ)** — `/cast` ตามรูป `CampaignViewService::rewardedView()` · **ต้องมีเทสต์ยืนยันว่าไม่มีคอลัมน์ใดใน `election_ballots` ชี้กลับหาผู้ลงคะแนน** | E-S5 | controller + service + tests | ⚪ |
 | **E-S7** | **ปิดหีบ + นับ + ประกาศผล** — ตรวจ invariant §2.3 ก่อนเสมอ · แช่ผลใน `election_results` · `/results` ปฏิเสธก่อน published · จัดอันดับ **พร้อมจัดการคะแนนเท่ากัน** (เมนูอื่นในระบบยังไม่มีตัวไหนทำ) | E-S6 | service + tests | ⚪ |
@@ -374,6 +374,18 @@ Prefix: `/api/academies/{academy}/elections`
 **เส้นทางที่สั้นที่สุดที่จัดเลือกตั้งได้จริง:** E-S1 → E-S2 → E-S3 → E-S4 → E-S5 → E-S6 → E-S7 → E-S8 (หน้าแอดมินยังทำมือผ่าน API ได้ชั่วคราว แต่ **หน้าหน่วยเลือกตั้งข้ามไม่ได้**)
 
 **Rule:** ทุก step ต้อง verify (test/build/ตัวเลขจาก DB จริง) ก่อนขึ้น 🟢 · commit เป็นชุดเล็กต่อ step · ห้าม `migrate:fresh`
+
+### 🔴 กฎที่ได้จาก E-S4: เทสต์เขียวไม่พอ ต้องรันกับข้อมูลจริง
+
+E-S4 เจอบั๊ก **3 รอบติด และทั้ง 3 รอบเทสต์ผ่านหมด**:
+
+| รอบ | บั๊ก | ทำไมเทสต์ไม่จับ |
+|---|---|---|
+| 1 | `lock()` **พังทั้งกระบวนการ** — `display_name cannot be null` เพราะสมาชิก 2 คนมี `user_id = null` | factory สร้างผู้ใช้ครบเสมอ ไม่มีเคส user หาย |
+| 2 | รายงาน `total 3061` แต่เขียนจริง 3058 | ไม่มีเคส "คนเดียวมีสมาชิก 2 แถว" |
+| 3 | **memory หมด + ยิง query ~2,900 ครั้ง** (`get()` ทั้งตาราง + `exists()` ต่อคน) | เทสต์มีสมาชิกไม่กี่คน และไม่มีอะไรวัดจำนวน query |
+
+→ **กฎถาวร: step ไหนที่แตะข้อมูลระดับทั้งโรงเรียน ต้องรัน service ตัวนั้นกับ DB จริงใน `DB::beginTransaction()` … `rollBack()` และดูตัวเลข/จำนวน query/memory ก่อนขึ้น 🟢** เทียบเคียงบั๊ก D-S3 ของเมนู #9 ที่เทสต์ 6 เคสแรกจับไม่ได้เพราะทุกเคสสร้างผู้ใช้ที่มี role อยู่แล้ว — **รูปร่างข้อมูลจริงคือสิ่งที่ factory ไม่เคยสร้าง**
 
 ---
 
