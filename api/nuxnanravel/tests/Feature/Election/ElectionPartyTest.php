@@ -83,15 +83,33 @@ class ElectionPartyTest extends TestCase
         }
     }
 
-    public function test_freed_number_can_be_reused_after_withdrawal(): void
+    public function test_withdrawn_party_keeps_its_number(): void
     {
         [$a, $u, $e] = $this->context(['status' => 'nomination']);
         $old = $this->party($e, $u, 'Old', ElectionParty::STATUS_APPROVED, 4);
         $this->memberRow($old, $u, 'leader');
         app(ElectionPartyService::class)->withdraw($old, $u);
+        $this->assertSame(4, $old->fresh()->number);
+    }
+
+    public function test_withdrawn_party_number_is_not_reissued(): void
+    {
+        [$a, $u, $e] = $this->context(['status' => 'nomination']);
+        foreach (range(1, 3) as $number) {
+            $this->party($e, $u, 'Existing'.$number, ElectionParty::STATUS_APPROVED, $number);
+        }
+        $old = $this->party($e, $u, 'Old', ElectionParty::STATUS_APPROVED, 4);
+        $this->memberRow($old, $u, 'leader');
+        app(ElectionPartyService::class)->withdraw($old, $u);
         $p = $this->party($e, $u, 'New');
         $this->memberRow($p, $u, 'leader');
-        $this->assertSame(4, app(ElectionPartyService::class)->approve($p, 4, $u)->number);
+        try {
+            app(ElectionPartyService::class)->approve($p, 4, $u);
+            $this->fail('Expected duplicate number rejection');
+        } catch (DomainException) {
+            $this->assertTrue(true);
+        }
+        $this->assertSame(5, app(ElectionPartyService::class)->approve($p, null, $u)->number);
     }
 
     public function test_blank_rejection_note_is_rejected(): void

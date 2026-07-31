@@ -69,7 +69,7 @@ class ElectionPartyService
             throw new DomainException('ไม่สามารถถอนพรรคหลังเริ่มลงคะแนนได้');
         } if (! in_array($p->status, [ElectionParty::STATUS_PENDING, ElectionParty::STATUS_APPROVED])) {
             throw new DomainException('ไม่สามารถถอนพรรคในสถานะปัจจุบันได้');
-        } $p->update(['status' => ElectionParty::STATUS_WITHDRAWN, 'number' => null]);
+        } $p->update(['status' => ElectionParty::STATUS_WITHDRAWN]);
         $this->log($election, $actor, MemberActivityLog::ACTION_ELECTION_PARTY_WITHDRAW, ['party_id' => $p->id]);
 
         return $p->fresh();
@@ -84,11 +84,11 @@ class ElectionPartyService
             }
             if ($number === null) {
                 $number = 1;
-                while ($p->election->parties()->where('number', $number)->where('status', '!=', ElectionParty::STATUS_WITHDRAWN)->exists()) {
+                while ($p->election->parties()->where('number', $number)->exists()) {
                     $number++;
                 }
             }
-            if ($p->election->parties()->where('number', $number)->where('status', '!=', ElectionParty::STATUS_WITHDRAWN)->exists()) {
+            if ($p->election->parties()->where('number', $number)->exists()) {
                 throw new DomainException('หมายเลข '.$number.' ถูกใช้แล้ว');
             } $p->update(['status' => ElectionParty::STATUS_APPROVED, 'number' => $number, 'reviewed_by' => $actor->id, 'reviewed_at' => now()]);
             $this->log($p->election, $actor, MemberActivityLog::ACTION_ELECTION_PARTY_APPROVE, ['party_id' => $p->id, 'number' => $number]);
