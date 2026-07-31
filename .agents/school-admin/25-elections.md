@@ -360,7 +360,7 @@ Prefix: `/api/academies/{academy}/elections`
 |---|---|---|---|---|
 | **E-S1** | **Schema + Models + Permission** — 8 migration, 8 model (`ElectionBallot` ต้อง `$incrementing=false` + `$keyType='string'` + `$timestamps=false`), ตระกูล `elections` 3 key + เพิ่มใน `DEPARTMENT_DELEGABLE_FAMILIES` | — | migrations + models + tests | 🟢 **verified 2026-07-31** |
 | **E-S2** | **Election CRUD + State Machine + Audit** — `ElectionService::transitionTo()` บังคับกฎ §3.1 · route ทุกตัวมี guard ตั้งแต่แรก | E-S1 | controller + service + routes + tests | 🟢 **verified 2026-07-31** |
-| **E-S3** | **รับสมัครพรรค + อนุมัติ + ให้เบอร์** — บังคับ 1 leader/พรรค, 1 คน 1 พรรค, เบอร์ไม่ซ้ำ | E-S2 | controller + service + tests | ⚪ |
+| **E-S3** | **รับสมัครพรรค + อนุมัติ + ให้เบอร์** — บังคับ 1 leader/พรรค, 1 คน 1 พรรค, เบอร์ไม่ซ้ำ | E-S2 | controller + service + tests | 🟢 **verified 2026-07-31** |
 | **E-S4** | **Lock บัญชีผู้มีสิทธิ์** — snapshot จาก `academy_members` status=2 + join ห้องเรียน · idempotent · รายงานตัวเลขแยก student/staff และ **แยกรายชื่อคนที่ไม่มี member_code / ไม่มีบัตร ออกมาให้เห็น** | E-S2 | command + endpoint + tests | ⚪ |
 | **E-S5** | **หน่วยเลือกตั้ง + ออกบัตร** — station CRUD/open/close · `/lookup` (ต่อ `StudentIdentifierResolver` + ค้นด้วยชื่อ) · `/issue` (ล็อกแถว + token hash + TTL) · `/void` | E-S4 | controller + service + tests รวมเคสยิงพร้อมกัน | ⚪ |
 | **E-S6** | **ลงคะแนน (บัตรลับ)** — `/cast` ตามรูป `CampaignViewService::rewardedView()` · **ต้องมีเทสต์ยืนยันว่าไม่มีคอลัมน์ใดใน `election_ballots` ชี้กลับหาผู้ลงคะแนน** | E-S5 | controller + service + tests | ⚪ |
@@ -388,6 +388,12 @@ Prefix: `/api/academies/{academy}/elections`
 
 ## 10. Review Log
 
+- **2026-07-31 E-S3** — codex ทำ 2 รอบ, claude ตรวจ → **ผ่านในรอบที่ 2** · เทสต์รวม **36 ผ่าน (58 assertions)** ยืนยันซ้ำ 2 รอบว่าไม่ flaky · pint ผ่าน · guard ครบ **13/13 route**
+  - **codex ข้ามข้อเทสต์อีกครั้ง** (ครั้งที่ 2 จาก 3 step) — เขียน service/controller/requests/routes ครบตอน 05:26 แล้วหยุดไป 2 ชั่วโมงโดยไม่แตะเทสต์ → **ต่อจากนี้วางแผนเป็น 2 รอบตั้งแต่ต้น** (รอบเขียน + รอบเทสต์) สำหรับ step ที่เหลือ
+  - **บั๊กที่ claude เจอเองจากการอ่านโค้ด:** `approve()` วนหาเบอร์ว่าง → เช็คซ้ำ → เขียน **นอก transaction ไม่มีล็อกแถว** กรรมการ 2 คนกดพร้อมกันได้เบอร์เดียวกัน แล้ว unique index ยิง `QueryException` ออกเป็น **500 แทน 422** (คลาสเดียวกับ E-S2) · และ `validateMembers()` เช็คข้ามพรรคแต่**ไม่เช็คในอาร์เรย์ตัวเอง** ส่งคนเดิมซ้ำในทีมได้ → ชน unique `[party_id, user_id]` เป็น 500 · แก้ทั้งคู่แล้ว
+  - **⚠️ สเปกเดิม (§3.2) ขัดกันเอง — claude เขียนผิดเอง:** ระบุ `unique [election_id, number]` พร้อมกับข้อกำหนด "เบอร์ที่ว่างจากพรรคที่ถอนตัวเอากลับมาใช้ได้" ซึ่งเป็นไปไม่ได้ถ้าพรรคที่ถอนยังถือเลขไว้ในแถว → **codex แก้โดยให้ `withdraw()` เซ็ต `number = null` ด้วย** · ประวัติเบอร์เดิมยังตามได้จาก audit log ของ action `approve` ที่บันทึกเบอร์ไว้
+  - **🔴 ยังต้องให้เจ้าของโปรเจคตัดสิน:** พฤติกรรมปัจจุบันคือ **เบอร์ของพรรคที่ถอนตัวเอากลับมาแจกใหม่ได้** · ในการเลือกตั้งจริงมักจะ **"เก็บเบอร์นั้นไว้ ไม่แจกซ้ำ"** เพราะโปสเตอร์/ป้ายหาเสียงที่ติดไปแล้วเป็นชื่อพรรคเดิม การเอาเบอร์ 3 ไปให้พรรคอื่นทำให้ผู้ลงคะแนนสับสนและอาจไม่เป็นธรรม → ถ้าตัดสินให้เก็บเบอร์ ต้องแก้ `withdraw()` ไม่ให้ล้าง `number` และเอาเงื่อนไข `status != withdrawn` ออกจากทั้งลูปหาเบอร์และการเช็คซ้ำใน `approve()`
+  - **บทเรียนของ claude เอง:** รันเทสต์ครั้งแรกได้ 6 ล้ม เพราะรันตอน codex ยังเขียนไฟล์ไม่จบ — พอไฟล์นิ่งจริงแล้วผ่านหมด · **ตัวเฝ้าต้องครอบไฟล์ทุกตัวที่ step นั้นแตะ ไม่ใช่เฉพาะไฟล์เทสต์**
 - **2026-07-31 E-S2** — codex ทำ 2 รอบ, claude ตรวจ → **ผ่านในรอบที่ 2** · เทสต์ 20 ผ่าน (37 assertions) · pint ผ่าน · `route:list --json` ยืนยัน guard ครบ 7/7 (อ่าน `elections.view` · เขียน `elections.manage`) ไม่มี route หลุด
   - **รอบแรก codex ข้ามข้อเทสต์ทั้งข้อ** (เขียน service/controller/requests/routes ครบแล้วหยุด) ทั้งที่โจทย์ระบุไว้ชัด → ต้องส่งกลับ · **ย้ำบทเรียนเดิม: ตรวจไฟล์จริงเสมอ อย่าเชื่อว่า "เสร็จ" แปลว่าครบ**
   - **บั๊กที่ claude เจอเองตอนตรวจ (เทสต์ของ codex ไม่ได้ครอบ):** `ElectionController::index()` เขียน `'receipts as receipts_cast_count'` **ไม่มี closure จำกัด `status`** → นับใบเสร็จทุกสถานะรวม `issued`/`void`/`expired` ทั้งที่ตัวเลขนี้คือยอดผู้มาใช้สิทธิ์ → **ยอดจะสูงเกินจริงโดยนับคนที่รับบัตรแล้วไม่ได้ลง** · แก้แล้วทั้ง `index` และ `show` + มีเทสต์ `issued receipt is not counted as cast` คุม
