@@ -111,6 +111,16 @@ class MemberActivityLog extends Model
 
     public const ACTION_ELECTION_STATUS_CHANGE = 'election_status_change';
 
+    public const ACTION_ELECTION_PARTY_APPLY = 'election_party_apply';
+
+    public const ACTION_ELECTION_PARTY_UPDATE = 'election_party_update';
+
+    public const ACTION_ELECTION_PARTY_APPROVE = 'election_party_approve';
+
+    public const ACTION_ELECTION_PARTY_REJECT = 'election_party_reject';
+
+    public const ACTION_ELECTION_PARTY_WITHDRAW = 'election_party_withdraw';
+
     // Categories
     public const CATEGORY_MEMBER = 'member';
 

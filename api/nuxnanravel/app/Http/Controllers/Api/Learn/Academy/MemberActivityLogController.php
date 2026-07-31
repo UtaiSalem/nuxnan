@@ -241,6 +241,11 @@ class MemberActivityLogController extends Controller
             ['value' => MemberActivityLog::ACTION_ELECTION_UPDATE, 'label' => 'แก้ไขการเลือกตั้ง', 'icon' => 'mdi:vote-outline'],
             ['value' => MemberActivityLog::ACTION_ELECTION_DELETE, 'label' => 'ลบการเลือกตั้ง', 'icon' => 'mdi:vote-outline'],
             ['value' => MemberActivityLog::ACTION_ELECTION_STATUS_CHANGE, 'label' => 'เปลี่ยนสถานะการเลือกตั้ง', 'icon' => 'mdi:state-machine'],
+            ['value' => MemberActivityLog::ACTION_ELECTION_PARTY_APPLY, 'label' => 'สมัครพรรค', 'icon' => 'mdi:account-group'],
+            ['value' => MemberActivityLog::ACTION_ELECTION_PARTY_UPDATE, 'label' => 'แก้ไขใบสมัครพรรค', 'icon' => 'mdi:account-edit'],
+            ['value' => MemberActivityLog::ACTION_ELECTION_PARTY_APPROVE, 'label' => 'อนุมัติพรรค', 'icon' => 'mdi:check-circle'],
+            ['value' => MemberActivityLog::ACTION_ELECTION_PARTY_REJECT, 'label' => 'ปฏิเสธพรรค', 'icon' => 'mdi:close-circle'],
+            ['value' => MemberActivityLog::ACTION_ELECTION_PARTY_WITHDRAW, 'label' => 'ถอนพรรค', 'icon' => 'mdi:account-remove'],
         ];
 
         return response()->json([
