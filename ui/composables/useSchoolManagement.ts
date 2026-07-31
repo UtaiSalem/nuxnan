@@ -399,7 +399,7 @@ export const useSchoolManagement = () => {
   const recordSchoolAttendances = (
     academyId: number,
     attendanceId: number,
-    records: Array<{ student_id: number; status: string; remark?: string }>
+    records: Array<{ student_id: number; status: string; remarks?: string }>
   ) =>
     api.call(`/api/academies/${academyId}/school-attendances/${attendanceId}/records`, {
       method: 'POST',

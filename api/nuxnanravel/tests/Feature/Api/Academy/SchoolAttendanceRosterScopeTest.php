@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api\Academy;
 
+use App\Models\AcademicYear;
 use App\Models\Academy;
 use App\Models\AcademyMember;
 use App\Models\Classroom;
@@ -37,8 +38,18 @@ class SchoolAttendanceRosterScopeTest extends TestCase
             'slug' => 'attendance-scope-academy',
         ]);
 
+        // classrooms.academic_year_id became NOT NULL in migration
+        // 2026_07_12_150000_fix_classrooms_unique_and_notnull, after this test was written.
+        $academicYear = AcademicYear::create([
+            'academy_id' => $this->academy->id,
+            'name' => '2569',
+            'start_date' => '2026-05-01',
+            'end_date' => '2027-03-31',
+        ]);
+
         $this->classroom = Classroom::create([
             'academy_id' => $this->academy->id,
+            'academic_year_id' => $academicYear->id,
             'grade_level' => 'ม.1',
             'section' => '1',
             'name' => 'ม.1/1',
@@ -117,6 +128,51 @@ class SchoolAttendanceRosterScopeTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('data.records.0.student_number', null)
             ->assertJsonPath('data.records.0.classroom_name', null);
+    }
+
+    public function test_bulk_manual_record_persists_the_teacher_remark(): void
+    {
+        [$user] = $this->makeMemberedStudent('ATD003', 'สมปอง');
+
+        $response = $this->actingAs($this->owner, 'api')
+            ->postJson("/api/academies/{$this->academy->id}/school-attendances/{$this->attendance->id}/records", [
+                'records' => [
+                    ['student_id' => $user->id, 'status' => 'late', 'remarks' => 'รถติดมาสาย 10 นาที'],
+                ],
+            ]);
+
+        $response->assertOk();
+
+        $this->assertDatabaseHas('school_attendance_records', [
+            'attendance_id' => $this->attendance->id,
+            'student_id' => $user->id,
+            'status' => 'late',
+            'remarks' => 'รถติดมาสาย 10 นาที',
+        ]);
+    }
+
+    public function test_resubmitting_bulk_records_updates_the_existing_remark(): void
+    {
+        [$user] = $this->makeMemberedStudent('ATD004', 'สมทรง');
+        $url = "/api/academies/{$this->academy->id}/school-attendances/{$this->attendance->id}/records";
+
+        $this->actingAs($this->owner, 'api')->postJson($url, [
+            'records' => [['student_id' => $user->id, 'status' => 'absent', 'remarks' => 'ยังไม่ทราบสาเหตุ']],
+        ])->assertOk();
+
+        $this->actingAs($this->owner, 'api')->postJson($url, [
+            'records' => [['student_id' => $user->id, 'status' => 'leave', 'remarks' => 'ผู้ปกครองแจ้งลาป่วย']],
+        ])->assertOk();
+
+        $this->assertSame(1, SchoolAttendanceRecord::where('attendance_id', $this->attendance->id)
+            ->where('student_id', $user->id)->count());
+
+        $this->assertDatabaseHas('school_attendance_records', [
+            'attendance_id' => $this->attendance->id,
+            'student_id' => $user->id,
+            'status' => 'leave',
+            'remarks' => 'ผู้ปกครองแจ้งลาป่วย',
+        ]);
     }
 
     private function makeMemberedStudent(string $studentId, string $firstName): array

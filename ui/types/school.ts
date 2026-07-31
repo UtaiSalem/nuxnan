@@ -195,7 +195,7 @@ export interface SchoolAttendanceRecord {
   status: 'present' | 'absent' | 'late' | 'leave'
   check_in_method: 'qr' | 'manual'
   checked_in_at?: string
-  remark?: string
+  remarks?: string
   recorded_by?: number
   student?: {
     id: number

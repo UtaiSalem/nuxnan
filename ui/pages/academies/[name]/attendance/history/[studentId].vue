@@ -323,17 +323,17 @@ const formatTime = (dt: string) => {
                 <Icon icon="fluent:clock-24-regular" class="w-3.5 h-3.5 inline mr-0.5" />
                 {{ formatTime(rec.checked_in_at || rec.created_at) }}
               </span>
-              <span v-if="rec.method" class="text-xs text-slate-400 dark:text-slate-500">
+              <span v-if="rec.check_in_method" class="text-xs text-slate-400 dark:text-slate-500">
                 <Icon
-                  :icon="rec.method === 'qr' ? 'fluent:qr-code-24-regular' : 'fluent:pen-24-regular'"
+                  :icon="rec.check_in_method === 'qr' ? 'fluent:qr-code-24-regular' : 'fluent:pen-24-regular'"
                   class="w-3.5 h-3.5 inline mr-0.5"
                 />
-                {{ rec.method === 'qr' ? 'QR Code' : 'Manual' }}
+                {{ rec.check_in_method === 'qr' ? 'QR Code' : 'Manual' }}
               </span>
             </div>
 
-            <p v-if="rec.remark" class="text-xs text-slate-500 dark:text-slate-400 mt-1 italic">
-              "{{ rec.remark }}"
+            <p v-if="rec.remarks" class="text-xs text-slate-500 dark:text-slate-400 mt-1 italic">
+              "{{ rec.remarks }}"
             </p>
           </div>
         </div>

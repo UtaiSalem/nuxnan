@@ -195,7 +195,7 @@ const saveManualRecords = async () => {
     const records = manualRecords.value.map((r) => ({
       student_id: r.student_id,
       status: r.status,
-      remark: r.remark || undefined,
+      remarks: r.remark || undefined,
     }))
     const res: any = await schoolApi.recordSchoolAttendances(academyId.value, sessionId.value, records)
     if (res?.success) {

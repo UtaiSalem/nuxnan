@@ -524,7 +524,7 @@ const loadAttendanceForDate = async () => {
           const matched = records.find((r: any) => r.student_id === (s.user_id || s.user?.id || s.id))
           attendanceStatuses.value[s.id || s.user_id] = {
             status: matched?.status || 'present',
-            remark: matched?.remark || ''
+            remark: matched?.remarks || ''
           }
         })
       }
@@ -569,7 +569,7 @@ const saveAttendanceRecords = async () => {
       return {
         student_id: s.user_id || s.user?.id || s.id,
         status: state?.status || 'present',
-        remark: state?.remark || ''
+        remarks: state?.remark || undefined
       }
     })
     const res: any = await schoolApi.recordSchoolAttendances(academy.value.id, activeSession.value.id, records)
