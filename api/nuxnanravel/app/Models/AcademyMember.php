@@ -12,6 +12,28 @@ class AcademyMember extends Model
 {
     use HasFactory;
 
+    /**
+     * Membership status. These values were previously bare numbers scattered
+     * across controllers; the meanings are recorded here so they stop being
+     * guessed at. Only APPROVED members are treated as belonging to the school —
+     * every access check filters on it, so any other value excludes the member.
+     */
+    public const STATUS_PENDING = 1;
+
+    public const STATUS_APPROVED = 2;
+
+    public const STATUS_REJECTED = 3;
+
+    public const STATUS_INVITED = 4;
+
+    /**
+     * พ้นสภาพ — the person left the school (จำหน่ายออกจากทะเบียน, moved away,
+     * withdrew). Distinct from REJECTED, which means a join request was turned
+     * down and would otherwise inflate the rejected-requests figure on the
+     * members dashboard. Record why and when in graduation_reason/graduation_date.
+     */
+    public const STATUS_DISCHARGED = 5;
+
     protected $guarded = [];
 
     public function academy(): BelongsTo
