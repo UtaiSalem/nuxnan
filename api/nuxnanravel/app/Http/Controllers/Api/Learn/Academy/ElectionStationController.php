@@ -9,6 +9,7 @@ use App\Models\Academy;
 use App\Models\Election;
 use App\Models\ElectionStation;
 use App\Models\ElectionVoterReceipt;
+use App\Services\Election\ElectionBallotService;
 use App\Services\Election\ElectionStationService;
 use DomainException;
 use Illuminate\Http\Request;
@@ -16,6 +17,16 @@ use Illuminate\Http\Request;
 class ElectionStationController extends Controller
 {
     public function __construct(private ElectionStationService $service) {}
+
+    public function cast(Academy $a, Election $e, Request $r, ElectionBallotService $ballots)
+    {
+        abort_if($e->academy_id !== $a->id, 404);
+        try {
+            return response()->json(['success' => true, 'data' => $ballots->cast($e, $r->string('ballot_token')->toString(), $r->has('party_id') && $r->input('party_id') !== null ? (int) $r->input('party_id') : null, $r->user())]);
+        } catch (DomainException $x) {
+            return $this->fail($x);
+        }
+    }
 
     private function station(Academy $academy, Election $election, ElectionStation $station): ElectionStation
     {
