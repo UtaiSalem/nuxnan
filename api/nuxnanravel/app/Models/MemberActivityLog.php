@@ -123,6 +123,14 @@ class MemberActivityLog extends Model
 
     public const ACTION_ELECTION_VOTER_ROLL_LOCK = 'election_voter_roll_lock';
 
+    public const ACTION_ELECTION_STATION_OPEN = 'election_station_open';
+
+    public const ACTION_ELECTION_STATION_CLOSE = 'election_station_close';
+
+    public const ACTION_ELECTION_BALLOT_ISSUE = 'election_ballot_issue';
+
+    public const ACTION_ELECTION_BALLOT_VOID = 'election_ballot_void';
+
     // Categories
     public const CATEGORY_MEMBER = 'member';
 
