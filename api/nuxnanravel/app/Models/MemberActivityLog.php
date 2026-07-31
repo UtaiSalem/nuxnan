@@ -131,6 +131,10 @@ class MemberActivityLog extends Model
 
     public const ACTION_ELECTION_BALLOT_VOID = 'election_ballot_void';
 
+    public const ACTION_ELECTION_CLOSE_COUNT = 'election_close_count';
+
+    public const ACTION_ELECTION_PUBLISH = 'election_publish';
+
     // Categories
     public const CATEGORY_MEMBER = 'member';
 

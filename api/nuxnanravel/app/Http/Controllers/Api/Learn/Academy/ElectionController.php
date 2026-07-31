@@ -9,13 +9,47 @@ use App\Http\Requests\Election\UpdateElectionRequest;
 use App\Models\Academy;
 use App\Models\Election;
 use App\Models\MemberActivityLog;
+use App\Services\Election\ElectionResultService;
 use App\Services\Election\ElectionService;
 use DomainException;
 use Illuminate\Http\Request;
 
 class ElectionController extends Controller
 {
-    public function __construct(private ElectionService $service) {}
+    public function __construct(private ElectionService $service, private ElectionResultService $results) {}
+
+    public function closeAndCount(Request $request, Academy $academy, Election $election)
+    {
+        try {
+            return response()->json(['success' => true, 'data' => $this->results->closeAndCount($this->find($academy, $election), $request->user())]);
+        } catch (DomainException $e) {
+            return $this->fail($e);
+        }
+    }
+
+    public function publish(Request $request, Academy $academy, Election $election)
+    {
+        try {
+            $this->results->publish($this->find($academy, $election), $request->user());
+
+            return response()->json(['success' => true]);
+        } catch (DomainException $e) {
+            return $this->fail($e);
+        }
+    }
+
+    public function results(Academy $academy, Election $election)
+    {
+        $e = $this->find($academy, $election);
+        abort_unless($e->published_at, 404);
+
+        return response()->json(['success' => true, 'data' => $this->results->results($e)]);
+    }
+
+    public function turnout(Academy $academy, Election $election)
+    {
+        return response()->json(['success' => true, 'data' => $this->results->turnout($this->find($academy, $election))]);
+    }
 
     private function find(Academy $academy, Election $election): Election
     {

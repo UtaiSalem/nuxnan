@@ -212,7 +212,9 @@ Unique `[election_id, name]`
 
 ### 3.8 `election_results` (ผลที่ประกาศแล้ว — แช่แข็ง)
 
-`id, election_id (FK cascade), party_id (FK nullable = ไม่ประสงค์ลงคะแนน), votes unsigned int, rank unsigned smallint nullable, is_winner boolean default false, published_at datetime, published_by FK users, timestamps`
+`id, election_id (FK cascade), party_id (FK nullable = ไม่ประสงค์ลงคะแนน), votes unsigned int, rank unsigned smallint nullable, is_winner boolean default false, published_at datetime **nullable**, published_by FK users **nullable**, timestamps`
+
+> ⚠️ **แก้สเปก 2026-07-31 (ความผิดพลาดของ claude เอง):** ฉบับแรกเขียน `published_at` / `published_by` แบบไม่ระบุ nullable → E-S1 จึงสร้างเป็น NOT NULL · **แต่ E-S7 แยกเป็นสองจังหวะ: `closeAndCount` นับแล้วเขียนแถวโดยยัง*ไม่*ประกาศ (`published_at` เป็น null) แล้ว `publish` ค่อยเติมทีหลัง** สองอย่างนี้อยู่ด้วยกันไม่ได้ → ต้องมี migration แก้เป็น nullable (ตารางยังว่าง 0 แถว จึงปลอดภัย)
 
 Unique `[election_id, party_id]`
 
@@ -364,7 +366,7 @@ Prefix: `/api/academies/{academy}/elections`
 | **E-S4** | **Lock บัญชีผู้มีสิทธิ์** — snapshot จาก `academy_members` status=2 + join ห้องเรียน · idempotent · รายงานตัวเลขแยก student/staff และ **แยกรายชื่อคนที่ไม่มี member_code / ไม่มีบัตร ออกมาให้เห็น** | E-S2 | endpoint + service + tests | 🟢 **verified 2026-07-31** |
 | **E-S5** | **หน่วยเลือกตั้ง + ออกบัตร** — station CRUD/open/close · `/lookup` (ต่อ `StudentIdentifierResolver` + ค้นด้วยชื่อ) · `/issue` (ล็อกแถว + token hash + TTL) · `/void` | E-S4 | controller + service + tests รวมเคสยิงพร้อมกัน | 🟢 **verified 2026-07-31** |
 | **E-S6** | **ลงคะแนน (บัตรลับ)** — `/cast` ตามรูป `CampaignViewService::rewardedView()` · **ต้องมีเทสต์ยืนยันว่าไม่มีคอลัมน์ใดใน `election_ballots` ชี้กลับหาผู้ลงคะแนน** | E-S5 | controller + service + tests | 🟢 **verified 2026-07-31** |
-| **E-S7** | **ปิดหีบ + นับ + ประกาศผล** — ตรวจ invariant §2.3 ก่อนเสมอ · แช่ผลใน `election_results` · `/results` ปฏิเสธก่อน published · จัดอันดับ **พร้อมจัดการคะแนนเท่ากัน** (เมนูอื่นในระบบยังไม่มีตัวไหนทำ) | E-S6 | service + tests | ⚪ |
+| **E-S7** | **ปิดหีบ + นับ + ประกาศผล** — ตรวจ invariant §2.3 ก่อนเสมอ · แช่ผลใน `election_results` · `/results` ปฏิเสธก่อน published · จัดอันดับ **พร้อมจัดการคะแนนเท่ากัน** (เมนูอื่นในระบบยังไม่มีตัวไหนทำ) | E-S6 | service + tests | 🟢 **verified 2026-07-31** |
 | **E-S8** | **หน้าหน่วยเลือกตั้ง (station.vue)** — งาน frontend ที่สำคัญที่สุด ตาม §7 | E-S6 | FE | ⚪ |
 | **E-S9** | **หน้าแอดมิน** — index + [id] 6 แท็บ + เมนูใน `admin.vue` | E-S7 | FE | ⚪ |
 | **E-S10** | **หน้าสมัครพรรค + หน้าผลคะแนน + turnout realtime** | E-S9 | FE | ⚪ |
@@ -400,6 +402,11 @@ E-S4 เจอบั๊ก **3 รอบติด และทั้ง 3 รอ
 
 ## 10. Review Log
 
+- **2026-07-31 E-S7** — codex ทำ 2 รอบ, claude ตรวจ → **ผ่านในรอบที่ 2** · เทสต์ **101 ผ่าน (166 assertions)** · pint ผ่าน · **backend ของเมนู #25 ครบทั้งเส้นแล้ว**
+  - **🔴 รอบแรกล้ม 9 เคส เพราะสเปกที่ claude เขียนเองผิด** — §3.8 ฉบับแรกไม่ระบุ `published_at`/`published_by` เป็น nullable → E-S1 สร้างเป็น NOT NULL · แต่ E-S7 ออกแบบเป็นสองจังหวะ (`closeAndCount` เขียนแถวโดยยังไม่ประกาศ แล้ว `publish` เติมทีหลัง) ซึ่งอยู่ด้วยกันไม่ได้ → ต้องมี migration `2026_07_31_000009` แก้เป็น nullable (ตารางว่าง 0 แถว จึงปลอดภัย)
+  - **codex ควรรายงานว่าทำตามที่สั่งไม่ได้ แต่เลือกทิ้งเทสต์แดงไว้แทน** — ครั้งที่ 3 ของเซสชันนี้ที่รายงานจบทั้งที่ยังแดง
+  - **ตรวจกับข้อมูลจริง (rollback):** ตั้งใจให้คะแนนเท่ากัน 10/10/5/ไม่ประสงค์ 2 → **ได้อันดับ 1, 1, 3 ไม่ใช่ 1,2,3** และติดธงผู้ชนะทั้งสองพรรค · ไม่ประสงค์ลงคะแนนไม่มีอันดับและไม่เป็นผู้ชนะ · `turnout` ระหว่างเปิดหีบคืนแค่ `voted/total/percentage/by_grade_level/by_station` **ไม่มีข้อมูลรายพรรค** · หลังนับ `published_at` เป็น null ทุกแถว · **ลบบัตรออก 5 ใบหลังประกาศแล้ว ผลยังเป็น `[10,10,5,2]` เท่าเดิม** · ประกาศซ้ำถูกปฏิเสธ
+  - **ช่องแถว "ไม่ประสงค์ลงคะแนน" ซ้ำ (§3.8) ปิดแล้วโดยไม่ต้องใช้ generated column** — `closeAndCount` เข้าได้เฉพาะจากสถานะ `voting` พอนับเสร็จสถานะเป็น `closed` แล้วนับซ้ำไม่ได้อีก → state machine ปิดช่องให้เอง
 - **2026-07-31 E-S6** — codex ทำ 2 รอบ, claude ตรวจ → **ผ่านในรอบที่ 2** · เทสต์ **86 ผ่าน (145 assertions)** · pint ผ่าน
   - **service ถูกต้องตั้งแต่รอบแรก** (ตรวจทีละบรรทัด): ค้นด้วย `token_hash` แล้วล็อก receipt → election → station **ก่อน**อ่านสถานะ · แถวบัตรมีแค่ 3 คอลัมน์ · `cast_at` ตัดวินาที · ล้าง `token_hash` · คืนแค่ `['success' => true]` ไม่ทวนตัวเลือก · **เลือกที่จะไม่เขียน audit log ตอนหย่อนบัตรเลย** ซึ่งเป็นทางที่ถูกที่สุด ไม่มีอะไรให้จับคู่ตั้งแต่ต้น
   - **ปัญหาอยู่ที่เทสต์: ยุบ 13 เคสเหลือ 3 เมธอด และมีเมธอดหนึ่งชื่อหลอก** — `test_cast_rejects_expired_voided_closed_and_non_voting_receipts` ตั้งแค่ `token_expires_at` เป็นอดีตแล้วจบ · `expectException` จบเทสต์ที่ throw แรก → **บัตรที่ถูกยกเลิก / หน่วยปิด / ออกจาก `voting` ไม่ถูกรันเลยทั้งสามเรื่อง** ทั้งที่ชื่อบอกว่าครอบ

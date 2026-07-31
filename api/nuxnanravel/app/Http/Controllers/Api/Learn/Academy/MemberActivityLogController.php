@@ -251,6 +251,8 @@ class MemberActivityLogController extends Controller
             ['value' => MemberActivityLog::ACTION_ELECTION_STATION_CLOSE, 'label' => 'ปิดหน่วยเลือกตั้ง', 'icon' => 'mdi:door-closed'],
             ['value' => MemberActivityLog::ACTION_ELECTION_BALLOT_ISSUE, 'label' => 'ออกบัตรเลือกตั้ง', 'icon' => 'mdi:ticket-confirmation'],
             ['value' => MemberActivityLog::ACTION_ELECTION_BALLOT_VOID, 'label' => 'ยกเลิกบัตรเลือกตั้ง', 'icon' => 'mdi:ticket-remove'],
+            ['value' => MemberActivityLog::ACTION_ELECTION_CLOSE_COUNT, 'label' => 'ปิดหีบและนับคะแนน', 'icon' => 'mdi:counter'],
+            ['value' => MemberActivityLog::ACTION_ELECTION_PUBLISH, 'label' => 'ประกาศผลการเลือกตั้ง', 'icon' => 'mdi:bullhorn'],
         ];
 
         return response()->json([
