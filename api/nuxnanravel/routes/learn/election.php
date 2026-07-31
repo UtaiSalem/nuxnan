@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Learn\Academy\ElectionController;
 use App\Http\Controllers\Api\Learn\Academy\ElectionPartyController;
+use App\Http\Controllers\Api\Learn\Academy\ElectionVoterRollController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:api')->prefix('academies/{academy}/elections')->group(function () {
@@ -12,6 +13,9 @@ Route::middleware('auth:api')->prefix('academies/{academy}/elections')->group(fu
     Route::put('/{election}', [ElectionController::class, 'update'])->middleware('academy.permission:elections.manage');
     Route::delete('/{election}', [ElectionController::class, 'destroy'])->middleware('academy.permission:elections.manage');
     Route::post('/{election}/status', [ElectionController::class, 'transitionStatus'])->middleware('academy.permission:elections.manage');
+    Route::post('/{election}/voter-roll/lock', [ElectionVoterRollController::class, 'lock'])->middleware('academy.permission:elections.manage');
+    Route::get('/{election}/voter-roll', [ElectionVoterRollController::class, 'index'])->middleware('academy.permission:elections.manage');
+    Route::get('/{election}/voter-roll/stats', [ElectionVoterRollController::class, 'stats'])->middleware('academy.permission:elections.view');
     Route::post('/{election}/parties', [ElectionPartyController::class, 'store'])->middleware('academy.permission:elections.view');
     Route::put('/{election}/parties/{party}', [ElectionPartyController::class, 'update'])->middleware('academy.permission:elections.view');
     Route::post('/{election}/parties/{party}/withdraw', [ElectionPartyController::class, 'withdraw'])->middleware('academy.permission:elections.view');

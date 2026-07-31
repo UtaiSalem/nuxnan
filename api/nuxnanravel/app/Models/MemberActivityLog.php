@@ -121,6 +121,8 @@ class MemberActivityLog extends Model
 
     public const ACTION_ELECTION_PARTY_WITHDRAW = 'election_party_withdraw';
 
+    public const ACTION_ELECTION_VOTER_ROLL_LOCK = 'election_voter_roll_lock';
+
     // Categories
     public const CATEGORY_MEMBER = 'member';
 

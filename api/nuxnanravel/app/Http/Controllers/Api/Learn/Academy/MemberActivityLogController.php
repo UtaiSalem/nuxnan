@@ -246,6 +246,7 @@ class MemberActivityLogController extends Controller
             ['value' => MemberActivityLog::ACTION_ELECTION_PARTY_APPROVE, 'label' => 'อนุมัติพรรค', 'icon' => 'mdi:check-circle'],
             ['value' => MemberActivityLog::ACTION_ELECTION_PARTY_REJECT, 'label' => 'ปฏิเสธพรรค', 'icon' => 'mdi:close-circle'],
             ['value' => MemberActivityLog::ACTION_ELECTION_PARTY_WITHDRAW, 'label' => 'ถอนพรรค', 'icon' => 'mdi:account-remove'],
+            ['value' => MemberActivityLog::ACTION_ELECTION_VOTER_ROLL_LOCK, 'label' => 'ล็อกบัญชีผู้มีสิทธิ์เลือกตั้ง', 'icon' => 'mdi:account-lock'],
         ];
 
         return response()->json([
