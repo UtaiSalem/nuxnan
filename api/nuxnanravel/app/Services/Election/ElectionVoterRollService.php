@@ -30,6 +30,21 @@ class ElectionVoterRollService
                             ->where('students.status', 'active');
                     });
             });
+        if ($e->education_level !== null) {
+            $level = $e->education_level;
+            $eligible->where(function ($query) use ($level) {
+                $query->where(function ($student) use ($level) {
+                    $student->whereNotNull('student_id')->whereExists(function ($academic) use ($level) {
+                        $academic->selectRaw('1')->from('student_academic_info')
+                            ->whereColumn('student_academic_info.student_id', 'academy_members.student_id')
+                            ->where('student_academic_info.is_current', true)
+                            ->where('student_academic_info.education_level', $level);
+                    });
+                })->orWhere(function ($staff) use ($level) {
+                    $staff->whereNull('student_id')->where('education_level', $level);
+                });
+            });
+        }
         $skippedNoUserAccount = AcademyMember::query()->where('academy_id', $e->academy_id)->where('status', 2)->whereNull('user_id')->count();
         $skippedInactiveStudent = AcademyMember::query()
             ->where('academy_id', $e->academy_id)
@@ -42,6 +57,20 @@ class ElectionVoterRollService
                     ->whereColumn('students.id', 'academy_members.student_id')
                     ->where('students.status', 'active');
             })->count();
+        $skippedOtherLevel = 0;
+        $staffWithoutLevel = 0;
+        if ($e->education_level !== null) {
+            $level = $e->education_level;
+            $skippedOtherLevel = AcademyMember::query()->where('academy_id', $e->academy_id)->where('status', 2)
+                ->whereNotNull('user_id')->whereNotNull('student_id')->whereExists(function ($academic) use ($level) {
+                    $academic->selectRaw('1')->from('student_academic_info')
+                        ->whereColumn('student_academic_info.student_id', 'academy_members.student_id')
+                        ->where('student_academic_info.is_current', true)
+                        ->where('student_academic_info.education_level', '!=', $level);
+                })->count();
+            $staffWithoutLevel = AcademyMember::query()->where('academy_id', $e->academy_id)->where('status', 2)
+                ->whereNotNull('user_id')->whereNull('student_id')->whereNull('education_level')->count();
+        }
         $ids = $eligible->pluck('user_id');
         ElectionVoter::where('election_id', $e->id)->whereNotIn('user_id', $ids)->delete();
         $duplicateMemberRows = (clone $eligible)->select('user_id')->groupBy('user_id')->havingRaw('COUNT(*) > 1')->count();
@@ -99,6 +128,8 @@ class ElectionVoterRollService
             'duplicate_member_rows' => $duplicateMemberRows,
             'skipped_no_user_account' => $skippedNoUserAccount,
             'skipped_inactive_student' => $skippedInactiveStudent,
+            'skipped_other_level' => $skippedOtherLevel,
+            'staff_without_level' => $staffWithoutLevel,
         ];
         $e->update(['voter_roll_locked_at' => now()]);
         MemberActivityLog::logActivity(['academy_id' => $e->academy_id, 'user_id' => $actor->id, 'action' => MemberActivityLog::ACTION_ELECTION_VOTER_ROLL_LOCK, 'description' => 'ล็อกบัญชีผู้มีสิทธิ์เลือกตั้ง', 'new_values' => $counts]);

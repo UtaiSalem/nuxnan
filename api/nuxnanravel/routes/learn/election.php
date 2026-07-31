@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Learn\Academy\AcademyMemberController;
 use App\Http\Controllers\Api\Learn\Academy\ElectionController;
 use App\Http\Controllers\Api\Learn\Academy\ElectionPartyController;
 use App\Http\Controllers\Api\Learn\Academy\ElectionStationController;
@@ -39,3 +40,6 @@ Route::middleware('auth:api')->prefix('academies/{academy}/elections')->group(fu
     Route::post('/{election}/stations/{station}/void', [ElectionStationController::class, 'void'])->middleware('academy.permission:elections.station');
     Route::get('/{election}/stations/{station}/progress', [ElectionStationController::class, 'progress'])->middleware('academy.permission:elections.station');
 });
+
+Route::put('academies/{academy}/members/{member}/education-level', [AcademyMemberController::class, 'updateEducationLevel'])
+    ->middleware(['auth:api', 'academy.permission:elections.manage']);

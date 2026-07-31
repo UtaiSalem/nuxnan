@@ -22,6 +22,26 @@ use Illuminate\Http\Request;
 
 class AcademyMemberController extends Controller
 {
+    public function updateEducationLevel(Academy $academy, AcademyMember $member, Request $request)
+    {
+        abort_if((int) $member->academy_id !== (int) $academy->id, 404);
+        if ($member->student_id !== null) {
+            return response()->json(['message' => 'Student education level is managed by academic information.'], 422);
+        }
+        $data = $request->validate(['education_level' => 'nullable|integer|in:1,2']);
+        $old = $member->education_level;
+        $member->update(['education_level' => $data['education_level'] ?? null]);
+        MemberActivityLog::logActivity([
+            'academy_id' => $academy->id, 'user_id' => $request->user()->id,
+            'target_user_id' => $member->user_id, 'academy_member_id' => $member->id,
+            'action' => MemberActivityLog::ACTION_PROFILE_UPDATE,
+            'old_values' => ['education_level' => $old], 'new_values' => ['education_level' => $member->education_level],
+            'description' => 'Updated staff education level',
+        ]);
+
+        return response()->json(['success' => true, 'data' => $member->fresh()]);
+    }
+
     // index
     public function index(Academy $academy)
     {

@@ -10,6 +10,7 @@ use App\Models\ElectionParty;
 use App\Models\ElectionVoter;
 use App\Models\MemberActivityLog;
 use App\Models\Student;
+use App\Models\StudentAcademicInfo;
 use App\Models\User;
 use App\Services\Election\ElectionService;
 use App\Services\Election\ElectionVoterRollService;
@@ -93,6 +94,142 @@ class ElectionVoterRollTest extends TestCase
         app(ElectionVoterRollService::class)->lock($e, $actor);
 
         $this->assertDatabaseHas('election_voters', ['election_id' => $e->id, 'user_id' => $user->id, 'voter_type' => 'student']);
+    }
+
+    public function test_unscoped_election_includes_students_from_both_education_levels(): void
+    {
+        [$a, $actor, $e] = $this->context(['education_level' => null]);
+        $primary = Student::create(['academy_id' => $a->id, 'student_id' => uniqid('S'), 'first_name_th' => 'Primary', 'last_name_th' => 'Test']);
+        $secondary = Student::create(['academy_id' => $a->id, 'student_id' => uniqid('S'), 'first_name_th' => 'Secondary', 'last_name_th' => 'Test']);
+        $this->currentAcademicInfo($a, $primary, 1);
+        $this->currentAcademicInfo($a, $secondary, 2);
+        $primaryUser = $this->member($a, ['student_id' => $primary->id]);
+        $secondaryUser = $this->member($a, ['student_id' => $secondary->id]);
+
+        app(ElectionVoterRollService::class)->lock($e, $actor);
+
+        $this->assertDatabaseHas('election_voters', ['election_id' => $e->id, 'user_id' => $primaryUser->id]);
+        $this->assertDatabaseHas('election_voters', ['election_id' => $e->id, 'user_id' => $secondaryUser->id]);
+    }
+
+    public function test_secondary_election_includes_secondary_student_and_excludes_primary_student(): void
+    {
+        [$a, $actor, $e] = $this->context(['education_level' => 2]);
+        AcademyMember::where('user_id', $actor->id)->update(['education_level' => 2]);
+        [$primaryUser, $secondaryUser] = $this->studentsAtLevels($a);
+
+        app(ElectionVoterRollService::class)->lock($e, $actor);
+
+        $this->assertDatabaseMissing('election_voters', ['election_id' => $e->id, 'user_id' => $primaryUser->id]);
+        $this->assertDatabaseHas('election_voters', ['election_id' => $e->id, 'user_id' => $secondaryUser->id]);
+    }
+
+    public function test_primary_election_includes_primary_student_and_excludes_secondary_student(): void
+    {
+        [$a, $actor, $e] = $this->context(['education_level' => 1]);
+        AcademyMember::where('user_id', $actor->id)->update(['education_level' => 1]);
+        [$primaryUser, $secondaryUser] = $this->studentsAtLevels($a);
+
+        app(ElectionVoterRollService::class)->lock($e, $actor);
+
+        $this->assertDatabaseHas('election_voters', ['election_id' => $e->id, 'user_id' => $primaryUser->id]);
+        $this->assertDatabaseMissing('election_voters', ['election_id' => $e->id, 'user_id' => $secondaryUser->id]);
+    }
+
+    public function test_skipped_other_level_excludes_only_active_students_with_a_different_level(): void
+    {
+        [$a, $actor, $e] = $this->context(['education_level' => 2]);
+        AcademyMember::where('user_id', $actor->id)->update(['education_level' => 2]);
+        [$primaryUser, $secondaryUser] = $this->studentsAtLevels($a);
+        $graduated = Student::create(['academy_id' => $a->id, 'student_id' => uniqid('S'), 'first_name_th' => 'Graduated', 'last_name_th' => 'Test', 'status' => 'graduated']);
+        $this->currentAcademicInfo($a, $graduated, 1);
+        $this->member($a, ['student_id' => $graduated->id]);
+        AcademyMember::create(['academy_id' => $a->id, 'user_id' => null, 'academy_role_id' => AcademyRole::where('academy_id', $a->id)->first()->id, 'status' => 2, 'student_id' => $graduated->id]);
+
+        $counts = app(ElectionVoterRollService::class)->lock($e, $actor);
+
+        $this->assertSame(2, $counts['skipped_other_level']);
+        $this->assertSame(1, $counts['skipped_inactive_student']);
+        $this->assertSame(1, $counts['skipped_no_user_account']);
+        $this->assertDatabaseHas('election_voters', ['election_id' => $e->id, 'user_id' => $secondaryUser->id]);
+        $this->assertDatabaseMissing('election_voters', ['election_id' => $e->id, 'user_id' => $primaryUser->id]);
+    }
+
+    public function test_scoped_election_includes_staff_with_matching_level(): void
+    {
+        [$a, $actor, $e] = $this->context(['education_level' => 2]);
+        $staff = $this->member($a, ['education_level' => 2]);
+
+        app(ElectionVoterRollService::class)->lock($e, $actor);
+
+        $this->assertDatabaseHas('election_voters', ['election_id' => $e->id, 'user_id' => $staff->id, 'voter_type' => 'staff']);
+    }
+
+    public function test_scoped_election_excludes_staff_with_the_other_level(): void
+    {
+        [$a, $actor, $e] = $this->context(['education_level' => 2]);
+        $staff = $this->member($a, ['education_level' => 1]);
+
+        app(ElectionVoterRollService::class)->lock($e, $actor);
+
+        $this->assertDatabaseMissing('election_voters', ['election_id' => $e->id, 'user_id' => $staff->id]);
+    }
+
+    public function test_scoped_election_excludes_staff_without_level_and_reports_them(): void
+    {
+        [$a, $actor, $e] = $this->context(['education_level' => 2]);
+        AcademyMember::where('user_id', $actor->id)->update(['education_level' => 2]);
+        $staff = $this->member($a, ['education_level' => null]);
+
+        $counts = app(ElectionVoterRollService::class)->lock($e, $actor);
+
+        $this->assertSame(1, $counts['staff_without_level']);
+        $this->assertDatabaseMissing('election_voters', ['election_id' => $e->id, 'user_id' => $staff->id]);
+    }
+
+    public function test_unscoped_election_reports_zero_staff_without_level(): void
+    {
+        [$a, $actor, $e] = $this->context(['education_level' => null]);
+        $staff = $this->member($a, ['education_level' => null]);
+
+        $counts = app(ElectionVoterRollService::class)->lock($e, $actor);
+
+        $this->assertSame(0, $counts['staff_without_level']);
+        $this->assertDatabaseHas('election_voters', ['election_id' => $e->id, 'user_id' => $staff->id]);
+    }
+
+    public function test_query_count_ceiling_holds_for_primary_secondary_and_staff(): void
+    {
+        [$a, $actor, $e] = $this->context(['education_level' => null]);
+        $this->studentsAtLevels($a);
+        for ($i = 0; $i < 10; $i++) {
+            $this->member($a, ['education_level' => $i % 2 + 1]);
+        }
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        app(ElectionVoterRollService::class)->lock($e, $actor);
+
+        $this->assertLessThan(40, count(DB::getQueryLog()));
+    }
+
+    public function test_student_member_cannot_have_education_level_set_directly(): void
+    {
+        [$a, $actor] = $this->context();
+        $student = Student::create(['academy_id' => $a->id, 'student_id' => uniqid('S'), 'first_name_th' => 'Student', 'last_name_th' => 'Test']);
+        $memberUser = $this->member($a, ['student_id' => $student->id]);
+        $member = AcademyMember::where('academy_id', $a->id)->where('user_id', $memberUser->id)->firstOrFail();
+
+        $this->actingAs($actor, 'api')->putJson("/api/academies/{$a->id}/members/{$member->id}/education-level", ['education_level' => 2])->assertStatus(422);
+    }
+
+    public function test_view_only_cannot_set_member_education_level(): void
+    {
+        [$a, $actor] = $this->context([], ['elections.view']);
+        $memberUser = $this->member($a);
+        $member = AcademyMember::where('academy_id', $a->id)->where('user_id', $memberUser->id)->firstOrFail();
+
+        $this->actingAs($actor, 'api')->putJson("/api/academies/{$a->id}/members/{$member->id}/education-level", ['education_level' => 2])->assertForbidden();
     }
 
     public function test_skipped_inactive_students_are_counted_separately_from_missing_accounts(): void
@@ -269,5 +406,20 @@ class ElectionVoterRollTest extends TestCase
         AcademyMember::create(array_merge(['academy_id' => $a->id, 'user_id' => $u->id, 'academy_role_id' => $role->id, 'status' => 2], $attrs));
 
         return $u;
+    }
+
+    private function currentAcademicInfo(Academy $academy, Student $student, int $level): void
+    {
+        StudentAcademicInfo::create(['academy_id' => $academy->id, 'student_id' => $student->id, 'education_level' => $level, 'is_current' => true]);
+    }
+
+    private function studentsAtLevels(Academy $academy): array
+    {
+        $primary = Student::create(['academy_id' => $academy->id, 'student_id' => uniqid('S'), 'first_name_th' => 'Primary', 'last_name_th' => 'Test']);
+        $secondary = Student::create(['academy_id' => $academy->id, 'student_id' => uniqid('S'), 'first_name_th' => 'Secondary', 'last_name_th' => 'Test']);
+        $this->currentAcademicInfo($academy, $primary, 1);
+        $this->currentAcademicInfo($academy, $secondary, 2);
+
+        return [$this->member($academy, ['student_id' => $primary->id]), $this->member($academy, ['student_id' => $secondary->id])];
     }
 }

@@ -13,7 +13,7 @@ class StoreElectionRequest extends FormRequest
 
     public function rules(): array
     {
-        return ['academic_year_id' => 'nullable|exists:academic_years,id', 'title' => 'required|string|max:150', 'description' => 'nullable|string', 'nomination_opens_at' => 'nullable|date', 'nomination_closes_at' => 'nullable|date|after_or_equal:nomination_opens_at', 'voting_opens_at' => 'nullable|date', 'voting_closes_at' => 'nullable|date|after_or_equal:voting_opens_at', 'allow_abstain' => 'nullable|boolean', 'ballot_ttl_seconds' => 'nullable|integer|min:1', 'settings' => 'nullable|array'];
+        return ['academic_year_id' => 'nullable|exists:academic_years,id', 'title' => 'required|string|max:150', 'description' => 'nullable|string', 'education_level' => 'nullable|integer|in:1,2', 'nomination_opens_at' => 'nullable|date', 'nomination_closes_at' => 'nullable|date|after_or_equal:nomination_opens_at', 'voting_opens_at' => 'nullable|date', 'voting_closes_at' => 'nullable|date|after_or_equal:voting_opens_at', 'allow_abstain' => 'nullable|boolean', 'ballot_ttl_seconds' => 'nullable|integer|min:1', 'settings' => 'nullable|array'];
     }
 
     public function messages(): array

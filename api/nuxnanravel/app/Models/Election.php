@@ -26,7 +26,7 @@ class Election extends Model
 
     protected $guarded = [];
 
-    protected $casts = ['nomination_opens_at' => 'datetime', 'nomination_closes_at' => 'datetime', 'voting_opens_at' => 'datetime', 'voting_closes_at' => 'datetime', 'voter_roll_locked_at' => 'datetime', 'published_at' => 'datetime', 'settings' => 'array', 'allow_abstain' => 'boolean'];
+    protected $casts = ['nomination_opens_at' => 'datetime', 'nomination_closes_at' => 'datetime', 'voting_opens_at' => 'datetime', 'voting_closes_at' => 'datetime', 'voter_roll_locked_at' => 'datetime', 'published_at' => 'datetime', 'settings' => 'array', 'allow_abstain' => 'boolean', 'education_level' => 'integer'];
 
     public function academy()
     {
