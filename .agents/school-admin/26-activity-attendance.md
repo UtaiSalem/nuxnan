@@ -243,6 +243,39 @@ route เช็คอินต้องการ **3 id**: `POST /academies/{aca
 
 ---
 
+## 1.12 ✅ A-S6 (2026-08-01) — รายงานการเข้าร่วม + ส่งออก Excel (อุด A5) · **ปิดเมนู #26 ครบ**
+
+`GET /academies/{academy}/events/{event}/attendance-report?from=&to=&format=json|xlsx`
+`ActivityAttendanceReport` (service) + `ActivityAttendanceExport` (xlsx) + ปุ่มส่งออกในหน้ารายการคาบ ที่ใช้ตัวกรองวันที่ของหน้าเดิม
+
+### 🔴 จุดออกแบบที่ตัดสินผลลัพธ์ทั้งหมด — แถวมาจากกลุ่มเป้าหมาย ไม่ใช่ `activity_enrollments`
+
+หลัง A-S3b แถวลงทะเบียนถูกสร้าง**ตอนเช็คชื่อครั้งแรกเท่านั้น** → นักเรียนที่อยู่ในกลุ่มเป้าหมายทั้งเทอมแต่ **ไม่เคยมาเลย ไม่มีทั้งแถวลงทะเบียนและแถวเช็คชื่อ**
+
+→ ถ้าสร้างรายงานจาก `activity_enrollments` ตามสัญชาตญาณ **คนที่ขาดทุกคาบจะหายไปทั้งหมด** ซึ่งคือคนกลุ่มเดียวที่รายงานนี้มีไว้เพื่อหา · รายงานจะดูดีกว่าความจริงโดยไม่มีใครรู้ตัว
+→ เทสต์ `test_audience_member_who_never_attended_still_appears_as_a_row` ล็อกข้อนี้ไว้
+
+### "ไม่ได้บันทึก" ≠ "ขาด" — แยกคอลัมน์ ไม่ยุบรวม
+
+`not_recorded` = ไม่มีใครเช็คชื่อคาบนั้น · `absent` = ครูเช็คแล้วว่าไม่มา · การยุบรวมคือการยืนยันสิ่งที่ข้อมูลไม่ได้บอก · `attendance_rate` = `(present + late) / sessions_total`
+
+### งบ query = 3 ครั้ง คงที่ (พิสูจน์แล้ว ไม่ใช่แค่รับปาก)
+
+session ids → aggregate `groupBy(user_id, status)` ครั้งเดียว → `EventAudienceResolver::rosterRows()` แล้ว join ในหน่วยความจำ
+(`roster()` เดิมใช้ซ้ำไม่ได้ เพราะ paginate และอ่าน `request()` ตรงข้างใน)
+→ `test_query_count_does_not_scale_with_people_or_sessions` — **21 คน 6 คาบ = 3 query เป๊ะ** (audience แบบ `all: true` จริงคือ 3,058 คน)
+
+### ⚠️ บทเรียนเครื่องมือ — Codex ส่งเทสต์ 2 จาก 9 ข้อ
+
+โจทย์ระบุ 9 เคสพร้อมชื่อ · ที่ส่งมาคือ 2 เคส **และทั้งคู่เป็น service-level** → route, ด่านสิทธิ์ 403/404, และสาขา xlsx **ไม่ถูกทดสอบเลยสักบรรทัด** ทั้งที่เป็นของใหม่ทั้งหมด
+(รูปแบบเดียวกับ E-S2 ในบันทึกเดิม: "codex รอบแรกข้ามข้อเทสต์ทั้งข้อ")
+→ claude เขียนเพิ่มเอง 7 เคส + เคสงบ query · **รวม 11 เคส ผ่านหมด**
+→ โค้ดที่ Codex ส่ง (service/export/controller/route/composable) คุณภาพดีรอบนี้ ฟอร์แมตถูกต้อง ไม่ minify — แก้เองแค่ type ของ `getEventAttendanceReport` ที่รับ `format: 'json'` ได้ทั้งที่คืน Blob เสมอ
+
+**ตรวจแล้ว:** `pint --test` ผ่าน · `php artisan test --filter=Activity` → **77 passed (176 assertions)** · `route:list --path=attendance-report` ยืนยัน route · `vitest` 15 ผ่าน
+
+---
+
 ## 2. Gap Analysis — ช่องว่างจริง 5 จุด
 
 | ID | Gap | ระดับ |
@@ -289,7 +322,7 @@ route เช็คอินต้องการ **3 id**: `POST /academies/{aca
 | **A-S3b** | **อุด A8** — สร้าง enrollment อัตโนมัติให้สมาชิกในกลุ่มเป้าหมายตอนเช็คชื่อครั้งแรก (`ActivityEnrollmentResolver`) | A-S3 | ✅ §1.9 |
 | **A-S4** | **หน้าคอนโซลเช็คชื่อกิจกรรม** — 4 แท็บ + หน้ารายการคาบ (ลอกจาก `school-attendance/[id].vue` ไม่ได้ใช้ HopeUI ดูเหตุผล §1.10) | A-S1, A-S2, A-S3b | ✅ §1.10 |
 | **A-S5** | **แก้บั๊ก `remark` → `remarks`** ของเมนู #18 (§3) + เทสต์กันถอยหลัง | — | ✅ `71974826` ดู §1.11 |
-| **A-S6** | รายงาน/ส่งออกการเข้าร่วมกิจกรรม (A5) | A-S4 | ⚪ |
+| **A-S6** | รายงาน/ส่งออกการเข้าร่วมกิจกรรม (A5) — `GET /{event}/attendance-report` + Excel | A-S4 | ✅ §1.12 |
 
 ---
 

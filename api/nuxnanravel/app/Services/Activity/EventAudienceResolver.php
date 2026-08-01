@@ -65,6 +65,24 @@ class EventAudienceResolver
         return $query->distinct()->orderBy('users.name')->paginate(request()->integer('per_page', 25));
     }
 
+    public function rosterRows(SchoolEvent $event): Collection
+    {
+        return $this->audienceQuery($event)
+            ->leftJoin('users', 'users.id', '=', 'academy_members.user_id')
+            ->leftJoin('classroom_students', function ($join) {
+                $join->on('classroom_students.student_id', '=', 'academy_members.student_id')
+                    ->where('classroom_students.status', 'active');
+            })
+            ->leftJoin('classrooms', 'classrooms.id', '=', 'classroom_students.classroom_id')
+            ->select([
+                'academy_members.user_id', 'users.name', 'classroom_students.student_number',
+                'classrooms.name as classroom_name',
+            ])
+            ->distinct()
+            ->orderBy('users.name')
+            ->get();
+    }
+
     private function audienceQuery(SchoolEvent $event): Builder
     {
         $audience = $event->target_audience;

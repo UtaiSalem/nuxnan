@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api\Learn\Academy;
 
+use App\Exports\ActivityAttendanceExport;
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\ActivityAttendance;
 use App\Models\ActivityEnrollment;
 use App\Models\ActivitySession;
 use App\Models\SchoolEvent;
+use App\Services\Activity\ActivityAttendanceReport;
 use App\Services\Activity\ActivityEnrollmentResolver;
 use App\Services\Activity\EventAudienceResolver;
 use App\Services\StudentIdentifierResolver;
@@ -17,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Maatwebsite\Excel\Facades\Excel;
 
 /**
  * Check-in for ActivitySession (semester/recurring activities — e.g. ชมรม, ลูกเสือ,
@@ -318,6 +321,31 @@ class ActivitySessionController extends Controller
                 'absence_count' => $enrollment->absence_count,
             ],
         ]);
+    }
+
+    public function attendanceReport(Request $request, Academy $academy, SchoolEvent $event)
+    {
+        $this->authorizeEvent($academy, $event);
+        $this->authorizeManager($request, $academy, $event);
+
+        $validated = $request->validate([
+            'from' => 'nullable|date',
+            'to' => 'nullable|date',
+            'format' => 'nullable|in:json,xlsx',
+        ]);
+        $report = app(ActivityAttendanceReport::class)->build($event, $validated['from'] ?? null, $validated['to'] ?? null);
+
+        if (($validated['format'] ?? 'json') === 'xlsx') {
+            $rows = array_map(function (array $row) use ($report): array {
+                $row['sessions_total'] = $report['sessions_total'];
+
+                return $row;
+            }, $report['rows']);
+
+            return Excel::download(new ActivityAttendanceExport($rows, $event), "activity-attendance-{$event->id}-".now()->format('Ymd').'.xlsx');
+        }
+
+        return response()->json(['success' => true, ...$report]);
     }
 
     // Find an active enrollment, creating one for an approved audience member who has none.

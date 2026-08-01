@@ -90,6 +90,11 @@ export const useSchoolEvents = () => {
   const getEventAudienceCount = (academyId: number, eventId: number) =>
     api.call(`/api/academies/${academyId}/events/${eventId}/audience-count`)
 
+  // Always returns a blob — the endpoint also serves format=json, but reach for api.call
+  // for that, otherwise the JSON arrives wrapped in a Blob nobody can read.
+  const getEventAttendanceReport = (academyId: number, eventId: number, params?: { from?: string; to?: string; format?: 'xlsx' }) =>
+    api.getBlob(`/api/academies/${academyId}/events/${eventId}/attendance-report`, { params })
+
   // Student self-check-in via QR token
   const checkInSession = (academyId: number, eventId: number, sessionId: number, qrToken: string) =>
     api.call(`/api/academies/${academyId}/events/${eventId}/sessions/${sessionId}/check-in`, {
@@ -159,6 +164,7 @@ export const useSchoolEvents = () => {
     deleteEventSession,
     getEventRoster,
     getEventAudienceCount,
+    getEventAttendanceReport,
     checkInSession,
     scanSessionStudent,
     storeSessionRecords,

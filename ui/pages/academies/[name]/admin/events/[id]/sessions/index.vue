@@ -19,6 +19,7 @@ const event = ref<any>(null)
 const sessions = ref<any[]>([])
 const isLoading = ref(true)
 const isSaving = ref(false)
+const isExporting = ref(false)
 const errorMessage = ref('')
 
 const filters = ref({ from: '', to: '', status: '', q: '' })
@@ -134,6 +135,31 @@ const loadSessions = async () => {
   sessions.value = res?.data?.data || []
 }
 
+const exportAttendance = async () => {
+  if (!academyId.value || isExporting.value) return
+  isExporting.value = true
+  errorMessage.value = ''
+  try {
+    const { blob, filename } = await eventsApi.getEventAttendanceReport(academyId.value, eventId.value, {
+      from: filters.value.from || undefined,
+      to: filters.value.to || undefined,
+      format: 'xlsx',
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename || `activity-attendance-${eventId.value}.xlsx`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  } catch (e: any) {
+    errorMessage.value = e?.data?.message || 'ส่งออก Excel ไม่สำเร็จ'
+  } finally {
+    isExporting.value = false
+  }
+}
+
 onMounted(async () => {
   try {
     const res: any = await api.get(`/api/academies/${academyName.value}`)
@@ -207,6 +233,15 @@ const formatRange = (start: string, end: string | null) => {
               </p>
             </div>
 
+            <button
+              :disabled="isExporting"
+              class="mr-2 flex items-center gap-2 px-4 py-2.5 bg-white/15 text-white font-semibold rounded-vikinger transition-all hover:bg-white/25 disabled:opacity-60"
+              @click="exportAttendance"
+            >
+              <Icon v-if="isExporting" icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
+              <Icon v-else icon="fluent:arrow-download-24-regular" class="w-4 h-4" />
+              ส่งออก Excel
+            </button>
             <button
               class="flex items-center gap-2 px-4 py-2.5 bg-white text-purple-700 font-semibold rounded-vikinger transition-all shadow hover:shadow-lg"
               @click="openCreateModal"

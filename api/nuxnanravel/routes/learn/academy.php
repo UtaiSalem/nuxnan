@@ -761,6 +761,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::post('/{event}/sessions/{session}/check-in', [ActivitySessionController::class, 'checkIn'])->name('api.academy.events.sessions.checkIn');
         Route::post('/{event}/sessions/{session}/scan', [ActivitySessionController::class, 'scanStudent'])->name('api.academy.events.sessions.scanStudent');
         Route::post('/{event}/sessions/{session}/records', [ActivitySessionController::class, 'storeRecords'])->name('api.academy.events.sessions.storeRecords');
+        Route::get('/{event}/attendance-report', [ActivitySessionController::class, 'attendanceReport'])->name('api.academy.events.attendanceReport');
         Route::get('/{event}/enrollments/{enrollment}/attendance-summary', [ActivitySessionController::class, 'attendanceSummary'])->name('api.academy.events.enrollments.attendanceSummary');
     });
 
