@@ -752,7 +752,11 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::post('/{event}/registrations/{registration}/attendance', [SchoolEventController::class, 'markAttendance'])->name('api.academy.events.markAttendance');
 
         // Activity Sessions - เช็คชื่อกิจกรรมต่อเนื่อง (ชมรม, ลูกเสือ, ละหมาดรายวัน ฯลฯ)
+        Route::get('/{event}/sessions', [ActivitySessionController::class, 'index'])->name('api.academy.events.sessions.index');
+        Route::post('/{event}/sessions', [ActivitySessionController::class, 'store'])->name('api.academy.events.sessions.store');
         Route::get('/{event}/sessions/{session}', [ActivitySessionController::class, 'show'])->name('api.academy.events.sessions.show');
+        Route::patch('/{event}/sessions/{session}', [ActivitySessionController::class, 'update'])->name('api.academy.events.sessions.update');
+        Route::delete('/{event}/sessions/{session}', [ActivitySessionController::class, 'destroy'])->name('api.academy.events.sessions.destroy');
         Route::post('/{event}/sessions/{session}/refresh-qr', [ActivitySessionController::class, 'refreshQr'])->name('api.academy.events.sessions.refreshQr');
         Route::post('/{event}/sessions/{session}/check-in', [ActivitySessionController::class, 'checkIn'])->name('api.academy.events.sessions.checkIn');
         Route::post('/{event}/sessions/{session}/scan', [ActivitySessionController::class, 'scanStudent'])->name('api.academy.events.sessions.scanStudent');

@@ -25,10 +25,118 @@ class ActivitySessionController extends Controller
 {
     use ManagesEventPermissions;
 
+    private const STATUSES = ['scheduled', 'completed', 'cancelled'];
+
+    // GET /academies/{academy}/events/{event}/sessions
+    public function index(Request $request, Academy $academy, SchoolEvent $event): JsonResponse
+    {
+        $this->authorizeEvent($academy, $event);
+        $this->authorizeManager($request, $academy, $event);
+
+        $validated = $request->validate([
+            'from' => 'nullable|date',
+            'to' => 'nullable|date',
+            'status' => ['nullable', Rule::in(self::STATUSES)],
+            'q' => 'nullable|string|max:100',
+        ]);
+
+        $sessions = ActivitySession::where('event_id', $event->id)
+            ->withCount([
+                'attendances',
+                'attendances as present_count' => fn ($q) => $q->whereIn('status', ['present', 'late']),
+                'attendances as absent_count' => fn ($q) => $q->where('status', 'absent'),
+            ])
+            ->when($validated['from'] ?? null, fn ($q, $v) => $q->whereDate('start_datetime', '>=', $v))
+            ->when($validated['to'] ?? null, fn ($q, $v) => $q->whereDate('start_datetime', '<=', $v))
+            ->when($validated['status'] ?? null, fn ($q, $v) => $q->where('status', $v))
+            ->when($validated['q'] ?? null, fn ($q, $v) => $q->where(
+                fn ($w) => $w->where('title', 'like', "%{$v}%")->orWhere('slot_label', 'like', "%{$v}%")
+            ))
+            // Same-day slots (e.g. ละหมาด 5 เวลา) share a start time — id keeps the order stable.
+            ->orderBy('start_datetime')
+            ->orderBy('id')
+            ->paginate(min(200, max(1, $request->integer('per_page', 50))));
+
+        return response()->json(['success' => true, 'data' => $sessions]);
+    }
+
+    // POST /academies/{academy}/events/{event}/sessions — ครูสร้างคาบเฉพาะกิจ/คาบชดเชย
+    public function store(Request $request, Academy $academy, SchoolEvent $event): JsonResponse
+    {
+        $this->authorizeEvent($academy, $event);
+        $this->authorizeManager($request, $academy, $event);
+
+        $validated = $request->validate([
+            'title' => 'nullable|string|max:255',
+            'slot_label' => 'nullable|string|max:100',
+            'description' => 'nullable|string|max:2000',
+            'start_datetime' => 'required|date',
+            'end_datetime' => 'nullable|date|after:start_datetime',
+            'status' => ['nullable', Rule::in(self::STATUSES)],
+            'location' => 'nullable|string|max:255',
+            'is_makeup_class' => 'nullable|boolean',
+        ]);
+
+        // event_id comes from the URL only; qr_token is server-issued via refreshQr().
+        $session = ActivitySession::create(array_merge($validated, [
+            'event_id' => $event->id,
+            'status' => $validated['status'] ?? 'scheduled',
+            'is_makeup_class' => $validated['is_makeup_class'] ?? false,
+        ]));
+
+        return response()->json(['success' => true, 'data' => $session, 'message' => 'สร้างคาบกิจกรรมสำเร็จ'], 201);
+    }
+
+    // PATCH /academies/{academy}/events/{event}/sessions/{session}
+    public function update(Request $request, Academy $academy, SchoolEvent $event, ActivitySession $session): JsonResponse
+    {
+        $this->authorizeSession($academy, $event, $session);
+        $this->authorizeManager($request, $academy, $event);
+
+        // A PATCH may send end_datetime alone — compare it against the stored start, not a missing one.
+        $request->merge(['effective_start_datetime' => $request->input('start_datetime', $session->start_datetime)]);
+
+        $validated = $request->validate([
+            'title' => 'sometimes|nullable|string|max:255',
+            'slot_label' => 'sometimes|nullable|string|max:100',
+            'description' => 'sometimes|nullable|string|max:2000',
+            'start_datetime' => 'sometimes|required|date',
+            'end_datetime' => 'sometimes|nullable|date|after:effective_start_datetime',
+            // status and is_makeup_class are NOT NULL columns — reject an explicit null.
+            'status' => ['sometimes', 'required', Rule::in(self::STATUSES)],
+            'location' => 'sometimes|nullable|string|max:255',
+            'is_makeup_class' => 'sometimes|required|boolean',
+        ]);
+
+        $session->fill($validated)->save();
+
+        return response()->json(['success' => true, 'data' => $session->fresh(), 'message' => 'บันทึกการแก้ไขสำเร็จ']);
+    }
+
+    // DELETE /academies/{academy}/events/{event}/sessions/{session}
+    public function destroy(Request $request, Academy $academy, SchoolEvent $event, ActivitySession $session): JsonResponse
+    {
+        $this->authorizeSession($academy, $event, $session);
+        $this->authorizeManager($request, $academy, $event);
+
+        // ActivitySession soft-deletes but activity_attendances.session_id is a hard FK: deleting a
+        // checked session would leave live attendance rows pointing at a row nothing can show again.
+        if ($session->attendances()->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'คาบนี้มีการเช็คชื่อแล้ว ลบไม่ได้ — ให้เปลี่ยนสถานะเป็น "ยกเลิก" แทน',
+            ], 409);
+        }
+
+        $session->delete();
+
+        return response()->json(['success' => true, 'message' => 'ลบคาบกิจกรรมสำเร็จ']);
+    }
+
     // GET /academies/{academy}/events/{event}/sessions/{session}
     public function show(Request $request, Academy $academy, SchoolEvent $event, ActivitySession $session): JsonResponse
     {
-        $this->authorizeSession($event, $session);
+        $this->authorizeSession($academy, $event, $session);
         $this->authorizeManager($request, $academy, $event);
 
         $session->load('event:id,title,attendance_pattern');
@@ -46,7 +154,7 @@ class ActivitySessionController extends Controller
     // POST /academies/{academy}/events/{event}/sessions/{session}/refresh-qr
     public function refreshQr(Request $request, Academy $academy, SchoolEvent $event, ActivitySession $session): JsonResponse
     {
-        $this->authorizeSession($event, $session);
+        $this->authorizeSession($academy, $event, $session);
         $this->authorizeManager($request, $academy, $event);
 
         $token = $session->generateQrToken();
@@ -61,7 +169,7 @@ class ActivitySessionController extends Controller
     // POST /academies/{academy}/events/{event}/sessions/{session}/check-in — นักเรียนสแกน QR ด้วยตนเอง
     public function checkIn(Academy $academy, SchoolEvent $event, ActivitySession $session, Request $request): JsonResponse
     {
-        $this->authorizeSession($event, $session);
+        $this->authorizeSession($academy, $event, $session);
 
         $validated = $request->validate([
             'qr_token' => 'required|string',
@@ -85,7 +193,7 @@ class ActivitySessionController extends Controller
     // POST /academies/{academy}/events/{event}/sessions/{session}/scan — สแกนบัตรนักเรียน หรือป้อนเลขประจำตัว (ครู/แอดมิน)
     public function scanStudent(Academy $academy, SchoolEvent $event, ActivitySession $session, Request $request): JsonResponse
     {
-        $this->authorizeSession($event, $session);
+        $this->authorizeSession($academy, $event, $session);
         $this->authorizeManager($request, $academy, $event);
 
         $validated = $request->validate([
@@ -130,7 +238,7 @@ class ActivitySessionController extends Controller
     // POST /academies/{academy}/events/{event}/sessions/{session}/records — ครูบันทึกแบบ bulk
     public function storeRecords(Academy $academy, SchoolEvent $event, ActivitySession $session, Request $request): JsonResponse
     {
-        $this->authorizeSession($event, $session);
+        $this->authorizeSession($academy, $event, $session);
         $this->authorizeManager($request, $academy, $event);
 
         $validated = $request->validate([
@@ -167,6 +275,7 @@ class ActivitySessionController extends Controller
     // สรุปการเข้าร่วม รายวัน/สัปดาห์/เดือน/ภาคเรียน ของผู้ลงทะเบียนคนหนึ่ง
     public function attendanceSummary(Academy $academy, SchoolEvent $event, ActivityEnrollment $enrollment, Request $request): JsonResponse
     {
+        $this->authorizeEvent($academy, $event);
         abort_if($enrollment->event_id !== $event->id, 404);
 
         // The enrolled student may view their own summary; otherwise must manage the event.
@@ -280,8 +389,16 @@ class ActivitySessionController extends Controller
         });
     }
 
-    private function authorizeSession(SchoolEvent $event, ActivitySession $session): void
+    // Route-model binding resolves {event} globally — without this an admin of academy B can
+    // reach any event of academy A, because canManageEvent() only asks about the academy in the URL.
+    private function authorizeEvent(Academy $academy, SchoolEvent $event): void
     {
+        abort_if($event->academy_id !== $academy->id, 404);
+    }
+
+    private function authorizeSession(Academy $academy, SchoolEvent $event, ActivitySession $session): void
+    {
+        $this->authorizeEvent($academy, $event);
         abort_if($session->event_id !== $event->id, 404);
     }
 

@@ -91,6 +91,31 @@ school_events         = 3 แถว (ceremony 1, meeting 1, sports 1)
 
 ---
 
+## 1.7 ✅ A-S1 (2026-08-01) — สร้าง/ลิสต์/แก้/ลบคาบได้แล้ว + ปิดรูข้ามโรงเรียน
+
+**อุด A1 แล้ว:** `GET|POST /{event}/sessions` · `PATCH|DELETE /{event}/sessions/{session}` (ยืนยันด้วย `route:list --path=sessions`) → ครูสร้างคาบชดเชย/คาบเฉพาะกิจได้แล้ว ไม่ต้องรอ auto-generate จาก `recurrence_pattern` อย่างเดียว
+
+### 🔴 รูที่เจอระหว่างทำ — admin โรงเรียนอื่นเขียนข้อมูลข้ามโรงเรียนได้
+
+`ActivitySessionController` **ทั้ง 6 เมธอดเดิม** ผูก `SchoolEvent` ด้วย route-model binding แล้ว**ไม่เคยตรวจว่า event เป็นของ `$academy` ในลิงก์** · `authorizeSession()` ตรวจแค่ `session->event_id === event->id` ส่วน `authorizeManager()` ถาม `canManageEvent($user, $academy, ...)` ซึ่งถามว่า *"คนนี้เป็นแอดมินของโรงเรียนที่อยู่ใน URL ไหม"*
+
+→ เจ้าของโรงเรียน B ยิง `/academies/{B}/events/{eventของโรงเรียน A}/sessions/{s}/records` **ผ่านทั้งสองด่าน** แล้วเขียนการเช็คชื่อลงกิจกรรมของโรงเรียน A ได้
+
+**พิสูจน์แล้วด้วย revert-check:** ถอด `abort_if` ออกบรรทัดเดียว → คำขอวิ่งทะลุถึงชั้น validation ของ `storeRecords` (ตอบ "The records field is required") แทนที่จะเป็น 404
+
+`SchoolEventController::roster()` (`:699`) และ `destroy()` (`:739`) ตรวจถูกอยู่แล้ว → **นี่คือ drift ไม่ใช่การออกแบบ** · แก้ด้วย helper `authorizeEvent()` ใช้ทุกเมธอดในคอนโทรลเลอร์ (10 จุด) + เทสต์ล็อกไว้
+
+### ⚠️ `events.manage` เป็นสิทธิ์ที่ประกาศไว้แต่ไม่มีใครอ่าน (ยังไม่แก้ — รอตัดสิน)
+
+สเปกเดิมเขียนว่า A-S1 ต้อง "guard `events.manage`" แต่ตรวจแล้ว **ไม่มี middleware หรือคอนโทรลเลอร์ตัวไหนอ่านคีย์นี้เลย** — `events.view`/`events.manage` มีใน `AcademyPermission.php:175-176` และแจกให้ 6 role ใน `AcademyRole.php` แต่ทั้ง 13 endpoint ของกิจกรรมกรองด้วย `ManagesEventPermissions::canManageEvent()` = **แอดมินโรงเรียน หรือ หัวหน้าฝ่ายเจ้าของ `group_id`** เท่านั้น
+
+→ route ใหม่ 4 ตัวจึงใช้ `canManageEvent` ให้เหมือนอีก 6 ตัว (ใส่ middleware เฉพาะตัวใหม่ = ไม่ปลดล็อกใครเพิ่ม แถมทำให้ 2 มาตรฐานอยู่ในบล็อกเดียวกัน)
+→ **ข้อตัดสินที่ค้าง:** จะให้ `canManageEvent` นับ `events.manage` ด้วยไหม — ถ้าเอา **สิทธิ์เปลี่ยนพร้อมกันทั้ง 13 endpoint** ไม่ใช่เฉพาะ A-S1
+
+**สถานะเทสต์:** Activity 35 (เพิ่ม `ActivitySessionCrudTest` 12 เคส) · รวมชุดที่ filter `Activity` จับได้ 57 ผ่าน
+
+---
+
 ## 2. Gap Analysis — ช่องว่างจริง 5 จุด
 
 | ID | Gap | ระดับ |
@@ -130,9 +155,9 @@ school_events         = 3 แถว (ceremony 1, meeting 1, sports 1)
 
 | Step | Title | Depends | Status |
 |---|---|---|---|
-| **A-S0** | **พิสูจน์ว่าของเดิมทำงาน** — สร้าง event ทดสอบ + session + enrollment ผ่าน tinker แล้วยิงครบ 6 endpoint ของ `ActivitySessionController` · **งานนี้ต้องมาก่อนทุกอย่าง** เพราะตาราง 0 แถวแปลว่าไม่มีใครรู้ว่ามันพังตรงไหน | — | ⚪ |
-| **A-S1** | **อุด A1** — เพิ่ม route + controller method `index`/`store`/`update`/`destroy` ของ session พร้อม guard `events.manage` | A-S0 | ⚪ |
-| **A-S2** | **อุด A2** — `GET /{event}/enrollments` คืนรายชื่อ + `student_number` + `classroom_name` (ลอก `enrichRecordsWithClassroomInfo`) + สถานะเช็คชื่อของ session ที่ระบุ | A-S0 | ⚪ |
+| **A-S0** | **พิสูจน์ว่าของเดิมทำงาน** — สร้าง event ทดสอบ + session + enrollment ผ่าน tinker แล้วยิงครบ 6 endpoint ของ `ActivitySessionController` · **งานนี้ต้องมาก่อนทุกอย่าง** เพราะตาราง 0 แถวแปลว่าไม่มีใครรู้ว่ามันพังตรงไหน | — | ✅ §1.5 |
+| **A-S1** | **อุด A1** — เพิ่ม route + controller method `index`/`store`/`update`/`destroy` ของ session (guard = `canManageEvent` ไม่ใช่ `events.manage` ดูเหตุผลใน §1.7) | A-S0 | ✅ §1.7 |
+| **A-S2** | **อุด A2** — รายชื่อผู้เข้าร่วมมาจากกลุ่มเป้าหมาย ผ่าน `GET /{event}/roster` (ไม่ใช่ `GET /enrollments` ตามร่างเดิม) | A-S0 | ✅ §1.6 |
 | **A-S3** | **อุด A4** — เพิ่มสาขา `CHECKIN:ACTIVITY:` ใน `ui/types/qr.ts` + routing ใน `useQRScanner.ts` (ระวัง: ไฟล์นี้ใช้ร่วมทั้งระบบ) | A-S0 | ⚪ |
 | **A-S4** | **หน้าคอนโซลเช็คชื่อกิจกรรม** — ลอกรูป 4 แท็บจาก `school-attendance/[id].vue` · ใช้สกิล `hopeui-port` | A-S1, A-S2 | ⚪ |
 | **A-S5** | **แก้บั๊ก `remark` → `remarks`** ของเมนู #18 (§3) + เทสต์กันถอยหลัง | — | ⚪ |
