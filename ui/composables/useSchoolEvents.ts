@@ -72,6 +72,24 @@ export const useSchoolEvents = () => {
   const refreshSessionQr = (academyId: number, eventId: number, sessionId: number) =>
     api.call(`/api/academies/${academyId}/events/${eventId}/sessions/${sessionId}/refresh-qr`, { method: 'POST' })
 
+  const getEventSessions = (academyId: number, eventId: number, params?: { from?: string; to?: string; status?: string; q?: string; per_page?: number; page?: number }) =>
+    api.call(`/api/academies/${academyId}/events/${eventId}/sessions`, { params })
+
+  const createEventSession = (academyId: number, eventId: number, data: Record<string, any>) =>
+    api.call(`/api/academies/${academyId}/events/${eventId}/sessions`, { method: 'POST', body: data })
+
+  const updateEventSession = (academyId: number, eventId: number, sessionId: number, data: Record<string, any>) =>
+    api.call(`/api/academies/${academyId}/events/${eventId}/sessions/${sessionId}`, { method: 'PATCH', body: data })
+
+  const deleteEventSession = (academyId: number, eventId: number, sessionId: number) =>
+    api.call(`/api/academies/${academyId}/events/${eventId}/sessions/${sessionId}`, { method: 'DELETE' })
+
+  const getEventRoster = (academyId: number, eventId: number, params?: { session_id?: number; q?: string; per_page?: number; page?: number }) =>
+    api.call(`/api/academies/${academyId}/events/${eventId}/roster`, { params })
+
+  const getEventAudienceCount = (academyId: number, eventId: number) =>
+    api.call(`/api/academies/${academyId}/events/${eventId}/audience-count`)
+
   // Student self-check-in via QR token
   const checkInSession = (academyId: number, eventId: number, sessionId: number, qrToken: string) =>
     api.call(`/api/academies/${academyId}/events/${eventId}/sessions/${sessionId}/check-in`, {
@@ -135,6 +153,12 @@ export const useSchoolEvents = () => {
     enrollInEvent,
     getSession,
     refreshSessionQr,
+    getEventSessions,
+    createEventSession,
+    updateEventSession,
+    deleteEventSession,
+    getEventRoster,
+    getEventAudienceCount,
     checkInSession,
     scanSessionStudent,
     storeSessionRecords,

@@ -176,6 +176,46 @@ route เช็คอินต้องการ **3 id**: `POST /academies/{aca
 
 ---
 
+## 1.10 ✅ A-S4 (2026-08-01) — หน้าคอนโซลเช็คชื่อกิจกรรม (อุด A3)
+
+2 หน้าใหม่ + 1 component + 6 ฟังก์ชันใน `useSchoolEvents.ts`:
+
+| ไฟล์ | หน้าที่ |
+|---|---|
+| `admin/events/[id]/sessions/index.vue` | รายการคาบ + สร้าง/แก้ไข/ลบ (ใช้ route ของ A-S1) |
+| `admin/events/[id]/sessions/[sessionId].vue` | คอนโซล 4 แท็บ `qr` / `scan` / `manual` / `records` |
+| `components/academy/activity/ActivitySessionQRDisplay.vue` | QR + ขยายเต็มจอ (โทนม่วงให้ตรงกับ `activity_checkin`) |
+
+### ตัดสินเรื่องแหล่งดีไซน์ — ไม่ได้ดึงจาก HopeUI ทั้งที่ `hopa/` มีอยู่
+
+ต้นแบบคือ **`school-attendance/[id].vue` (797 บรรทัด)** ซึ่งเป็นคอนโซล 4 แท็บที่ครูใช้เป็นแล้วและใช้โทเคนของ nuxnan ครบ (`rounded-vikinger`, `shadow-card`, `bg-gradient-vikinger`, `font-heading`) ส่วนหน้ารายการคาบลอกทรงการ์ดจาก `admin/events/index.vue` โฟลเดอร์เดียวกัน
+→ quality bar ของสกิลคือ "ให้ดูเหมือนเป็นของ nuxnan" · ทั้งสองทรงมีในบ้านแล้ว การเอาแหล่งที่สามเข้ามาจะได้ผลตรงข้าม · ใช้ภาษาไทยฝังตรงตามหน้าพี่น้อง (`$t()` 0 ครั้ง) ไม่เพิ่มคีย์ i18n ให้หน้าเดียวแล้วไม่เข้าพวก
+
+### จุดที่ต้องดัดจากต้นแบบ (ไม่ใช่ลอกตรง ๆ)
+
+- **ไม่มี open/closed** — คาบกิจกรรมเป็น `scheduled`/`completed`/`cancelled` → ปุ่ม "ปิดการเช็คชื่อ" กลายเป็น "จบคาบนี้" ที่ PATCH สถานะ
+- **`summary.total` = จำนวนแถวเช็คชื่อ ไม่ใช่จำนวนคน** → การ์ด "กลุ่มเป้าหมาย" ดึงจาก `audience-count` แทน ไม่งั้นเปอร์เซ็นต์ผิดหมด · และ `summary` ไม่มีคีย์ `leave` → 4 การ์ด ไม่ใช่ 5
+- **ไม่มี endpoint คืนรายชื่อผู้เช็คชื่อ** → แท็บ `records` ใช้ roster แล้วกรองแถวที่ `attendance_status` ไม่ null (ไม่ต้องเพิ่ม backend)
+- **`already_checked` มากับ HTTP 422** ซึ่ง `api.call` โยน exception → ต้องอ่านจาก `catch` ไม่งั้นเช็คซ้ำจะขึ้นแดงเป็น error
+- สถานะ 5 ตัว (เพิ่ม `activity_leave` โทนม่วง) · roster ส่ง `user_id`/`remarks` **ไม่ใช่ `student_id`/`remark`** ตามบั๊กของเมนู #18 (§3)
+- แสดง `skipped_user_ids` ที่ A-S3b เพิ่มเข้ามา + เตือนเมื่อ roster เกิน 200 แถว
+
+### ปุ่ม "จัดการ" ที่ชี้ไปหน้าที่ไม่มีอยู่จริง
+
+`admin/events/index.vue:348` ชี้ไป `/admin/events/{id}` ซึ่ง **ไม่มีไฟล์นั้นในโปรเจค — 404 มาตลอด** (ทั้งที่ commit `b823a396` ชื่อว่า "repair every broken path")
+→ แก้เฉพาะกิจกรรม `semester`/`recurring` ให้ไปหน้ารายการคาบ (ป้ายเปลี่ยนเป็น "คาบเช็คชื่อ") · **`one_time` ยังพังอยู่ เป็นคนละงาน**
+
+### ⚠️ บทเรียนเครื่องมือ — Codex ทำ regression บนไฟล์ที่สั่งห้ามแตะ
+
+สั่งให้ **copy** `SchoolAttendanceQRDisplay.vue` ไปเป็นตัวใหม่ แต่ Codex **ย้าย**ของดีไปไฟล์ใหม่แล้วทิ้ง**เวอร์ชัน minified ที่ตัดฟีเจอร์ออก**ไว้แทนที่ของเดิม — ไอคอนย่อ-ขยายเต็มจอ, ป้าย "Session เปิดอยู่", เงา/สถานะ disabled หายหมด **บนหน้าที่ใช้งานจริงอยู่**
+→ กู้ด้วย `git checkout --` ยืนยัน **md5 ตรงกับ HEAD เป๊ะ**
+→ และหน้าใหม่ 2 หน้าที่ส่งมาเป็น **one-liner ยาวบรรทัดเดียว** ขาด UI ตามสเปกเกินครึ่ง (ไม่มีการ์ดผลสแกน, ไม่มีประวัติสแกนล่าสุด, ไม่มี sticky save bar, ไม่มี empty state, ไม่มี not-found) → **claude เขียนใหม่ทั้ง 2 หน้าเอง**
+→ ที่เก็บของ Codex ไว้: `useSchoolEvents.ts` (6 ฟังก์ชัน ถูกต้อง ฟอร์แมตดี) และ `ActivitySessionQRDisplay.vue` (แก้สี teal ที่ตกค้าง 3 จุด + copy 2 บรรทัดเอง)
+
+**ตรวจแล้ว:** `vue-tsc --noEmit` — **0 error ในไฟล์ใหม่** (เหลือ 5 error เดิมใน `public/js/TimelineMax.js` ซึ่งเป็น vendor minified ไม่เกี่ยวกัน) · `vitest` 15 ผ่าน · **ไม่ได้รัน `npm run build`** (เจ้าของโปรเจครันเอง)
+
+---
+
 ## 2. Gap Analysis — ช่องว่างจริง 5 จุด
 
 | ID | Gap | ระดับ |
@@ -220,7 +260,7 @@ route เช็คอินต้องการ **3 id**: `POST /academies/{aca
 | **A-S2** | **อุด A2** — รายชื่อผู้เข้าร่วมมาจากกลุ่มเป้าหมาย ผ่าน `GET /{event}/roster` (ไม่ใช่ `GET /enrollments` ตามร่างเดิม) | A-S0 | ✅ §1.6 |
 | **A-S3** | **อุด A4** — เพิ่มสาขา `CHECKIN:ACTIVITY:` ใน `ui/types/qr.ts` + routing ใน `useQRScanner.ts` (+ เพิ่ม `event_id` ใน payload ฝั่ง backend) | A-S0 | ✅ §1.8 |
 | **A-S3b** | **อุด A8** — สร้าง enrollment อัตโนมัติให้สมาชิกในกลุ่มเป้าหมายตอนเช็คชื่อครั้งแรก (`ActivityEnrollmentResolver`) | A-S3 | ✅ §1.9 |
-| **A-S4** | **หน้าคอนโซลเช็คชื่อกิจกรรม** — ลอกรูป 4 แท็บจาก `school-attendance/[id].vue` · ใช้สกิล `hopeui-port` | A-S1, A-S2, A-S3b | ⚪ **พร้อมทำ** |
+| **A-S4** | **หน้าคอนโซลเช็คชื่อกิจกรรม** — 4 แท็บ + หน้ารายการคาบ (ลอกจาก `school-attendance/[id].vue` ไม่ได้ใช้ HopeUI ดูเหตุผล §1.10) | A-S1, A-S2, A-S3b | ✅ §1.10 |
 | **A-S5** | **แก้บั๊ก `remark` → `remarks`** ของเมนู #18 (§3) + เทสต์กันถอยหลัง | — | ⚪ |
 | **A-S6** | รายงาน/ส่งออกการเข้าร่วมกิจกรรม (A5) | A-S4 | ⚪ |
 

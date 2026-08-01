@@ -108,6 +108,16 @@ const onSaved = async () => {
   await loadEvents()
 }
 
+// Only continuous activities have sessions to check into; one_time events go to the event
+// detail page, which does not exist yet — that route still 404s.
+const hasSessions = (event: any) =>
+  event.attendance_pattern === 'semester' || event.attendance_pattern === 'recurring'
+
+const manageLink = (event: any) => {
+  const base = `/academies/${academyName.value}/admin/events/${event.id}`
+  return hasSessions(event) ? `${base}/sessions` : base
+}
+
 const groupName = (groupId: number | null) => {
   if (!groupId) return null
   return groups.value.find((g) => g.id === groupId)?.name || null
@@ -345,10 +355,10 @@ const formatDateRange = (start: string, end: string | null) => {
                 </button>
                 <button
                   class="px-4 py-2 bg-gradient-vikinger text-white text-sm font-semibold rounded-lg shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 transition-all"
-                  @click="navigateTo(`/academies/${academyName}/admin/events/${event.id}`)"
+                  @click="navigateTo(manageLink(event))"
                 >
                   <Icon icon="fluent:arrow-right-24-regular" class="w-4 h-4 inline mr-1" />
-                  จัดการ
+                  {{ hasSessions(event) ? 'คาบเช็คชื่อ' : 'จัดการ' }}
                 </button>
               </div>
             </div>
