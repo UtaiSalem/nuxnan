@@ -151,6 +151,32 @@ class SchoolAttendanceRosterScopeTest extends TestCase
         ]);
     }
 
+    // The 2026_06_25_090000 rename made `remark` an unknown key, and an unknown key used to be
+    // accepted and dropped. Answer 422 instead, so the next rename cannot go quiet for weeks.
+    public function test_bulk_records_rejects_the_pre_rename_remark_key(): void
+    {
+        [$user] = $this->makeMemberedStudent('ATD009', 'สมหญิง');
+
+        $response = $this->actingAs($this->owner, 'api')
+            ->postJson("/api/academies/{$this->academy->id}/school-attendances/{$this->attendance->id}/records", [
+                'records' => [
+                    ['student_id' => $user->id, 'status' => 'late', 'remark' => 'รถติด'],
+                ],
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('records.0');
+
+        // 'records.0' is a flat key, so it cannot be reached with dot-path lookup.
+        // The message must name the key sent and the keys read, or it does not help the next person.
+        $errors = $response->json('errors');
+        $this->assertStringContainsString('ฟิลด์ที่ไม่รู้จัก: remark', $errors['records.0'][0]);
+        $this->assertStringContainsString('student_id, status, remarks', $errors['records.0'][0]);
+        $this->assertDatabaseMissing('school_attendance_records', [
+            'attendance_id' => $this->attendance->id,
+            'student_id' => $user->id,
+        ]);
+    }
+
     public function test_resubmitting_bulk_records_updates_the_existing_remark(): void
     {
         [$user] = $this->makeMemberedStudent('ATD004', 'สมทรง');

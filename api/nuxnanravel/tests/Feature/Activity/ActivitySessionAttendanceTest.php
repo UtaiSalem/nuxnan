@@ -83,6 +83,31 @@ class ActivitySessionAttendanceTest extends TestCase
         $this->assertDatabaseHas('activity_attendances', ['session_id' => $session->id, 'user_id' => $student->id, 'status' => 'late', 'remarks' => 'traffic']);
     }
 
+    // The activity endpoint reads user_id/remarks. student_id and remark belong to menu #18 and
+    // used to be accepted here and dropped without a word — they must be refused out loud.
+    public function test_bulk_records_rejects_keys_the_endpoint_does_not_read(): void
+    {
+        $owner = User::factory()->create();
+        $student = User::factory()->create();
+        $academy = Academy::factory()->create(['user_id' => $owner->id]);
+        $event = $this->event($owner, $academy);
+        $session = ActivitySession::create(['event_id' => $event->id, 'start_datetime' => now(), 'status' => 'scheduled']);
+        ActivityEnrollment::create(['event_id' => $event->id, 'user_id' => $student->id, 'status' => 'active']);
+
+        $url = "/api/academies/{$academy->id}/events/{$event->id}/sessions/{$session->id}/records";
+
+        $this->actingAs($owner, 'api')
+            ->postJson($url, ['records' => [['user_id' => $student->id, 'status' => 'late', 'remark' => 'traffic']]])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('records.0');
+
+        $this->actingAs($owner, 'api')
+            ->postJson($url, ['records' => [['student_id' => $student->id, 'status' => 'late', 'remarks' => 'traffic']]])
+            ->assertStatus(422);
+
+        $this->assertDatabaseCount('activity_attendances', 0);
+    }
+
     public function test_student_attendance_summary_has_period_buckets(): void
     {
         $owner = User::factory()->create();

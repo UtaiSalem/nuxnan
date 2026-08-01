@@ -239,7 +239,7 @@ route เช็คอินต้องการ **3 id**: `POST /academies/{aca
 **เทสต์ทั้งสองอยู่ฝั่ง backend จึงกันการถอยหลังของ frontend ไม่ได้** — ถ้าใครแก้ไฟล์ Vue กลับไปส่ง `remark` เทสต์ยังเขียวหมด
 และ TypeScript ก็กันไม่ได้จริง: `remarks` เป็น optional ส่วน payload ถูกสร้างผ่านตัวแปรกลาง ทำให้ excess-property check ของ TS ไม่ทำงาน → `{student_id, status, remark}` ยัง assign เข้า `{student_id, status, remarks?}` ได้
 
-**ข้อเสนอ:** ให้ `storeRecords` **ปฏิเสธคีย์ที่ไม่รู้จักใน `records[]`** (422 แทนที่จะกลืนเงียบ) — อันตรายของบั๊กตระกูลนี้คือ**ความเงียบ** ไม่ใช่ตัวสะกด · ตอนนี้มีผู้เรียกแค่ 2 หน้าและถูกทั้งคู่ ความเสี่ยงต่ำ · ใช้ได้กับ `ActivitySessionController::storeRecords` ด้วย
+**ข้อเสนอ:** ให้ `storeRecords` **ปฏิเสธคีย์ที่ไม่รู้จักใน `records[]`** (422 แทนที่จะกลืนเงียบ) — **ทำแล้ว ดู §1.13**
 
 ---
 
@@ -273,6 +273,28 @@ session ids → aggregate `groupBy(user_id, status)` ครั้งเดีย
 → โค้ดที่ Codex ส่ง (service/export/controller/route/composable) คุณภาพดีรอบนี้ ฟอร์แมตถูกต้อง ไม่ minify — แก้เองแค่ type ของ `getEventAttendanceReport` ที่รับ `format: 'json'` ได้ทั้งที่คืน Blob เสมอ
 
 **ตรวจแล้ว:** `pint --test` ผ่าน · `php artisan test --filter=Activity` → **77 passed (176 assertions)** · `route:list --path=attendance-report` ยืนยัน route · `vitest` 15 ผ่าน
+
+---
+
+## 1.13 ✅ strict-keys (2026-08-01) — คีย์ที่ไม่รู้จักตอบ 422 แทนที่จะกลืนเงียบ
+
+`App\Rules\OnlyKnownKeys` ใช้กับ `records.*` ของทั้งสอง endpoint:
+
+| endpoint | คีย์ที่รับ |
+|---|---|
+| `SchoolAttendanceController::storeRecords` (#18) | `student_id`, `status`, `remarks` |
+| `ActivitySessionController::storeRecords` (#26) | `user_id`, `status`, `remarks` |
+
+**เหตุผล:** validator ของ Laravel **ไม่สนใจคีย์ที่ไม่รู้จัก** → ฟิลด์ที่ถูกเปลี่ยนชื่อจะยังถูกรับแล้วทิ้งเงียบ ๆ ต่อไป · migration `2026_06_25_090000` เปลี่ยน `remark` → `remarks` แล้ว frontend ส่งของเดิมต่ออีกหลายสัปดาห์ **ตอบ 200 ทุกครั้ง ไม่มีหมายเหตุถูกบันทึกสักอัน**
+→ อันตรายของบั๊กตระกูลนี้คือ **ความเงียบ ไม่ใช่ตัวสะกด** · ข้อความ error จึงบอกทั้งคีย์ที่ส่งมาและคีย์ที่รับได้ เพื่อให้เห็นตัวที่พิมพ์ผิดทันที
+
+**ตรวจก่อนใส่ว่าไม่พังของเดิม:** ไล่ครบทั้ง 3 client — `school-attendance/[id].vue:195`, `classrooms/[id].vue:568`, `events/[id]/sessions/[sessionId].vue:245` — ส่งเฉพาะคีย์ที่อนุญาตอยู่แล้วทั้งหมด และในเทสต์มีแค่ 3 ไฟล์ที่ยิง endpoint นี้
+
+**revert-check:** ถอด rule ออก → ส่ง `remark` ได้ **200** และหมายเหตุหายเงียบเหมือนเดิมเป๊ะ
+
+**สถานะเทสต์:** Activity 78 · SchoolAttendanceRosterScope 5 · รวม filter ทั้งสอง **83 ผ่าน (199 assertions)**
+
+⚠️ ยังกันฝั่ง frontend ถอยหลังไม่ได้ 100% — แต่ตอนนี้ถ้าใครส่งผิด **จะเห็น 422 ทันทีบนหน้าจอ** แทนที่จะสำเร็จแล้วข้อมูลหาย
 
 ---
 

@@ -10,6 +10,7 @@ use App\Models\ClassroomStudent;
 use App\Models\Learn\Academy\SchoolAttendance;
 use App\Models\Learn\Academy\SchoolAttendanceRecord;
 use App\Models\User;
+use App\Rules\OnlyKnownKeys;
 use App\Services\Gamification\ClassroomPointsService;
 use App\Services\Gamification\XpService;
 use App\Services\PointsService;
@@ -246,6 +247,7 @@ class SchoolAttendanceController extends Controller
 
         $validated = $request->validate([
             'records' => 'required|array|min:1',
+            'records.*' => ['array', new OnlyKnownKeys(['student_id', 'status', 'remarks'])],
             'records.*.student_id' => 'required|exists:users,id',
             'records.*.status' => ['required', Rule::in(['present', 'absent', 'late', 'leave'])],
             'records.*.remarks' => 'nullable|string|max:200',

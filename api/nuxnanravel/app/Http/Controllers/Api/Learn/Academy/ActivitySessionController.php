@@ -9,6 +9,7 @@ use App\Models\ActivityAttendance;
 use App\Models\ActivityEnrollment;
 use App\Models\ActivitySession;
 use App\Models\SchoolEvent;
+use App\Rules\OnlyKnownKeys;
 use App\Services\Activity\ActivityAttendanceReport;
 use App\Services\Activity\ActivityEnrollmentResolver;
 use App\Services\Activity\EventAudienceResolver;
@@ -247,6 +248,7 @@ class ActivitySessionController extends Controller
 
         $validated = $request->validate([
             'records' => 'required|array|min:1',
+            'records.*' => ['array', new OnlyKnownKeys(['user_id', 'status', 'remarks'])],
             'records.*.user_id' => 'required|exists:users,id',
             'records.*.status' => ['required', Rule::in(['present', 'absent', 'late', 'leave', 'activity_leave'])],
             'records.*.remarks' => 'nullable|string|max:200',
