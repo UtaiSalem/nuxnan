@@ -149,9 +149,10 @@ SchoolEvent (event_type='sports')          ← งานกีฬาสีทั
 
 | Step | Title | Depends | Status |
 |---|---|---|---|
-| **S-S1+S-S2** | **ก้อนเดียวกัน (ดู §5.2)** — ลงทะเบียน type `house` ใน `app/Constants/AcademyGroupTypes.php` + `ui/constants/academyGroupTypes.ts` · เปลี่ยน `in:` rule 2 จุดให้อ่าน `AcademyGroupTypes::keys()` · **เขียน `houseLeaderboard()` ใหม่ให้เลิกอ่าน `SUM(users.pp)`** · ใส่ `academy.permission` ให้ 2 route leaderboard | — | ⚪ |
-| **S-S3** | เครื่องมือแบ่งนักเรียนเข้าคณะสี — สุ่ม + นำเข้า ผ่านเส้นทาง batch เดียวกัน (§8) | S-S1 | ⚪ |
-| **S-S3b** | หน้าจอแบ่งคณะสี (เลือกโหมด → preview → commit → undo) | S-S3 | ⚪ |
+| **S-S1+S-S2** | **ก้อนเดียวกัน (ดู §5.2)** — ลงทะเบียน type `house` ใน `app/Constants/AcademyGroupTypes.php` + `ui/constants/academyGroupTypes.ts` · เปลี่ยน `in:` rule 2 จุดให้อ่าน `AcademyGroupTypes::keys()` · **เขียน `houseLeaderboard()` ใหม่ให้เลิกอ่าน `SUM(users.pp)`** · ใส่ `academy.permission` ให้ 2 route leaderboard | — | ✅ `b2fb8e40` (5 เทสต์) |
+| **S-S3** | เครื่องมือแบ่งนักเรียนเข้าคณะสี — **โหมดสุ่ม** + batch/commit/undo/projection ผ่านเส้นทางเดียวกัน (§7) | S-S1 | ✅ `f5fe814e` (16 เทสต์) |
+| **S-S3i** | **โหมดนำเข้า** — parser + matcher บนตารางและ commit path เดียวกัน (§7.6) | S-S3 | ✅ (9 เทสต์) |
+| **S-S3b** | หน้าจอแบ่งคณะสี (เลือกโหมด → preview → commit → undo) | S-S3i | ⚪ **งานถัดไป** |
 | **S-S4** | schema กีฬาสี (§4) + ให้คะแนนแก่คณะสีผ่าน event log + จัดการคะแนนเท่ากัน | S-S3 | ⚪ |
 | **S-S5** | บันทึกผลการแข่ง (อันดับ → คะแนนตามตาราง) + คะแนนกรรมการตามเกณฑ์ย่อย (§3) | S-S4 | ⚪ |
 | **S-S6** | หน้าจอ: ตารางคะแนนคณะสี · ตารางแข่ง · กรอกผล · สรุปเหรียญ | S-S5 | ⚪ |
@@ -252,7 +253,11 @@ house_memberships                       ← แหล่งความจริ
 
 จับคู่คณะสี: เทียบ `academy_groups.name` ของ type `house` แบบ trim + case-insensitive · ไม่เจอ = `unknown_house` (**ห้ามสร้างคณะสีใหม่อัตโนมัติจากไฟล์**)
 
-`already_assigned` = มีสีในปีนั้นอยู่แล้ว → ค่าเริ่มต้น `skip`, มีตัวเลือก `overwrite` ใน options
+`already_assigned` = มีสีในปีนั้นอยู่แล้ว → ค่าเริ่มต้น `skip`, มีตัวเลือก `overwrite` ใน options (โหมด overwrite ต้องเก็บ `previous_house_group_id` เพื่อให้ undo คืนสีเดิมได้ ตาม §7.3.1)
+
+**นักเรียนคนเดียวโผล่ 2 แถวในไฟล์** → แถวหลังต้องเป็น `ambiguous` พร้อมบอกเลขแถวแรก **ห้ามปล่อยเป็น `ok` ทั้งคู่** เพราะ `commit()` ใช้ upsert → DB ได้แถวเดียว แต่**หน้า preview จะรายงานยอดเกินจริง** และยอดต่อสีที่คนอนุมัติไปจะไม่ตรงกับที่เขียนจริง (พิสูจน์ด้วยเทสต์: ปิดตัวกันซ้ำแล้วยอด ok = 3 ทั้งที่มีนักเรียน 2 คน)
+
+⚡ **ประสิทธิภาพ:** ตัวจับคู่ต้องสร้างดัชนี (รหัสนักเรียน / เลขบัตร 13 หลัก / ชื่อ-สกุล normalize / ชื่อคณะสี / สังกัดเดิมของปีนั้น) **ครั้งเดียวต่อการนำเข้า** — ไฟล์จริง ~2,200 แถว × นักเรียน ~2,900 คน ถ้า query รายแถวจะกลายเป็นการโหลดตารางนักเรียนทั้งตาราง 2,200 รอบ
 
 ### 7.7 สิทธิ์
 

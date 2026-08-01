@@ -355,7 +355,19 @@ class HouseAssignmentTest extends TestCase
         $routes = collect(app('router')->getRoutes())
             ->filter(fn ($route) => str_contains($route->getName() ?? '', 'api.academy.house-assignments.'));
 
-        $this->assertCount(8, $routes);
+        $this->assertEqualsCanonicalizing([
+            'api.academy.house-assignments.index',
+            'api.academy.house-assignments.current',
+            'api.academy.house-assignments.preview-random',
+            'api.academy.house-assignments.preview-import',
+            'api.academy.house-assignments.template',
+            'api.academy.house-assignments.show',
+            'api.academy.house-assignments.rows',
+            'api.academy.house-assignments.commit',
+            'api.academy.house-assignments.undo',
+            'api.academy.house-assignments.discard',
+        ], $routes->map(fn ($route) => $route->getName())->values()->all());
+
         foreach ($routes as $route) {
             $this->assertContains('auth:api', $route->middleware());
             $this->assertTrue(

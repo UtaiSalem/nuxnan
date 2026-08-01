@@ -957,6 +957,8 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::get('/', [HouseAssignmentController::class, 'index'])->middleware('academy.permission:sports.view')->name('api.academy.house-assignments.index');
         Route::get('/current', [HouseAssignmentController::class, 'current'])->middleware('academy.permission:sports.view')->name('api.academy.house-assignments.current');
         Route::post('/preview-random', [HouseAssignmentController::class, 'previewRandom'])->middleware('academy.permission:sports.manage')->name('api.academy.house-assignments.preview-random');
+        Route::post('/preview-import', [HouseAssignmentController::class, 'previewImport'])->middleware('academy.permission:sports.manage')->name('api.academy.house-assignments.preview-import');
+        Route::get('/template', [HouseAssignmentController::class, 'template'])->middleware('academy.permission:sports.view')->name('api.academy.house-assignments.template');
         Route::get('/{batch}', [HouseAssignmentController::class, 'show'])->middleware('academy.permission:sports.view')->name('api.academy.house-assignments.show');
         Route::get('/{batch}/rows', [HouseAssignmentController::class, 'rows'])->middleware('academy.permission:sports.view')->name('api.academy.house-assignments.rows');
         Route::post('/{batch}/commit', [HouseAssignmentController::class, 'commit'])->middleware('academy.permission:sports.manage')->name('api.academy.house-assignments.commit');

@@ -9,6 +9,7 @@ use App\Services\Sports\HouseAssignmentService;
 use DomainException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class HouseAssignmentController extends Controller
 {
@@ -45,6 +46,27 @@ class HouseAssignmentController extends Controller
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
+    }
+
+    public function previewImport(Request $request, Academy $academy)
+    {
+        $request->validate(['academic_year_id' => ['required', 'integer'], 'file' => ['required', 'file', 'mimes:csv,txt,xlsx'], 'column_mapping' => ['required'], 'on_conflict' => ['nullable', 'in:skip,overwrite']]);
+        try {
+            return response()->json(['batch' => $this->service->previewImport($academy, $request->integer('academic_year_id'), $request->file('file'), $request->all(), $request->user())], 201);
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    public function template(Academy $academy): StreamedResponse
+    {
+        return response()->streamDownload(function (): void {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+            fputcsv($out, ['student_identifier', 'house_name']);
+            fputcsv($out, ['student-code-here', 'Red']);
+            fclose($out);
+        }, 'house-assignment-template.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     public function show(Academy $academy, HouseAssignmentBatch $batch)

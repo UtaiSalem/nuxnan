@@ -7,6 +7,7 @@ use App\Models\HouseAssignmentBatch;
 use App\Models\HouseAssignmentRow;
 use App\Models\User;
 use DomainException;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Random\Engine\Mt19937;
@@ -77,6 +78,77 @@ class HouseAssignmentService
         foreach (array_chunk(array_map(fn ($row, $index) => ['batch_id' => $batch->id, 'row_number' => $index + 1, 'student_id' => $row['student_id'], 'house_group_id' => $row['house_group_id'], 'previous_house_group_id' => $row['previous_house_group_id'], 'status' => 'ok', 'created_at' => now(), 'updated_at' => now()], $assigned, array_keys($assigned)), 500) as $chunk) {
             HouseAssignmentRow::insert($chunk);
         }
+
+        return $batch->fresh();
+    }
+
+    public function previewImport(Academy $academy, int $year, UploadedFile $file, array $options, User $actor): HouseAssignmentBatch
+    {
+        if (! DB::table('academic_years')->where('id', $year)->where('academy_id', $academy->id)->exists()) {
+            throw new DomainException('Academic year does not belong to this academy.');
+        }
+        $mapping = $options['column_mapping'] ?? [];
+        if (is_string($mapping)) {
+            $mapping = json_decode($mapping, true) ?: [];
+        }
+        if (empty($mapping['student_identifier']) || empty($mapping['house_name'])) {
+            throw new DomainException('Student and house columns are required.');
+        }
+        $conflict = $options['on_conflict'] ?? 'skip';
+        if (! in_array($conflict, ['skip', 'overwrite'], true)) {
+            throw new DomainException('Invalid conflict option.');
+        }
+        $stored = $file->store('house-assignments', 'local');
+        $batch = HouseAssignmentBatch::create(['id' => (string) Str::uuid(), 'academy_id' => $academy->id, 'academic_year_id' => $year, 'mode' => 'import', 'status' => 'draft', 'options' => ['column_mapping' => $mapping, 'on_conflict' => $conflict, 'stored_path' => $stored], 'summary' => [], 'source_filename' => $file->getClientOriginalName(), 'created_by_user_id' => $actor->id]);
+        $matcher = app(HouseImportMatcher::class);
+        $summary = ['total' => 0, 'per_house' => [], 'per_house_by_grade' => [], 'by_status' => array_fill_keys(['ok', 'unmatched', 'ambiguous', 'unknown_house', 'already_assigned', 'skipped'], 0), 'moved_count' => 0];
+        $rows = [];
+
+        // Prefetched once: a roster file has ~2,200 rows, and looking each student's
+        // grade up individually would issue a query per row.
+        $grades = DB::table('classroom_students')
+            ->join('classrooms', 'classrooms.id', '=', 'classroom_students.classroom_id')
+            ->where('classroom_students.academic_year_id', $year)
+            ->where('classroom_students.status', 'active')
+            ->pluck('classrooms.grade_level', 'classroom_students.student_id');
+
+        $seen = [];
+        foreach (app(HouseImportParser::class)->parse($file) as $number => $raw) {
+            $result = $matcher->match($academy, $year, $raw, $mapping, $conflict);
+            $status = $result['status'];
+
+            // The same student listed twice would otherwise produce two 'ok' rows: the
+            // preview would count them twice while commit's upsert keeps only the last,
+            // so the screen the operator approves would not match what gets written.
+            if ($status === 'ok' && isset($seen[$result['student_id']])) {
+                $status = 'ambiguous';
+                $result['message'] = 'This student appears more than once in the file (first at row '.$seen[$result['student_id']].').';
+                $result['house_group_id'] = null;
+            } elseif ($status === 'ok') {
+                $seen[$result['student_id']] = $number + 1;
+            }
+
+            $summary['total']++;
+            $summary['by_status'][$status]++;
+            if ($status === 'ok') {
+                $house = (string) $result['house_group_id'];
+                $summary['per_house'][$house] = ($summary['per_house'][$house] ?? 0) + 1;
+                if (($result['previous_house_group_id'] ?? null) !== null && (int) $result['previous_house_group_id'] !== (int) $result['house_group_id']) {
+                    $summary['moved_count']++;
+                }
+                $grade = $grades[$result['student_id']] ?? 'unknown';
+                $summary['per_house_by_grade'][$house][$grade] = ($summary['per_house_by_grade'][$house][$grade] ?? 0) + 1;
+            }
+            $rows[] = ['batch_id' => $batch->id, 'row_number' => $number + 1, 'raw' => json_encode($raw, JSON_UNESCAPED_UNICODE), 'student_id' => $result['student_id'] ?? null, 'house_group_id' => $result['house_group_id'] ?? null, 'previous_house_group_id' => $result['previous_house_group_id'] ?? null, 'status' => $status, 'message' => $result['message'] ?? null, 'created_at' => now(), 'updated_at' => now()];
+            if (count($rows) === 500) {
+                HouseAssignmentRow::insert($rows);
+                $rows = [];
+            }
+        }
+        if ($rows) {
+            HouseAssignmentRow::insert($rows);
+        }
+        $batch->update(['summary' => $summary]);
 
         return $batch->fresh();
     }
