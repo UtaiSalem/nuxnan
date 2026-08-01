@@ -892,8 +892,8 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::patch('/points/rules/{rule}', [AcademyPointRuleController::class, 'update'])->name('api.academy.gamification.points.rules.update');
         Route::delete('/points/rules/{rule}', [AcademyPointRuleController::class, 'destroy'])->name('api.academy.gamification.points.rules.delete');
 
-        Route::get('/leaderboard/houses', [AnalyticsController::class, 'houseLeaderboard'])->name('api.academy.gamification.leaderboard.houses');
-        Route::get('/leaderboard/classrooms', [AnalyticsController::class, 'classroomLeaderboard'])->name('api.academy.gamification.leaderboard.classrooms');
+        Route::get('/leaderboard/houses', [AnalyticsController::class, 'houseLeaderboard'])->middleware('academy.permission:sports.view')->name('api.academy.gamification.leaderboard.houses');
+        Route::get('/leaderboard/classrooms', [AnalyticsController::class, 'classroomLeaderboard'])->middleware('academy.permission:sports.view')->name('api.academy.gamification.leaderboard.classrooms');
     });
 
     // Analytics

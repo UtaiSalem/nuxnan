@@ -10,11 +10,11 @@ use App\Models\AnalyticsAlertRule;
 use App\Models\AnalyticsSnapshot;
 use App\Models\Assignment;
 use App\Models\AssignmentAnswer;
+use App\Models\Classroom;
 use App\Models\ClassSchedule;
 use App\Models\ComparativeAnalytics;
 use App\Models\KpiDefinition;
 use App\Models\KpiValue;
-use App\Models\Learn\Academy\Classroom;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
 use App\Models\TrendAnalysis;
@@ -174,20 +174,27 @@ class AnalyticsController extends Controller
             ->get();
 
         $leaderboard = $houses->map(function ($house) {
-            $totalPoints = DB::table('users')
-                ->join('academy_group_members', 'users.id', '=', 'academy_group_members.user_id')
-                ->where('academy_group_members.academy_group_id', $house->id)
-                ->sum('pp'); // Assuming pp is the points column in users table
-
             return [
                 'id' => $house->id,
                 'name' => $house->name,
-                'points' => (float) $totalPoints,
+                'points' => 0.0,
+                'points_source' => 'pending',
                 'member_count' => $house->members()->count(),
                 'icon' => $house->settings['icon'] ?? 'fluent:shield-24-filled',
                 'color' => $house->settings['color'] ?? '#3B82F6',
             ];
-        })->sortByDesc('points')->values();
+        })->sortBy([['points', 'desc'], ['name', 'asc']])->values();
+        $lastPoints = null;
+        $lastRank = 0;
+        $leaderboard = $leaderboard->map(function (array $row, int $index) use (&$lastPoints, &$lastRank) {
+            if ($index === 0 || $row['points'] !== $lastPoints) {
+                $lastRank = $index + 1;
+                $lastPoints = $row['points'];
+            }
+            $row['rank'] = $lastRank;
+
+            return $row;
+        })->values();
 
         return response()->json([
             'success' => true,
@@ -203,18 +210,25 @@ class AnalyticsController extends Controller
         $classrooms = Classroom::where('academy_id', $academy->id)->get();
 
         $leaderboard = $classrooms->map(function ($classroom) {
-            $totalPoints = DB::table('users')
-                ->join('classroom_members', 'users.id', '=', 'classroom_members.student_id')
-                ->where('classroom_members.classroom_id', $classroom->id)
-                ->sum('pp');
-
             return [
                 'id' => $classroom->id,
                 'name' => $classroom->name,
-                'points' => (float) $totalPoints,
-                'student_count' => $classroom->members()->count(),
+                'points' => 0.0,
+                'points_source' => 'pending',
+                'student_count' => $classroom->classroomMembers()->count(),
             ];
-        })->sortByDesc('points')->values();
+        })->sortBy([['points', 'desc'], ['name', 'asc']])->values();
+        $lastPoints = null;
+        $lastRank = 0;
+        $leaderboard = $leaderboard->map(function (array $row, int $index) use (&$lastPoints, &$lastRank) {
+            if ($index === 0 || $row['points'] !== $lastPoints) {
+                $lastRank = $index + 1;
+                $lastPoints = $row['points'];
+            }
+            $row['rank'] = $lastRank;
+
+            return $row;
+        })->values();
 
         return response()->json([
             'success' => true,

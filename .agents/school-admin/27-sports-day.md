@@ -112,33 +112,144 @@ SchoolEvent (event_type='sports')          ← งานกีฬาสีทั
 
 ---
 
-## 5. ต้องตัดสินก่อนล็อกแผน (ยังไม่ได้ถาม)
+## 5. ข้อตัดสิน — ล็อกแล้ว 2026-08-02 (ผู้ใช้ตัดสิน)
 
-| # | ประเด็น | ทางเลือก / ทำไมสำคัญ |
+| # | ประเด็น | ผลตัดสิน |
 |---|---|---|
-| **S-D1** | **แบ่งนักเรียน 2,931 คนเข้าคณะสียังไง** | สุ่มคละชั้น · ตามห้องเรียน (ทั้งห้องอยู่สีเดียว) · ตามเลขที่/นามสกุล · นำเข้าจากไฟล์ที่โรงเรียนแบ่งไว้แล้ว — **ข้อนี้เปลี่ยนงานมากที่สุด** และถ้าปีก่อนแบ่งไว้แล้วต้องรู้ว่าจะสืบทอดยังไงตอนเลื่อนชั้น |
-| **S-D2** | กี่คณะสี | 4 / 5 / 6 — มีผลกับตารางแข่งและตัวคูณคะแนน |
-| **S-D3** | ต้องมีสายการแข่งขัน (bracket) ไหม | ถ้าต้องมี = งานใหญ่ขึ้นมาก (`sports_matches` ต้องรู้จักรอบ/คู่/ผู้ชนะไปต่อ) · ถ้าแค่บันทึกอันดับสุดท้ายของแต่ละรายการ = เล็กลงมาก **แนะนำเริ่มจากบันทึกอันดับก่อน** |
-| **S-D4** | นักกีฬาลงชื่อสมัครในระบบ หรือครูกรอกผลอย่างเดียว | ถ้ามีสมัคร → ใช้ `ActivityEnrollment` ต่อได้ · ผูกกับเมนู #26 |
-| **S-D5** | คะแนนคณะสีโผล่ที่ไหนบ้าง | เฉพาะหน้ากีฬาสี · หรือขึ้นหน้าแรกโรงเรียน/ฟีดด้วย |
-| **S-D6** | ปีถัดไปทำยังไง | คณะสีอยู่ถาวรข้ามปี (นักเรียนสังกัดสีเดิมจนจบ) หรือแบ่งใหม่ทุกปี — กระทบว่า `academy_groups` ผูกกับ `academic_year` หรือไม่ |
+| **S-D1** | วิธีแบ่งนักเรียนเข้าคณะสี | ✅ **รองรับทั้งสุ่มและนำเข้า** — ทั้งสองโหมดต้องเดินผ่าน **เส้นทางเดียวกัน** (batch → preview → commit → undo) ไม่ใช่สองฟีเจอร์แยก |
+| **S-D2** | กี่คณะสี | ⏸ ยังไม่ตัดสิน → **เครื่องมือต้องรองรับ N สี** และ**ห้าม seed คณะสีตัวอย่าง** |
+| **S-D3** | bracket | ⏸ ยังไม่ถึงคิว (S-S4 ขึ้นไป) |
+| **S-D4** | นักกีฬาสมัครเอง | ⏸ ยังไม่ถึงคิว |
+| **S-D5** | คะแนนโผล่ที่ไหน | ⏸ ยังไม่ถึงคิว |
+| **S-D6** | ปีถัดไป | ✅ **แบ่งใหม่ทุกปี** → สมาชิกภาพคณะสี**ต้องผูกกับปีการศึกษา** |
+| **S-D7** *(ใหม่)* | เกณฑ์กระจายของตัวสุ่ม | ✅ ค่าเริ่มต้น = **คละทุกห้องเท่า ๆ กัน + สมดุลชาย/หญิง** · และต้องมีตัวเลือก **สุ่มล้วนทั้งโรงเรียน** ให้เลือกตอนรัน |
+
+### 5.1 ผลที่ตามมาจาก S-D6 — ห้ามเก็บสมาชิกคณะสีใน `academy_group_members`
+
+`academy_group_members` **ไม่มี `academic_year_id`** (คอลัมน์จริง: `id, academy_group_id, user_id, role, status, invited_by, timestamps`) และตอนนี้ตารางนี้ให้บริการ 35 กลุ่มที่มีอยู่จริง (office 1 · department 5 · section 21 · academic_group 8)
+
+→ **ห้ามเพิ่มคอลัมน์ปีลงตารางกลาง** เพราะทุก query ของฝ่าย/งาน/กลุ่มสาระจะต้องรู้จักค่า null ทันที (บทเรียนเดียวกับ `Student::guardians()` ใน #6 §6.1)
+→ ใช้ตารางของตัวเอง `house_memberships` ที่มี `academic_year_id` ตั้งแต่แรก · `academy_groups(type='house')` ยังเป็น **ตัวตนถาวรข้ามปี** ของคณะสี (แดง/น้ำเงิน/…) จึงได้ CRUD/ฟีด/หน้าโปรไฟล์กลุ่มมาฟรีตามเดิม
+
+### 5.2 🔴 S-S2 ต้องอยู่ commit เดียวกับ S-S1 (เปลี่ยนลำดับจากร่างเดิม)
+
+วันนี้ `houseLeaderboard()` คืน `[]` **เพราะยังไม่มีแถว `house` เท่านั้น** — ไม่ใช่เพราะปลอดภัย
+**วินาทีที่ S-S1 หรือเครื่องมือแบ่งสีสร้างคณะสีแถวแรก** endpoint นี้จะเริ่มเผยแพร่ `SUM(users.pp)` = ยอดเงินถอนได้ของนักเรียนทั้งคณะทันที
+และ route `routes/learn/academy.php:895` อยู่ในบล็อก `auth:api` เปล่า ๆ **ไม่มี `academy.permission` สักตัว** (รูปแบบเดียวกับช่องโหว่ departments ที่ปิดไปใน #9 D-S1) → ใครล็อกอินก็เรียกได้
+
+### 5.3 บล็อกเกอร์ที่สเปกร่างมองข้าม — validation ไม่ได้อ่านจาก constant
+
+`AcademyGroupController::store():46` และ `update():87` **hardcode** `in:office,department,section,academic_group,classroom,club,committee`
+→ ลิสต์นี้ **หลุดจาก `AcademyGroupTypes` ไปแล้ว** (`dormitory` อยู่ใน constant แต่ API ปฏิเสธ)
+→ เติม `house` ใน 2 mirror เฉย ๆ **ยังสร้างคณะสีไม่ได้** ต้องแก้ให้ rule อ่านจาก `AcademyGroupTypes::keys()` (ซึ่งซ่อม `dormitory` ให้ด้วยในตัว)
 
 ---
 
-## 6. Implementation Tasks (ร่าง — รอ §5)
+## 6. Implementation Tasks (ล็อกแล้ว)
 
 | Step | Title | Depends | Status |
 |---|---|---|---|
-| **S-S1** | ลงทะเบียน type `house` ใน **`app/Constants/AcademyGroupTypes.php` และ `ui/constants/academyGroupTypes.ts` (mirror ทั้งคู่)** + สี/ไอคอนใน `settings` → ปลดล็อก CRUD/สมาชิก/ประธานสี/ฟีดกลุ่มที่มีอยู่แล้ว | — | ⚪ |
-| **S-S2** | **แก้ `houseLeaderboard()` ให้เลิกอ่าน `SUM(users.pp)`** — ชี้ไป event log ของกีฬาสีแทน · ปิดช่องภาระจ่ายเงินจริง | S-S1 | ⚪ |
-| **S-S3** | เครื่องมือแบ่งนักเรียนเข้าคณะสี (ตาม S-D1) + preview ก่อน commit ตามรูปของ `RolloverBatch` | S-S1, S-D1 | ⚪ |
-| **S-S4** | schema กีฬาสี (§4) + ให้คะแนนแก่คณะสีผ่าน event log + จัดการคะแนนเท่ากัน | S-S2 | ⚪ |
+| **S-S1+S-S2** | **ก้อนเดียวกัน (ดู §5.2)** — ลงทะเบียน type `house` ใน `app/Constants/AcademyGroupTypes.php` + `ui/constants/academyGroupTypes.ts` · เปลี่ยน `in:` rule 2 จุดให้อ่าน `AcademyGroupTypes::keys()` · **เขียน `houseLeaderboard()` ใหม่ให้เลิกอ่าน `SUM(users.pp)`** · ใส่ `academy.permission` ให้ 2 route leaderboard | — | ⚪ |
+| **S-S3** | เครื่องมือแบ่งนักเรียนเข้าคณะสี — สุ่ม + นำเข้า ผ่านเส้นทาง batch เดียวกัน (§8) | S-S1 | ⚪ |
+| **S-S3b** | หน้าจอแบ่งคณะสี (เลือกโหมด → preview → commit → undo) | S-S3 | ⚪ |
+| **S-S4** | schema กีฬาสี (§4) + ให้คะแนนแก่คณะสีผ่าน event log + จัดการคะแนนเท่ากัน | S-S3 | ⚪ |
 | **S-S5** | บันทึกผลการแข่ง (อันดับ → คะแนนตามตาราง) + คะแนนกรรมการตามเกณฑ์ย่อย (§3) | S-S4 | ⚪ |
 | **S-S6** | หน้าจอ: ตารางคะแนนคณะสี · ตารางแข่ง · กรอกผล · สรุปเหรียญ | S-S5 | ⚪ |
 | **S-S7** | อัลบั้มภาพผูกกับงาน (ต้องเพิ่ม owner ให้ `albums` หรือทำตารางใหม่ — ดู §1.3) | S-S6 | ⚪ |
 
 ---
 
-## 7. Review Log
+## 7. S-S3 — เครื่องมือแบ่งนักเรียนเข้าคณะสี (สเปกล็อก)
+
+### 7.1 หลักการ: สุ่มกับนำเข้าต่างกันแค่ "ใครเป็นคนกรอกช่องคณะสี"
+
+ทั้งสองโหมดสร้าง **batch + rows ชุดเดียวกัน** แล้วเดินต่อด้วยโค้ดเส้นเดียวกัน:
+
+```
+POST preview (mode=random + options)  ─┐
+POST preview (mode=import + file)     ─┴→ house_assignment_batches(status=draft)
+                                           + house_assignment_rows (ทุกแถวมีสถานะรายแถว)
+                                        → GET rows (แบ่งหน้า + สรุปจำนวนต่อสถานะ/ต่อสี)
+                                        → POST commit  → เขียน house_memberships
+                                        → POST undo    → ย้อนได้ตามรูป RolloverBatch::isUndoable()
+```
+
+**ทำไมต้องเส้นเดียว:** โหมดนำเข้าต้องให้คนตรวจก่อนลงจริงอยู่แล้ว (จับคู่ชื่อไม่ได้/สีไม่รู้จัก) และโหมดสุ่มก็ต้องให้คนดูยอดต่อสีก่อนกด — ถ้าแยกเส้นจะได้ตัว commit 2 ตัวที่ต้องถูกต้องตรงกันตลอดไป
+
+### 7.2 ตารางใหม่ 3 ตาราง
+
+```
+house_assignment_batches
+  id uuid PK · academy_id · academic_year_id · mode enum(random|import)
+  status enum(draft|committed|undone) · options json · summary json
+  source_filename nullable · created_by_user_id
+  committed_at/committed_by_user_id · undone_at/undone_by_user_id · timestamps
+  index [academy_id, academic_year_id, status]
+
+house_assignment_rows
+  id · batch_id FK cascade · row_number
+  raw json (แถวดิบจากไฟล์ / null ถ้าโหมดสุ่ม)
+  student_id nullable FK · house_group_id nullable FK
+  status enum(ok|unmatched|ambiguous|unknown_house|already_assigned|skipped)
+  message nullable · timestamps
+  index [batch_id, status]
+
+house_memberships                       ← แหล่งความจริงของ "ใครอยู่สีอะไร ปีไหน"
+  id · academy_id · academic_year_id · house_group_id FK · student_id FK
+  user_id nullable · source enum(random|import|manual) · batch_id nullable
+  assigned_by_user_id · timestamps
+  UNIQUE [academic_year_id, student_id]  ← กันคนเดียวอยู่ 2 สีในปีเดียว
+  index [academy_id, academic_year_id, house_group_id]
+```
+
+### 7.3 การฉายไปยัง `academy_group_members` (projection ไม่ใช่ dual-write)
+
+หลัง commit **ของปีปัจจุบันเท่านั้น** ให้ `HouseMembershipProjector` เขียน `academy_group_members` ของกลุ่ม `house` ใหม่ทั้งชุดจาก `house_memberships` (delete+insert ในทรานแซกชัน) เพื่อให้ฟีดกลุ่ม/หน้าโปรไฟล์คณะสีที่มีอยู่แล้วใช้งานได้
+
+- **ผู้เขียนมีตัวเดียว** — ห้ามมีเส้นทางอื่นเขียน `academy_group_members` ของกลุ่ม type `house`
+- สร้างใหม่จากแหล่งความจริงได้เสมอ (idempotent) → ไม่ใช่กับดัก dual-write แบบ #6
+- นักเรียนที่ยังไม่มี `user_id` จะไม่มีแถว projection (ตารางกลางคีย์ที่ `user_id`) แต่**ยังอยู่ใน `house_memberships` ครบ** — ยอดคนต่อสีต้องนับจาก `house_memberships` เท่านั้น ห้ามนับจากตารางกลาง
+
+### 7.4 ประชากรที่ถูกแบ่ง
+
+`classroom_students` ของปีนั้น `status='active'` → **2,202 คนในปี 2569** (ม.1 397 · ม.2 455 · ม.3 370 · ม.4 377 · ม.5 312 · ม.6 291)
+
+**ห้ามใช้ `students.status='active'` (2,662 คน) เป็นประชากร** — ต่างกัน 460 คนคือคนที่ไม่มีแถวห้องเรียนปีนี้ (สายเดียวกับ 449 คนที่ถูกจำหน่ายใน #25) → ถ้าใช้ตัวหลังจะแบ่งคนที่ไม่ได้เรียนอยู่เข้าคณะสีด้วย
+
+### 7.5 โหมดสุ่ม — 2 กลยุทธ์ (S-D7)
+
+**`strategy=stratified` (ค่าเริ่มต้น)** — คละทุกห้องเท่า ๆ กัน
+1. ไล่ทีละห้อง (`classrooms` ของปีนั้น)
+2. ในห้อง ถ้า `balance_gender=true` แยกเป็นถัง ชาย / หญิง / **ไม่ระบุ** (มี 227 คนที่ `students.gender` เป็น null — ต้องเป็นถังที่ 3 ห้ามยัดเข้าถังใดถังหนึ่ง)
+3. สับแต่ละถังด้วย seed แล้วแจกแบบ round-robin เข้าคณะสี โดย**เริ่มที่คณะสีที่มีคนน้อยที่สุด ณ ตอนนั้น** (ไม่ใช่เริ่มที่สีแรกเสมอ ไม่งั้นสีต้น ๆ จะได้เศษของทุกห้อง)
+
+**`strategy=pure_random`** — สุ่มล้วนทั้งโรงเรียน ไม่สนห้อง/ระดับชั้น
+
+**ต้องมีทั้งคู่:**
+- `seed` บันทึกใน `options` → รันซ้ำได้ผลเดิม อธิบายให้นักเรียนที่สงสัยได้ว่าไม่ได้เลือกที่รัก
+- `scope` = `unassigned_only` (ค่าเริ่มต้น — เติมเฉพาะคนที่ยังไม่มีสีในปีนั้น) หรือ `all` (แบ่งใหม่ทั้งหมด ทับของเดิม) · โหมด `all` ต้องเตือนจำนวนคนที่จะถูกย้ายสีในหน้า preview
+
+### 7.6 โหมดนำเข้า — การจับคู่
+
+รับ `.xlsx`/`.csv` · ผู้ใช้แม็พคอลัมน์เอง (รูปเดียวกับ `student_import_batches.column_mapping`)
+
+จับคู่นักเรียนตามลำดับ **หยุดที่ตัวแรกที่เจอ**:
+1. `students.student_id` (เลขประจำตัวนักเรียน) — **ยืนยันแล้วว่าไม่ซ้ำเลย 0 คู่ ว่าง 1 แถว** → เป็นคีย์หลักที่เชื่อถือได้
+2. `students.citizen_id` 13 หลัก — ⚠️ **ห้ามใช้ถ้าไม่ครบ 13 หลัก** มี 215 แถวที่ Excel ทำพังเป็น `1.90E+12` และค่าเดียวซ้ำ 72 แถว (บันทึกไว้ใน #6 G-S0) → จับคู่พลาดจะยกคน 72 คนเข้าสีเดียวกัน
+3. ชื่อ+นามสกุล เทียบแบบไม่สนวรรณยุกต์ `[่้๊๋]` (ใช้ normalizer ตัวเดียวกับ `SelectsGuardianRelation` / guardians backfill) — **ถ้าเจอมากกว่า 1 คน ต้องเป็น `ambiguous` ห้ามเดา**
+
+จับคู่คณะสี: เทียบ `academy_groups.name` ของ type `house` แบบ trim + case-insensitive · ไม่เจอ = `unknown_house` (**ห้ามสร้างคณะสีใหม่อัตโนมัติจากไฟล์**)
+
+`already_assigned` = มีสีในปีนั้นอยู่แล้ว → ค่าเริ่มต้น `skip`, มีตัวเลือก `overwrite` ใน options
+
+### 7.7 สิทธิ์
+
+เพิ่มตระกูล `sports` ใน `AcademyPermission::PERMISSIONS` (`sports.view` / `sports.manage`) + ใส่ `'sports'` ใน `DEPARTMENT_DELEGABLE_FAMILIES` (ฝ่ายกิจการนักเรียนต้องมอบต่อได้ ตามรูปของ `'elections'`)
+⚠️ เติมคำเดียว **ห้ามเผลอใส่ซ้ำ 2 ครั้ง** — PHP เก็บตัวหลังเงียบ ๆ เทสต์ไม่จับ (เคสจริงของ E-S1)
+ทุก route ของ S-S3 ต้องมี `academy.permission:sports.manage` (อ่านอย่างเดียวใช้ `sports.view`)
+
+---
+
+## 8. Review Log
 
 - **2026-07-31 — สแกน + เขียนสเปกร่าง** — พบว่าเมนูนี้มี house leaderboard ต่อสายครบตั้งแต่ route ถึง UI แต่ **ตายทั้งเส้นด้วยเหตุผล 2 ข้อที่ไม่เกี่ยวกัน**: `type='house'` ไม่ได้อยู่ใน registry (สร้างไม่ได้) และคะแนนคิดจาก `SUM(users.pp)` ซึ่งเป็นเงินจริง (ใช้ไม่ได้แม้สร้างได้) · ยืนยันจาก DB: `academy_groups` ไม่มีแถว `house` และไม่มีแถว `classroom` เลย → **เส้นทางให้คะแนนแบบกลุ่มทั้งเส้นไม่เคยถูกรันจริง** ต้องนับ `xp_events`/`ClassroomPointsService` เป็น "เขียนแล้วแต่ยังไม่พิสูจน์" เหมือนเมนู #26 · ยังไม่ล็อกแผนเพราะ §5 มี 6 ข้อค้าง โดยเฉพาะ S-D1 (วิธีแบ่งนักเรียน) ที่เปลี่ยนงานมากที่สุด

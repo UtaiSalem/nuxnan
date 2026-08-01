@@ -65,6 +65,13 @@ class AcademyGroupTypes
             'color' => 'teal',
             'order' => 8,
         ],
+        'house' => [
+            'label' => 'คณะสี',
+            'label_en' => 'House',
+            'icon' => 'heroicons:flag',
+            'color' => 'purple',
+            'order' => 9,
+        ],
     ];
 
     public static function all(): array

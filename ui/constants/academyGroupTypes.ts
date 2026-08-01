@@ -30,6 +30,7 @@ export const ACADEMY_GROUP_TYPES: AcademyGroupTypeMeta[] = [
   { key: 'club',           label: 'ชมรม',          labelEn: 'Club',           icon: 'heroicons:trophy',                    color: 'pink',   order: 6 },
   { key: 'committee',      label: 'คณะกรรมการ',    labelEn: 'Committee',      icon: 'heroicons:user-group',                color: 'amber',  order: 7 },
   { key: 'dormitory',      label: 'หอพัก',         labelEn: 'Dormitory',      icon: 'heroicons:home-modern',               color: 'teal',   order: 8 },
+  { key: 'house',          label: 'คณะสี',                 labelEn: 'House',          icon: 'heroicons:flag',                       color: 'purple', order: 9 },
 ]
 
 const UNKNOWN_TYPE: AcademyGroupTypeMeta = {

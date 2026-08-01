@@ -19,6 +19,7 @@ use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class AcademyGroupController extends Controller
 {
@@ -43,7 +44,7 @@ class AcademyGroupController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'type' => 'required|string|in:office,department,section,academic_group,classroom,club,committee',
+            'type' => ['required', 'string', Rule::in(AcademyGroupTypes::keys())],
             'parent_id' => 'nullable|integer|exists:academy_groups,id',
             'settings' => 'nullable|array',
         ]);
@@ -84,7 +85,7 @@ class AcademyGroupController extends Controller
         $validated = $request->validate([
             'name' => 'nullable|string|max:255',
             'description' => 'nullable|string',
-            'type' => 'nullable|string|in:office,department,section,academic_group,classroom,club,committee',
+            'type' => ['nullable', 'string', Rule::in(AcademyGroupTypes::keys())],
             'parent_id' => 'nullable|integer|exists:academy_groups,id',
             'settings' => 'nullable|array',
         ]);

@@ -20,7 +20,7 @@ class AcademyPermission extends Model
     private const DEPARTMENT_DELEGABLE_FAMILIES = [
         'students', 'behavior', 'home_visits', 'attendance', 'school_attendance',
         'grades', 'gradebook', 'schedule', 'courses', 'assignments', 'announcements',
-        'events', 'reports', 'messages', 'teachers', 'staff', 'children', 'elections',
+        'events', 'reports', 'messages', 'teachers', 'staff', 'children', 'elections', 'sports',
     ];
 
     /**
@@ -179,6 +179,10 @@ class AcademyPermission extends Model
             ['name' => 'elections.view', 'display_name' => 'ดูการเลือกตั้งและผลคะแนน'],
             ['name' => 'elections.manage', 'display_name' => 'จัดการการเลือกตั้ง: สร้าง/รับสมัคร/อนุมัติพรรค/เปิด-ปิดหีบ/ประกาศผล'],
             ['name' => 'elections.station', 'display_name' => 'ประจำหน่วยเลือกตั้ง: เปิดหน่วยและออกบัตรเลือกตั้ง'],
+        ],
+        'sports' => [
+            ['name' => 'sports.view', 'display_name' => 'ดูคณะสีและคะแนนกีฬาสี'],
+            ['name' => 'sports.manage', 'display_name' => 'จัดการกีฬาสี: คณะสี/การจัดกลุ่มนักเรียน/บันทึกผล'],
         ],
         'school_attendance' => [
             ['name' => 'school_attendance.view', 'display_name' => 'ดูการเข้าเรียนของโรงเรียน'],
