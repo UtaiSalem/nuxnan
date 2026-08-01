@@ -162,7 +162,7 @@ class ActivitySessionController extends Controller
         return response()->json([
             'success' => true,
             'qr_token' => $token,
-            'qr_content' => "CHECKIN:ACTIVITY:{$academy->id}:{$session->id}:{$token}",
+            'qr_content' => "CHECKIN:ACTIVITY:{$academy->id}:{$event->id}:{$session->id}:{$token}",
         ]);
     }
 

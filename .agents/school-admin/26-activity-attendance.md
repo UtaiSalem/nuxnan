@@ -116,6 +116,38 @@ school_events         = 3 แถว (ceremony 1, meeting 1, sports 1)
 
 ---
 
+## 1.8 ✅ A-S3 (2026-08-01) — สแกน QR กิจกรรมแล้วไปถูกที่แล้ว + **แต่เจอตอปิดทางอยู่ข้างหน้า**
+
+**อุด A4 แล้ว** — เพิ่มสาขา `CHECKIN:ACTIVITY:` ใน `parseQRCode()` + handler `handleActivityCheckinQR` ใน `useQRScanner.ts` · เทสต์ vitest 7 เคสใหม่ที่ `ui/tests/qr.spec.ts`
+
+**พิสูจน์ว่า A4 มีจริงด้วย revert-check:** ปิดสาขาใหม่ทิ้งชั่วคราว → `CHECKIN:ACTIVITY:7:12:34:tok` คืน type `checkin` (ไม่ใช่ `activity_checkin`) แล้ว `handleCheckinQR` จะยิง `/api/classes/checkin` ด้วย `class_id = 'ACTIVITY'` · และ payload 3 ช่องรายงานว่า valid ทั้งที่ไม่พอใช้
+
+### 🔴 payload เดิมขาด `event_id` — แก้ฝั่ง backend ด้วย (นอกขอบเขตร่างเดิม แต่ไม่แก้ = ทำ A-S3 ไม่ได้)
+
+route เช็คอินต้องการ **3 id**: `POST /academies/{academy}/events/{event}/sessions/{session}/check-in`
+แต่ QR เดิมพก 2: `CHECKIN:ACTIVITY:{academy}:{session}:{token}` → **ประกอบ URL ไม่ได้เลย**
+
+(`CHECKIN:SCHOOL:` รอดมาได้เพราะปลายทางใช้แค่ 2 id ไม่ใช่ 3)
+
+→ เปลี่ยนเป็น `CHECKIN:ACTIVITY:{academy}:{event}:{session}:{token}` เรียงตาม segment ของ URL ซ้ายไปขวา
+→ **ปลอดภัยเพราะ `activity_sessions` = 0 แถว ไม่เคยมี QR ใบไหนถูกออกหรือพิมพ์** · grep ยืนยันไม่มีที่อื่นในโปรเจคอ่าน/สร้างสตริง `CHECKIN:ACTIVITY:`
+
+### 🔴 A8 (ใหม่) — สแกนแล้วก็ยังเช็คชื่อไม่ได้อยู่ดี เพราะ `checkIn()` ยังบังคับให้มีแถวลงทะเบียน
+
+`ActivitySessionController::checkIn()` ผ่าน `assertInAudience()` แล้ว **ยังไปต่อที่ `resolveEnrollment()` และตอบ 422 "คุณไม่ได้ลงทะเบียนกิจกรรมนี้" ถ้าไม่มีแถวใน `activity_enrollments`** (เส้น `scanStudent` กับ `storeRecords` เหมือนกัน)
+
+**ขัดกับข้อตกลงที่ล็อกไว้ใน §1.6 ตรง ๆ** ("ผู้เข้าร่วมมาจากการกำหนดกลุ่มเป้าหมาย ไม่ใช่การลงทะเบียนรายคน") · ที่เทสต์ผ่านหมดเพราะ **ทุกเคสสร้างแถว `ActivityEnrollment` ให้เองก่อน** (ดู `EventAudienceTest::sessionFixture` + 3 เคสรอบ ๆ)
+
+ของจริง: `activity_enrollments` = **0 แถว** และ**ไม่มี UI ไหนสร้างได้** → นักเรียนที่อยู่ในกลุ่มเป้าหมายสแกนแล้วโดนปฏิเสธ 100%
+
+⚠️ ลบเงื่อนไขทิ้งเฉย ๆ ไม่ได้ — `activity_attendances.enrollment_id` เป็น FK **NOT NULL** ต้องมีแถวลงทะเบียนจริงถึงบันทึกการเช็คชื่อได้
+
+**ต้องตัดสิน (A-D2 รอบสอง):** คนในกลุ่มเป้าหมายที่ยังไม่มีแถวลงทะเบียน → **สร้าง enrollment อัตโนมัติตอนเช็คชื่อครั้งแรก** (ตรงกับ §1.6 มากที่สุด) หรือให้ครูกด "เปิดรายชื่อ" จาก roster ทีเดียวทั้งห้อง · **ต้องเคลียร์ก่อน A-S4 ไม่งั้นหน้าคอนโซลจะเสร็จแล้วกดไม่ได้**
+
+**สถานะเทสต์:** backend Activity 35 (filter จับได้ 57 ผ่าน) · frontend vitest 7 ผ่าน
+
+---
+
 ## 2. Gap Analysis — ช่องว่างจริง 5 จุด
 
 | ID | Gap | ระดับ |
@@ -158,8 +190,9 @@ school_events         = 3 แถว (ceremony 1, meeting 1, sports 1)
 | **A-S0** | **พิสูจน์ว่าของเดิมทำงาน** — สร้าง event ทดสอบ + session + enrollment ผ่าน tinker แล้วยิงครบ 6 endpoint ของ `ActivitySessionController` · **งานนี้ต้องมาก่อนทุกอย่าง** เพราะตาราง 0 แถวแปลว่าไม่มีใครรู้ว่ามันพังตรงไหน | — | ✅ §1.5 |
 | **A-S1** | **อุด A1** — เพิ่ม route + controller method `index`/`store`/`update`/`destroy` ของ session (guard = `canManageEvent` ไม่ใช่ `events.manage` ดูเหตุผลใน §1.7) | A-S0 | ✅ §1.7 |
 | **A-S2** | **อุด A2** — รายชื่อผู้เข้าร่วมมาจากกลุ่มเป้าหมาย ผ่าน `GET /{event}/roster` (ไม่ใช่ `GET /enrollments` ตามร่างเดิม) | A-S0 | ✅ §1.6 |
-| **A-S3** | **อุด A4** — เพิ่มสาขา `CHECKIN:ACTIVITY:` ใน `ui/types/qr.ts` + routing ใน `useQRScanner.ts` (ระวัง: ไฟล์นี้ใช้ร่วมทั้งระบบ) | A-S0 | ⚪ |
-| **A-S4** | **หน้าคอนโซลเช็คชื่อกิจกรรม** — ลอกรูป 4 แท็บจาก `school-attendance/[id].vue` · ใช้สกิล `hopeui-port` | A-S1, A-S2 | ⚪ |
+| **A-S3** | **อุด A4** — เพิ่มสาขา `CHECKIN:ACTIVITY:` ใน `ui/types/qr.ts` + routing ใน `useQRScanner.ts` (+ เพิ่ม `event_id` ใน payload ฝั่ง backend) | A-S0 | ✅ §1.8 |
+| **A-S3b** | 🔴 **อุด A8 — ตัดสิน A-D2 รอบสอง** ให้คนในกลุ่มเป้าหมายที่ไม่มีแถว `activity_enrollments` เช็คชื่อได้ (สร้างอัตโนมัติ หรือครูเปิดรายชื่อจาก roster) · **ขวางทางทุกอย่างที่เหลือ** | A-S3 | ⚪ |
+| **A-S4** | **หน้าคอนโซลเช็คชื่อกิจกรรม** — ลอกรูป 4 แท็บจาก `school-attendance/[id].vue` · ใช้สกิล `hopeui-port` | A-S1, A-S2, **A-S3b** | ⚪ |
 | **A-S5** | **แก้บั๊ก `remark` → `remarks`** ของเมนู #18 (§3) + เทสต์กันถอยหลัง | — | ⚪ |
 | **A-S6** | รายงาน/ส่งออกการเข้าร่วมกิจกรรม (A5) | A-S4 | ⚪ |
 

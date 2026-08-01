@@ -11,6 +11,7 @@
  * - COURSE:course_123        → View course
  * - ACADEMY:academy_123      → View academy
  * - REWARD:reward_123        → Claim reward
+ * - CHECKIN:ACTIVITY:1:2:3:token → Check-in to an activity session
  */
 
 // QR Code Types
@@ -18,6 +19,7 @@ export type QRCodeType =
   | 'coupon'          // Redeem points/wallet coupon
   | 'checkin'         // Class attendance check-in
   | 'school_checkin'  // School attendance check-in (session-based)
+  | 'activity_checkin' // Activity session check-in
   | 'student_card'    // Student identity card
   | 'event'           // Event attendance
   | 'poll'            // Answer poll/survey
@@ -66,6 +68,15 @@ export const QR_TYPES: Record<QRCodeType, QRTypeConfig> = {
     color: 'text-teal-600',
     bgColor: 'bg-teal-100',
     description: 'เช็คชื่อการมาโรงเรียนประจำวัน'
+  },
+  activity_checkin: {
+    type: 'activity_checkin',
+    prefix: 'CHECKIN', // Shared prefix with checkin, but parsed specially
+    label: 'เช็คชื่อกิจกรรม',
+    icon: 'fluent:people-team-24-filled',
+    color: 'text-violet-600',
+    bgColor: 'bg-violet-100',
+    description: 'เช็คชื่อเข้าร่วมกิจกรรมต่อเนื่อง เช่น ชมรม ลูกเสือ'
   },
   student_card: {
     type: 'student_card',
@@ -164,7 +175,7 @@ export function parseQRCode(qrString: string): ParsedQRData {
   
   // Special Handling for CHECKIN:SCHOOL prefix (School Attendance)
   if (trimmed.startsWith('CHECKIN:SCHOOL:')) {
-    const dataString = qrString.trim().substring(15) // Length of 'CHECKIN:SCHOOL:'
+    const dataString = qrString.trim().substring('CHECKIN:SCHOOL:'.length)
     const dataParts = dataString.split(':')
     return {
       type: 'school_checkin',
@@ -175,9 +186,22 @@ export function parseQRCode(qrString: string): ParsedQRData {
     }
   }
 
+  // Special Handling for CHECKIN:ACTIVITY prefix (Activity Session Attendance)
+  if (trimmed.startsWith('CHECKIN:ACTIVITY:')) {
+    const dataString = qrString.trim().substring('CHECKIN:ACTIVITY:'.length)
+    const dataParts = dataString.split(':')
+    return {
+      type: 'activity_checkin',
+      config: QR_TYPES.activity_checkin,
+      rawData: qrString,
+      data: dataParts,
+      isValid: dataParts.length >= 4 // [academy_id, event_id, session_id, token]
+    }
+  }
+
   // Try to match known prefixes
   for (const [key, config] of Object.entries(QR_TYPES)) {
-    if (key === 'unknown' || key === 'school_checkin') continue
+    if (key === 'unknown' || key === 'school_checkin' || key === 'activity_checkin') continue
     
     if (trimmed.startsWith(config.prefix + ':')) {
       const dataString = qrString.trim().substring(config.prefix.length + 1)

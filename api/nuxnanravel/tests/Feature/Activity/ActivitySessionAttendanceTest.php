@@ -49,7 +49,7 @@ class ActivitySessionAttendanceTest extends TestCase
         $enrollment = ActivityEnrollment::create(['event_id' => $event->id, 'user_id' => $student->id, 'status' => 'active']);
         $qr = $this->actingAs($owner, 'api')->postJson("/api/academies/{$academy->id}/events/{$event->id}/sessions/{$session->id}/refresh-qr")->assertOk();
         $token = $qr->json('qr_token');
-        $this->assertSame("CHECKIN:ACTIVITY:{$academy->id}:{$session->id}:{$token}", $qr->json('qr_content'));
+        $this->assertSame("CHECKIN:ACTIVITY:{$academy->id}:{$event->id}:{$session->id}:{$token}", $qr->json('qr_content'));
         $this->actingAs($student, 'api')->postJson("/api/academies/{$academy->id}/events/{$event->id}/sessions/{$session->id}/check-in", ['qr_token' => $token])->assertOk();
         $this->actingAs($student, 'api')->postJson("/api/academies/{$academy->id}/events/{$event->id}/sessions/{$session->id}/check-in", ['qr_token' => $token])->assertStatus(422);
         $this->assertDatabaseCount('activity_attendances', 1);

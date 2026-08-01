@@ -173,6 +173,9 @@ export function useQRScanner() {
       
       case 'school_checkin':
         return await handleSchoolCheckinQR(parsed)
+
+      case 'activity_checkin':
+        return await handleActivityCheckinQR(parsed)
       
       case 'student_card':
         return await handleStudentCardQR(parsed)
@@ -311,6 +314,25 @@ export function useQRScanner() {
         type: 'school_checkin',
         message: err.data?.message || err.message || 'เกิดข้อผิดพลาดในการเช็คชื่อ'
       }
+    }
+  }
+
+  // Handle Activity Session Check-in QR
+  const handleActivityCheckinQR = async (parsed: ParsedQRData): Promise<QRActionResult> => {
+    const [academyId, eventId, sessionId, token] = parsed.data
+
+    try {
+      const response = await api.post(`/api/academies/${academyId}/events/${eventId}/sessions/${sessionId}/check-in`, {
+        qr_token: token
+      }) as ApiResponse
+
+      if (response.success) {
+        return { success: true, type: 'activity_checkin', message: response.message || 'เช็คชื่อกิจกรรมสำเร็จ!', data: response.data }
+      } else {
+        return { success: false, type: 'activity_checkin', message: response.message || 'ไม่สามารถเช็คชื่อได้' }
+      }
+    } catch (err: any) {
+      return { success: false, type: 'activity_checkin', message: err.data?.message || err.message || 'เกิดข้อผิดพลาดในการเช็คชื่อ' }
     }
   }
 
