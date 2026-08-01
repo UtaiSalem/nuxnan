@@ -319,13 +319,13 @@ const startOver = () => {
             <p class="font-semibold text-amber-900 dark:text-amber-200">ยังสร้างคณะสีไม่ครบ</p>
             <p class="text-amber-800 dark:text-amber-300 mt-1">
               ต้องมีคณะสีอย่างน้อย 2 คณะก่อนจึงจะแบ่งนักเรียนได้ ตอนนี้มี {{ houseGroups.length }} คณะ —
-              สร้างได้ที่หน้าส่วนงาน โดยเลือกประเภท "คณะสี"
+              สร้างที่หน้าโรงเรียน แท็บ "ส่วนงาน" → ปุ่ม "สร้างกลุ่มใหม่" แล้วเลือกประเภท "คณะสี"
             </p>
             <NuxtLink
-              :to="`/academies/${academyName}/admin/departments`"
+              :to="`/academies/${academyName}`"
               class="inline-flex items-center gap-1.5 mt-2 text-amber-900 dark:text-amber-200 font-semibold hover:underline"
             >
-              ไปหน้าส่วนงาน
+              ไปหน้าโรงเรียน
               <Icon icon="fluent:arrow-right-24-regular" class="w-4 h-4" />
             </NuxtLink>
           </div>
