@@ -216,6 +216,33 @@ route เช็คอินต้องการ **3 id**: `POST /academies/{aca
 
 ---
 
+## 1.11 ✅ A-S5 — แก้ไปแล้วตั้งแต่ 2026-07-31 (`71974826`) ไม่ใช่งานค้าง
+
+ตรวจกับโค้ดจริงแล้ว **ครบทั้ง fix และเทสต์** — ตารางเดิมขึ้น ⚪ เพราะไม่ได้อัพเดทหลัง commit เท่านั้น
+
+**ขอบเขตจริงกว้างกว่าที่ §3 เขียนไว้** — §3 ระบุหน้าเดียว แต่ commit นั้นพบว่ามี **4 จุด**:
+
+| จุด | สถานะ |
+|---|---|
+| `admin/school-attendance/[id].vue:198` ส่ง `remarks` | ✅ |
+| `admin/classrooms/[id].vue:572` ส่ง `remarks` (หน้าที่ §3 ไม่ได้พูดถึง — ยิง endpoint เดียวกัน) | ✅ |
+| `useSchoolManagement.ts:402` ประกาศ payload เป็น `remarks?: string` | ✅ |
+| `types/school.ts:198` ฝั่ง**อ่าน**เคยประกาศ `remark` ทำให้ `attendance/history/[studentId].vue` ไม่แสดงหมายเหตุเลยแม้มีข้อมูล | ✅ |
+
+ชื่อ `remark` ที่เหลือใน component state เป็นความตั้งใจ — เปลี่ยนเฉพาะขอบเขต API
+
+**เทสต์กันถอยหลังมีแล้ว** ใน `tests/Feature/Api/Academy/SchoolAttendanceRosterScopeTest.php`:
+`test_bulk_manual_record_persists_the_teacher_remark` · `test_resubmitting_bulk_records_updates_the_existing_remark` — **4 เทสต์ผ่าน (12 assertions)**
+
+### ⚠️ ช่องที่ยังเหลือ (ไม่ใช่ A-S5 — เป็นข้อเสนอแยก)
+
+**เทสต์ทั้งสองอยู่ฝั่ง backend จึงกันการถอยหลังของ frontend ไม่ได้** — ถ้าใครแก้ไฟล์ Vue กลับไปส่ง `remark` เทสต์ยังเขียวหมด
+และ TypeScript ก็กันไม่ได้จริง: `remarks` เป็น optional ส่วน payload ถูกสร้างผ่านตัวแปรกลาง ทำให้ excess-property check ของ TS ไม่ทำงาน → `{student_id, status, remark}` ยัง assign เข้า `{student_id, status, remarks?}` ได้
+
+**ข้อเสนอ:** ให้ `storeRecords` **ปฏิเสธคีย์ที่ไม่รู้จักใน `records[]`** (422 แทนที่จะกลืนเงียบ) — อันตรายของบั๊กตระกูลนี้คือ**ความเงียบ** ไม่ใช่ตัวสะกด · ตอนนี้มีผู้เรียกแค่ 2 หน้าและถูกทั้งคู่ ความเสี่ยงต่ำ · ใช้ได้กับ `ActivitySessionController::storeRecords` ด้วย
+
+---
+
 ## 2. Gap Analysis — ช่องว่างจริง 5 จุด
 
 | ID | Gap | ระดับ |
@@ -261,7 +288,7 @@ route เช็คอินต้องการ **3 id**: `POST /academies/{aca
 | **A-S3** | **อุด A4** — เพิ่มสาขา `CHECKIN:ACTIVITY:` ใน `ui/types/qr.ts` + routing ใน `useQRScanner.ts` (+ เพิ่ม `event_id` ใน payload ฝั่ง backend) | A-S0 | ✅ §1.8 |
 | **A-S3b** | **อุด A8** — สร้าง enrollment อัตโนมัติให้สมาชิกในกลุ่มเป้าหมายตอนเช็คชื่อครั้งแรก (`ActivityEnrollmentResolver`) | A-S3 | ✅ §1.9 |
 | **A-S4** | **หน้าคอนโซลเช็คชื่อกิจกรรม** — 4 แท็บ + หน้ารายการคาบ (ลอกจาก `school-attendance/[id].vue` ไม่ได้ใช้ HopeUI ดูเหตุผล §1.10) | A-S1, A-S2, A-S3b | ✅ §1.10 |
-| **A-S5** | **แก้บั๊ก `remark` → `remarks`** ของเมนู #18 (§3) + เทสต์กันถอยหลัง | — | ⚪ |
+| **A-S5** | **แก้บั๊ก `remark` → `remarks`** ของเมนู #18 (§3) + เทสต์กันถอยหลัง | — | ✅ `71974826` ดู §1.11 |
 | **A-S6** | รายงาน/ส่งออกการเข้าร่วมกิจกรรม (A5) | A-S4 | ⚪ |
 
 ---
