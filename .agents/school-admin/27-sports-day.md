@@ -190,6 +190,7 @@ house_assignment_rows
   id · batch_id FK cascade · row_number
   raw json (แถวดิบจากไฟล์ / null ถ้าโหมดสุ่ม)
   student_id nullable FK · house_group_id nullable FK
+  previous_house_group_id nullable FK   ← สีเดิม ณ ตอน preview (ดู §7.3.1)
   status enum(ok|unmatched|ambiguous|unknown_house|already_assigned|skipped)
   message nullable · timestamps
   index [batch_id, status]
@@ -202,11 +203,22 @@ house_memberships                       ← แหล่งความจริ
   index [academy_id, academic_year_id, house_group_id]
 ```
 
+### 7.3.1 ⚠️ undo ต้อง "คืนสีเดิม" ไม่ใช่ "ลบทิ้ง" (แก้สเปกเดิม 2026-08-02)
+
+ร่างแรกของ §7 เขียนว่า undo = ลบแถว `house_memberships` ที่มี `batch_id` นั้น — **ผิด**
+
+เพราะ commit ของ `scope=all` ใช้ upsert ทับแถวเดิม → **สีเดิมของคนที่ถูกย้ายหายไปตั้งแต่ตอน commit** พอกด undo จึงได้ผลลัพธ์ว่าคนกลุ่มนั้น**ไม่มีสังกัดสีเลย** แทนที่จะกลับไปสีเดิม (ยิ่งอันตรายเพราะปุ่มชื่อ "ย้อนกลับ")
+
+→ เก็บ `previous_house_group_id` ลง `house_assignment_rows` ตั้งแต่ตอน preview
+→ `undo()`: ถ้า `previous_house_group_id` ไม่ null ให้**เขียนกลับเป็นสีเดิม** · ถ้า null (คนที่เพิ่งได้สีครั้งแรกจาก batch นี้) จึงลบแถวทิ้ง
+→ ต้องมีเทสต์: แบ่งเข้าสี A → แบ่งใหม่ `scope=all` ให้ไปสี B → undo → **ต้องกลับมาอยู่สี A ไม่ใช่ไม่มีสี**
+
 ### 7.3 การฉายไปยัง `academy_group_members` (projection ไม่ใช่ dual-write)
 
 หลัง commit **ของปีปัจจุบันเท่านั้น** ให้ `HouseMembershipProjector` เขียน `academy_group_members` ของกลุ่ม `house` ใหม่ทั้งชุดจาก `house_memberships` (delete+insert ในทรานแซกชัน) เพื่อให้ฟีดกลุ่ม/หน้าโปรไฟล์คณะสีที่มีอยู่แล้วใช้งานได้
 
 - **ผู้เขียนมีตัวเดียว** — ห้ามมีเส้นทางอื่นเขียน `academy_group_members` ของกลุ่ม type `house`
+- ⚠️ **คอลัมน์จริงของ `academy_group_members` มีแค่** `id, academy_group_id, user_id, role, status, invited_by, timestamps` — **ไม่มี `student_id`** (พิสูจน์แล้วด้วยการรันจริง: insert ที่ใส่ `student_id` ตาย `SQLSTATE[42S22]`) · และ `role` ต้องเป็น `'member'` ไม่ใช่ `'student'` (migration `2026_07_29_000001_change_academy_group_member_role_default` เปลี่ยน default ทิ้งไปแล้วเพราะ `'student'` ไม่ตรงกับ validation ใด ๆ)
 - สร้างใหม่จากแหล่งความจริงได้เสมอ (idempotent) → ไม่ใช่กับดัก dual-write แบบ #6
 - นักเรียนที่ยังไม่มี `user_id` จะไม่มีแถว projection (ตารางกลางคีย์ที่ `user_id`) แต่**ยังอยู่ใน `house_memberships` ครบ** — ยอดคนต่อสีต้องนับจาก `house_memberships` เท่านั้น ห้ามนับจากตารางกลาง
 

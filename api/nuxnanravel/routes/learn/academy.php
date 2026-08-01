@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\Learn\Academy\FeeStructureController;
 use App\Http\Controllers\Api\Learn\Academy\GamificationController;
 use App\Http\Controllers\Api\Learn\Academy\GradeScaleController;
 use App\Http\Controllers\Api\Learn\Academy\GuardianController;
+use App\Http\Controllers\Api\Learn\Academy\HouseAssignmentController;
 use App\Http\Controllers\Api\Learn\Academy\InviteLinkController;
 use App\Http\Controllers\Api\Learn\Academy\LeaveRequestController;
 use App\Http\Controllers\Api\Learn\Academy\LibraryController;
@@ -950,6 +951,17 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::post('/{attendance}/scan-student', [SchoolAttendanceController::class, 'scanStudent'])->name('api.academy.schoolAttendance.scanStudent');
         Route::post('/{attendance}/records', [SchoolAttendanceController::class, 'storeRecords'])->name('api.academy.schoolAttendance.storeRecords');
         Route::post('/{attendance}/close', [SchoolAttendanceController::class, 'close'])->name('api.academy.schoolAttendance.close');
+    });
+
+    Route::prefix('{academy}/house-assignments')->group(function () {
+        Route::get('/', [HouseAssignmentController::class, 'index'])->middleware('academy.permission:sports.view')->name('api.academy.house-assignments.index');
+        Route::get('/current', [HouseAssignmentController::class, 'current'])->middleware('academy.permission:sports.view')->name('api.academy.house-assignments.current');
+        Route::post('/preview-random', [HouseAssignmentController::class, 'previewRandom'])->middleware('academy.permission:sports.manage')->name('api.academy.house-assignments.preview-random');
+        Route::get('/{batch}', [HouseAssignmentController::class, 'show'])->middleware('academy.permission:sports.view')->name('api.academy.house-assignments.show');
+        Route::get('/{batch}/rows', [HouseAssignmentController::class, 'rows'])->middleware('academy.permission:sports.view')->name('api.academy.house-assignments.rows');
+        Route::post('/{batch}/commit', [HouseAssignmentController::class, 'commit'])->middleware('academy.permission:sports.manage')->name('api.academy.house-assignments.commit');
+        Route::post('/{batch}/undo', [HouseAssignmentController::class, 'undo'])->middleware('academy.permission:sports.manage')->name('api.academy.house-assignments.undo');
+        Route::delete('/{batch}', [HouseAssignmentController::class, 'discard'])->middleware('academy.permission:sports.manage')->name('api.academy.house-assignments.discard');
     });
 
     // ============================================
