@@ -736,6 +736,8 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::post('/', [SchoolEventController::class, 'store'])->name('api.academy.events.store');
         Route::get('/upcoming', [SchoolEventController::class, 'upcoming'])->name('api.academy.events.upcoming');
         Route::get('/my-schedule', [SchoolEventController::class, 'mySchedule'])->name('api.academy.events.mySchedule');
+        Route::get('/{event}/roster', [SchoolEventController::class, 'roster'])->name('api.academy.events.roster');
+        Route::get('/{event}/audience-count', [SchoolEventController::class, 'audienceCount'])->name('api.academy.events.audienceCount');
         Route::post('/{event}/enroll', [SchoolEventController::class, 'enroll'])->name('api.academy.events.enroll');
         Route::get('/{event}', [SchoolEventController::class, 'show'])->name('api.academy.events.show');
         Route::patch('/{event}', [SchoolEventController::class, 'update'])->name('api.academy.events.update');

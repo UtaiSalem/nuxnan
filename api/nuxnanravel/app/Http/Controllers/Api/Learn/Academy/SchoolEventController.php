@@ -10,6 +10,7 @@ use App\Models\ActivityEnrollment;
 use App\Models\ActivitySession;
 use App\Models\EventRegistration;
 use App\Models\SchoolEvent;
+use App\Services\Activity\EventAudienceResolver;
 use App\Services\AuditLogService;
 use App\Services\EventToPostMirror;
 use App\Traits\ManagesEventPermissions;
@@ -17,6 +18,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class SchoolEventController extends Controller
 {
@@ -203,9 +205,19 @@ class SchoolEventController extends Controller
             'is_all_day' => 'boolean',
             'is_recurring' => 'boolean',
             'recurrence_pattern' => 'nullable|array',
+            'target_audience' => 'nullable|array',
+            'target_audience.all' => 'boolean',
+            'target_audience.roles' => 'nullable|array', 'target_audience.roles.*' => 'in:student,staff',
+            'target_audience.education_levels' => 'nullable|array', 'target_audience.education_levels.*' => 'integer|in:0,1,2',
+            'target_audience.grade_levels' => 'nullable|array', 'target_audience.grade_levels.*' => 'string|max:50',
+            'target_audience.classroom_ids' => 'nullable|array', 'target_audience.classroom_ids.*' => 'integer',
+            'target_audience.group_ids' => 'nullable|array', 'target_audience.group_ids.*' => 'integer',
+            'target_audience.user_ids' => 'nullable|array', 'target_audience.user_ids.*' => 'integer',
+            'target_audience.exclude_user_ids' => 'nullable|array', 'target_audience.exclude_user_ids.*' => 'integer',
             'status' => 'in:draft,published',
         ]);
 
+        $this->validateAudienceOwnership($validator, $request->input('target_audience'), $academy);
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
@@ -240,6 +252,7 @@ class SchoolEventController extends Controller
                 'registration_deadline' => $request->registration_deadline,
                 'is_all_day' => $request->get('is_all_day', false),
                 'is_recurring' => $request->get('is_recurring', false),
+                'target_audience' => $request->input('target_audience'),
                 'recurrence_pattern' => $request->recurrence_pattern,
                 'status' => $request->get('status', 'draft'),
                 'published_at' => $request->get('status') === 'published' ? now() : null,
@@ -319,8 +332,18 @@ class SchoolEventController extends Controller
             'max_participants' => 'nullable|integer|min:1',
             'requires_registration' => 'boolean',
             'registration_deadline' => 'nullable|date',
+            'target_audience' => 'nullable|array',
+            'target_audience.all' => 'boolean',
+            'target_audience.roles' => 'nullable|array', 'target_audience.roles.*' => 'in:student,staff',
+            'target_audience.education_levels' => 'nullable|array', 'target_audience.education_levels.*' => 'integer|in:0,1,2',
+            'target_audience.grade_levels' => 'nullable|array', 'target_audience.grade_levels.*' => 'string|max:50',
+            'target_audience.classroom_ids' => 'nullable|array', 'target_audience.classroom_ids.*' => 'integer',
+            'target_audience.group_ids' => 'nullable|array', 'target_audience.group_ids.*' => 'integer',
+            'target_audience.user_ids' => 'nullable|array', 'target_audience.user_ids.*' => 'integer',
+            'target_audience.exclude_user_ids' => 'nullable|array', 'target_audience.exclude_user_ids.*' => 'integer',
         ]);
 
+        $this->validateAudienceOwnership($validator, $request->input('target_audience'), $academy);
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
@@ -338,7 +361,7 @@ class SchoolEventController extends Controller
                 'start_datetime', 'end_datetime', 'location',
                 'location_type', 'meeting_url', 'max_participants',
                 'requires_registration', 'registration_deadline',
-                'is_all_day', 'is_recurring', 'recurrence_pattern',
+                'is_all_day', 'is_recurring', 'recurrence_pattern', 'target_audience',
             ]));
 
             $this->auditLog->log(
@@ -652,6 +675,10 @@ class SchoolEventController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
+        if ($event->target_audience && ! app(EventAudienceResolver::class)->includes($event, (int) $registration->user_id)) {
+            throw ValidationException::withMessages(['target_audience' => 'ผู้ใช้ไม่ได้อยู่ในกลุ่มเป้าหมายของกิจกรรมนี้']);
+        }
+
         $attended = $request->get('attended', true);
 
         if ($attended) {
@@ -665,6 +692,43 @@ class SchoolEventController extends Controller
             'message' => $attended ? 'Marked as attended' : 'Marked as no show',
             'data' => $registration,
         ]);
+    }
+
+    public function roster(Request $request, Academy $academy, SchoolEvent $event)
+    {
+        abort_if($event->academy_id !== $academy->id, 404);
+        abort_unless($this->canManageEvent($request->user(), $academy, $event->group_id), 403);
+        $session = $request->filled('session_id') ? ActivitySession::where('event_id', $event->id)->findOrFail($request->session_id) : null;
+
+        return response()->json(['success' => true, 'data' => app(EventAudienceResolver::class)->roster($event, $session)]);
+    }
+
+    public function audienceCount(Request $request, Academy $academy, SchoolEvent $event)
+    {
+        abort_if($event->academy_id !== $academy->id, 404);
+        abort_unless($this->canManageEvent($request->user(), $academy, $event->group_id), 403);
+
+        return response()->json(['success' => true, 'count' => app(EventAudienceResolver::class)->count($event)]);
+    }
+
+    private function validateAudienceOwnership($validator, ?array $audience, Academy $academy): void
+    {
+        if (! is_array($audience)) {
+            return;
+        }
+        foreach (['classroom_ids' => 'classrooms', 'group_ids' => 'academy_groups', 'user_ids' => 'academy_members', 'exclude_user_ids' => 'academy_members'] as $key => $table) {
+            $ids = array_filter($audience[$key] ?? [], 'is_numeric');
+            if ($ids === []) {
+                continue;
+            }
+            $column = str_ends_with($key, 'user_ids') ? 'user_id' : 'id';
+            $query = DB::table($table)->whereIn($column, $ids);
+            $query->where('academy_id', $academy->id);
+            $missing = array_diff(array_map('intval', $ids), $query->pluck($column)->map(fn ($id) => (int) $id)->all());
+            if ($missing) {
+                $validator->errors()->add($key, 'รายการต้องเป็นข้อมูลของ academy นี้');
+            }
+        }
     }
 
     /**

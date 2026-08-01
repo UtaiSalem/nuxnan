@@ -8,12 +8,14 @@ use App\Models\ActivityAttendance;
 use App\Models\ActivityEnrollment;
 use App\Models\ActivitySession;
 use App\Models\SchoolEvent;
+use App\Services\Activity\EventAudienceResolver;
 use App\Services\StudentIdentifierResolver;
 use App\Traits\ManagesEventPermissions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Check-in for ActivitySession (semester/recurring activities — e.g. ชมรม, ลูกเสือ,
@@ -70,6 +72,7 @@ class ActivitySessionController extends Controller
         }
 
         $user = $request->user();
+        $this->assertInAudience($event, (int) $user->id);
         $enrollment = $this->resolveEnrollment($event, $user->id);
 
         if (! $enrollment) {
@@ -103,6 +106,7 @@ class ActivitySessionController extends Controller
         }
 
         $enrollment = $this->resolveEnrollment($event, $resolved['user_id']);
+        $this->assertInAudience($event, (int) $resolved['user_id']);
 
         if (! $enrollment) {
             return response()->json([
@@ -138,6 +142,7 @@ class ActivitySessionController extends Controller
 
         DB::transaction(function () use ($validated, $event, $session) {
             foreach ($validated['records'] as $record) {
+                $this->assertInAudience($event, (int) $record['user_id']);
                 $enrollment = $this->resolveEnrollment($event, $record['user_id']);
                 if (! $enrollment) {
                     continue;
@@ -283,5 +288,12 @@ class ActivitySessionController extends Controller
     private function authorizeManager(Request $request, Academy $academy, SchoolEvent $event): void
     {
         abort_unless($this->canManageEvent($request->user(), $academy, $event->group_id), 403, 'Unauthorized');
+    }
+
+    private function assertInAudience(SchoolEvent $event, int $userId): void
+    {
+        if ($event->target_audience !== null && $event->target_audience !== [] && ! app(EventAudienceResolver::class)->includes($event, $userId)) {
+            throw ValidationException::withMessages(['target_audience' => 'ผู้ใช้ไม่ได้อยู่ในกลุ่มเป้าหมายของกิจกรรมนี้']);
+        }
     }
 }
