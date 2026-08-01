@@ -63,8 +63,10 @@ class HouseAssignmentController extends Controller
         return response()->streamDownload(function (): void {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, ['student_identifier', 'house_name']);
-            fputcsv($out, ['student-code-here', 'Red']);
+            // หัวคอลัมน์ต้องตรงกับค่าเริ่มต้นในหน้าจอนำเข้า ไม่งั้นครูที่โหลดไฟล์นี้ไปกรอก
+            // แล้วอัปกลับมาจะเจอ "ไม่พบนักเรียน" ทั้งไฟล์เพราะแม็พคอลัมน์ไม่ตรง
+            fputcsv($out, ['เลขประจำตัว', 'คณะสี', 'ชื่อ', 'นามสกุล']);
+            fputcsv($out, ['12345', 'แดง', '', '']);
             fclose($out);
         }, 'house-assignment-template.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }

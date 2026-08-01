@@ -207,6 +207,13 @@ const menuItems = computed(() => [
         to: `/academies/${academyName.value}/admin/events`,
         show: can('announcements.manage') || can('academy.view'),
       },
+      {
+        name: 'คณะสี (กีฬาสี)',
+        icon: 'fluent:flag-24-regular',
+        to: `/academies/${academyName.value}/admin/house-assignments`,
+        // ต้องตรงกับด่านตรวจในหน้านั้นเอง ไม่งั้นแอดมินที่ไม่ใช่เจ้าของจะเข้าหน้าได้แต่ไม่เห็นเมนู
+        show: isAdmin.value || can('sports.manage'),
+      },
     ]
   },
   {
