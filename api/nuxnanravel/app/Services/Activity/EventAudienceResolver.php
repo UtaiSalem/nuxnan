@@ -26,6 +26,17 @@ class EventAudienceResolver
         return $this->audienceQuery($event)->where('academy_members.user_id', $userId)->exists();
     }
 
+    // Approved membership of the event's academy, ignoring target_audience entirely.
+    public function isMember(SchoolEvent $event, int $userId): bool
+    {
+        return DB::table('academy_members')
+            ->where('academy_members.academy_id', $event->academy_id)
+            ->where('academy_members.status', 2)
+            ->whereNotNull('academy_members.user_id')
+            ->where('academy_members.user_id', $userId)
+            ->exists();
+    }
+
     public function roster(SchoolEvent $event, ?ActivitySession $session = null): LengthAwarePaginator
     {
         $query = $this->audienceQuery($event)

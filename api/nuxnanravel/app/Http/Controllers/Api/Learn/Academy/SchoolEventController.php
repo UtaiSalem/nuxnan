@@ -10,6 +10,7 @@ use App\Models\ActivityEnrollment;
 use App\Models\ActivitySession;
 use App\Models\EventRegistration;
 use App\Models\SchoolEvent;
+use App\Services\Activity\ActivityEnrollmentResolver;
 use App\Services\Activity\EventAudienceResolver;
 use App\Services\AuditLogService;
 use App\Services\EventToPostMirror;
@@ -782,11 +783,15 @@ class SchoolEventController extends Controller
         // Check enrollment deadline/criteria
         // ...
 
+        $term = app(ActivityEnrollmentResolver::class)->currentTerm($event);
+        $semester = $request->get('semester', $term['semester']);
+        $academicYear = $request->get('academic_year', $term['academic_year']);
+
         // Check if already enrolled
         $existing = ActivityEnrollment::where('user_id', $user->id)
             ->where('event_id', $event->id)
-            ->where('semester', $request->get('semester', '1')) // Default or current
-            ->where('academic_year', $request->get('academic_year', '2024'))
+            ->where('semester', $semester)
+            ->where('academic_year', $academicYear)
             ->first();
 
         if ($existing) {
@@ -797,8 +802,8 @@ class SchoolEventController extends Controller
             'user_id' => $user->id,
             'event_id' => $event->id,
             'status' => 'active',
-            'semester' => $request->get('semester', '1'),
-            'academic_year' => $request->get('academic_year', '2024'),
+            'semester' => $semester,
+            'academic_year' => $academicYear,
             'remarks' => $request->remarks,
         ]);
 

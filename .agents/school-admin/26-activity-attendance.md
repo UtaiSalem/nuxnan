@@ -142,9 +142,37 @@ route เช็คอินต้องการ **3 id**: `POST /academies/{aca
 
 ⚠️ ลบเงื่อนไขทิ้งเฉย ๆ ไม่ได้ — `activity_attendances.enrollment_id` เป็น FK **NOT NULL** ต้องมีแถวลงทะเบียนจริงถึงบันทึกการเช็คชื่อได้
 
-**ต้องตัดสิน (A-D2 รอบสอง):** คนในกลุ่มเป้าหมายที่ยังไม่มีแถวลงทะเบียน → **สร้าง enrollment อัตโนมัติตอนเช็คชื่อครั้งแรก** (ตรงกับ §1.6 มากที่สุด) หรือให้ครูกด "เปิดรายชื่อ" จาก roster ทีเดียวทั้งห้อง · **ต้องเคลียร์ก่อน A-S4 ไม่งั้นหน้าคอนโซลจะเสร็จแล้วกดไม่ได้**
+**ตัดสินแล้ว (A-D2 รอบสอง, เจ้าของโปรเจค):** **สร้าง enrollment อัตโนมัติตอนเช็คชื่อครั้งแรก** → ทำใน A-S3b ดู §1.9
 
 **สถานะเทสต์:** backend Activity 35 (filter จับได้ 57 ผ่าน) · frontend vitest 7 ผ่าน
+
+---
+
+## 1.9 ✅ A-S3b (2026-08-01) — อุด A8: อยู่ในกลุ่มเป้าหมาย = เช็คชื่อได้เลย ไม่ต้องลงทะเบียนก่อน
+
+`App\Services\Activity\ActivityEnrollmentResolver` เป็นทางเข้าเดียวของทั้ง 3 เส้น (`checkIn` / `scanStudent` / `storeRecords`) · เจอแถวเดิม → ใช้เลย (พฤติกรรมเดิมไม่เปลี่ยน) · ไม่เจอ → สร้างให้ถ้าเป็นสมาชิกที่อนุมัติแล้ว
+
+### 3 ตอที่ตรวจกับ DB จริงก่อนออกแบบ — ถ้าทำตรง ๆ พังทั้งหมด
+
+**ตอ 1 — unique index ที่ไม่ป้องกันอะไรเลย:** `enrollment_unique` คลุม `[user_id, event_id, semester, academic_year]` แต่ 2 คอลัมน์หลังเป็น `varchar(20) NULL` · MySQL ไม่ถือว่า NULL ซ้ำ → เขียน null = สองคนสแกนพร้อมกันได้ 2 แถว (**ตอเดียวกับ `election_results`**)
+→ แถวอัตโนมัติเขียนค่าไม่เป็น null เสมอ + `firstOrCreate` คีย์ครบ 4 คอลัมน์ + catch `UniqueConstraintViolationException` ให้คนแพ้ race ได้แถวของคนชนะ
+
+**ตอ 2 — กิจกรรมทั้ง 3 ตัวมี `target_audience = null`:** `assertInAudience()` return ทันทีเมื่อ audience เป็น null (ข้อตกลง §1.6) → พอเอาเงื่อนไข enrollment ออก **ใครก็ได้ที่ล็อกอินอยู่และเห็น QR บนโปรเจกเตอร์ ได้แถวลงทะเบียนในกิจกรรมของโรงเรียนอื่น** — เงื่อนไข enrollment เป็นด่านเดียวที่กันอยู่โดยบังเอิญมาตลอด
+→ **auto-create ต้องเป็นสมาชิกที่อนุมัติแล้ว** (`EventAudienceResolver::isMember()`) · **ไม่แตะ `assertInAudience` ไม่แตะเส้นที่มี enrollment อยู่แล้ว** → §1.6 ไม่เปลี่ยน และ `test_null_audience_refuses_nobody` ผ่านโดยไม่ถูกแก้
+→ **revert-check ยืนยัน:** ปิดด่านสมาชิกทิ้ง → คนนอกได้ **200 + แถวลงทะเบียน** และเส้น bulk ก็เงียบ ๆ รับเข้าไปด้วย
+
+**ตอ 3 — เทอมมีให้ครึ่งเดียว:** academy 1 มี `AcademicYear` ปัจจุบัน `2569` แต่ **`Semester` 0 แถว** → `semester` fallback เป็น `'-'` (ไม่ระบุภาคเรียน) · `academic_year` fallback เป็นปี พ.ศ. ปัจจุบัน
+
+### บั๊กแฝงที่แก้ไปพร้อมกัน
+
+- `upsertAttendance()` ใช้ `updateOrCreate` คีย์ `(session_id, enrollment_id)` แต่ unique index จริงคือ **`(session_id, user_id)`** → ถ้าใครมี enrollment 2 แถว มันจะ INSERT ชน unique เป็น QueryException · auto-create ทำให้เข้าถึงง่ายขึ้น → เปลี่ยนคีย์ให้ตรง index
+- `storeRecords()` เดิม `continue` เงียบ ๆ (data loss แบบเดียวกับ `remark`/`remarks`) → คืน `skipped_user_ids` ให้ UI เอาไปแสดง
+- `SchoolEventController::enroll()` ฝังค่า `'1'`/`'2024'` ไว้ → ใช้ `currentTerm()` ตัวเดียวกัน ไม่งั้นลงทะเบียนมือกับอัตโนมัติไปคนละบัคเก็ตแล้วได้ 2 แถวต่อคน
+- **แถวที่ `status = 'dropped'` ใช้คอลัมน์เดียวกับ unique index** → `firstOrCreate` จะคืนแถวที่ถูกถอนออกมาให้ แล้วเช็คชื่อทับ · ตอนนี้ยังไม่มีโค้ดไหนเขียน `'dropped'` แต่ปิดไว้ก่อน: คืน null (ปฏิเสธ) ไม่ใช่คืนสิทธิ์ให้เงียบ ๆ
+
+**สถานะเทสต์:** Activity 44 (`ActivityAutoEnrollmentTest` 9 เคส) · filter จับได้ **66 ผ่าน (146 assertions)**
+
+⚠️ **A-S4 ปลดล็อกแล้ว** — เส้นเช็คชื่อทั้ง 3 ทางใช้งานได้จริงตั้งแต่ต้นจนจบโดยไม่ต้องป้อนข้อมูลอะไรล่วงหน้า
 
 ---
 
@@ -191,8 +219,8 @@ route เช็คอินต้องการ **3 id**: `POST /academies/{aca
 | **A-S1** | **อุด A1** — เพิ่ม route + controller method `index`/`store`/`update`/`destroy` ของ session (guard = `canManageEvent` ไม่ใช่ `events.manage` ดูเหตุผลใน §1.7) | A-S0 | ✅ §1.7 |
 | **A-S2** | **อุด A2** — รายชื่อผู้เข้าร่วมมาจากกลุ่มเป้าหมาย ผ่าน `GET /{event}/roster` (ไม่ใช่ `GET /enrollments` ตามร่างเดิม) | A-S0 | ✅ §1.6 |
 | **A-S3** | **อุด A4** — เพิ่มสาขา `CHECKIN:ACTIVITY:` ใน `ui/types/qr.ts` + routing ใน `useQRScanner.ts` (+ เพิ่ม `event_id` ใน payload ฝั่ง backend) | A-S0 | ✅ §1.8 |
-| **A-S3b** | 🔴 **อุด A8 — ตัดสิน A-D2 รอบสอง** ให้คนในกลุ่มเป้าหมายที่ไม่มีแถว `activity_enrollments` เช็คชื่อได้ (สร้างอัตโนมัติ หรือครูเปิดรายชื่อจาก roster) · **ขวางทางทุกอย่างที่เหลือ** | A-S3 | ⚪ |
-| **A-S4** | **หน้าคอนโซลเช็คชื่อกิจกรรม** — ลอกรูป 4 แท็บจาก `school-attendance/[id].vue` · ใช้สกิล `hopeui-port` | A-S1, A-S2, **A-S3b** | ⚪ |
+| **A-S3b** | **อุด A8** — สร้าง enrollment อัตโนมัติให้สมาชิกในกลุ่มเป้าหมายตอนเช็คชื่อครั้งแรก (`ActivityEnrollmentResolver`) | A-S3 | ✅ §1.9 |
+| **A-S4** | **หน้าคอนโซลเช็คชื่อกิจกรรม** — ลอกรูป 4 แท็บจาก `school-attendance/[id].vue` · ใช้สกิล `hopeui-port` | A-S1, A-S2, A-S3b | ⚪ **พร้อมทำ** |
 | **A-S5** | **แก้บั๊ก `remark` → `remarks`** ของเมนู #18 (§3) + เทสต์กันถอยหลัง | — | ⚪ |
 | **A-S6** | รายงาน/ส่งออกการเข้าร่วมกิจกรรม (A5) | A-S4 | ⚪ |
 

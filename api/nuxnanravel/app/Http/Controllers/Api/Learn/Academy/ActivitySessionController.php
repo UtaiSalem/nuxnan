@@ -8,6 +8,7 @@ use App\Models\ActivityAttendance;
 use App\Models\ActivityEnrollment;
 use App\Models\ActivitySession;
 use App\Models\SchoolEvent;
+use App\Services\Activity\ActivityEnrollmentResolver;
 use App\Services\Activity\EventAudienceResolver;
 use App\Services\StudentIdentifierResolver;
 use App\Traits\ManagesEventPermissions;
@@ -248,11 +249,14 @@ class ActivitySessionController extends Controller
             'records.*.remarks' => 'nullable|string|max:200',
         ]);
 
-        DB::transaction(function () use ($validated, $event, $session) {
+        $skipped = [];
+        DB::transaction(function () use ($validated, $event, $session, &$skipped) {
             foreach ($validated['records'] as $record) {
                 $this->assertInAudience($event, (int) $record['user_id']);
                 $enrollment = $this->resolveEnrollment($event, $record['user_id']);
                 if (! $enrollment) {
+                    $skipped[] = (int) $record['user_id'];
+
                     continue;
                 }
 
@@ -268,7 +272,7 @@ class ActivitySessionController extends Controller
             }
         });
 
-        return response()->json(['success' => true, 'message' => 'บันทึกการเช็คชื่อสำเร็จ']);
+        return response()->json(['success' => true, 'message' => 'บันทึกการเช็คชื่อสำเร็จ', 'skipped_user_ids' => $skipped]);
     }
 
     // GET /academies/{academy}/events/{event}/enrollments/{enrollment}/attendance-summary
@@ -316,12 +320,10 @@ class ActivitySessionController extends Controller
         ]);
     }
 
+    // Find an active enrollment, creating one for an approved audience member who has none.
     private function resolveEnrollment(SchoolEvent $event, int $userId): ?ActivityEnrollment
     {
-        return ActivityEnrollment::where('event_id', $event->id)
-            ->where('user_id', $userId)
-            ->where('status', 'active')
-            ->first();
+        return app(ActivityEnrollmentResolver::class)->resolveOrCreate($event, $userId);
     }
 
     private function recordAttendance(
@@ -369,8 +371,9 @@ class ActivitySessionController extends Controller
     ): ActivityAttendance {
         return DB::transaction(function () use ($session, $enrollment, $userId, $status, $method, $recordedBy, $remarks) {
             $record = ActivityAttendance::updateOrCreate(
-                ['session_id' => $session->id, 'enrollment_id' => $enrollment->id],
+                ['session_id' => $session->id, 'user_id' => $userId],
                 [
+                    'enrollment_id' => $enrollment->id,
                     'user_id' => $userId,
                     'status' => $status,
                     'check_in_time' => in_array($status, ['present', 'late']) ? now() : null,
@@ -410,7 +413,7 @@ class ActivitySessionController extends Controller
     private function assertInAudience(SchoolEvent $event, int $userId): void
     {
         if ($event->target_audience !== null && $event->target_audience !== [] && ! app(EventAudienceResolver::class)->includes($event, $userId)) {
-            throw ValidationException::withMessages(['target_audience' => 'ผู้ใช้ไม่ได้อยู่ในกลุ่มเป้าหมายของกิจกรรมนี้']);
+            throw ValidationException::withMessages(['target_audience' => 'ผู้ใช้ #'.$userId.' ไม่ได้อยู่ในกลุ่มเป้าหมายของกิจกรรมนี้']);
         }
     }
 }
