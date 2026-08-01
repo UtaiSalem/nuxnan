@@ -200,11 +200,11 @@ class EmergencyAlertController extends Controller
 
             $this->auditLog->log(
                 'emergency_alert.created',
-                'emergency_alert',
-                $alert->id,
+                $alert,
                 null,
                 $alert->toArray(),
-                $academy->id
+                'emergency_alerts',
+                ['academy_id' => $academy->id]
             );
 
             // TODO: Dispatch notification jobs for SMS, email, push
@@ -275,11 +275,11 @@ class EmergencyAlertController extends Controller
 
             $this->auditLog->log(
                 'emergency_alert.updated',
-                'emergency_alert',
-                $alert->id,
+                $alert,
                 $oldData,
                 $alert->fresh()->toArray(),
-                $academy->id
+                'emergency_alerts',
+                ['academy_id' => $academy->id]
             );
 
             DB::commit();
@@ -318,11 +318,11 @@ class EmergencyAlertController extends Controller
 
         $this->auditLog->log(
             'emergency_alert.deactivated',
-            'emergency_alert',
-            $alert->id,
+            $alert,
             ['is_active' => true],
             ['is_active' => false],
-            $academy->id
+            'emergency_alerts',
+            ['academy_id' => $academy->id]
         );
 
         return response()->json([
@@ -464,11 +464,11 @@ class EmergencyAlertController extends Controller
 
         $this->auditLog->log(
             'emergency_alert.deleted',
-            'emergency_alert',
-            $alert->id,
+            $alert,
             $oldData,
             null,
-            $academy->id
+            'emergency_alerts',
+            ['academy_id' => $academy->id]
         );
 
         return response()->json([

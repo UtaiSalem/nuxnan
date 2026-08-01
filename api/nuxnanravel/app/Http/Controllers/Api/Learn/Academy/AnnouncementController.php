@@ -252,11 +252,11 @@ class AnnouncementController extends Controller
 
             $this->auditLog->log(
                 'announcement.created',
-                'school_announcement',
-                $announcement->id,
+                $announcement,
                 null,
                 $announcement->toArray(),
-                $academy->id
+                'announcements',
+                ['academy_id' => $academy->id]
             );
 
             DB::commit();
@@ -323,11 +323,11 @@ class AnnouncementController extends Controller
 
             $this->auditLog->log(
                 'announcement.updated',
-                'school_announcement',
-                $announcement->id,
+                $announcement,
                 $oldData,
                 $announcement->fresh()->toArray(),
-                $academy->id
+                'announcements',
+                ['academy_id' => $academy->id]
             );
 
             DB::commit();
@@ -366,11 +366,11 @@ class AnnouncementController extends Controller
 
         $this->auditLog->log(
             'announcement.published',
-            'school_announcement',
-            $announcement->id,
+            $announcement,
             ['is_published' => false],
             ['is_published' => true],
-            $academy->id
+            'announcements',
+            ['academy_id' => $academy->id]
         );
 
         return response()->json([
@@ -399,11 +399,11 @@ class AnnouncementController extends Controller
 
         $this->auditLog->log(
             'announcement.unpublished',
-            'school_announcement',
-            $announcement->id,
+            $announcement,
             ['is_published' => true],
             ['is_published' => false],
-            $academy->id
+            'announcements',
+            ['academy_id' => $academy->id]
         );
 
         return response()->json([
@@ -433,11 +433,11 @@ class AnnouncementController extends Controller
 
         $this->auditLog->log(
             'announcement.deleted',
-            'school_announcement',
-            $announcement->id,
+            $announcement,
             $oldData,
             null,
-            $academy->id
+            'announcements',
+            ['academy_id' => $academy->id]
         );
 
         return response()->json([

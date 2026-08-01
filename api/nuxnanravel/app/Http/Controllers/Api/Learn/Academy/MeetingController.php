@@ -169,11 +169,11 @@ class MeetingController extends Controller
 
             $this->auditLog->log(
                 'meeting_slot.created',
-                'meeting_slot',
-                $slot->id,
+                $slot,
                 null,
                 $slot->toArray(),
-                $academy->id
+                'meetings',
+                ['academy_id' => $academy->id]
             );
 
             DB::commit();
@@ -300,11 +300,11 @@ class MeetingController extends Controller
 
         $this->auditLog->log(
             'meeting_slot.updated',
-            'meeting_slot',
-            $slot->id,
+            $slot,
             $oldData,
             $slot->fresh()->toArray(),
-            $academy->id
+            'meetings',
+            ['academy_id' => $academy->id]
         );
 
         return response()->json([
@@ -342,11 +342,11 @@ class MeetingController extends Controller
 
         $this->auditLog->log(
             'meeting_slot.deleted',
-            'meeting_slot',
-            $slot->id,
+            $slot,
             $oldData,
             null,
-            $academy->id
+            'meetings',
+            ['academy_id' => $academy->id]
         );
 
         return response()->json([

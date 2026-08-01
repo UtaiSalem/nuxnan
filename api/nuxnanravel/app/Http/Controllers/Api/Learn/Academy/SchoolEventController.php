@@ -247,11 +247,11 @@ class SchoolEventController extends Controller
 
             $this->auditLog->log(
                 'event.created',
-                'school_event',
-                $event->id,
+                $event,
                 null,
                 $event->toArray(),
-                $academy->id
+                'events',
+                ['academy_id' => $academy->id]
             );
 
             DB::commit();
@@ -343,11 +343,11 @@ class SchoolEventController extends Controller
 
             $this->auditLog->log(
                 'event.updated',
-                'school_event',
-                $event->id,
+                $event,
                 $oldData,
                 $event->fresh()->toArray(),
-                $academy->id
+                'events',
+                ['academy_id' => $academy->id]
             );
 
             DB::commit();
@@ -393,11 +393,11 @@ class SchoolEventController extends Controller
 
         $this->auditLog->log(
             'event.published',
-            'school_event',
-            $event->id,
+            $event,
             ['status' => 'draft'],
             ['status' => 'published'],
-            $academy->id
+            'events',
+            ['academy_id' => $academy->id]
         );
 
         // Mirror to post
@@ -430,11 +430,11 @@ class SchoolEventController extends Controller
 
         $this->auditLog->log(
             'event.cancelled',
-            'school_event',
-            $event->id,
+            $event,
             ['status' => $oldStatus],
             ['status' => 'cancelled'],
-            $academy->id
+            'events',
+            ['academy_id' => $academy->id]
         );
 
         // Unmirror event post
@@ -461,7 +461,7 @@ class SchoolEventController extends Controller
         $user = $request->user();
 
         // Check if event accepts registrations
-        if (! $event->registration_required) {
+        if (! $event->requires_registration) {
             return response()->json([
                 'success' => false,
                 'message' => 'This event does not require registration',
@@ -691,11 +691,11 @@ class SchoolEventController extends Controller
 
         $this->auditLog->log(
             'event.deleted',
-            'school_event',
-            $event->id,
+            $event,
             $oldData,
             null,
-            $academy->id
+            'events',
+            ['academy_id' => $academy->id]
         );
 
         return response()->json([
@@ -820,7 +820,7 @@ class SchoolEventController extends Controller
                 if (! empty($timeSlots)) {
                     // One session per time slot per day (e.g. ละหมาด 5 เวลา/วัน)
                     foreach ($timeSlots as $slot) {
-                        $sessionStart = $currentDate->copy()->setTimeFromString($slot['time']);
+                        $sessionStart = $currentDate->copy()->setTimeFromTimeString($slot['time']);
                         $sessionEnd = $sessionStart->copy()->addMinutes($slotDurationMinutes);
 
                         $sessions[] = [
@@ -836,7 +836,7 @@ class SchoolEventController extends Controller
                     }
                 } else {
                     // Single session per day — preserve time block from the event's first instance
-                    $sessionStart = $currentDate->copy()->setTimeFromString($startDate->format('H:i'));
+                    $sessionStart = $currentDate->copy()->setTimeFromTimeString($startDate->format('H:i'));
 
                     $originalStart = Carbon::parse($event->start_datetime);
                     $originalEnd = Carbon::parse($event->end_datetime);

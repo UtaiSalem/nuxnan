@@ -181,8 +181,8 @@ class ActivitySessionController extends Controller
         $rows = ActivityAttendance::query()
             ->join('activity_sessions', 'activity_sessions.id', '=', 'activity_attendances.session_id')
             ->where('activity_attendances.enrollment_id', $enrollment->id)
-            ->selectRaw("{$groupExpr} as period_key, status, COUNT(*) as count")
-            ->groupBy('period_key', 'status')
+            ->selectRaw("{$groupExpr} as period_key, activity_attendances.status, COUNT(*) as count")
+            ->groupBy('period_key', 'activity_attendances.status')
             ->orderBy('period_key')
             ->get();
 
