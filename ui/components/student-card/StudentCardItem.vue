@@ -4,16 +4,25 @@ import QRCodeVue3 from "qrcode-vue3"
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/vue'
+import { DEFAULT_STUDENT_CARD_SCHOOL } from '~/constants/studentCard'
 
 const props = defineProps({
     studentInfo: { type: Object, required: true },
     canManage: { type: Boolean, default: false },
     canRequest: { type: Boolean, default: false },
+    canEdit: { type: Boolean, default: true },
     selectMode: { type: Boolean, default: false },
-    selected: { type: Boolean, default: false }
+    selected: { type: Boolean, default: false },
+    school: { type: Object, default: () => ({ ...DEFAULT_STUDENT_CARD_SCHOOL }) },
+    // ตัวเรียก API — ถ้าไม่ส่งมาจะใช้เส้นทางสาธารณะเดิม (หน้าชั่วคราว)
+    updateCard: { type: Function, default: null },
+    uploadPhoto: { type: Function, default: null },
+    deletePhoto: { type: Function, default: null },
 })
 
-const emit = defineEmits(['transfer', 'remove', 'request', 'cancel-request', 'toggle-select'])
+const emit = defineEmits(['transfer', 'remove', 'request', 'cancel-request', 'toggle-select', 'updated'])
+
+const school = computed(() => ({ ...DEFAULT_STUDENT_CARD_SCHOOL, ...(props.school || {}) }))
 
 // คำร้องทำบัตรที่ค้างอยู่ของนักเรียนคนนี้ (มาจาก active_card_request ใน API)
 const activeRequest = computed(() => props.studentInfo.active_card_request || null)
@@ -81,10 +90,16 @@ const fileInput = ref(null)
 const previewImage = ref(null)
 const tempPhoto = ref(props.studentInfo.profile_image || null)
 
+// รูปที่เพิ่งอัพโหลดในหน้านี้ — เก็บแยกแทนการเขียนทับ props.studentInfo
+// (การแก้ props ตรง ๆ ทำให้ parent กับ component ไม่ตรงกันเงียบ ๆ)
+const uploadedImageUrl = ref(null)
+
 const studentImageUrl = computed(() => {
     if (previewImage.value) return previewImage.value
-    return props.studentInfo.profile_image_url || null
+    return uploadedImageUrl.value || props.studentInfo.profile_image_url || null
 })
+
+const logoUrl = computed(() => school.value.logo_url || `${apiBase}/storage/jsm_logo.png`)
 
 const cardBgStyle = computed(() => ({
     background: `url('${apiBase}/storage/images/std_card_bg2.png') center center / cover no-repeat`
@@ -107,18 +122,21 @@ const handlePhotoUploadToServer = async (id, studentNumber, file) => {
     const formData = new FormData()
     formData.append('photo', file)
     try {
-        const response = await $fetch(`${apiBase}/api/student-card/admin/upload-photo/${id}`, {
-            method: 'POST',
-            body: formData,
-        })
+        const response = props.uploadPhoto
+            ? await props.uploadPhoto(formData, props.studentInfo)
+            : await $fetch(`${apiBase}/api/student-card/admin/upload-photo/${id}`, {
+                method: 'POST',
+                body: formData,
+            })
         if (response.success) {
             Swal.fire({ icon: 'success', title: 'อัพโหลดรูปภาพสำเร็จ', text: response.message, confirmButtonText: 'ตกลง' })
             if (response.photo) {
                 tempPhoto.value = response.photo
             }
             if (response.path) {
-                props.studentInfo.profile_image_url = response.path
+                uploadedImageUrl.value = response.path
             }
+            emit('updated', props.studentInfo)
         } else {
             Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: response.message || 'ไม่สามารถอัพโหลดรูปภาพได้', confirmButtonText: 'ตกลง' })
         }
@@ -133,28 +151,38 @@ const handlePhotoUploadToServer = async (id, studentNumber, file) => {
 const triggerFileInput = () => fileInput.value?.click()
 
 const handleSubmit = async () => {
+    const payload = {
+        national_id: editForm.national_id,
+        student_number: editForm.student_number,
+        title_name: editForm.title_name,
+        first_name_thai: editForm.first_name_thai,
+        last_name_thai: editForm.last_name_thai,
+        first_name_english: editForm.first_name_english,
+        last_name_english: editForm.last_name_english,
+        birth_date: editForm.birth_date,
+    }
+
     try {
         isSaving.value = true
-        const response = await $fetch(`${apiBase}/api/student-card/public-update/${props.studentInfo.class_level}/${props.studentInfo.class_section}/${editForm.id}`, {
-            method: 'PUT',
-            body: {
-                national_id: editForm.national_id,
-                student_number: editForm.student_number,
-                title_name: editForm.title_name,
-                first_name_thai: editForm.first_name_thai,
-                last_name_thai: editForm.last_name_thai,
-                first_name_english: editForm.first_name_english,
-                last_name_english: editForm.last_name_english,
-                birth_date: editForm.birth_date,
-            },
-        })
+        const response = props.updateCard
+            ? await props.updateCard(payload, props.studentInfo)
+            : await $fetch(`${apiBase}/api/student-card/public-update/${props.studentInfo.class_level}/${props.studentInfo.class_section}/${editForm.id}`, {
+                method: 'PUT',
+                body: payload,
+            })
         if (response.success) {
             editForm.full_name_thai = [editForm.title_name, editForm.first_name_thai, editForm.last_name_thai].filter(p => p?.trim()).join(' ')
             Swal.fire({ title: 'บันทึกข้อมูลสำเร็จ', icon: 'success', confirmButtonText: 'ตกลง' })
             isEditModalOpen.value = false
+            emit('updated', props.studentInfo)
         }
-    } catch {
-        Swal.fire({ title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถบันทึกข้อมูลได้', icon: 'error', confirmButtonText: 'ตกลง' })
+    } catch (error) {
+        Swal.fire({
+            title: 'เกิดข้อผิดพลาด',
+            text: error?.data?.message || 'ไม่สามารถบันทึกข้อมูลได้',
+            icon: 'error',
+            confirmButtonText: 'ตกลง',
+        })
     } finally {
         isSaving.value = false
     }
@@ -168,16 +196,20 @@ const handleDeletePhoto = async () => {
     if (!result.isConfirmed) return
     try {
         isDeletingStudentPhoto.value = true
-        const response = await $fetch(`${apiBase}/api/student-card/${props.studentInfo.id}/photo`, { method: 'DELETE' })
+        const response = props.deletePhoto
+            ? await props.deletePhoto(props.studentInfo)
+            : await $fetch(`${apiBase}/api/student-card/${props.studentInfo.id}/photo`, { method: 'DELETE' })
         if (response.success) {
             previewImage.value = null
             tempPhoto.value = null
+            uploadedImageUrl.value = null
             Swal.fire('ลบสำเร็จ', '', 'success')
+            emit('updated', props.studentInfo)
         } else {
             Swal.fire('เกิดข้อผิดพลาด', response.message || '', 'error')
         }
-    } catch {
-        Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถลบรูปภาพได้', 'error')
+    } catch (error) {
+        Swal.fire('เกิดข้อผิดพลาด', error?.data?.message || 'ไม่สามารถลบรูปภาพได้', 'error')
     } finally {
         isDeletingStudentPhoto.value = false
     }
@@ -200,14 +232,14 @@ const studentPrefixName = (prefix) => {
             <!-- Top Section -->
             <div class="h-[20%] relative" style="background: linear-gradient(135deg, transparent 40%, #4a90e2 0%);">
                 <div class="absolute -left-2 md:-left-3 -top-[16px] sm:-top-[28px] md:-top-[22px] w-[22%] aspect-square rounded-full flex items-center justify-center">
-                    <img :src="`${apiBase}/storage/jsm_logo.png`" alt="School Logo" class="w-[56%] h-[56%] object-cover rounded-full">
+                    <img :src="logoUrl" alt="School Logo" class="w-[56%] h-[56%] object-cover rounded-full">
                 </div>
                 <div class="absolute left-[16%] top-[10%] sm:top-2">
-                    <div class="text-[3.8vw] md:text-[28px] font-semibold md:font-bold text-gray-800">โรงเรียนจริยธรรมศึกษามูลนิธิ</div>
-                    <div class="text-[2.4vw] sm:text-[2.5vw] md:text-[16px] -mt-1 sm:-mt-2.5 md:-mt-2 text-gray-800 tracking-wider">CHARIYATHAMSUKSA FOUNDATION SCHOOL</div>
-                    <div class="text-[2.4vw] md:text-sm -mt-0.5 sm:-mt-2 md:-mt-1 text-gray-800">148 ม.8 ต.สะกอม อ.จะนะ จ.สงขลา 90130 โทร.081-5412281</div>
+                    <div class="text-[3.8vw] md:text-[28px] font-semibold md:font-bold text-gray-800">{{ school.name_th }}</div>
+                    <div class="text-[2.4vw] sm:text-[2.5vw] md:text-[16px] -mt-1 sm:-mt-2.5 md:-mt-2 text-gray-800 tracking-wider">{{ school.name_en }}</div>
+                    <div class="text-[2.4vw] md:text-sm -mt-0.5 sm:-mt-2 md:-mt-1 text-gray-800">{{ school.address }}</div>
                 </div>
-                <div @click="isEditModalOpen = true" class="absolute z-50 top-0 right-2 text-gray-700 bg-gray-200/60 p-2 rounded-full shadow-md cursor-pointer">
+                <div v-if="canEdit" @click="isEditModalOpen = true" class="absolute z-50 top-0 right-2 text-gray-700 bg-gray-200/60 p-2 rounded-full shadow-md cursor-pointer">
                     <Icon icon="dashicons:edit" width="20" height="20" />
                 </div>
                 <div v-if="canManage || canRequest || activeRequest?.status === 'pending'" class="absolute z-50 top-0 right-12">
@@ -254,14 +286,15 @@ const studentPrefixName = (prefix) => {
                     <input type="file" ref="fileInput" @change="handlePhotoUpload" accept="image/*" class="hidden" />
                     <div v-if="previewImage || tempPhoto" class="w-full h-full relative">
                         <img :src="studentImageUrl" alt="Student Photo" class="w-full h-full object-fill" />
-                        <button class="absolute bottom-2 right-2 bg-white p-1 rounded-full shadow-md cursor-pointer focus:outline-none" @click="triggerFileInput" aria-label="เปลี่ยนรูป">
+                        <button v-if="canEdit" class="absolute bottom-2 right-2 bg-white p-1 rounded-full shadow-md cursor-pointer focus:outline-none" @click="triggerFileInput" aria-label="เปลี่ยนรูป">
                             <Icon :icon="isEditStudentPhoto ? 'eos-icons:bubble-loading' : 'heroicons:pencil-solid'" class="w-5 h-5 text-gray-600" />
                         </button>
-                        <button class="absolute bottom-2 left-2 bg-red-500 p-1 rounded-full shadow-md cursor-pointer focus:outline-none" @click="handleDeletePhoto" aria-label="ลบรูป">
+                        <button v-if="canEdit" class="absolute bottom-2 left-2 bg-red-500 p-1 rounded-full shadow-md cursor-pointer focus:outline-none" @click="handleDeletePhoto" aria-label="ลบรูป">
                             <Icon :icon="isDeletingStudentPhoto ? 'eos-icons:bubble-loading' : 'heroicons:trash-solid'" class="w-5 h-5 text-white" />
                         </button>
                     </div>
-                    <div v-else class="w-full h-full flex items-center justify-center bg-gray-300 cursor-pointer" @click="triggerFileInput">
+                    <div v-else class="w-full h-full flex items-center justify-center bg-gray-300"
+                        :class="canEdit ? 'cursor-pointer' : ''" @click="canEdit && triggerFileInput()">
                         <Icon icon="tabler:photo-plus" class="w-10 h-10 text-gray-600/60" />
                     </div>
                 </div>
@@ -319,10 +352,11 @@ const studentPrefixName = (prefix) => {
                             class="flex-1 text-[2.4vw] sm:text-sm md:text-lg font-semibold text-gray-800">
                             {{ new Date(editForm.birth_date).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' }) }}
                         </span>
-                        <button v-else type="button" @click="isEditModalOpen = true"
+                        <button v-else-if="canEdit" type="button" @click="isEditModalOpen = true"
                             class="flex-1 text-left text-[2.4vw] sm:text-sm md:text-lg font-semibold text-amber-600 underline decoration-dotted underline-offset-2 hover:text-amber-700">
                             ยังไม่ระบุ
                         </button>
+                        <span v-else class="flex-1 text-[2.4vw] sm:text-sm md:text-lg font-semibold text-gray-400">ยังไม่ระบุ</span>
                     </div>
                     <div class="flex items-baseline -mt-1.5 sm:-mt-2 md:-mt-2.5">
                         <span class="w-[25%] text-[2vw] sm:text-xs font-normal text-gray-600">Date of Birth</span>
