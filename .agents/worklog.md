@@ -1,8 +1,54 @@
 # Work Log — nuxnan project
 
+## 2026-08-03 — ตรวจสถานะเปิดเซสชัน (ไม่มีการแก้โค้ด)
+
+### สถานะ: เซสชันนี้**ไม่ได้เขียนโค้ดเลย** — ตรวจของเดิมกับ git/DB จริงแล้วรีเฟรชบันทึกด้านล่างให้ตรง
+
+**สิ่งที่ยืนยันด้วยคำสั่งจริง (ไม่ใช่การอ่านบันทึกเก่า):**
+
+| เรื่อง | ผลตรวจ | คำสั่งที่ใช้ |
+|---|---|---|
+| commit ค้าง push | **0 ก้อน** — บันทึก 2026-08-02 ที่เขียนว่า "ยังไม่ push" **ล้าสมัยแล้ว** | `git rev-list --count origin/main..HEAD` |
+| S-S3b หน้าจอแบ่งคณะสี | **เสร็จแล้ว** `f065ce19` + แก้ empty-state `ee228e75` — บันทึกเก่าที่เขียนว่า "ยังไม่มีหน้าจอ" ล้าสมัย | `git log --oneline` |
+| migration 15 ตัว (`2026_07_31_000001` → `2026_08_02_000004`) | ขึ้น **Ran ครบ** บน DB เครื่องนี้ (`nuxnan_nuxnan_db`) | `php artisan migrate:status` |
+| ข้อมูลคณะสีจริง | **ว่างทั้งหมด** `academy_groups(house)=0 · house_memberships=0 · house_assignment_batches=0 · house_assignment_rows=0` | `php artisan tinker` |
+| working tree | มีของ session อื่นค้าง 3 ไฟล์ + untracked 1 ไฟล์ (ดูล่าง) | `git status --short` |
+
+⚠️ **ชื่อตารางที่เดาผิดง่าย** — ตารางของเครื่องมือแบ่งสีชื่อ `house_assignment_batches` / `house_assignment_rows` **ไม่ใช่** `house_division_runs` (เดาผิดรอบหนึ่งแล้วเจอ error)
+
+⚠️ **DB เครื่องนี้ชื่อ `nuxnan_nuxnan_db` ไม่ใช่ `nuxnan`** ตามที่ CLAUDE.md เขียนไว้ — ถ้าต่อ DB แล้วไม่เจอตาราง ให้ดู `.env` ก่อนสรุปว่า migration ไม่ได้รัน
+
+### 📄 ไฟล์ untracked ที่ยังไม่ตัดสิน
+
+`api/nuxnanravel/database/migrations_from_2026_07_31.sql` — 24KB, 11 `CREATE TABLE`, แปลง 15 migrations (`2026_07_31_000001` … `2026_08_02_000004`) เป็น SQL ล้วนสำหรับรันบน prod ที่รัน artisan ไม่ได้
+หัวไฟล์ระบุเงื่อนไข: DB ปลายทางต้องรัน migrations ถึง `2026_07_29_000007` ครบก่อน · `mysql -u <user> -p <db> < ไฟล์นี้`
+⚠️ หมายเหตุในไฟล์เอง: **MySQL ทำ implicit commit ทุกครั้งที่เจอ DDL** → `START TRANSACTION` ในไฟล์คุมได้แค่ INSERT ท้ายไฟล์ ถ้าพังกลางทาง**ต้อง rollback ด้วยมือ**
+→ **ผู้ใช้ยังไม่ตัดสินว่าจะ commit เข้า repo / ใส่ `.gitignore` / ปล่อยไว้** — ถามแล้วแต่ยังไม่ตอบ
+
+### ⚠️ ไฟล์ `ui/` 3 ไฟล์ที่ค้างใน working tree — **งานของ session อื่น อย่าเผลอ commit รวม**
+
+`ui/components/academy/AssignHomeroomTeacherModal.vue` (+34) · `ui/pages/academies/[name]/admin/classrooms/[id].vue` (+86) · `ui/pages/academies/[name]/admin/classrooms/index.vue` (+270) — งานครูประจำชั้น/ห้องเรียน **ไม่เกี่ยวกับ #27**
+สังเกต: ตอนกลางเซสชัน `git status` เคยขึ้นสะอาด แล้วไฟล์ 3 ตัวนี้กลับมาโผล่อีกครั้ง → **น่าจะมี session/editor อื่นเขียนอยู่พร้อมกัน** ให้ `git status` สดทุกครั้งก่อน `git add`
+
+### 🔴 ตัวบล็อกเดียวที่เหลือของ #27 — S-D2 ยังไม่ตัดสิน
+
+**โรงเรียนจะมีกี่คณะสี (4/5/6)** — ค้างมาตั้งแต่ 2026-08-02 · เครื่องมือรองรับ N สีอยู่แล้วจึงไม่บล็อกงานโค้ด **แต่บล็อกการใช้งานจริง** เพราะยังไม่มีใครสร้างคณะสีสักสี → หน้า S-S3b ที่ทำเสร็จแล้วยังไม่เคยถูกใช้กับข้อมูลจริง
+ถามผู้ใช้รอบนี้แล้ว **ยังไม่ตอบ** — อย่าตัดสินแทน
+
+### งานที่ค้าง (TODO ต่อ)
+
+- [ ] **ตัดสิน S-D2 จำนวนคณะสี** → สร้างคณะสีจริง → ทดลองแบ่งนักเรียน 2,202 คนผ่านหน้า `ui/pages/academies/[name]/admin/house-assignments/index.vue` (preview → commit → undo) **เพื่อพิสูจน์ว่าทั้งเส้นทำงาน — ยังไม่เคยรันกับข้อมูลจริงสักครั้ง**
+- [ ] **S-S4 คือขั้นถัดไปตามตารางที่ล็อก** — schema กีฬาสี (§4 ของสเปก) + ให้คะแนนแก่คณะสีผ่าน event log + จัดการคะแนนเท่ากัน · `houseLeaderboard()` ตอนนี้คืน `points: 0, points_source: 'pending'` รออันนี้อยู่
+- [ ] ตัดสินชะตาไฟล์ `migrations_from_2026_07_31.sql`
+
+---
+
 ## 2026-08-02 — เมนู #27 กีฬาสี: แบ่งนักเรียนเข้าคณะสี (สุ่ม + นำเข้า)
 
-### สถานะ: S-S1/S-S2/S-S3/S-S3i เสร็จ · **30 เทสต์ผ่าน (124 assertions)** · commit แล้ว 3 ก้อน `b2fb8e40` `f5fe814e` `c35a32b0` · **ยังไม่ push** · **ยังไม่มีหน้าจอ (S-S3b คืองานถัดไป)**
+### สถานะ: S-S1/S-S2/S-S3/S-S3i/**S-S3b เสร็จ** · **30 เทสต์ผ่าน (124 assertions)** · commit `b2fb8e40` `f5fe814e` `c35a32b0` `f065ce19` `ee228e75` · **push แล้วทั้งหมด** (ยืนยัน 2026-08-03)
+
+> ⚠️ บรรทัดสถานะเดิมเขียนว่า "ยังไม่ push · ยังไม่มีหน้าจอ (S-S3b คืองานถัดไป)" — **แก้แล้วเมื่อ 2026-08-03** เพราะทั้งสองข้อไม่จริงอีกต่อไป
+> **S-S3b (`f065ce19`)** เพิ่ม `ui/pages/academies/[name]/admin/house-assignments/index.vue` (849 บรรทัด) + `ui/composables/useHouseAssignments.ts` + เมนูใน `admin.vue` + แก้ `HouseAssignmentController` · **`ee228e75`** แก้ empty-state ให้ชี้ไปหน้าที่สร้างคณะสีได้จริง
 
 เอกสารเต็ม: [.agents/school-admin/27-sports-day.md](school-admin/27-sports-day.md) — §5 ข้อตัดสินล็อกแล้ว · §7 สเปกเครื่องมือแบ่งสี
 
@@ -36,11 +82,11 @@
 
 ### งานที่ค้าง (TODO ต่อ)
 
-- [ ] **S-S3b หน้าจอแบ่งคณะสี** (เลือกโหมด → preview เห็นยอดต่อสี/แถวที่ล้มเหลว → commit → undo) — งานถัดไป ใช้สกิล `hopeui-port`
-- [ ] **ยังไม่มีใครสร้างคณะสีจริงสักสี** — `academy_groups` type `house` = 0 แถว · ต้องตัดสิน S-D2 (4/5/6 สี) ก่อนใช้งานจริง
+- [x] ~~**S-S3b หน้าจอแบ่งคณะสี**~~ — เสร็จ `f065ce19` (2026-08-02)
+- [x] ~~`git push`~~ — push ครบแล้ว ยืนยัน 2026-08-03
+- [ ] **ยังไม่มีใครสร้างคณะสีจริงสักสี** — `academy_groups` type `house` = 0 แถว (ยืนยันอีกครั้ง 2026-08-03) · ต้องตัดสิน S-D2 (4/5/6 สี) ก่อนใช้งานจริง
 - [ ] S-S4 schema คะแนนกีฬาสี + event log (leaderboard ตอนนี้คืน `points: 0, points_source: 'pending'` รออันนี้อยู่)
-- [ ] `git push` (ค้าง 3 commit ของ #27 + ของเดิมที่ยังไม่ push)
-- [ ] `ui/components/school/SchoolAttendanceQRDisplay.vue` ยังค้างใน working tree — **งานของ session อื่น อย่าเผลอ commit รวม**
+- [x] ~~`ui/components/school/SchoolAttendanceQRDisplay.vue` ค้างใน working tree~~ — ไม่ค้างแล้ว working tree สะอาด (2026-08-03)
 
 ---
 
