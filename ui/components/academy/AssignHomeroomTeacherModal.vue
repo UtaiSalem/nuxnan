@@ -61,6 +61,22 @@ const save = async () => {
     saving.value = false
   }
 }
+
+// Clearing the post leaves the room without a homeroom teacher. The teacher
+// keeps any classroom_members role they already have.
+const removing = ref(false)
+const remove = async () => {
+  removing.value = true
+  error.value = ''
+  try {
+    await api.patch(`/api/academies/${props.academyId}/classrooms/${props.classroomId}`, { homeroom_teacher_id: null })
+    emit('updated')
+  } catch (e: any) {
+    error.value = e?.data?.message || 'ไม่สามารถเอาครูประจำชั้นออกได้'
+  } finally {
+    removing.value = false
+  }
+}
 </script>
 
 <template>
@@ -68,7 +84,7 @@ const save = async () => {
     <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="emit('close')" />
     <div class="relative flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-slate-800">
       <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-slate-700">
-        <h2 class="font-bold text-slate-900 dark:text-white">แต่งตั้งครูประจำชั้น</h2>
+        <h2 class="font-bold text-slate-900 dark:text-white">{{ props.currentTeacherId ? 'เปลี่ยนครูประจำชั้น' : 'แต่งตั้งครูประจำชั้น' }}</h2>
         <button class="text-slate-400 hover:text-slate-700" @click="emit('close')"><Icon icon="fluent:dismiss-24-regular" class="h-5 w-5" /></button>
       </div>
       <div class="space-y-4 overflow-y-auto p-6">
@@ -84,7 +100,21 @@ const save = async () => {
           <p v-if="!teachers.length" class="py-6 text-center text-sm text-slate-500">ไม่พบสมาชิกที่เป็นครูหรือผู้ดูแล</p>
         </div>
       </div>
-      <div class="flex justify-end gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-700"><button class="rounded-xl px-4 py-2 text-sm text-slate-600" @click="emit('close')">ยกเลิก</button><button class="rounded-xl bg-primary-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" :disabled="saving" @click="save">{{ saving ? 'กำลังบันทึก...' : 'บันทึก' }}</button></div>
+      <div class="flex items-center justify-between gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-700">
+        <button
+          v-if="props.currentTeacherId"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-950/40"
+          :disabled="saving || removing"
+          @click="remove"
+        >
+          {{ removing ? 'กำลังเอาออก...' : 'เอาออกจากตำแหน่ง' }}
+        </button>
+        <span v-else></span>
+        <div class="flex gap-2">
+          <button class="rounded-xl px-4 py-2 text-sm text-slate-600 dark:text-slate-300" @click="emit('close')">ยกเลิก</button>
+          <button class="rounded-xl bg-primary-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" :disabled="saving || removing" @click="save">{{ saving ? 'กำลังบันทึก...' : 'บันทึก' }}</button>
+        </div>
+      </div>
     </div>
   </div>
 </template>

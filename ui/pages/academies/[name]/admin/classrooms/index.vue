@@ -88,7 +88,9 @@ const otherClassrooms = ref<any[]>([])
 
 // Academic Years
 const currentYear = new Date().getFullYear() + 543 // Buddhist Era
-const academicYears = computed(() => {
+const dbAcademicYears = ref<any[]>([])
+
+const fallbackAcademicYears = computed(() => {
   const years = []
   for (let i = currentYear + 1; i >= currentYear - 3; i--) {
     years.push(i.toString())
@@ -96,7 +98,25 @@ const academicYears = computed(() => {
   return years
 })
 
-const dbAcademicYears = ref<any[]>([])
+// Prefer the years the academy actually has rows for. The API filters on the
+// academic_year *name* stored on the classroom, so an invented year matches
+// nothing and would empty the list.
+const academicYears = computed(() => {
+  if (dbAcademicYears.value.length > 0) {
+    return dbAcademicYears.value.map((y: any) => String(y.name))
+  }
+  return fallbackAcademicYears.value
+})
+
+// Only send the year filter when it maps to a real academic year; otherwise let
+// the API fall back to the academy's current year.
+const academicYearFilter = computed(() => {
+  if (!selectedAcademicYear.value) return undefined
+
+  return dbAcademicYears.value.some((y: any) => String(y.name) === selectedAcademicYear.value)
+    ? selectedAcademicYear.value
+    : undefined
+})
 
 // The API may return the related academic year as an object or as a plain
 // year name. Normalize it before rendering so Vue never prints raw JSON.
@@ -141,19 +161,23 @@ onMounted(async () => {
     if (response.success) {
       academy.value = response.academy
       academyId.value = response.academy.id
-      selectedAcademicYear.value = currentYear.toString()
       await fetchMyRole()
-      
+
       if (!isAdmin.value) {
         navigateTo(`/academies/${academyName.value}/admin`)
         return
       }
-      
+
+      // Academic years first — the classroom and statistics filters need to know
+      // which years actually exist before they can send a year filter.
+      await fetchAcademicYears()
+      const activeYear = dbAcademicYears.value.find((y: any) => y.is_current)
+      selectedAcademicYear.value = String(activeYear?.name ?? currentYear)
+
       await Promise.all([
         fetchClassrooms(),
         fetchGradeLevels(),
-        fetchStatistics(),
-        fetchAcademicYears()
+        fetchStatistics()
       ])
     }
   } catch (err) {
@@ -169,12 +193,16 @@ const fetchClassrooms = async () => {
   
   isLoadingClassrooms.value = true
   try {
+    // useApi().get() forwards its second argument as $fetch options, so filters
+    // have to sit under `query` — a flat object is silently dropped.
     const response: any = await api.get(`/api/academies/${academyId.value}/classrooms`, {
-      search: searchQuery.value || undefined,
-      grade_level: selectedGradeLevel.value || undefined,
-      academic_year: selectedAcademicYear.value || undefined,
-      page: pagination.value.current_page,
-      per_page: pagination.value.per_page
+      query: {
+        search: searchQuery.value || undefined,
+        grade_level: selectedGradeLevel.value || undefined,
+        academic_year: academicYearFilter.value,
+        page: pagination.value.current_page,
+        per_page: pagination.value.per_page
+      }
     })
     
     if (response.success) {
@@ -212,7 +240,9 @@ const fetchStatistics = async () => {
   
   try {
     const response: any = await api.get(`/api/academies/${academyId.value}/classrooms/statistics`, {
-      academic_year: selectedAcademicYear.value
+      query: {
+        academic_year: academicYearFilter.value
+      }
     })
     if (response.success) {
       statistics.value = response.statistics
@@ -438,7 +468,9 @@ const fetchAvailableStudents = async () => {
   
   try {
     const response: any = await api.get(`/api/academies/${academyId.value}/classrooms/students`, {
-      per_page: 100
+      query: {
+        per_page: 100
+      }
     })
     
     if (response.success) {
@@ -564,8 +596,10 @@ const openTransferModal = async (studentMemberId: number) => {
   // Fetch other classrooms
   try {
     const response: any = await api.get(`/api/academies/${academyId.value}/classrooms`, {
-      academic_year: selectedAcademicYear.value,
-      per_page: 100
+      query: {
+        academic_year: academicYearFilter.value,
+        per_page: 100
+      }
     })
     if (response.success) {
       otherClassrooms.value = (response.classrooms || []).filter(
@@ -638,6 +672,29 @@ const groupedClassrooms = computed(() => {
   return grouped
 })
 
+// Capacity helpers — the fill ratio drives the card's accent colour so an
+// over-subscribed room is obvious without reading the numbers.
+const capacityRatio = (classroom: any) => {
+  const capacity = classroom.capacity || 40
+  return (classroom.student_count || 0) / capacity
+}
+
+const capacityPercent = (classroom: any) => Math.round(capacityRatio(classroom) * 100)
+
+const capacityBarClass = (classroom: any) => {
+  const ratio = capacityRatio(classroom)
+  if (ratio > 1) return 'bg-gradient-to-r from-rose-500 to-red-400'
+  if (ratio >= 0.9) return 'bg-gradient-to-r from-amber-500 to-orange-400'
+  return 'bg-gradient-to-r from-primary-500 to-cyan-400'
+}
+
+const capacityChipClass = (classroom: any) => {
+  const ratio = capacityRatio(classroom)
+  if (ratio > 1) return 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+  if (ratio >= 0.9) return 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+  return 'bg-primary-500/10 text-primary-600 dark:text-primary-400'
+}
+
 // Get grade color
 const getGradeColor = (grade: string) => {
   if (grade?.includes('ป.') || grade?.includes('ประถม')) return 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300'
@@ -664,7 +721,7 @@ const getGradeColor = (grade: string) => {
           @click="openCreateModal"
           class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
         >
-          <Icon name="fluent:add-24-filled" class="w-5 h-5" />
+          <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
           <span>สร้างห้องเรียน</span>
         </button>
       </div>
@@ -674,7 +731,7 @@ const getGradeColor = (grade: string) => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-xl">
-              <Icon name="fluent:building-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Icon icon="fluent:building-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ statistics.total_classrooms }}</p>
@@ -686,7 +743,7 @@ const getGradeColor = (grade: string) => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-green-100 dark:bg-green-900/50 rounded-xl">
-              <Icon name="fluent:people-24-filled" class="w-6 h-6 text-green-600 dark:text-green-400" />
+              <Icon icon="fluent:people-24-filled" class="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ statistics.total_students }}</p>
@@ -698,7 +755,7 @@ const getGradeColor = (grade: string) => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-amber-100 dark:bg-amber-900/50 rounded-xl">
-              <Icon name="fluent:person-board-24-filled" class="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              <Icon icon="fluent:person-board-24-filled" class="w-6 h-6 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ statistics.classrooms_with_teacher }}</p>
@@ -710,7 +767,7 @@ const getGradeColor = (grade: string) => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-purple-100 dark:bg-purple-900/50 rounded-xl">
-              <Icon name="fluent:chart-multiple-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Icon icon="fluent:chart-multiple-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ (statistics.total_students / (statistics.total_classrooms || 1)).toFixed(1) }}</p>
@@ -724,7 +781,7 @@ const getGradeColor = (grade: string) => {
       <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
         <div class="flex flex-col sm:flex-row gap-4">
           <div class="flex-1 relative">
-            <Icon name="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               v-model="searchQuery"
               @input="handleSearch"
@@ -795,14 +852,14 @@ const getGradeColor = (grade: string) => {
       </div>
 
       <div v-else-if="classrooms.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-sm border border-gray-100 dark:border-gray-700">
-        <Icon name="fluent:class-24-regular" class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+        <Icon icon="fluent:class-24-regular" class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
         <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">ยังไม่มีห้องเรียน</h3>
         <p class="text-gray-500 dark:text-gray-400 mb-4">เริ่มต้นสร้างห้องเรียนแรกของโรงเรียน</p>
         <button
           @click="openCreateModal"
           class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
         >
-          <Icon name="fluent:add-24-filled" class="w-5 h-5" />
+          <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
           <span>สร้างห้องเรียน</span>
         </button>
       </div>
@@ -819,115 +876,124 @@ const getGradeColor = (grade: string) => {
             <div
               v-for="classroom in rooms"
               :key="classroom.id"
-              class="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_36px_rgba(15,23,42,0.12)] dark:border-gray-700 dark:bg-gray-800"
+              class="relative flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary-300 hover:shadow-[0_16px_36px_rgba(2,132,199,0.16)] dark:border-gray-700 dark:bg-gray-800 dark:hover:border-primary-600"
             >
-              <div class="h-1.5 bg-gradient-to-r from-primary-500 via-sky-400 to-cyan-300"></div>
+              <div class="h-1.5 bg-gradient-to-r from-primary-600 via-primary-500 to-cyan-400"></div>
               <div class="p-5">
-                <div class="flex items-start justify-between mb-3">
-                  <div class="flex items-center gap-3">
-                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary-50 ring-1 ring-primary-100 dark:bg-primary-900/30 dark:ring-primary-800">
-                      <Icon name="fluent:class-24-filled" class="w-6 h-6 text-primary-600 dark:text-primary-300" />
+                <div class="mb-4 flex items-start justify-between gap-3">
+                  <div class="flex min-w-0 items-center gap-3">
+                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-cyan-400 shadow-lg shadow-primary-500/30">
+                      <Icon icon="fluent:class-24-filled" class="h-6 w-6 text-white" />
                     </div>
                     <div class="min-w-0">
-                      <p class="mb-0.5 text-xs font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">ห้องเรียน</p>
                       <NuxtLink
                         :to="`/academies/${academyName}/admin/classrooms/${classroom.id}`"
-                        @click.stop
-                        class="truncate text-lg font-bold text-gray-900 hover:text-primary-600 dark:text-white dark:hover:text-primary-400"
+                        class="block truncate text-lg font-bold text-gray-900 hover:text-primary-600 dark:text-white dark:hover:text-primary-400"
                       >
                         {{ classroom.name }}
                       </NuxtLink>
-                      <p class="text-sm text-gray-500 dark:text-gray-400">
-                        {{ classroom.student_count || 0 }}/{{ classroom.capacity || 40 }} คน
+                      <p class="truncate text-xs font-medium text-gray-400 dark:text-gray-500">
+                        ปีการศึกษา {{ academicYearLabel(classroom.academic_year) }}
                       </p>
                     </div>
                   </div>
-                  <div class="relative group">
-                    <button class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                      <Icon name="fluent:more-vertical-24-regular" class="w-5 h-5 text-gray-400" />
-                    </button>
-                    <div class="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-                      <button
-                        @click="openStudentsModal(classroom)"
-                        class="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 first:rounded-t-xl"
-                      >
-                        <Icon name="fluent:people-24-regular" class="w-4 h-4" />
-                        จัดการนักเรียน
-                      </button>
-                      <button
-                        @click="openEditModal(classroom)"
-                        class="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
-                      >
-                        <Icon name="fluent:edit-24-regular" class="w-4 h-4" />
-                        แก้ไข
-                      </button>
-                      <button
-                        @click="deleteClassroom(classroom)"
-                        class="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2 last:rounded-b-xl"
-                      >
-                        <Icon name="fluent:delete-24-regular" class="w-4 h-4" />
-                        ลบ
-                      </button>
-                    </div>
-                  </div>
+                  <span :class="['shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold', getGradeColor(classroom.grade_level)]">
+                    {{ classroom.grade_level || 'อื่นๆ' }}
+                  </span>
                 </div>
 
-                <!-- Progress Bar -->
+                <!-- Capacity -->
                 <div class="mb-4">
-                  <div class="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div 
-                      class="h-full rounded-full bg-gradient-to-r from-primary-500 to-sky-400 transition-all"
-                      :style="{ width: `${Math.min((classroom.student_count || 0) / (classroom.capacity || 40) * 100, 100)}%` }"
+                  <div class="mb-1.5 flex items-baseline justify-between gap-2">
+                    <p class="flex items-baseline gap-1">
+                      <span class="text-2xl font-bold leading-none text-gray-900 dark:text-white">{{ classroom.student_count || 0 }}</span>
+                      <span class="text-sm font-medium text-gray-400 dark:text-gray-500">/ {{ classroom.capacity || 40 }} คน</span>
+                    </p>
+                    <span :class="['shrink-0 rounded-full px-2 py-0.5 text-xs font-bold', capacityChipClass(classroom)]">
+                      {{ capacityPercent(classroom) }}%
+                    </span>
+                  </div>
+                  <div class="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
+                    <div
+                      :class="['h-full rounded-full transition-all duration-500', capacityBarClass(classroom)]"
+                      :style="{ width: `${Math.min(capacityPercent(classroom), 100)}%` }"
                     ></div>
                   </div>
                 </div>
 
                 <!-- Homeroom Teacher -->
-                <div v-if="classroom.homeroom_teacher" class="flex items-center gap-3 rounded-2xl border border-amber-100 bg-amber-50/80 p-3 dark:border-amber-800/40 dark:bg-amber-900/20">
+                <div v-if="classroom.homeroom_teacher" class="flex items-center gap-3 rounded-xl bg-gray-50 p-3 ring-1 ring-gray-200/70 dark:bg-gray-900/40 dark:ring-gray-700">
                   <img
                     :src="classroom.homeroom_teacher.profile_photo_url || '/images/default-avatar.png'"
                     :alt="classroom.homeroom_teacher.name"
-                    class="w-8 h-8 rounded-full object-cover"
+                    class="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-white dark:ring-gray-800"
                   />
-                  <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ classroom.homeroom_teacher.name }}</p>
-                    <p class="text-xs text-amber-600 dark:text-amber-400">ครูประจำชั้น</p>
-                  </div>
-                </div>
-                <div v-else class="flex items-center justify-between gap-2 rounded-2xl border border-dashed border-amber-200 bg-amber-50/60 p-3 dark:border-amber-800/50 dark:bg-amber-900/10">
-                  <div class="flex items-center gap-2 min-w-0">
-                    <Icon name="fluent:warning-24-regular" class="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                    <p class="truncate text-sm text-amber-700 dark:text-amber-300">ยังไม่ได้กำหนดครูประจำชั้น</p>
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-sm font-semibold text-gray-900 dark:text-white">{{ classroom.homeroom_teacher.name }}</p>
+                    <p class="text-xs font-medium text-primary-600 dark:text-primary-400">ครูประจำชั้น</p>
                   </div>
                   <button
                     type="button"
                     @click.stop="openAssignHomeroomModal(classroom)"
-                    class="shrink-0 rounded-lg bg-amber-600 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-700"
+                    title="เปลี่ยนครูประจำชั้น"
+                    aria-label="เปลี่ยนครูประจำชั้น"
+                    class="shrink-0 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-600 transition-colors hover:border-primary-300 hover:text-primary-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-primary-500 dark:hover:text-primary-400"
+                  >
+                    เปลี่ยน
+                  </button>
+                </div>
+                <div v-else class="flex items-center justify-between gap-2 rounded-xl border border-dashed border-amber-300 bg-amber-50 p-3 dark:border-amber-700/60 dark:bg-amber-900/20">
+                  <div class="flex min-w-0 items-center gap-2">
+                    <Icon icon="fluent:person-alert-24-regular" class="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <p class="truncate text-sm font-medium text-amber-800 dark:text-amber-300">ยังไม่มีครูประจำชั้น</p>
+                  </div>
+                  <button
+                    type="button"
+                    @click.stop="openAssignHomeroomModal(classroom)"
+                    class="shrink-0 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-white shadow-sm shadow-amber-500/30 transition-colors hover:bg-amber-600"
                   >
                     แต่งตั้ง
                   </button>
                 </div>
               </div>
 
-              <div class="flex items-center justify-between border-t border-gray-100 bg-gray-50/70 px-5 py-3 dark:border-gray-700 dark:bg-gray-900/20">
-                <button
-                  @click="openStudentsModal(classroom)"
-                  class="text-sm text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1"
-                >
-                  <Icon name="fluent:people-24-regular" class="w-4 h-4" />
-                  ดูนักเรียน
-                </button>
+              <!-- Actions live here permanently instead of a hover dropdown, which
+                   used to cover the card's own details while reading it. -->
+              <div class="mt-auto flex items-center gap-2 border-t border-gray-100 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900/40">
                 <NuxtLink
                   :to="`/academies/${academyName}/admin/classrooms/${classroom.id}`"
-                  @click.stop
-                  class="text-sm font-medium text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400"
+                  class="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm shadow-primary-600/30 transition-colors hover:bg-primary-700"
                 >
+                  <Icon icon="fluent:settings-24-regular" class="h-4 w-4" />
                   จัดการห้อง
-                  <Icon name="fluent:arrow-right-24-regular" class="ml-1 inline-block h-4 w-4" />
                 </NuxtLink>
-                <span class="text-xs text-gray-400">
-                  ปี {{ academicYearLabel(classroom.academic_year) }}
-                </span>
+                <button
+                  type="button"
+                  @click="openStudentsModal(classroom)"
+                  title="ดูนักเรียนในห้อง"
+                  aria-label="ดูนักเรียนในห้อง"
+                  class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary-600 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-primary-400"
+                >
+                  <Icon icon="fluent:people-24-regular" class="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  @click="openEditModal(classroom)"
+                  title="แก้ไขห้องเรียน"
+                  aria-label="แก้ไขห้องเรียน"
+                  class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary-600 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-primary-400"
+                >
+                  <Icon icon="fluent:edit-24-regular" class="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  @click="deleteClassroom(classroom)"
+                  title="ลบห้องเรียน"
+                  aria-label="ลบห้องเรียน"
+                  class="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400"
+                >
+                  <Icon icon="fluent:delete-24-regular" class="h-5 w-5" />
+                </button>
               </div>
             </div>
           </div>
@@ -964,7 +1030,7 @@ const getGradeColor = (grade: string) => {
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">สร้างห้องเรียนใหม่</h3>
             <button @click="showCreateModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              <Icon name="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
+              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
           
@@ -1046,7 +1112,7 @@ const getGradeColor = (grade: string) => {
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">แก้ไขห้องเรียน</h3>
             <button @click="showEditModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              <Icon name="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
+              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
           
@@ -1135,11 +1201,11 @@ const getGradeColor = (grade: string) => {
                 @click="openAddStudentsModal"
                 class="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded-lg font-medium transition-colors flex items-center gap-1"
               >
-                <Icon name="fluent:add-24-regular" class="w-4 h-4" />
+                <Icon icon="fluent:add-24-regular" class="w-4 h-4" />
                 เพิ่มนักเรียน
               </button>
               <button @click="showStudentsModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                <Icon name="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
+                <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
               </button>
             </div>
           </div>
@@ -1175,7 +1241,7 @@ const getGradeColor = (grade: string) => {
               </div>
               
               <div v-else-if="classroomStudents.length === 0" class="text-center py-12">
-                <Icon name="fluent:people-24-regular" class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+                <Icon icon="fluent:people-24-regular" class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
                 <p class="text-gray-500 dark:text-gray-400">ยังไม่มีนักเรียนในห้องนี้</p>
               </div>
               
@@ -1219,14 +1285,14 @@ const getGradeColor = (grade: string) => {
                             class="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                             title="ย้ายห้อง"
                           >
-                            <Icon name="fluent:arrow-swap-24-regular" class="w-4 h-4" />
+                            <Icon icon="fluent:arrow-swap-24-regular" class="w-4 h-4" />
                           </button>
                           <button
                             @click="removeStudent(student.id)"
                             class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                             title="นำออก"
                           >
-                            <Icon name="fluent:delete-24-regular" class="w-4 h-4" />
+                            <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
                           </button>
                         </div>
                       </td>
@@ -1258,13 +1324,13 @@ const getGradeColor = (grade: string) => {
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">เพิ่มนักเรียน</h3>
             <button @click="showAddStudentModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              <Icon name="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
+              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
           
           <div class="p-5 border-b border-gray-200 dark:border-gray-700">
             <div class="relative">
-              <Icon name="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 v-model="studentSearchQuery"
                 type="text"
@@ -1335,7 +1401,7 @@ const getGradeColor = (grade: string) => {
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">ย้ายห้องเรียน</h3>
             <button @click="showTransferModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              <Icon name="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
+              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
           
