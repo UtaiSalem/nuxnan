@@ -45,6 +45,8 @@ const tabs = [
 const studentSearch = ref('')
 const selectedStatusFilter = ref('active')
 const selectedGenderFilter = ref('all')
+const studentSortKey = ref<'student_number' | 'student_id' | 'name'>('student_number')
+const studentSortDir = ref<'asc' | 'desc'>('asc')
 const showAddStudentModal = ref(false)
 const searchQueryAddStudent = ref('')
 const availableStudents = ref<any[]>([])
@@ -114,8 +116,15 @@ const studentCount = computed(() => students.value.length || 0)
 const capacity = computed(() => classroom.value?.capacity || 40)
 const occupancy = computed(() => Math.min(Math.round((studentCount.value / capacity.value) * 100), 100))
 
+// Resolve strictly from homeroom_teacher_id. Falling back to "any member with
+// the teacher role" would keep showing someone after the post is cleared.
 const homeroomTeacher = computed(() => {
-  return classroom.value?.homeroom_teacher || members.value.find((m: any) => (m.user_id || m.user?.id) === classroom.value?.homeroom_teacher_id) || members.value.find((m: any) => m.role === 'teacher')
+  const teacherId = classroom.value?.homeroom_teacher_id
+  if (!teacherId) return null
+
+  return classroom.value?.homeroom_teacher
+    || members.value.find((m: any) => (m.user_id || m.user?.id) === teacherId)
+    || null
 })
 
 const clearHomeroomTeacher = async () => {
@@ -146,6 +155,12 @@ const classroomMembersList = computed(() => {
 const studentName = (student: any) => {
   if (student.user?.name) return student.user.name
   return [student.title_prefix_th, student.first_name_th, student.last_name_th].filter(Boolean).join(' ') || student.name || '-'
+}
+
+// เรียงตามชื่อจริง-นามสกุล โดยไม่เอาคำนำหน้ามาคิด ไม่งั้น "เด็กชาย" ทั้งหมดจะถูกจับกองไว้ด้วยกัน
+const studentSortName = (student: any) => {
+  const parts = [student.first_name_th, student.last_name_th].filter(Boolean).join(' ').trim()
+  return parts || studentName(student)
 }
 
 // Attendance summary computes
@@ -251,6 +266,45 @@ const filteredStudents = computed(() => {
     return matchesSearch && matchesStatus && matchesGender
   })
 })
+
+// Roster sorting — เลขที่ / เลขประจำตัว / ชื่อ-สกุล
+// Thai names need localeCompare('th'); student codes are numeric strings so
+// they need `numeric: true` or "10" would sort before "9".
+const sortedStudents = computed(() => {
+  const dir = studentSortDir.value === 'asc' ? 1 : -1
+
+  return [...filteredStudents.value].sort((a, b) => {
+    if (studentSortKey.value === 'student_number') {
+      // Students without a เลขที่ always sink to the bottom, either direction.
+      const na = Number(a.student_number)
+      const nb = Number(b.student_number)
+      const aMissing = !Number.isFinite(na)
+      const bMissing = !Number.isFinite(nb)
+      if (aMissing || bMissing) return aMissing && bMissing ? 0 : aMissing ? 1 : -1
+      return (na - nb) * dir
+    }
+
+    if (studentSortKey.value === 'student_id') {
+      return String(a.student_id || '').localeCompare(String(b.student_id || ''), 'th', { numeric: true }) * dir
+    }
+
+    return studentSortName(a).localeCompare(studentSortName(b), 'th') * dir
+  })
+})
+
+const toggleStudentSort = (key: 'student_number' | 'student_id' | 'name') => {
+  if (studentSortKey.value === key) {
+    studentSortDir.value = studentSortDir.value === 'asc' ? 'desc' : 'asc'
+    return
+  }
+  studentSortKey.value = key
+  studentSortDir.value = 'asc'
+}
+
+const studentSortIcon = (key: 'student_number' | 'student_id' | 'name') => {
+  if (studentSortKey.value !== key) return 'fluent:arrow-sort-24-regular'
+  return studentSortDir.value === 'asc' ? 'fluent:arrow-sort-up-24-filled' : 'fluent:arrow-sort-down-24-filled'
+}
 
 // Edit student number
 const startEditStudentNumber = (student: any) => {
@@ -802,7 +856,6 @@ onMounted(async () => {
             </div>
 
             <!-- Homeroom Teacher card -->
-            <button class="absolute right-6 top-6 z-10 text-xs font-bold text-primary-600 hover:underline" @click="showAssignHomeroomModal = true">{{ homeroomTeacher ? 'เปลี่ยน' : 'แต่งตั้ง' }}</button>
             <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-800 hover:shadow-md transition-shadow">
               <div class="flex items-center justify-between">
                 <p class="text-sm font-semibold text-slate-500 dark:text-slate-400">ครูประจำชั้น</p>
@@ -814,10 +867,24 @@ onMounted(async () => {
                 </div>
                 <div class="min-w-0 flex-1">
                   <p class="truncate text-base font-bold text-slate-900 dark:text-white">{{ homeroomTeacher?.name || 'ยังไม่ได้กำหนด' }}</p>
-                  <p class="truncate text-xs text-slate-500 dark:text-slate-400">{{ homeroomTeacher?.email || 'admin@nuxnan.com' }}</p>
+                  <p class="truncate text-xs text-slate-500 dark:text-slate-400">{{ homeroomTeacher?.email || '—' }}</p>
                 </div>
               </div>
-              <p class="mt-2 text-xs font-semibold text-slate-400 dark:text-slate-500">บทบาท: ครูประจำชั้นหลัก</p>
+              <div class="mt-4 flex items-center justify-end gap-2">
+                <button
+                  class="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-bold text-primary-600 transition-colors hover:bg-primary-50 dark:border-slate-700 dark:hover:bg-slate-700"
+                  @click="showAssignHomeroomModal = true"
+                >
+                  {{ homeroomTeacher ? 'เปลี่ยน' : 'แต่งตั้ง' }}
+                </button>
+                <button
+                  v-if="homeroomTeacher"
+                  class="rounded-lg border border-red-200 px-2.5 py-1 text-xs font-bold text-red-600 transition-colors hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
+                  @click="clearHomeroomTeacher"
+                >
+                  เอาออก
+                </button>
+              </div>
             </div>
 
             <!-- Attendance Rate card -->
@@ -1024,31 +1091,60 @@ onMounted(async () => {
           <!-- Roster List Table -->
           <div class="overflow-hidden bg-white dark:bg-slate-800 rounded-2xl border dark:border-slate-700 shadow-sm">
             <div class="overflow-x-auto">
-              <table class="w-full text-left border-collapse">
+              <!-- Column widths include the cell padding, so px-4 (not px-5) is
+                   what keeps the narrow badge columns from wrapping mid-word. -->
+              <table class="w-full min-w-[1040px] text-left border-collapse">
                 <thead>
-                  <tr class="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    <th class="px-5 py-4 w-20">เลขที่</th>
-                    <th class="px-5 py-4 w-32">รหัสนักเรียน</th>
-                    <th class="px-5 py-4 min-w-[200px]">รูปภาพ & ชื่อ-นามสกุล</th>
-                    <th class="px-5 py-4 w-28">ชื่อเล่น</th>
-                    <th class="px-5 py-4 w-20">เพศ</th>
-                    <th class="px-5 py-4 w-32">สถานะ</th>
-                    <th class="px-5 py-4 w-52">ผู้ปกครองหลัก</th>
-                    <th class="px-5 py-4 text-right w-44">การจัดการ</th>
+                  <tr class="bg-slate-50 dark:bg-slate-900/50 border-b dark:border-slate-700 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                    <th class="px-4 py-4 w-20">
+                      <button
+                        @click="toggleStudentSort('student_number')"
+                        class="inline-flex items-center gap-1 font-semibold transition-colors hover:text-primary-600 dark:hover:text-primary-400"
+                        :class="studentSortKey === 'student_number' ? 'text-primary-600 dark:text-primary-400' : ''"
+                      >
+                        เลขที่
+                        <Icon :icon="studentSortIcon('student_number')" class="h-3.5 w-3.5" />
+                      </button>
+                    </th>
+                    <th class="px-4 py-4 w-28">
+                      <button
+                        @click="toggleStudentSort('student_id')"
+                        class="inline-flex items-center gap-1 font-semibold transition-colors hover:text-primary-600 dark:hover:text-primary-400"
+                        :class="studentSortKey === 'student_id' ? 'text-primary-600 dark:text-primary-400' : ''"
+                      >
+                        เลขประจำตัว
+                        <Icon :icon="studentSortIcon('student_id')" class="h-3.5 w-3.5" />
+                      </button>
+                    </th>
+                    <th class="px-4 py-4 min-w-[200px]">
+                      <button
+                        @click="toggleStudentSort('name')"
+                        class="inline-flex items-center gap-1 font-semibold transition-colors hover:text-primary-600 dark:hover:text-primary-400"
+                        :class="studentSortKey === 'name' ? 'text-primary-600 dark:text-primary-400' : ''"
+                      >
+                        รูปภาพ &amp; ชื่อ-นามสกุล
+                        <Icon :icon="studentSortIcon('name')" class="h-3.5 w-3.5" />
+                      </button>
+                    </th>
+                    <th class="px-4 py-4 w-24">ชื่อเล่น</th>
+                    <th class="px-4 py-4 w-24">เพศ</th>
+                    <th class="px-4 py-4 w-36">สถานะ</th>
+                    <th class="px-4 py-4 w-44">ผู้ปกครองหลัก</th>
+                    <th class="px-4 py-4 text-right w-36">การจัดการ</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-700/60">
-                  <tr v-if="filteredStudents.length === 0">
+                  <tr v-if="sortedStudents.length === 0">
                     <td colspan="8" class="text-center py-10 text-slate-400 dark:text-slate-500 text-sm">ไม่พบรายชื่อนักเรียน</td>
                   </tr>
-                  
-                  <tr 
-                    v-for="(student, index) in filteredStudents" 
+
+                  <tr
+                    v-for="(student, index) in sortedStudents"
                     :key="student.id"
                     class="hover:bg-slate-50/50 dark:hover:bg-slate-700/20 transition-colors text-sm text-slate-800 dark:text-slate-200"
                   >
                     <!-- student_number -->
-                    <td class="px-5 py-3.5 font-medium">
+                    <td class="px-4 py-3.5 font-medium">
                       <div v-if="editingStudentNumberId === student.id" class="flex items-center gap-1.5">
                         <input
                           v-model="editingStudentNumberValue"
@@ -1075,10 +1171,10 @@ onMounted(async () => {
                     </td>
                     
                     <!-- student_id_code -->
-                    <td class="px-5 py-3.5 font-mono text-xs text-slate-500 dark:text-slate-400">{{ student.student_id || '-' }}</td>
-                    
+                    <td class="px-4 py-3.5 font-mono text-xs text-slate-500 dark:text-slate-400">{{ student.student_id || '-' }}</td>
+
                     <!-- Photo & Name -->
-                    <td class="px-5 py-3.5">
+                    <td class="px-4 py-3.5">
                       <div class="flex items-center gap-3">
                         <img
                           v-if="student.profile_image_url || student.profile_image"
@@ -1097,33 +1193,33 @@ onMounted(async () => {
                     </td>
 
                     <!-- Nickname -->
-                    <td class="px-5 py-3.5 font-semibold">{{ student.nickname || '-' }}</td>
+                    <td class="px-4 py-3.5 font-semibold truncate">{{ student.nickname || '-' }}</td>
 
                     <!-- Gender -->
-                    <td class="px-5 py-3.5">
-                      <span class="text-xs font-semibold px-2 py-0.5 rounded-full" :class="student.gender === 1 ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' : 'bg-pink-100 text-pink-800 dark:bg-pink-950 dark:text-pink-300'">
+                    <td class="px-4 py-3.5">
+                      <span class="inline-block whitespace-nowrap text-xs font-semibold px-2 py-0.5 rounded-full" :class="student.gender === 1 ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' : 'bg-pink-100 text-pink-800 dark:bg-pink-950 dark:text-pink-300'">
                         {{ student.gender === 1 ? 'ชาย' : 'หญิง' }}
                       </span>
                     </td>
 
                     <!-- Status -->
-                    <td class="px-5 py-3.5">
-                      <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold" :class="student.status === 'active' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-slate-100 text-slate-800 dark:bg-slate-950 dark:text-slate-300'">
-                        <span class="w-1.5 h-1.5 rounded-full" :class="student.status === 'active' ? 'bg-emerald-400' : 'bg-slate-400'"></span>
+                    <td class="px-4 py-3.5">
+                      <span class="inline-flex items-center gap-1.5 whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-semibold" :class="student.status === 'active' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-slate-100 text-slate-800 dark:bg-slate-950 dark:text-slate-300'">
+                        <span class="w-1.5 h-1.5 shrink-0 rounded-full" :class="student.status === 'active' ? 'bg-emerald-400' : 'bg-slate-400'"></span>
                         {{ student.status === 'active' ? 'กำลังเรียน' : student.status }}
                       </span>
                     </td>
 
                     <!-- Parent / Guardian -->
-                    <td class="px-5 py-3.5">
+                    <td class="px-4 py-3.5">
                       <div class="text-xs">
-                        <p class="font-semibold text-slate-950 dark:text-white">{{ student.guardians?.[0]?.guardian_name || 'ไม่ระบุ' }}</p>
+                        <p class="truncate font-semibold text-slate-950 dark:text-white">{{ student.guardians?.[0]?.guardian_name || 'ไม่ระบุ' }}</p>
                         <p class="text-slate-400 font-mono mt-0.5">{{ student.guardians?.[0]?.phone || '-' }}</p>
                       </div>
                     </td>
 
                     <!-- Actions -->
-                    <td class="px-5 py-3.5 text-right space-x-1 whitespace-nowrap">
+                    <td class="px-4 py-3.5 text-right space-x-1 whitespace-nowrap">
                       <!-- View Profile -->
                       <button
                         @click="openStudentProfile(student)"
@@ -1202,7 +1298,7 @@ onMounted(async () => {
                 </div>
                 <div>
                   <h4 class="font-extrabold text-slate-950 dark:text-white text-base">{{ member.name || member.user?.name || '-' }}</h4>
-                  <p class="text-xs text-slate-400 font-mono mt-0.5">{{ member.user?.email || member.email || 'admin@nuxnan.com' }}</p>
+                  <p class="text-xs text-slate-400 font-mono mt-0.5">{{ member.user?.email || member.email || '—' }}</p>
                 </div>
               </div>
               
@@ -1216,6 +1312,14 @@ onMounted(async () => {
                   >
                     <Icon icon="fluent:person-star-24-regular" class="h-4 w-4" />
                     ตั้งเป็นครูประจำชั้น
+                  </button>
+                  <button
+                    v-if="(member.user_id || member.user?.id) === classroom.homeroom_teacher_id"
+                    @click="clearHomeroomTeacher"
+                    class="text-red-500 hover:text-red-600 font-bold flex items-center gap-1 dark:text-red-400"
+                  >
+                    <Icon icon="fluent:person-subtract-24-regular" class="h-4 w-4" />
+                    ลบออก
                   </button>
                   <button
                     v-if="member.role !== 'teacher'"
