@@ -9,6 +9,7 @@ use App\Models\AcademicYear;
 use App\Models\Academy;
 use App\Models\Student;
 use App\Models\StudentCard;
+use App\Services\StudentCardAccessService;
 use App\Services\StudentCardAuditService;
 use App\Services\StudentCardSyncService;
 use App\Services\StudentPhotoService;
@@ -38,6 +39,22 @@ class StudentCardController extends Controller
         $card = $studentCard instanceof StudentCard ? $studentCard : StudentCard::findOrFail($studentCard);
 
         return [$academyModel, $card];
+    }
+
+    /**
+     * ตรวจสิทธิ์แก้บัตร เฉพาะเส้นทางที่มี academy อยู่ใน URL
+     *
+     * เส้นทางสาธารณะชั่วคราว (/api/student-card/...) ส่ง $academy เป็น null และ
+     * ยังคุมด้วย config flag + throttle ตามเดิม — ห้ามบังคับตรงนี้ ไม่งั้นหน้า
+     * ชั่วคราวที่ครูใช้งานอยู่จริงจะพังทันที (ข้อตกลง: เปิดสองเส้นคู่ขนานไปก่อน)
+     */
+    private function ensureCanManageCard(Request $request, $academy, StudentCard $card): void
+    {
+        if (! $academy instanceof Academy) {
+            return;
+        }
+
+        app(StudentCardAccessService::class)->ensureCanManageCard($academy, $card, $request->user());
     }
 
     private function resolveRoomRouteParameters($academy, $level, $room): array
@@ -471,6 +488,7 @@ class StudentCardController extends Controller
     {
         [$academy, $student_card] = $this->resolveCardRouteParameters($academy, $student_card);
         $this->ensureCardBelongsToAcademy($student_card, $academy);
+        $this->ensureCanManageCard($request, $academy, $student_card);
         $request->validate([
             'photo' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
@@ -519,6 +537,7 @@ class StudentCardController extends Controller
     {
         [$academy, $student_card] = $this->resolveCardRouteParameters($academy, $student_card);
         $this->ensureCardBelongsToAcademy($student_card, $academy);
+        $this->ensureCanManageCard($request, $academy, $student_card);
         $request->validate([
             'student_number' => 'required|string|max:255',
         ]);
@@ -548,6 +567,7 @@ class StudentCardController extends Controller
     {
         [$academy, $student_card] = $this->resolveCardRouteParameters($academy, $student_card);
         $this->ensureCardBelongsToAcademy($student_card, $academy);
+        $this->ensureCanManageCard($request, $academy, $student_card);
         $request->validate([
             'title_name' => 'nullable|string|max:50',
             'first_name_thai' => 'nullable|string|max:255',
@@ -587,6 +607,7 @@ class StudentCardController extends Controller
     {
         [$academy, $student_card] = $this->resolveCardRouteParameters($academy, $student_card);
         $this->ensureCardBelongsToAcademy($student_card, $academy);
+        $this->ensureCanManageCard($request, $academy, $student_card);
         $request->validate([
             'first_name_english' => 'nullable|string|max:255',
             'last_name_english' => 'nullable|string|max:255',
@@ -621,6 +642,7 @@ class StudentCardController extends Controller
     {
         [$academy, $student_card] = $this->resolveCardRouteParameters($academy, $student_card);
         $this->ensureCardBelongsToAcademy($student_card, $academy);
+        $this->ensureCanManageCard($request, $academy, $student_card);
         $request->validate([
             'student_number' => 'nullable|string|max:255',
             'title_name' => 'nullable|string|max:50',
@@ -817,6 +839,7 @@ class StudentCardController extends Controller
     {
         [$academy, $student_card] = $this->resolveCardRouteParameters($academy, $student_card);
         $this->ensureCardBelongsToAcademy($student_card, $academy);
+        $this->ensureCanManageCard($request, $academy, $student_card);
         try {
             $student = $student_card->student;
             if ($student) {
