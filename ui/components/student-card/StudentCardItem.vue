@@ -13,7 +13,7 @@ const props = defineProps({
     canEdit: { type: Boolean, default: true },
     selectMode: { type: Boolean, default: false },
     selected: { type: Boolean, default: false },
-    school: { type: Object, default: () => ({ ...DEFAULT_STUDENT_CARD_SCHOOL }) },
+    school: { type: Object, default: () => ({}) },
     // ตัวเรียก API — ถ้าไม่ส่งมาจะใช้เส้นทางสาธารณะเดิม (หน้าชั่วคราว)
     updateCard: { type: Function, default: null },
     uploadPhoto: { type: Function, default: null },
