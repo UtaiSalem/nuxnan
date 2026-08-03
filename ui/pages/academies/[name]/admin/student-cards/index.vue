@@ -4,7 +4,7 @@
  * หน้าจัดการบัตรนักเรียน - มี 2 โหมด: ดูตามห้อง / ดูรายชื่อ
  */
 import { Icon } from '@iconify/vue'
-import StudentCardFront from '~/components/learn/student-card/StudentCardFront.vue'
+import StudentCardRoomManager from '~/components/academy/student-card/StudentCardRoomManager.vue'
 
 definePageMeta({
   layout: 'main'
@@ -46,16 +46,13 @@ const stats = ref({
   sectionsByLevel: {} as Record<string, string[]>,
 })
 
-// Room browsing
+// Room browsing — เมื่อเลือกห้องแล้ว StudentCardRoomManager เป็นคนโหลดและจัดการเอง
 const activeLevel = ref('')
-const roomStudents = ref<any[]>([])
-const isLoadingRoom = ref(false)
 
 // Scoped state for errors & separate loading
 const pageError = ref<string | null>(null)
 const statsError = ref<string | null>(null)
 const listError = ref<string | null>(null)
-const roomError = ref<string | null>(null)
 const isLoadingStats = ref(false)
 const isLoadingList = ref(false)
 const hasLoaded = ref(false)
@@ -65,7 +62,6 @@ const initializePage = async () => {
   pageError.value = null
   statsError.value = null
   listError.value = null
-  roomError.value = null
   isLoading.value = true
   try {
     // Parent (admin.vue) already resolved my-role, but our local useAcademyRole
@@ -163,26 +159,9 @@ const fetchStudents = async () => {
   }
 }
 
-const fetchRoomStudents = async (level: string, room: string) => {
-  if (!academyId.value) return
-  isLoadingRoom.value = true
-  roomError.value = null
+const openRoom = (level: string, room: string) => {
   selectedLevel.value = level
   selectedRoom.value = room
-
-  try {
-    const response: any = await api.get(`/api/academies/${academyId.value}/student-cards/${level}/${room}`)
-    if (response.success) {
-      roomStudents.value = response.students || []
-    } else {
-      roomError.value = 'ไม่สามารถดึงข้อมูลนักเรียนของห้องนี้ได้'
-    }
-  } catch (err: any) {
-    console.error('Failed to fetch room students:', err)
-    roomError.value = err?.data?.message || 'เกิดข้อผิดพลาดในการดึงรายชื่อนักเรียนประจำห้อง'
-  } finally {
-    isLoadingRoom.value = false
-  }
 }
 
 const handleSearch = () => {
@@ -204,7 +183,6 @@ const switchToRooms = () => {
   viewMode.value = 'rooms'
   selectedLevel.value = ''
   selectedRoom.value = ''
-  roomStudents.value = []
 }
 
 const viewStudentCard = (student: any) => {
@@ -222,17 +200,12 @@ const editStudentCard = (student: any) => {
 // Computed
 const levels = computed(() => Object.keys(stats.value.byLevel || {}).sort())
 
+// ห้องที่มีอยู่จริงเท่านั้น — sectionsByLevel มาจาก query เดียวกับ byLevel
+// (เดิม fallback เป็น 1–10 ตายตัว ทำให้ขึ้นห้องที่โรงเรียนไม่มี แล้วกดเข้าไปเจอห้องว่าง)
 const roomsForLevel = computed(() => {
   if (!activeLevel.value) return []
-  const secs = stats.value.sectionsByLevel?.[activeLevel.value]
-  return secs || ['1','2','3','4','5','6','7','8','9','10']
+  return stats.value.sectionsByLevel?.[activeLevel.value] || []
 })
-
-const academyLogo = computed(() => {
-  return academy.value?.logo ? `/storage/${academy.value.logo}` : '/images/default-school-logo.png'
-})
-
-const academyAddress = computed(() => academy.value?.address || '')
 
 const photoRate = computed(() => {
   if (!stats.value.totalStudents) return 0
@@ -385,7 +358,7 @@ const getProfileImage = (student: any) => {
             <button
               v-for="level in levels"
               :key="level"
-              @click="activeLevel = level; selectedRoom = ''; roomStudents = []"
+              @click="activeLevel = level; selectedRoom = ''"
               :class="[
                 'px-5 py-3 rounded-xl font-semibold transition-all flex items-center gap-2',
                 activeLevel === level
@@ -404,7 +377,7 @@ const getProfileImage = (student: any) => {
             <div
               v-for="room in roomsForLevel"
               :key="room"
-              @click="fetchRoomStudents(activeLevel, room)"
+              @click="openRoom(activeLevel, room)"
               class="group bg-white dark:bg-gray-800 shadow-sm rounded-2xl p-6 cursor-pointer hover:scale-105 hover:shadow-lg transition-all text-center border-2 border-gray-200 dark:border-gray-700 hover:border-primary-400 dark:hover:border-primary-500 relative overflow-hidden"
             >
               <div class="flex flex-col items-center justify-center">
@@ -427,62 +400,16 @@ const getProfileImage = (student: any) => {
             </p>
           </div>
 
-          <!-- Room Students (Card View) -->
-          <div v-if="selectedRoom">
-            <div class="flex items-center justify-between mb-4">
-              <div class="flex items-center gap-3">
-                <button
-                  @click="selectedRoom = ''; roomStudents = []"
-                  class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
-                >
-                  <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />
-                </button>
-                <h2 class="text-xl font-bold text-gray-900 dark:text-white">
-                  ม.{{ selectedLevel }}/{{ selectedRoom }}
-                </h2>
-                <span class="text-sm text-gray-500 dark:text-gray-400">
-                  {{ roomStudents.length }} คน
-                </span>
-              </div>
-            </div>
-
-            <!-- Room Loading -->
-            <div v-if="isLoadingRoom" class="flex justify-center py-10">
-              <div class="animate-spin rounded-full h-8 w-8 border-4 border-primary-500 border-t-transparent"></div>
-            </div>
-
-            <!-- Room Error -->
-            <div v-else-if="roomError" class="p-8 text-center text-red-500 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30 max-w-md mx-auto my-6">
-              <Icon icon="fluent:error-circle-24-regular" class="w-8 h-8 mx-auto mb-2 text-red-500" />
-              <p class="text-sm">{{ roomError }}</p>
-              <button @click="fetchRoomStudents(selectedLevel, selectedRoom)" class="mt-3 px-3 py-1.5 bg-red-100 hover:bg-red-200 dark:bg-red-900/50 dark:hover:bg-red-900 text-xs font-semibold rounded-lg transition">
-                ลองใหม่อีกครั้ง
-              </button>
-            </div>
-
-            <!-- Room Empty -->
-            <div v-else-if="roomStudents.length === 0" class="text-center py-12">
-              <Icon icon="fluent:people-24-regular" class="w-12 h-12 mx-auto text-gray-300 mb-3" />
-              <p class="text-gray-500 dark:text-gray-400">ไม่พบข้อมูลนักเรียนประจำห้องเรียนนี้</p>
-            </div>
-
-            <!-- Room Cards List -->
-            <div v-else class="grid grid-cols-1 gap-4">
-              <div
-                v-for="student in roomStudents"
-                :key="student.id"
-                class="cursor-pointer"
-                @click="viewStudentCard(student)"
-              >
-                <StudentCardFront
-                  :student="student"
-                  :academy-name="academy?.name"
-                  :academy-logo="academyLogo"
-                  :academy-address="academyAddress"
-                />
-              </div>
-            </div>
-          </div>
+          <!-- Room Students — จัดการได้เต็มรูปแบบในหน้าเดียว -->
+          <StudentCardRoomManager
+            v-if="selectedRoom && academyId"
+            :key="`${selectedLevel}-${selectedRoom}`"
+            :academy-id="academyId"
+            :academy="academy"
+            :level="selectedLevel"
+            :room="selectedRoom"
+            @back="selectedRoom = ''"
+          />
         </template>
 
         <!-- =============== LIST MODE =============== -->
