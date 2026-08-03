@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import Swal from 'sweetalert2'
 import { Icon } from '@iconify/vue'
 import StudentCardItem from '~/components/student-card/StudentCardItem.vue'
@@ -24,6 +24,14 @@ useHead({ title: computed(() => `บัตรนักเรียน ม.${leve
 const students = ref<any[]>([])
 const isLoading = ref(true)
 const searchTerm = ref('')
+
+type SortKey = 'student_number' | 'order_no' | 'name'
+const sortKey = ref<SortKey>('student_number')
+const sortOptions: { key: SortKey; label: string }[] = [
+    { key: 'student_number', label: 'เลขประจำตัว' },
+    { key: 'order_no', label: 'เลขที่' },
+    { key: 'name', label: 'ชื่อ-สกุล' },
+]
 
 const {
     manageContext,
@@ -181,6 +189,18 @@ const handleRemoveConfirm = async (reason: string | null) => {
     }
 }
 
+// ชื่อจริง-นามสกุลแบบตัดคำนำหน้าทิ้ง ใช้สองที่:
+// 1) ตอนเรียง ไม่งั้น "เด็กชาย" ทั้งหมดจะถูกจับกองไว้ด้วยกัน
+// 2) ตอนแสดงในรายชื่อด้านซ้าย ซึ่งคอลัมน์แคบ คำนำหน้ากินที่เปล่าๆ
+const studentSortName = (s: any) => {
+    const parts = [s?.first_name_thai, s?.last_name_thai].filter(Boolean).join(' ').trim()
+    if (parts) return parts
+    const title = s?.title_name?.trim()
+    const full = (s?.full_name_thai || '').trim()
+
+    return title && full.startsWith(title) ? full.slice(title.length).trim() : full
+}
+
 const filteredStudents = computed(() => {
     if (!searchTerm.value) return students.value
     const term = searchTerm.value.toLowerCase()
@@ -189,6 +209,122 @@ const filteredStudents = computed(() => {
         (s.first_name_thai && s.first_name_thai.toLowerCase().includes(term)) ||
         (s.student_number && s.student_number.toString().includes(term))
     )
+})
+
+// เรียงลำดับรายการบัตร — ค่าเริ่มต้นคือเลขประจำตัวนักเรียน
+// เลขประจำตัวเก็บเป็นสตริง จึงต้องใช้ numeric:true ไม่งั้น "10" จะมาก่อน "9"
+const sortedStudents = computed(() => {
+    const list = [...filteredStudents.value]
+
+    if (sortKey.value === 'name') {
+        return list.sort((a, b) => studentSortName(a).localeCompare(studentSortName(b), 'th'))
+    }
+
+    if (sortKey.value === 'order_no') {
+        return list.sort((a, b) => {
+            // คนที่ยังไม่มีเลขที่ให้ไปอยู่ท้ายรายการเสมอ
+            const na = Number(a.order_no)
+            const nb = Number(b.order_no)
+            const aMissing = !Number.isFinite(na)
+            const bMissing = !Number.isFinite(nb)
+            if (aMissing || bMissing) return aMissing && bMissing ? 0 : aMissing ? 1 : -1
+            return na - nb
+        })
+    }
+
+    return list.sort((a, b) =>
+        String(a.student_number || '').localeCompare(String(b.student_number || ''), 'th', { numeric: true }))
+})
+
+// ---- แถบนำทางระหว่างบัตร ----
+// currentIndex ถูกอัพเดทสองทาง: ผู้ใช้เลือกเอง หรือเลื่อนจอเองแล้วคำนวณตามตำแหน่ง
+const currentIndex = ref(0)
+const NAV_OFFSET = 96 // ความสูงแถบนำทาง + ระยะเผื่อ ต้องตรงกับ scroll-mt ของการ์ด
+
+const studentLabel = (s: any, index: number) => {
+    const name = s?.full_name_thai
+        || [s?.title_name, s?.first_name_thai, s?.last_name_thai].filter(Boolean).join(' ')
+        || 'ไม่ระบุชื่อ'
+    const orderNo = s?.order_no ? `เลขที่ ${s.order_no}` : `ลำดับ ${index + 1}`
+
+    return `${orderNo} · ${s?.student_number || '-'} · ${name}`
+}
+
+const scrollToIndex = (index: number) => {
+    const student = sortedStudents.value[index]
+    if (!student) return
+    currentIndex.value = index
+
+    const el = document.getElementById(`card-${student.id}`)
+    if (!el) return
+
+    const before = window.scrollY
+    el.scrollIntoView({ block: 'start', behavior: 'smooth' })
+
+    // บางเบราว์เซอร์ (หรือโหมดลดการเคลื่อนไหว) ไม่ทำ smooth scroll ให้เลย
+    // ถ้าจอไม่ขยับภายในเวลาสั้นๆ ให้กระโดดแบบทันทีแทน ปุ่มนำทางจะได้ไม่ด้าน
+    window.setTimeout(() => {
+        if (Math.abs(window.scrollY - before) < 2) el.scrollIntoView({ block: 'start' })
+    }, 300)
+}
+
+const stepCard = (delta: number) => {
+    const next = currentIndex.value + delta
+    if (next < 0 || next >= sortedStudents.value.length) return
+    scrollToIndex(next)
+}
+
+// รายชื่อด้านซ้าย (จอใหญ่เท่านั้น) — เลื่อนตามบัตรที่กำลังดู
+// ตั้ง scrollTop เองแทน scrollIntoView เพราะ scrollIntoView จะลาก viewport หลักไปด้วย
+const railRef = ref<HTMLElement | null>(null)
+
+const syncRailScroll = () => {
+    const rail = railRef.value
+    const student = sortedStudents.value[currentIndex.value]
+    if (!rail || !student) return
+
+    const row = document.getElementById(`row-${student.id}`)
+    if (!row) return
+
+    const top = row.offsetTop
+    const bottom = top + row.offsetHeight
+    if (top < rail.scrollTop) rail.scrollTop = top - 8
+    else if (bottom > rail.scrollTop + rail.clientHeight) rail.scrollTop = bottom - rail.clientHeight + 8
+}
+
+watch(currentIndex, syncRailScroll)
+
+// ใบที่กำลังดูอยู่ = ใบสุดท้ายที่ขอบบนเลื่อนพ้นแถบนำทางไปแล้ว
+// ใช้ scroll listener แทน IntersectionObserver เพราะต้องการให้ทำงานเหมือนกันทุกเบราว์เซอร์
+let scrollTicking = false
+
+const syncCurrentIndexToScroll = () => {
+    const list = sortedStudents.value
+    if (!list.length) return
+
+    let index = 0
+    for (let i = 0; i < list.length; i++) {
+        const el = document.getElementById(`card-${list[i].id}`)
+        if (!el) continue
+        if (el.getBoundingClientRect().top - NAV_OFFSET > 0) break
+        index = i
+    }
+    currentIndex.value = index
+}
+
+const handleScroll = () => {
+    if (scrollTicking) return
+    scrollTicking = true
+    window.requestAnimationFrame(() => {
+        scrollTicking = false
+        syncCurrentIndexToScroll()
+    })
+}
+
+watch(sortedStudents, async (list) => {
+    if (currentIndex.value > list.length - 1) currentIndex.value = Math.max(0, list.length - 1)
+    await nextTick()
+    syncCurrentIndexToScroll()
 })
 
 const fetchStudents = async () => {
@@ -206,6 +342,11 @@ const fetchStudents = async () => {
 onMounted(() => {
     fetchStudents()
     fetchManageContext()
+    window.addEventListener('scroll', handleScroll, { passive: true })
+})
+
+onBeforeUnmount(() => {
+    window.removeEventListener('scroll', handleScroll)
 })
 </script>
 
@@ -245,6 +386,12 @@ onMounted(() => {
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                         </div>
+                        <select v-model="sortKey" title="เรียงลำดับตาม"
+                            class="w-full sm:w-auto px-4 py-2 border border-gray-200 rounded-xl bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                            <option v-for="opt in sortOptions" :key="opt.key" :value="opt.key">
+                                เรียงตาม{{ opt.label }}
+                            </option>
+                        </select>
                         <NuxtLink to="/student-card"
                             class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 flex items-center justify-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -334,22 +481,91 @@ onMounted(() => {
             </div>
 
             <!-- Cards -->
-            <div v-else class="grid grid-cols-1 gap-6 pb-6">
-                <StudentCardItem
-                    v-for="student in filteredStudents"
-                    :key="student.id"
-                    :studentInfo="student"
-                    :canManage="!!manageContext?.can_manage"
-                    :canRequest="!!manageContext?.can_request"
-                    :selectMode="selectMode"
-                    :selected="!!student.student_id && selectedIds.has(student.student_id)"
-                    @transfer="openTransferModal"
-                    @remove="openRemoveModal"
-                    @request="openRequestModal"
-                    @cancel-request="cancelRequest"
-                    @toggle-select="toggleSelect"
-                />
-            </div>
+            <template v-else>
+              <!-- ไม่ใส่ items-start เพราะต้องให้ aside ยืดเต็มความสูงคอลัมน์การ์ด
+                   ไม่งั้นกล่อง sticky ข้างในจะไม่มีที่ให้เกาะตอนเลื่อน -->
+              <div class="lg:flex lg:gap-6">
+                <!-- รายชื่อด้านซ้าย — ข้อความล้วน ย่อได้ไม่พัง แต่ยังซ่อนบนจอเล็กเพื่อไม่ให้เบียดการ์ด -->
+                <aside class="hidden shrink-0 lg:block lg:w-64 xl:w-72">
+                    <div class="rounded-2xl border border-gray-200 bg-white shadow-sm lg:sticky lg:top-4">
+                        <div class="flex items-center gap-2 border-b border-gray-100 px-3 py-2.5 text-sm font-semibold text-gray-700">
+                            <Icon icon="heroicons:list-bullet" class="h-4 w-4 text-blue-600" />
+                            รายชื่อนักเรียน
+                            <span class="ml-auto text-xs font-normal text-gray-400">{{ sortedStudents.length }} คน</span>
+                        </div>
+
+                        <div class="grid grid-cols-[2.5rem_3.5rem_1fr] gap-2 border-b border-gray-100 px-3 py-1.5 text-[11px] font-semibold text-gray-400">
+                            <span>เลขที่</span>
+                            <span>รหัส</span>
+                            <span>ชื่อ-สกุล</span>
+                        </div>
+
+                        <div ref="railRef" class="relative max-h-[calc(100vh-11rem)] overflow-y-auto py-1">
+                            <button v-for="(student, index) in sortedStudents" :key="student.id"
+                                :id="`row-${student.id}`" type="button" @click="scrollToIndex(index)"
+                                class="grid w-full grid-cols-[2.5rem_3.5rem_1fr] items-center gap-2 px-3 py-1.5 text-left text-xs transition"
+                                :class="index === currentIndex
+                                    ? 'bg-blue-50 font-semibold text-blue-700'
+                                    : 'text-gray-600 hover:bg-gray-50'">
+                                <span class="tabular-nums">{{ student.order_no || '-' }}</span>
+                                <span class="font-mono tabular-nums">{{ student.student_number || '-' }}</span>
+                                <span class="truncate">{{ studentSortName(student) || 'ไม่ระบุชื่อ' }}</span>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+
+                <div class="min-w-0 lg:flex-1">
+                <!-- แถบนำทาง — ลอยอยู่บนสุดเสมอ กระโดดไปบัตรของใครก็ได้โดยไม่ต้องเลื่อนหา -->
+                <div class="sticky top-0 z-30 -mx-4 mb-4 border-b border-gray-200 bg-white/95 px-4 py-2.5 shadow-sm backdrop-blur lg:mx-0 lg:rounded-2xl lg:border lg:px-3">
+                    <div class="flex items-center gap-2">
+                        <button @click="stepCard(-1)" :disabled="currentIndex <= 0"
+                            class="shrink-0 rounded-lg border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-50 disabled:opacity-40"
+                            aria-label="บัตรก่อนหน้า">
+                            <Icon icon="heroicons:chevron-up" class="h-4 w-4" />
+                        </button>
+
+                        <select :value="currentIndex"
+                            @change="scrollToIndex(Number(($event.target as HTMLSelectElement).value))"
+                            class="min-w-0 flex-1 truncate rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-blue-500"
+                            aria-label="ไปที่บัตรนักเรียน">
+                            <option v-for="(student, index) in sortedStudents" :key="student.id" :value="index">
+                                {{ studentLabel(student, index) }}
+                            </option>
+                        </select>
+
+                        <button @click="stepCard(1)" :disabled="currentIndex >= sortedStudents.length - 1"
+                            class="shrink-0 rounded-lg border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-50 disabled:opacity-40"
+                            aria-label="บัตรถัดไป">
+                            <Icon icon="heroicons:chevron-down" class="h-4 w-4" />
+                        </button>
+
+                        <span class="shrink-0 whitespace-nowrap text-xs font-semibold text-gray-500 tabular-nums">
+                            {{ currentIndex + 1 }}/{{ sortedStudents.length }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-6 pb-6">
+                    <!-- scroll-mt เผื่อความสูงของแถบนำทาง ไม่งั้นหัวบัตรจะโดนแถบบัง -->
+                    <div v-for="student in sortedStudents" :key="student.id" :id="`card-${student.id}`" class="scroll-mt-20">
+                        <StudentCardItem
+                            :studentInfo="student"
+                            :canManage="!!manageContext?.can_manage"
+                            :canRequest="!!manageContext?.can_request"
+                            :selectMode="selectMode"
+                            :selected="!!student.student_id && selectedIds.has(student.student_id)"
+                            @transfer="openTransferModal"
+                            @remove="openRemoveModal"
+                            @request="openRequestModal"
+                            @cancel-request="cancelRequest"
+                            @toggle-select="toggleSelect"
+                        />
+                    </div>
+                </div>
+                </div>
+              </div>
+            </template>
         </div>
 
         <!-- Management modals -->

@@ -314,15 +314,21 @@ const studentPrefixName = (prefix) => {
                     <div class="flex items-baseline mt-0.5">
                         <span class="w-[25%] text-[2.2vw] sm:text-sm md:text-lg font-medium text-gray-700">วันเกิด</span>
                         <span class="mx-[1%] text-[2.2vw] sm:text-sm md:text-lg text-gray-700">:</span>
-                        <span class="flex-1 text-[2.4vw] sm:text-sm md:text-lg font-semibold text-gray-800">
-                            {{ editForm.birth_date ? new Date(editForm.birth_date).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-' }}
+                        <!-- นักเรียนบางคนยังไม่มีวันเกิดในระบบ บอกให้ชัดว่าให้กดแก้ไขเติม ไม่ใช่แสดงขีดเปล่าๆ -->
+                        <span v-if="editForm.birth_date"
+                            class="flex-1 text-[2.4vw] sm:text-sm md:text-lg font-semibold text-gray-800">
+                            {{ new Date(editForm.birth_date).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' }) }}
                         </span>
+                        <button v-else type="button" @click="isEditModalOpen = true"
+                            class="flex-1 text-left text-[2.4vw] sm:text-sm md:text-lg font-semibold text-amber-600 underline decoration-dotted underline-offset-2 hover:text-amber-700">
+                            ยังไม่ระบุ
+                        </button>
                     </div>
                     <div class="flex items-baseline -mt-1.5 sm:-mt-2 md:-mt-2.5">
                         <span class="w-[25%] text-[2vw] sm:text-xs font-normal text-gray-600">Date of Birth</span>
                         <span class="mx-[1%] text-transparent">:</span>
                         <span class="flex-1 text-[1.4vw] sm:text-[12px] font-normal text-gray-800">
-                            {{ editForm.birth_date ? new Date(editForm.birth_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : '-' }}
+                            {{ editForm.birth_date ? new Date(editForm.birth_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : '' }}
                         </span>
                     </div>
                     <div class="flex items-baseline mt-0.5">
