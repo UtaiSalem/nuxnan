@@ -33,7 +33,7 @@ const showDonationModal = ref(false)
         :to="{ path: '/earn/advertise/create', query: { scope: 'course', course_id: course.id } }"
         class="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-violet-200 bg-white px-4 py-2.5 text-sm font-semibold text-violet-600 transition hover:bg-violet-50 dark:border-violet-900/40 dark:bg-transparent dark:text-violet-300 dark:hover:bg-violet-950/30"
       >
-        <Icon icon="solar:megaphone-bold-duotone" class="h-4 w-4" />
+        <Icon icon="mdi:bullhorn" class="h-4 w-4" />
         ลงแคมเปญโฆษณา
       </NuxtLink>
     </div>

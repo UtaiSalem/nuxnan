@@ -284,7 +284,7 @@ const handleGetDonate = async (donateId: number, idx: number) => {
             style="animation-delay: 240ms"
           >
             <div class="flex items-center gap-1.5 sm:gap-2 bg-blue-50 text-blue-700 px-3 sm:px-5 py-2 rounded-full border border-blue-200 font-medium text-sm sm:text-base">
-              <IconWrapper icon="solar:graduation-hat-bold" class="w-4 h-4 sm:w-5 sm:h-5" />
+              <IconWrapper icon="mdi:school" class="w-4 h-4 sm:w-5 sm:h-5" />
               <span>เรียนรู้</span>
             </div>
             <div class="flex items-center gap-1.5 sm:gap-2 bg-purple-50 text-purple-700 px-3 sm:px-5 py-2 rounded-full border border-purple-200 font-medium text-sm sm:text-base">
@@ -403,7 +403,7 @@ const handleGetDonate = async (donateId: number, idx: number) => {
             <!-- Learn -->
             <div class="group bg-white rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-xl transition-all duration-300 border border-transparent hover:border-blue-100 hover:-translate-y-1 cursor-default">
               <div class="w-12 h-12 sm:w-14 sm:h-14 bg-blue-50 rounded-2xl flex items-center justify-center mb-5 sm:mb-6 group-hover:bg-blue-500 transition-colors duration-300">
-                <IconWrapper icon="solar:graduation-hat-bold" class="w-6 h-6 sm:w-7 sm:h-7 text-blue-500 group-hover:text-white transition-colors duration-300" />
+                <IconWrapper icon="mdi:school" class="w-6 h-6 sm:w-7 sm:h-7 text-blue-500 group-hover:text-white transition-colors duration-300" />
               </div>
               <h3 class="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3 font-prompt">เรียนรู้</h3>
               <p class="text-gray-500 text-sm sm:text-base leading-relaxed font-prompt">เรียนรู้ทักษะใหม่ๆ ผ่านคอร์สที่หลากหลาย เข้าถึงได้ทุกที่ทุกเวลา พัฒนาตัวเองได้อย่างต่อเนื่อง</p>

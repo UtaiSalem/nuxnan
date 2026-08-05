@@ -55,7 +55,7 @@ const emit = defineEmits<{
           :to="{ path: '/earn/advertise/create', query: { scope: 'academy', academy_id: academyId } }"
           class="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20 hover:border-white/30 hover:scale-[1.01] active:scale-[0.99]"
         >
-          <Icon icon="solar:megaphone-bold-duotone" class="h-4 w-4 text-amber-300" />
+          <Icon icon="mdi:bullhorn" class="h-4 w-4 text-amber-300" />
           ลงแคมเปญโฆษณา
         </NuxtLink>
       </div>

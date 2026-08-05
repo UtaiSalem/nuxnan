@@ -320,7 +320,7 @@ const handleGetDonate = async (donateId: number, idx: number) => {
             <div
               class="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20 hover:bg-white/20 transform hover:scale-110 transition-all duration-300 shadow-lg"
             >
-              <IconWrapper icon="solar:graduation-hat-bold" class="w-5 h-5 text-green-300" />
+              <IconWrapper icon="mdi:school" class="w-5 h-5 text-green-300" />
               <span>เรียนรู้</span>
             </div>
             <div

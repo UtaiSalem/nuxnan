@@ -368,7 +368,7 @@ watch(() => authStore.user?.id, async (id) => {
         <div class="absolute inset-0 opacity-20 bg-[url('/storage/images/banner/banner-bg.png')] bg-cover bg-center"></div>
         <div class="relative z-10 flex items-center gap-6">
           <div class="p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20">
-            <Icon icon="solar:megaphone-bold-duotone" class="w-12 h-12 text-white" />
+            <Icon icon="mdi:bullhorn" class="w-12 h-12 text-white" />
           </div>
           <div>
             <h1 class="text-3xl md:text-4xl font-bold text-white mb-2">สร้างแคมเปญโฆษณา / สนับสนุน</h1>
@@ -549,7 +549,7 @@ watch(() => authStore.user?.id, async (id) => {
 
                 <div v-else class="relative rounded-2xl overflow-hidden shadow-md group">
                   <button @click.stop="deleteMediaImage" class="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white p-2.5 rounded-full shadow-lg z-20 transition-all hover:scale-110">
-                    <Icon icon="solar:trash-bin-bold" class="w-5 h-5" />
+                    <Icon icon="mdi:trash-can" class="w-5 h-5" />
                   </button>
                   <div v-if="mediaImage.type?.startsWith('video/')" class="aspect-video bg-black flex items-center justify-center">
                     <video :src="mediaImage.url" controls class="max-h-[350px] w-full"></video>

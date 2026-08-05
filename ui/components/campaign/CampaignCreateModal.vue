@@ -182,7 +182,7 @@ const scopeLabel = computed(() => (props.scopeType === 'academy' ? 'โรงเ
         <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-800">
           <div class="flex items-center gap-2">
             <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white">
-              <Icon icon="solar:megaphone-bold-duotone" class="h-5 w-5" />
+              <Icon icon="mdi:bullhorn" class="h-5 w-5" />
             </span>
             <div>
               <p class="text-[11px] font-semibold uppercase tracking-wider text-indigo-500">สร้างแคมเปญใน{{ scopeLabel }}</p>

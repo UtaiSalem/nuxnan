@@ -266,7 +266,7 @@ onMounted(() => {
                 <!-- Type -->
                 <td class="p-4">
                   <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold" :class="c.campaign_type === 'advertisement' ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400' : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-400'">
-                    <Icon :icon="c.campaign_type === 'advertisement' ? 'solar:megaphone-bold' : 'solar:heart-bold'" />
+                    <Icon :icon="c.campaign_type === 'advertisement' ? 'mdi:bullhorn' : 'solar:heart-bold'" />
                     {{ c.campaign_type === 'advertisement' ? 'โฆษณา' : 'สนับสนุน' }}
                   </span>
                 </td>
