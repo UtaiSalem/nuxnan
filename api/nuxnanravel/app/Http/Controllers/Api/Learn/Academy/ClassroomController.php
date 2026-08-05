@@ -455,11 +455,22 @@ class ClassroomController extends Controller
             'student_ids.*' => 'exists:students,id',
         ]);
 
-        $added = $this->enrollmentService->bulkEnrollStudents($classroom, $validated['student_ids']);
+        $summary = $this->enrollmentService->bulkEnrollStudents($classroom, $validated['student_ids'], auth()->id());
+
+        // นักเรียนที่มีห้องเดิมอยู่แล้วจะถูกย้าย (ปิดทะเบียนเดิม) ไม่ใช่เพิ่มเฉยๆ — แยกให้ชัดในข้อความ
+        $moved = $summary['transferred'] + $summary['promoted'];
+        $parts = [];
+        if ($summary['enrolled'] > 0) {
+            $parts[] = "เพิ่มนักเรียน {$summary['enrolled']} คน";
+        }
+        if ($moved > 0) {
+            $parts[] = "ย้ายจากห้องเดิม {$moved} คน";
+        }
 
         return response()->json([
             'success' => true,
-            'message' => "เพิ่มนักเรียนสำเร็จ {$added} คน",
+            'message' => $parts ? implode(' และ ', $parts).'สำเร็จ' : 'ไม่มีรายการที่ต้องดำเนินการ',
+            'summary' => $summary,
             'classroom' => $classroom->fresh(['classroomStudents.student']),
         ]);
     }
@@ -654,6 +665,28 @@ class ClassroomController extends Controller
 
         if ($request->filled('status')) {
             $query->where('status', $request->query('status'));
+        }
+
+        // Server-side search. The add-student picker cannot filter client-side: an academy holds
+        // thousands of students and the page only ever receives one paginated slice, so a term that
+        // is not in that slice would look like "no such student".
+        if ($request->filled('search')) {
+            $term = trim((string) $request->query('search'));
+            // Escape LIKE wildcards so a literal % or _ typed by the user is not treated as a pattern.
+            $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $term).'%';
+
+            $query->where(function ($q) use ($like) {
+                $q->where('student_id', 'like', $like)
+                    ->orWhere('first_name_th', 'like', $like)
+                    ->orWhere('last_name_th', 'like', $like)
+                    ->orWhere('nickname', 'like', $like)
+                    ->orWhere('first_name_en', 'like', $like)
+                    ->orWhere('last_name_en', 'like', $like)
+                    ->orWhereRaw("CONCAT_WS(' ', first_name_th, last_name_th) LIKE ?", [$like])
+                    ->orWhereHas('user', function ($u) use ($like) {
+                        $u->where('name', 'like', $like);
+                    });
+            });
         }
 
         // Include latest GPA and active classroom metadata without assuming columns exist on students.

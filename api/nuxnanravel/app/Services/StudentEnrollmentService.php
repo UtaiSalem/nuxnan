@@ -126,6 +126,16 @@ class StudentEnrollmentService
         return DB::transaction(function () use ($student, $classroom, $studentNumber, $batchId, $userId, $dispatchEvent) {
             // Auto-assign student number if not provided
             if ($studentNumber === null) {
+                // ถ้านักเรียนยัง active อยู่ห้องนี้แล้ว ให้คงเลขที่เดิมไว้ — updateOrCreate ด้านล่างเขียนทับ
+                // student_number เสมอ การลงทะเบียนซ้ำจึงเคยดันเลขที่ของเด็กพุ่งไปท้ายห้อง
+                // (เฉพาะกรณี active เท่านั้น ถ้าเคยออกไปแล้วกลับเข้ามาใหม่ให้รับเลขที่ใหม่ตามปกติ)
+                $studentNumber = ClassroomStudent::where('classroom_id', $classroom->id)
+                    ->where('student_id', $student->id)
+                    ->where('status', ClassroomStudent::STATUS_ACTIVE)
+                    ->value('student_number');
+            }
+
+            if ($studentNumber === null) {
                 $studentNumber = ClassroomStudent::where('classroom_id', $classroom->id)
                     ->where('status', ClassroomStudent::STATUS_ACTIVE)
                     ->max('student_number') + 1;
@@ -173,21 +183,56 @@ class StudentEnrollmentService
      */
     public function bulkEnrollStudents(
         Classroom $classroom,
-        array $studentIds
-    ): int {
-        $enrolled = 0;
+        array $studentIds,
+        ?int $userId = null
+    ): array {
+        $result = ['enrolled' => 0, 'transferred' => 0, 'promoted' => 0];
 
-        DB::transaction(function () use ($classroom, $studentIds, &$enrolled) {
+        DB::transaction(function () use ($classroom, $studentIds, $userId, &$result) {
             foreach ($studentIds as $studentId) {
                 $student = Student::find($studentId);
-                if ($student) {
-                    $this->enrollStudent($student, $classroom);
-                    $enrolled++;
+                if (! $student) {
+                    continue;
+                }
+
+                // นักเรียนที่ยัง active อยู่ห้องอื่นต้องปิดทะเบียนห้องเดิมก่อน ไม่งั้นจะค้างสองห้องพร้อมกัน
+                // (enrollStudent() แตะเฉพาะห้องปลายทาง จึงไม่ปิดของเดิมให้)
+                $openElsewhere = ClassroomStudent::with('classroom')
+                    ->where('student_id', $student->id)
+                    ->where('status', ClassroomStudent::STATUS_ACTIVE)
+                    ->where('classroom_id', '!=', $classroom->id)
+                    ->orderByDesc('created_at')
+                    ->get();
+
+                // เหลือไว้แค่ห้องล่าสุดเป็นต้นทางของการย้าย ส่วนที่ค้างซ้ำ (ข้อมูลเก่าผิดปกติ) ปิดทิ้งตรงๆ
+                // ถ้าวนย้ายทีละห้องเข้าห้องเดียวกัน enrollStudent() จะถูกเรียกซ้ำและเลขที่จะเขยิบขึ้นทุกรอบ
+                $primary = $openElsewhere->shift();
+
+                foreach ($openElsewhere as $stale) {
+                    $stale->update([
+                        'status' => ClassroomStudent::STATUS_TRANSFERRED,
+                        'left_at' => today(),
+                        'leave_reason' => 'ปิดทะเบียนที่ค้างซ้ำอัตโนมัติ',
+                    ]);
+                }
+
+                $from = $primary?->classroom;
+
+                if (! $from) {
+                    $this->enrollStudent($student, $classroom, null, null, $userId);
+                    $result['enrolled']++;
+                } elseif ((int) $from->academic_year_id === (int) $classroom->academic_year_id) {
+                    $this->transferStudent($student, $from, $classroom, 'ย้ายเข้าห้องเรียนโดยผู้ดูแล', null, $userId);
+                    $result['transferred']++;
+                } else {
+                    // คนละปีการศึกษา — transferStudent() จะโยน InvalidArgumentException ต้องใช้ promoteStudent()
+                    $this->promoteStudent($student, $from, $classroom, 'ย้ายเข้าห้องเรียนโดยผู้ดูแล', null, null, $userId);
+                    $result['promoted']++;
                 }
             }
         });
 
-        return $enrolled;
+        return $result;
     }
 
     /**

@@ -51,6 +51,10 @@ const showAddStudentModal = ref(false)
 const searchQueryAddStudent = ref('')
 const availableStudents = ref<any[]>([])
 const isLoadingAvailableStudents = ref(false)
+const availableStudentsError = ref('')
+const availableStudentsTotal = ref(0)
+let availableStudentsSearchTimer: ReturnType<typeof setTimeout> | null = null
+let availableStudentsRequestId = 0
 const showTransferStudentModal = ref(false)
 const selectedStudentForTransfer = ref<any>(null)
 const transferToClassroomId = ref<number | null>(null)
@@ -387,38 +391,84 @@ const openAddStudentModal = async () => {
   showAddStudentModal.value = true
   searchQueryAddStudent.value = ''
   availableStudents.value = []
+  availableStudentsError.value = ''
+  availableStudentsTotal.value = 0
+  // ให้ watcher ของ searchQueryAddStudent ทำงานก่อน แล้วค่อยยกเลิก timer ที่มันตั้งไว้
+  // ไม่งั้นจะยิง request ซ้ำอีกรอบหลังเปิด modal 350ms
+  await nextTick()
+  if (availableStudentsSearchTimer) clearTimeout(availableStudentsSearchTimer)
   await fetchAvailableStudents()
 }
 
 const fetchAvailableStudents = async () => {
   isLoadingAvailableStudents.value = true
+  availableStudentsError.value = ''
+  // กันผลลัพธ์ของคำค้นเก่ามาทับคำค้นล่าสุด (out-of-order response)
+  const requestId = ++availableStudentsRequestId
+
   try {
-    const res: any = await api.get(`/api/academies/${academy.value.id}/classrooms/allStudents`, {
-      params: { per_page: 100 }
+    const res: any = await api.get(`/api/academies/${academy.value.id}/classrooms/students`, {
+      query: {
+        per_page: 50,
+        search: searchQueryAddStudent.value.trim() || undefined,
+      }
     })
+    if (requestId !== availableStudentsRequestId) return
     if (res.success) {
       // Filter out students who are already in this classroom
       const classroomStudentIds = new Set(students.value.map(s => s.id))
       availableStudents.value = (res.students || []).filter((s: any) => !classroomStudentIds.has(s.id))
+      availableStudentsTotal.value = res.pagination?.total ?? availableStudents.value.length
     }
-  } catch (err) {
+  } catch (err: any) {
+    if (requestId !== availableStudentsRequestId) return
     console.error('Failed to fetch available students:', err)
+    availableStudents.value = []
+    availableStudentsTotal.value = 0
+    availableStudentsError.value = err?.data?.message || err?.message || 'ไม่สามารถดึงรายชื่อนักเรียนได้'
   } finally {
-    isLoadingAvailableStudents.value = false
+    if (requestId === availableStudentsRequestId) {
+      isLoadingAvailableStudents.value = false
+    }
   }
 }
 
-const filteredAvailableStudents = computed(() => {
-  const q = searchQueryAddStudent.value.toLowerCase()
-  return availableStudents.value.filter((s) => {
-    const name = studentName(s).toLowerCase()
-    const code = (s.student_id || '').toLowerCase()
-    const classroom = (s.currentEnrollment?.classroom?.name || '').toLowerCase()
-    return name.includes(q) || code.includes(q) || classroom.includes(q)
-  })
+// ค้นหาฝั่ง server — สถาบันมีนักเรียนหลักพัน การกรองใน 50 รายการที่โหลดมาจะหาไม่เจอ
+watch(searchQueryAddStudent, () => {
+  if (!showAddStudentModal.value) return
+  if (availableStudentsSearchTimer) clearTimeout(availableStudentsSearchTimer)
+  availableStudentsSearchTimer = setTimeout(() => {
+    fetchAvailableStudents()
+  }, 350)
 })
 
+// จำนวนที่ค้นเจอทั้งหมดยังเกินที่โหลดมาแสดงหรือไม่ (ให้ผู้ใช้รู้ว่าต้องพิมพ์ค้นให้แคบลง)
+const hasMoreAvailableStudents = computed(
+  () => availableStudentsTotal.value > availableStudents.value.length
+)
+
+const escapeHtml = (value: string) =>
+  value.replace(/[&<>"']/g, (ch) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch] as string
+  )
+
 const handleAddStudent = async (student: any) => {
+  // นักเรียนที่มีห้องอยู่แล้วจะถูกย้าย (ปิดทะเบียนห้องเดิม) ไม่ใช่เพิ่มเฉยๆ — ต้องให้ผู้ใช้ยืนยันก่อน
+  const currentClassroom = student.currentEnrollment?.classroom
+  if (currentClassroom) {
+    const confirmed = await Swal.fire({
+      icon: 'warning',
+      title: 'นักเรียนมีห้องเรียนอยู่แล้ว',
+      html: `<b>${escapeHtml(studentName(student))}</b> อยู่ห้อง <b>${escapeHtml(currentClassroom.name || '-')}</b><br>`
+        + `การเพิ่มเข้าห้อง <b>${escapeHtml(classroomName.value)}</b> จะปิดทะเบียนห้องเดิมและย้ายมาห้องนี้`,
+      showCancelButton: true,
+      confirmButtonText: 'ย้ายมาห้องนี้',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#d97706',
+    })
+    if (!confirmed.isConfirmed) return
+  }
+
   try {
     const res: any = await api.post(`/api/academies/${academy.value.id}/classrooms/${classroomId.value}/students`, {
       student_ids: [student.id]
@@ -426,7 +476,14 @@ const handleAddStudent = async (student: any) => {
     if (res.success) {
       await loadClassroom()
       availableStudents.value = availableStudents.value.filter((s) => s.id !== student.id)
-      Swal.fire({ icon: 'success', title: 'เพิ่มนักเรียนเข้าห้องสำเร็จ', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 })
+      Swal.fire({
+        icon: 'success',
+        title: res.message || 'เพิ่มนักเรียนเข้าห้องสำเร็จ',
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 2500,
+      })
     }
   } catch (err: any) {
     Swal.fire('ข้อผิดพลาด', err.message || 'ไม่สามารถเพิ่มนักเรียนได้', 'error')
@@ -1770,13 +1827,29 @@ onMounted(async () => {
                 <p class="text-xs text-slate-500 mt-2">กำลังดึงข้อมูลนักเรียน...</p>
               </div>
 
+              <div v-else-if="availableStudentsError" class="rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-900/20 p-4 text-center">
+                <Icon icon="fluent:error-circle-24-regular" class="h-6 w-6 text-rose-500 mx-auto" />
+                <p class="text-sm font-bold text-rose-700 dark:text-rose-300 mt-2">ดึงรายชื่อนักเรียนไม่สำเร็จ</p>
+                <p class="text-xs text-rose-600 dark:text-rose-400 mt-1">{{ availableStudentsError }}</p>
+                <button
+                  @click="fetchAvailableStudents()"
+                  class="mt-3 rounded-lg border border-rose-300 dark:border-rose-800 px-3 py-1.5 text-xs font-bold text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors"
+                >
+                  ลองใหม่
+                </button>
+              </div>
+
               <div v-else class="space-y-2">
-                <div v-if="filteredAvailableStudents.length === 0" class="text-center py-10 text-slate-400 text-sm">
-                  ไม่พบนักเรียนว่างสะสมในสถาบัน
+                <div v-if="availableStudents.length === 0" class="text-center py-10 text-slate-400 text-sm">
+                  {{ searchQueryAddStudent.trim() ? 'ไม่พบนักเรียนที่ตรงกับคำค้นหา' : 'ไม่พบนักเรียนว่างสะสมในสถาบัน' }}
                 </div>
 
-                <div 
-                  v-for="student in filteredAvailableStudents" 
+                <p v-else-if="hasMoreAvailableStudents" class="text-xs text-slate-400 text-center pb-1">
+                  แสดง {{ availableStudents.length }} จาก {{ availableStudentsTotal }} คน — พิมพ์ชื่อหรือรหัสนักเรียนเพื่อค้นหาให้แคบลง
+                </p>
+
+                <div
+                  v-for="student in availableStudents"
                   :key="student.id"
                   class="flex items-center justify-between p-3 rounded-xl border dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 hover:bg-slate-100 transition-colors"
                 >
