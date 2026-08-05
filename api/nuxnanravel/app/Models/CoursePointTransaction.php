@@ -26,6 +26,10 @@ class CoursePointTransaction extends Model
 
     const TYPE_DONATION_CASH_CREDIT = 'donation_cash_credit';
 
+    const TYPE_DONATION_RESERVE = 'donation_reserve';
+
+    const TYPE_CLAIM_SHARE = 'claim_share';
+
     const TYPE_ALLOCATION_IN = 'allocation_in';
 
     const TYPE_AD_REVENUE = 'ad_revenue';

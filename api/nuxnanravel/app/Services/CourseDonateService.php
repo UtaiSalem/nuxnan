@@ -12,7 +12,10 @@ use Illuminate\Support\Facades\DB;
 
 class CourseDonateService
 {
-    public function __construct(protected PointLedgerService $ledger) {}
+    public function __construct(
+        protected PointLedgerService $ledger,
+        protected CoursePointAccountService $accounts,
+    ) {}
 
     public function createPointDonation(User $donor, Course $course, int $pointsAmount, array $meta, ?string $key): CourseDonate
     {
@@ -32,7 +35,10 @@ class CourseDonateService
             }
             $result = $this->ledger->donatePoints($donor, 'course', $course->id, $pointsAmount, 'course_donation', $key, ['reason' => 'course_donation'] + $meta);
 
-            return CourseDonate::create(['course_id' => $course->id, 'donor_id' => $donor->id, 'donor_display_name' => $meta['donor_display_name'] ?? null, 'donation_type' => CourseDonate::TYPE_POINT, 'points_amount' => $pointsAmount, 'remaining_points' => $pointsAmount, 'status' => CourseDonate::STATUS_COMPLETED, 'purpose' => $meta['purpose'] ?? null, 'anonymous' => $meta['anonymous'] ?? false, 'course_point_transaction_id' => $result['destination_transaction_id'], 'metadata' => $meta, 'idempotency_key' => $key]);
+            $donation = CourseDonate::create(['course_id' => $course->id, 'donor_id' => $donor->id, 'donor_display_name' => $meta['donor_display_name'] ?? null, 'donation_type' => CourseDonate::TYPE_POINT, 'points_amount' => $pointsAmount, 'remaining_points' => $pointsAmount, 'status' => CourseDonate::STATUS_COMPLETED, 'purpose' => $meta['purpose'] ?? null, 'anonymous' => $meta['anonymous'] ?? false, 'course_point_transaction_id' => $result['destination_transaction_id'], 'metadata' => $meta, 'idempotency_key' => $key]);
+            $this->accounts->reserveForClaims($course->id, $pointsAmount, $donor->id, ['donation_id' => $donation->id]);
+
+            return $donation->fresh();
         });
     }
 
