@@ -7,6 +7,7 @@ use App\Http\Resources\StudentCardPublicResource;
 use App\Http\Resources\StudentCardResource;
 use App\Models\AcademicYear;
 use App\Models\Academy;
+use App\Models\Classroom;
 use App\Models\Student;
 use App\Models\StudentCard;
 use App\Services\StudentCardAccessService;
@@ -109,18 +110,55 @@ class StudentCardController extends Controller
             return $query;
         }
 
-        return $query->whereHas('student.classroomEnrollments', function ($enrollmentQuery) use ($level, $section) {
+        $gradeLevelValues = $level === null ? [] : (static::$studentCardGradeLevelValues[$level] ?? request()->attributes->get('student_card_grade_level_values_'.$level));
+        if ($level !== null && $gradeLevelValues === null) {
+            $gradeLevelValues = Classroom::query()->distinct()->pluck('grade_level')
+                ->filter(fn ($grade) => (int) preg_replace('/\D+/', '', (string) $grade) === (int) $level)
+                ->values()->all();
+        }
+
+        return $query->whereHas('student.classroomEnrollments', function ($enrollmentQuery) use ($level, $section, $gradeLevelValues) {
             $enrollmentQuery->where('status', 'active')
-                ->whereHas('classroom', function ($classroomQuery) use ($level, $section) {
+                ->whereHas('classroom', function ($classroomQuery) use ($level, $section, $gradeLevelValues) {
                     $classroomQuery->whereHas('academicYear', fn ($yearQuery) => $yearQuery->where('is_current', true));
                     if ($level !== null) {
-                        $classroomQuery->where('grade_level', 'like', '%'.$level);
+                        $classroomQuery->whereIn('grade_level', $gradeLevelValues);
                     }
                     if ($section !== null) {
                         $classroomQuery->where('section', $section);
                     }
                 });
         });
+    }
+
+    private function currentClassrooms($academy = null)
+    {
+        $query = Classroom::query()
+            ->where('status', 'active')
+            ->whereHas('academicYear', fn ($year) => $year->where('is_current', true))
+            ->withCount(['classroomStudents as active_student_count' => fn ($students) => $students->where('status', 'active')]);
+
+        if ($academy !== null) {
+            $query->where('academy_id', $academy instanceof Academy ? $academy->id : $academy);
+        }
+
+        return $query;
+    }
+
+    private function filterStudentsByRoom($students, $level, $room)
+    {
+        $requestedLevel = $level === null ? null : (int) preg_replace('/\D+/', '', (string) $level);
+
+        return $students->filter(function ($card) use ($requestedLevel, $room) {
+            return $card->student?->classroomEnrollments?->contains(function ($enrollment) use ($requestedLevel, $room) {
+                $classroom = $enrollment->classroom;
+
+                return $enrollment->status === 'active'
+                    && $classroom?->academicYear?->is_current
+                    && ($requestedLevel === null || (int) preg_replace('/\D+/', '', (string) $classroom->grade_level) === $requestedLevel)
+                    && ($room === null || (string) $classroom->section === (string) $room);
+            }) ?? false;
+        })->values();
     }
 
     /**
@@ -136,22 +174,17 @@ class StudentCardController extends Controller
      */
     public function dashboard($academy = null)
     {
-        $baseQuery = fn () => $academy ? $this->academyQuery($academy, 'active') : StudentCard::where('student_status', 'active');
-        $totalStudents = $baseQuery()->count();
-        $levelRows = $baseQuery()
-            ->selectRaw('class_level, class_section, COUNT(*) as student_count')
-            ->groupBy('class_level', 'class_section')
-            ->orderBy('class_level')
-            ->orderBy('class_section')
-            ->get();
-        $levels = $levelRows->groupBy('class_level')->map(function ($sections, $level) {
+        // With no academy route parameter this remains the legacy global view; classrooms are still the explicit source of truth.
+        $classrooms = $this->currentClassrooms($academy)->orderBy('grade_level')->get();
+        $totalStudents = $classrooms->sum('active_student_count');
+        $levels = $classrooms->groupBy(fn ($classroom) => (string) ((int) preg_replace('/\D+/', '', $classroom->grade_level)))->map(function ($sections, $level) {
             return [
                 'level' => (string) $level,
                 'name' => 'ม.'.$level,
-                'sections' => $sections->pluck('class_section')->map(fn ($section) => (string) $section)->values(),
-                'studentCount' => $sections->sum('student_count'),
+                'sections' => $sections->pluck('section')->map(fn ($section) => (string) $section)->sortBy(fn ($section) => (int) $section)->values(),
+                'studentCount' => $sections->sum('active_student_count'),
             ];
-        })->values();
+        })->sortBy(fn ($level) => (int) $level['level'])->values();
 
         return response()->json([
             'success' => true,
@@ -165,33 +198,31 @@ class StudentCardController extends Controller
      */
     public function statistics($academy = null)
     {
-        $query = $this->academyQuery($academy, 'active');
-        $totalStudents = $query->count();
+        $classrooms = $this->currentClassrooms($academy)->get();
+        $activeCards = StudentCard::query()->where('student_status', 'active')
+            ->when($academy !== null, fn ($query) => $query->where('academy_id', $academy instanceof Academy ? $academy->id : $academy))
+            ->whereHas('student.classroomEnrollments', function ($query) {
+                $query->where('status', 'active')->whereHas('classroom', fn ($classroom) => $classroom
+                    ->where('status', 'active')->whereHas('academicYear', fn ($year) => $year->where('is_current', true)));
+            });
+        $totalStudents = (clone $activeCards)->count();
 
         $totalGraduated = $this->academyQuery($academy, 'graduated')->count();
         $totalExpired = $this->academyQuery($academy, 'expired')->count();
 
-        $withPhoto = $this->academyQuery($academy, 'active')
+        $withPhoto = (clone $activeCards)
             ->whereNotNull('profile_image')
             ->where('profile_image', '!=', '')
             ->count();
         $withoutPhoto = $totalStudents - $withPhoto;
 
-        $byLevel = $this->academyQuery($academy, 'active')
-            ->selectRaw('class_level, COUNT(*) as count')
-            ->groupBy('class_level')
-            ->pluck('count', 'class_level')
-            ->toArray();
+        $byLevel = $classrooms->groupBy(fn ($room) => (string) ((int) preg_replace('/\D+/', '', $room->grade_level)))
+            ->map(fn ($rooms) => $rooms->sum('active_student_count'))->toArray();
 
         // Sections per level
-        $sectionsByLevel = $this->academyQuery($academy, 'active')
-            ->selectRaw('class_level, class_section')
-            ->distinct()
-            ->orderBy('class_level')
-            ->orderBy('class_section')
-            ->get()
-            ->groupBy('class_level')
-            ->map(fn ($items) => $items->pluck('class_section')->sort()->values())
+        $sectionsByLevel = $classrooms->groupBy(fn ($room) => (string) ((int) preg_replace('/\D+/', '', $room->grade_level)))
+            ->map(fn ($items) => $items->pluck('section')->map(fn ($section) => (string) $section)->sortBy(fn ($section) => (int) $section)->values())
+            ->sortKeysUsing(fn ($left, $right) => (int) $left <=> (int) $right)
             ->toArray();
 
         return response()->json([
@@ -214,19 +245,16 @@ class StudentCardController extends Controller
      */
     public function getLevels($academy = null)
     {
-        $levelsData = $this->academyQuery($academy, 'active')
-            ->selectRaw('class_level, class_section, COUNT(*) as studentCount')
-            ->groupBy('class_level', 'class_section')
-            ->get();
+        $levelsData = $this->currentClassrooms($academy)->orderBy('grade_level')->get();
 
         $formattedLevels = [];
 
-        foreach ($levelsData->groupBy('class_level') as $level => $sections) {
+        foreach ($levelsData->groupBy(fn ($room) => (string) ((int) preg_replace('/\D+/', '', $room->grade_level)))->sortKeysUsing(fn ($left, $right) => (int) $left <=> (int) $right) as $level => $sections) {
             $formattedLevels[] = [
                 'level' => $level,
                 'name' => 'ม.'.$level,
-                'sections' => $sections->pluck('class_section')->sort()->values()->toArray(),
-                'studentCount' => $sections->sum('studentCount'),
+                'sections' => $sections->pluck('section')->map(fn ($section) => (string) $section)->sortBy(fn ($section) => (int) $section)->values()->toArray(),
+                'studentCount' => $sections->sum('active_student_count'),
             ];
         }
 
@@ -263,9 +291,7 @@ class StudentCardController extends Controller
 
         $this->applyCurrentClassFilters($query, $request->level, $request->section);
 
-        $students = $this->withStudentContext($query)->orderBy('class_level')
-            ->orderBy('class_section')
-            ->orderBy('order_no')
+        $students = $this->withStudentContext($query)->orderBy('order_no')
             ->paginate(20);
 
         $students->through(fn ($card) => new StudentCardResource($card));
@@ -353,12 +379,8 @@ class StudentCardController extends Controller
     {
         [$academy, $level, $room] = $this->resolveRoomRouteParameters($academy, $level, $room);
         $baseQuery = $academy ? $this->academyQuery($academy, 'active') : StudentCard::where('student_status', 'active');
-
-        $this->applyCurrentClassFilters($baseQuery, $level, $room);
-        $students = $this->withStudentContext($baseQuery)
-            ->orderBy('order_no')
-            ->orderBy('first_name_thai')
-            ->get();
+        $students = $this->withStudentContext($baseQuery)->orderBy('order_no')->orderBy('first_name_thai')->get();
+        $students = $this->filterStudentsByRoom($students, $level, $room);
 
         $resourceClass = ($academy && $request->user()) ? StudentCardResource::class : StudentCardPublicResource::class;
 
@@ -377,12 +399,8 @@ class StudentCardController extends Controller
     {
         [$academy, $level, $room] = $this->resolveRoomRouteParameters($academy, $level, $room);
         $baseQuery = $academy ? $this->academyQuery($academy, 'active') : StudentCard::where('student_status', 'active');
-
-        $this->applyCurrentClassFilters($baseQuery, $level, $room);
-        $students = $this->withStudentContext($baseQuery)
-            ->orderBy('order_no')
-            ->orderBy('first_name_thai')
-            ->get();
+        $students = $this->withStudentContext($baseQuery)->orderBy('order_no')->orderBy('first_name_thai')->get();
+        $students = $this->filterStudentsByRoom($students, $level, $room);
 
         return response()->json([
             'success' => true,
