@@ -17,7 +17,7 @@ class ClassroomStudentObserver
     public function created(ClassroomStudent $classroomStudent): void
     {
         if ($classroomStudent->status === ClassroomStudent::STATUS_ACTIVE) {
-            $this->reactivateCard($classroomStudent->student_id);
+            $this->reactivateCard($classroomStudent->student_id, $classroomStudent->academy_id);
         }
     }
 
@@ -30,23 +30,49 @@ class ClassroomStudentObserver
             $status = $classroomStudent->status;
 
             if ($status === 'graduated') {
-                StudentCard::where('student_id', $classroomStudent->student_id)
+                $this->cardsOf($classroomStudent->student_id, $classroomStudent->academy_id)
                     ->where('student_status', 'active')
                     ->update(['student_status' => 'graduated']);
             } elseif ($status === ClassroomStudent::STATUS_ACTIVE) {
-                $this->reactivateCard($classroomStudent->student_id);
+                $this->reactivateCard($classroomStudent->student_id, $classroomStudent->academy_id);
             } else {
-                StudentCard::where('student_id', $classroomStudent->student_id)
+                $this->cardsOf($classroomStudent->student_id, $classroomStudent->academy_id)
                     ->where('student_status', 'active')
                     ->update(['student_status' => 'expired']);
             }
         }
     }
 
-    private function reactivateCard(int $studentId): void
+    /**
+     * บัตรของนักเรียนคนนี้เฉพาะใน academy ที่เกี่ยวข้อง — ห้องของโรงเรียนหนึ่ง
+     * ต้องไม่ไปแตะบัตรที่นักเรียนถืออยู่ในอีกโรงเรียนหนึ่ง
+     */
+    private function cardsOf(int $studentId, ?int $academyId)
     {
-        StudentCard::where('student_id', $studentId)
+        return StudentCard::where('student_id', $studentId)
+            ->when($academyId !== null, fn ($query) => $query->where('academy_id', $academyId));
+    }
+
+    /**
+     * ปลุกบัตรที่หมดอายุกลับมาใบเดียวเท่านั้น
+     *
+     * uq_student_card_active (student_id, academy_id, is_active_flag) ยอมให้มีบัตร
+     * active ได้ใบเดียวต่อ academy การ update ทั้งชุดจึงชนกันเองเมื่อนักเรียนมีบัตร
+     * expired หลายใบ (เก็บไว้ใบละปีการศึกษา) และชนกับใบที่ active อยู่แล้ว
+     */
+    private function reactivateCard(int $studentId, ?int $academyId): void
+    {
+        if ($this->cardsOf($studentId, $academyId)->where('student_status', 'active')->exists()) {
+            return;
+        }
+
+        $card = $this->cardsOf($studentId, $academyId)
             ->where('student_status', 'expired')
-            ->update(['student_status' => 'active']);
+            ->orderByDesc('academic_year_id')
+            ->orderByDesc('card_issue_date')
+            ->orderByDesc('id')
+            ->first();
+
+        $card?->update(['student_status' => 'active']);
     }
 }
