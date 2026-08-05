@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { ref, computed, onUnmounted } from 'vue'
 import type { CourseDonationClaimable } from '~/composables/useCourseClaimable'
 import { useCourseClaimable } from '~/composables/useCourseClaimable'
@@ -115,6 +116,10 @@ const openReceiveModal = () => {
     if (elapsed >= durationMs) finishClaim()
   }, 50)
 }
+
+// ความคืบหน้าอ่านจากแต้มที่ไต่ขึ้น ไม่ใช่จากเวลาที่เหลือ
+const claimTarget = computed(() => Math.max(1, props.donation.claimer_reward_preview))
+const claimProgress = computed(() => Math.min(1, animatedPoints.value / claimTarget.value))
 
 onUnmounted(clearReceiveTimers)
 </script>
@@ -316,7 +321,7 @@ onUnmounted(clearReceiveTimers)
               <div class="relative mx-auto mb-4 h-24 w-24">
                 <svg class="h-24 w-24 -rotate-90">
                   <circle cx="48" cy="48" r="42" fill="transparent" stroke="rgba(255,255,255,0.3)" stroke-width="7" />
-                  <circle cx="48" cy="48" r="42" fill="transparent" stroke="white" stroke-width="7" stroke-linecap="round" :stroke-dasharray="264" :stroke-dashoffset="264 * (countdownSeconds / 10)" class="transition-all duration-1000 ease-linear" />
+                  <circle cx="48" cy="48" r="42" fill="transparent" stroke="white" stroke-width="7" stroke-linecap="round" :stroke-dasharray="264" :stroke-dashoffset="264 * (1 - claimProgress)" class="transition-all duration-100 ease-linear" />
                 </svg>
                 <img v-if="donation.donor_avatar" :src="donation.donor_avatar" :alt="donation.donor_display_name" class="absolute inset-3 h-[72px] w-[72px] rounded-full border-4 border-white object-cover shadow-lg" />
                 <div v-else class="absolute inset-3 flex h-[72px] w-[72px] items-center justify-center rounded-full bg-white/25 text-2xl font-bold">{{ (donation.donor_display_name || '?')[0] }}</div>
@@ -330,19 +335,18 @@ onUnmounted(clearReceiveTimers)
           </div>
 
           <div class="p-6 text-center">
-            <div class="mb-5 text-6xl font-black text-transparent bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text">{{ countdownSeconds }}</div>
-            <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">วินาที</p>
+            <div class="mb-1 flex items-center justify-center gap-2">
+              <Icon icon="mdi:star" class="h-9 w-9 animate-pulse text-yellow-500" />
+              <span class="text-6xl font-black tabular-nums text-transparent bg-gradient-to-r from-yellow-500 via-orange-500 to-pink-600 bg-clip-text">+{{ animatedPoints.toLocaleString() }}</span>
+            </div>
+            <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">จาก {{ donation.claimer_reward_preview.toLocaleString() }} แต้ม</p>
             <div class="mb-5 h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-              <div class="h-full rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 transition-all duration-1000" :style="{ width: `${((10 - countdownSeconds) / 10) * 100}%` }" />
+              <div class="h-full rounded-full bg-gradient-to-r from-yellow-500 via-orange-500 to-pink-600 transition-all duration-100 ease-linear" :style="{ width: `${claimProgress * 100}%` }" />
             </div>
-            <div class="mx-auto mb-5 flex w-fit items-center gap-3 rounded-2xl bg-gradient-to-r from-yellow-100 to-amber-100 px-6 py-4 shadow-inner dark:from-yellow-900/30 dark:to-amber-900/30">
-              <Icon icon="mdi:star" class="h-8 w-8 animate-pulse text-yellow-500" />
-              <div>
-                <div class="text-4xl font-black tabular-nums text-transparent bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text">+{{ animatedPoints }}</div>
-                <p class="text-xs font-medium text-yellow-700 dark:text-yellow-400">แต้ม</p>
-              </div>
-            </div>
-            <p class="mb-5 text-sm text-gray-500 dark:text-gray-400">ระบบกำลังเตรียมแต้มสนับสนุนให้คุณ</p>
+            <p class="mb-5 text-sm text-gray-500 dark:text-gray-400">
+              กำลังโอนแต้มสนับสนุนให้คุณ
+              <span v-if="countdownSeconds > 0" class="text-gray-400 dark:text-gray-500">· อีก {{ countdownSeconds }} วินาที</span>
+            </p>
             <button type="button" :disabled="loading" class="rounded-xl bg-gray-200 px-8 py-3 font-semibold text-gray-700 transition hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:text-gray-300" @click="closeReceiveModal">
               {{ loading ? 'กำลังดำเนินการ...' : 'ยกเลิก' }}
             </button>
