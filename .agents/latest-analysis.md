@@ -1,5 +1,296 @@
 ---
 
+# 2026-08-05 — Student Card SSOT: ปิด drift ระหว่างบัตร / ทะเบียนนักเรียน / รายชื่อห้อง
+
+- **Status:** Work Plan (ยังไม่ลงมือ)
+- **Branch ตอนร่างแผน:** `feat/donation-claim-unification`
+- **คำถามตั้งต้น:** หน้า student-card สาธารณะกับหน้าโรงเรียนใช้ตาราง DB เดียวกันหรือไม่ / แก้ฝั่งหนึ่งอีกฝั่งเปลี่ยนตามไหม / เข้าหลัก SSOT หรือยัง
+
+## ข้อสรุปจากการตรวจโค้ด + query DB จริง (2026-08-05)
+
+**ใช้ตารางเดียวกัน และใช้ controller ตัวเดียวกันด้วย** — ต่างกันแค่ชั้นตรวจสิทธิ์
+
+| | หน้าสาธารณะ | หน้าโรงเรียน |
+|---|---|---|
+| Route อ่านห้อง | `GET /api/student-card/{level}/{room}` | `GET /api/academies/{academy}/student-cards/{level}/{room}` |
+| Controller | `StudentCardController@getStudentByRoom` | **ตัวเดียวกัน** |
+| Resource | `StudentCardPublicResource` | `StudentCardResource` (เนื้อหาแทบเหมือนกัน ต่างแค่ format วันเกิด) |
+| จัดการรายชื่อห้อง | `StudentCardManageController` | `AcademyStudentCardManageController` |
+| ตรรกะเพิ่ม/ย้าย/ลบ | **trait เดียวกัน** `ManagesClassroomRoster` | |
+| ตรวจสิทธิ์ | config flag + throttle | `StudentCardAccessService` + `academy.permission` |
+
+**ซิงก์สองทางทันที ไม่มี copy/cache:**
+- แก้ชื่อ/รหัส/เลข ปชช./วันเกิด → API เขียนลง `students` เท่านั้น ไม่เขียนลง `student_cards` (`StudentCardController::update()` ~L667)
+- Resource อ่านจาก `$this->student` ก่อนเสมอ (`StudentCardResource` L27+)
+- ห้อง/เลขที่ อ่านจาก `classroom_students` + `classrooms` ของปีการศึกษาปัจจุบัน
+- เพิ่ม/ย้าย/ลบสมาชิกห้อง → เขียนลง `classroom_students` ตารางเดียว
+- คุมด้วย `tests/Feature/StudentCardSSOTTest.php`
+
+**ตารางแกนหลัก 5 ตัว (บทบาทต่างกัน ไม่ซ้ำซ้อน):**
+
+| ตาราง | แถว | เป็น SSOT ของ |
+|---|---|---|
+| `students` | 2,940 | ตัวบุคคล: ชื่อ, เลข ปชช., วันเกิด, รูป |
+| `classroom_students` | 4,394 (active 2,158) | อยู่ห้องไหน เลขที่เท่าไร (เก็บประวัติ) |
+| `classrooms` | 104 | ห้องเรียน |
+| `student_cards` | 2,647 | ตัวบัตร: วันออก/วันหมดอายุ/สถานะบัตร |
+| `academy_members` | 3,122 (role=student 2,942) | บัญชี/สิทธิ์ในระบบ — คนละแกน |
+
+ตารางบริวาร 1:1 (ไม่ซ้ำซ้อน): `student_academic_info` 2,223 · `student_addresses` 5,307 · `student_contacts` 5,847 · `student_health_info` 2,912 · `student_guardians` 4,855 · `guardian_contacts` 4,853 · `student_documents` 10
+
+ตารางค้าง/ควรเก็บกวาดภายหลัง: `jsm_student_info` (0 — legacy import schema ทั้งก้อน) · `guardians` 0 vs `student_guardians` 4,855 · `student_guardian_links` 0 · `curriculum_students` 0 · `classroom_members` 61 (คนละระบบ ผูก `user_id` ของ LMS ไม่ใช่ `student_id`)
+
+## ตัวเลข impact (วัดจาก DB จริง 2026-08-05, academy id=1 ตัวเดียว)
+
+> ⚠️ **แก้ตัวเลขหลังรัน A3.1 (2026-08-05):** ตัวเลข "169 active cards ห้อง drift" ที่รายงานตอนร่างแผน **ผิด**
+> สาเหตุ: query ที่ใช้เขียนเป็น `->where('student_status','active')->whereRaw("A OR B")` ซึ่ง MySQL ตีความเป็น
+> `(student_status='active' AND A) OR B` เพราะ `AND` ผูกแน่นกว่า `OR` → เงื่อนไข B หลุดตัวกรองสถานะ
+> ของจริงคือ **169–170 ใบนั้นเป็นบัตร `expired` ทั้งหมด** และบัตร active มีห้อง drift = **0**
+
+| ตัวชี้วัด | จำนวน |
+|---|---|
+| บัตรทั้งหมด | 2,647 (active 2,151 · expired 494 · graduated 2) |
+| **active** ที่ห้องบนบัตร ≠ ห้องจริง | **0** ✅ |
+| **expired** ที่ห้องบนบัตร ≠ ห้องจริง | 170 (= ห้องสุดท้ายก่อนออก ถือเป็นประวัติ ไม่ใช่ drift) |
+| **active** ที่ไม่มี enrollment ปีปัจจุบันเลย | **19** ← ถูกนับใน dashboard แต่หายจากทุกหน้ารายห้อง |
+| บัตรที่ `student_id` เป็น NULL / ชี้ไปนักเรียนที่ไม่มีอยู่ | 0 / 0 |
+| นักเรียนที่ยังไม่มีบัตร | 454 |
+| นักเรียนที่มี active enrollment ซ้อนกัน >1 ห้อง | 0 |
+
+**ทำไม active ถึงไม่ drift:** `app/Observers/StudentObserver.php` sync `student_number`, `national_id`,
+`title_name`, `first_name_thai`, `last_name_thai`, `full_name_thai`, `first_name_english`, `birth_date`,
+`birth_date_string`, `profile_image` จาก `students` → บัตร active **ทุกครั้งที่ student ถูก update**
+ส่วน `ClassroomStudentObserver` sync แค่ `student_status` — **ไม่เคยแตะ `class_level`/`class_section`**
+ที่ยังไม่ drift เพราะการย้ายห้องจริงในระบบยังไม่เกิดหลังข้อมูลถูก import (ไม่ใช่เพราะมีตัวป้องกัน)
+
+---
+
+## Work Plan — Action Items
+
+### P0 · A1 — ปิดช่องโหว่ `publicUpdate()` แก้บัตรผ่านห้องเก่า
+
+**ปัญหา:** `StudentCardController::publicUpdate()` (~L743) ผ่านเมื่อตรง enrollment จริง **หรือ** ตรงคอลัมน์เก่าบนบัตร → แก้ชื่อ/เลข ปชช./วันเกิด ผ่าน URL ห้องเดิมได้ **โดยไม่ต้อง login** (`PUBLIC_STUDENT_CARD_MANAGEMENT=true` อยู่ตอนนี้)
+
+> 📌 **แก้ขอบเขตหลัง A3.1:** กลุ่มที่เข้าเงื่อนไข fallback ไม่ใช่ "169 คนที่ drift" (ตัวเลขนั้นผิด)
+> แต่คือบัตรที่ **ไม่มี active enrollment ตรงกับห้องที่ขอมา แต่คอลัมน์เก่าบนบัตรยังชี้ห้องนั้นอยู่** =
+> บัตร expired 494 ใบ (เก็บห้องสุดท้ายไว้) + บัตร active 19 ใบที่ไม่มี enrollment
+> → คือ **PII ของนักเรียนที่ออกไปแล้ว** ยังถูกแก้ผ่านหน้าสาธารณะได้ผ่าน URL ห้องเดิม
+> ความรุนแรงเท่าเดิม แต่กลุ่มเป้าหมายคือศิษย์เก่า ไม่ใช่นักเรียนปัจจุบัน
+
+- [ ] **A1.1** ตัด fallback `|| ($cardLevel === $requestedLevel && $cardRoom === $requestedRoom)` ทิ้ง เหลือเช็ค enrollment จริงอย่างเดียว → 404 ถ้าไม่ตรง
+- [ ] **A1.2** เพิ่ม test `PublicStudentCardUpdateTest`: ย้าย ม.1/1 → ม.2/3 แล้ว `PUT /api/student-card/1/1/{card}` ต้อง **404** และ `PUT /api/student-card/2/3/{card}` ต้อง 200
+- [ ] **A1.3** เพิ่มเคส "ไม่มี enrollment ปีปัจจุบัน (19 ใบ)" → ต้อง 404 ทุกห้อง
+
+**ผลข้างเคียง:** ครูจะแก้บัตรของนักเรียนที่ไม่มี enrollment (19 ใบ) และบัตร expired ไม่ได้อีก — ซึ่งเป็นพฤติกรรมที่ต้องการ
+~~ต้อง deploy คู่กับ A3.1~~ **ไม่จำเป็นแล้ว** — บัตร active ห้อง drift = 0 อยู่แล้ว A1 เดินได้เดี่ยวๆ ทันที
+*ขนาด: เล็ก (~15 บรรทัด + 1 ไฟล์เทสต์)*
+
+### P1 · A2 — หยุด drift ที่ต้นทาง (ไม่ใช่ไล่ถูทีหลัง)
+
+- [ ] **A2.1** เพิ่ม `created()`/`updated()` ใน `ClassroomStudentObserver` ให้เขียน `class_level`, `class_section`, `level_and_room`, `order_no` ลงบัตรทุกครั้งที่ enrollment เปลี่ยน — ครอบคลุม `isDirty('classroom_id')` และ `isDirty('student_number')` ไม่ใช่แค่ `status`
+- [ ] **A2.2** ดึง `numericGradeLevel()` ที่ก๊อปกันอยู่ **4 ที่** (`StudentCardResource` L62, `StudentCardPublicResource` L65, `ReconcileStudentCards`, `publicUpdate()`) ไปไว้ที่เดียว — `Classroom::numericGradeLevel()` หรือ accessor `grade_level_number`
+- [ ] **A2.3** test: ย้ายห้องผ่าน `StudentEnrollmentService::transferStudent()` แล้ว assert คอลัมน์บนบัตรเปลี่ยนตามทันที
+- [ ] **A2.4** ตัดสินใจเชิงสถาปัตยกรรม — **แนะนำ:** เมื่อ A3 เสร็จแล้วไม่มีใครอ่านคอลัมน์พวกนี้ ให้ migration `drop` ทิ้ง (`class_level`, `class_section`, `level_and_room`, `full_name_thai`, `first_name_thai`, `last_name_thai`, `national_id`, `birth_date`, `birth_date_string`, `order_no`, `profile_image`)
+  → **ถ้าเลือกทางนี้ ให้ข้าม A2.1 ไปทำ A3 ก่อน** จะได้ไม่ต้องเขียน sync ที่จะโดนลบทิ้งใน 2 สัปดาห์
+
+*ขนาด: A2.1+A2.2 กลาง / ทาง drop เล็กกว่าแต่ต้องรอ A3*
+
+### P1 · A3 — ให้ทุก endpoint อ่านจาก SSOT เดียว
+
+**ปัญหา:** `dashboard()`, `statistics()`, `getLevels()`, `getSections()` ยัง `groupBy('class_level','class_section')` จาก `student_cards` ตรงๆ ขณะที่ endpoint รายห้องอ่านจาก enrollment → **ยอดบน dashboard ไม่ตรงกับรายชื่อที่เปิดเข้าไปดู**
+
+ผู้ใช้ที่ได้รับผล: `ui/pages/student-card/index.vue:29` · `ui/pages/student-card/admin/index.vue:32` (dashboard) · `ui/pages/academies/[name]/admin/student-cards/index.vue:107` · `.../print.vue:60,68` (statistics + levels)
+
+- [x] **A3.1 — รัน dry-run แล้ว (2026-08-05) · ผลสรุป: อย่ารัน `--fix` ตามที่วางไว้เดิม**
+  คำสั่ง: `php artisan students:reconcile-cards 1 --dry-run --report` (ไม่มี `--fix` = ไม่แตะ DB)
+  output เต็ม 3,445 บรรทัดอยู่ใน scratchpad `reconcile-dryrun-2026-08-05.txt`
+
+  **รายงานบอก: Total Cards Checked 2,151 · Cards with Drift 1,144** แยกตามฟีลด์:
+
+  | ฟีลด์ | จำนวน | เป็น drift จริงไหม |
+  |---|---|---|
+  | `first_name_english` | 1,144 | ❌ **drift หลอก** — บัตรเก็บ "ชื่อ นามสกุล" รวมคอลัมน์เดียว (`'Haneez Masamah'`) ส่วน master เก็บแยก (`first_name_en='Haneez'`, `last_name_en='Masamah'`) command เทียบ `card.first_name_english !== student.first_name_en` ตรงๆ จึงต่างทุกแถว |
+  | `student_number` | 3 | ✅ จริง |
+  | `national_id` | 3 | ✅ จริง |
+  | `birth_date` | 1 | ✅ จริง |
+  | `class_level` / `class_section` | **0** | — ยืนยันว่าบัตร active ไม่มีห้อง drift |
+
+  **7 แถวที่ drift จริง — ทิศทางชัดเจนว่า master ถูก บัตรถูกตัดสั้น:**
+
+  | card | นักเรียน | ฟีลด์ | บัตร | master | อ่านว่า |
+  |---|---|---|---|---|---|
+  | 501 | ณรินทร์ทิพย์ เพชรรัตน์ | national_id | `190050123202` (12) | `1900501232028` (13) | master ถูก |
+  | 1170 | นัสรีน แวกะจิ | national_id | `190940004736` (12) | `1909400047363` (13) | master ถูก |
+  | 1221 | อาซูมา อาร์ลี | national_id | `73991043092` (11) | `0073991043092` (13) | master ถูก (บัตรกินเลข 0 นำหน้า) |
+  | 1206 | กวิน อาดหาญ | student_number | `1169` | `11692` | master ถูก |
+  | 48 | ธานัธ เหงียน สาแหม | student_number | `11494T` | `11494` | ⚠️ ต้องใช้คนตัดสิน — `T` อาจเป็น suffix ที่ตั้งใจ |
+  | 185 | ซีฟัต สวัสดี | student_number | `90118` | `10118` | ⚠️ ต้องใช้คนตัดสิน — หลักแรกต่าง |
+  | 285 | นูรัยนี อิสลาม | birth_date | `2012-08-16` | `2012-08-15` | ⚠️ ต้องใช้คนตัดสิน — ต่าง 1 วัน |
+
+  **card#1536 (สุฮัยมีย์ ใหนเด)** เป็นเคสเดียวที่ master ว่าง (`first_name_en`/`last_name_en` = NULL)
+  บัตรมี `'Suhaimee Naide'` → `--fix` จะเข้า branch backfill แล้วยัดชื่อเต็มลง `students.first_name_en`
+  ทั้งก้อนโดยไม่ split นามสกุล ควรแยกใส่ `first_name_en='Suhaimee'` / `last_name_en='Naide'` ด้วยมือแทน
+
+  **ผลรีวิวจาก agy (read-only, gemini-3.1-pro-high) + สิ่งที่ Claude ตรวจแย้ง:**
+  - agy ตัดสิน **NOT-SAFE** เหตุผลหลัก: `--fix` จะเขียน `students.first_name_en` ทับ
+    `student_cards.first_name_english` ทำให้นามสกุลอังกฤษหายจากตารางบัตร 1,143 ใบ
+  - ✅ ตรวจแล้วจริงตามโค้ด (`ReconcileStudentCards.php` L199-201)
+  - ⚠️ **แต่ agy ตกประเด็นสำคัญ:** `StudentObserver::updated()` L39 เขียน
+    `'first_name_english' => $student->first_name_en` ลงบัตร active **อยู่แล้วทุกครั้งที่ student ถูกแก้**
+    → `--fix` ไม่ได้สร้างสถานะใหม่ แค่ทำสิ่งที่ observer ทำอยู่แล้วให้เร็วขึ้น
+    และไม่มี API ไหนอ่านคอลัมน์นี้เลยเมื่อบัตรมี `student_id` (มีครบ 2,647 ใบ) — Resource ใช้
+    `$student->first_name_en` เสมอ ผลกระทบจริงจึงเป็น 0
+  - ✅ ข้ออื่นของ agy ที่ตรวจแล้วถูก: ไม่มี `DB::transaction` ครอบลูป update 2,151 แถว
+  - ✅ ยืนยันด้วย `git status` แล้วว่า agy ไม่ได้แก้ไฟล์ใดเลย
+
+  **ข้อสรุป A3.1 → แผนต้องเปลี่ยน:**
+  1. **ยกเลิกเหตุผลเดิมของ A3.1** — ที่วางไว้ว่า "ต้อง reconcile ก่อนเพื่อปลดล็อก A1" ใช้ไม่ได้แล้ว
+     เพราะบัตร active มีห้อง drift = 0 อยู่แล้ว A1 จึงเดินได้เลยโดยไม่ต้อง reconcile
+  2. **อย่ารัน `--fix` ทั้งก้อน** — 1,144 จาก 1,151 รายการเป็น drift หลอก
+  3. แทนที่ด้วย: แก้ 4 แถวที่ทิศทางชัด (501/1170/1221/1206) ด้วย SQL เจาะจง +
+     ให้คนตัดสิน 3 แถว (48/185/285) + แยกชื่อ card#1536 ด้วยมือ
+     → **[x] ทำแล้ว 2026-08-05** ผู้ใช้ตัดสิน "ตาม master" ทั้ง 3 แถว ดูหัวข้อถัดไป
+  4. ถ้ายังอยากใช้ command นี้ต่อในอนาคต ต้องแก้เงื่อนไขเทียบเป็น
+     `$card->first_name_english !== trim("{$student->first_name_en} {$student->last_name_en}")`
+     และครอบ `DB::transaction` — แต่ถ้าเลือกทาง A2.4 (drop คอลัมน์) ก็ไม่ต้องแก้ ให้ลบ command ทิ้งไปด้วย
+- [x] **A3.1b — แก้ 8 แถวด้วยมือแล้ว (2026-08-05)** · การตัดสินของผู้ใช้: **"ตาม master"**
+  backup ก่อนแก้: scratchpad `backup-7rows-2026-08-05.json` (8 แถว ครบทุกคอลัมน์ที่แตะ)
+  รันใน `DB::transaction` ผ่าน Eloquent (ให้ `Auditable` + observer ทำงานตามปกติ)
+
+  | card | ฟีลด์ | เดิม | ใหม่ (= master) |
+  |---|---|---|---|
+  | 48 | student_number | `11494T` | `11494` |
+  | 185 | student_number | `90118` | `10118` |
+  | 1206 | student_number | `1169` | `11692` |
+  | 285 | birth_date | `2012-08-16` | `2012-08-15` (+ `birth_date_string` → `15/08/2012`) |
+  | 501 | national_id | `190050123202` | `1900501232028` |
+  | 1170 | national_id | `190940004736` | `1909400047363` |
+  | 1221 | national_id | `73991043092` | `0073991043092` |
+  | 1536 | — | master ว่าง | **backfill master แทน**: `students.first_name_en='Suhaimee'`, `last_name_en='Naide'` |
+
+  card#1536 ไม่ได้ "ตาม master" ตรงๆ เพราะ master เป็น NULL — ถ้าตามจะทำให้ชื่ออังกฤษหายทั้งคู่
+  จึงแยก `'Suhaimee Naide'` จากบัตรไป backfill ต้นทางแทน (ทิศทางที่ไม่ทำข้อมูลหาย)
+
+  ⚠️ **บทเรียนระหว่างทาง:** สคริปต์แก้รอบแรกเทียบ `(string)$card->birth_date !== (string)$s->date_of_birth`
+  ตรงๆ ซึ่ง **เทียบไม่ได้** เพราะ `Student::date_of_birth` ถูก cast เป็น Carbon แต่ `StudentCard::birth_date`
+  เป็น string ดิบ → เข้าเงื่อนไขทุกแถว ทำให้ 6 แถวถูกเขียน `birth_date` ทับโดยไม่จำเป็น
+  ตรวจแล้วไม่เสียหาย เพราะคอลัมน์เป็น `date` และ Carbon ตกลงเป็นวันเดิม (ยืนยันเทียบกับ backup ทีละแถว)
+  **เวลาเทียบวันที่ข้ามสองโมเดลนี้ ต้อง normalize ด้วย `Carbon::parse(...)->format('Y-m-d')` ทั้งสองฝั่งเสมอ**
+  (`ReconcileStudentCards` L140-143 ทำถูกอยู่แล้ว — จึงรายงาน birth_date drift แค่ 1 แถว)
+
+  **ยืนยันผลหลังแก้:** drift ของ `student_number` / `national_id` / `birth_date` ในบัตร active = **0 ทั้งสามฟีลด์**
+  รัน dry-run ซ้ำ: Cards with Drift 1,144 → **1,143** เหลือฟีลด์เดียวคือ `first_name_english`
+  ซึ่งเป็น drift หลอกจากการเทียบผิดรูปแบบ (จะหายเองเมื่อทำ A2.4 drop คอลัมน์)
+
+  📌 **ข้อสังเกตนอกขอบเขต:** card#48 ชื่อไทยคือ "ธานัธ เหงียน สาแหม" แต่ชื่ออังกฤษใน master คือ
+  `'Malaria'` / `' Jehloh'` (มีช่องว่างนำหน้านามสกุลด้วย) — คนละคนกันชัดเจน ควรให้ทางโรงเรียนตรวจแยกต่างหาก
+
+- [x] **A3.1c — ห่อการแก้ทั้งหมดเป็น migration สำหรับ production (2026-08-05)**
+  ไฟล์สุดท้าย: **`database/migrations/2026_08_05_160000_deploy_20260805_repairs.php`** (ขั้นที่ 7 ในไฟล์นั้น)
+
+  > รวมมา 2 รอบตามที่เจ้าของระบบขอ เพื่อให้รัน production ครั้งเดียว:
+  > รอบแรกยุบ 2 ไฟล์บัตรนักเรียนเป็น `..._repair_student_card_data`
+  > รอบสองยุบรวมกับ migration ของวันเดียวกันอีก 6 ตัว เป็นไฟล์ `..._deploy_20260805_repairs`
+  > วิธีรวม: `migrate:rollback` ออกจาก dev ก่อนทุกตัว (ข้อมูลกลับสู่สถานะเดียวกับ production พอดี)
+  > → ลบไฟล์เดิม → เขียนไฟล์รวม → รันใหม่ → ผลออกมาเท่ากันทุกตัวเลข
+  > **ลำดับภายในสำคัญ:** ขั้นล้าง `birth_date_string` ต้องอยู่ **หลัง** ขั้นยึด master เสมอ
+  > เพราะขั้นแรกอาจแก้ `birth_date` ของบางแถว แล้วสตริงต้อง render ใหม่ตามวันที่ใหม่
+
+  🐛 **บั๊กที่เจอตอนรวมรอบสอง (มีมาตั้งแต่ไฟล์แยกแล้ว ผมพลาดที่ไม่ได้รันเทสต์ตอนนั้น):**
+  SQL ของขั้นบัตรนักเรียนใช้ไวยากรณ์เฉพาะ MySQL — `UPDATE ... INNER JOIN`, ตัวดำเนินการ
+  null-safe `<=>`, `DATE_FORMAT`, `SUBSTRING_INDEX` — ซึ่ง **SQLite ที่เทสต์ใช้ parse ไม่ผ่าน**
+  (`SQLSTATE[HY000]: General error: 1 near ">"`) ทำให้ `RefreshDatabase` ล้มและเทสต์แดงยกชุด 9 ตัว
+  แก้ด้วยการ guard `DB::getDriverName() !== 'mysql' → return` เหมือนขั้นอื่น ๆ ในไฟล์
+  **บทเรียน:** migration ที่เขียน raw SQL ต้องรัน `php artisan test` ด้วยเสมอ ไม่ใช่แค่ `migrate` บน MySQL
+  — ตรงข้ามกับกับดักปกติที่ว่า "เทสต์เขียวไม่พิสูจน์ว่ารันบน MySQL ได้"
+
+  **ไม่ hardcode card id** — ใช้เงื่อนไข "ค่าบนบัตร ≠ ค่าใน students" แล้วยึด master
+  จึงปรับตัวตามข้อมูล production เองโดยไม่ต้องรู้ว่า id ตรงกับ dev หรือไม่ แบ่งเป็น 4 คำสั่ง:
+
+  | คำสั่ง | เงื่อนไข | ผลบน dev |
+  |---|---|---|
+  | `syncStudentNumber()` | `card.student_number <> students.student_id` | 3 |
+  | `syncNationalId()` | `card.national_id <> students.citizen_id` | 3 |
+  | `syncBirthDate()` | `NOT (card.birth_date <=> students.date_of_birth)` | 1 |
+  | `backfillMasterEnglishName()` | master ว่างทั้งคู่ + บัตรมีชื่อ 2 คำ → split กลับไปเติมต้นทาง | 1 |
+
+  **จุดที่ตั้งใจออกแบบ:**
+  - เขียนด้วย raw SQL เพื่อไม่ให้ `StudentObserver` ทำงานซ้อน และไม่ดึง 2,000+ แถวขึ้น memory
+  - เทียบวันเกิดด้วย `<=>` (null-safe) ใน SQL ไม่ใช่ PHP — กันบั๊ก Carbon vs string ที่เคยพลาด
+  - **กันคอลัมน์ล้น:** `students.student_id` เป็น `varchar(20)` แต่ `student_cards.student_number`
+    เป็น `varchar(8)` และ MySQL เปิด `STRICT_TRANS_TABLES` → ถ้าไม่กัน migration จะ error กลางคัน
+    บน production ที่ข้อมูลไม่เหมือน dev จึงเลือก **ข้ามแถวนั้นแล้ว echo บอก** แทนการล้มทั้งชุด
+  - **`down()` ย้อนได้จริง** — snapshot ค่าก่อนแก้ลงตาราง `bk_student_card_identity_20260805`
+    ก่อนเขียนทับ และคืนชื่ออังกฤษต้นทางเฉพาะแถวที่ `backfilled_english_name=1` เท่านั้น
+    (ไม่งั้นจะไปล้างชื่อที่ครูกรอกเพิ่มหลัง migration รัน)
+
+  **การทดสอบบน dev (ไม่ใช่แค่รันผ่าน):**
+  1. ย้อน 8 แถวกลับสู่สถานะเดียวกับ production ด้วย backup JSON แล้วรัน → ได้ 3/3/1/1 ตรงกับที่แก้ด้วยมือทุกค่า
+  2. `migrate:rollback` → ค่ากลับเป็นแบบเพี้ยนครบ + ตาราง backup ถูกลบ ✅
+  3. รัน UPDATE ชุดเดิมซ้ำบน DB ที่แก้แล้ว → affected 0/0/0 (idempotent) ✅
+  4. `./vendor/bin/pint` ผ่าน · `migrate:status` = Ran
+  - ⚠️ รอบทดสอบแรกได้ `en_name_backfill=0` เพราะ fixture ไม่ครบ (ตอนแก้ด้วยมือ การอัปเดต
+    `students` ไปกระตุ้น `StudentObserver` ให้เขียน `card.first_name_english` ทับไปแล้ว
+    แต่ผมกู้คืนแค่ 4 คอลัมน์) — ไม่ใช่บั๊ก migration แต่เป็นบทเรียนว่า **การกู้ fixture
+    ต้องครอบคลุมคอลัมน์ที่ observer เขียนด้วย ไม่ใช่แค่คอลัมน์ที่ตั้งใจแก้**
+
+- [x] **A3.1d — ล้างรูปแบบ `birth_date_string` (2026-08-05)** — ขั้นที่ 3 ในไฟล์รวมข้างบน
+
+  **ปัญหา:** 1,688 แถว (active 1,212 · expired 474 · graduated 2) เก็บสตริงเป็น `MM/DD/YYYY`
+  ตกค้างจากตอน import เช่น card#2 = `'06/11/2013'` ทั้งที่ `birth_date` = `2013-06-11`
+  (11 มิ.ย.) → อ่านผิดเป็น 6 พ.ย. ได้ทันทีถ้ามีใครหยิบคอลัมน์นี้ไปใช้
+
+  **ตรวจก่อนเขียนทับ ว่าไม่มีเคสที่แปลงแล้วเสียความหมาย:**
+  - ปี พ.ศ. (ปี > 2400) = **0 แถว** → ไม่มีเคสที่ต้องแปลงปฏิทิน
+  - `birth_date` NULL แต่มีสตริง = **0 แถว** → ไม่มีเคสที่ derive ไม่ได้
+  - รูปแบบที่พบมี 2 แบบเท่านั้น: `NN/NN/NNNN` (2,278) และ `N/NN/NNNN` (308)
+  - 500 แถวที่เลขตัวแรก > 12 = เป็น `d/m/Y` ถูกอยู่แล้ว ไม่ถูกแตะ (WHERE ไม่ match)
+
+  ค่าใหม่ derive จาก `birth_date` ของแถวตัวเอง (คอลัมน์ชนิด `DATE` ไม่กำกวม) จึงเป็นการ
+  render ใหม่ล้วน ๆ ไม่ได้ดึงจากแหล่งอื่น → **ทำทุกสถานะ ไม่จำกัดแค่ active**
+  ต่างจาก migration ตัวก่อนหน้าที่ยึดค่าจาก `students` จึงต้องจำกัดที่ active เพื่อไม่แก้ประวัติ
+
+  **ทดสอบ:** รัน → normalized=1,688 · เหลือไม่ตรงรูปแบบ **0** · `migrate:rollback` → กลับเป็น
+  `06/11/2013` และนับได้ 1,688 เท่าเดิม ตาราง backup ถูกลบ ✅ · รันซ้ำ → affected **0** ✅ · Pint ผ่าน
+
+  📌 ย้ำ: คอลัมน์นี้ไม่มี API ไหนอ่านเมื่อบัตรมี `student_id` (มีครบทุกใบ) — `StudentCardResource`
+  คำนวณจาก `students.date_of_birth` เสมอ migration นี้จึงเป็นการเก็บกวาดข้อมูลให้สะอาด
+  ก่อนถึงขั้น A2.4 drop คอลัมน์ ไม่ใช่การแก้บั๊กที่ผู้ใช้มองเห็น
+
+- [ ] **A3.2** สร้าง query scope กลางตัวเดียว เช่น `StudentCard::scopeWithCurrentEnrollment()` join `classroom_students` + `classrooms` + `academic_years(is_current=1)` ให้ทั้ง 4 เมธอด + `applyCurrentClassFilters()` ใช้ร่วมกัน
+- [ ] **A3.3** แก้ `dashboard/statistics/getLevels/getSections` ให้ `groupBy` จาก `classrooms.grade_level`/`classrooms.section`
+- [ ] **A3.4** แก้บั๊ก filter `where('grade_level','like','%'.$level)` (~L118) — `'%1'` จับได้ทั้ง `ม.1` และ `ป.1` ตอนนี้รอดเพราะโรงเรียนเดียวมีระดับเดียว พอมีโรงเรียนที่สอง/มีประถมจะปนทันที → เทียบตัวเลขท้ายแบบ exact
+- [ ] **A3.5** เพิ่ม `test_dashboard_counts_match_room_listing` ใน `StudentCardSSOTTest` — ย้ายนักเรียน 1 คนข้ามห้อง แล้ว assert ยอด dashboard ของทั้งสองห้องขยับตาม **โดยไม่ต้องรัน reconcile**
+- [ ] **A3.6** ตัดสินใจเรื่อง 19 ใบที่ active แต่ไม่มี enrollment — **แนะนำ:** ให้ observer ปิดเป็น `expired` (ตรรกะมีอยู่แล้ว) แล้วหาสาเหตุว่าหลุดมาได้อย่างไร
+
+*ขนาด: กลาง–ใหญ่ (แตะ 4 เมธอด + scope ใหม่ / frontend ไม่ต้องแก้ เพราะ response shape เดิม)*
+
+## ลำดับการทำ
+
+**ลำดับเดิม (ก่อนรู้ผล A3.1) — ยกเลิก:**
+~~A3.1 → A1 (deploy รอบเดียวกัน) → A3.2–A3.6 → A2.4~~
+
+**ลำดับใหม่หลัง A3.1 (2026-08-05):**
+```
+A1.1–A1.3 (ปิดช่องโหว่)          ← เดินได้ทันที ไม่ต้องรอ reconcile
+   └─> A3.2–A3.6 (ย้าย read path)
+          └─> A2.4 (drop คอลัมน์) ── รอ 1–2 สัปดาห์ยืนยันไม่มีอะไรพัง
+                 └─> ลบ ReconcileStudentCards + StudentObserver sync ที่ไม่มีที่ให้เขียนแล้ว
+
+แยกเป็นงานเล็กคู่ขนาน: แก้ 7 แถว identity ด้วยมือ (ดูตาราง A3.1)
+```
+
+- **A2.1 ทำก็ต่อเมื่อ** ตัดสินใจว่าจะ **เก็บ** คอลัมน์ denormalized ไว้ ถ้าจะ drop ก็ข้ามไปเลย
+- ระวัง: `StudentObserver` เขียนคอลัมน์เหล่านี้อยู่ตลอด ถ้า A2.4 drop คอลัมน์ต้องแก้ observer พร้อมกัน ไม่งั้น update นักเรียนจะพังทั้งระบบ
+
+## Definition of Done
+
+- `php artisan students:reconcile-cards 1 --dry-run --report` ต้องรายงาน drift = 0 **โดยไม่ต้องรัน reconcile ซ้ำ** หลังทดสอบย้ายห้องจริง 1 ครั้ง
+- `php artisan test --filter=StudentCardSSOTTest` เขียว
+- ⚠️ เทสต์เขียวไม่พิสูจน์ว่า migration รันผ่านบน MySQL — ถ้ามี migration drop คอลัมน์ใน A2.4 ต้องทดสอบบน MySQL จริงแยกต่างหาก
+
+---
+
 # 2026-07-21 - Modernize Member Withdrawal Request Cancellation Notifications & Push
 
 - **Status:** Complete & Pushed (`a34aca17` -> `origin/main`)
