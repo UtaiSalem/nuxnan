@@ -7,17 +7,8 @@ import CampaignWidget from '~/components/campaign/CampaignWidget.vue'
 definePageMeta({ layout: 'main', middleware: 'auth' })
 useHead({ title: 'รายได้ - Nuxnan' })
 
-const route = useRoute()
 const course = inject<any>('course', ref(null))
 const isCourseAdmin = inject<any>('isCourseAdmin', ref(false))
-const courseId = computed(() => String(route.params.id))
-const { transactions, fetchTransactions } = useCoursePoints(courseId)
-
-onMounted(async () => {
-  if (isCourseAdmin.value) {
-    await fetchTransactions()
-  }
-})
 </script>
 
 <template>
@@ -31,15 +22,6 @@ onMounted(async () => {
     </section>
 
     <CourseSupportPanel v-if="course" :course="course" :is-course-admin="isCourseAdmin" />
-
-    <section v-if="isCourseAdmin" class="rounded-2xl bg-white p-5 shadow-sm dark:bg-vikinger-dark-200">
-      <h2 class="mb-4 font-black">ประวัติการรับแต้ม (เต็ม)</h2>
-      <div v-if="!transactions.length" class="py-8 text-center text-sm text-slate-500">ยังไม่มีประวัติรายการ</div>
-      <div v-for="transaction in transactions" :key="transaction.id" class="flex items-center justify-between border-b border-slate-100 py-3 text-sm last:border-0 dark:border-slate-700">
-        <span class="truncate">{{ transaction.description || transaction.type || 'รายการแต้ม' }}</span>
-        <strong :class="Number(transaction.amount || transaction.points || 0) >= 0 ? 'text-emerald-600' : 'text-red-500'">{{ Number(transaction.amount || transaction.points || 0).toLocaleString() }}</strong>
-      </div>
-    </section>
 
     <section class="grid gap-6 lg:grid-cols-2">
       <div class="rounded-2xl border border-indigo-100 bg-white p-5 shadow-sm dark:border-indigo-900/40 dark:bg-vikinger-dark-200">
