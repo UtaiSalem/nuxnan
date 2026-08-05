@@ -8,6 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Imported production dumps already have legacy_row_ids and no legacy id column.
+        if (! Schema::hasColumn('student_guardian_links', 'legacy_student_guardian_id')) {
+            return;
+        }
+
         Schema::table('student_guardian_links', function (Blueprint $table) {
             $table->dropUnique('student_guardian_links_legacy_student_guardian_id_unique');
             $table->dropColumn('legacy_student_guardian_id');

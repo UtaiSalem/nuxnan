@@ -8,6 +8,12 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Imported production dumps already carry this table while the migrations
+        // table does not record it. Guard so `migrate` stays runnable.
+        if (Schema::hasTable('student_guardian_links')) {
+            return;
+        }
+
         Schema::create('student_guardian_links', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('student_id')->index();

@@ -8,6 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Imported production dumps already carry this column. Guard so `migrate` stays runnable.
+        if (Schema::hasColumn('guardian_contacts', 'superseded_by_contact_id')) {
+            return;
+        }
+
         Schema::table('guardian_contacts', function (Blueprint $table) {
             $table->unsignedBigInteger('superseded_by_contact_id')->nullable()->index();
         });
