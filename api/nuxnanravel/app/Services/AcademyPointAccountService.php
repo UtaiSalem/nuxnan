@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AcademyPointAccount;
 use App\Models\AcademyPointTransaction;
+use DomainException;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -47,6 +48,80 @@ class AcademyPointAccountService
                 'balance_before' => $before,
                 'balance_after' => $after,
                 'idempotency_key' => $idempotencyKey,
+                'metadata' => $metadata,
+                'created_by' => $userId,
+            ]);
+        });
+    }
+
+    /**
+     * Move points OUT of the academy account. Claims must debit here before any
+     * points are granted to users, otherwise the payout mints new points.
+     */
+    public function debit(int $academyId, ?int $userId, int $amount, string $type, ?string $idempotencyKey = null, array $metadata = [], bool $releaseReservation = false): AcademyPointTransaction
+    {
+        if ($idempotencyKey && ($existing = AcademyPointTransaction::where('idempotency_key', $idempotencyKey)->first())) {
+            return $existing;
+        }
+
+        return DB::transaction(function () use ($academyId, $userId, $amount, $type, $idempotencyKey, $metadata, $releaseReservation) {
+            if ($idempotencyKey && ($existing = AcademyPointTransaction::where('idempotency_key', $idempotencyKey)->first())) {
+                return $existing;
+            }
+
+            $account = AcademyPointAccount::where('academy_id', $academyId)->lockForUpdate()->first();
+            if (! $account || (int) $account->balance < $amount) {
+                throw new DomainException('insufficient_pool');
+            }
+
+            $before = (int) $account->balance;
+            $after = $before - $amount;
+            $updateData = ['balance' => $after, 'total_distributed' => $account->total_distributed + $amount, 'version' => $account->version + 1];
+            if ($releaseReservation) {
+                $updateData['reserved_balance'] = max(0, (int) $account->reserved_balance - $amount);
+            }
+            $account->update($updateData);
+
+            return AcademyPointTransaction::create([
+                'academy_point_account_id' => $account->id,
+                'academy_id' => $academyId,
+                'user_id' => $userId,
+                'type' => $type,
+                // `amount` is an unsigned column: direction is carried by the type and
+                // the before/after balances, never by the sign. Matches credit().
+                'amount' => $amount,
+                'balance_before' => $before,
+                'balance_after' => $after,
+                'idempotency_key' => $idempotencyKey,
+                'metadata' => $metadata,
+                'created_by' => $userId,
+            ]);
+        });
+    }
+
+    /**
+     * Earmark donated points for member claims. Reserved points stay in the
+     * balance but drop out of available_balance, so withdrawals and allocations
+     * cannot spend what claimers are entitled to.
+     */
+    public function reserveForClaims(int $academyId, int $amount, ?int $userId = null, array $metadata = []): AcademyPointTransaction
+    {
+        return DB::transaction(function () use ($academyId, $amount, $userId, $metadata) {
+            $account = AcademyPointAccount::where('academy_id', $academyId)->lockForUpdate()->first()
+                ?? AcademyPointAccount::create(['academy_id' => $academyId]);
+
+            $balance = (int) $account->balance;
+            $account->update(['reserved_balance' => (int) $account->reserved_balance + $amount, 'version' => $account->version + 1]);
+
+            return AcademyPointTransaction::create([
+                'academy_point_account_id' => $account->id,
+                'academy_id' => $academyId,
+                'user_id' => $userId,
+                'type' => AcademyPointTransaction::TYPE_DONATION_RESERVE,
+                'amount' => $amount,
+                'balance_before' => $balance,
+                'balance_after' => $balance,
+                'idempotency_key' => null,
                 'metadata' => $metadata,
                 'created_by' => $userId,
             ]);
