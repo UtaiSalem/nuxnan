@@ -33,8 +33,12 @@ return new class extends Migration
             });
         }
 
+        // SQL SECURITY INVOKER keeps the view working after a dump is restored on a
+        // host where the original definer does not exist. MySQL-only syntax.
+        $security = DB::getDriverName() === 'mysql' ? 'SQL SECURITY INVOKER ' : '';
+
         DB::statement('DROP VIEW IF EXISTS user_daily_claim_counters');
-        DB::statement("CREATE VIEW user_daily_claim_counters AS SELECT user_id, created_at AS claimed_at, 'public' AS tier FROM donate_recipients UNION ALL SELECT claimer_id AS user_id, claimed_at, 'academy' AS tier FROM academy_donate_claims UNION ALL SELECT claimer_id AS user_id, claimed_at, 'course' AS tier FROM course_donate_claims");
+        DB::statement("CREATE {$security}VIEW user_daily_claim_counters AS SELECT user_id, created_at AS claimed_at, 'public' AS tier FROM donate_recipients UNION ALL SELECT claimer_id AS user_id, claimed_at, 'academy' AS tier FROM academy_donate_claims UNION ALL SELECT claimer_id AS user_id, claimed_at, 'course' AS tier FROM course_donate_claims");
 
         // Deliberately no data step here. Legacy course donations carry a stale
         // remaining_points (the old campaign flow never decremented it) while their
