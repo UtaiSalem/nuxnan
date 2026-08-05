@@ -8,6 +8,7 @@ import CourseCard from '~/components/learn/course/CourseCard.vue'
 import EventFormModal from '~/components/academy/events/EventFormModal.vue'
 import { useCourseGrouping } from '~/composables/useCourseGrouping'
 import CampaignWidget from '~/components/campaign/CampaignWidget.vue'
+import AdvertiseCtaWidget from '~/components/widgets/AdvertiseCtaWidget.vue'
 import AcademyDonationModal from '~/components/donation/AcademyDonationModal.vue'
 import AcademyPublicSupportWidget from '~/components/academy/revenue/AcademyPublicSupportWidget.vue'
 import AcademyWalletCard from '~/components/academy/revenue/AcademyWalletCard.vue'
@@ -2426,12 +2427,31 @@ watch(() => academy.value?.id, (id) => {
           <!-- Revenue Tab -->
           <div v-else-if="currentTab === 'revenue'" class="space-y-5">
             <div class="space-y-5">
-              <AcademyWalletCard :summary="supportSummary" :loading="supportSummaryLoading" :academy-id="academy?.id" @support="openAcademyDonation" />
+              <AcademyWalletCard :summary="supportSummary" :loading="supportSummaryLoading" @support="openAcademyDonation" />
+              <div v-if="academy && (academy.memberStatus === 2 || academy.authIsAcademyAdmin)">
+                <AcademyClaimWidget :key="claimWidgetKey" :academy-id="academy.id" @claimed="handleAcademyClaimed" />
+              </div>
               <div class="grid gap-5 xl:grid-cols-2">
-                <div v-if="academy && (academy.memberStatus === 2 || academy.authIsAcademyAdmin)" class="min-w-0 xl:col-span-2">
-                  <AcademyClaimWidget :key="claimWidgetKey" :academy-id="academy.id" @claimed="handleAcademyClaimed" />
+                <div class="rounded-2xl border border-indigo-100 bg-white p-5 shadow-sm dark:border-indigo-900/40 dark:bg-vikinger-dark-200">
+                  <div class="mb-4 flex items-center gap-3">
+                    <span class="rounded-xl bg-indigo-100 p-2 text-indigo-600 dark:bg-indigo-900/30"><Icon icon="mdi:bullhorn-outline" class="h-6 w-6" /></span>
+                    <div>
+                      <h2 class="font-black">ลงโฆษณา &amp; สนับสนุนด้วยเงิน</h2>
+                      <p class="text-sm text-slate-500">ชำระผ่าน Wallet เพื่อโปรโมตหรือให้ทุนโรงเรียนนี้</p>
+                    </div>
+                  </div>
+                  <AdvertiseCtaWidget v-if="academy" scope-type="academy" :target-id="academy.id" :target-name="academy.name" />
                 </div>
-                <CampaignWidget v-if="academy" scope="academy" :academy-id="academy.id" placement="academy-revenue" hide-when-empty />
+                <div class="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm dark:border-emerald-900/40 dark:bg-vikinger-dark-200">
+                  <div class="mb-4 flex items-center gap-3">
+                    <span class="rounded-xl bg-emerald-100 p-2 text-emerald-600 dark:bg-emerald-900/30"><Icon icon="mdi:play-circle-outline" class="h-6 w-6" /></span>
+                    <div>
+                      <h2 class="font-black">ดูโฆษณาเพื่อรับรายได้</h2>
+                      <p class="text-sm text-slate-500">ดูแคมเปญและรับรางวัลตามเงื่อนไข</p>
+                    </div>
+                  </div>
+                  <CampaignWidget v-if="academy" scope="academy" :academy-id="academy.id" placement="academy-revenue" :limit="4" hide-header />
+                </div>
               </div>
             </div>
           </div>
@@ -2493,7 +2513,8 @@ watch(() => academy.value?.id, (id) => {
         
         <!-- Right Sidebar -->
         <aside class="hidden min-[1421px]:block min-[1421px]:sticky min-[1421px]:top-[86px] min-[1421px]:space-y-6">
-          <AcademySupportCtaWidget v-if="academy" :academy-id="academy.id" :academy-name="academy.name" @donate="openAcademyDonation" />
+          <!-- The revenue tab carries richer versions of both actions, so the sidebar CTA stands down there. -->
+          <AcademySupportCtaWidget v-if="academy && currentTab !== 'revenue'" :academy-id="academy.id" :academy-name="academy.name" @donate="openAcademyDonation" />
 
           <!-- Quick Stats -->
           <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-5 shadow-sm">
@@ -2623,7 +2644,7 @@ watch(() => academy.value?.id, (id) => {
     <!-- Right Mobile Drawer -->
     <CommonSidebarDrawer v-model:open="showMobileRightDrawer" side="right" title="Stats & activity">
       <div v-if="academy" class="space-y-6">
-        <AcademySupportCtaWidget v-if="academy" :academy-id="academy.id" :academy-name="academy.name" @donate="() => { showMobileRightDrawer = false; openAcademyDonation() }" />
+        <AcademySupportCtaWidget v-if="academy && currentTab !== 'revenue'" :academy-id="academy.id" :academy-name="academy.name" @donate="() => { showMobileRightDrawer = false; openAcademyDonation() }" />
         <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <Icon icon="fluent:data-bar-horizontal-24-regular" class="w-5 h-5 text-vikinger-purple" />
