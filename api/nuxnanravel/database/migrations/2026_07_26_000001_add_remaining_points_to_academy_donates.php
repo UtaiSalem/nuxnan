@@ -9,6 +9,12 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Imported production dumps already carry this column while the migrations
+        // table does not record it, so guard both steps and stay idempotent.
+        if (Schema::hasColumn('academy_donates', 'remaining_points')) {
+            return;
+        }
+
         Schema::table('academy_donates', function (Blueprint $table) {
             $table->unsignedBigInteger('remaining_points')->nullable()->after('points_amount');
         });

@@ -102,7 +102,7 @@ class CoursePointCampaignController extends Controller
     public function available(Course $course)
     {
         $user = auth()->user();
-        $enrolled = $course->courseMembers()->where('user_id', $user->id)->exists();
+        $enrolled = $course->user_id === $user->id || $course->courseMembers()->where('user_id', $user->id)->exists();
         $data = CoursePointCampaign::where('course_id', $course->id)->where('campaign_type', CoursePointCampaign::CAMPAIGN_TYPE_MANUAL)->get()->filter(fn ($campaign) => $campaign->isClaimable())->map(function ($campaign) use ($user, $enrolled) {
             $claimed = $campaign->claims()->where('user_id', $user->id)->exists();
 

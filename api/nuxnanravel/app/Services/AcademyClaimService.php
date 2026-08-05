@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\Academy;
 use App\Models\AcademyDonate;
 use App\Models\AcademyDonateClaim;
+use App\Models\AcademyPointAccount;
+use App\Models\AcademyPointTransaction;
 use App\Models\User;
 use DomainException;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +19,8 @@ class AcademyClaimService
     {
         $today = now()->startOfDay();
         $baseQuery = AcademyDonate::where('academy_id', $academy->id)->where('donation_type', 'point')->where('status', 'completed')->where('remaining_points', '>', 0);
-        $poolTotal = (int) (clone $baseQuery)->sum('remaining_points');
+        $accountBalance = (int) (AcademyPointAccount::where('academy_id', $academy->id)->value('balance') ?? 0);
+        $poolTotal = min((int) (clone $baseQuery)->sum('remaining_points'), $accountBalance);
         $donations = (clone $baseQuery)->with('donor')->orderBy('created_at')->paginate(min(max($perPage, 1), 50), ['*'], 'page', max($page, 1));
         $maxCost = (int) config('economy.academy_claim_max_cost', 270);
         $ratioClaimer = (float) config('economy.academy_claim_ratio_claimer', 210 / 270);
@@ -61,6 +64,7 @@ class AcademyClaimService
                 $rewardSchool += $rewardPlatform;
                 $rewardPlatform = 0;
             }
+            $this->academyPoints->debit($academy->id, $user->id, $cost, AcademyPointTransaction::TYPE_STUDENT_CLAIM, null, ['donation_id' => $donation->id], true);
             $donation->decrement('remaining_points', $cost);
             $claimerTx = $this->points->earn($user, $rewardClaimer, 'donation_claim_reward_claimer', $donation->id);
             $suggesterTx = $suggester ? $this->points->earn($suggester, $rewardSuggester, 'donation_claim_reward_suggester', $donation->id) : null;

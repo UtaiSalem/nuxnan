@@ -12,6 +12,7 @@ use App\Models\CoursePointTransaction;
 use App\Models\CourseQuiz;
 use App\Models\Lesson;
 use App\Models\User;
+use DomainException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -20,6 +21,122 @@ class CoursePointAccountService
     public function __construct(
         protected PointsService $pointsService,
     ) {}
+
+    public function debit(int $courseId, ?int $userId, int $amount, string $type, ?string $idempotencyKey = null, array $metadata = [], bool $releaseReservation = false): CoursePointTransaction
+    {
+        if ($idempotencyKey && ($existing = CoursePointTransaction::where('idempotency_key', $idempotencyKey)->first())) {
+            return $existing;
+        }
+
+        return DB::transaction(function () use ($courseId, $userId, $amount, $type, $idempotencyKey, $metadata, $releaseReservation) {
+            if ($idempotencyKey && ($existing = CoursePointTransaction::where('idempotency_key', $idempotencyKey)->first())) {
+                return $existing;
+            }
+
+            $account = CoursePointAccount::where('course_id', $courseId)->lockForUpdate()->first();
+            if (! $account || (int) $account->balance < $amount) {
+                throw new DomainException('insufficient_pool');
+            }
+
+            $before = (int) $account->balance;
+            $after = $before - $amount;
+            $updateData = ['balance' => $after, 'total_distributed' => $account->total_distributed + $amount, 'version' => $account->version + 1];
+            if ($releaseReservation) {
+                $updateData['reserved_balance'] = max(0, (int) $account->reserved_balance - $amount);
+            }
+            $account->update($updateData);
+
+            return CoursePointTransaction::create([
+                'course_point_account_id' => $account->id,
+                'course_id' => $courseId,
+                'user_id' => $userId,
+                'type' => $type,
+                // `amount` is an unsigned column: direction is carried by the type and
+                // the before/after balances, never by the sign. Matches grantCampaignClaim().
+                'amount' => $amount,
+                'balance_before' => $before,
+                'balance_after' => $after,
+                'idempotency_key' => $idempotencyKey,
+                'metadata' => $metadata,
+                'created_by' => $userId,
+            ]);
+        });
+    }
+
+    public function reserveForClaims(int $courseId, int $amount, ?int $userId = null, array $metadata = []): CoursePointTransaction
+    {
+        return DB::transaction(function () use ($courseId, $amount, $userId, $metadata) {
+            $account = CoursePointAccount::where('course_id', $courseId)->lockForUpdate()->first();
+            if (! $account) {
+                $account = CoursePointAccount::create([
+                    'course_id' => $courseId,
+                    'balance' => 0,
+                    'total_earned' => 0,
+                    'total_withdrawn' => 0,
+                    'total_distributed' => 0,
+                    'reserved_balance' => 0,
+                    'commission_rate' => 0.0000,
+                    'minimum_withdrawal' => CoursePointAccount::MINIMUM_WITHDRAWAL,
+                ]);
+            }
+
+            $balance = (int) $account->balance;
+            $account->update(['reserved_balance' => (int) $account->reserved_balance + $amount, 'version' => $account->version + 1]);
+
+            return CoursePointTransaction::create([
+                'course_point_account_id' => $account->id,
+                'course_id' => $courseId,
+                'user_id' => $userId,
+                'type' => CoursePointTransaction::TYPE_DONATION_RESERVE,
+                'amount' => $amount,
+                'balance_before' => $balance,
+                'balance_after' => $balance,
+                'idempotency_key' => null,
+                'metadata' => $metadata,
+                'created_by' => $userId,
+            ]);
+        });
+    }
+
+    public function creditClaimShare(int $courseId, ?int $userId, int $amount, array $metadata = []): CoursePointTransaction
+    {
+        return DB::transaction(function () use ($courseId, $userId, $amount, $metadata) {
+            $account = CoursePointAccount::where('course_id', $courseId)->lockForUpdate()->first();
+            if (! $account) {
+                $account = CoursePointAccount::create([
+                    'course_id' => $courseId,
+                    'balance' => 0,
+                    'total_earned' => 0,
+                    'total_withdrawn' => 0,
+                    'total_distributed' => 0,
+                    'reserved_balance' => 0,
+                    'commission_rate' => 0.0000,
+                    'minimum_withdrawal' => CoursePointAccount::MINIMUM_WITHDRAWAL,
+                ]);
+            }
+
+            $before = (int) $account->balance;
+            $after = $before + $amount;
+            $account->update([
+                'balance' => $after,
+                'total_earned' => $account->total_earned + $amount,
+                'version' => $account->version + 1,
+            ]);
+
+            return CoursePointTransaction::create([
+                'course_point_account_id' => $account->id,
+                'course_id' => $courseId,
+                'user_id' => $userId,
+                'type' => CoursePointTransaction::TYPE_CLAIM_SHARE,
+                'amount' => $amount,
+                'balance_before' => $before,
+                'balance_after' => $after,
+                'idempotency_key' => null,
+                'metadata' => $metadata,
+                'created_by' => $userId,
+            ]);
+        });
+    }
 
     // ─── 1. Credit (เรียกจาก LessonAccessService หลัง unlock) ───
 
@@ -514,7 +631,8 @@ class CoursePointAccountService
         if ($campaign->campaign_type !== CoursePointCampaign::CAMPAIGN_TYPE_MANUAL) {
             return ['success' => false, 'message' => 'Campaign is not manual'];
         }
-        if (! CourseMember::where('course_id', $campaign->course_id)->where('user_id', $student->id)->exists()) {
+        $isCourseOwner = Course::where('id', $campaign->course_id)->value('user_id') === $student->id;
+        if (! $isCourseOwner && ! CourseMember::where('course_id', $campaign->course_id)->where('user_id', $student->id)->exists()) {
             return ['success' => false, 'message' => 'ต้องเข้าร่วมรายวิชาก่อน'];
         }
         if (! $campaign->isClaimable()) {

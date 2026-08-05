@@ -33,6 +33,7 @@ class AcademyClaimController extends Controller
             $code = $e->getMessage();
             $status = match ($code) {
                 'daily_cap_reached', 'per_donation_cap_reached' => 429,
+                'insufficient_pool' => 409,
                 'no_claimable_pool' => 404,
                 'donation_not_claimable' => 422,
                 default => 422,

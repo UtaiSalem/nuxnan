@@ -18,4 +18,12 @@ return [
     'academy_claim_ratio_platform' => 0.0370,
     'academy_claim_cap_per_donation_per_day' => 5,
     'academy_claim_cap_total_per_day' => 20,
+    'course_claim_cost' => 270,
+    'course_claim_max_cost' => 270,
+    'course_claim_ratio_claimer' => 0.7778,
+    'course_claim_ratio_suggester' => 0.1111,
+    'course_claim_ratio_course' => 0.0741,
+    'course_claim_ratio_platform' => 0.0370,
+    'course_claim_cap_per_donation_per_day' => 5,
+    'course_claim_cap_total_per_day' => 20,
 ];

@@ -3,14 +3,16 @@ import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 import { useAuthStore } from '~/stores/auth'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   visible: boolean
   scopeType: 'academy' | 'course'
   targetId: number | string
   targetName?: string
   // For a course that belongs to an academy, pass it so the campaign is linked.
   academyId?: number | string | null
-}>()
+  // Which tab the modal opens on, so a "สนับสนุน" CTA does not land on the ad form.
+  defaultType?: 'advertisement' | 'support'
+}>(), { defaultType: 'advertisement' })
 
 const emit = defineEmits<{
   'update:visible': [boolean]
@@ -25,7 +27,7 @@ const apiBase = config.public.apiBase
 // and the central create page, otherwise the backend rejects a mismatched budget.
 const AD_PRICE_PER_VIEW_SECOND = 0.10
 
-const campaignType = ref<'advertisement' | 'support'>('advertisement')
+const campaignType = ref<'advertisement' | 'support'>(props.defaultType)
 const title = ref('')
 const description = ref('')
 const mediaLink = ref('')
@@ -50,7 +52,7 @@ const budgetAmount = computed(() =>
 const walletBalance = computed(() => parseFloat(authStore.user?.wallet) || 0)
 
 function reset() {
-  campaignType.value = 'advertisement'
+  campaignType.value = props.defaultType
   title.value = ''
   description.value = ''
   mediaLink.value = ''

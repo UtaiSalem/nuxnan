@@ -29,6 +29,11 @@ const props = withDefaults(defineProps<{
   placement?: string
   limit?: number
   hideWhenEmpty?: boolean
+  // Creating is opt-in: most placements are consumption surfaces (sidebars, "watch to
+  // earn" panels) where the page already carries its own create CTA.
+  allowCreate?: boolean
+  // Set when the host card already has a heading, so the widget does not repeat it.
+  hideHeader?: boolean
 }>(), { scope: 'public', placement: 'sidebar', limit: 5 })
 
 const api = useApi()
@@ -45,21 +50,26 @@ const completedIds = new Set<number>()
 const scopeLabel = computed(() => ({ public: 'สาธารณะ', academy: 'โรงเรียน', course: 'รายวิชา' }[props.scope]))
 
 const showCreateModal = ref(false)
-const canCreateInline = computed(() => props.scope !== 'public' && (props.scope === 'academy' ? !!props.academyId : !!props.courseId))
+const canCreateInline = computed(() => !!props.allowCreate && props.scope !== 'public' && (props.scope === 'academy' ? !!props.academyId : !!props.courseId))
 const createModalScope = computed<'academy' | 'course'>(() => props.scope === 'course' ? 'course' : 'academy')
 const createModalTargetId = computed(() => props.scope === 'course' ? (props.courseId as number | string) : (props.academyId as number | string))
 
 const campaignCreateLink = computed(() => {
+  // The create page prefills from `scope` (not `scope_type`) — see applyQueryPrefill().
   if (props.scope === 'academy' && props.academyId) {
-    return { path: '/earn/advertise/create', query: { scope_type: 'academy', academy_id: props.academyId } }
+    return { path: '/earn/advertise/create', query: { scope: 'academy', academy_id: props.academyId } }
   }
 
   if (props.scope === 'course' && props.courseId) {
-    return { path: '/earn/advertise/create', query: { scope_type: 'course', course_id: props.courseId, academy_id: props.academyId || undefined } }
+    return { path: '/earn/advertise/create', query: { scope: 'course', course_id: props.courseId, academy_id: props.academyId || undefined } }
   }
 
   return '/earn/advertise'
 })
+
+// Without create rights the widget only offers browsing, never the create page.
+const secondaryLink = computed(() => (props.allowCreate ? campaignCreateLink.value : '/earn/advertise'))
+const emptyText = computed(() => (props.allowCreate ? 'ยังไม่มีแคมเปญในพื้นที่นี้' : 'ยังไม่มีแคมเปญให้รับชมตอนนี้'))
 
 function idempotencyKey(campaign: Campaign) {
   return `campaign-view-${campaign.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -141,16 +151,16 @@ onMounted(loadCampaigns)
 
 <template>
   <section v-if="!props.hideWhenEmpty || isLoading || error || campaigns.length" class="rounded-2xl bg-white p-4 shadow-sm dark:bg-gray-800" :aria-label="`แคมเปญ${scopeLabel}`">
-    <div class="mb-4 flex items-center justify-between">
-      <div>
+    <div v-if="!hideHeader || canCreateInline" class="mb-4 flex items-center justify-between gap-3">
+      <div v-if="!hideHeader">
         <p class="text-[10px] font-bold uppercase tracking-wider text-indigo-500">{{ scopeLabel }}</p>
         <h3 class="font-bold text-gray-900 dark:text-white">โฆษณาและการสนับสนุน</h3>
       </div>
-      <button v-if="canCreateInline" type="button" class="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-300" @click="showCreateModal = true">
+      <button v-if="canCreateInline" type="button" class="ms-auto inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-300" @click="showCreateModal = true">
         <Icon icon="heroicons:plus" class="h-3.5 w-3.5" />
         สร้างแคมเปญ
       </button>
-      <NuxtLink v-else :to="campaignCreateLink" class="text-xs text-blue-500 hover:underline">
+      <NuxtLink v-else-if="!hideHeader" :to="secondaryLink" class="text-xs text-blue-500 hover:underline">
         ดูทั้งหมด
       </NuxtLink>
     </div>
@@ -164,12 +174,12 @@ onMounted(loadCampaigns)
     </div>
     <div v-else-if="campaigns.length === 0" class="rounded-xl border border-dashed border-indigo-200 bg-indigo-50/40 px-4 py-6 text-center dark:border-indigo-900/50 dark:bg-indigo-950/20">
       <Icon icon="fluent:megaphone-off-24-regular" class="mx-auto mb-2 h-8 w-8 text-indigo-400 opacity-70" />
-      <p class="text-sm text-gray-600 dark:text-gray-300">ยังไม่มีแคมเปญในพื้นที่นี้</p>
+      <p class="text-sm text-gray-600 dark:text-gray-300">{{ emptyText }}</p>
       <button v-if="canCreateInline" type="button" class="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700" @click="showCreateModal = true">
         <Icon icon="heroicons:plus" class="h-4 w-4" />
         สร้างแคมเปญแรก
       </button>
-      <NuxtLink v-else :to="campaignCreateLink" class="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700">
+      <NuxtLink v-else-if="allowCreate" :to="campaignCreateLink" class="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700">
         <Icon icon="heroicons:plus" class="h-4 w-4" />
         ดูแคมเปญทั้งหมด
       </NuxtLink>

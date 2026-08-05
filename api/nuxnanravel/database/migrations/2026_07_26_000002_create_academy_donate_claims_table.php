@@ -28,8 +28,9 @@ return new class extends Migration
             $table->foreignId('platform_transaction_id')->constrained('points_transactions')->cascadeOnDelete();
             $table->timestamp('claimed_at');
             $table->timestamps();
-            $table->index(['academy_donate_id', 'claimer_id', 'claimed_at']);
-            $table->index(['claimer_id', 'claimed_at']);
+            // Explicit names: the auto-generated ones exceed MySQL's 64-char identifier limit.
+            $table->index(['academy_donate_id', 'claimer_id', 'claimed_at'], 'adc_donate_claimer_at_idx');
+            $table->index(['claimer_id', 'claimed_at'], 'adc_claimer_at_idx');
         });
     }
 

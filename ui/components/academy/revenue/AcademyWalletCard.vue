@@ -5,10 +5,9 @@ import type { AcademySupportSummary } from '~/composables/useAcademyRevenue'
 interface Props {
   summary: AcademySupportSummary | null
   loading?: boolean
-  academyId?: number | string | null
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
 const emit = defineEmits<{ support: [] }>()
 </script>
 
@@ -54,19 +53,13 @@ const emit = defineEmits<{ support: [] }>()
         </div>
       </div>
 
-      <div class="mt-6 flex flex-col gap-2 sm:flex-row">
-        <button type="button" class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-violet-700" @click="emit('support')">
+      <!-- Ads and money support live in the AdvertiseCtaWidget below, so this card
+           only carries the point-donation action. -->
+      <div class="mt-6">
+        <button type="button" class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-violet-700 sm:w-auto" @click="emit('support')">
           <Icon icon="fluent:heart-24-regular" class="h-5 w-5" />
           สนับสนุนโรงเรียน
         </button>
-        <NuxtLink
-          v-if="props.academyId"
-          :to="{ path: '/earn/advertise/create', query: { scope_type: 'academy', academy_id: props.academyId } }"
-          class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-white px-4 py-3 text-sm font-bold text-indigo-600 transition hover:bg-indigo-50 dark:border-indigo-800 dark:bg-gray-800 dark:text-indigo-300 dark:hover:bg-indigo-950/30"
-        >
-          <Icon icon="fluent:megaphone-24-regular" class="h-5 w-5" />
-          สร้างแคมเปญ
-        </NuxtLink>
       </div>
     </div>
   </div>
