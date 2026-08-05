@@ -8,6 +8,7 @@ use App\Http\Requests\CourseDonate\StorePointDonationRequest;
 use App\Http\Resources\CourseDonate\CourseDonateResource;
 use App\Models\Course;
 use App\Models\CourseDonate;
+use App\Models\CourseMember;
 use App\Services\CourseDonateService;
 use Illuminate\Http\Request;
 
@@ -30,10 +31,21 @@ class CourseDonationController extends Controller
         return CourseDonateResource::collection(CourseDonate::where('donor_id', $r->user()->id)->latest()->paginate());
     }
 
-    public function showForCourse(Course $course)
+    public function showForCourse(Request $request, Course $course)
     {
-        abort_unless(auth()->id() === $course->user_id || auth()->user()->isSuperAdmin() || auth()->user()->is_plearnd_admin, 403);
+        $user = $request->user();
+        $privileged = (int) $course->user_id === (int) $user->id || $user->isSuperAdmin() || $user->is_plearnd_admin;
+        // Members need to see who funded the course before they claim from it.
+        abort_unless($privileged || CourseMember::where('course_id', $course->id)->where('user_id', $user->id)->exists(), 403);
 
-        return CourseDonateResource::collection(CourseDonate::where('course_id', $course->id)->latest()->paginate());
+        // Donor contact details stay with the course owner and platform admins.
+        $request->attributes->set('course_donate_contact_visible', $privileged);
+
+        $query = CourseDonate::where('course_id', $course->id);
+        if (! $privileged) {
+            $query->whereIn('status', [CourseDonate::STATUS_APPROVED, CourseDonate::STATUS_COMPLETED]);
+        }
+
+        return CourseDonateResource::collection($query->latest()->paginate());
     }
 }
