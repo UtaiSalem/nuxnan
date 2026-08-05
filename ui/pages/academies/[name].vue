@@ -13,7 +13,7 @@ import AcademyDonationModal from '~/components/donation/AcademyDonationModal.vue
 import AcademyPublicSupportWidget from '~/components/academy/revenue/AcademyPublicSupportWidget.vue'
 import AcademyWalletCard from '~/components/academy/revenue/AcademyWalletCard.vue'
 import AcademySupportCtaWidget from '~/components/academy/revenue/AcademySupportCtaWidget.vue'
-import AcademyClaimWidget from '~/components/academy/points/AcademyClaimWidget.vue'
+import AcademySupportPanel from '~/components/academy/points/AcademySupportPanel.vue'
 import PointsBadge from '~/components/Common/PointsBadge.vue'
 
 definePageMeta({
@@ -2425,35 +2425,60 @@ watch(() => academy.value?.id, (id) => {
           </div>
 
           <!-- Revenue Tab -->
-          <div v-else-if="currentTab === 'revenue'" class="space-y-5">
-            <div class="space-y-5">
-              <AcademyWalletCard :summary="supportSummary" :loading="supportSummaryLoading" @support="openAcademyDonation" />
-              <div v-if="academy && (academy.memberStatus === 2 || academy.authIsAcademyAdmin)">
-                <AcademyClaimWidget :key="claimWidgetKey" :academy-id="academy.id" @claimed="handleAcademyClaimed" />
-              </div>
-              <div class="grid gap-5 xl:grid-cols-2">
-                <div class="rounded-2xl border border-indigo-100 bg-white p-5 shadow-sm dark:border-indigo-900/40 dark:bg-vikinger-dark-200">
-                  <div class="mb-4 flex items-center gap-3">
-                    <span class="rounded-xl bg-indigo-100 p-2 text-indigo-600 dark:bg-indigo-900/30"><Icon icon="mdi:bullhorn-outline" class="h-6 w-6" /></span>
-                    <div>
-                      <h2 class="font-black">ลงโฆษณา &amp; สนับสนุนด้วยเงิน</h2>
-                      <p class="text-sm text-slate-500">ชำระผ่าน Wallet เพื่อโปรโมตหรือให้ทุนโรงเรียนนี้</p>
-                    </div>
-                  </div>
-                  <AdvertiseCtaWidget v-if="academy" scope-type="academy" :target-id="academy.id" :target-name="academy.name" />
-                </div>
-                <div class="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm dark:border-emerald-900/40 dark:bg-vikinger-dark-200">
-                  <div class="mb-4 flex items-center gap-3">
-                    <span class="rounded-xl bg-emerald-100 p-2 text-emerald-600 dark:bg-emerald-900/30"><Icon icon="mdi:play-circle-outline" class="h-6 w-6" /></span>
-                    <div>
-                      <h2 class="font-black">ดูโฆษณาเพื่อรับรายได้</h2>
-                      <p class="text-sm text-slate-500">ดูแคมเปญและรับรางวัลตามเงื่อนไข</p>
-                    </div>
-                  </div>
-                  <CampaignWidget v-if="academy" scope="academy" :academy-id="academy.id" placement="academy-revenue" :limit="4" hide-header />
+          <!-- Same order as the course revenue page: fund first, then the pool, then claiming -->
+          <div v-else-if="currentTab === 'revenue'" class="space-y-8">
+            <AcademyWalletCard :summary="supportSummary" :loading="supportSummaryLoading" @support="openAcademyDonation" />
+
+            <section>
+              <div class="flex items-center gap-3">
+                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-black text-white">1</span>
+                <div class="min-w-0">
+                  <h2 class="text-lg font-black text-gray-900 dark:text-white">ให้ทุนโรงเรียนนี้</h2>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">ชำระผ่าน Wallet เพื่อโปรโมตหรือให้ทุนการเรียนรู้</p>
                 </div>
               </div>
-            </div>
+              <div class="mt-3">
+                <AdvertiseCtaWidget v-if="academy" scope-type="academy" :target-id="academy.id" :target-name="academy.name" />
+              </div>
+            </section>
+
+            <section>
+              <div class="flex items-center gap-3">
+                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-vikinger-purple text-sm font-black text-white">2</span>
+                <div class="min-w-0">
+                  <h2 class="text-lg font-black text-gray-900 dark:text-white">กองทุน &amp; การกดรับ</h2>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">ดูผู้สนับสนุนและประวัติก่อน แล้วค่อยกดรับแต้มด้านล่าง</p>
+                </div>
+              </div>
+              <div class="mt-3">
+                <AcademySupportPanel
+                  v-if="academy"
+                  :key="claimWidgetKey"
+                  :academy-id="academy.id"
+                  :summary="supportSummary"
+                  :loading="supportSummaryLoading"
+                  :can-claim="academy.memberStatus === 2 || academy.authIsAcademyAdmin"
+                  :donation-enabled="academy.donation_enabled !== false"
+                  @donate="openAcademyDonation"
+                  @claimed="handleAcademyClaimed"
+                />
+              </div>
+            </section>
+
+            <section>
+              <div class="flex items-center gap-3">
+                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300">
+                  <Icon icon="mdi:play-circle-outline" class="h-5 w-5" />
+                </span>
+                <div class="min-w-0">
+                  <h2 class="text-lg font-black text-gray-900 dark:text-white">ดูโฆษณาเพื่อรับรายได้</h2>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">อีกช่องทางรับรายได้ ดูแคมเปญและรับรางวัลตามเงื่อนไข</p>
+                </div>
+              </div>
+              <div class="mt-3">
+                <CampaignWidget v-if="academy" scope="academy" :academy-id="academy.id" placement="academy-revenue" :limit="4" hide-header />
+              </div>
+            </section>
           </div>
 
           <div v-else-if="currentTab === 'about'" class="space-y-4">
