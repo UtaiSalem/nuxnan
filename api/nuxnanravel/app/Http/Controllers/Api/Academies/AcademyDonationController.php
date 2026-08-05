@@ -30,10 +30,21 @@ class AcademyDonationController extends Controller
         return AcademyDonateResource::collection(AcademyDonate::with(['academy', 'donor'])->where('donor_id', $r->user()->id)->latest()->paginate());
     }
 
-    public function showForAcademy(Academy $academy)
+    public function showForAcademy(Request $request, Academy $academy)
     {
-        abort_unless(auth()->id() === $academy->user_id || auth()->user()->isSuperAdmin() || auth()->user()->is_plearnd_admin, 403);
+        $user = $request->user();
+        $privileged = (int) $academy->user_id === (int) $user->id || $user->isSuperAdmin() || $user->is_plearnd_admin;
+        // Members need to see who funded the school before they claim from it.
+        abort_unless($privileged || $user->can('claim', $academy), 403);
 
-        return AcademyDonateResource::collection(AcademyDonate::with(['academy', 'donor'])->where('academy_id', $academy->id)->latest()->paginate());
+        // Donor contact details stay with the academy owner and platform admins.
+        $request->attributes->set('academy_donate_contact_visible', $privileged);
+
+        $query = AcademyDonate::with(['academy', 'donor'])->where('academy_id', $academy->id);
+        if (! $privileged) {
+            $query->whereIn('status', [AcademyDonate::STATUS_APPROVED, AcademyDonate::STATUS_COMPLETED]);
+        }
+
+        return AcademyDonateResource::collection($query->latest()->paginate());
     }
 }

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Academy;
 use App\Models\AcademyDonateClaim;
+use App\Models\AcademyMember;
 use App\Models\AcademyPointAccount;
 use App\Models\User;
 use App\Services\AcademyClaimService;
@@ -30,6 +31,13 @@ class AcademyClaimLedgerTest extends TestCase
         $academy = Academy::factory()->create(['user_id' => $owner->id, 'donation_enabled' => true]);
 
         return [$owner, $donor, $claimer, $platform, $academy];
+    }
+
+    private function joinAcademy(Academy $academy, User ...$users): void
+    {
+        foreach ($users as $user) {
+            AcademyMember::create(['academy_id' => $academy->id, 'user_id' => $user->id, 'status' => 2]);
+        }
     }
 
     public function test_claim_debits_the_academy_fund_instead_of_minting_points(): void
@@ -123,5 +131,57 @@ class AcademyClaimLedgerTest extends TestCase
         $this->assertEquals(50, $account->balance);
         $this->assertEquals(0, $account->reserved_balance);
         $this->assertEquals(50, $account->available_balance);
+    }
+
+    public function test_outsider_cannot_view_academy_claim_history(): void
+    {
+        [$owner, $donor, $claimer, $platform, $academy] = $this->setupClaimTest();
+
+        $this->actingAs(User::factory()->create(), 'api')
+            ->getJson('/api/academies/'.$academy->id.'/donations/claims')
+            ->assertForbidden();
+    }
+
+    public function test_academy_claim_history_is_newest_first_with_summary(): void
+    {
+        [$owner, $donor, $claimer, $platform, $academy] = $this->setupClaimTest();
+        $other = User::factory()->create(['pp' => 0, 'suggester_code' => null]);
+        $this->joinAcademy($academy, $claimer, $other);
+
+        $donation = app(AcademyDonateService::class)->createPointDonation($donor, $academy, 540, [], 'history-key-1');
+        $mine = app(AcademyClaimService::class)->claimSpecific($claimer, $academy, $donation);
+        $mine->update(['claimed_at' => now()->subDay()]);
+        // Second row reuses the real transaction ids (the columns are foreign keys) so the
+        // read endpoint sees two claimers without running the claim pipeline twice, which
+        // would trip the per-user daily point limit.
+        AcademyDonateClaim::create([...$mine->only(['academy_donate_id', 'academy_id', 'amount_claimer', 'amount_suggester', 'amount_school', 'amount_platform', 'claimer_transaction_id', 'school_transaction_id', 'platform_transaction_id']), 'claimer_id' => $other->id, 'claimed_at' => now()]);
+
+        $response = $this->actingAs($claimer, 'api')
+            ->getJson('/api/academies/'.$academy->id.'/donations/claims')
+            ->assertOk()
+            ->assertJsonPath('summary.total_claims', 2)
+            ->assertJsonPath('summary.my_claims_count', 1)
+            ->assertJsonPath('summary.my_points_total', 210)
+            ->assertJsonStructure(['claims', 'pagination' => ['current_page', 'last_page', 'per_page', 'total', 'has_more'], 'summary']);
+
+        // Newest first: the other user's claim leads, and only the caller's row is marked mine.
+        $this->assertFalse($response->json('claims.0.is_mine'));
+        $this->assertTrue($response->json('claims.1.is_mine'));
+        $this->assertSame(210, $response->json('claims.1.amount_claimer'));
+    }
+
+    public function test_academy_claim_history_masks_anonymous_donors(): void
+    {
+        [$owner, $donor, $claimer, $platform, $academy] = $this->setupClaimTest();
+
+        $this->joinAcademy($academy, $claimer);
+        $donation = app(AcademyDonateService::class)->createPointDonation($donor, $academy, 270, ['anonymous' => true], 'history-key-3');
+        $donation->forceFill(['anonymous' => true])->save();
+        app(AcademyClaimService::class)->claimSpecific($claimer, $academy, $donation);
+
+        $this->actingAs($claimer, 'api')
+            ->getJson('/api/academies/'.$academy->id.'/donations/claims')
+            ->assertOk()
+            ->assertJsonPath('claims.0.donor_display_name', 'ผู้ไม่ประสงค์ออกนาม');
     }
 }

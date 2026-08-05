@@ -27,6 +27,7 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified'])->g
     Route::get('/me/academy-donations', [AcademyDonationController::class, 'mine']);
     Route::get('/academies/{academy}/donations', [AcademyDonationController::class, 'showForAcademy']);
     Route::get('/academies/{academy}/donations/claimable', [AcademyClaimController::class, 'claimable']);
+    Route::get('/academies/{academy}/donations/claims', [AcademyClaimController::class, 'claims']);
     Route::post('/academies/{academy}/donations/{donation}/claim', [AcademyClaimController::class, 'claimFromDonation']);
     Route::post('/academies/{academy}/allocations', [AcademyAllocationController::class, 'store']);
     Route::get('/academies/{academy}/allocations', [AcademyAllocationController::class, 'index']);

@@ -14,4 +14,9 @@ class AcademyDonateClaim extends Model
     {
         return $this->belongsTo(AcademyDonate::class, 'academy_donate_id');
     }
+
+    public function claimer()
+    {
+        return $this->belongsTo(User::class, 'claimer_id');
+    }
 }

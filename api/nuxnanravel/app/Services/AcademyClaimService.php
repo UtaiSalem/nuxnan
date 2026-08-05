@@ -34,6 +34,42 @@ class AcademyClaimService
         return ['donations' => $items, 'pagination' => ['current_page' => $donations->currentPage(), 'last_page' => $donations->lastPage(), 'per_page' => $donations->perPage(), 'total' => $donations->total(), 'has_more' => $donations->hasMorePages()], 'my_claims_today_all_tiers' => $allCount, 'cap_reached' => $allCount >= (int) config('economy.academy_claim_cap_total_per_day'), 'pool_total_remaining' => $poolTotal];
     }
 
+    public function listClaims(User $user, Academy $academy, int $page = 1, int $perPage = 15): array
+    {
+        $claims = AcademyDonateClaim::where('academy_id', $academy->id)
+            ->with(['claimer:id,name,avatar,personal_code', 'donation:id,anonymous,donor_display_name'])
+            ->orderByDesc('claimed_at')
+            ->paginate(min(max($perPage, 1), 50), ['*'], 'page', max($page, 1));
+        $items = $claims->map(fn (AcademyDonateClaim $claim) => [
+            'id' => $claim->id,
+            'claimer_name' => $claim->claimer?->name,
+            'claimer_avatar' => $claim->claimer?->avatar,
+            'claimer_personal_code' => $claim->claimer?->personal_code,
+            'donor_display_name' => $claim->donation?->anonymous ? 'ผู้ไม่ประสงค์ออกนาม' : $claim->donation?->donor_display_name,
+            'amount_claimer' => (int) $claim->amount_claimer,
+            'amount_school' => (int) $claim->amount_school,
+            'claimed_at' => $claim->claimed_at,
+            'is_mine' => (int) $claim->claimer_id === (int) $user->id,
+        ])->values();
+        $academyClaims = AcademyDonateClaim::where('academy_id', $academy->id);
+
+        return [
+            'claims' => $items,
+            'pagination' => [
+                'current_page' => $claims->currentPage(),
+                'last_page' => $claims->lastPage(),
+                'per_page' => $claims->perPage(),
+                'total' => $claims->total(),
+                'has_more' => $claims->hasMorePages(),
+            ],
+            'summary' => [
+                'total_claims' => (int) (clone $academyClaims)->count(),
+                'my_claims_count' => (int) (clone $academyClaims)->where('claimer_id', $user->id)->count(),
+                'my_points_total' => (int) ((clone $academyClaims)->where('claimer_id', $user->id)->sum('amount_claimer') ?? 0),
+            ],
+        ];
+    }
+
     public function claimSpecific(User $user, Academy $academy, AcademyDonate $donation): AcademyDonateClaim
     {
         return DB::transaction(function () use ($user, $academy, $donation) {

@@ -21,6 +21,13 @@ class AcademyClaimController extends Controller
         return response()->json($data);
     }
 
+    public function claims(Request $request, Academy $academy)
+    {
+        abort_unless($request->user()->can('claim', $academy), 403);
+
+        return response()->json($this->service->listClaims($request->user(), $academy, $request->integer('page', 1), $request->integer('per_page', 15)));
+    }
+
     public function claimFromDonation(Request $request, Academy $academy, AcademyDonate $donation)
     {
         abort_unless($request->user()->can('claim', $academy), 403);
