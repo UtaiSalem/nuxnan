@@ -159,6 +159,7 @@
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 const currentYear = computed(() => new Date().getFullYear())
 
 const footerBorder = ref<HTMLDivElement | null>(null)

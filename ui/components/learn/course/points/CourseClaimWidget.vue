@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useCourseClaimable } from '~/composables/useCourseClaimable'
 import CourseDonorCard from './CourseDonorCard.vue'

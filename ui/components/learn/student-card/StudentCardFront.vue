@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 /**
  * StudentCardFront - Reusable student card front face component
  * Used in: student card view, print, and list pages

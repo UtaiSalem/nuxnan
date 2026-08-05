@@ -23,6 +23,7 @@
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import ImportWizard from '../../../../components/academy/student-import/ImportWizard.vue'

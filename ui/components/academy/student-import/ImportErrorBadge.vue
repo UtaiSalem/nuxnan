@@ -16,6 +16,7 @@
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import type { ImportRowError, ImportRowStatus } from '../../../types/studentImport'
 
 defineProps<{

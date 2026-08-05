@@ -153,6 +153,7 @@
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 const particleCanvas = ref<HTMLCanvasElement | null>(null)
 let particles: any[] = []
 let animationId: number

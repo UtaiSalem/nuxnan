@@ -64,6 +64,7 @@
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 const isVisible = ref(false)
 const activeSection = ref('hero')
 

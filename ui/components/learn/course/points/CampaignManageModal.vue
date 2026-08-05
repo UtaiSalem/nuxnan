@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import type { CoursePointCampaign } from '~/composables/useCoursePoints'
 const props = defineProps<{ visible: boolean; courseId: number | string }>(); const emit = defineEmits<{ 'update:visible': [boolean]; updated: [] }>()
 const { ownerCampaigns, fetchOwnerCampaigns, pauseCampaign, endCampaign } = useCoursePoints(computed(() => props.courseId)); const swal = useSweetAlert(); const close = () => emit('update:visible', false); const campaigns = computed(() => ownerCampaigns.value.filter(c => c.campaign_type === 'manual_claim'))

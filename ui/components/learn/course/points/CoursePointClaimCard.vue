@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import type { CoursePointCampaign } from '~/composables/useCoursePoints'
 
 const props = defineProps<{ campaign: CoursePointCampaign; isClaiming: boolean }>()

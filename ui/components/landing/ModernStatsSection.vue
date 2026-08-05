@@ -124,6 +124,7 @@
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 interface Props {
   usersCount?: number
   coursesCount?: number

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { ref, computed, onUnmounted } from 'vue'
 import type { AcademyDonationClaimable } from '~/composables/useAcademyPoints'
 import { useAcademyClaimable } from '~/composables/useAcademyPoints'

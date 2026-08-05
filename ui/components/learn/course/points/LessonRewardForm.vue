@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { ref, computed, onMounted } from 'vue'
 
 interface Props {

@@ -242,6 +242,7 @@
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { ref, onMounted } from 'vue'
 import Swal from 'sweetalert2'
 

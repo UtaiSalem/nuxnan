@@ -123,6 +123,7 @@
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 const sectionHeader = ref<HTMLElement | null>(null)
 const feature1 = ref<HTMLElement | null>(null)
 const feature2 = ref<HTMLElement | null>(null)

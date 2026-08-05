@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 /**
  * Academy Dashboard Router
  * หน้านี้จะ redirect ไปยัง dashboard ที่เหมาะสมตามบทบาทของผู้ใช้

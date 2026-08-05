@@ -80,6 +80,7 @@
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useStudentImport } from '../../../composables/useStudentImport'
