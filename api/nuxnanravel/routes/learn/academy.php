@@ -444,7 +444,9 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::get('students', [ClassroomController::class, 'getAllStudents'])->name('api.academy.classrooms.allStudents');
     });
 
-    Route::prefix('{academy}/classrooms/{classroom}')->group(function () {
+    // {classroom} ต้องเป็นตัวเลขเท่านั้น — controller ในกลุ่มนี้รับ int ทุกตัว ถ้าปล่อยให้ path แปลกๆ
+    // (เช่นชื่อ endpoint ที่พิมพ์ผิด) มาชนจะกลายเป็น TypeError 500 แทนที่จะเป็น 404 ตามที่ควร
+    Route::prefix('{academy}/classrooms/{classroom}')->whereNumber(['academy', 'classroom'])->group(function () {
         Route::get('enrollments', [ClassroomController::class, 'listEnrollments'])->name('api.academy.classrooms.enrollments');
         Route::get('/', [ClassroomController::class, 'show'])->name('api.academy.classrooms.show');
         Route::match(['put', 'patch'], '/', [ClassroomController::class, 'update'])->name('api.academy.classrooms.update');
