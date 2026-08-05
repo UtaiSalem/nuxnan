@@ -72,7 +72,25 @@ class StudentEnrollmentService
             'created_by_user_id' => $userId,
         ]);
 
+        $this->syncStudentFieldsForStudent($student);
+
         return $enrollment;
+    }
+
+    /** Recompute the legacy cached class fields from the active pivot row. */
+    private function syncStudentFieldsForStudent(Student $student): void
+    {
+        $enrollment = ClassroomStudent::where('student_id', $student->id)
+            ->where('status', ClassroomStudent::STATUS_ACTIVE)
+            ->with('classroom')
+            ->first();
+
+        $student->update([
+            'class_level' => $enrollment?->classroom
+                ? $this->normalizeGradeLevel($enrollment->classroom->grade_level)
+                : null,
+            'class_section' => $enrollment?->classroom?->section,
+        ]);
     }
 
     /**
@@ -166,6 +184,8 @@ class StudentEnrollmentService
                 'class_section' => $classroom->section,
                 'status' => 'active',
             ]);
+
+            $this->syncStudentFieldsForStudent($student);
 
             // Update StudentAcademicInfo snapshot
             $this->manageAcademicInfoSnapshot($student, $classroom, $batchId);

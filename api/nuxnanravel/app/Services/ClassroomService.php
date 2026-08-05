@@ -4,10 +4,12 @@ namespace App\Services;
 
 use App\Models\Classroom;
 use App\Models\ClassroomMember;
+use App\Models\ClassroomStudent;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -225,11 +227,32 @@ class ClassroomService
     }
 
     /**
-     * Delete a classroom (cascade handled by DB FK).
+     * Delete a classroom after guarding active enrollments and cleaning history.
      */
     public function deleteClassroom(Classroom $classroom): void
     {
-        $classroom->delete();
+        DB::transaction(function () use ($classroom) {
+            $activeCount = ClassroomStudent::where('classroom_id', $classroom->id)
+                ->where('status', ClassroomStudent::STATUS_ACTIVE)
+                ->count();
+
+            if ($activeCount > 0) {
+                throw ValidationException::withMessages([
+                    'classroom' => "ห้องเรียนยังมีนักเรียนที่ลงทะเบียนอยู่ {$activeCount} คน ไม่สามารถลบได้ กรุณาใช้ archiveClassroom() เพื่อเก็บห้องเรียนแทน",
+                ]);
+            }
+
+            $historicalCount = ClassroomStudent::where('classroom_id', $classroom->id)->delete();
+
+            if ($historicalCount > 0) {
+                Log::info('Deleted historical classroom enrollments before classroom deletion.', [
+                    'classroom_id' => $classroom->id,
+                    'count' => $historicalCount,
+                ]);
+            }
+
+            $classroom->delete();
+        });
     }
 
     /**
