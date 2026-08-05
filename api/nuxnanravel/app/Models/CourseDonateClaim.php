@@ -14,4 +14,9 @@ class CourseDonateClaim extends Model
     {
         return $this->belongsTo(CourseDonate::class, 'course_donate_id');
     }
+
+    public function claimer()
+    {
+        return $this->belongsTo(User::class, 'claimer_id');
+    }
 }

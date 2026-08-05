@@ -30,6 +30,23 @@ class CourseClaimController extends Controller
         }
     }
 
+    public function claims(Request $request, Course $course)
+    {
+        try {
+            $data = $this->service->listClaims($request->user(), $course, $request->integer('page', 1), $request->integer('per_page', 15));
+
+            return response()->json($data);
+        } catch (DomainException $e) {
+            $code = $e->getMessage();
+            $status = match ($code) {
+                'not_a_course_member' => 403,
+                default => 422,
+            };
+
+            return response()->json(['ok' => false, 'code' => $code], $status);
+        }
+    }
+
     public function claimFromDonation(Request $request, Course $course, CourseDonate $donation)
     {
         abort_unless((int) $donation->course_id === (int) $course->id, 404);

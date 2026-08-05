@@ -18,10 +18,7 @@ class CourseClaimService
 
     public function listClaimable(User $user, Course $course, int $page = 1, int $perPage = 12): array
     {
-        $isCourseOwner = (int) $course->user_id === (int) $user->id;
-        if (! $isCourseOwner && ! CourseMember::where('course_id', $course->id)->where('user_id', $user->id)->exists()) {
-            throw new DomainException('not_a_course_member');
-        }
+        $this->assertMember($user, $course);
 
         $today = now()->startOfDay();
         $baseQuery = CourseDonate::where('course_id', $course->id)->where('donation_type', 'point')->where('status', 'completed')->where('remaining_points', '>', 0);
@@ -67,10 +64,7 @@ class CourseClaimService
     public function claimSpecific(User $user, Course $course, CourseDonate $donation): CourseDonateClaim
     {
         return DB::transaction(function () use ($user, $course, $donation) {
-            $isCourseOwner = (int) $course->user_id === (int) $user->id;
-            if (! $isCourseOwner && ! CourseMember::where('course_id', $course->id)->where('user_id', $user->id)->exists()) {
-                throw new DomainException('not_a_course_member');
-            }
+            $this->assertMember($user, $course);
 
             $donation = CourseDonate::whereKey($donation->id)->lockForUpdate()->firstOrFail();
             if ((int) $donation->course_id !== (int) $course->id || $donation->donation_type !== 'point' || $donation->status !== 'completed') {
@@ -125,5 +119,50 @@ class CourseClaimService
                 'claimed_at' => now(),
             ]);
         });
+    }
+
+    public function listClaims(User $user, Course $course, int $page = 1, int $perPage = 15): array
+    {
+        $this->assertMember($user, $course);
+
+        $claims = CourseDonateClaim::where('course_id', $course->id)
+            ->with(['claimer:id,name,avatar,personal_code', 'donation:id,anonymous,donor_display_name'])
+            ->orderByDesc('claimed_at')
+            ->paginate(min(max($perPage, 1), 50), ['*'], 'page', max($page, 1));
+        $items = $claims->map(fn (CourseDonateClaim $claim) => [
+            'id' => $claim->id,
+            'claimer_name' => $claim->claimer?->name,
+            'claimer_avatar' => $claim->claimer?->avatar,
+            'claimer_personal_code' => $claim->claimer?->personal_code,
+            'donor_display_name' => $claim->donation?->anonymous ? 'ผู้ไม่ประสงค์ออกนาม' : $claim->donation?->donor_display_name,
+            'amount_claimer' => (int) $claim->amount_claimer,
+            'amount_course' => (int) $claim->amount_course,
+            'claimed_at' => $claim->claimed_at,
+            'is_mine' => (int) $claim->claimer_id === (int) $user->id,
+        ])->values();
+        $courseClaims = CourseDonateClaim::where('course_id', $course->id);
+
+        return [
+            'claims' => $items,
+            'pagination' => [
+                'current_page' => $claims->currentPage(),
+                'last_page' => $claims->lastPage(),
+                'per_page' => $claims->perPage(),
+                'total' => $claims->total(),
+                'has_more' => $claims->hasMorePages(),
+            ],
+            'summary' => [
+                'total_claims' => (int) (clone $courseClaims)->count(),
+                'my_claims_count' => (int) (clone $courseClaims)->where('claimer_id', $user->id)->count(),
+                'my_points_total' => (int) ((clone $courseClaims)->where('claimer_id', $user->id)->sum('amount_claimer') ?? 0),
+            ],
+        ];
+    }
+
+    private function assertMember(User $user, Course $course): void
+    {
+        if ((int) $course->user_id !== (int) $user->id && ! CourseMember::where('course_id', $course->id)->where('user_id', $user->id)->exists()) {
+            throw new DomainException('not_a_course_member');
+        }
     }
 }

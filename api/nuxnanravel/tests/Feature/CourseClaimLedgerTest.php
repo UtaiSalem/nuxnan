@@ -128,4 +128,61 @@ class CourseClaimLedgerTest extends TestCase
             $this->assertEquals(270, $donation->fresh()->remaining_points);
         }
     }
+
+    public function test_non_member_cannot_view_claim_history(): void
+    {
+        [$owner, $donor, $claimer, $platform, $course] = $this->setupClaimTest();
+        $nonMember = User::factory()->create();
+
+        $this->actingAs($nonMember, 'api')
+            ->getJson('/api/courses/'.$course->id.'/donations/claims')
+            ->assertForbidden()
+            ->assertJsonPath('code', 'not_a_course_member');
+    }
+
+    public function test_member_sees_newest_first_paginated_claim_history_and_summary(): void
+    {
+        [$owner, $donor, $claimer, $platform, $course] = $this->setupClaimTest();
+        $other = User::factory()->create(['pp' => 0, 'suggester_code' => null]);
+        CourseMember::create(['course_id' => $course->id, 'user_id' => $other->id]);
+        $firstDonation = app(CourseDonateService::class)->createPointDonation($donor, $course, 270, ['donor_display_name' => 'Donor'], 'ledger-history-1');
+        $first = app(CourseClaimService::class)->claimSpecific($claimer, $course, $firstDonation);
+        $second = CourseDonateClaim::create([
+            'course_id' => $course->id, 'course_donate_id' => $firstDonation->id, 'claimer_id' => $other->id,
+            'amount_claimer' => 8, 'amount_course' => 1, 'amount_suggester' => 0, 'amount_platform' => 0,
+            'claimer_transaction_id' => $first->claimer_transaction_id,
+            'course_transaction_id' => $first->course_transaction_id,
+            'platform_transaction_id' => $first->platform_transaction_id,
+            'claimed_at' => now()->addSecond(),
+        ]);
+
+        $this->actingAs($claimer, 'api')
+            ->getJson('/api/courses/'.$course->id.'/donations/claims?per_page=1')
+            ->assertOk()
+            ->assertJsonPath('claims.0.id', $second->id)
+            ->assertJsonPath('pagination.current_page', 1)
+            ->assertJsonPath('pagination.last_page', 2)
+            ->assertJsonPath('pagination.per_page', 1)
+            ->assertJsonPath('pagination.total', 2)
+            ->assertJsonPath('pagination.has_more', true)
+            ->assertJsonPath('summary.total_claims', 2)
+            ->assertJsonPath('summary.my_claims_count', 1)
+            ->assertJsonPath('summary.my_points_total', 210)
+            ->assertJsonPath('claims.0.is_mine', false);
+        $this->assertTrue($first->fresh()->claimer_id === $claimer->id);
+    }
+
+    public function test_claim_history_masks_anonymous_donor_and_marks_my_claim(): void
+    {
+        [$owner, $donor, $claimer, $platform, $course] = $this->setupClaimTest();
+        $donation = app(CourseDonateService::class)->createPointDonation($donor, $course, 270, ['anonymous' => true, 'donor_display_name' => 'Secret'], 'ledger-history-2');
+        $claim = app(CourseClaimService::class)->claimSpecific($claimer, $course, $donation);
+
+        $this->actingAs($claimer, 'api')
+            ->getJson('/api/courses/'.$course->id.'/donations/claims')
+            ->assertOk()
+            ->assertJsonPath('claims.0.donor_display_name', 'ผู้ไม่ประสงค์ออกนาม')
+            ->assertJsonPath('claims.0.is_mine', true)
+            ->assertJsonPath('summary.my_points_total', $claim->amount_claimer);
+    }
 }
