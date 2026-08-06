@@ -2178,13 +2178,20 @@ onMounted(async () => {
               </div>
 
               <!-- Footer -->
-              <div class="px-6 py-4 bg-slate-50 dark:bg-slate-900/20 border-t dark:border-slate-700 flex justify-end">
+              <div class="px-6 py-4 bg-slate-50 dark:bg-slate-900/20 border-t dark:border-slate-700 flex justify-end gap-2">
                 <button
                   @click="showProfileDrawer = false"
                   class="rounded-xl border border-slate-300 dark:border-slate-700 px-5 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
                 >
                   ปิดหน้าต่าง
                 </button>
+                <NuxtLink
+                  v-if="selectedStudentForProfile?.id"
+                  :to="`/academies/${route.params.name}/students/${selectedStudentForProfile.id}/profile`"
+                  class="rounded-xl bg-primary-600 px-5 py-2 text-sm font-bold text-white hover:bg-primary-700 transition-colors"
+                >
+                  เปิดโปรไฟล์เต็ม / แก้ไขข้อมูล
+                </NuxtLink>
               </div>
             </div>
           </div>

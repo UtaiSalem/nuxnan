@@ -5,31 +5,33 @@ import { computed, reactive, watch } from 'vue'
 import type {
   ClassroomOptionDTO,
   ClassroomStudentDTO,
+  AssignClassroomPayload,
   DropStudentPayload,
-  EnrollmentAction,
   EnrollmentActionPayload,
   EnrollmentFieldErrors,
   GraduateStudentPayload,
   PromoteStudentPayload,
   RepeatStudentPayload,
+  StudentMenuAction,
   StudentSummaryDTO,
   TransferStudentPayload,
 } from '~/types/enrollment'
 
 interface Props {
   open: boolean
-  action: EnrollmentAction | null
+  action: StudentMenuAction | null
   student: StudentSummaryDTO | null
   enrollment: ClassroomStudentDTO | null
   availableClassrooms: ClassroomOptionDTO[]
   isLoading: boolean
   fieldErrors: EnrollmentFieldErrors
+  assignError?: string
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<{
   'update:open': [v: boolean]
-  submit: [payload: EnrollmentActionPayload<EnrollmentAction>]
+  submit: [payload: EnrollmentActionPayload | AssignClassroomPayload]
 }>()
 
 interface FormState {
@@ -60,7 +62,8 @@ watch(
 
 const todayIso = computed(() => new Date().toISOString().slice(0, 10))
 
-const titleMap: Record<EnrollmentAction, string> = {
+const titleMap: Record<StudentMenuAction, string> = {
+  assign: 'ลงห้องเรียน',
   graduate: 'จบการศึกษา',
   drop: 'ลาออก / พ้นสภาพ',
   repeat: 'ซ้ำชั้น',
@@ -68,7 +71,8 @@ const titleMap: Record<EnrollmentAction, string> = {
   transfer: 'ย้ายห้อง (ในปีนี้)',
 }
 
-const confirmLabelMap: Record<EnrollmentAction, string> = {
+const confirmLabelMap: Record<StudentMenuAction, string> = {
+  assign: 'ยืนยันการลงห้องเรียน',
   graduate: 'ยืนยันจบการศึกษา',
   drop: 'ยืนยันการพ้นสภาพ',
   repeat: 'ยืนยันการซ้ำชั้น',
@@ -98,6 +102,8 @@ const promoteOptions = computed<ClassroomOptionDTO[]>(() => {
   return props.availableClassrooms.filter((c) => c.id !== currentClassroomId.value)
 })
 
+const assignOptions = computed<ClassroomOptionDTO[]>(() => props.availableClassrooms)
+
 interface ClassroomGroup {
   key: string
   label: string
@@ -109,6 +115,7 @@ const groupedTargetClassrooms = computed<ClassroomGroup[]>(() => {
   if (props.action === 'repeat') source = sameGradeOptions.value
   else if (props.action === 'transfer') source = sameYearOtherClassrooms.value
   else if (props.action === 'promote') source = promoteOptions.value
+  else if (props.action === 'assign') source = assignOptions.value
 
   const groups = new Map<string, ClassroomGroup>()
   for (const option of source) {
@@ -126,7 +133,7 @@ const noTargetClassrooms = computed(() => groupedTargetClassrooms.value.length =
 
 const requiresReason = computed(() => props.action === 'drop')
 const requiresNewClassroom = computed(() => props.action === 'repeat')
-const requiresToClassroom = computed(() => props.action === 'promote' || props.action === 'transfer')
+const requiresToClassroom = computed(() => props.action === 'promote' || props.action === 'transfer' || props.action === 'assign')
 
 const canSubmit = computed(() => {
   if (!props.action || !props.student) return false
@@ -143,12 +150,14 @@ function close() {
   emit('update:open', false)
 }
 
-function buildPayload(): EnrollmentActionPayload<EnrollmentAction> | null {
+function buildPayload(): EnrollmentActionPayload | AssignClassroomPayload | null {
   if (!props.action) return null
   const reason = form.reason.trim() || undefined
   const effective_at = form.effective_at || undefined
 
   switch (props.action) {
+    case 'assign':
+      return { to_classroom_id: form.to_classroom_id as number } as AssignClassroomPayload
     case 'graduate':
       return { reason, effective_at } as GraduateStudentPayload & { effective_at?: string }
     case 'drop':
@@ -228,6 +237,9 @@ function onSubmit() {
             </div>
 
             <form class="space-y-3" @submit.prevent="onSubmit">
+              <p v-if="assignError" class="text-sm text-rose-600 dark:text-rose-400">
+                {{ assignError }}
+              </p>
               <template v-if="action === 'graduate' || action === 'drop'">
                 <div>
                   <label class="mb-1 block text-sm text-zinc-700 dark:text-zinc-300">
@@ -321,7 +333,7 @@ function onSubmit() {
                 </div>
               </template>
 
-              <template v-else-if="action === 'promote' || action === 'transfer'">
+              <template v-else-if="action === 'promote' || action === 'transfer' || action === 'assign'">
                 <div>
                   <label class="mb-1 block text-sm text-zinc-700 dark:text-zinc-300">
                     ห้องปลายทาง <span class="text-rose-500">*</span>
@@ -364,7 +376,7 @@ function onSubmit() {
                   </p>
                 </div>
 
-                <div>
+                <div v-if="action !== 'assign'">
                   <label class="mb-1 block text-sm text-zinc-700 dark:text-zinc-300">
                     เหตุผล (optional)
                   </label>

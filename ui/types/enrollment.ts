@@ -22,6 +22,15 @@ export const ENROLLMENT_ACTIONS = [
 
 export type EnrollmentAction = typeof ENROLLMENT_ACTIONS[number]
 
+/** Actions offered by the row kebab menu. `assign` is not a lifecycle endpoint —
+ *  it enrolls a student who currently has no active classroom via the classroom roster API. */
+export const STUDENT_MENU_ACTIONS = [...ENROLLMENT_ACTIONS, 'assign'] as const
+export type StudentMenuAction = typeof STUDENT_MENU_ACTIONS[number]
+
+export interface AssignClassroomPayload {
+  to_classroom_id: number
+}
+
 export interface EnrollmentStatusStyle {
   label: string
   icon: string

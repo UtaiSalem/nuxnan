@@ -104,6 +104,8 @@ export interface StudentListItem {
   classroom_enrollments: Array<{
     id: number
     classroom_id: number
+    academic_year_id: number | null
+    student_number: number | null
     status: string
     classroom: {
       id: number

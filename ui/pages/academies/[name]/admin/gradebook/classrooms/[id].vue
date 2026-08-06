@@ -11,8 +11,10 @@ import StudentStatusBadge from '~/components/academy/enrollment/StudentStatusBad
 import type {
   ClassroomOptionDTO,
   ClassroomStudentDTO,
+  AssignClassroomPayload,
   EnrollmentAction,
   EnrollmentActionPayload,
+  StudentMenuAction,
   StudentSummaryDTO,
 } from '~/types/enrollment'
 import { ENROLLMENT_STATUS } from '~/types/enrollment'
@@ -50,7 +52,7 @@ const searchAvailable = ref('')
 
 // Phase 4.C — lifecycle actions state
 const availableClassrooms = ref<ClassroomOptionDTO[]>([])
-const currentAction = ref<EnrollmentAction | null>(null)
+const currentAction = ref<StudentMenuAction | null>(null)
 const currentStudent = ref<StudentSummaryDTO | null>(null)
 const currentEnrollment = ref<ClassroomStudentDTO | null>(null)
 const historyOpen = ref(false)
@@ -348,7 +350,9 @@ const buildStudentDTO = (cs: any): StudentSummaryDTO => ({
   class_section: cs.student?.class_section ?? null,
 })
 
-const onActionSelect = (cs: any, action: EnrollmentAction) => {
+const onActionSelect = (cs: any, action: StudentMenuAction) => {
+  // assign จะไม่ถูก emit ในหน้านี้ เพราะทุกรายการมี enrollment
+  if (action === 'assign') return
   resetActionErrors()
   currentStudent.value = buildStudentDTO(cs)
   currentEnrollment.value = buildEnrollmentDTO(cs)
@@ -356,14 +360,15 @@ const onActionSelect = (cs: any, action: EnrollmentAction) => {
 }
 
 const onActionSubmit = async (
-  payload: EnrollmentActionPayload<EnrollmentAction>,
+  payload: EnrollmentActionPayload<EnrollmentAction> | AssignClassroomPayload,
 ) => {
-  if (!currentAction.value || !currentStudent.value) return
+  const action = currentAction.value
+  if (!action || !currentStudent.value || action === 'assign') return
   try {
     await runEnrollmentAction(
-      currentAction.value,
+      action,
       currentStudent.value.id,
-      payload,
+      payload as EnrollmentActionPayload<EnrollmentAction>,
     )
     toast.success('อัปเดทสถานะนักเรียนเรียบร้อย', 'สำเร็จ', 3000)
     showActionModal.value = false

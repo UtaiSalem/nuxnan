@@ -8,10 +8,12 @@ import StudentStatusActionModal from '~/components/academy/enrollment/StudentSta
 import EnrollmentHistoryDrawer from '~/components/academy/enrollment/EnrollmentHistoryDrawer.vue'
 import StudentAccountActivationModal from '~/components/academy/student/StudentAccountActivationModal.vue'
 import type {
+  AssignClassroomPayload,
   ClassroomOptionDTO,
   ClassroomStudentDTO,
   EnrollmentAction,
   EnrollmentActionPayload,
+  StudentMenuAction,
   StudentSummaryDTO,
 } from '~/types/enrollment'
 
@@ -21,6 +23,7 @@ const props = defineProps<{
 
 const { listStudents } = useStudentIntakeService()
 const api = useApi()
+const route = useRoute()
 
 // Enrollment lifecycle state
 const {
@@ -32,9 +35,10 @@ const {
 } = useStudentEnrollmentActions(toRef(props, 'academyId'))
 
 const actionModalOpen = ref(false)
-const selectedAction = ref<EnrollmentAction | null>(null)
+const selectedAction = ref<StudentMenuAction | null>(null)
 const selectedStudent = ref<StudentSummaryDTO | null>(null)
 const selectedEnrollment = ref<ClassroomStudentDTO | null>(null)
+const assignError = ref('')
 const availableClassrooms = ref<ClassroomOptionDTO[]>([])
 const historyDrawerOpen = ref(false)
 const historyStudent = ref<StudentSummaryDTO | null>(null)
@@ -87,6 +91,22 @@ const classroomOptions = computed(() => {
     : availableClassrooms.value
   return [...list].sort((a, b) => a.display_name.localeCompare(b.display_name, 'th', { numeric: true }))
 })
+
+const academicYearNames = computed(() => {
+  const entries = availableClassrooms.value
+    .filter(classroom => !!classroom.academic_year_name)
+    .map(classroom => [classroom.id, classroom.academic_year_name as string] as const)
+  return new Map<number, string>(entries)
+})
+
+const hasActiveFilters = computed(() => Boolean(
+  lazyParams.value.search
+  || searchInput.value
+  || lazyParams.value.status
+  || lazyParams.value.accountStatus
+  || lazyParams.value.gradeLevel
+  || lazyParams.value.classroomId,
+))
 
 const onGradeChange = () => {
   const selected = lazyParams.value.classroomId
@@ -150,12 +170,38 @@ const onFilterChange = () => {
   fetchData()
 }
 
+const resetFilters = () => {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
+    searchTimeout = null
+  }
+  searchInput.value = ''
+  lazyParams.value.search = ''
+  lazyParams.value.status = ''
+  lazyParams.value.accountStatus = ''
+  lazyParams.value.gradeLevel = ''
+  lazyParams.value.classroomId = ''
+  lazyParams.value.page = 1
+  lazyParams.value.first = 0
+  fetchData()
+}
+
+const getActiveEnrollment = (student: StudentListItem) =>
+  student.classroom_enrollments?.find(cs => cs.status === 'active')
+
 const getClassroomName = (student: StudentListItem): string => {
-  const active = student.classroom_enrollments?.find(cs => cs.status === 'active')
-  if (!active?.classroom) return '-'
+  const active = getActiveEnrollment(student)
+  if (!active?.classroom) return ''
   const c = active.classroom
   if (c.grade_level && c.section) return `${c.grade_level}/${c.section}`
   return c.name || '-'
+}
+
+const getStudentNumber = (student: StudentListItem) => getActiveEnrollment(student)?.student_number ?? null
+
+const getAcademicYearName = (student: StudentListItem) => {
+  const active = getActiveEnrollment(student)
+  return active ? academicYearNames.value.get(active.classroom_id) ?? null : null
 }
 
 const getStatusLabel = (status: string) => {
@@ -205,7 +251,7 @@ const toCurrentEnrollment = (s: StudentListItem): ClassroomStudentDTO | null => 
     student_id: s.id,
     classroom_id: active.classroom_id,
     academy_id: props.academyId || 0,
-    academic_year_id: null,
+    academic_year_id: active.academic_year_id ?? null,
     student_number: null,
     status: active.status,
     status_text: null,
@@ -225,7 +271,7 @@ const toCurrentEnrollment = (s: StudentListItem): ClassroomStudentDTO | null => 
 const fetchClassrooms = async () => {
   if (!props.academyId) return
   try {
-    const res: any = await api.get(`/api/academies/${props.academyId}/classrooms`)
+    const res: any = await api.get(`/api/academies/${props.academyId}/classrooms?all_years=1`)
     if (res.success && res.classrooms) {
       availableClassrooms.value = res.classrooms.map((c: any) => ({
         id: c.id,
@@ -241,24 +287,44 @@ const fetchClassrooms = async () => {
   }
 }
 
-const onActionSelect = (student: StudentListItem, action: EnrollmentAction) => {
+const onActionSelect = (student: StudentListItem, action: StudentMenuAction) => {
   selectedStudent.value = toStudentSummary(student)
   selectedEnrollment.value = toCurrentEnrollment(student)
   selectedAction.value = action
+  assignError.value = ''
   resetErrors()
   actionModalOpen.value = true
   if (!availableClassrooms.value.length) fetchClassrooms()
 }
 
-const onActionSubmit = async (payload: EnrollmentActionPayload<EnrollmentAction>) => {
-  if (!selectedAction.value || !selectedStudent.value) return
+const onActionSubmit = async (
+  payload: EnrollmentActionPayload<EnrollmentAction> | AssignClassroomPayload,
+) => {
+  const action = selectedAction.value
+  const student = selectedStudent.value
+  if (!action || !student) return
   try {
-    await executeLifecycleAction(selectedAction.value, selectedStudent.value.id, payload)
+    if (action === 'assign') {
+      await api.post(`/api/academies/${props.academyId}/classrooms/${(payload as AssignClassroomPayload).to_classroom_id}/students`, {
+        student_ids: [student.id],
+      })
+    } else {
+      await executeLifecycleAction(action, student.id, payload as EnrollmentActionPayload<EnrollmentAction>)
+    }
     actionModalOpen.value = false
+    assignError.value = ''
     fetchData()
-  } catch (e) {
-    // errors are in lifecycleFieldErrors
+  } catch (error: any) {
+    if (action === 'assign') {
+      assignError.value = error?.data?.message ?? error?.message ?? 'ไม่สามารถลงห้องเรียนได้'
+    } else {
+      // errors are in lifecycleFieldErrors
+    }
   }
+}
+
+const onViewProfile = (student: StudentListItem) => {
+  navigateTo(`/academies/${route.params.name}/students/${student.id}/profile`)
 }
 
 const onViewHistory = (student: StudentListItem) => {
@@ -290,7 +356,7 @@ watch(() => props.academyId, (id) => {
 <template>
   <div class="space-y-4">
     <!-- Filters -->
-    <div class="flex flex-col sm:flex-row gap-3">
+    <div class="flex flex-col sm:flex-row flex-wrap gap-3">
       <div class="relative flex-1">
         <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
         <input
@@ -332,64 +398,120 @@ watch(() => props.academyId, (id) => {
       >
         <option v-for="opt in accountStatusOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
       </select>
+      <button
+        v-if="hasActiveFilters"
+        type="button"
+        @click="resetFilters"
+        class="px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+      >
+        ล้างตัวกรอง
+      </button>
     </div>
 
     <!-- Table -->
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="bg-gray-50 dark:bg-gray-900/50">
-            <tr>
-              <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">รหัส</th>
-              <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 cursor-pointer select-none" @click="onSort({ sortField: 'first_name_th', sortOrder: lazyParams.sortField === 'first_name_th' && lazyParams.sortOrder === 1 ? -1 : 1 })">
+        <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+          <thead>
+            <tr class="bg-gray-100 dark:bg-gray-900/50">
+              <th class="px-6 py-4 text-left text-xs font-semibold tracking-wide text-gray-500 dark:text-gray-400">รหัส</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold tracking-wide text-gray-500 dark:text-gray-400 cursor-pointer select-none" @click="onSort({ sortField: 'first_name_th', sortOrder: lazyParams.sortField === 'first_name_th' && lazyParams.sortOrder === 1 ? -1 : 1 })">
                 <span class="flex items-center gap-1">
                   ชื่อ-สกุล
                   <Icon v-if="lazyParams.sortField === 'first_name_th'" :icon="lazyParams.sortOrder === 1 ? 'fluent:arrow-up-24-regular' : 'fluent:arrow-down-24-regular'" class="w-4 h-4" />
                 </span>
               </th>
-              <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">ห้องเรียน</th>
-              <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">สถานะ</th>
-              <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">บัญชี</th>
-              <th class="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">จัดการ</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold tracking-wide text-gray-500 dark:text-gray-400">ห้องเรียน</th>
+              <th class="px-6 py-4 text-right text-xs font-semibold tracking-wide text-gray-500 dark:text-gray-400">เลขที่</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold tracking-wide text-gray-500 dark:text-gray-400">ปีการศึกษา</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold tracking-wide text-gray-500 dark:text-gray-400">สถานะ</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold tracking-wide text-gray-500 dark:text-gray-400">บัญชี</th>
+              <th class="sticky right-0 z-10 border-l border-gray-100 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50 px-6 py-4 text-right text-xs font-semibold tracking-wide text-gray-500 dark:text-gray-400">จัดการ</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-            <tr v-if="loading" v-for="i in lazyParams.rows" :key="i">
-              <td colspan="6" class="px-4 py-3">
-                <div class="h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-              </td>
-            </tr>
+            <template v-if="loading">
+              <tr v-for="i in lazyParams.rows" :key="i">
+                <td colspan="8" class="px-6 py-4 whitespace-nowrap">
+                  <div class="h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                </td>
+              </tr>
+            </template>
             <tr v-else-if="students.length === 0">
-              <td colspan="6" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+              <td colspan="8" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                 <Icon icon="fluent:people-24-regular" class="w-10 h-10 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
-                <p>ไม่พบข้อมูลนักเรียน</p>
+                <template v-if="hasActiveFilters">
+                  <p>ไม่พบนักเรียนที่ตรงกับตัวกรอง</p>
+                  <button
+                    type="button"
+                    @click="resetFilters"
+                    class="mt-3 inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    ล้างตัวกรองทั้งหมด
+                  </button>
+                </template>
+                <template v-else>
+                  <p>ไม่พบข้อมูลนักเรียน</p>
+                  <a
+                    :href="`/academies/${route.params.name}/admin/students/intake`"
+                    class="mt-3 inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+                  >
+                    รับนักเรียนใหม่
+                  </a>
+                </template>
               </td>
             </tr>
             <tr
               v-else
               v-for="student in students"
               :key="student.id"
-              class="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors"
+              class="group hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors"
             >
-              <td class="px-4 py-3 font-mono text-xs text-gray-700 dark:text-gray-300">{{ student.student_id }}</td>
-              <td class="px-4 py-3">
+              <td class="px-6 py-4 whitespace-nowrap font-mono text-xs text-gray-700 dark:text-gray-300">{{ student.student_id }}</td>
+              <td class="px-6 py-4 whitespace-nowrap">
                 <div class="font-medium text-gray-900 dark:text-white">
                   {{ student.title_prefix_th }}{{ student.first_name_th }} {{ student.last_name_th }}
                 </div>
               </td>
-              <td class="px-4 py-3 text-gray-600 dark:text-gray-400">{{ getClassroomName(student) }}</td>
-              <td class="px-4 py-3">
-                <span :class="['px-2 py-0.5 rounded-full text-xs font-medium', getStatusClass(student.status)]">
+              <td class="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400">
+                <span
+                  v-if="getClassroomName(student)"
+                  class="inline-block whitespace-nowrap px-2 py-1 text-xs text-center font-medium leading-none rounded bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+                >
+                  {{ getClassroomName(student) }}
+                </span>
+                <span
+                  v-else
+                  class="inline-block whitespace-nowrap px-2 py-1 text-xs text-center font-medium leading-none rounded bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+                >
+                  ยังไม่มีห้อง
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-right tabular-nums text-gray-700 dark:text-gray-300">
+                {{ getStudentNumber(student) ?? '—' }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400">
+                {{ getAcademicYearName(student) ?? '—' }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span :class="['inline-block whitespace-nowrap px-2 py-1 text-xs text-center font-bold leading-none rounded', getStatusClass(student.status)]">
                   {{ getStatusLabel(student.status) }}
                 </span>
               </td>
-              <td class="px-4 py-3">
+              <td class="px-6 py-4 whitespace-nowrap">
                 <span :class="['text-xs font-medium', getAccountBadge(student.account_status).class]">
                   {{ getAccountBadge(student.account_status).label }}
                 </span>
               </td>
-              <td class="px-4 py-3 text-right">
-                <div class="flex items-center justify-end gap-1">
+              <td class="sticky right-0 z-10 border-l border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-700/50 px-6 py-4 whitespace-nowrap text-right">
+                <div class="flex items-center justify-end gap-1 list-user-action">
+                  <button
+                    @click.stop="onViewProfile(student)"
+                    class="p-1.5 rounded-md text-zinc-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition"
+                    title="ดูโปรไฟล์นักเรียน"
+                  >
+                    <Icon icon="fluent:person-card-profile-24-regular" class="w-4 h-4" />
+                  </button>
                   <button
                     v-if="student.account_status !== 'active'"
                     @click.stop="onActivateAccount(student)"
@@ -450,6 +572,7 @@ watch(() => props.academyId, (id) => {
       :available-classrooms="availableClassrooms"
       :is-loading="lifecycleLoading"
       :field-errors="lifecycleFieldErrors"
+      :assign-error="assignError"
       @update:open="actionModalOpen = $event"
       @submit="onActionSubmit"
     />
