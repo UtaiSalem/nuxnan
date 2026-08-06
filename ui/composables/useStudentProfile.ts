@@ -11,6 +11,8 @@ import { useApi } from './useApi'
 
 export interface StudentProfile {
   id: number
+  /** Numeric academy id — required to build the sectional-edit endpoints */
+  academy_id: number
   student_id: string
   citizen_id: string | null
   title_prefix_th: string | null

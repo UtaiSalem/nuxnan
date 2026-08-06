@@ -24,7 +24,7 @@ const form = ref({
   first_name_en: '',
   last_name_en: '',
   nickname: '',
-  gender: 0,
+  gender: '' as number | '',
   date_of_birth: '',
   nationality: '',
   religion: ''
@@ -54,7 +54,7 @@ const initForm = () => {
       first_name_en: s.first_name_en || '',
       last_name_en: s.last_name_en || '',
       nickname: s.nickname || '',
-      gender: s.gender || 0,
+      gender: s.gender ?? '',
       date_of_birth: s.date_of_birth ? s.date_of_birth.split('T')[0] : '',
       nationality: s.nationality || '',
       religion: s.religion || ''
@@ -197,7 +197,7 @@ const student = computed(() => studentStore.currentStudent)
               </div>
               <div>
                 <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">เพศ</dt>
-                <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ student.gender_text || (student.gender === 1 ? 'ชาย' : (student.gender === 2 ? 'หญิง' : '-')) }}</dd>
+                <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ student.gender_text || (student.gender === 1 ? 'ชาย' : (student.gender === 0 ? 'หญิง' : '-')) }}</dd>
               </div>
               <div>
                 <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">สัญชาติ</dt>
@@ -256,9 +256,9 @@ const student = computed(() => studentStore.currentStudent)
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">เพศ</label>
                   <select v-model="form.gender" class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600">
-                    <option :value="0">ไม่ระบุ</option>
+                    <option value="">ไม่ระบุ</option>
                     <option :value="1">ชาย</option>
-                    <option :value="2">หญิง</option>
+                    <option :value="0">หญิง</option>
                   </select>
                 </div>
                 <div>

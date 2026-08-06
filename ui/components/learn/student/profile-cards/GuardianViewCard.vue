@@ -136,7 +136,7 @@ const fullName = (g: StudentGuardian) => {
 }
 
 const canEdit = computed(() => {
-  return props.accessLevel === 'self' || props.accessLevel === 'admin'
+  return ['self', 'admin', 'homeroom'].includes(props.accessLevel)
 })
 </script>
 

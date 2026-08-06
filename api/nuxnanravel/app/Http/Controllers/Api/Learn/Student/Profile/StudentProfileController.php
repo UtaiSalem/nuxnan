@@ -227,6 +227,7 @@ class StudentProfileController extends Controller
         // Profile data
         $profileData = [
             'id' => $student->id,
+            'academy_id' => $student->academy_id,
             'student_id' => $student->student_id,
             'citizen_id' => $this->maskCitizenId($student->citizen_id, $accessLevel),
             'title_prefix_th' => $student->title_prefix_th,
@@ -354,42 +355,36 @@ class StudentProfileController extends Controller
             return 'self';
         }
 
-        // 2. Check if user is academy member
+        // 2. Academy owner / super admin — they usually have no academy_members row
+        if ($academy->isAdmin($user)) {
+            return 'admin';
+        }
+
+        // 3. Check if user is academy member
         $academyMember = AcademyMember::where('academy_id', $academy->id)
             ->where('user_id', $user->id)
-            ->where('status', 1)
+            ->where('status', AcademyMember::STATUS_APPROVED)
             ->first();
 
         if (! $academyMember) {
             return null;
         }
 
-        // 3. Academy admin/owner
+        // 4. Academy admin/owner
         if (in_array($academyMember->role, ['admin', 'owner', 'director'])) {
             return 'admin';
         }
 
-        // 4. Check if teacher is homeroom teacher of student's classroom
+        // 5. Check if teacher is homeroom teacher/co-teacher of student's classroom
         if (in_array($academyMember->role, ['teacher', 'co_teacher'])) {
-            $isHomeroom = ClassroomMember::whereHas('classroom', function ($q) use ($student) {
-                $q->whereHas('classroomStudents', function ($sq) use ($student) {
-                    $sq->where('student_id', $student->id)
-                        ->where('status', 'active');
-                });
-            })
-                ->where('user_id', $user->id)
-                ->where('role', 'teacher')
-                ->where('is_active', true)
-                ->exists();
-
-            if ($isHomeroom) {
+            if (ClassroomMember::isHomeroomStaffOf($user->id, $student)) {
                 return 'homeroom';
             }
 
             return 'teacher';
         }
 
-        // 5. Parent - check if user is linked as guardian
+        // 6. Parent - check if user is linked as guardian
         $isParent = $student->guardians()
             ->where(function ($q) use ($user) {
                 $q->where('citizen_id', $user->citizen_id ?? '__none__');
@@ -400,7 +395,7 @@ class StudentProfileController extends Controller
             return 'parent';
         }
 
-        // 6. Regular academy member (student role) - limited access
+        // 7. Regular academy member (student role) - limited access
         if ($academyMember->role === 'student') {
             return null;
         }

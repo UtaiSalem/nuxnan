@@ -71,7 +71,7 @@ const typeColor = (type: string) => {
 }
 
 const canEdit = computed(() => {
-  return props.accessLevel === 'self' || props.accessLevel === 'admin'
+  return ['self', 'admin', 'homeroom'].includes(props.accessLevel)
 })
 
 const startAdd = () => {

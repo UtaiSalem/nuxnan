@@ -32,8 +32,7 @@ const form = ref({
   gender: props.student.gender ?? '',
   date_of_birth: props.student.date_of_birth || '',
   nationality: props.student.nationality || '',
-  religion: props.student.religion || '',
-  blood_type: props.student.blood_type || ''
+  religion: props.student.religion || ''
 })
 
 const startEditing = () => {
@@ -48,8 +47,7 @@ const startEditing = () => {
     gender: props.student.gender ?? '',
     date_of_birth: props.student.date_of_birth || '',
     nationality: props.student.nationality || '',
-    religion: props.student.religion || '',
-    blood_type: props.student.blood_type || ''
+    religion: props.student.religion || ''
   }
   isEditing.value = true
 }
@@ -111,7 +109,7 @@ const genderText = computed(() => {
 })
 
 const canEdit = computed(() => {
-  return props.accessLevel === 'self' || props.accessLevel === 'admin'
+  return ['self', 'admin', 'homeroom'].includes(props.accessLevel)
 })
 </script>
 
@@ -187,10 +185,6 @@ const canEdit = computed(() => {
           <label class="block text-xs font-semibold text-gray-500 mb-1">วันเกิด</label>
           <input v-model="form.date_of_birth" type="date" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
         </div>
-        <div>
-          <label class="block text-xs font-semibold text-gray-500 mb-1">กรุ๊ปเลือด</label>
-          <input v-model="form.blood_type" type="text" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="เช่น A, B, O, AB" />
-        </div>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -242,10 +236,6 @@ const canEdit = computed(() => {
         <div>
           <dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">ศาสนา</dt>
           <dd class="mt-1 text-sm font-medium text-gray-900">{{ student.religion || '-' }}</dd>
-        </div>
-        <div>
-          <dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">กรุ๊ปเลือด</dt>
-          <dd class="mt-1 text-sm font-medium text-gray-900">{{ student.blood_type || '-' }}</dd>
         </div>
         <div>
           <dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">วันที่เข้าเรียน</dt>

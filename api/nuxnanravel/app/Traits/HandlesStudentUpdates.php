@@ -2,14 +2,42 @@
 
 namespace App\Traits;
 
+use App\Models\Academy;
 use App\Models\AcademyMember;
 use App\Models\Student;
 use App\Models\StudentChangeRequest;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 
 trait HandlesStudentUpdates
 {
+    /**
+     * Fields a student may NOT change on their own without staff approval.
+     * Identity fields (name, prefix, gender, date of birth) are included because
+     * they feed student cards, transcripts and the sports-day gender balance.
+     */
+    public static function defaultEditableFieldSettings(): array
+    {
+        return [
+            'mode' => 'blacklist',
+            'fields' => [
+                'citizen_id',
+                'student_id',
+                'academic',
+                'health',
+                'gender',
+                'date_of_birth',
+                'title_prefix_th',
+                'title_prefix_en',
+                'first_name_th',
+                'first_name_en',
+                'last_name_th',
+                'last_name_en',
+            ],
+        ];
+    }
+
     /**
      * Handle update of a student field with approval flow logic.
      * Staff (admin/director/teacher in the student's academy) bypass approval.
@@ -27,10 +55,7 @@ trait HandlesStudentUpdates
         }
 
         $academy = $student->academy;
-        $settings = $academy->student_editable_fields ?? [
-            'mode' => 'blacklist',
-            'fields' => ['citizen_id', 'student_id', 'academic', 'health'],
-        ];
+        $settings = $academy->student_editable_fields ?? self::defaultEditableFieldSettings();
 
         if ($this->needsApproval($field, $settings)) {
             return StudentChangeRequest::create([
@@ -66,6 +91,12 @@ trait HandlesStudentUpdates
             $fullField = $fieldPrefix ? "{$fieldPrefix}.{$field}" : $field;
             $oldValue = $model?->{$field};
 
+            // Sectional forms post every field, changed or not. Without this the
+            // owner would raise a change request per untouched blacklisted field.
+            if ($model && $this->valuesMatch($oldValue, $value)) {
+                continue;
+            }
+
             $changeRequest = $this->applyUpdate($student, $modelType, $modelId, $fullField, $value, $oldValue);
 
             if ($changeRequest) {
@@ -84,10 +115,42 @@ trait HandlesStudentUpdates
     }
 
     /**
+     * Compare a stored attribute against an incoming value, tolerating the
+     * casts Eloquent applies (Carbon dates, integer gender) versus the plain
+     * strings that arrive from a form.
+     */
+    protected function valuesMatch($oldValue, $newValue): bool
+    {
+        if ($oldValue instanceof \DateTimeInterface) {
+            $oldValue = $oldValue->format('Y-m-d');
+        }
+
+        if ($newValue instanceof \DateTimeInterface) {
+            $newValue = $newValue->format('Y-m-d');
+        }
+
+        if ($oldValue === null || $newValue === null) {
+            return $oldValue === $newValue;
+        }
+
+        if (is_array($oldValue) || is_array($newValue)) {
+            return $oldValue === $newValue;
+        }
+
+        return (string) $oldValue === (string) $newValue;
+    }
+
+    /**
      * Determine whether the user is staff (admin/director/teacher) of the given academy.
      */
     protected function isStaffOfAcademy(int $userId, int $academyId): bool
     {
+        // The academy owner normally has no academy_members row.
+        $academy = Academy::find($academyId);
+        if ($academy && $academy->isAdmin(User::find($userId))) {
+            return true;
+        }
+
         return AcademyMember::where('user_id', $userId)
             ->where('academy_id', $academyId)
             ->whereIn('role', ['admin', 'director', 'teacher'])

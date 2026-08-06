@@ -71,6 +71,32 @@ class ClassroomMember extends Model
         return $this->hasMany(GroupMember::class, 'member_id');
     }
 
+    // ───── Helpers ─────
+
+    /**
+     * Homeroom staff of a student = the teacher or co-teacher of a classroom
+     * the student is actively enrolled in (ครูประจำชั้น / ครูประจำชั้นร่วม).
+     */
+    public static function isHomeroomStaffOf($userId, Student $student): bool
+    {
+        if (! $userId) {
+            return false;
+        }
+
+        return static::whereHas('classroom', function ($q) use ($student) {
+            $q->where('academy_id', $student->academy_id)
+                ->where('is_active', true)
+                ->whereHas('classroomStudents', function ($sq) use ($student) {
+                    $sq->where('student_id', $student->id)
+                        ->where('status', 'active');
+                });
+        })
+            ->where('user_id', $userId)
+            ->whereIn('role', [self::ROLE_TEACHER, self::ROLE_CO_TEACHER])
+            ->where('is_active', true)
+            ->exists();
+    }
+
     // ───── Scopes ─────
 
     public function scopeActive($query)

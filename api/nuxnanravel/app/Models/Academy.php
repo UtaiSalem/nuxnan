@@ -75,7 +75,10 @@ class Academy extends Model
         'donation_enabled',
     ];
 
-    protected $casts = ['donation_enabled' => 'boolean'];
+    protected $casts = [
+        'donation_enabled' => 'boolean',
+        'student_editable_fields' => 'array',
+    ];
 
     public function donationEnabled(): bool
     {

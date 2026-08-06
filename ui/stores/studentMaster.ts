@@ -78,20 +78,29 @@ export const useStudentMasterStore = defineStore('studentMaster', () => {
   }
 
   async function updateProfile(data: any) {
+    const academyId = currentStudent.value?.academy_id
+    const studentId = currentStudent.value?.id
+
+    if (!academyId || !studentId) {
+      error.value = 'ยังไม่ได้โหลดข้อมูลนักเรียน ไม่สามารถบันทึกได้'
+      throw new Error(error.value)
+    }
+
     isLoading.value = true
     error.value = null
     try {
-      const response = await $fetch<any>(`${apiBase}/api/student/update-info`, {
-        method: 'POST',
+      const response = await $fetch<any>(`${apiBase}/api/academies/${academyId}/students/${studentId}/personal`, {
+        method: 'PATCH',
         headers: getHeaders(),
         body: data
       })
-      
-      // Update local state if successful and not pending approval
-      if (response.success && response.student) {
-        currentStudent.value = response.student
+
+      // Re-fetch so currentStudent keeps the StudentResource shape (the PATCH
+      // response returns a raw model without the loaded relations)
+      if (response.success) {
+        await fetchMyProfile()
       }
-      
+
       return response
     } catch (e: any) {
       error.value = e.message || 'Failed to update profile'
