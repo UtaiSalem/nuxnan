@@ -6,7 +6,6 @@ import { useStudentCard } from '~/composables/useStudentCard'
 import StudentCardFront from '~/components/learn/student-card/StudentCardFront.vue'
 import StudentCardBack from '~/components/learn/student-card/StudentCardBack.vue'
 import { useApi } from '~/composables/useApi'
-import { useToast } from 'primevue/usetoast'
 
 const props = defineProps<{
   studentCard: StudentCardInfo | null

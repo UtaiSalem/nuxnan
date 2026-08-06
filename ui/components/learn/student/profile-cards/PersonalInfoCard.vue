@@ -2,7 +2,6 @@
 import { ref, computed } from 'vue'
 import type { StudentProfile } from '~/composables/useStudentProfile'
 import { useStudentEdit } from '~/composables/useStudentEdit'
-import { useToast } from 'primevue/usetoast'
 
 const props = withDefaults(defineProps<{
   student: StudentProfile

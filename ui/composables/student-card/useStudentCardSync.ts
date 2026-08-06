@@ -1,5 +1,4 @@
 import { ref } from 'vue'
-import { useToast } from 'primevue/usetoast'
 
 export const useStudentCardSync = () => {
     const api = useApi()
