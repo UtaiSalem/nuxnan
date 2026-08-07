@@ -166,6 +166,34 @@ const fitEnabled = ref(false)
 let fitRO: ResizeObserver | null = null
 let fitRaf = 0
 
+// Single authoritative writer for the fit-to-viewport styles. `width` and
+// `scale` MUST always be written together from the same `fitScale`: the scene
+// is centred by `left:50%` + `translateX(-50%)`, which only cancels out when
+// width * scale === 100% of the outer box. If the two ever desync the whole
+// classroom slides off to the left — and because Vue's :style diff would see
+// no change, it would stay there until a page refresh. Hence: Vue does not
+// bind these properties at all, this function owns them.
+function applyFitStyles() {
+  const inner = sceneInnerRef.value
+  if (!inner) return
+
+  if (!fitEnabled.value) {
+    inner.style.transform = ''
+    inner.style.transformOrigin = ''
+    inner.style.width = ''
+    inner.style.position = ''
+    inner.style.left = ''
+    return
+  }
+
+  const s = fitScale.value
+  inner.style.transform = `translateX(-50%) scale(${s})`
+  inner.style.transformOrigin = 'top center'
+  inner.style.width = `${100 / s}%`
+  inner.style.position = 'relative'
+  inner.style.left = '50%'
+}
+
 function updateFitScale() {
   const outer = sceneOuterRef.value
   const inner = sceneInnerRef.value
@@ -173,7 +201,10 @@ function updateFitScale() {
 
   // Decide whether to fit at all based on viewport width
   const enabled = typeof window !== 'undefined' && window.innerWidth >= FIT_MIN_WIDTH
-  if (fitEnabled.value !== enabled) fitEnabled.value = enabled
+  if (fitEnabled.value !== enabled) {
+    fitEnabled.value = enabled
+    applyFitStyles()
+  }
   if (!enabled) {
     if (fitScale.value !== 1) fitScale.value = 1
     return
@@ -183,21 +214,22 @@ function updateFitScale() {
   if (fitRaf) cancelAnimationFrame(fitRaf)
   fitRaf = requestAnimationFrame(() => {
     fitRaf = 0
-    // Measure natural height by temporarily clearing transform AND width
-    // inflation (otherwise the previous frame's scale feeds back in).
-    const prevTransform = inner.style.transform
-    const prevWidth = inner.style.width
-    inner.style.transform = 'none'
+    // Measure natural height at 100% width. `transform` does NOT affect
+    // scrollHeight (it is a layout value), so only the inflated width has to
+    // be cleared here — and it is re-established by applyFitStyles() below,
+    // synchronously, before the browser can paint.
     inner.style.width = '100%'
     const naturalH = inner.scrollHeight
-    inner.style.transform = prevTransform
-    inner.style.width = prevWidth
     const availH = outer.clientHeight
-    if (!naturalH || !availH) return
-    // Constrain by height only — width is already 100% of outer.
-    const next = Math.min(1, availH / naturalH)
-    const clamped = Math.max(0.35, next)
-    if (Math.abs(clamped - fitScale.value) > 0.005) fitScale.value = clamped
+
+    if (naturalH && availH) {
+      // Constrain by height only — width is already 100% of outer.
+      const next = Math.min(1, availH / naturalH)
+      const clamped = Math.max(0.35, next)
+      if (Math.abs(clamped - fitScale.value) > 0.005) fitScale.value = clamped
+    }
+
+    applyFitStyles()
   })
 }
 
@@ -452,13 +484,6 @@ onUnmounted(() => {
     <div
       ref="sceneInnerRef"
       class="p-3 sm:p-5 relative"
-      :style="fitEnabled ? {
-        transform: `translateX(-50%) scale(${fitScale})`,
-        transformOrigin: 'top center',
-        width: fitScale < 1 ? `${100 / fitScale}%` : '100%',
-        position: 'relative',
-        left: '50%',
-      } : {}"
     >
     <!-- Top wall behind the blackboard -->
     <div class="absolute inset-x-0 top-0 h-28 sm:h-32 bg-gradient-to-b from-[#6B4A2B] via-[#8B5E3C] to-[#A47148] pointer-events-none" aria-hidden="true"></div>
