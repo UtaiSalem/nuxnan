@@ -271,6 +271,20 @@ const filteredStudents = computed(() => {
   })
 })
 
+// gender: 1 = ชาย, 0 = หญิง, null = ยังไม่ระบุ. The old inline
+// `gender === 1 ? 'ชาย' : 'หญิง'` labelled every unspecified student as หญิง.
+const genderLabel = (gender: number | null | undefined) => {
+  if (gender === 1) return 'ชาย'
+  if (gender === 0) return 'หญิง'
+  return 'ไม่ระบุ'
+}
+
+const genderBadgeClass = (gender: number | null | undefined) => {
+  if (gender === 1) return 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+  if (gender === 0) return 'bg-pink-100 text-pink-800 dark:bg-pink-950 dark:text-pink-300'
+  return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+}
+
 // Roster sorting — เลขที่ / เลขประจำตัว / ชื่อ-สกุล
 // Thai names need localeCompare('th'); student codes are numeric strings so
 // they need `numeric: true` or "10" would sort before "9".
@@ -746,7 +760,7 @@ const exportRosterReport = () => {
     'รหัสประจำตัวนักเรียน': s.student_id || '-',
     'ชื่อ-นามสกุล (ไทย)': studentName(s),
     'ชื่อเล่น': s.nickname || '-',
-    'เพศ': s.gender === 1 ? 'ชาย' : s.gender === 0 ? 'หญิง' : '-',
+    'เพศ': genderLabel(s.gender),
     'สถานะ': s.status === 'active' ? 'กำลังเรียน' : s.status,
     'ผู้ปกครอง': s.guardians?.[0]?.guardian_name || '-',
     'เบอร์ติดต่อผู้ปกครอง': s.guardians?.[0]?.phone || '-'
@@ -1254,8 +1268,8 @@ onMounted(async () => {
 
                     <!-- Gender -->
                     <td class="px-4 py-3.5">
-                      <span class="inline-block whitespace-nowrap text-xs font-semibold px-2 py-0.5 rounded-full" :class="student.gender === 1 ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' : 'bg-pink-100 text-pink-800 dark:bg-pink-950 dark:text-pink-300'">
-                        {{ student.gender === 1 ? 'ชาย' : 'หญิง' }}
+                      <span class="inline-block whitespace-nowrap text-xs font-semibold px-2 py-0.5 rounded-full" :class="genderBadgeClass(student.gender)">
+                        {{ genderLabel(student.gender) }}
                       </span>
                     </td>
 
@@ -2127,7 +2141,7 @@ onMounted(async () => {
                       </div>
                       <div>
                         <p class="text-xs text-slate-400">เพศ</p>
-                        <p class="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{{ selectedStudentForProfile.gender === 1 ? 'ชาย' : 'หญิง' }}</p>
+                        <p class="font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{{ genderLabel(selectedStudentForProfile.gender) }}</p>
                       </div>
                       <div>
                         <p class="text-xs text-slate-400">วันเกิด</p>

@@ -139,6 +139,34 @@ class StudentIdentityFieldApprovalTest extends TestCase
         $this->assertSame(0, StudentChangeRequest::count());
     }
 
+    public function test_a_request_that_changes_nothing_does_not_report_a_save(): void
+    {
+        ['admin' => $admin, 'academy' => $academy, 'student' => $student] = $this->setupStudentAndAcademy();
+
+        $this->actingAs($admin, 'api')
+            ->patchJson("/api/academies/{$academy->id}/students/{$student->id}/personal", [
+                'gender' => Student::GENDER_FEMALE,
+                'first_name_th' => 'สมชาย',
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('message', 'ไม่มีข้อมูลที่เปลี่ยนแปลง')
+            ->assertJsonPath('updated_fields', []);
+    }
+
+    public function test_a_real_change_reports_the_fields_it_wrote(): void
+    {
+        ['admin' => $admin, 'academy' => $academy, 'student' => $student] = $this->setupStudentAndAcademy();
+
+        $this->actingAs($admin, 'api')
+            ->patchJson("/api/academies/{$academy->id}/students/{$student->id}/personal", [
+                'gender' => Student::GENDER_MALE,
+                'first_name_th' => 'สมชาย',
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('message', 'อัปเดตข้อมูลส่วนตัวสำเร็จแล้ว')
+            ->assertJsonPath('updated_fields', ['gender']);
+    }
+
     /**
      * @return array{teacher: User, coTeacher: User, outsider: User}
      */

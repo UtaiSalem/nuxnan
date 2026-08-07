@@ -302,13 +302,25 @@ class StudentController extends Controller
 
         $result = $this->processFieldUpdates($student, $student, 'Student', '', $request->validated());
 
+        $updated = array_keys($result['updated'] ?? []);
+        $pending = $result['pending'] ?? [];
+
+        // Saying "saved" when every field came back identical hides real
+        // problems — the caller cannot tell a no-op from a write.
+        if (empty($updated) && empty($pending)) {
+            $message = 'ไม่มีข้อมูลที่เปลี่ยนแปลง';
+        } elseif (empty($pending)) {
+            $message = 'อัปเดตข้อมูลส่วนตัวสำเร็จแล้ว';
+        } else {
+            $message = 'ส่งคำขอแก้ไขข้อมูลส่วนตัวรอการอนุมัติแล้ว';
+        }
+
         return response()->json([
             'success' => true,
-            'message' => empty($result['pending'])
-                ? 'อัปเดตข้อมูลส่วนตัวสำเร็จแล้ว'
-                : 'ส่งคำขอแก้ไขข้อมูลส่วนตัวรอการอนุมัติแล้ว',
+            'message' => $message,
             'data' => $student->fresh(),
-            'pending_fields' => $result['pending'] ?? [],
+            'updated_fields' => $updated,
+            'pending_fields' => $pending,
         ]);
     }
 

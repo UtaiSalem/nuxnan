@@ -59,9 +59,13 @@ const save = async () => {
   try {
     const res = await updatePersonal(form.value)
     if (res?.success) {
+      // A request that changed nothing must not look like a successful save.
+      const changed = (res.updated_fields?.length ?? 0) > 0
+        || Object.keys(res.pending_fields ?? {}).length > 0
+
       toast.add({
-        severity: 'success',
-        summary: 'สำเร็จ',
+        severity: changed ? 'success' : 'info',
+        summary: changed ? 'สำเร็จ' : 'ไม่มีการเปลี่ยนแปลง',
         detail: res.message || 'อัปเดตข้อมูลส่วนตัวสำเร็จแล้ว',
         life: 3000
       })
