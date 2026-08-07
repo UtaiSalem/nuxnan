@@ -81,10 +81,42 @@ const currentStatusConfig = computed(() => {
   }
 })
 
+const isSelected = (option: { value: number | null }) =>
+  option.value === null
+    ? currentStatus.value == null || currentStatus.value === 0
+    : currentStatus.value === option.value
+
+const panelRef = ref<HTMLElement | null>(null)
+const menuPosition = ref({ top: 0, left: 0 })
+const hasPositioned = ref(false)
+
+const MENU_WIDTH = 144 // w-36
+
+const updateMenuPosition = () => {
+  const trigger = menuRef.value
+  if (!trigger || !showMenu.value) return
+
+  const rect = trigger.getBoundingClientRect()
+  const panelHeight = panelRef.value?.offsetHeight ?? 220
+  const left = Math.min(
+    Math.max(8, rect.left + rect.width / 2 - MENU_WIDTH / 2),
+    window.innerWidth - MENU_WIDTH - 8,
+  )
+  const hasRoomBelow = rect.bottom + panelHeight + 8 <= window.innerHeight
+  const top = hasRoomBelow ? rect.bottom + 8 : rect.top - panelHeight - 8
+
+  menuPosition.value = { top: Math.max(8, top), left }
+  hasPositioned.value = true
+}
+
 // Toggle menu
 const toggleMenu = () => {
   if (!props.isCourseAdmin) return
   showMenu.value = !showMenu.value
+  if (showMenu.value) {
+    hasPositioned.value = false
+    nextTick(updateMenuPosition)
+  }
 }
 
 // Close menu
@@ -120,20 +152,26 @@ const selectStatus = async (newStatus: number | null) => {
   }
 }
 
-// Click outside handler
+// Click outside handler — the panel is teleported out of menuRef, so check both
 const onClickOutside = (event: Event) => {
-  if (menuRef.value && !menuRef.value.contains(event.target as Node)) {
-    closeMenu()
-  }
+  const target = event.target as Node
+  if (menuRef.value?.contains(target)) return
+  if (panelRef.value?.contains(target)) return
+  closeMenu()
 }
 
-// Setup click outside listener
 onMounted(() => {
   document.addEventListener('click', onClickOutside)
+  // capture: true is required — the table scrolls inside its own
+  // overflow-x-auto container and that scroll event does not bubble to window
+  window.addEventListener('scroll', updateMenuPosition, true)
+  window.addEventListener('resize', updateMenuPosition)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', onClickOutside)
+  window.removeEventListener('scroll', updateMenuPosition, true)
+  window.removeEventListener('resize', updateMenuPosition)
 })
 </script>
 
@@ -169,79 +207,82 @@ onUnmounted(() => {
     </div>
 
     <!-- Dropdown Menu -->
-    <Transition
-      enter-active-class="transition ease-out duration-150"
-      enter-from-class="opacity-0 scale-95 -translate-y-1"
-      enter-to-class="opacity-100 scale-100 translate-y-0"
-      leave-active-class="transition ease-in duration-100"
-      leave-from-class="opacity-100 scale-100 translate-y-0"
-      leave-to-class="opacity-0 scale-95 -translate-y-1"
-    >
-      <div
-        v-if="showMenu && isCourseAdmin"
-        class="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-36 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50"
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition ease-out duration-150"
+        enter-from-class="opacity-0 scale-95 -translate-y-1"
+        enter-to-class="opacity-100 scale-100 translate-y-0"
+        leave-active-class="transition ease-in duration-100"
+        leave-from-class="opacity-100 scale-100 translate-y-0"
+        leave-to-class="opacity-0 scale-95 -translate-y-1"
       >
-        <!-- Header -->
-        <div class="px-3 py-2 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
-          <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">เลือกสถานะ</p>
-        </div>
+        <div
+          v-if="showMenu && isCourseAdmin"
+          ref="panelRef"
+          :style="{
+            top: `${menuPosition.top}px`,
+            left: `${menuPosition.left}px`,
+            visibility: hasPositioned ? 'visible' : 'hidden',
+          }"
+          class="fixed z-[60] w-36 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+        >
+          <!-- Header -->
+          <div class="px-3 py-2 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
+            <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">เลือกสถานะ</p>
+          </div>
 
-        <!-- Options -->
-        <div class="py-1">
-          <button
-            v-for="option in statusOptions"
-            :key="option.value ?? 'null'"
-            @click.stop="selectStatus(option.value)"
-            :disabled="isLoading"
-            class="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-700/50"
-            :class="[
-              (currentStatus === option.value || (currentStatus === null && option.value === null) || (currentStatus === undefined && option.value === null) || (currentStatus === 0 && option.value === null))
-                ? `bg-${option.color}-50 dark:bg-${option.color}-900/20 text-${option.color}-700 dark:text-${option.color}-300`
-                : 'text-gray-700 dark:text-gray-300'
-            ]"
-          >
-            <div
+          <!-- Options -->
+          <div class="py-1">
+            <button
+              v-for="option in statusOptions"
+              :key="option.value ?? 'null'"
+              @click.stop="selectStatus(option.value)"
+              :disabled="isLoading"
+              class="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium transition-all duration-150 hover:bg-gray-100 dark:hover:bg-gray-700/50"
               :class="[
-                'w-7 h-7 rounded-full flex items-center justify-center',
-                option.color === 'green' ? 'bg-green-100 dark:bg-green-900/30' : '',
-                option.color === 'amber' ? 'bg-amber-100 dark:bg-amber-900/30' : '',
-                option.color === 'blue' ? 'bg-blue-100 dark:bg-blue-900/30' : '',
-                option.color === 'red' ? 'bg-red-100 dark:bg-red-900/30' : '',
+                !isSelected(option) ? 'text-gray-700 dark:text-gray-300' : '',
+                isSelected(option) && option.color === 'green' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' : '',
+                isSelected(option) && option.color === 'amber' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300' : '',
+                isSelected(option) && option.color === 'blue' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' : '',
+                isSelected(option) && option.color === 'red' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300' : '',
               ]"
             >
+              <div
+                :class="[
+                  'w-7 h-7 rounded-full flex items-center justify-center',
+                  option.color === 'green' ? 'bg-green-100 dark:bg-green-900/30' : '',
+                  option.color === 'amber' ? 'bg-amber-100 dark:bg-amber-900/30' : '',
+                  option.color === 'blue' ? 'bg-blue-100 dark:bg-blue-900/30' : '',
+                  option.color === 'red' ? 'bg-red-100 dark:bg-red-900/30' : '',
+                ]"
+              >
+                <Icon 
+                  :icon="option.icon" 
+                  class="w-4 h-4"
+                  :class="[
+                    option.color === 'green' ? 'text-green-600 dark:text-green-400' : '',
+                    option.color === 'amber' ? 'text-amber-600 dark:text-amber-400' : '',
+                    option.color === 'blue' ? 'text-blue-600 dark:text-blue-400' : '',
+                    option.color === 'red' ? 'text-red-600 dark:text-red-400' : '',
+                  ]"
+                />
+              </div>
+              <span class="flex-1 text-left">{{ option.label }}</span>
               <Icon 
-                :icon="option.icon" 
+                v-if="isSelected(option)"
+                icon="heroicons:check" 
                 class="w-4 h-4"
                 :class="[
-                  option.color === 'green' ? 'text-green-600 dark:text-green-400' : '',
-                  option.color === 'amber' ? 'text-amber-600 dark:text-amber-400' : '',
-                  option.color === 'blue' ? 'text-blue-600 dark:text-blue-400' : '',
-                  option.color === 'red' ? 'text-red-600 dark:text-red-400' : '',
+                  option.color === 'green' ? 'text-green-600' : '',
+                  option.color === 'amber' ? 'text-amber-600' : '',
+                  option.color === 'blue' ? 'text-blue-600' : '',
+                  option.color === 'red' ? 'text-red-600' : '',
                 ]"
               />
-            </div>
-            <span class="flex-1 text-left">{{ option.label }}</span>
-            <Icon 
-              v-if="currentStatus === option.value || (currentStatus === null && option.value === null) || (currentStatus === undefined && option.value === null) || (currentStatus === 0 && option.value === null)"
-              icon="heroicons:check" 
-              class="w-4 h-4"
-              :class="[
-                option.color === 'green' ? 'text-green-600' : '',
-                option.color === 'amber' ? 'text-amber-600' : '',
-                option.color === 'blue' ? 'text-blue-600' : '',
-                option.color === 'red' ? 'text-red-600' : '',
-              ]"
-            />
-          </button>
+            </button>
+          </div>
         </div>
-      </div>
-    </Transition>
+      </Transition>
+    </Teleport>
   </div>
 </template>
-
-<style scoped>
-/* Ensure dropdown is above other elements */
-.z-50 {
-  z-index: 50;
-}
-</style>
