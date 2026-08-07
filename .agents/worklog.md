@@ -1,5 +1,65 @@
 # Work Log — nuxnan project
 
+## 2026-08-08 (ต่อ) — เคลียร์ TODO ค้าง 3 ข้อจาก 2026-08-03 · ตัดสิน S-D2 · ล็อกสเปก S-S3e
+
+### สถานะ: **ยังไม่แตะโค้ด** — เซสชันนี้เป็นการตัดสินใจ + เขียนสเปก · แก้เฉพาะ `.agents/school-admin/27-sports-day.md` กับไฟล์นี้
+
+### ผลเช็ค TODO 3 ข้อ — **ข้อ 3 ปิดไปแล้วโดยที่ worklog ตกข่าว**
+
+| TODO | ผลตรวจจริง |
+|---|---|
+| ชะตาไฟล์ `migrations_from_2026_07_31.sql` | ✅ **ตัดสินไปแล้ว** — commit เข้า repo ตั้งแต่ `a152a009` (2026-08-05) พร้อมอีก 2 ไฟล์ `repair_schema_drift_2026_08_05.sql` · `restore_missing_tables.sql` |
+| S-D2 จำนวนคณะสี | ✅ **ตัดสินรอบนี้** (ดูล่าง) |
+| S-S4 | ⏸ ถูกบล็อกโดย S-S3e ที่เพิ่งเพิ่ม |
+
+### 🔴 2 เรื่องที่เจอระหว่างตรวจ — ยังไม่ได้แก้ ทั้งคู่เป็นงานใหม่
+
+1. **ไฟล์ SQL ล้าสมัยไป 9 migrations** — หัวไฟล์เขียนถูกว่าครอบคลุม `2026_07_31_000001 … 2026_08_02_000004` แต่หลังจากนั้นมี `2026_08_05_160000` → `2026_08_07_100000` อีก 9 ตัวที่**ไม่มีคู่ SQL** → ถ้า prod ยังรัน artisan ไม่ได้ prod จะตามหลัง 9 ตัวโดยไม่มีทางไล่ตาม
+2. **`2026_08_06_150000_restore_user_account_for_student_12247` ขึ้น `Pending`** บนเครื่องนี้ ทั้งที่ตัวที่ใหม่กว่า (`2026_08_07_100000`) ขึ้น `Ran` ใน batch 117 → แปลว่าไฟล์ถูกเพิ่มทีหลังด้วยเลขย้อนหลัง **จะรันเองในครั้งถัดไปที่ `migrate` โดยไม่มีใครตั้งใจ** — ตรวจเนื้อในก่อนรัน migration ครั้งหน้า
+
+### ✅ S-D2 ตัดสินแล้ว: ไม่มีจำนวนตายตัว — กำหนดได้ต่อสถาบัน **และต่อครั้งที่จัด**
+
+ผู้ใช้ตัดสิน 2 ข้อ:
+- **จำนวนคณะสีแล้วแต่สถาบัน + แล้วแต่ครั้งที่จัด** · โรงเรียนนี้ **จัดได้หลายครั้งต่อปี**
+- **กีฬาสีปี 2569 ใช้ 4 คณะสี** (2,202 คน ≈ 550 คน/สี)
+
+**"แล้วแต่สถาบัน" ได้อยู่แล้ว** — คณะสีคือ `academy_groups(type='house', academy_id)` และ `house_group_ids` ส่งต่อ batch ได้อิสระ (UI ติ๊กกี่สีก็ได้ min 2)
+
+**"แล้วแต่ครั้งที่จัด" ติดบรรทัดเดียว** — `2026_08_02_000003_create_house_memberships_table.php:26`
+```php
+$table->unique(['academic_year_id', 'student_id']);   // 1 นักเรียน = 1 สี ต่อ 1 ปี ตายตัว
+```
+`commit()` upsert ที่คีย์นี้ (`HouseAssignmentService.php:163`) → จัด 2 ครั้งในปีเดียว **ครั้งที่ 2 ทับครั้งที่ 1 ทิ้ง** · `current()` (`HouseAssignmentController.php:36`) และ `HouseMembershipProjector::rebuild($academyId, $yearId)` ก็ยึด "1 ปี 1 ชุดสี" ทั้งคู่
+
+### 🆕 S-S3e — สเปกล็อกแล้วที่ §9 ของ `27-sports-day.md`
+
+ตารางใหม่ 2 ตัว: **`sports_editions`** (academy + academic_year + sequence + status + `school_event_id` nullable) และ **`sports_edition_houses`** (จำนวนคณะสีของครั้งนั้น = จำนวนแถวตรงนี้)
+ย้ายคีย์ `house_memberships` / `house_assignment_batches` จาก `academic_year_id` → `edition_id`
+
+⏱ **ต้องทำก่อน S-S4 เท่านั้น** — `house_memberships` / `house_assignment_batches` / `house_assignment_rows` = **0 แถวทั้ง 3 ตาราง** (ยืนยัน 2026-08-08) เปลี่ยนคีย์ได้ฟรี · ถ้าปล่อย `sports_score_entries` ลงก่อน จะต้องย้าย event log คะแนนตามไปด้วย
+
+⚠️ **จุดที่ห้ามพลาดเวลาสั่งทำ (เขียนละเอียดไว้ใน §9 แล้ว):**
+- **ต้อง drop `academic_year_id` ออก ไม่ใช่เก็บคู่กับ `edition_id`** — เจ้าของปีมีคนเดียวคือ edition (บทเรียน dual-write ของ #6)
+- **migration ให้ drop + recreate 3 ตาราง ไม่ใช่ ALTER** — เลี่ยงกับดัก `dropForeign()->dropColumn()` ที่ต่อกันไม่ได้ · **ต้องมี guard: แถว > 0 ให้ throw** ห้ามลบข้อมูลของ env ที่เผลอใช้ไปแล้ว · `down()` ต้องคืนรูปเดิมได้จริง
+- **ห้ามมี edition `active` เกิน 1 ต่อ academy** — บังคับด้วย generated column `active_key AS IF(status='active', academy_id, NULL) STORED` + UNIQUE (MySQL ไม่ถือว่า NULL ซ้ำ — เทคนิคเดียวกับที่แนะนำให้ `election_results.party_key` ใน #25) **อย่าบังคับด้วยโค้ดแอปอย่างเดียว**
+- **⛔ ห้ามใช้ `school_events` เป็นคีย์ตรง ๆ** — ตรวจแล้ว: ไม่มีคอลัมน์ `academic_year_id` (ดึงประชากร §7.4 ไม่ได้), มี `deleted_at`, และปน event_type หลายแบบ (3 แถว seed: sports/meeting/ceremony) → ผูกกลับด้วย `school_event_id` nullable แทน
+
+### ลำดับงานถัดไปที่ล็อกแล้ว
+
+1. **S-S3e** (backend + migration + แก้ 6 ไฟล์ตาม §9.3 + 25 เทสต์เดิมต้องผ่าน)
+2. สร้างคณะสีจริง **4 สี** ของปี 2569 → รัน preview → commit → undo กับนักเรียน 2,202 คน **เพื่อพิสูจน์ว่าทั้งเส้นทำงาน (ยังไม่เคยรันกับข้อมูลจริงสักครั้ง)**
+3. **S-S4** schema คะแนน — ทุกตาราง key ที่ `edition_id`
+
+### งานที่ค้าง (TODO ต่อ)
+
+- [ ] **S-S3e** — สเปกพร้อมส่ง Codex แล้วที่ §9 ของ [27-sports-day.md](school-admin/27-sports-day.md)
+- [ ] สร้าง 4 คณะสีของปี 2569 + ทดลองแบ่ง 2,202 คนให้ครบเส้น
+- [ ] **S-S4** (บล็อกโดย S-S3e)
+- [ ] ไฟล์ SQL สำหรับ prod ล้าสมัย 9 migrations — ตัดสินว่าจะต่อไฟล์ให้ทันหรือเลิกใช้วิธีนี้
+- [ ] ตรวจ `2026_08_06_150000_restore_user_account_for_student_12247` ที่ค้าง `Pending`
+
+---
+
 ## 2026-08-08 — แก้ 2 บั๊ก UI หน้าเช็คชื่อ (dropdown โดน clip · ห้องเรียนเลื่อนซ้าย)
 
 ### สถานะ: เสร็จทั้งคู่ · ผู้ใช้ทดสอบผ่านแล้ว · commit `34ac9d44` `73f9ecdf` · **push แล้ว** · working tree สะอาด

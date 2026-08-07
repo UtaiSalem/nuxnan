@@ -93,9 +93,11 @@ $totalPoints = DB::table('users')
 
 ## 4. โครงสร้างที่เสนอ (ร่าง)
 
+> ⚠️ **แก้ 2026-08-08 ตาม S-D2 รอบใหม่** — หน่วยขอบเขตไม่ใช่ "ปีการศึกษา" อีกต่อไป แต่เป็น **`sports_editions` = งานกีฬาสี 1 ครั้ง** (ดู §5.4) · ทุกที่ที่แผนภาพนี้เขียน `SchoolEvent` ให้อ่านว่า `sports_editions` ซึ่ง**อาจ**ผูกกับ `school_events` หรือไม่ก็ได้
+
 ```
-SchoolEvent (event_type='sports')          ← งานกีฬาสีทั้งงาน 1 ครั้ง/ปี
-  └─ sports_houses  →  AcademyGroup(type='house')   ← คณะสี (ชื่อ/สี/ไอคอน อยู่ใน settings)
+sports_editions                            ← งานกีฬาสี 1 ครั้ง (จัดกี่ครั้ง/ปีก็ได้)
+  └─ sports_edition_houses → AcademyGroup(type='house')  ← คณะสีของครั้งนี้ (จำนวนอยู่ที่จำนวนแถว)
   └─ sports_disciplines                     ← ชนิดกีฬา (ฟุตบอล, วิ่ง 100 ม., ชักเย่อ, พาเหรด, กองเชียร์)
        │    is_team / is_judged / scoring_table (json)
        └─ sports_matches  →  ActivitySession  ← 1 คู่/1 ฮีต/1 รอบ (ได้ QR เช็คชื่อนักกีฬาฟรี)
@@ -117,11 +119,11 @@ SchoolEvent (event_type='sports')          ← งานกีฬาสีทั
 | # | ประเด็น | ผลตัดสิน |
 |---|---|---|
 | **S-D1** | วิธีแบ่งนักเรียนเข้าคณะสี | ✅ **รองรับทั้งสุ่มและนำเข้า** — ทั้งสองโหมดต้องเดินผ่าน **เส้นทางเดียวกัน** (batch → preview → commit → undo) ไม่ใช่สองฟีเจอร์แยก |
-| **S-D2** | กี่คณะสี | ⏸ ยังไม่ตัดสิน → **เครื่องมือต้องรองรับ N สี** และ**ห้าม seed คณะสีตัวอย่าง** |
+| **S-D2** | กี่คณะสี | ✅ **ตัดสินแล้ว 2026-08-08 — ไม่มีจำนวนตายตัว** จำนวนคณะสีกำหนดได้ **แล้วแต่สถาบันการศึกษา** และ **แล้วแต่ครั้งที่จัด** → จำนวน = จำนวนแถว `sports_edition_houses` ของครั้งนั้น (ดู §5.4) · ยัง**ห้าม seed คณะสีตัวอย่าง** · ครั้งแรกของจริง: **ปี 2569 ใช้ 4 คณะสี** |
 | **S-D3** | bracket | ⏸ ยังไม่ถึงคิว (S-S4 ขึ้นไป) |
 | **S-D4** | นักกีฬาสมัครเอง | ⏸ ยังไม่ถึงคิว |
 | **S-D5** | คะแนนโผล่ที่ไหน | ⏸ ยังไม่ถึงคิว |
-| **S-D6** | ปีถัดไป | ✅ **แบ่งใหม่ทุกปี** → สมาชิกภาพคณะสี**ต้องผูกกับปีการศึกษา** |
+| **S-D6** | ปีถัดไป | ✅ **แบ่งใหม่ทุกครั้งที่จัด** (เดิมเขียนว่า "ทุกปี" — ขยายความ 2026-08-08 เพราะจัดได้หลายครั้ง/ปี) → สมาชิกภาพคณะสี**ผูกกับ `sports_editions` ไม่ใช่ `academic_year_id`** · ปีการศึกษาเป็นคุณสมบัติของ edition |
 | **S-D7** *(ใหม่)* | เกณฑ์กระจายของตัวสุ่ม | ✅ ค่าเริ่มต้น = **คละทุกห้องเท่า ๆ กัน + สมดุลชาย/หญิง** · และต้องมีตัวเลือก **สุ่มล้วนทั้งโรงเรียน** ให้เลือกตอนรัน |
 
 ### 5.1 ผลที่ตามมาจาก S-D6 — ห้ามเก็บสมาชิกคณะสีใน `academy_group_members`
@@ -143,6 +145,23 @@ SchoolEvent (event_type='sports')          ← งานกีฬาสีทั
 → ลิสต์นี้ **หลุดจาก `AcademyGroupTypes` ไปแล้ว** (`dormitory` อยู่ใน constant แต่ API ปฏิเสธ)
 → เติม `house` ใน 2 mirror เฉย ๆ **ยังสร้างคณะสีไม่ได้** ต้องแก้ให้ rule อ่านจาก `AcademyGroupTypes::keys()` (ซึ่งซ่อม `dormitory` ให้ด้วยในตัว)
 
+### 5.4 🔴 ผลที่ตามมาจาก S-D2 รอบใหม่ — หน่วยขอบเขตต้องย้ายจาก "ปี" ไป "ครั้งที่จัด" *(ใหม่ 2026-08-08)*
+
+**"แล้วแต่สถาบันการศึกษา" ได้อยู่แล้ว** — คณะสีคือ `academy_groups(type='house', academy_id)` ไม่มีเลขตายตัวที่ไหน และ `house_group_ids` ส่งมาต่อ batch ได้อิสระ (UI ติ๊กกี่สีก็ได้ ขั้นต่ำ 2)
+
+**"แล้วแต่ครั้งที่จัด" ยังทำไม่ได้ ติดบรรทัดเดียว** — `2026_08_02_000003_create_house_memberships_table.php:26`
+
+```php
+$table->unique(['academic_year_id', 'student_id']);   // 1 นักเรียน = 1 สี ต่อ 1 ปี ตายตัว
+```
+
+จัด 2 ครั้งในปีเดียวด้วยชุดสีคนละชุดไม่ได้ เพราะ `commit()` ใช้ `upsert` ที่คีย์นี้ (`HouseAssignmentService.php:163`) → **ครั้งที่ 2 ทับครั้งที่ 1 ทิ้ง** และ `current()` (`HouseAssignmentController.php:36`) กับ `HouseMembershipProjector::rebuild($academyId, $yearId)` ก็นับ/ฉาย**รายปี**ทั้งคู่ = ยึดสมมติฐาน "1 ปี 1 ชุดสี" ไว้ทั้งเส้น
+
+⏱ **ต้องแก้ก่อน S-S4 เท่านั้น** — วันนี้ `house_memberships` / `house_assignment_batches` / `house_assignment_rows` = **0 แถวทั้ง 3 ตาราง** (ยืนยัน 2026-08-08) เปลี่ยนคีย์ได้ฟรี · ถ้าปล่อยให้ `sports_score_entries` ลงไปก่อนแล้วค่อยย้าย จะต้องย้าย event log คะแนนตามไปด้วย
+
+**⛔ ห้ามใช้ `school_events` เป็นคีย์ของสมาชิกภาพคณะสีโดยตรง** — ตรวจตารางจริงแล้ว: **ไม่มีคอลัมน์ `academic_year_id`** (จึงดึงประชากร §7.4 ไม่ได้), มี `deleted_at` (soft delete แล้วสมาชิกภาพคณะสีลอย), และให้บริการ event_type หลายแบบปนกันอยู่แล้ว (มี 3 แถว seed: sports / meeting / ceremony)
+→ ใช้ตาราง `sports_editions` ของตัวเอง แล้ว**ผูกกลับ**ด้วย `school_event_id` แบบ nullable เพื่อให้ได้ QR เช็คชื่อนักกีฬาตาม §4 เมื่อผู้ใช้อยากผูก
+
 ---
 
 ## 6. Implementation Tasks (ล็อกแล้ว)
@@ -153,7 +172,8 @@ SchoolEvent (event_type='sports')          ← งานกีฬาสีทั
 | **S-S3** | เครื่องมือแบ่งนักเรียนเข้าคณะสี — **โหมดสุ่ม** + batch/commit/undo/projection ผ่านเส้นทางเดียวกัน (§7) | S-S1 | ✅ `f5fe814e` (16 เทสต์) |
 | **S-S3i** | **โหมดนำเข้า** — parser + matcher บนตารางและ commit path เดียวกัน (§7.6) | S-S3 | ✅ (9 เทสต์) |
 | **S-S3b** | หน้าจอแบ่งคณะสี (เลือกโหมด → preview → commit → undo) + เมนูใน admin.vue | S-S3i | ✅ `f065ce19` |
-| **S-S4** | schema กีฬาสี (§4) + ให้คะแนนแก่คณะสีผ่าน event log + จัดการคะแนนเท่ากัน | S-S3 | ⚪ |
+| **S-S3e** *(ใหม่ 2026-08-08 — แทรกก่อน S-S4)* | **หน่วย "ครั้งที่จัด"** — ตาราง `sports_editions` + `sports_edition_houses` · ย้ายคีย์ของ `house_memberships`/`house_assignment_batches` จาก `academic_year_id` → `edition_id` · projector ฉายจาก edition ที่ `active` เท่านั้น (§9) | S-S3b | ⚪ |
+| **S-S4** | schema กีฬาสี (§4) + ให้คะแนนแก่คณะสีผ่าน event log + จัดการคะแนนเท่ากัน — **ทุกตาราง key ที่ `edition_id`** | **S-S3e** | ⚪ |
 | **S-S5** | บันทึกผลการแข่ง (อันดับ → คะแนนตามตาราง) + คะแนนกรรมการตามเกณฑ์ย่อย (§3) | S-S4 | ⚪ |
 | **S-S6** | หน้าจอ: ตารางคะแนนคณะสี · ตารางแข่ง · กรอกผล · สรุปเหรียญ | S-S5 | ⚪ |
 | **S-S7** | อัลบั้มภาพผูกกับงาน (ต้องเพิ่ม owner ให้ `albums` หรือทำตารางใหม่ — ดู §1.3) | S-S6 | ⚪ |
@@ -270,3 +290,69 @@ house_memberships                       ← แหล่งความจริ
 ## 8. Review Log
 
 - **2026-07-31 — สแกน + เขียนสเปกร่าง** — พบว่าเมนูนี้มี house leaderboard ต่อสายครบตั้งแต่ route ถึง UI แต่ **ตายทั้งเส้นด้วยเหตุผล 2 ข้อที่ไม่เกี่ยวกัน**: `type='house'` ไม่ได้อยู่ใน registry (สร้างไม่ได้) และคะแนนคิดจาก `SUM(users.pp)` ซึ่งเป็นเงินจริง (ใช้ไม่ได้แม้สร้างได้) · ยืนยันจาก DB: `academy_groups` ไม่มีแถว `house` และไม่มีแถว `classroom` เลย → **เส้นทางให้คะแนนแบบกลุ่มทั้งเส้นไม่เคยถูกรันจริง** ต้องนับ `xp_events`/`ClassroomPointsService` เป็น "เขียนแล้วแต่ยังไม่พิสูจน์" เหมือนเมนู #26 · ยังไม่ล็อกแผนเพราะ §5 มี 6 ข้อค้าง โดยเฉพาะ S-D1 (วิธีแบ่งนักเรียน) ที่เปลี่ยนงานมากที่สุด
+
+---
+
+## 9. S-S3e — หน่วย "ครั้งที่จัด" (สเปกล็อก 2026-08-08)
+
+### 9.1 ตารางใหม่ 2 ตาราง
+
+```
+sports_editions                       ← งานกีฬาสี 1 ครั้ง = หน่วยขอบเขตของทุกอย่างใน #27
+  id · academy_id FK cascade
+  academic_year_id FK cascade         ← ยังต้องมี เพราะประชากรมาจาก classroom_students ของปีนั้น (§7.4)
+  school_event_id nullable FK school_events nullOnDelete   ← ผูกงาน/QR เช็คชื่อ (§4) ไม่บังคับ
+  name varchar(150)                   ← 'กีฬาสี 2569'
+  sequence unsigned smallint default 1 ← ครั้งที่เท่าไหร่ในปีนั้น
+  status enum(draft|active|closed) default 'draft'
+  starts_on/ends_on date nullable
+  created_by_user_id FK users
+  timestamps
+  UNIQUE [academy_id, academic_year_id, sequence]
+  active_key AS (IF(status='active', academy_id, NULL)) STORED + UNIQUE  ← กัน active ซ้อนกัน (ดู 9.4)
+
+sports_edition_houses                 ← "ครั้งนี้มีกี่สี อะไรบ้าง" — คำตอบของ S-D2 อยู่ที่จำนวนแถวตรงนี้
+  id · edition_id FK cascade · house_group_id FK academy_groups cascade
+  display_order unsigned smallint default 0
+  timestamps
+  UNIQUE [edition_id, house_group_id]
+```
+
+**ทำไมต้องมี `sports_edition_houses` ทั้งที่ batch ก็เก็บ `house_group_ids` อยู่แล้ว** — batch คือ *การรันเครื่องมือ 1 ครั้ง* (รันกี่รอบก็ได้ต่อ edition) ส่วนตารางนี้คือ *ชุดสีที่เป็นทางการของงานครั้งนั้น* · S-S4 ต้องใช้ตัวหลัง เพราะตารางคะแนนต้องแสดง**ทุกคณะสีรวมถึงคณะที่ยังได้ 0 แต้ม** ซึ่งอนุมานจาก event log ไม่ได้
+
+### 9.2 การย้ายคีย์ (ตาราง 0 แถวทั้งหมด → ทำได้ครั้งเดียวจบ)
+
+| ตาราง | เดิม | ใหม่ |
+|---|---|---|
+| `house_memberships` | `academic_year_id` + `UNIQUE [academic_year_id, student_id]` | **`edition_id`** + `UNIQUE [edition_id, student_id]` · index `[edition_id, house_group_id]` |
+| `house_assignment_batches` | `academic_year_id` · index `[academy_id, academic_year_id, status]` | **`edition_id`** · index `[edition_id, status]` |
+| `house_assignment_rows` | — (ผูกกับ batch อยู่แล้ว) | ไม่เปลี่ยน |
+
+- **`academic_year_id` ต้องถูก drop ออกจาก 2 ตารางบน ไม่ใช่เก็บไว้คู่กัน** — เจ้าของปีมีคนเดียวคือ `sports_editions` ถ้าเก็บทั้งคู่จะเปิดช่องให้ปีของ membership ขัดกับปีของ edition (บทเรียน dual-write ของ #6)
+- `academy_id` **เก็บไว้ได้** เพื่อ scope 404 ตามรูปเดิมของ `HouseAssignmentController::scoped()` แต่ **ต้องเขียนจาก `$edition->academy_id` เท่านั้น ห้ามรับจาก request**
+- 🔧 **วิธีทำ migration ที่ปลอดภัยที่สุดคือ drop + recreate ทั้ง 3 ตาราง** ไม่ใช่ ALTER — เลี่ยงกับดัก `dropForeign()->dropColumn()` ที่ต่อกันไม่ได้ (บันทึกไว้แล้วในบันทึก 2026-08-02) และเลี่ยงเรื่อง index ที่ FK ยืมใช้
+  → **ต้องมี guard: ถ้าตารางใดมีแถว > 0 ให้ `throw` พร้อมข้อความชัด** ห้ามลบข้อมูลของ environment ที่เผลอใช้ไปแล้ว
+  → `down()` ต้องสร้างรูปเดิมกลับได้จริง
+
+### 9.3 จุดที่ต้องแก้ตาม (สำรวจแล้ว 2026-08-08)
+
+| ไฟล์ | สิ่งที่ต้องเปลี่ยน |
+|---|---|
+| `HouseAssignmentService.php` (13 จุดที่อ้าง academic_year) | `previewRandom(Academy, int $year, …)` / `previewImport(…)` → รับ `SportsEdition` แทน `int $year` · ปีอ่านจาก `$edition->academic_year_id` · **ตรวจ `house_group_ids` กับ `sports_edition_houses` ของ edition นั้น ไม่ใช่กับทั้ง academy** · `commit()` upsert คีย์ `['edition_id','student_id']` |
+| `HouseAssignmentController.php` (8 จุด) | validation `academic_year_id` → `edition_id` ทุก route · `current()` นับต่อ edition |
+| `HouseMembershipProjector.php` | `rebuild($academyId, $yearId)` → `rebuild(SportsEdition $edition)` — ฉายเฉพาะ edition ที่ `status='active'` (ดู 9.4) |
+| `HouseImportMatcher.php` | `match(Academy, int $year, …)` → รับ edition · เงื่อนไข `already_assigned` เทียบสีเดิม**ในครั้งนั้น** ไม่ใช่ในปีนั้น |
+| `ui/composables/useHouseAssignments.ts` + `ui/pages/academies/[name]/admin/house-assignments/index.vue` | ตัวเลือกปีการศึกษา → **ตัวเลือก "ครั้งที่จัด"** + จอจัดการ edition (สร้าง/เลือกคณะสีของครั้งนี้/เปิดใช้/ปิด) |
+| `tests/Feature/Sports/HouseAssignmentTest.php` · `HouseImportTest.php` (25 เทสต์) | factory ต้องสร้าง edition ก่อน |
+
+### 9.4 กฎ projection ที่ต้องล็อก — ห้ามมี edition `active` เกิน 1 ต่อ academy
+
+`academy_group_members` ของกลุ่ม type `house` ตอบคำถามเดียวว่า **"ตอนนี้ใครอยู่สีอะไร"** จึงต้องมีต้นทางเดียว
+→ ฉายจาก edition ที่ `status='active'` เท่านั้น · เปลี่ยน edition เป็น `active` = projector rebuild ใหม่ทั้งชุด · ไม่มี edition `active` = ตาราง projection ว่าง (ถูกต้อง ไม่ใช่บั๊ก)
+→ บังคับด้วย **generated column `active_key` + UNIQUE** เพราะ MySQL ไม่ถือว่า `NULL` ซ้ำกัน — เป็นเทคนิคเดียวกับที่บันทึกไว้ให้ `election_results.party_key` ใน #25 · **อย่าบังคับด้วยโค้ดแอปอย่างเดียว**
+
+### 9.5 สิ่งที่ **ดีขึ้นฟรี** จากการย้ายคีย์ (ไม่ใช่แค่หนี้ที่ต้องจ่าย)
+
+- **ประวัติไม่ถูกทับ** — เดิมแบ่งใหม่ในปีเดียวกัน `upsert` กลืนสีเดิมทิ้ง เหลือร่องรอยแค่ใน `house_assignment_rows` · ตอนนี้แต่ละครั้งมีแถวของตัวเอง ย้อนดูได้ว่าปีที่แล้วเด็กคนนี้อยู่สีอะไร
+- **`previous_house_group_id` (§7.3.1) ความหมายชัดขึ้น** — "สีเดิมภายในครั้งนี้" ไม่ใช่ "สีเดิมที่อาจมาจากงานคนละงาน"
+- **เปลี่ยนจำนวนสีระหว่างครั้งไม่ต้องคิดเรื่องคนตกค้าง** — ครั้งใหม่เริ่มจากศูนย์เสมอ ไม่มีเคส "สีที่ถูกยุบยังมีสมาชิกค้าง"
