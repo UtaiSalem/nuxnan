@@ -442,6 +442,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::get('grade-levels', [ClassroomController::class, 'getGradeLevels'])->name('api.academy.classrooms.gradeLevels');
         Route::get('statistics', [ClassroomController::class, 'getStatistics'])->name('api.academy.classrooms.statistics');
         Route::get('students', [ClassroomController::class, 'getAllStudents'])->name('api.academy.classrooms.allStudents');
+        Route::post('renumber', [ClassroomController::class, 'renumberAcademyClassrooms'])->name('api.academy.classrooms.renumberAll');
     });
 
     // {classroom} ต้องเป็นตัวเลขเท่านั้น — controller ในกลุ่มนี้รับ int ทุกตัว ถ้าปล่อยให้ path แปลกๆ
@@ -459,6 +460,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::post('students', [ClassroomController::class, 'addStudents'])->name('api.academy.classrooms.students.add');
         Route::delete('students/{student}', [ClassroomController::class, 'removeStudent'])->name('api.academy.classrooms.students.remove');
         Route::patch('students/{student}/number', [ClassroomController::class, 'updateStudentNumber'])->name('api.academy.classrooms.students.updateNumber');
+        Route::post('renumber', [ClassroomController::class, 'renumberStudents'])->name('api.academy.classrooms.students.renumber');
 
         // New member management
         Route::get('members', [ClassroomController::class, 'listMembers'])->name('api.academy.classrooms.members.index');

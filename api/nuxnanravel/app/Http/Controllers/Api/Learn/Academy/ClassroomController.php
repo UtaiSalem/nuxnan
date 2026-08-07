@@ -10,6 +10,7 @@ use App\Models\AnnualTranscript;
 use App\Models\Classroom;
 use App\Models\ClassroomStudent;
 use App\Models\Student;
+use App\Services\ClassroomRenumberService;
 use App\Services\ClassroomService;
 use App\Services\MemberService;
 use App\Services\StudentEnrollmentService;
@@ -25,14 +26,18 @@ class ClassroomController extends Controller
 
     private StudentEnrollmentService $enrollmentService;
 
+    private ClassroomRenumberService $renumberService;
+
     public function __construct(
         ClassroomService $classroomService,
         MemberService $memberService,
-        StudentEnrollmentService $enrollmentService
+        StudentEnrollmentService $enrollmentService,
+        ClassroomRenumberService $renumberService
     ) {
         $this->classroomService = $classroomService;
         $this->memberService = $memberService;
         $this->enrollmentService = $enrollmentService;
+        $this->renumberService = $renumberService;
     }
 
     /**
@@ -520,6 +525,60 @@ class ClassroomController extends Controller
             'success' => true,
             'message' => 'อัปเดตเลขที่สำเร็จ',
         ]);
+    }
+
+    public function renumberAcademyClassrooms(Request $request, int $academyId): JsonResponse
+    {
+        $academy = Academy::findOrFail($academyId);
+
+        if (! $this->canManage($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
+        }
+
+        $validated = $request->validate([
+            'academic_year_id' => 'sometimes|nullable|integer',
+            'academic_year' => 'sometimes|nullable|string',
+            'grade_level' => 'sometimes|nullable|string',
+            'dry_run' => 'sometimes|boolean',
+        ]);
+
+        $result = $this->renumberService->renumberAcademy(
+            $academy,
+            $validated['academic_year_id'] ?? null,
+            $validated['academic_year'] ?? null,
+            $validated['grade_level'] ?? null,
+            $validated['dry_run'] ?? false
+        );
+
+        if (! $result['success']) {
+            return response()->json($result, 422);
+        }
+
+        return response()->json($result);
+    }
+
+    public function renumberStudents(Request $request, int $academyId, int $id): JsonResponse
+    {
+        $academy = Academy::findOrFail($academyId);
+
+        if (! $this->canManage($academy)) {
+            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์จัดการ'], 403);
+        }
+
+        $classroom = Classroom::where('academy_id', $academyId)->findOrFail($id);
+
+        $validated = $request->validate([
+            'sort_by' => 'sometimes|in:student_id',
+            'dry_run' => 'sometimes|boolean',
+        ]);
+
+        $result = $this->renumberService->renumber(
+            $classroom,
+            $validated['dry_run'] ?? false,
+            $validated['sort_by'] ?? 'student_id'
+        );
+
+        return response()->json($result);
     }
 
     /**
