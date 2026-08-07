@@ -1,5 +1,86 @@
 # Work Log — nuxnan project
 
+## 2026-08-08 — แก้ 2 บั๊ก UI หน้าเช็คชื่อ (dropdown โดน clip · ห้องเรียนเลื่อนซ้าย)
+
+### สถานะ: เสร็จทั้งคู่ · ผู้ใช้ทดสอบผ่านแล้ว · commit `34ac9d44` `73f9ecdf` · **push แล้ว** · working tree สะอาด
+
+> ⚠️ **บทเรียนหลักของเซสชันนี้: ทั้ง 2 บั๊กไม่ได้มีสาเหตุตามที่รายงานมา** ถ้ารีบแก้ตามอาการที่เห็นจะไม่ถูกสักตัว
+
+### 🐛 บั๊ก 1 — dropdown เลือกสถานะเช็คชื่อโดนตัด (`34ac9d44`)
+
+**รายงานมาว่า "ปัญหา z-index" แต่ไม่ใช่** — เป็น **overflow clipping** เพิ่ม z-index เท่าไหร่ก็ไม่มีทางแก้ได้ เพราะ `position: absolute` หนีกรอบ overflow ของ ancestor ไม่ได้
+
+พาเนลอยู่ใน `<td>` แล้วโดนตัดจาก 2 ชั้นใน `ui/components/learn/course/AttendancesTable.vue`:
+- บรรทัด 74 การ์ดนอกสุด `overflow-hidden`
+- บรรทัด 75 `overflow-x-auto` — **ตามสเปค CSS ถ้าแกนหนึ่งไม่ใช่ `visible` อีกแกนที่เป็น `visible` จะถูกบังคับเป็น `auto`** → ตัดแนวตั้งไปด้วย
+
+→ แก้ที่ `ui/components/learn/course/AttendanceStatusBadge.vue`: `<Teleport to="body">` + `position: fixed` คำนวณจาก `getBoundingClientRect()` ตามแพทเทิร์นที่มีอยู่แล้วใน `ui/components/academy/enrollment/StudentActionMenu.vue`
+
+จุดที่พลาดง่าย 3 ข้อ:
+- **`scroll` listener ต้องใส่ `capture: true`** — ตารางเลื่อนใน `overflow-x-auto` ของตัวเอง event ไม่ bubble ขึ้น window ถ้าลืมข้อนี้เมนูจะลอยค้างเวลาเลื่อนตาราง
+- **click-outside ต้องเช็คทั้ง trigger และ panel** เพราะ panel ถูก teleport ออกไปนอก `menuRef` แล้ว
+- `hasRoomBelow` ให้แถวล่างๆ เด้งเมนูขึ้นบนแทนตกจอ
+
+**แถมที่เจอระหว่างทาง:** `:class` ใช้ `bg-${option.color}-50` แบบ interpolate — **Tailwind JIT สแกนหา class แบบ literal เท่านั้น class พวกนี้ไม่เคยถูก generate เลย** ไฮไลต์ตัวเลือกที่เลือกอยู่จึงไม่เคยขึ้นสีตั้งแต่แรก → เปลี่ยนเป็น ternary เต็มสตริง + ยุบเงื่อนไขซ้ำ 2 ที่เป็น `isSelected()`
+
+### 🐛 บั๊ก 2 — ห้องเรียนจำลองเลื่อนไปทางซ้ายค้างถาวรหลังนักเรียนรายงานตัว (`73f9ecdf`)
+
+**รายงานมาว่า "toast ดัน layout" แต่ SweetAlert2 ไม่มีทางทำได้** — ตรวจซอร์สของมันเองแล้ว ทั้ง 3 ทางที่ swal ยุ่งกับ `<body>` ถูกกันไว้หมดในโหมด toast:
+
+| กลไก | ที่มา | toast |
+|---|---|---|
+| `body { overflow: hidden }` | `sweetalert2.css:104` selector คือ `.swal2-shown:not(..., .swal2-toast-shown)` | ไม่โดน |
+| `body { height: auto !important }` | `sweetalert2.js:4419` `if (heightAuto && backdrop && !params.toast)` | ไม่โดน |
+| `body { padding-right }` ชดเชย scrollbar | `sweetalert2.js:4321` `if (isModal())` | ไม่โดน |
+
+container เองคือ `div:where(.swal2-container) { position: fixed; z-index: 1060 }` (`sweetalert2.css:171`) → หลุด flow สนิท **toast แค่มาโผล่ทีหลังพอดี**
+
+**สาเหตุจริง: `transform` กับ `width` บน `sceneInnerRef` มี 2 เจ้าของแย่งกันเขียน** ใน `ui/components/learn/course/attendances/ClassroomSeatGrid.vue`
+- (ก) Vue ผ่าน `:style` binding
+- (ข) โค้ด imperative ในขั้นวัดความสูงของ `updateFitScale()` ที่ save → clear → measure → restore
+
+พอ `fitScale` เปลี่ยนระหว่างที่ rAF ค้างอยู่ ตัว restore จะเขียนทับค่าใหม่ที่ Vue เพิ่งใส่ ทำให้ `width` กับ `scale` **หลุดคู่กัน** แล้ว render ถัดไป Vue diff เห็นว่า binding ไม่เปลี่ยน → **ไม่เขียนซ้ำ ค้างถาวรจนกว่าจะ refresh**
+
+**ทำไมเป็นการเลื่อนซ้าย** — ฉากถูกจัดกลางด้วย `left:50%` + `translateX(-50%)` ซึ่งหักล้างกันพอดีก็ต่อเมื่อ `width × scale === 100%` ของ outer สูตรขอบซ้าย = `W/2 − (w×s)/2` พอเพี้ยนเป็น `width:142%` + `scale(1)` จะได้ `−0.214W` = ห้องเรียนหลุดออกนอกขอบซ้าย
+
+ตัวกระตุ้นคือ `handleSelfCheckIn()` ใน `AttendanceSimulatorShell.vue:285` ที่ยิง re-render 4 ครั้งรวดในไม่กี่ ms (refetch → `scrollIntoView` → `selectedMemberId` → `emit('checked-in')` ที่ทำให้ `AttendancesList` refetch อีกชุด)
+
+→ แก้โดย **ให้โค้ด imperative เป็นเจ้าของคนเดียว**: ถอด `:style` ออกจาก inner element ทั้งก้อน แล้วเขียนทั้งคู่พร้อมกันใน `applyFitStyles()` จาก `fitScale` ค่าเดียวเสมอ
+
+⚠️ **ข้อบังคับที่ห้ามลืมถ้าจะแก้ไฟล์นี้ต่อ:**
+- **`applyFitStyles()` ต้องถูกเรียกทุกทางออกของ rAF** รวมกรณี `naturalH`/`availH` เป็น 0 ไม่งั้น `width` ค้างที่ `100%` ขณะที่ `scale` ยัง < 1 = อาการเดิมเป๊ะ → ใช้ `if` block ห้ามแปลงกลับเป็น early return
+- **ห้ามแก้ด้วยวิธี "ให้ Vue เป็นเจ้าของคนเดียว" + `measuring` flag + `await nextTick()`** — จะเปิดช่องให้เบราว์เซอร์ paint 1 เฟรมตอน transform หายไป = ห้องเรียนกระพริบใหญ่ขึ้นทุกครั้งที่วัด (แผนแรกของ claude มีจุดอ่อนนี้ เปลี่ยนก่อนส่ง agy)
+- **`transform: scale()` ไม่มีผลกับ `scrollHeight`** เพราะเป็นค่า layout → บรรทัด `inner.style.transform = 'none'` เดิมไม่เคยจำเป็นตั้งแต่แรก มีแค่ `width` ที่ต้องเคลียร์ตอนวัด
+- `fitScale` ถูก clamp ด้วย `Math.min(1, ...)` อยู่แล้ว → `100/s` ครอบคลุมทุกกรณี **อย่าเอา ternary `fitScale < 1 ? ... : '100%'` กลับมา** มันเป็นอีกช่องให้หลุดคู่
+
+### บทเรียนเครื่องมือ
+
+- **agy ทำงานได้ดีมากเมื่อสเปคแน่น** — 3 job ติดกัน ทำตามเป๊ะทุกข้อ ไม่มีการ over-reach ไม่แตะไฟล์นอกขอบเขต ไม่แก้ข้อความไทย · สูตรที่ได้ผล: เขียน root cause ให้เสร็จ + ใส่โค้ดเป้าหมายเต็มๆ + ระบุไฟล์ที่ห้ามแตะเป็นชื่อ + ใส่ acceptance ที่ตรวจได้ด้วยคำสั่ง
+- **acceptance criterion ที่ claude เขียนเองผิดได้** — สั่ง agy ว่า "`git diff -w` ต้องว่าง" สำหรับงาน whitespace แต่ baseline คือ HEAD ซึ่งอยู่ก่อนงานรอบแรกที่ยังไม่ commit `-w` เลยโชว์ diff รอบแรกติดมาด้วย **agy อธิบายถูกและ claude ผิดเอง** → ตัวตรวจที่ใช้ได้จริงคือ `--stat` (+40/−40 พอดี = whitespace ล้วน)
+- **ตรวจสมมติฐานกับซอร์สจริงก่อนสั่งแก้** — เซสชันนี้ล้มสมมติฐานตัวเอง 2 ข้อจากการอ่าน `node_modules/sweetalert2/dist/*` (คิดว่าจะแก้ด้วย `heightAuto: false` แต่ `sweetalert2.js:3285` มันอยู่ใน `toastIncompatibleParams` = ใส่ไปก็ได้แค่ warning) ถ้าไม่เช็คจะส่ง agy ไปแก้ผิดจุด
+
+### วิธี verify ที่ใช้ (ไม่ได้ `npm run build` ตามข้อตกลง)
+
+```bash
+node -e "const {parse,compileTemplate,compileScript}=require('@vue/compiler-sfc'); ..."
+```
+รันจาก `ui/` — parse + compile template + compile script setup ของ `.vue` ทีละไฟล์ เร็วกว่า build มากและจับ syntax error ได้ครบ · ใช้ตรวจข้อความไทยกับ magic number ว่ายังอยู่ครบในสคริปต์เดียวกันได้ด้วย
+
+### งานที่ค้าง (TODO ต่อ)
+
+- [ ] **ไม่มีงานค้างจากเซสชันนี้** — ทั้ง 2 บั๊กปิดครบ ทดสอบผ่าน push แล้ว
+- [ ] (ยกมาจาก 2026-08-03) ตัดสิน S-D2 จำนวนคณะสี → สร้างคณะสีจริง → ทดลองแบ่งนักเรียน 2,202 คน
+- [ ] (ยกมาจาก 2026-08-03) S-S4 schema คะแนนกีฬาสี + event log
+- [ ] (ยกมาจาก 2026-08-03) ตัดสินชะตาไฟล์ `api/nuxnanravel/database/migrations_from_2026_07_31.sql`
+
+### Branch / Git State
+
+- Branch: `main` — ตรงกับ `origin/main` (`73f9ecdf`)
+- Uncommitted: **ไม่มี** working tree สะอาด
+- Push status: **push แล้ว** (`d2543d50..73f9ecdf`)
+
+---
+
 ## 2026-08-03 — ตรวจสถานะเปิดเซสชัน (ไม่มีการแก้โค้ด)
 
 ### สถานะ: เซสชันนี้**ไม่ได้เขียนโค้ดเลย** — ตรวจของเดิมกับ git/DB จริงแล้วรีเฟรชบันทึกด้านล่างให้ตรง
