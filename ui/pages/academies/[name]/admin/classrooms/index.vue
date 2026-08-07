@@ -46,6 +46,11 @@ const showTransferModal = ref(false)
 const showAssignHomeroomModal = ref(false)
 const selectedClassroom = ref<any>(null)
 
+const showBulkRenumberModal = ref(false)
+const isLoadingBulkRenumberPreview = ref(false)
+const isApplyingBulkRenumber = ref(false)
+const bulkRenumberSummary = ref<any>(null)
+
 const openAssignHomeroomModal = (classroom: any) => {
   selectedClassroom.value = classroom
   showAssignHomeroomModal.value = true
@@ -702,6 +707,86 @@ const getGradeColor = (grade: string) => {
   if (grade?.includes('อนุบาล')) return 'bg-pink-100 text-pink-700 dark:bg-pink-900/50 dark:text-pink-300'
   return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
 }
+
+// Bulk Renumber
+const openBulkRenumberPreview = async () => {
+  if (!academyId.value) return
+  
+  isLoadingBulkRenumberPreview.value = true
+  try {
+    const response: any = await api.post(`/api/academies/${academyId.value}/classrooms/renumber`, {
+      academic_year: academicYearFilter.value,
+      grade_level: selectedGradeLevel.value || undefined,
+      dry_run: true
+    })
+    
+    if (response.success) {
+      if (response.classroom_count === 0) {
+        Swal.fire({
+          icon: 'info',
+          title: 'ข้อมูล',
+          text: 'ไม่พบห้องเรียนที่ตรงกับเงื่อนไข'
+        })
+        return
+      }
+      
+      if (response.changed_count === 0) {
+        Swal.fire({
+          icon: 'info',
+          title: 'ข้อมูล',
+          text: 'ทุกห้องเรียงเลขที่ถูกต้องอยู่แล้ว'
+        })
+        return
+      }
+      
+      bulkRenumberSummary.value = response
+      showBulkRenumberModal.value = true
+    }
+  } catch (err: any) {
+    Swal.fire({
+      icon: 'error',
+      title: 'เกิดข้อผิดพลาด',
+      text: err.response?.data?.message || 'ไม่สามารถดึงข้อมูลการจัดเรียงได้'
+    })
+  } finally {
+    isLoadingBulkRenumberPreview.value = false
+  }
+}
+
+const applyBulkRenumber = async () => {
+  if (!academyId.value) return
+  
+  isApplyingBulkRenumber.value = true
+  try {
+    const response: any = await api.post(`/api/academies/${academyId.value}/classrooms/renumber`, {
+      academic_year: academicYearFilter.value,
+      grade_level: selectedGradeLevel.value || undefined,
+      dry_run: false
+    })
+    
+    if (response.success) {
+      showBulkRenumberModal.value = false
+      await fetchClassrooms()
+      await fetchStatistics()
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'สำเร็จ',
+        text: response.message || 'จัดเรียงเลขที่ใหม่เรียบร้อยแล้ว',
+        timer: 2000,
+        showConfirmButton: false
+      })
+    }
+  } catch (err: any) {
+    Swal.fire({
+      icon: 'error',
+      title: 'เกิดข้อผิดพลาด',
+      text: err.response?.data?.message || 'ไม่สามารถจัดเรียงเลขที่ได้'
+    })
+  } finally {
+    isApplyingBulkRenumber.value = false
+  }
+}
 </script>
 
 <template>
@@ -717,6 +802,17 @@ const getGradeColor = (grade: string) => {
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">จัดการห้องเรียน</h1>
           <p class="text-gray-600 dark:text-gray-400 mt-1">จัดการห้องเรียนและนักเรียนของโรงเรียน</p>
         </div>
+        <div class="flex items-center gap-3">
+          <button
+            @click="openBulkRenumberPreview"
+            :disabled="isLoadingBulkRenumberPreview"
+            class="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl font-medium transition-colors text-gray-700 dark:text-gray-300 disabled:opacity-50"
+            title="เรียงเลขที่ใหม่ทุกห้องตามลำดับเลขประจำตัวนักเรียน"
+          >
+            <Icon v-if="isLoadingBulkRenumberPreview" icon="fluent:spinner-ios-20-filled" class="w-5 h-5 animate-spin" />
+            <Icon v-else icon="fluent:arrow-sort-24-regular" class="w-5 h-5" />
+            <span>จัดเรียงเลขที่ทั้งโรงเรียน</span>
+          </button>
         <button
           @click="openCreateModal"
           class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
@@ -724,6 +820,7 @@ const getGradeColor = (grade: string) => {
           <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
           <span>สร้างห้องเรียน</span>
         </button>
+        </div>
       </div>
 
       <!-- Statistics Cards -->
@@ -1448,5 +1545,77 @@ const getGradeColor = (grade: string) => {
       @close="showAssignHomeroomModal = false"
       @updated="handleHomeroomAssigned"
     />
+
+    <!-- Bulk Renumber Modal -->
+    <Teleport to="body">
+      <div v-if="showBulkRenumberModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50" @click="showBulkRenumberModal = false"></div>
+        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+          <div class="flex items-start justify-between p-5 border-b border-gray-200 dark:border-gray-700">
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">จัดเรียงเลขที่ทั้งโรงเรียน</h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">เรียงตามลำดับเลขประจำตัวนักเรียน จากน้อยไปมาก</p>
+            </div>
+            <button @click="showBulkRenumberModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+          
+          <div class="p-5 overflow-y-auto flex-1">
+            <div class="mb-4 text-gray-700 dark:text-gray-300">
+              <p>ปีการศึกษา {{ bulkRenumberSummary?.academic_year }} <span v-if="selectedGradeLevel">เฉพาะระดับชั้น {{ selectedGradeLevel }}</span><span v-else>ทุกระดับชั้น</span></p>
+            </div>
+            
+            <div class="text-gray-800 dark:text-gray-200 mb-4 text-lg">
+              <span class="font-mono tabular-nums">{{ bulkRenumberSummary?.affected_classroom_count }}</span> ห้อง ที่จะเปลี่ยน จากทั้งหมด <span class="font-mono tabular-nums">{{ bulkRenumberSummary?.classroom_count }}</span> ห้อง และ <span class="font-mono tabular-nums">{{ bulkRenumberSummary?.changed_count }}</span> รายการ จากนักเรียน <span class="font-mono tabular-nums">{{ bulkRenumberSummary?.total_students }}</span> คน
+            </div>
+            
+            <div class="bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 p-3 rounded-xl mb-6 text-sm flex items-start gap-2">
+              <Icon icon="fluent:warning-24-filled" class="w-5 h-5 shrink-0 mt-0.5" />
+              <p>เลขที่ใหม่จะมีผลกับบัตรนักเรียนและใบรายชื่อที่พิมพ์ออกไปแล้ว</p>
+            </div>
+            
+            <div class="max-h-[50vh] overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-xl relative">
+              <table class="w-full text-sm text-left">
+                <thead class="text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 sticky top-0 shadow-sm">
+                  <tr>
+                    <th class="px-4 py-3 font-medium">ห้อง</th>
+                    <th class="px-4 py-3 font-medium text-center">นักเรียน</th>
+                    <th class="px-4 py-3 font-medium text-center">เลขที่ที่เปลี่ยน</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                  <tr v-for="room in bulkRenumberSummary?.classrooms.filter((c: any) => c.changed_count > 0)" :key="room.classroom_id" class="text-gray-900 dark:text-white">
+                    <td class="px-4 py-3">{{ room.name }}</td>
+                    <td class="px-4 py-3 text-center font-mono tabular-nums">{{ room.total }}</td>
+                    <td class="px-4 py-3 text-center text-amber-600 dark:text-amber-400 font-medium font-mono tabular-nums">{{ room.changed_count }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p v-if="bulkRenumberSummary?.classroom_count - bulkRenumberSummary?.affected_classroom_count > 0" class="text-sm text-gray-500 dark:text-gray-400 mt-3 text-center">
+              อีก <span class="font-mono tabular-nums">{{ bulkRenumberSummary?.classroom_count - bulkRenumberSummary?.affected_classroom_count }}</span> ห้องเรียงถูกต้องอยู่แล้ว
+            </p>
+          </div>
+          
+          <div class="p-5 border-t border-gray-200 dark:border-gray-700 flex gap-3">
+            <button
+              @click="showBulkRenumberModal = false"
+              class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              ยกเลิก
+            </button>
+            <button
+              @click="applyBulkRenumber"
+              :disabled="isApplyingBulkRenumber"
+              class="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              <Icon v-if="isApplyingBulkRenumber" icon="fluent:spinner-ios-20-filled" class="w-5 h-5 animate-spin" />
+              <span>ยืนยันจัดเรียงทั้งหมด</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>

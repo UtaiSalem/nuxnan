@@ -66,6 +66,12 @@ const showProfileDrawer = ref(false)
 const selectedStudentForProfile = ref<any>(null)
 const isLoadingProfile = ref(false)
 const showAssignHomeroomModal = ref(false)
+const showRenumberModal = ref(false)
+const isLoadingRenumberPreview = ref(false)
+const isApplyingRenumber = ref(false)
+const renumberPreview = ref<any[]>([])
+const renumberChangedCount = ref(0)
+const renumberTotal = ref(0)
 
 // Members tab state
 const showAddMemberModal = ref(false)
@@ -818,6 +824,50 @@ const exportAcademicReport = () => {
   XLSX.writeFile(wb, `ผลสัมฤทธิ์ทางการเรียน_ห้อง_${classroomName.value}_ปี_${classroom.value?.academic_year || '-'}.xlsx`)
 }
 
+const openRenumberPreview = async () => {
+  if (students.value.length === 0) return
+  isLoadingRenumberPreview.value = true
+  try {
+    const res: any = await api.post(`/api/academies/${academy.value.id}/classrooms/${classroomId.value}/renumber`, {
+      sort_by: 'student_id',
+      dry_run: true
+    })
+    
+    if (res.changed_count === 0) {
+      Swal.fire({ icon: 'info', title: 'เลขที่เรียงถูกต้องอยู่แล้ว', toast: true, position: 'top-end', showConfirmButton: false, timer: 2500 })
+      return
+    }
+    
+    renumberPreview.value = res.preview || []
+    renumberChangedCount.value = res.changed_count || 0
+    renumberTotal.value = res.total || 0
+    showRenumberModal.value = true
+  } catch (err: any) {
+    Swal.fire('ข้อผิดพลาด', err.message || 'ไม่สามารถดึงข้อมูลพรีวิวได้', 'error')
+  } finally {
+    isLoadingRenumberPreview.value = false
+  }
+}
+
+const applyRenumber = async () => {
+  isApplyingRenumber.value = true
+  try {
+    const res: any = await api.post(`/api/academies/${academy.value.id}/classrooms/${classroomId.value}/renumber`, {
+      sort_by: 'student_id',
+      dry_run: false
+    })
+    if (res.success) {
+      showRenumberModal.value = false
+      await loadClassroom()
+      Swal.fire({ icon: 'success', title: res.message || 'จัดเรียงเลขที่สำเร็จ', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 })
+    }
+  } catch (err: any) {
+    Swal.fire('ข้อผิดพลาด', err.message || 'ไม่สามารถจัดเรียงเลขที่ได้', 'error')
+  } finally {
+    isApplyingRenumber.value = false
+  }
+}
+
 onMounted(async () => {
   await loadClassroom()
   await loadAttendanceForDate()
@@ -1149,6 +1199,16 @@ onMounted(async () => {
 
             <!-- Action buttons -->
             <div class="flex gap-2 shrink-0">
+              <button
+                @click="openRenumberPreview"
+                :disabled="students.length === 0 || isLoadingRenumberPreview"
+                class="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 active:scale-95 transition-all disabled:opacity-50"
+                title="เรียงเลขที่ใหม่ตามลำดับเลขประจำตัวนักเรียน"
+              >
+                <Icon v-if="isLoadingRenumberPreview" icon="fluent:spinner-ios-20-filled" class="h-4 w-4 animate-spin" />
+                <Icon v-else icon="fluent:arrow-sort-24-regular" class="h-4 w-4" />
+                จัดเรียงเลขที่ใหม่
+              </button>
               <button
                 @click="openAddStudentModal"
                 class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary-600 to-sky-500 px-4 py-2 text-sm font-bold text-white hover:opacity-95 shadow-md active:scale-95 transition-all"
@@ -2084,6 +2144,77 @@ onMounted(async () => {
                 class="rounded-xl bg-gradient-to-r from-primary-600 to-sky-500 px-5 py-2 text-sm font-bold text-white shadow-md active:scale-95 transition-all disabled:opacity-50"
               >
                 ลงประกาศ
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Renumber Preview Modal -->
+        <div v-if="showRenumberModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" @click="showRenumberModal = false"></div>
+          
+          <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-3xl w-full overflow-hidden border border-slate-100 dark:border-slate-700 transform transition-all flex flex-col max-h-[90vh]">
+            <div class="px-6 py-5 border-b dark:border-slate-700 flex justify-between items-center">
+              <div>
+                <h3 class="font-extrabold text-slate-900 dark:text-white text-lg">จัดเรียงเลขที่ใหม่</h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">เรียงตามลำดับเลขประจำตัวนักเรียน จากน้อยไปมาก</p>
+              </div>
+              <button @click="showRenumberModal = false" class="text-slate-400 hover:text-slate-500">
+                <Icon icon="fluent:dismiss-24-regular" class="h-6 w-6" />
+              </button>
+            </div>
+
+            <div class="p-6 space-y-4 overflow-hidden flex flex-col">
+              <div class="rounded-xl bg-amber-50 dark:bg-amber-950/20 p-4 border border-amber-100 dark:border-amber-900/40 text-sm">
+                <p class="font-bold text-amber-800 dark:text-amber-400">จะเปลี่ยนเลขที่ {{ renumberChangedCount }} รายการ จากนักเรียนทั้งหมด {{ renumberTotal }} คน</p>
+                <p class="text-amber-700 dark:text-amber-500 mt-1">เลขที่ใหม่จะมีผลกับบัตรนักเรียนและใบรายชื่อที่พิมพ์ออกไปแล้ว</p>
+              </div>
+
+              <div class="flex-1 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col">
+                <div class="overflow-y-auto max-h-[60vh]">
+                  <table class="w-full text-left border-collapse">
+                    <thead class="sticky top-0 bg-slate-50 dark:bg-slate-900 shadow-sm z-10">
+                      <tr class="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        <th class="px-4 py-3 w-20">เลขที่เดิม</th>
+                        <th class="px-2 py-3 w-10 text-center">→</th>
+                        <th class="px-4 py-3 w-20">เลขที่ใหม่</th>
+                        <th class="px-4 py-3 w-32">เลขประจำตัว</th>
+                        <th class="px-4 py-3 min-w-[200px]">ชื่อ-นามสกุล</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-700/60 text-sm">
+                      <tr
+                        v-for="row in renumberPreview"
+                        :key="row.student_id"
+                        :class="row.changed ? 'bg-amber-50/50 dark:bg-amber-900/10' : 'text-slate-500 dark:text-slate-400'"
+                      >
+                        <td class="px-4 py-2.5 font-mono tabular-nums">{{ row.from === null ? '-' : row.from }}</td>
+                        <td class="px-2 py-2.5 text-center text-slate-300 dark:text-slate-600"><Icon icon="fluent:arrow-right-16-regular" class="h-3 w-3 inline-block" /></td>
+                        <td class="px-4 py-2.5 font-mono tabular-nums" :class="row.changed ? 'font-bold text-slate-900 dark:text-white' : ''">{{ row.to }}</td>
+                        <td class="px-4 py-2.5 font-mono">{{ row.student_code || '-' }}</td>
+                        <td class="px-4 py-2.5" :class="row.changed ? 'font-semibold text-slate-900 dark:text-white' : ''">{{ row.full_name }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="px-6 py-4 bg-slate-50 dark:bg-slate-900/20 border-t dark:border-slate-700 flex justify-end gap-2 shrink-0">
+              <button
+                @click="showRenumberModal = false"
+                class="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+              >
+                ยกเลิก
+              </button>
+              
+              <button
+                @click="applyRenumber"
+                :disabled="isApplyingRenumber"
+                class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary-600 to-sky-500 px-5 py-2 text-sm font-bold text-white shadow-md active:scale-95 transition-all disabled:opacity-50"
+              >
+                <Icon v-if="isApplyingRenumber" icon="fluent:spinner-ios-20-filled" class="h-4 w-4 animate-spin" />
+                ยืนยันจัดเรียงใหม่
               </button>
             </div>
           </div>
