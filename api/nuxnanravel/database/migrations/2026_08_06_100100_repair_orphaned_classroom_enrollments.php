@@ -10,6 +10,29 @@ return new class extends Migration
 {
     private string $batch = '2026_08_06_100100';
 
+    /** @var array<string, array<int, string>> writable column names, keyed by table */
+    private array $writableColumns = [];
+
+    /**
+     * Backups are full-row dumps, so they carry generated columns such as
+     * student_cards.is_active_flag; writing one back raises MySQL error 3105
+     * (SQLite: "cannot UPDATE generated column"). Keep only real columns.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function writable(string $table, array $payload): array
+    {
+        if (! isset($this->writableColumns[$table])) {
+            $this->writableColumns[$table] = array_column(
+                array_filter(Schema::getColumns($table), fn (array $column) => empty($column['generation'])),
+                'name'
+            );
+        }
+
+        return array_intersect_key($payload, array_flip($this->writableColumns[$table]));
+    }
+
     public function up(): void
     {
         if (! Schema::hasTable('classroom_repair_backups')) {
@@ -102,10 +125,18 @@ return new class extends Migration
         DB::transaction(function () {
             $rows = DB::table('classroom_repair_backups')->where('batch', $this->batch)->orderBy('id')->get();
             foreach ($rows->whereIn('table_name', ['students', 'student_cards', 'student_academic_info']) as $row) {
-                DB::table($row->table_name)->where('id', $row->record_id)->update((array) json_decode($row->payload, true));
+                if (! Schema::hasTable($row->table_name)) {
+                    continue;
+                }
+                $payload = $this->writable($row->table_name, (array) json_decode($row->payload, true));
+                if ($payload === []) {
+                    continue;
+                }
+                DB::table($row->table_name)->where('id', $row->record_id)->update($payload);
             }
             foreach ($rows->where('table_name', 'classroom_students') as $row) {
-                DB::table('classroom_students')->updateOrInsert(['id' => $row->record_id], (array) json_decode($row->payload, true));
+                $payload = $this->writable('classroom_students', (array) json_decode($row->payload, true));
+                DB::table('classroom_students')->updateOrInsert(['id' => $row->record_id], $payload);
             }
             DB::table('classroom_repair_backups')->where('batch', $this->batch)->delete();
         });
