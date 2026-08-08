@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Api\Learn\Student\Card;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\StudentCardPublicResource;
+use App\Http\Resources\RoomStudentResource;
 use App\Http\Resources\StudentCardResource;
 use App\Models\AcademicYear;
 use App\Models\Academy;
 use App\Models\Classroom;
+use App\Models\ClassroomStudent;
 use App\Models\Student;
 use App\Models\StudentCard;
 use App\Services\StudentCardAccessService;
@@ -145,20 +146,53 @@ class StudentCardController extends Controller
         return $query;
     }
 
-    private function filterStudentsByRoom($students, $level, $room)
+    /**
+     * รหัสห้องที่ตรงกับ level/room
+     *
+     * grade_level เก็บเป็นสตริงแบบ "ม.4" เทียบเป็นตัวเลขใน SQL ไม่ได้ จึงดึงมากรองใน PHP
+     * (วิธีเดียวกับ ResolvesStudentCardRoom) ห้ามใช้ LIKE เพราะ "ม.1" จะ match "ม.10"
+     */
+    private function roomClassroomIds($academy, $level, $room): array
     {
-        $requestedLevel = $level === null ? null : (int) preg_replace('/\D+/', '', (string) $level);
+        $requested = (int) preg_replace('/\D+/', '', (string) $level);
 
-        return $students->filter(function ($card) use ($requestedLevel, $room) {
-            return $card->student?->classroomEnrollments?->contains(function ($enrollment) use ($requestedLevel, $room) {
-                $classroom = $enrollment->classroom;
+        return Classroom::query()
+            ->where('status', 'active')
+            ->where('section', (string) $room)
+            ->whereHas('academicYear', fn ($year) => $year->where('is_current', true))
+            ->when($academy !== null, fn ($query) => $query->where(
+                'academy_id', $academy instanceof Academy ? $academy->id : $academy
+            ))
+            ->get(['id', 'grade_level'])
+            ->filter(fn ($classroom) => (int) preg_replace('/\D+/', '', (string) $classroom->grade_level) === $requested)
+            ->pluck('id')
+            ->all();
+    }
 
-                return $enrollment->status === 'active'
-                    && $classroom?->academicYear?->is_current
-                    && ($requestedLevel === null || (int) preg_replace('/\D+/', '', (string) $classroom->grade_level) === $requestedLevel)
-                    && ($room === null || (string) $classroom->section === (string) $room);
-            }) ?? false;
-        })->values();
+    /**
+     * รายชื่อในห้อง = classroom_students (source of truth) แล้วค่อยแนบบัตรถ้ามี
+     *
+     * ห้ามกลับทิศเป็นตั้งต้นจาก student_cards เด็ดขาด — นักเรียนที่ยังไม่เคยมีบัตร
+     * จะหายไปทั้งคน ซึ่งเป็นบั๊กที่เมธอดนี้ถูกเขียนขึ้นมาเพื่อแก้
+     */
+    private function roomRoster($academy, $level, $room)
+    {
+        $classroomIds = $this->roomClassroomIds($academy, $level, $room);
+
+        if (! $classroomIds) {
+            return collect();
+        }
+
+        return ClassroomStudent::query()
+            ->whereIn('classroom_id', $classroomIds)
+            ->where('status', ClassroomStudent::STATUS_ACTIVE)
+            ->with(['classroom', 'student.activeCard', 'student.activeCardRequest'])
+            ->get()
+            ->sortBy([
+                fn ($a, $b) => ($a->student_number ?? PHP_INT_MAX) <=> ($b->student_number ?? PHP_INT_MAX),
+                fn ($a, $b) => ($a->student?->first_name_th ?? '') <=> ($b->student?->first_name_th ?? ''),
+            ])
+            ->values();
     }
 
     /**
@@ -378,15 +412,10 @@ class StudentCardController extends Controller
     public function getStudentByRoom(Request $request, $academy = null, $level = null, $room = null)
     {
         [$academy, $level, $room] = $this->resolveRoomRouteParameters($academy, $level, $room);
-        $baseQuery = $academy ? $this->academyQuery($academy, 'active') : StudentCard::where('student_status', 'active');
-        $students = $this->withStudentContext($baseQuery)->orderBy('order_no')->orderBy('first_name_thai')->get();
-        $students = $this->filterStudentsByRoom($students, $level, $room);
-
-        $resourceClass = ($academy && $request->user()) ? StudentCardResource::class : StudentCardPublicResource::class;
 
         return response()->json([
             'success' => true,
-            'students' => $resourceClass::collection($students),
+            'students' => RoomStudentResource::collection($this->roomRoster($academy, $level, $room)),
             'level' => $level,
             'room' => $room,
         ]);
@@ -398,13 +427,10 @@ class StudentCardController extends Controller
     public function adminGetStudentByRoom($academy = null, $level = null, $room = null)
     {
         [$academy, $level, $room] = $this->resolveRoomRouteParameters($academy, $level, $room);
-        $baseQuery = $academy ? $this->academyQuery($academy, 'active') : StudentCard::where('student_status', 'active');
-        $students = $this->withStudentContext($baseQuery)->orderBy('order_no')->orderBy('first_name_thai')->get();
-        $students = $this->filterStudentsByRoom($students, $level, $room);
 
         return response()->json([
             'success' => true,
-            'students' => StudentCardResource::collection($students),
+            'students' => RoomStudentResource::collection($this->roomRoster($academy, $level, $room)),
             'level' => $level,
             'room' => $room,
         ]);

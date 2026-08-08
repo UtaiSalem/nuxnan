@@ -249,6 +249,14 @@ class Student extends Model
         return $this->hasOne(StudentCard::class);
     }
 
+    /**
+     * บัตรใบที่ใช้อยู่ — uq_student_card_active การันตีว่ามีได้ใบเดียวต่อโรงเรียน
+     */
+    public function activeCard(): HasOne
+    {
+        return $this->hasOne(StudentCard::class)->where('student_status', 'active')->latest('id');
+    }
+
     public function cardRequests(): HasMany
     {
         return $this->hasMany(StudentCardRequest::class);
