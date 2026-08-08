@@ -36,6 +36,12 @@ class ClassroomStudentObserver
             } elseif ($status === ClassroomStudent::STATUS_ACTIVE) {
                 $this->reactivateCard($classroomStudent->student_id, $classroomStudent->academy_id);
             } else {
+                // ปิดห้องหนึ่งไม่ได้แปลว่านักเรียนออกจากโรงเรียน — ถ้ายังมีห้อง active อยู่แถวอื่น
+                // บัตรต้องอยู่ต่อ ไม่งั้นโฟลว์ที่ "เปิดแถวใหม่ก่อนปิดแถวเก่า" จะดับบัตรที่เพิ่งปลุก
+                if ($this->hasOtherActiveEnrollment($classroomStudent)) {
+                    return;
+                }
+
                 $this->cardsOf($classroomStudent->student_id, $classroomStudent->academy_id)
                     ->where('student_status', 'active')
                     ->update(['student_status' => 'expired']);
@@ -74,5 +80,24 @@ class ClassroomStudentObserver
             ->first();
 
         $card?->update(['student_status' => 'active']);
+    }
+
+    /**
+     * นักเรียนคนนี้ยังมีห้องเรียน active อยู่แถวอื่นไหม (ไม่นับแถวที่กำลังถูกปิดอยู่)
+     *
+     * academy_id บน classroom_students เป็น nullable — ถ้าเป็น null จะไม่กรองตามโรงเรียน
+     * ซึ่งเป็นฝั่งที่ปลอดภัยกว่า (เลือกไม่ expire ดีกว่าเผลอ expire)
+     */
+    private function hasOtherActiveEnrollment(ClassroomStudent $classroomStudent): bool
+    {
+        return ClassroomStudent::query()
+            ->where('student_id', $classroomStudent->student_id)
+            ->whereKeyNot($classroomStudent->getKey())
+            ->where('status', ClassroomStudent::STATUS_ACTIVE)
+            ->when(
+                $classroomStudent->academy_id !== null,
+                fn ($query) => $query->where('academy_id', $classroomStudent->academy_id)
+            )
+            ->exists();
     }
 }

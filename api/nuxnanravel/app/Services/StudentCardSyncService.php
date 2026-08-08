@@ -247,13 +247,24 @@ class StudentCardSyncService
             // 3. Expire cards
             $expireIds = array_column($details['expire'], 'student_id');
             if (count($expireIds) > 0) {
-                // If the student graduated, status should be graduated, otherwise expired
-                // Let's just set to 'expired' for simplicity, or check their actual student status
-                StudentCard::whereIn('student_id', $expireIds)
+                // ห้าม expire บัตรของคนที่ยังมีห้องเรียน active อยู่จริง
+                //
+                // $details['expire'] มาจาก previewSync() ซึ่งผูกกับ $year ที่ส่งเข้ามา ถ้ามีใคร
+                // เรียก sync ด้วยปีที่ไม่ใช่ปีปัจจุบัน นักเรียนที่กำลังเรียนอยู่จะเข้าลิสต์นี้ทั้งโรงเรียน
+                // เงื่อนไขนี้จึงเช็คกับ classroom_students ตรง ๆ ตอนจะเขียนจริง ไม่เชื่อลิสต์ที่รับมา
+                $result['expired'] = StudentCard::whereIn('student_id', $expireIds)
                     ->where('academy_id', $academy->id)
                     ->where('student_status', 'active')
+                    ->whereNotExists(fn ($query) => $query->selectRaw('1')
+                        ->from('classroom_students as cs')
+                        ->join('classrooms as c', 'c.id', '=', 'cs.classroom_id')
+                        ->join('academic_years as ay', 'ay.id', '=', 'c.academic_year_id')
+                        ->whereColumn('cs.student_id', 'student_cards.student_id')
+                        ->whereColumn('c.academy_id', 'student_cards.academy_id')
+                        ->where('cs.status', 'active')
+                        ->where('c.status', 'active')
+                        ->where('ay.is_current', 1))
                     ->update(['student_status' => 'expired']);
-                $result['expired'] = count($expireIds);
             }
 
             DB::commit();
