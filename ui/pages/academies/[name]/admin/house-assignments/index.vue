@@ -26,8 +26,10 @@ const isLoading = ref(true)
 const isWorking = ref(false)
 const errorMessage = ref('')
 
-const academicYears = ref<any[]>([])
-const selectedYearId = ref<number | null>(null)
+const selectedEditionId = ref<number | null>(null)
+/** คณะสีของครั้งที่เลือก มาจากตัว edition โดยตรง ไม่ใช่จากคีย์ของยอดนับ — ยอดนับบังเอิญมีครบทุกสี
+ * เพราะ API เติมศูนย์ให้ ถ้าวันหนึ่งมันเลิกเติม ตัวเลือกคณะสีจะว่างเงียบ ๆ โดยไม่มีอะไรฟ้อง */
+const editionHouseIds = ref<number[]>([])
 const houseGroups = ref<any[]>([])
 const currentCounts = ref<Record<string, number>>({})
 const batches = ref<HouseAssignmentBatch[]>([])
@@ -110,49 +112,48 @@ onMounted(async () => {
       navigateTo(`/academies/${academyName.value}`)
       return
     }
-    await loadYears()
-    await Promise.all([loadHouses(), refreshYearState()])
+    await Promise.all([loadHouses(), refreshEditionState()])
   } finally {
     isLoading.value = false
   }
 })
 
-const loadYears = async () => {
-  const res: any = await houses.listAcademicYears(academyId.value!)
-  academicYears.value = res?.academicYears || []
-  selectedYearId.value =
-    academicYears.value.find((y: any) => y.is_current)?.id ?? academicYears.value[0]?.id ?? null
-}
-
 const loadHouses = async () => {
   const res: any = await houses.listHouses(academyId.value!)
   houseGroups.value = res?.groups || []
-  randomForm.value.house_group_ids = houseGroups.value.map((h: any) => Number(h.id))
 }
 
-const refreshYearState = async () => {
-  if (!academyId.value || !selectedYearId.value) return
+const refreshEditionState = async () => {
+  if (!academyId.value || !selectedEditionId.value) {
+    currentCounts.value = {}
+    batches.value = []
+    return
+  }
   const [counts, list]: any = await Promise.all([
-    houses.getCurrentCounts(academyId.value, selectedYearId.value),
-    houses.listBatches(academyId.value, { per_page: 10 }),
+    houses.getCurrentCounts(academyId.value, selectedEditionId.value),
+    houses.listBatches(academyId.value, { edition_id: selectedEditionId.value, per_page: 10 }),
   ])
   currentCounts.value = counts?.counts || {}
   batches.value = (list?.data ?? []) as HouseAssignmentBatch[]
 }
 
-watch(selectedYearId, () => {
+watch(selectedEditionId, () => {
   batch.value = null
   rows.value = []
-  refreshYearState()
+  refreshEditionState()
+})
+
+watch(editionHouseIds, (ids) => {
+  randomForm.value.house_group_ids = [...ids]
 })
 
 const runRandom = async () => {
-  if (!academyId.value || !selectedYearId.value || isWorking.value) return
+  if (!academyId.value || !selectedEditionId.value || isWorking.value) return
   errorMessage.value = ''
   isWorking.value = true
   try {
     const res: any = await houses.previewRandom(academyId.value, {
-      academic_year_id: selectedYearId.value,
+      edition_id: selectedEditionId.value,
       ...randomForm.value,
       seed: randomForm.value.seed || undefined,
     })
@@ -166,7 +167,7 @@ const runRandom = async () => {
 }
 
 const runImport = async () => {
-  if (!academyId.value || !selectedYearId.value || !importForm.value.file || isWorking.value) return
+  if (!academyId.value || !selectedEditionId.value || !importForm.value.file || isWorking.value) return
   errorMessage.value = ''
   isWorking.value = true
   try {
@@ -179,7 +180,7 @@ const runImport = async () => {
 
     const res: any = await houses.previewImport(
       academyId.value,
-      selectedYearId.value,
+      selectedEditionId.value,
       importForm.value.file,
       mapping,
       importForm.value.on_conflict,
@@ -216,7 +217,7 @@ const commit = async () => {
   try {
     const res: any = await houses.commitBatch(academyId.value, batch.value.id)
     batch.value = res?.batch || batch.value
-    await refreshYearState()
+    await refreshEditionState()
   } catch (e: any) {
     errorMessage.value = e?.data?.message || 'บันทึกไม่สำเร็จ'
   } finally {
@@ -231,7 +232,7 @@ const undo = async () => {
   try {
     const res: any = await houses.undoBatch(academyId.value, batch.value.id)
     batch.value = res?.batch || batch.value
-    await refreshYearState()
+    await refreshEditionState()
   } catch (e: any) {
     errorMessage.value = e?.data?.message || 'ย้อนกลับไม่สำเร็จ'
   } finally {
@@ -246,7 +247,7 @@ const discard = async () => {
     await houses.discardBatch(academyId.value, batch.value.id)
     batch.value = null
     rows.value = []
-    await refreshYearState()
+    await refreshEditionState()
   } finally {
     isWorking.value = false
   }
@@ -297,31 +298,41 @@ const startOver = () => {
               <p class="text-purple-200 text-sm mt-0.5">สุ่มหรือนำเข้าจากไฟล์ — {{ academy?.name }}</p>
             </div>
           </div>
-          <select
-            v-model="selectedYearId"
-            class="px-4 py-2.5 rounded-vikinger bg-white/95 text-purple-800 font-semibold focus:outline-none"
-          >
-            <option v-for="y in academicYears" :key="y.id" :value="y.id">
-              ปีการศึกษา {{ y.name }}{{ y.is_current ? ' (ปัจจุบัน)' : '' }}
-            </option>
-          </select>
         </div>
       </div>
 
       <div class="max-w-6xl mx-auto px-6 space-y-6 pb-10">
-        <!-- ยังไม่มีคณะสี = ทำอะไรไม่ได้เลย บอกให้ชัดแทนที่จะให้ฟอร์มว่าง -->
+        <SportsEditionPanel
+          v-model="selectedEditionId"
+          v-model:house-ids="editionHouseIds"
+          :academy-id="academyId!"
+          :academy-name="academyName"
+          :house-groups="houseGroups"
+          @changed="refreshEditionState"
+        />
+
         <div
-          v-if="houseGroups.length < 2"
+          v-if="!selectedEditionId"
           class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-vikinger p-5 flex items-start gap-4"
         >
           <Icon icon="fluent:warning-24-filled" class="w-6 h-6 text-amber-600 dark:text-amber-400 flex-shrink-0" />
           <div class="text-sm">
-            <p class="font-semibold text-amber-900 dark:text-amber-200">ยังสร้างคณะสีไม่ครบ</p>
-            <p class="text-amber-800 dark:text-amber-300 mt-1">
-              ต้องมีคณะสีอย่างน้อย 2 คณะก่อนจึงจะแบ่งนักเรียนได้ ตอนนี้มี {{ houseGroups.length }} คณะ —
+            <p class="font-semibold text-amber-900 dark:text-amber-200">ยังไม่ได้สร้างงานกีฬาสี — สร้าง 'ครั้งที่จัด' ก่อนจึงจะแบ่งนักเรียนได้</p>
+          </div>
+        </div>
+
+        <div
+          v-else-if="editionHouseIds.length < 2"
+          class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-vikinger p-5 flex items-start gap-4"
+        >
+          <Icon icon="fluent:warning-24-filled" class="w-6 h-6 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+          <div class="text-sm">
+            <p class="font-semibold text-amber-900 dark:text-amber-200">ครั้งนี้ยังเลือกคณะสีไม่ครบ ต้องมีอย่างน้อย 2 คณะ</p>
+            <p v-if="houseGroups.length < 2" class="text-amber-800 dark:text-amber-300 mt-1">
               สร้างที่หน้าโรงเรียน แท็บ "ส่วนงาน" → ปุ่ม "สร้างกลุ่มใหม่" แล้วเลือกประเภท "คณะสี"
             </p>
             <NuxtLink
+              v-if="houseGroups.length < 2"
               :to="`/academies/${academyName}`"
               class="inline-flex items-center gap-1.5 mt-2 text-amber-900 dark:text-amber-200 font-semibold hover:underline"
             >
@@ -331,19 +342,20 @@ const startOver = () => {
           </div>
         </div>
 
-        <!-- สภาพปัจจุบันของปีที่เลือก -->
-        <div
-          class="bg-white dark:bg-slate-800 rounded-vikinger shadow-card dark:shadow-card-dark border border-slate-200 dark:border-slate-700 p-5"
-        >
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="font-heading font-bold text-slate-900 dark:text-white">สังกัดคณะสีของปีนี้</h2>
-            <span class="text-sm text-slate-500 dark:text-slate-400">
-              แบ่งแล้ว {{ totalAssignedNow.toLocaleString() }} คน
-            </span>
-          </div>
-          <div v-if="totalAssignedNow === 0" class="text-sm text-slate-500 dark:text-slate-400 py-4 text-center">
-            ยังไม่มีการแบ่งคณะสีในปีการศึกษานี้
-          </div>
+        <template v-else>
+          <!-- สภาพปัจจุบันของครั้งที่เลือก -->
+          <div
+            class="bg-white dark:bg-slate-800 rounded-vikinger shadow-card dark:shadow-card-dark border border-slate-200 dark:border-slate-700 p-5"
+          >
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="font-heading font-bold text-slate-900 dark:text-white">สังกัดคณะสีของครั้งนี้</h2>
+              <span class="text-sm text-slate-500 dark:text-slate-400">
+                แบ่งแล้ว {{ totalAssignedNow.toLocaleString() }} คน
+              </span>
+            </div>
+            <div v-if="totalAssignedNow === 0" class="text-sm text-slate-500 dark:text-slate-400 py-4 text-center">
+              ยังไม่มีการแบ่งคณะสีในครั้งนี้
+            </div>
           <div v-else class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div
               v-for="(count, id) in currentCounts"
@@ -436,7 +448,7 @@ const startOver = () => {
               <label class="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">คณะสีที่จะใช้แบ่ง</label>
               <div class="flex flex-wrap gap-2">
                 <label
-                  v-for="h in houseGroups"
+                  v-for="h in houseGroups.filter(hg => editionHouseIds.includes(Number(hg.id)))"
                   :key="h.id"
                   class="flex items-center gap-2 px-4 py-2 rounded-vikinger border cursor-pointer transition-all"
                   :class="
@@ -843,6 +855,7 @@ const startOver = () => {
             </button>
           </div>
         </div>
+        </template>
       </div>
     </div>
   </div>

@@ -1,5 +1,8 @@
 /**
- * คณะสี (sports houses) — แบ่งนักเรียนเข้าคณะสีของปีการศึกษา
+ * คณะสี (sports houses) — แบ่งนักเรียนเข้าคณะสีของงานกีฬาสี "แต่ละครั้งที่จัด"
+ *
+ * หน่วยขอบเขตคือ sports_editions ไม่ใช่ปีการศึกษา — ปีหนึ่งจัดได้หลายครั้ง และแต่ละครั้ง
+ * ใช้จำนวนคณะสีต่างกันได้ ปีการศึกษาเป็นคุณสมบัติของครั้งนั้น ไม่ใช่คีย์
  *
  * โหมดสุ่มกับโหมดนำเข้าสร้าง batch แบบเดียวกัน แล้วเดิน preview → commit → undo
  * เส้นเดียวกัน ฝั่ง UI จึงเรียกต่างกันแค่ขั้นสร้าง batch เท่านั้น
@@ -29,7 +32,7 @@ export interface HouseAssignmentSummary {
 export interface HouseAssignmentBatch {
   id: string
   academy_id: number
-  academic_year_id: number
+  edition_id: number
   mode: HouseAssignmentMode
   status: HouseAssignmentStatus
   options: Record<string, any>
@@ -53,12 +56,33 @@ export interface HouseAssignmentRow {
 }
 
 export interface RandomPreviewPayload {
-  academic_year_id: number
+  edition_id: number
   house_group_ids: number[]
   strategy?: 'stratified' | 'pure_random'
   balance_gender?: boolean
   scope?: 'unassigned_only' | 'all'
   seed?: number | null
+}
+
+export type SportsEditionStatus = 'draft' | 'active' | 'closed'
+
+export interface SportsEditionHouse {
+  id: number; edition_id: number; house_group_id: number; display_order: number
+}
+
+export interface SportsEdition {
+  id: number
+  academy_id: number
+  academic_year_id: number
+  school_event_id: number | null
+  name: string
+  sequence: number
+  status: SportsEditionStatus
+  starts_on: string | null
+  ends_on: string | null
+  houses?: SportsEditionHouse[]
+  students_count?: number
+  created_at: string
 }
 
 export const useHouseAssignments = () => {
@@ -69,23 +93,26 @@ export const useHouseAssignments = () => {
   const listBatches = <T = any>(academyId: number, params?: Record<string, any>) =>
     api.get<T>(base(academyId), { params })
 
-  /** ยอดคนต่อคณะสีที่ "มีผลจริง" ของปีนั้น — อ่านจาก house_memberships ไม่ใช่สมาชิกกลุ่ม */
-  const getCurrentCounts = <T = any>(academyId: number, academicYearId: number) =>
-    api.get<T>(`${base(academyId)}/current`, { params: { academic_year_id: academicYearId } })
+  /**
+   * ยอดคนต่อคณะสีที่ "มีผลจริง" ของครั้งนั้น — อ่านจาก house_memberships ไม่ใช่สมาชิกกลุ่ม
+   * API เติมค่า 0 ให้ทุกคณะสีของครั้งนั้นด้วย เพื่อให้เห็นสีที่ยังไม่มีคน — อย่ากรองศูนย์ทิ้ง
+   */
+  const getCurrentCounts = <T = any>(academyId: number, editionId: number) =>
+    api.get<T>(`${base(academyId)}/current`, { params: { edition_id: editionId } })
 
   const previewRandom = <T = any>(academyId: number, payload: RandomPreviewPayload) =>
     api.post<T>(`${base(academyId)}/preview-random`, payload)
 
   const previewImport = <T = any>(
     academyId: number,
-    academicYearId: number,
+    editionId: number,
     file: File,
     columnMapping: Record<string, string>,
     onConflict: 'skip' | 'overwrite' = 'skip',
   ) => {
     const form = new FormData()
     form.append('file', file)
-    form.append('academic_year_id', String(academicYearId))
+    form.append('edition_id', String(editionId))
     form.append('on_conflict', onConflict)
     form.append('column_mapping', JSON.stringify(columnMapping))
 
@@ -132,6 +159,31 @@ export const useHouseAssignments = () => {
   const listAcademicYears = <T = any>(academyId: number) =>
     api.get<T>(`/api/academies/${academyId}/academic-years`)
 
+  const listEditions = <T = any>(academyId: number) =>
+    api.get<T>(`/api/academies/${academyId}/sports-editions`)
+
+  const createEdition = <T = any>(academyId: number, payload: Partial<SportsEdition> & { house_group_ids?: number[] }) =>
+    api.post<T>(`/api/academies/${academyId}/sports-editions`, payload)
+
+  const updateEdition = <T = any>(academyId: number, editionId: number, payload: Partial<SportsEdition> & { house_group_ids?: number[] }) =>
+    api.put<T>(`/api/academies/${academyId}/sports-editions/${editionId}`, payload)
+
+  const activateEdition = <T = any>(academyId: number, editionId: number) =>
+    api.post<T>(`/api/academies/${academyId}/sports-editions/${editionId}/activate`, {})
+
+  const closeEdition = <T = any>(academyId: number, editionId: number) =>
+    api.post<T>(`/api/academies/${academyId}/sports-editions/${editionId}/close`, {})
+
+  const deleteEdition = <T = any>(academyId: number, editionId: number) =>
+    api.delete<T>(`/api/academies/${academyId}/sports-editions/${editionId}`)
+
+  const editionHouseIds = (edition: SportsEdition | null): number[] => {
+    if (!edition || !edition.houses) return []
+    return [...edition.houses]
+      .sort((a, b) => a.display_order - b.display_order)
+      .map((h) => h.house_group_id)
+  }
+
   /** batch ย้อนกลับได้ 24 ชม. หลัง commit — ตรงกับ HouseAssignmentBatch::isUndoable() ฝั่ง API */
   const isUndoable = (batch: HouseAssignmentBatch | null | undefined): boolean => {
     if (!batch || batch.status !== 'committed' || !batch.committed_at) return false
@@ -152,5 +204,12 @@ export const useHouseAssignments = () => {
     listHouses,
     listAcademicYears,
     isUndoable,
+    listEditions,
+    createEdition,
+    updateEdition,
+    activateEdition,
+    closeEdition,
+    deleteEdition,
+    editionHouseIds,
   }
 }
