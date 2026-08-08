@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Sports;
 
+use App\Http\Controllers\Api\Learn\Academy\SportsEditionController;
 use App\Models\AcademicYear;
 use App\Models\Academy;
 use App\Models\AcademyGroup;
@@ -9,9 +10,12 @@ use App\Models\AcademyMember;
 use App\Models\AcademyRole;
 use App\Models\Classroom;
 use App\Models\HouseAssignmentBatch;
+use App\Models\SportsEdition;
+use App\Models\SportsEditionHouse;
 use App\Models\Student;
 use App\Models\User;
 use App\Services\Sports\HouseAssignmentService;
+use App\Services\Sports\HouseMembershipProjector;
 use DomainException;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -30,6 +34,8 @@ class HouseAssignmentTest extends TestCase
 
     /** @var array<int, int> */
     private array $houses = [];
+
+    protected SportsEdition $edition;
 
     protected function setUp(): void
     {
@@ -51,6 +57,7 @@ class HouseAssignmentTest extends TestCase
             'status' => 2,
         ]);
         $this->year = $this->makeYear(true);
+        $this->edition = $this->makeEdition($this->year, 'active');
     }
 
     public function test_only_students_enrolled_this_year_are_divided(): void
@@ -161,7 +168,7 @@ class HouseAssignmentTest extends TestCase
         $student = $this->makeStudent();
         $row = [
             'academy_id' => $this->academy->id,
-            'academic_year_id' => $this->year->id,
+            'edition_id' => $this->edition->id,
             'student_id' => $student->id,
             'source' => 'manual',
             'created_at' => now(),
@@ -183,12 +190,12 @@ class HouseAssignmentTest extends TestCase
         $batch = $this->preview();
         $this->service()->commit($batch, $this->actor);
 
-        $this->assertSame(6, DB::table('house_memberships')->where('academic_year_id', $this->year->id)->count());
+        $this->assertSame(6, DB::table('house_memberships')->where('edition_id', $this->edition->id)->count());
         $this->assertSame(6, $this->projectedCount());
 
         $this->service()->undo($batch->fresh(), $this->actor);
 
-        $this->assertSame(0, DB::table('house_memberships')->where('academic_year_id', $this->year->id)->count());
+        $this->assertSame(0, DB::table('house_memberships')->where('edition_id', $this->edition->id)->count());
         $this->assertSame(0, $this->projectedCount());
         $this->assertSame('undone', $batch->fresh()->status);
     }
@@ -237,7 +244,7 @@ class HouseAssignmentTest extends TestCase
 
         DB::table('house_memberships')->insert([
             'academy_id' => $this->academy->id,
-            'academic_year_id' => $this->year->id,
+            'edition_id' => $this->edition->id,
             'house_group_id' => $this->houses[0],
             'student_id' => $settled->id,
             'source' => 'manual',
@@ -258,15 +265,16 @@ class HouseAssignmentTest extends TestCase
     public function test_a_past_year_is_recorded_but_never_projected_onto_the_live_group(): void
     {
         $past = $this->makeYear(false);
+        $pastEdition = $this->makeEdition($past);
         $classroom = $this->makeClassroom($past);
         foreach (range(1, 4) as $i) {
             $this->enrol($this->makeStudent(), $classroom, $past);
         }
 
-        $batch = $this->preview([], $past);
+        $batch = $this->preview([], $pastEdition);
         $this->service()->commit($batch, $this->actor);
 
-        $this->assertSame(4, DB::table('house_memberships')->where('academic_year_id', $past->id)->count());
+        $this->assertSame(4, DB::table('house_memberships')->where('edition_id', $pastEdition->id)->count());
         // academy_group_members shows who is in a คณะสี *now*; back-filling an old year
         // must not rewrite it.
         $this->assertSame(0, $this->projectedCount());
@@ -282,7 +290,7 @@ class HouseAssignmentTest extends TestCase
 
         // Headcount must be read from house_memberships; the projection can only ever
         // carry the students who happen to have a user account.
-        $this->assertSame(2, DB::table('house_memberships')->where('academic_year_id', $this->year->id)->count());
+        $this->assertSame(2, DB::table('house_memberships')->where('edition_id', $this->edition->id)->count());
         $this->assertSame(1, $this->projectedCount());
     }
 
@@ -293,7 +301,7 @@ class HouseAssignmentTest extends TestCase
 
         $this->actingAs($viewer, 'api')
             ->postJson("/api/academies/{$this->academy->id}/house-assignments/preview-random", [
-                'academic_year_id' => $this->year->id,
+                'edition_id' => $this->edition->id,
                 'house_group_ids' => $this->houses,
             ])->assertForbidden();
 
@@ -343,9 +351,10 @@ class HouseAssignmentTest extends TestCase
             'end_date' => '2028-03-31',
             'is_current' => false,
         ]);
+        $foreignEdition = $this->makeEdition($foreignYear);
 
         $this->expectException(DomainException::class);
-        $this->service()->previewRandom($this->academy, $foreignYear->id, [
+        $this->service()->previewRandom($this->academy, $foreignEdition, [
             'house_group_ids' => $this->houses,
         ], $this->actor);
     }
@@ -384,13 +393,13 @@ class HouseAssignmentTest extends TestCase
         return app(HouseAssignmentService::class);
     }
 
-    private function preview(array $options = [], ?AcademicYear $year = null): HouseAssignmentBatch
+    private function preview(array $options = [], ?SportsEdition $edition = null): HouseAssignmentBatch
     {
-        $year ??= $this->year;
+        $edition ??= $this->edition;
 
         return $this->service()->previewRandom(
             $this->academy,
-            $year->id,
+            $edition,
             array_merge(['house_group_ids' => $this->houses, 'strategy' => 'stratified'], $options),
             $this->actor,
         );
@@ -454,6 +463,28 @@ class HouseAssignmentTest extends TestCase
         return $year;
     }
 
+    private function makeEdition(AcademicYear $year, string $status = 'draft'): SportsEdition
+    {
+        $sequence = SportsEdition::where('academy_id', $year->academy_id)
+            ->where('academic_year_id', $year->id)
+            ->max('sequence') ?? 0;
+
+        $edition = SportsEdition::create([
+            'academy_id' => $year->academy_id,
+            'academic_year_id' => $year->id,
+            'name' => 'Test',
+            'sequence' => $sequence + 1,
+            'status' => $status,
+            'created_by_user_id' => $this->actor->id,
+        ]);
+
+        foreach ($this->houses as $i => $id) {
+            SportsEditionHouse::create(['edition_id' => $edition->id, 'house_group_id' => $id, 'display_order' => $i]);
+        }
+
+        return $edition;
+    }
+
     private function makeClassroom(AcademicYear $year, string $level = 'ม.1', string $section = '1'): Classroom
     {
         return Classroom::create([
@@ -492,5 +523,136 @@ class HouseAssignmentTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+    }
+
+    public function test_two_editions_in_one_year_keep_separate_memberships(): void
+    {
+        $classroom = $this->makeClassroom($this->year);
+        $this->enrol($this->makeStudent(), $classroom, $this->year);
+
+        $edition1 = $this->edition;
+        $this->service()->commit($this->preview([], $edition1), $this->actor);
+        $studentId = DB::table('house_memberships')->where('edition_id', $edition1->id)->value('student_id');
+        $houseId1 = DB::table('house_memberships')->where('edition_id', $edition1->id)->where('student_id', $studentId)->value('house_group_id');
+
+        $edition2 = $this->makeEdition($this->year);
+        $this->service()->commit($this->preview([], $edition2), $this->actor);
+
+        $count = DB::table('house_memberships')->where('student_id', $studentId)->count();
+        $this->assertSame(2, $count);
+        $houseId1After = DB::table('house_memberships')->where('edition_id', $edition1->id)->where('student_id', $studentId)->value('house_group_id');
+        $this->assertSame($houseId1, $houseId1After);
+    }
+
+    public function test_a_second_active_edition_is_rejected_by_the_database(): void
+    {
+        $this->expectException(QueryException::class);
+        SportsEdition::create([
+            'academy_id' => $this->academy->id,
+            'academic_year_id' => $this->year->id,
+            'name' => 'Active 2',
+            'sequence' => 2,
+            'status' => 'active',
+            'created_by_user_id' => $this->actor->id,
+        ]);
+    }
+
+    public function test_two_drafts_and_two_closed_editions_are_fine(): void
+    {
+        SportsEdition::create([
+            'academy_id' => $this->academy->id,
+            'academic_year_id' => $this->year->id,
+            'name' => 'Draft 2',
+            'sequence' => 2,
+            'status' => 'draft',
+            'created_by_user_id' => $this->actor->id,
+        ]);
+        SportsEdition::create([
+            'academy_id' => $this->academy->id,
+            'academic_year_id' => $this->year->id,
+            'name' => 'Closed 1',
+            'sequence' => 4,
+            'status' => 'closed',
+            'created_by_user_id' => $this->actor->id,
+        ]);
+        SportsEdition::create([
+            'academy_id' => $this->academy->id,
+            'academic_year_id' => $this->year->id,
+            'name' => 'Closed 2',
+            'sequence' => 5,
+            'status' => 'closed',
+            'created_by_user_id' => $this->actor->id,
+        ]);
+        $this->assertTrue(true);
+    }
+
+    public function test_activate_demotes_the_previous_edition_and_reprojects(): void
+    {
+        $classroom = $this->makeClassroom($this->year);
+        foreach (range(1, 4) as $i) {
+            $this->enrol($this->makeStudent(), $classroom, $this->year);
+        }
+
+        $edition1 = $this->edition;
+        $this->service()->commit($this->preview([], $edition1), $this->actor);
+        $this->assertGreaterThan(0, DB::table('academy_group_members')->count());
+
+        $edition2 = $this->makeEdition($this->year);
+        $this->service()->commit($this->preview([], $edition2), $this->actor);
+
+        app(SportsEditionController::class)
+            ->activate($this->academy, $edition2, app(HouseMembershipProjector::class));
+
+        $this->assertSame('closed', $edition1->fresh()->status);
+        $this->assertSame('active', $edition2->fresh()->status);
+
+        $members2 = DB::table('academy_group_members')->get();
+        $edition2Count = DB::table('house_memberships')->where('edition_id', $edition2->id)->count();
+        $this->assertSame($edition2Count, $members2->count());
+    }
+
+    public function test_activating_an_edition_with_no_houses_empties_the_projection(): void
+    {
+        $classroom = $this->makeClassroom($this->year);
+        foreach (range(1, 3) as $i) {
+            $this->enrol($this->makeStudent(), $classroom, $this->year);
+        }
+        $this->service()->commit($this->preview([], $this->edition), $this->actor);
+        $this->assertGreaterThan(0, DB::table('academy_group_members')->count());
+
+        // An edition whose house set has not been chosen yet is still the live one. The
+        // previous edition's members must not stay published under it.
+        $empty = SportsEdition::create([
+            'academy_id' => $this->academy->id,
+            'academic_year_id' => $this->year->id,
+            'name' => 'No houses yet',
+            'sequence' => 90,
+            'status' => 'draft',
+            'created_by_user_id' => $this->actor->id,
+        ]);
+
+        app(SportsEditionController::class)->activate($this->academy, $empty, app(HouseMembershipProjector::class));
+
+        $this->assertSame(0, DB::table('academy_group_members')->count());
+    }
+
+    public function test_preview_rejects_houses_that_are_not_in_the_edition(): void
+    {
+        $extraHouse = AcademyGroup::create(['academy_id' => $this->academy->id, 'type' => 'house', 'name' => 'Extra']);
+        $this->expectException(DomainException::class);
+        $this->expectExceptionMessage('All houses must belong to this edition.');
+        $this->preview(['house_group_ids' => [$this->houses[0], $extraHouse->id]]);
+    }
+
+    public function test_a_student_assigned_in_a_previous_edition_is_not_already_assigned(): void
+    {
+        $edition1 = $this->edition;
+        $batch1 = $this->preview(['scope' => 'unassigned_only'], $edition1);
+        $this->service()->commit($batch1, $this->actor);
+
+        $edition2 = $this->makeEdition($this->year);
+        $batch2 = $this->preview(['scope' => 'unassigned_only'], $edition2);
+
+        $this->assertSame($batch1->rows()->count(), $batch2->rows()->count());
     }
 }

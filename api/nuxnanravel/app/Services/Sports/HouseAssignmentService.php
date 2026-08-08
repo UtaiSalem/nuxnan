@@ -5,6 +5,7 @@ namespace App\Services\Sports;
 use App\Models\Academy;
 use App\Models\HouseAssignmentBatch;
 use App\Models\HouseAssignmentRow;
+use App\Models\SportsEdition;
 use App\Models\User;
 use DomainException;
 use Illuminate\Http\UploadedFile;
@@ -17,18 +18,21 @@ class HouseAssignmentService
 {
     public function __construct(private readonly HouseMembershipProjector $projector) {}
 
-    public function previewRandom(Academy $academy, int $year, array $input, User $actor): HouseAssignmentBatch
+    public function previewRandom(Academy $academy, SportsEdition $edition, array $input, User $actor): HouseAssignmentBatch
     {
-        if (! DB::table('academic_years')->where('id', $year)->where('academy_id', $academy->id)->exists()) {
-            throw new DomainException('Academic year does not belong to this academy.');
+        if ((int) $edition->academy_id !== (int) $academy->id) {
+            throw new DomainException('Edition does not belong to this academy.');
         }
-
+        if ($edition->status === 'closed') {
+            throw new DomainException('Cannot modify a closed edition.');
+        }
         $ids = collect($input['house_group_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->sort()->values()->all();
         if (count($ids) < 2 || count($ids) !== count($input['house_group_ids'] ?? [])) {
             throw new DomainException('At least two distinct houses are required.');
         }
-        if (DB::table('academy_groups')->where('academy_id', $academy->id)->where('type', 'house')->whereIn('id', $ids)->count() !== count($ids)) {
-            throw new DomainException('All house groups must belong to this academy and be houses.');
+        $allowed = $edition->houseGroupIds();
+        if (array_diff($ids, $allowed) !== []) {
+            throw new DomainException('All houses must belong to this edition.');
         }
 
         $options = [
@@ -42,8 +46,8 @@ class HouseAssignmentService
             throw new DomainException('Invalid random options.');
         }
 
-        $students = DB::table('classroom_students')->join('classrooms', 'classrooms.id', '=', 'classroom_students.classroom_id')->join('students', 'students.id', '=', 'classroom_students.student_id')->where('classroom_students.academy_id', $academy->id)->where('classroom_students.academic_year_id', $year)->where('classroom_students.status', 'active')->select('students.id', 'students.gender', 'students.user_id', 'classrooms.id as classroom_id', 'classrooms.grade_level')->orderBy('classroom_students.classroom_id')->orderBy('students.id')->get()->unique('id')->values();
-        $existing = DB::table('house_memberships')->where('academic_year_id', $year)->whereIn('student_id', $students->pluck('id'))->pluck('house_group_id', 'student_id');
+        $students = DB::table('classroom_students')->join('classrooms', 'classrooms.id', '=', 'classroom_students.classroom_id')->join('students', 'students.id', '=', 'classroom_students.student_id')->where('classroom_students.academy_id', $edition->academy_id)->where('classroom_students.academic_year_id', $edition->academic_year_id)->where('classroom_students.status', 'active')->select('students.id', 'students.gender', 'students.user_id', 'classrooms.id as classroom_id', 'classrooms.grade_level')->orderBy('classroom_students.classroom_id')->orderBy('students.id')->get()->unique('id')->values();
+        $existing = DB::table('house_memberships')->where('edition_id', $edition->id)->whereIn('student_id', $students->pluck('id'))->pluck('house_group_id', 'student_id');
         $population = $students->reject(fn ($student) => $options['scope'] === 'unassigned_only' && $existing->has($student->id))->values();
         $rng = new Randomizer(new Mt19937($options['seed']));
         $counts = array_fill_keys($ids, 0);
@@ -74,7 +78,7 @@ class HouseAssignmentService
             }
         }
 
-        $batch = HouseAssignmentBatch::create(['id' => (string) Str::uuid(), 'academy_id' => $academy->id, 'academic_year_id' => $year, 'mode' => 'random', 'status' => 'draft', 'options' => $options, 'summary' => ['total' => count($assigned), 'per_house' => $counts, 'per_house_by_grade' => $grade, 'skipped_count' => $students->count() - $population->count(), 'moved_count' => collect($assigned)->filter(fn ($row) => $row['previous_house_group_id'] !== null && (int) $row['previous_house_group_id'] !== $row['house_group_id'])->count()], 'created_by_user_id' => $actor->id]);
+        $batch = HouseAssignmentBatch::create(['id' => (string) Str::uuid(), 'academy_id' => $edition->academy_id, 'edition_id' => $edition->id, 'mode' => 'random', 'status' => 'draft', 'options' => $options, 'summary' => ['total' => count($assigned), 'per_house' => $counts, 'per_house_by_grade' => $grade, 'skipped_count' => $students->count() - $population->count(), 'moved_count' => collect($assigned)->filter(fn ($row) => $row['previous_house_group_id'] !== null && (int) $row['previous_house_group_id'] !== $row['house_group_id'])->count()], 'created_by_user_id' => $actor->id]);
         foreach (array_chunk(array_map(fn ($row, $index) => ['batch_id' => $batch->id, 'row_number' => $index + 1, 'student_id' => $row['student_id'], 'house_group_id' => $row['house_group_id'], 'previous_house_group_id' => $row['previous_house_group_id'], 'status' => 'ok', 'created_at' => now(), 'updated_at' => now()], $assigned, array_keys($assigned)), 500) as $chunk) {
             HouseAssignmentRow::insert($chunk);
         }
@@ -82,10 +86,13 @@ class HouseAssignmentService
         return $batch->fresh();
     }
 
-    public function previewImport(Academy $academy, int $year, UploadedFile $file, array $options, User $actor): HouseAssignmentBatch
+    public function previewImport(Academy $academy, SportsEdition $edition, UploadedFile $file, array $options, User $actor): HouseAssignmentBatch
     {
-        if (! DB::table('academic_years')->where('id', $year)->where('academy_id', $academy->id)->exists()) {
-            throw new DomainException('Academic year does not belong to this academy.');
+        if ((int) $edition->academy_id !== (int) $academy->id) {
+            throw new DomainException('Edition does not belong to this academy.');
+        }
+        if ($edition->status === 'closed') {
+            throw new DomainException('Cannot modify a closed edition.');
         }
         $mapping = $options['column_mapping'] ?? [];
         if (is_string($mapping)) {
@@ -99,7 +106,7 @@ class HouseAssignmentService
             throw new DomainException('Invalid conflict option.');
         }
         $stored = $file->store('house-assignments', 'local');
-        $batch = HouseAssignmentBatch::create(['id' => (string) Str::uuid(), 'academy_id' => $academy->id, 'academic_year_id' => $year, 'mode' => 'import', 'status' => 'draft', 'options' => ['column_mapping' => $mapping, 'on_conflict' => $conflict, 'stored_path' => $stored], 'summary' => [], 'source_filename' => $file->getClientOriginalName(), 'created_by_user_id' => $actor->id]);
+        $batch = HouseAssignmentBatch::create(['id' => (string) Str::uuid(), 'academy_id' => $edition->academy_id, 'edition_id' => $edition->id, 'mode' => 'import', 'status' => 'draft', 'options' => ['column_mapping' => $mapping, 'on_conflict' => $conflict, 'stored_path' => $stored], 'summary' => [], 'source_filename' => $file->getClientOriginalName(), 'created_by_user_id' => $actor->id]);
         $matcher = app(HouseImportMatcher::class);
         $summary = ['total' => 0, 'per_house' => [], 'per_house_by_grade' => [], 'by_status' => array_fill_keys(['ok', 'unmatched', 'ambiguous', 'unknown_house', 'already_assigned', 'skipped'], 0), 'moved_count' => 0];
         $rows = [];
@@ -108,13 +115,13 @@ class HouseAssignmentService
         // grade up individually would issue a query per row.
         $grades = DB::table('classroom_students')
             ->join('classrooms', 'classrooms.id', '=', 'classroom_students.classroom_id')
-            ->where('classroom_students.academic_year_id', $year)
+            ->where('classroom_students.academic_year_id', $edition->academic_year_id)
             ->where('classroom_students.status', 'active')
             ->pluck('classrooms.grade_level', 'classroom_students.student_id');
 
         $seen = [];
         foreach (app(HouseImportParser::class)->parse($file) as $number => $raw) {
-            $result = $matcher->match($academy, $year, $raw, $mapping, $conflict);
+            $result = $matcher->match($edition, $raw, $mapping, $conflict);
             $status = $result['status'];
 
             // The same student listed twice would otherwise produce two 'ok' rows: the
@@ -160,11 +167,11 @@ class HouseAssignmentService
         }
         DB::transaction(function () use ($batch, $actor) {
             foreach ($batch->rows()->where('status', 'ok')->with('student')->get()->chunk(500) as $chunk) {
-                DB::table('house_memberships')->upsert($chunk->map(fn ($row) => ['academy_id' => $batch->academy_id, 'academic_year_id' => $batch->academic_year_id, 'student_id' => $row->student_id, 'house_group_id' => $row->house_group_id, 'user_id' => $row->student->user_id, 'source' => $batch->mode, 'batch_id' => $batch->id, 'assigned_by_user_id' => $actor->id, 'created_at' => now(), 'updated_at' => now()])->all(), ['academic_year_id', 'student_id'], ['academy_id', 'house_group_id', 'user_id', 'source', 'batch_id', 'assigned_by_user_id', 'updated_at']);
+                DB::table('house_memberships')->upsert($chunk->map(fn ($row) => ['academy_id' => $batch->academy_id, 'edition_id' => $batch->edition_id, 'student_id' => $row->student_id, 'house_group_id' => $row->house_group_id, 'user_id' => $row->student->user_id, 'source' => $batch->mode, 'batch_id' => $batch->id, 'assigned_by_user_id' => $actor->id, 'created_at' => now(), 'updated_at' => now()])->all(), ['edition_id', 'student_id'], ['academy_id', 'house_group_id', 'user_id', 'source', 'batch_id', 'assigned_by_user_id', 'updated_at']);
             }
             $batch->update(['status' => 'committed', 'committed_at' => now(), 'committed_by_user_id' => $actor->id]);
-            if (DB::table('academic_years')->where('id', $batch->academic_year_id)->where('academy_id', $batch->academy_id)->where('is_current', true)->exists()) {
-                $this->projector->rebuild($batch->academy_id, $batch->academic_year_id);
+            if ($batch->edition->status === 'active') {
+                $this->projector->rebuild($batch->edition);
             }
         });
     }
@@ -180,7 +187,7 @@ class HouseAssignmentService
                 // moved the student on, undoing this one must not drag them back and
                 // silently discard the newer division.
                 $query = DB::table('house_memberships')
-                    ->where('academic_year_id', $batch->academic_year_id)
+                    ->where('edition_id', $batch->edition_id)
                     ->where('student_id', $row->student_id)
                     ->where('batch_id', $batch->id);
 
@@ -190,8 +197,8 @@ class HouseAssignmentService
                     $query->update(['house_group_id' => $row->previous_house_group_id, 'batch_id' => null, 'source' => 'manual', 'updated_at' => now()]);
                 }
             }
-            if (DB::table('academic_years')->where('id', $batch->academic_year_id)->where('academy_id', $batch->academy_id)->where('is_current', true)->exists()) {
-                $this->projector->rebuild($batch->academy_id, $batch->academic_year_id);
+            if ($batch->edition->status === 'active') {
+                $this->projector->rebuild($batch->edition);
             }
             $batch->update(['status' => 'undone', 'undone_at' => now(), 'undone_by_user_id' => $actor->id]);
         });

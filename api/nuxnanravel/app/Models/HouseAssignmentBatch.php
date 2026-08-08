@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class HouseAssignmentBatch extends Model
@@ -25,5 +26,10 @@ class HouseAssignmentBatch extends Model
     public function isUndoable(): bool
     {
         return $this->status === 'committed' && $this->committed_at?->copy()->addDay()->isFuture();
+    }
+
+    public function edition(): BelongsTo
+    {
+        return $this->belongsTo(SportsEdition::class, 'edition_id');
     }
 }

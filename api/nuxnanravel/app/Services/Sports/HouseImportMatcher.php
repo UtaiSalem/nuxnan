@@ -2,7 +2,7 @@
 
 namespace App\Services\Sports;
 
-use App\Models\Academy;
+use App\Models\SportsEdition;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -31,9 +31,9 @@ class HouseImportMatcher
     /** @var array<int, int> students.id => house_group_id already held this year */
     private array $existing = [];
 
-    public function match(Academy $academy, int $year, array $raw, array $mapping, string $conflict = 'skip'): array
+    public function match(SportsEdition $edition, array $raw, array $mapping, string $conflict = 'skip'): array
     {
-        $this->prepare($academy, $year);
+        $this->prepare($edition);
 
         $identifier = trim((string) ($raw[$mapping['student_identifier'] ?? ''] ?? ''));
         $houseName = trim((string) ($raw[$mapping['house_name'] ?? ''] ?? ''));
@@ -86,9 +86,9 @@ class HouseImportMatcher
         return ['student_id' => $studentId, 'house_group_id' => $houseId, 'status' => 'ok', 'message' => null, 'previous_house_group_id' => $previous];
     }
 
-    private function prepare(Academy $academy, int $year): void
+    private function prepare(SportsEdition $edition): void
     {
-        $key = $academy->id.':'.$year;
+        $key = 'edition:'.$edition->id;
         if ($this->preparedFor === $key) {
             return;
         }
@@ -98,7 +98,7 @@ class HouseImportMatcher
         $this->byName = [];
 
         DB::table('students')
-            ->where('academy_id', $academy->id)
+            ->where('academy_id', $edition->academy_id)
             ->select('id', 'student_id', 'citizen_id', 'first_name_th', 'last_name_th')
             ->orderBy('id')
             ->chunk(1000, function ($students) {
@@ -119,14 +119,15 @@ class HouseImportMatcher
             });
 
         $this->houses = DB::table('academy_groups')
-            ->where('academy_id', $academy->id)
+            ->where('academy_id', $edition->academy_id)
             ->where('type', 'house')
+            ->whereIn('id', $edition->houseGroupIds())
             ->pluck('id', 'name')
             ->mapWithKeys(fn ($id, $name) => [mb_strtolower(trim((string) $name)) => (int) $id])
             ->all();
 
         $this->existing = DB::table('house_memberships')
-            ->where('academic_year_id', $year)
+            ->where('edition_id', $edition->id)
             ->pluck('house_group_id', 'student_id')
             ->map(fn ($id) => (int) $id)
             ->all();

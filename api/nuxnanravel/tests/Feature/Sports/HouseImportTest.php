@@ -7,6 +7,8 @@ use App\Models\Academy;
 use App\Models\AcademyGroup;
 use App\Models\AcademyMember;
 use App\Models\AcademyRole;
+use App\Models\SportsEdition;
+use App\Models\SportsEditionHouse;
 use App\Models\Student;
 use App\Models\User;
 use App\Services\Sports\HouseAssignmentService;
@@ -25,6 +27,8 @@ class HouseImportTest extends TestCase
 
     private AcademicYear $year;
 
+    private SportsEdition $edition;
+
     private User $actor;
 
     private array $houses;
@@ -39,6 +43,17 @@ class HouseImportTest extends TestCase
         AcademyMember::create(['academy_id' => $this->academy->id, 'user_id' => $this->actor->id, 'academy_role_id' => $role->id, 'status' => 2]);
         $this->year = AcademicYear::create(['academy_id' => $this->academy->id, 'name' => '2569', 'start_date' => '2026-05-01', 'end_date' => '2027-03-31', 'is_current' => true]);
         $this->houses = collect(['Red', 'Blue'])->map(fn ($name) => AcademyGroup::create(['academy_id' => $this->academy->id, 'name' => $name, 'type' => 'house'])->id)->all();
+        $this->edition = SportsEdition::create([
+            'academy_id' => $this->academy->id,
+            'academic_year_id' => $this->year->id,
+            'name' => 'Test',
+            'sequence' => 1,
+            'status' => 'draft',
+            'created_by_user_id' => $this->actor->id,
+        ]);
+        foreach ($this->houses as $i => $id) {
+            SportsEditionHouse::create(['edition_id' => $this->edition->id, 'house_group_id' => $id, 'display_order' => $i]);
+        }
     }
 
     public function test_clean_csv_assigns_and_commits(): void
@@ -80,7 +95,7 @@ class HouseImportTest extends TestCase
     public function test_conflict_skip_overwrite_and_undo(): void
     {
         $student = $this->student('5001', 'Conflict', 'Person');
-        DB::table('house_memberships')->insert(['academy_id' => $this->academy->id, 'academic_year_id' => $this->year->id, 'student_id' => $student->id, 'house_group_id' => $this->houses[0], 'source' => 'manual', 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('house_memberships')->insert(['academy_id' => $this->academy->id, 'edition_id' => $this->edition->id, 'student_id' => $student->id, 'house_group_id' => $this->houses[0], 'source' => 'manual', 'created_at' => now(), 'updated_at' => now()]);
 
         // Default: leave the existing house alone.
         $this->assertSame('already_assigned', $this->import("code,house\n5001,Blue\n")->rows()->first()->status);
@@ -142,7 +157,7 @@ class HouseImportTest extends TestCase
 
         $this->actingAs($viewer, 'api')
             ->postJson("/api/academies/{$this->academy->id}/house-assignments/preview-import", [
-                'academic_year_id' => $this->year->id,
+                'edition_id' => $this->edition->id,
                 'column_mapping' => ['student_identifier' => 'code', 'house_name' => 'house'],
                 'file' => UploadedFile::fake()->createWithContent('house.csv', "code,house\n1,Red\n"),
             ])->assertForbidden();
@@ -155,13 +170,23 @@ class HouseImportTest extends TestCase
         $book->getActiveSheet()->fromArray([['code', 'house'], ['6001', 'Red']]);
         $path = tempnam(sys_get_temp_dir(), 'house');
         (new Xlsx($book))->save($path);
-        $batch = app(HouseAssignmentService::class)->previewImport($this->academy, $this->year->id, new UploadedFile($path, 'house.xlsx', null, null, true), ['column_mapping' => ['student_identifier' => 'code', 'house_name' => 'house']], $this->actor);
+        $batch = app(HouseAssignmentService::class)->previewImport($this->academy, $this->edition, new UploadedFile($path, 'house.xlsx', null, null, true), ['column_mapping' => ['student_identifier' => 'code', 'house_name' => 'house']], $this->actor);
         $this->assertSame('ok', $batch->rows()->first()->status);
+    }
+
+    public function test_import_reports_unknown_house_for_a_house_outside_the_edition(): void
+    {
+        $extraHouse = AcademyGroup::create(['academy_id' => $this->academy->id, 'type' => 'house', 'name' => 'Silver']);
+        $this->student('6001', 'Test', 'Person');
+
+        $batch = $this->import("code,house\n6001,Silver");
+
+        $this->assertSame('unknown_house', $batch->rows()->first()->status);
     }
 
     private function import(string $csv, array $mapping = ['student_identifier' => 'code', 'house_name' => 'house'], array $options = [])
     {
-        return app(HouseAssignmentService::class)->previewImport($this->academy, $this->year->id, UploadedFile::fake()->createWithContent('house.csv', $csv), array_merge(['column_mapping' => array_merge(['student_identifier' => 'code', 'house_name' => 'house'], $mapping)], $options), $this->actor);
+        return app(HouseAssignmentService::class)->previewImport($this->academy, $this->edition, UploadedFile::fake()->createWithContent('house.csv', $csv), array_merge(['column_mapping' => array_merge(['student_identifier' => 'code', 'house_name' => 'house'], $mapping)], $options), $this->actor);
     }
 
     private function student(string $code, string $first, string $last, ?string $citizen = null): Student

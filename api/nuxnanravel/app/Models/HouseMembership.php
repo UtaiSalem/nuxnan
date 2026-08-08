@@ -20,4 +20,9 @@ class HouseMembership extends Model
     {
         return $this->belongsTo(AcademyGroup::class, 'house_group_id');
     }
+
+    public function edition(): BelongsTo
+    {
+        return $this->belongsTo(SportsEdition::class, 'edition_id');
+    }
 }
