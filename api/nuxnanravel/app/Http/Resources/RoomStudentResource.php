@@ -9,8 +9,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
 /**
  * นักเรียนหนึ่งคนในห้อง มองจาก classroom_students (source of truth) แล้วค่อยแนบบัตรถ้ามี
  *
- * ต่างจาก StudentCardResource/StudentCardPublicResource ตรงที่ resource สองตัวนั้นรับ
- * StudentCard เป็นราก จึงแสดงคนที่ยังไม่มีบัตรไม่ได้เลย ที่นี่ $this คือ ClassroomStudent
+ * ต่างจาก StudentCardResource ตรงที่ resource ตัวนั้นรับ StudentCard เป็นราก
+ * จึงแสดงคนที่ยังไม่มีบัตรไม่ได้เลย ที่นี่ $this คือ ClassroomStudent
  *
  * ห้ามอ่านห้องจาก $card->class_level / class_section — เป็น snapshot ที่ค้างได้
  */
