@@ -45,6 +45,7 @@ export function useStudentCardRoomView(students: Ref<any[]>, options: { navOffse
         return students.value.filter(s =>
             (s.full_name_thai && s.full_name_thai.toLowerCase().includes(term)) ||
             (s.first_name_thai && s.first_name_thai.toLowerCase().includes(term)) ||
+            (s.last_name_thai && s.last_name_thai.toLowerCase().includes(term)) ||
             (s.student_number && s.student_number.toString().includes(term))
         )
     })
@@ -86,7 +87,7 @@ export function useStudentCardRoomView(students: Ref<any[]>, options: { navOffse
         if (!student) return
         currentIndex.value = index
 
-        const el = document.getElementById(`card-${student.id}`)
+        const el = document.getElementById(`card-${student.uid}`)
         if (!el) return
 
         const before = window.scrollY
@@ -110,7 +111,7 @@ export function useStudentCardRoomView(students: Ref<any[]>, options: { navOffse
         const student = sortedStudents.value[currentIndex.value]
         if (!rail || !student) return
 
-        const row = document.getElementById(`row-${student.id}`)
+        const row = document.getElementById(`row-${student.uid}`)
         if (!row) return
 
         const top = row.offsetTop
@@ -129,7 +130,7 @@ export function useStudentCardRoomView(students: Ref<any[]>, options: { navOffse
 
         let index = 0
         for (let i = 0; i < list.length; i++) {
-            const el = document.getElementById(`card-${list[i].id}`)
+            const el = document.getElementById(`card-${list[i].uid}`)
             if (!el) continue
             if (el.getBoundingClientRect().top - NAV_OFFSET > 0) break
             index = i

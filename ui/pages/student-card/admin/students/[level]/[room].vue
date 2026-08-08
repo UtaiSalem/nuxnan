@@ -232,7 +232,7 @@ const downloadCard = async (index, studentNumber) => {
                 <p class="mt-4 text-gray-500 text-lg">ไม่มีนักเรียนตรงตามตัวกรอง</p>
             </div>
             <div v-else class="grid grid-cols-1 gap-4">
-                <div v-for="(student, index) in filteredStudents" :key="student.id">
+                <div v-for="(student, index) in filteredStudents" :key="student.uid">
                     <div v-if="student.active_card_request" class="mb-2 flex items-center justify-center gap-2">
                         <span :class="requestStatusMeta(student.active_card_request.status).cls"
                             class="px-3 py-1 border rounded-full text-sm font-medium">

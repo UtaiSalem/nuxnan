@@ -168,7 +168,7 @@ const handleTransferConfirm = async (toClassroomId: number, reason: string | nul
     try {
         const response: any = await transferStudent(student.student_id, toClassroomId, reason)
         showTransferModal.value = false
-        students.value = students.value.filter(s => s.id !== student.id)
+        students.value = students.value.filter(s => s.uid !== student.uid)
         await fetchContext()
         Swal.fire({ icon: 'success', title: response.message || 'ย้ายห้องเรียบร้อย', timer: 1800, showConfirmButton: false })
     } catch (error: any) {
@@ -183,7 +183,7 @@ const handleRemoveConfirm = async (reason: string | null) => {
     try {
         const response: any = await removeStudent(student.student_id, reason)
         showRemoveModal.value = false
-        students.value = students.value.filter(s => s.id !== student.id)
+        students.value = students.value.filter(s => s.uid !== student.uid)
         await fetchContext()
         Swal.fire({ icon: 'success', title: response.message || 'นำออกจากห้องเรียบร้อย', timer: 1800, showConfirmButton: false })
     } catch (error: any) {
@@ -459,8 +459,8 @@ const handleBulkSubmitted = async (result: any) => {
                     </div>
 
                     <div ref="railRef" class="relative max-h-[calc(100vh-11rem)] overflow-y-auto py-1">
-                        <button v-for="(student, index) in sortedStudents" :key="student.id"
-                            :id="`row-${student.id}`" type="button" @click="scrollToIndex(index)"
+                        <button v-for="(student, index) in sortedStudents" :key="student.uid"
+                            :id="`row-${student.uid}`" type="button" @click="scrollToIndex(index)"
                             class="grid w-full grid-cols-[2.5rem_3.5rem_1fr] items-center gap-2 px-3 py-1.5 text-left text-xs transition"
                             :class="index === currentIndex
                                 ? 'bg-primary-50 dark:bg-primary-900/30 font-semibold text-primary-700 dark:text-primary-300'
@@ -487,7 +487,7 @@ const handleBulkSubmitted = async (result: any) => {
                             @change="scrollToIndex(Number(($event.target as HTMLSelectElement).value))"
                             class="min-w-0 flex-1 truncate rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 outline-none focus:ring-2 focus:ring-primary-500"
                             aria-label="ไปที่บัตรนักเรียน">
-                            <option v-for="(student, index) in sortedStudents" :key="student.id" :value="index">
+                            <option v-for="(student, index) in sortedStudents" :key="student.uid" :value="index">
                                 {{ studentLabel(student, index) }}
                             </option>
                         </select>
@@ -505,7 +505,7 @@ const handleBulkSubmitted = async (result: any) => {
                 </div>
 
                 <div class="grid grid-cols-1 gap-6 pb-6">
-                    <div v-for="student in sortedStudents" :key="student.id" :id="`card-${student.id}`" class="scroll-mt-20">
+                    <div v-for="student in sortedStudents" :key="student.uid" :id="`card-${student.uid}`" class="scroll-mt-20">
                         <StudentCardItem
                             :studentInfo="student"
                             :school="school"

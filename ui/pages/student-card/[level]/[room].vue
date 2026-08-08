@@ -63,6 +63,9 @@ const selectedIds = ref<Set<number>>(new Set())
 const eligibleStudents = computed(() =>
     students.value.filter(s => s.student_id && !s.active_card_request))
 
+// นักเรียนที่อยู่ในห้องแล้วแต่ยังไม่เคยมีบัตร — ต้องเห็นบนจอ ไม่ใช่หายเงียบแบบเดิม
+const studentsWithoutCard = computed(() => students.value.filter(s => !s.has_card))
+
 const selectedStudents = computed(() =>
     eligibleStudents.value.filter(s => selectedIds.value.has(s.student_id)))
 
@@ -169,7 +172,7 @@ const handleTransferConfirm = async (toClassroomId: number, reason: string | nul
     try {
         const response = await transferStudent(student.student_id, toClassroomId, reason)
         showTransferModal.value = false
-        students.value = students.value.filter(s => s.id !== student.id)
+        students.value = students.value.filter(s => s.uid !== student.uid)
         await fetchManageContext()
         Swal.fire({ icon: 'success', title: response.message || 'ย้ายห้องเรียบร้อย', timer: 1800, showConfirmButton: false })
     } catch (error: any) {
@@ -184,7 +187,7 @@ const handleRemoveConfirm = async (reason: string | null) => {
     try {
         const response = await removeStudent(student.student_id, reason)
         showRemoveModal.value = false
-        students.value = students.value.filter(s => s.id !== student.id)
+        students.value = students.value.filter(s => s.uid !== student.uid)
         await fetchManageContext()
         Swal.fire({ icon: 'success', title: response.message || 'นำออกจากห้องเรียบร้อย', timer: 1800, showConfirmButton: false })
     } catch (error: any) {
@@ -229,6 +232,10 @@ onMounted(() => {
                                         d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                 </svg>
                                 <span class="font-medium">{{ students.length }} คน</span>
+                            </div>
+                            <div v-if="studentsWithoutCard.length" class="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-800">
+                                <Icon icon="heroicons:exclamation-triangle" class="w-5 h-5 flex-shrink-0" />
+                                <span class="font-medium text-sm">ยังไม่มีบัตร {{ studentsWithoutCard.length }} คน</span>
                             </div>
                             <div v-if="manageContext?.classroom_id" class="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-gray-600">
                                 <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -362,8 +369,8 @@ onMounted(() => {
                         </div>
 
                         <div ref="railRef" class="relative max-h-[calc(100vh-11rem)] overflow-y-auto py-1">
-                            <button v-for="(student, index) in sortedStudents" :key="student.id"
-                                :id="`row-${student.id}`" type="button" @click="scrollToIndex(index)"
+                            <button v-for="(student, index) in sortedStudents" :key="student.uid"
+                                :id="`row-${student.uid}`" type="button" @click="scrollToIndex(index)"
                                 class="grid w-full grid-cols-[2.5rem_3.5rem_1fr] items-center gap-2 px-3 py-1.5 text-left text-xs transition"
                                 :class="index === currentIndex
                                     ? 'bg-blue-50 font-semibold text-blue-700'
@@ -390,7 +397,7 @@ onMounted(() => {
                             @change="scrollToIndex(Number(($event.target as HTMLSelectElement).value))"
                             class="min-w-0 flex-1 truncate rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-blue-500"
                             aria-label="ไปที่บัตรนักเรียน">
-                            <option v-for="(student, index) in sortedStudents" :key="student.id" :value="index">
+                            <option v-for="(student, index) in sortedStudents" :key="student.uid" :value="index">
                                 {{ studentLabel(student, index) }}
                             </option>
                         </select>
@@ -409,7 +416,7 @@ onMounted(() => {
 
                 <div class="grid grid-cols-1 gap-6 pb-6">
                     <!-- scroll-mt เผื่อความสูงของแถบนำทาง ไม่งั้นหัวบัตรจะโดนแถบบัง -->
-                    <div v-for="student in sortedStudents" :key="student.id" :id="`card-${student.id}`" class="scroll-mt-20">
+                    <div v-for="student in sortedStudents" :key="student.uid" :id="`card-${student.uid}`" class="scroll-mt-20">
                         <StudentCardItem
                             :studentInfo="student"
                             :canManage="!!manageContext?.can_manage"

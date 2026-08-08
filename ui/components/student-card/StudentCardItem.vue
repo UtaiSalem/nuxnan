@@ -27,6 +27,10 @@ const school = computed(() => ({ ...DEFAULT_STUDENT_CARD_SCHOOL, ...(props.schoo
 // คำร้องทำบัตรที่ค้างอยู่ของนักเรียนคนนี้ (มาจาก active_card_request ใน API)
 const activeRequest = computed(() => props.studentInfo.active_card_request || null)
 
+// ยังไม่มีบัตร = แก้ข้อมูลบัตร/อัพโหลดรูปไม่ได้ เพราะ endpoint ทั้งชุดใช้รหัสบัตรเป็น path param
+const hasCard = computed(() => !!props.studentInfo.id)
+const canEditCard = computed(() => props.canEdit && hasCard.value)
+
 const requestStatusLabel = computed(() => {
     switch (activeRequest.value?.status) {
         case 'pending': return 'ส่งคำร้องแล้ว • รอตรวจสอบ'
@@ -239,7 +243,7 @@ const studentPrefixName = (prefix) => {
                     <div class="text-[2.4vw] sm:text-[2.5vw] md:text-[16px] -mt-1 sm:-mt-2.5 md:-mt-2 text-gray-800 tracking-wider">{{ school.name_en }}</div>
                     <div class="text-[2.4vw] md:text-sm -mt-0.5 sm:-mt-2 md:-mt-1 text-gray-800">{{ school.address }}</div>
                 </div>
-                <div v-if="canEdit" @click="isEditModalOpen = true" class="absolute z-50 top-0 right-2 text-gray-700 bg-gray-200/60 p-2 rounded-full shadow-md cursor-pointer">
+                <div v-if="canEditCard" @click="isEditModalOpen = true" class="absolute z-50 top-0 right-2 text-gray-700 bg-gray-200/60 p-2 rounded-full shadow-md cursor-pointer">
                     <Icon icon="dashicons:edit" width="20" height="20" />
                 </div>
                 <div v-if="canManage || canRequest || activeRequest?.status === 'pending'" class="absolute z-50 top-0 right-12">
@@ -286,15 +290,15 @@ const studentPrefixName = (prefix) => {
                     <input type="file" ref="fileInput" @change="handlePhotoUpload" accept="image/*" class="hidden" />
                     <div v-if="previewImage || tempPhoto" class="w-full h-full relative">
                         <img :src="studentImageUrl" alt="Student Photo" class="w-full h-full object-fill" />
-                        <button v-if="canEdit" class="absolute bottom-2 right-2 bg-white p-1 rounded-full shadow-md cursor-pointer focus:outline-none" @click="triggerFileInput" aria-label="เปลี่ยนรูป">
+                        <button v-if="canEditCard" class="absolute bottom-2 right-2 bg-white p-1 rounded-full shadow-md cursor-pointer focus:outline-none" @click="triggerFileInput" aria-label="เปลี่ยนรูป">
                             <Icon :icon="isEditStudentPhoto ? 'eos-icons:bubble-loading' : 'heroicons:pencil-solid'" class="w-5 h-5 text-gray-600" />
                         </button>
-                        <button v-if="canEdit" class="absolute bottom-2 left-2 bg-red-500 p-1 rounded-full shadow-md cursor-pointer focus:outline-none" @click="handleDeletePhoto" aria-label="ลบรูป">
+                        <button v-if="canEditCard" class="absolute bottom-2 left-2 bg-red-500 p-1 rounded-full shadow-md cursor-pointer focus:outline-none" @click="handleDeletePhoto" aria-label="ลบรูป">
                             <Icon :icon="isDeletingStudentPhoto ? 'eos-icons:bubble-loading' : 'heroicons:trash-solid'" class="w-5 h-5 text-white" />
                         </button>
                     </div>
                     <div v-else class="w-full h-full flex items-center justify-center bg-gray-300"
-                        :class="canEdit ? 'cursor-pointer' : ''" @click="canEdit && triggerFileInput()">
+                        :class="canEditCard ? 'cursor-pointer' : ''" @click="canEditCard && triggerFileInput()">
                         <Icon icon="tabler:photo-plus" class="w-10 h-10 text-gray-600/60" />
                     </div>
                 </div>
@@ -352,7 +356,7 @@ const studentPrefixName = (prefix) => {
                             class="flex-1 text-[2.4vw] sm:text-sm md:text-lg font-semibold text-gray-800">
                             {{ new Date(editForm.birth_date).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' }) }}
                         </span>
-                        <button v-else-if="canEdit" type="button" @click="isEditModalOpen = true"
+                        <button v-else-if="canEditCard" type="button" @click="isEditModalOpen = true"
                             class="flex-1 text-left text-[2.4vw] sm:text-sm md:text-lg font-semibold text-amber-600 underline decoration-dotted underline-offset-2 hover:text-amber-700">
                             ยังไม่ระบุ
                         </button>
@@ -455,8 +459,13 @@ const studentPrefixName = (prefix) => {
             </div>
 
             <!-- Action footer — ระบุชัดว่าปุ่มปฏิบัติการเป็นของบัตรใบนี้ -->
-            <div v-if="canManage || canRequest || activeRequest?.status === 'pending'"
+            <div v-if="canManage || canRequest || activeRequest?.status === 'pending' || !hasCard"
                 class="mt-3 pt-3 border-t border-dashed border-gray-200 flex flex-wrap items-center gap-2">
+                <!-- อยู่นอกกล่อง truncate ด้านล่าง ไม่งั้นชื่อยาว ๆ จะบีบป้ายจนอ่านไม่ออก -->
+                <span v-if="!hasCard" class="inline-flex flex-shrink-0 items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border bg-amber-50 text-amber-700 border-amber-200">
+                    <Icon icon="heroicons:exclamation-triangle" class="w-4 h-4" />
+                    ยังไม่มีบัตร
+                </span>
                 <div class="flex items-center gap-1.5 text-xs text-gray-500 mr-auto min-w-0">
                     <Icon icon="heroicons:identification" class="w-4 h-4 text-gray-400 flex-shrink-0" />
                     <span class="truncate">จัดการบัตรของ <span class="font-semibold text-gray-700">{{ displayFullNameThai }}</span></span>
