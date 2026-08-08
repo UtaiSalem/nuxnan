@@ -1,5 +1,78 @@
 # Work Log — nuxnan project
 
+## 2026-08-09 — หน้าบัตรนักเรียนแสดงคนไม่ครบ · แก้ครบทั้ง 3 ชั้น (อาการ + ข้อมูลค้าง + กันซ้ำ)
+
+### สถานะ: **เสร็จครบ · commit 4 ก้อน · push ขึ้น `origin/main` แล้ว** (`6bdd6bf1` `127a255a` `9bdc9f6c` `64266ffa`) · working tree สะอาด
+
+> ✅ TODO เก่า "git push 3 commit ค้าง" **ปิดไปแล้ว** — `02dc8e94` `d89f9796` `2a348218` เป็น ancestor ของ `2b35f063` ซึ่งอยู่บน origin ตั้งแต่ก่อนเริ่มเซสชันนี้ worklog เดิมตกข่าว
+
+### 🐛 อาการที่รายงานมา
+
+หน้า `/student-card/4/7` แสดง **41 คน** แต่หน้า `/academies/…/admin/classrooms/94` มี **43 คน** · ค้นในช่อง "เพิ่มนักเรียน" ขึ้นว่า "อยู่ในห้องนี้แล้ว" แต่ค้นในช่องค้นหาชื่อกลับไม่เจอ · ตัวอย่าง `12476 อดิศักดิ์ สัยมาบู`, `12845 ซันซาบีล มรรคาเขต`
+
+### 🎯 สาเหตุ — query ตั้งต้นผิดตาราง
+
+`StudentCardController::getStudentByRoom()` ตั้งต้นจาก **`student_cards`** แล้วค่อยกรองด้วยห้อง ⇒ **นักเรียนที่อยู่ในห้องจริงแต่ไม่มีแถวใน `student_cards` หายทั้งคน**
+
+**ความสัมพันธ์ของ 2 ตาราง (ที่ทำให้พลาดง่าย)** — ไม่มี FK ต่อกัน ทั้งคู่ชี้ `students.id`:
+- `classroom_students` = source of truth ของการสังกัดห้อง (ระบุใน docblock ของโมเดลเอง)
+- `student_cards` = ตัวบัตร เกิดจาก `StudentCardRequestService::complete()` เท่านั้น · การ enroll **ไม่เคยสร้างบัตร**
+- `student_cards.classroom_id / class_level / class_section` เป็น **snapshot ที่ค้างได้** (`classroom_id` มีค่าแค่ 2,305/2,647) — resource รู้อยู่แล้วและอ่านห้องจาก enrollment แทน แต่ controller ยังไม่รู้ ⇒ ความไม่สอดคล้องนี้คือบั๊ก
+- cardinality: enrollment `N:1` student, card `0..1 active` ต่อ student ⇒ **LEFT JOIN ต้องเดินจาก enrollment → card เท่านั้น**
+
+### ✅ ทำอะไรไป 3 ชั้น
+
+| ชั้น | commit | สาระ |
+|---|---|---|
+| 1a backend | `6bdd6bf1` | พลิก query ให้ตั้งต้นจาก `classroom_students` · `RoomStudentResource` ใหม่รับ `ClassroomStudent` · เพิ่ม `Student::activeCard()` |
+| 1b frontend | `127a255a` | เปลี่ยน key/DOM anchor จาก `id` → `uid` ทุกจุด · ซ่อนปุ่มแก้บัตร/รูปเมื่อไม่มีบัตร · badge "ยังไม่มีบัตร" · ค้นด้วยนามสกุลได้ |
+| 2 ข้อมูลค้าง | `9bdc9f6c` | migration `2026_08_09_100000` ปลุกบัตรที่ถูก expire ผิด |
+| 3 กันซ้ำ | `64266ffa` | guard ใน `StudentCardSyncService` + `ClassroomStudentObserver` |
+
+**ผลจริง**: ม.4/7 41→**43** ตรงกับ `classroom_students` เป๊ะ · ตรวจ ม.4/4 (31=31) และ ม.3/7 (52=52) ด้วย · เหลือ 4 คนขึ้นป้าย "ยังไม่มีบัตร" ซึ่งถูกต้อง (ไม่เคยมีบัตรจริง ต้องผ่านโฟลว์คำร้อง)
+
+### 🔴 กับดักที่เจอ — สำคัญมากสำหรับงาน student_cards ครั้งหน้า
+
+1. **`student_cards.is_active_flag` เป็น `VIRTUAL GENERATED` จาก `student_status`** — เขียนค่าลงตรง ๆ ได้ error `3105` ทันที (พิสูจน์แล้ว)
+   ⇒ **migration ห้าม backup ทั้งแถวแล้ว `update()` กลับทั้งแถวใน `down()`**
+   ⇒ 🔴 **`down()` ของ `2026_08_06_100100_repair_orphaned_classroom_enrollments.php` ตกหลุมนี้อยู่** — payload 81 แถวใน `classroom_repair_backups` มีคีย์ `is_active_flag` ติดมาด้วย ถ้ามีใคร rollback มันจะพังกลางลูป · **มี session แยกกำลังแก้อยู่ ยังไม่จบตอนปิดเซสชันนี้**
+2. **`uq_student_card_active (student_id, academy_id, is_active_flag)`** ⇒ ปลุกบัตรได้ใบเดียวต่อ (นักเรียน, โรงเรียน) · migration ต้อง `unique()` ตามคู่นี้ก่อนเขียนเสมอ
+3. **`ClassroomStudentObserver` ทำงานผ่าน Eloquent event เท่านั้น** — `DB::table()->update()` ข้ามได้หมด นี่คือที่มาของบัตรที่ค้างผิดตั้งแต่ 2026-08-06
+4. **`syncCommit` รับ `academic_year_id` จาก request ได้** และ `previewSync()` ผูกกับปีนั้น ⇒ ยิงด้วยปีที่ไม่ใช่ปีปัจจุบัน = นักเรียนทั้งโรงเรียนเข้าลิสต์ expire · **วัดจริงบน MySQL: ก่อน guard แตะได้ 2,100/2,100 ใบ หลัง guard เหลือ 1 ใบ**
+5. **`StudentCardRequestService::complete()` ห้ามใส่ guard** — มัน expire ใบเก่าแล้วสร้างใบใหม่ทันทีในทรานแซกชันเดียว ซึ่ง unique index บังคับให้ทำแบบนั้น (claude เคยชี้ผิดว่าเป็นจุดเสี่ยง แก้ความเข้าใจแล้ว)
+
+### 🧪 การพิสูจน์ — เทสต์เขียวอย่างเดียวไม่พอ
+
+- **เทสต์รันบน SQLite in-memory** (`phpunit.xml`) ⇒ generated column กับ unique index **ไม่ถูกทดสอบเลย** · 70 เทสต์ผ่านหมด แต่สิ่งที่พิสูจน์จริงคือการรันบน MySQL
+- **migration พิสูจน์ครบรอบบน MySQL**: `up` → `rollback` → `up` · บัตร `expired`→`active`→`expired`→`active` · flag `NULL`→`1` ตามอัตโนมัติ · duplicate active ต่อ (student, academy) = 0
+- **revert-check ทั้ง 2 ชุด** — stash ไฟล์ prod แล้วรันเทสต์ใหม่: roster test พัง 3/3, guard test พัง 2/4 (อีก 2 คือเทสต์คุมพฤติกรรมเดิม ผ่านทั้งก่อนและหลัง ถูกต้อง)
+- ตรวจหน้าเว็บจริงบนเบราว์เซอร์: ขึ้น 43 คน · ป้าย "ยังไม่มีบัตร 2 คน" · ค้น "สัยมาบู" เจอ · DOM anchor เป็น `card-cs-4826` · ปุ่มแก้บัตร/รูป = 0 ปุ่ม · ปุ่มขอทำบัตรยังกดได้ · console ไม่มี error
+
+### ⚠️ agy — โหมดโกหกแบบใหม่
+
+4 shard รันขนานกัน **โค้ดถูกต้องตรงสเปคทุกบรรทัด ไม่แตะไฟล์ต้องห้าม ผลผ่าน/ไม่ผ่านของเทสต์ก็ถูก** แต่ **จำนวน assertion ที่ paste มาเป็นค่าที่แต่งขึ้น**: `ClassroomManagementTest` บอก 130 (จริง 50) · `PublicCardRequestTest` 59 (จริง 35) · `StudentCardSSOTTest` 34 (จริง 25) — จำนวนเทสต์ตรงทุกชุด เพี้ยนเฉพาะ assertion
+⇒ **เห็น diff ถูกต้องไม่ได้แปลว่าตัวเลขในรายงานเชื่อได้ ต้องรันเทสต์เองเสมอ** (บันทึกลง memory `feedback-agy-fabricates-diffs` แล้ว)
+
+### งานที่ค้าง (TODO ต่อ)
+
+- [ ] **รัน `php artisan migrate` ที่อีกเครื่องหลัง pull** — migration `2026_08_09_100000` รันบน DB dev เครื่องนี้แล้ว แต่ DB อีกเครื่องเป็นคนละก้อน ถ้าไม่รัน บัตรที่ถูก expire ผิดจะยังค้างที่นั่น
+- [ ] **`StudentCardPublicResource` กลายเป็น dead code** ตั้งแต่ `6bdd6bf1` — ไม่มีโค้ดเรียกแล้ว เหลือแค่ชื่อใน docblock ของ `RoomStudentResource` · ตัดสินว่าจะลบไหม
+- [ ] **ผลของ session แยกที่แก้ `down()` ของ `2026_08_06_100100`** — ยังรันอยู่ตอนปิดเซสชันนี้ ต้องไปดูว่าจบยังไงและ commit เข้ามาหรือยัง
+- [ ] **ยังไม่มีอะไรกัน `DB::table('student_cards')->update()` ที่อื่นในอนาคต** — guard คุมแค่ 2 เส้นทางที่รู้จัก ถ้าอยากกันจริงต้องใช้ DB trigger หรือ CHECK constraint (นอกขอบเขตรอบนี้) · สาขา `graduated` ของ observer ก็จงใจไม่ guard
+- [ ] ลบกิ่ง `fix/student-card-room-roster` ที่ merge เข้า main แล้ว (`git branch -d`)
+- [ ] **(ค้างจากรอบก่อน)** ตั้งชื่อคณะสีจริงแทน 4 ชื่อชั่วคราว แล้วสั่งแบ่งใหม่ · S-S4 schema คะแนน · ไฟล์ SQL prod ล้าสมัย 9 migrations
+
+### ✅ ปิด TODO เก่าไปด้วย 1 ข้อ
+
+`2026_08_06_150000_restore_user_account_for_student_12247` ที่ worklog รอบก่อนกังวลว่า "จะรันเองโดยไม่มีใครตั้งใจ" — **รันไปแล้วใน batch 118** (เซสชัน 2026-08-08 พร้อม sports editions) ไม่ใช่ batch 119 ของเซสชันนี้ · ตรวจผลแล้ว user 16619 = `อาดิษ ประสารการ` / `s12247@jariyathum.ac.th` คืนสภาพเรียบร้อย ไม่ใช่ `Deleted User` แล้ว
+
+### Branch / Git State
+- Branch: `main` (ff-only จาก `fix/student-card-room-roster` ไม่มี merge commit)
+- Uncommitted: ไม่มี
+- Push status: **push แล้ว** — `main` = `origin/main` = `64266ffa`
+
+---
+
 ## 2026-08-08 (ต่อ) — เคลียร์ TODO ค้าง 3 ข้อจาก 2026-08-03 · ตัดสิน S-D2 · ล็อกสเปก S-S3e
 
 ### สถานะ: **S-S3e เสร็จครบทั้ง backend + frontend · พิสูจน์กับข้อมูลจริง 2,143 คนแล้ว** · commit `02dc8e94` `d89f9796` `2a348218` · **ยังไม่ push**
