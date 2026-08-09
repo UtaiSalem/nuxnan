@@ -142,24 +142,55 @@ grep -n "^post_max_size\|^upload_max_filesize" /c/wamp64/bin/php/php8.4.15/php.i
 ```
 ผลหลังแก้: root node ใน `pages/academies/` **ผ่านหมด** · parent ที่ขาด `<NuxtPage />` **เหลือ 0 ทั้งโปรเจค**
 
-### ⚠️ ยังไม่ได้ตรวจด้วยตา — ต้องทำต่อ
+### ✅ ตรวจด้วยตาครบแล้ว (รอบสอง หลังผู้ใช้สั่งให้แก้ `layout` ต่อ)
 
-ยืนยันด้วยเบราว์เซอร์แล้ว **เฉพาะส่วนแรก** (สลับเมนู แดชบอร์ด → สมาชิก → คำขอเข้าร่วม → ห้องเรียน → บทบาท → ผลการเรียน → บัตรนักเรียน ขึ้นข้อมูลครบ · `/admin/members/invitations` ถูกต้อง)
+**รอบแรก** ยืนยันการสลับเมนู: แดชบอร์ด → สมาชิก → คำขอเข้าร่วม → ห้องเรียน → บทบาท → ผลการเรียน → บัตรนักเรียน ขึ้นข้อมูลครบ · `/admin/members/invitations` แสดงตารางถูกต้อง
 
-หลังจากนั้น dev server restart แล้ว **session หลุดไป `/auth`** เลยตรวจงาน `layout: 'main'` ต่อไม่ได้ → **ผ่านแค่ `npm run build`**
+**รอบสอง** เปิดดูจริง **23 หน้าจอ** — ทุกหน้ามี top nav + คอลัมน์โปรไฟล์ + sidebar admin + การ์ดขาว ตรงกันหมด ไม่มี double padding ไม่มีพื้นหลังซ้อน:
+
+| กลุ่ม | หน้าที่เปิดดู |
+|---|---|
+| store (5) | `index` `products` `categories` `orders` `settings` |
+| gradebook (10) | `subjects` `academic-years` `grade-scales` `students` `transcripts` `classrooms` `classrooms/58` `students/2405/transcript` `rollover` `rollover/history` |
+| home-visits (3) | `zones` `create` `export` |
+| students (3) | `import` `import-history` `intake` |
+| อื่น ๆ (2) | `courses/create` `members/1` |
+
+**2 หน้าที่เปิดไม่ได้**: `home-visits/[id]/index` และ `[id]/edit` — DB ไม่มี record เลย (หน้า home-visits ขึ้น "การเยี่ยมทั้งหมด 0") ทั้งสองไฟล์ root เป็น `<div>` เปล่าเหมือน 20 หน้าที่ผ่านแล้ว
+
+### 🔧 งานพ่วงรอบสอง — 5 หน้าร้านค้า (`18b0d519`)
+
+ทั้ง 5 หน้าเปิดด้วย wrapper ของหน้าเดี่ยว `min-h-screen bg-gray-50 dark:bg-gray-900` + ชั้นในเป็น `max-w-* mx-auto px-4 sm:px-6 py-6` ⇒ ในการ์ดขาวของ `admin.vue` กลายเป็น**บล็อกเทาสูงเต็มจอ + padding ซ้อนสองชั้น**
+
+`store/index.vue` มีอาการนี้อยู่ก่อนแล้วตั้งแต่ก่อนเซสชันนี้ (มัน `layout: 'main'` มาตลอด) อีก 4 หน้าติดมาตอนย้ายออกจาก `layout: false` · แก้ให้ทั้ง 5 เหลือ root `<div>` เปล่า + ชั้นใน `space-y-6` ตามที่อีก 20 หน้าใช้ ให้การ์ดเป็นคนจัด padding
+
+### 🐞 เจอระหว่างตรวจ — คนละเรื่องกับ layout ไม่ได้เกิดจากงานนี้
+
+1. **ข้อมูล gradebook ไม่ตรงกับส่วนอื่นอย่างชัดเจน (สำคัญสุดในสามข้อ)** — `admin/classrooms` บอก ม.1/1 = **43 คน** แต่ `gradebook/classrooms` บอกทุกห้อง **"0 นักเรียน / 50"** · `gradebook/students` บอก "20 นักเรียนทั้งหมด" ขณะที่โรงเรียนมี 2,613 สมาชิก / 2,931 นักเรียน · **id คนละชุดด้วย** (ม.1/1 ใน gradebook = `58`, ใน admin = `94`) เหมือน gradebook อยู่บนตาราง/ชุดข้อมูลแยกที่ยังไม่ populate
+2. **`/admin/gradebook/rollover` ตัว wizard ว่าง** — หัวข้อ "Year Rollover Wizard" ขึ้น แต่ใต้ลงมาไม่มีอะไร · console ไม่มี error
+3. **`/admin/members/{id}` ที่ไม่มีอยู่จริง หมุนค้างตลอด** — ลอง `/admin/members/1` แล้วสปินเนอร์ไม่หยุด ไม่มี not-found / error state
 
 ### งานที่ค้างอยู่ (TODO ต่อ)
 
-- [ ] **ตรวจด้วยตา** ว่า 24 หน้าที่เปลี่ยนเป็น `layout: 'main'` หน้าตาไม่เพี้ยน — ตัวอย่างที่ควรดู: `/admin/store/products`, `/admin/gradebook/subjects`, `/admin/gradebook/rollover`, `/admin/home-visits/zones`, `/admin/students/import`
-- [ ] เช็ค `/admin/student-cards/print` ว่ายังพิมพ์ออกมาถูก (เป็นหน้าเดียวที่ยังคง `layout: false`)
-- [ ] หน้าใต้ `Learn/Academy/[name]/Settings/*` และ `curriculum/*` ที่เพิ่งปลดล็อกให้เข้าถึงได้ **เป็นโค้ด Inertia เก่า** (`@inertiajs/vue3` ไม่ได้ติดตั้งจริง ใช้ shim ที่ `ui/shims/inertia-vue3.ts` + alias ใน `nuxt.config.ts:11`) และรับ `defineProps({academy, isAcademyAdmin})` ที่ไม่มีใครส่งให้ ⇒ **เข้าถึงได้แล้วแต่ยังไม่ทำงาน** ต้องตัดสินใจว่าจะรื้อหรือลบทิ้ง (ทั้งโปรเจคมี 51 ไฟล์ที่ import Inertia)
+- [ ] **ไล่ 3 ข้อในหัวข้อ 🐞 ข้างบน** — เริ่มที่ข้อ 1 (ข้อมูล gradebook) ก่อน
+- [ ] เช็ค `/admin/student-cards/print` ว่ายังพิมพ์ออกมาถูก (เป็นหน้าเดียวที่ยังคง `layout: false` โดยตั้งใจ — มี `@media print` + `print:hidden` ที่ออกแบบบนสมมติฐานว่าไม่มี app chrome)
+- [ ] เปิด `home-visits/[id]/index` + `[id]/edit` ดูสักครั้งเมื่อมี record จริง
+- [ ] **ยังมี page ที่ root เกิน 1 ตัวนอก `pages/academies/`** — `auth/{ConfirmPassword,ForgotPassword,ResetPassword,TwoFactorChallenge,VerifyEmail}.vue` และ `PrivacyPolicy.vue` `TermsOfService.vue` (ทั้งหมดเป็น `<Head>` + อีก element) กับ `timeline.vue` (5 `<section>`) · เป็น leaf route จึงพังเฉพาะตอน **navigate ออกจากหน้าพวกนี้** ไม่ใช่ตอนเข้า — ยังไม่แตะเพราะอยู่นอกขอบเขตที่ผู้ใช้สั่ง
+- [x] ~~หน้าใต้ `Learn/Academy/[name]/Settings/*` และ `curriculum/*` เป็นโค้ด Inertia เก่า~~ → **อีก session ลบทิ้งไปแล้ว** ใน `9476499f` / `42a4e9b9` (ดู `ce944b6e docs(agents): plan the removal of the dead Inertia pages`) ⇒ ตอนนี้ทั้งสองโฟลเดอร์ไม่มีแล้ว
 
 ### Branch / Git State
 
-- Branch: `main`
-- Uncommitted: ไม่มี (working tree สะอาด)
-- Push status: **push ครบแล้ว**
-- หมายเหตุ: ระหว่างเซสชันนี้มี **อีก session ทำงานคู่ขนานบน branch เดียวกัน** — ระหว่างที่ผมแก้ฝั่ง `ui/pages` มี diff โผล่ใน `api/.../StudentCardController.php` + `routes/studentcard/studentcard.php` ซึ่งไม่ใช่ของงานนี้ (ผม `git add` เฉพาะ `ui/pages` ทุกครั้งจึงไม่ปนเข้ามา) ภายหลังถูก commit เป็น `7e4f429a fix(student-card): let the public room page upload and delete photos` และ push ไปแล้ว · **ครั้งหน้าถ้าทำสองที่พร้อมกัน ให้ `git add` แบบระบุ path เสมอ อย่าใช้ `git add -A` ลอย ๆ**
+- Branch: `main` · Uncommitted: ไม่มี · Push status: **push ครบแล้ว**
+- commit ของงานนี้ 4 ก้อน เรียงเก่า→ใหม่: `f20d0842` `21988a8a` `0a072f7d` (สามก้อนแรก) แล้ว `18b0d519` (5 หน้าร้านค้า รอบสอง) · `npm run build` ผ่าน exit 0 ทั้งสองรอบ
+- ตรวจซ้ำที่ HEAD ปัจจุบัน: root node ใน `pages/academies/` **ผ่านหมด** · parent route ที่ขาด `<NuxtPage />` **เหลือ 0 ทั้งโปรเจค** (ยังจริงอยู่หลังอีก session ลบไฟล์ไปเยอะ)
+
+### ⚠️ มีอีก session ทำงานคู่ขนานบน `main` ตลอดเซสชันนี้ — อ่านก่อนถ้าเจอ history งง
+
+1. ระหว่างผมแก้ `ui/pages` มี diff โผล่ใน `api/.../StudentCardController.php` + `routes/studentcard/studentcard.php` ที่ไม่ใช่ของงานนี้ · ผม `git add` เฉพาะ path ที่ตั้งใจทุกครั้งจึงไม่ปนเข้ามา ภายหลังถูก commit เป็น `7e4f429a`
+2. ตอนผมเขียน worklog รอบแรก อีก session **push `7e4f429a` แซงไประหว่างนั้น** ทำให้บรรทัด Push status ที่เพิ่งเขียนผิดทันที ต้องแก้ก่อน amend
+3. ตอนกลับมาอัพเดท worklog รอบสอง มี **9 commit ใหม่ทับอยู่ข้างบน** (`b5481114` … `42a4e9b9`) ส่วนใหญ่เป็นการลบหน้า Inertia เก่าทิ้ง · ตรวจแล้ว history เป็นเส้นตรง commit ของผมทั้ง 4 ก้อนยังเป็น ancestor ของ HEAD ครบ ไม่มีอะไรหาย
+
+**บทเรียน:** ทำสองที่พร้อมกันเมื่อไหร่ → `git add` ระบุ path เสมอ อย่าใช้ `git add -A` ลอย ๆ · และ **`git commit` เก็บทุกอย่างที่อยู่ใน index ไม่ใช่แค่ path ที่เพิ่ง add** (`git mv` stage ให้อัตโนมัติ — รอบนี้ commit แรกกลืน rename ไปหมด ต้อง `git reset` แล้ว stage ใหม่ทีละกลุ่ม) · ก่อนเขียน Branch/Git State ทุกครั้งให้ `git fetch` แล้วเช็คสถานะจริงก่อน
 
 ---
 
