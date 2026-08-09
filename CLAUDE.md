@@ -117,7 +117,21 @@ php artisan reverb:start             # websocket server
 ## Conventions ของโปรเจคนี้
 
 ### Frontend
+
+#### 🔴 Mobile First — นโยบายบังคับของทุก UI ใน `ui/`
+ทุก markup ที่เขียนใหม่หรือแก้ไข **ต้องออกแบบจากจอมือถือขึ้นไป** ไม่ใช่ย่อจอ desktop ลงมา
+- **class ที่ไม่มี prefix = สไตล์ของมือถือ** แล้วค่อยใช้ `sm:` `md:` `lg:` เพิ่มเมื่อจอกว้างขึ้น
+  ห้ามเขียนแบบ desktop-first เช่น `flex-row md:flex-col` — ต้องเป็น `flex-col md:flex-row`
+- **ห้ามใช้ `hidden` ซ่อนข้อมูลสำคัญบนมือถือ** ให้จัดวางใหม่ (ซ้อนเป็นแถว/ย้ายลงล่าง) แทนการตัดทิ้ง
+- **touch target ขั้นต่ำ 44px** บนมือถือ (`min-h-[44px]` หรือ `p-3`) แล้วค่อยลดลงที่ `sm:`
+- ทุกแถวที่เป็น flex ต้องกัน layout พัง: ฝั่งที่ห้ามถูกบีบใส่ `flex-shrink-0` + `whitespace-nowrap`,
+  ฝั่งข้อความใส่ `min-w-0 flex-1` + `break-words` (ภาษาไทยไม่มีช่องว่าง จะแตกเป็นแนวตั้งถ้าโดนบีบ)
+- ตาราง/โค้ด/ไดอะแกรมที่กว้าง ต้องอยู่ในกล่อง `overflow-x-auto` ของตัวเอง — **ห้ามให้ทั้งหน้าเลื่อนแนวนอน**
+- padding/ขนาดตัวอักษรไล่จากเล็กไปใหญ่ เช่น `p-3 sm:p-6`, `text-sm sm:text-base`
+- ตรวจจริงที่ **375px** ก่อนเสมอ แล้วค่อยตรวจ 768px / 1280px
+
 - **เมื่อสร้าง/redesign หน้าหรือ component ใดๆ ใน `ui/`** → ใช้สกิล `hopeui-port` (`.agents/skills/hopeui-port/SKILL.md`) เพื่อดึงดีไซน์จาก HopeUI Pro (`hopa/`) มาเป็นต้นแบบ markup ก่อนเสมอ
+  หมายเหตุ: markup ของ HopeUI เป็น **desktop-first** — ให้เอาโครงสร้าง/spacing มาใช้ แล้ว**เขียน breakpoint ใหม่เป็น mobile-first เสมอ**
 - ใช้ `<script setup lang="ts">` เป็น default
 - ตั้งชื่อ component แบบ **PascalCase** (เช่น `CourseProfileCover.vue`)
 - จัด component เป็น **domain folder** (เช่น `components/learn/`, `components/academy/`) + design system folders (`atoms/`, `molecules/`, `organisms/`)
