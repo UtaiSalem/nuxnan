@@ -1,5 +1,252 @@
 ---
 
+# 2026-08-09 — 🅰️ ลบเกาะ Inertia legacy ออกจาก `ui/` (Tier A: orphan ล้วน)
+
+- **Status:** Work Plan — พร้อมสั่งทำ
+- **Branch ตอนร่างแผน:** `main` (`b5481114`, working tree สะอาด, ตรงกับ `origin/main`)
+- **ขอบเขต:** ลบอย่างเดียว **ห้ามเขียนหน้าใหม่ ห้ามแก้ลอจิก** — ไฟล์ที่ยังใช้งานจริงอยู่ (Tier B) เป็นงานคนละรอบ
+- **ที่มา:** TODO ค้างจากเซสชัน 2026-08-09 (ปิดท้าย) — *"หน้าใต้ `Learn/Academy/[name]/Settings/*` และ `curriculum/*` เป็นโค้ด Inertia เก่า … ต้องตัดสินใจว่าจะรื้อหรือลบทิ้ง (ทั้งโปรเจคมี 51 ไฟล์ที่ import Inertia)"*
+
+## ข้อสรุป: **ลบ ไม่ต้องรื้อ**
+
+51 ไฟล์ที่ `import ... from '@inertiajs/vue3'` **ไม่ใช่ก้อนเดียวกัน** แยกได้ 4 ชั้น — เอกสารนี้ครอบคลุมเฉพาะ 🅰️
+
+| ชั้น | จำนวน | ชะตา |
+|---|---|---|
+| 🅰️ orphan ล้วน — 0 inbound link จากแอปจริง | ~74 ไฟล์ | **ลบ** (เอกสารนี้) |
+| 🅱️ live แต่พัง | 10 ไฟล์ | เขียนใหม่ — งานแยก |
+| 🅲 เศษ import บรรทัดเดียว | 1 ไฟล์ | ลบบรรทัด |
+| 🅳 ตัว shim เอง | 3 จุด | ลบหลัง A+B+C จบ |
+
+## หลักฐานที่ยืนยันว่าเป็น orphan จริง (ทำแล้วก่อนร่างแผน)
+
+1. **ไม่มี import จากนอกเกาะ** — สแกน `from '...'` / `import()` ทุกไฟล์ `.vue/.ts/.js` ใน `pages components layouts composables stores middleware plugins` เทียบกับ basename ของทุกไฟล์ในลิสต์ลบ → **เจอเส้นเดียว** คือ `pages/Learn/Courses/create.vue:2 → pages/Learn/Course/CreateNewCourse.vue` ⇒ ไฟล์นี้ **ถูกกันออกจากลิสต์ลบ**
+2. **ไม่มี route-string ชี้เข้า** — สแกน `'/Teams…' '/API…' '/Academy' '/Test' '/profile/Show' '/Learn/{Academy,Course,Student,Lesson}…'` ทั้ง `ui/` (รวม `server/`, `i18n/`) นอกเกาะ → **0 นัด**
+3. **ไม่มี auto-import tag ชี้เข้า** — เช็คทั้งชื่อสั้นและชื่อ prefix ของ Nuxt (`<Banner>`, `<PartialsNavbar>`, `<LearnAcademyAcademyNavbarTab>`, `<LearnAcademyPostsCreateAcademyPost>`) → **0 นัด**
+4. **ไม่มี layout name ชี้เข้า** — `academy-layout` / `course-layout` / `guest-layout` ไม่ถูกอ้างใน `definePageMeta` ที่ไหนเลย (เจอแค่ `.nuxt/types/layouts.d.ts` ซึ่ง generate ขึ้นเอง)
+5. **เกาะ `Learn/Academy` ลิงก์หากันเองล้วน** — ตัวที่ลิงก์เข้า `Settings/*` และ `curriculum/*` คือ `components/learn/academy/AcademyNavbarTab.vue` ซึ่งถูกใช้โดย `layouts/AcademyLayout.vue` + `Learn/Academy/*` เท่านั้น ⇒ ทั้งวงอยู่ในลิสต์ลบ
+6. **ของใหม่ที่แทนแล้วมีครบ** — `academies/[name]/admin/curriculums.vue` (หลักสูตร) · `academies/[name]/groups/` (กลุ่ม) · `academies/[name]/admin/**` (สมาชิก/รายวิชา/ตั้งค่า) · `student-card/**` · `home-visit/` + `academies/[name]/admin/home-visits/`
+
+**สภาพจริงของโค้ดเกาะนี้** (รันบนเบราว์เซอร์ dev :3000 แล้ว): `route()` ถูกใส่ไว้ที่ `globalProperties` ใน `plugins/inertia-shim.ts:86` ⇒ ใช้ได้เฉพาะใน template · หน้าไหนเรียกใน `<script setup>` จะได้ `ReferenceError: route is not defined` · `<Link>` ของ shim resolve `NuxtLink` ไม่เจอตอน SSR · และมี **13 ไฟล์ multi-root** ค้างอยู่ (แพทเทิร์น `<Head>` + เนื้อหาวางคู่กัน) ซึ่งเป็นบั๊กประเภทเดียวกับที่เซสชัน 2026-08-09 เสียเวลาไปทั้งวัน
+
+---
+
+## 🔴 กับดักที่ต้องอ่านก่อนแตะ — พลาดข้อเดียวพังทั้งระบบคอร์ส
+
+| เก็บ ✅ | ลบ ❌ | ต่างกัน |
+|---|---|---|
+| `pages/Learn/Courses/**` | `pages/Learn/Course/**` | ตัว **s** — `Courses` คือหน้าคอร์สหลักที่ใช้อยู่ทุกวัน |
+| `layouts/CoursesLayout.vue` | `layouts/CourseLayout.vue` | ตัว **s** — `CoursesLayout` ถูก `CreateNewCourse.vue:7` ใช้จริง |
+| `layouts/course.vue` | `layouts/CourseLayout.vue` | คนละไฟล์ — `course.vue` ถูกใช้โดย `pages/courses/[name]/{instructor-dashboard,reports}.vue` |
+| `pages/profile/{index,edit,[id].vue,[id]/settings.vue}` | `pages/profile/{Show.vue,Partials/**}` | โฟลเดอร์เดียวกัน คนละยุค |
+| `components/ImageGalleryModal.vue` | `pages/Learn/Student/HomeVisit/Teacher/Components/ImageGalleryModal.vue` | **ชื่อไฟล์ซ้ำกันเป๊ะ** ตัวที่ `components/learn/course/*` ใช้คือตัวใน `components/` |
+| `components/learn/academy/curriculum/**` | `pages/Learn/Academy/[name]/curriculum/**` | ตัวใน `components/` ถูก `academies/[name]/admin/curriculums.vue` ใช้จริง |
+| `pages/Learn/Course/CreateNewCourse.vue` | สมาชิกอื่นทั้งหมดใน `pages/Learn/Course/` | ตัวเดียวในโฟลเดอร์ที่ยัง live |
+
+---
+
+## แผนลงมือ — 6 เกาะ เรียงจากเสี่ยงน้อยไปมาก
+
+> **1 เกาะ = 1 commit** · หลังทุกเกาะต้องผ่าน gate เดียวกัน (ดู §เกณฑ์ผ่าน) · ถ้าเกาะไหนไม่ผ่านให้หยุดและรายงาน **ห้ามลบเกาะถัดไปทับลงไป**
+
+### เกาะ 1 — Jetstream leftovers (14 ไฟล์) · เสี่ยงต่ำสุด
+
+ระบบ Teams / Sanctum API token / Fortify profile — โปรเจคนี้ใช้ JWT และไม่มีฟีเจอร์ทีมเลย
+
+```
+pages/Teams/Create.vue
+pages/Teams/Show.vue
+pages/Teams/Partials/CreateTeamForm.vue
+pages/Teams/Partials/DeleteTeamForm.vue
+pages/Teams/Partials/TeamMemberManager.vue
+pages/Teams/Partials/UpdateTeamNameForm.vue
+pages/API/Index.vue
+pages/API/Partials/ApiTokenManager.vue
+pages/profile/Show.vue
+pages/profile/Partials/DeleteUserForm.vue
+pages/profile/Partials/LogoutOtherBrowserSessionsForm.vue
+pages/profile/Partials/TwoFactorAuthenticationForm.vue
+pages/profile/Partials/UpdatePasswordForm.vue
+pages/profile/Partials/UpdateProfileInformationForm.vue
+```
+ลบโฟลเดอร์ `pages/Teams/`, `pages/API/`, `pages/profile/Partials/` ให้หมดด้วย
+
+**เช็คก่อนลบ**
+- [ ] `pages/profile/` ต้องเหลือ `index.vue` `edit.vue` `[id].vue` `[id]/settings.vue` ครบ 4 ตัว
+- [ ] `grep -rn "Teams\|ApiTokenManager\|profile/Show\|profile/Partials" ui/pages ui/components ui/layouts ui/composables ui/stores ui/middleware` (นอกลิสต์ลบ) = ว่าง
+
+**ผลข้างเคียงที่ตั้งใจ:** route `/profile/Partials/UpdatePasswordForm` และเพื่อน ๆ ที่ตอนนี้เข้าถึงได้จริง จะหายไป — **นี่คือสิ่งที่ต้องการ** (partial ไม่ควรเป็น route)
+
+---
+
+### เกาะ 2 — Home Visit เก่า (18 ไฟล์)
+
+ลบทั้งโฟลเดอร์ `pages/Learn/Student/HomeVisit/` (รวม `README.md`, `index.js`, `Composables/useStudentRoutes.js`)
+
+**เช็คก่อนลบ**
+- [ ] ของใหม่มีจริง: `pages/home-visit/index.vue` และ `pages/academies/[name]/admin/home-visits/` เปิดได้
+- [ ] ⚠️ `Teacher/Components/ImageGalleryModal.vue` **ชื่อชนกับ** `components/ImageGalleryModal.vue` ที่ยังใช้อยู่ 5 จุด — ยืนยันว่า import ทั้ง 5 จุดชี้ `~/components/ImageGalleryModal.vue` ไม่ใช่ path ใต้ `HomeVisit/`
+- [ ] `Teacher/Components/StudentCard.vue` ก็ชื่อชนกับของอื่น — เช็ค path เต็มเหมือนกัน
+
+---
+
+### เกาะ 3 — Student Card เก่า (7 ไฟล์)
+
+ลบทั้งโฟลเดอร์ `pages/Learn/Student/Card/`
+
+**เช็คก่อนลบ**
+- [ ] ของใหม่คือ `pages/student-card/**` (`index.vue`, `[level]/`, `admin/`) — เพิ่งถูกแก้ในเซสชัน 2026-08-09 ทั้ง 3 ชั้น ยังใช้งานอยู่
+- [ ] ห้ามแตะ `pages/student-card/` และ `pages/academies/[name]/admin/student-cards/` เด็ดขาด
+
+**หลังเกาะ 2+3 จบ:** `pages/Learn/Student/` ต้องว่าง → ลบโฟลเดอร์ทิ้ง
+
+---
+
+### เกาะ 4 — เศษเดี่ยว (3 ไฟล์)
+
+```
+pages/Test.vue
+components/Banner.vue
+layouts/GuestLayout.vue
+```
+
+**เช็คก่อนลบ**
+- [ ] `<Banner` / `<Test` ไม่ปรากฏใน template ที่ไหน (ยืนยันแล้ว 0 นัด — ให้ยืนยันซ้ำ)
+- [ ] `layout: 'guest-layout'` ไม่มีใน `definePageMeta` ที่ไหน
+- [ ] `GuestLayout.vue` ไม่ถูก import โดย `pages/auth/*` (ตัว Tier B) — **ถ้าเจอว่าถูกใช้ ให้ข้ามไฟล์นี้แล้วรายงาน**
+
+---
+
+### เกาะ 5 — `Learn/Academy` ทั้งเกาะ (19 ไฟล์)
+
+```
+pages/Learn/Academy/Academies.vue
+pages/Learn/Academy/AcademyCourses.vue
+pages/Learn/Academy/AcademyGroups.vue
+pages/Learn/Academy/AcademyMembers.vue
+pages/Learn/Academy/CreateNewAcademy.vue
+pages/Learn/Academy/CreateNewAcademyCourse.vue
+pages/Learn/Academy/GroupDetail.vue
+pages/Learn/Academy/ShowAcademy.vue
+pages/Learn/Academy/[name]/Settings/General.vue
+pages/Learn/Academy/[name]/Settings/Members.vue
+pages/Learn/Academy/[name]/Settings/Roles.vue
+pages/Learn/Academy/[name]/Settings/index.vue
+pages/Learn/Academy/[name]/curriculum/index.vue
+pages/Learn/Academy/[name]/curriculum/[curriculumId].vue
+pages/Academy.vue
+layouts/AcademyLayout.vue
+components/partials/Navbar.vue
+components/learn/academy/AcademyNavbarTab.vue
+components/learn/academy/posts/CreateAcademyPost.vue
+```
+ลบโฟลเดอร์ `pages/Learn/Academy/` และ `components/partials/` ให้หมด (ถ้า `components/partials/` เหลือไฟล์อื่น **อย่าลบโฟลเดอร์** ลบเฉพาะ `Navbar.vue`)
+
+**เช็คก่อนลบ**
+- [ ] `components/learn/academy/` ต้องเหลือไฟล์อื่นครบ — โดยเฉพาะ `curriculum/CurriculumCourseList.vue` และ `curriculum/CurriculumForm.vue` ที่ `academies/[name]/admin/curriculums.vue` ใช้อยู่
+- [ ] `components/learn/academy/posts/` ถ้าเหลือไฟล์อื่นให้เก็บโฟลเดอร์ไว้
+- [ ] ยืนยันว่า `pages/academies/[name]/**` ไม่มี import ใด ๆ ชี้เข้าเกาะนี้
+- [ ] **นี่คือเกาะที่ปิด TODO เดิม** — `Settings/*` + `curriculum/*` ที่เซสชันก่อน "ปลดล็อกให้เข้าถึงได้" ถูกลบทิ้งตรงนี้
+
+---
+
+### เกาะ 6 — `Learn/Course` เก่า + `Learn/Lesson` (14 ไฟล์) · เสี่ยงสูงสุด
+
+```
+pages/Learn/Course/AuthMemberCourses.vue
+pages/Learn/Course/Basic/BasicInfo.vue
+pages/Learn/Course/Course.vue
+pages/Learn/Course/CourseMemberRequesters.vue
+pages/Learn/Course/Courses.vue
+pages/Learn/Course/Member/Member.vue
+pages/Learn/Course/Member/MemberSettings.vue
+pages/Learn/Course/Member/Members.vue
+pages/Learn/Course/Progress/CourseMembersProgress.vue
+pages/Learn/Course/Progress/MemberGradeProgressDetails.vue
+pages/Learn/Course/Setting/Settings.vue
+pages/Learn/Course/UserCourses.vue
+pages/Learn/Lesson/Lesson.vue
+layouts/CourseLayout.vue
+```
+
+**🚨 ห้ามลบเด็ดขาด**
+- `pages/Learn/Course/CreateNewCourse.vue` — live ผ่าน `pages/Learn/Courses/create.vue:2` ซึ่งลิงก์จาก `pages/academies/[name].vue:1469` และ `pages/Learn/Courses/index.vue:574`
+- `pages/Learn/Courses/**` ทั้งต้นไม้ (มี **s**)
+- `layouts/CoursesLayout.vue` (มี **s**) — `CreateNewCourse.vue:7,273,641` ใช้อยู่
+- `layouts/course.vue` — `pages/courses/[name]/{instructor-dashboard,reports}.vue` ใช้อยู่
+
+**เช็คก่อนลบ**
+- [ ] หลังลบ `pages/Learn/Course/` ต้องเหลือ **`CreateNewCourse.vue` ไฟล์เดียว**
+- [ ] `layouts/` ต้องเหลือ `CoursesLayout.vue` `NuxnanAdminLayout.vue` `auth.vue` `course.vue` `main.vue` (5 ไฟล์)
+- [ ] `pages/Learn/` ต้องเหลือ `Course/CreateNewCourse.vue` + `Courses/**` เท่านั้น
+
+**หมายเหตุ:** `pages/Learn/Course/CreateNewCourse.vue` จะยังเป็น route `/Learn/Course/CreateNewCourse` ที่พังอยู่ — **จงใจปล่อยไว้** เป็นงาน Tier B (ย้ายไปเป็น component หรือเขียนใหม่) ไม่ใช่งานรอบนี้
+
+---
+
+## เกณฑ์ผ่าน (ต้องรันเองทุกเกาะ ห้าม paste ตัวเลขที่ไม่ได้รันจริง)
+
+รันใน `C:\wamp64\www\nuxnan\ui`:
+
+```bash
+# 1) ไม่มี import ค้างชี้ไฟล์ที่ลบไปแล้ว — ต้องได้ผลว่าง
+#    (แยกเป็น 2 คำสั่ง อย่าใช้ negative lookahead — rust regex ของ ripgrep ไม่รองรับ)
+grep -rn --include=*.vue --include=*.ts --include=*.js \
+  -E "(Learn/(Academy|Student|Lesson)/|pages/Teams|pages/API|profile/(Show|Partials)|AcademyLayout|CourseLayout|GuestLayout|AcademyNavbarTab|components/partials/Navbar|components/Banner)" \
+  pages components layouts composables stores middleware plugins server app.vue
+
+grep -rn --include=*.vue --include=*.ts --include=*.js "Learn/Course/" \
+  pages components layouts composables stores middleware plugins server app.vue \
+  | grep -v "Learn/Course/CreateNewCourse"
+
+# 2) ไฟล์ที่ต้องยังอยู่ครบ
+ls pages/Learn/Course/            # ต้องเหลือ CreateNewCourse.vue ตัวเดียว
+ls layouts/                       # ต้องเหลือ 5 ไฟล์
+ls pages/profile/                 # ต้องมี index.vue edit.vue [id].vue [id]/
+ls layouts/CoursesLayout.vue layouts/course.vue components/ImageGalleryModal.vue
+
+# 3) จำนวนไฟล์ .vue ที่ยัง import Inertia — ต้องลดจาก 50 เหลือ 10
+grep -rl "@inertiajs/vue3" --include=*.vue . | grep -v node_modules | wc -l
+
+# 4) compile ทุก SFC ที่เหลือ (เร็วกว่า build มาก — วิธีที่ใช้ประจำในโปรเจคนี้)
+node -e "const {parse,compileTemplate,compileScript}=require('@vue/compiler-sfc'); ..."
+```
+
+**10 ไฟล์ `.vue` ที่ต้องเหลือหลังเกาะ 1–6 จบ** (Tier B + C):
+```
+components/AuthenticationCardLogo.vue
+pages/PrivacyPolicy.vue
+pages/TermsOfService.vue
+pages/auth/ConfirmPassword.vue
+pages/auth/ForgotPassword.vue
+pages/auth/ResetPassword.vue
+pages/auth/TwoFactorChallenge.vue
+pages/auth/VerifyEmail.vue
+pages/Learn/Course/CreateNewCourse.vue
+pages/Learn/Courses/[id]/groups/index.vue
+(+ shims/inertia-vue3.ts, plugins/inertia-shim.ts, nuxt.config.ts:11 ที่ยังต้องคงไว้)
+```
+
+## ห้ามทำ
+
+- ❌ ห้าม `git commit` / `git push` — claude เป็นคน commit เอง
+- ❌ ห้ามแตะ `api/nuxnanravel/` ทั้งหมด
+- ❌ ห้ามแตะไฟล์ Tier B/C ทั้ง 11 ไฟล์ข้างบน
+- ❌ ห้ามลบ `shims/inertia-vue3.ts` · `plugins/inertia-shim.ts` · alias ที่ `nuxt.config.ts:11` (ยังมีคนใช้ 11 ไฟล์)
+- ❌ ห้ามรัน `npm run build` (ผู้ใช้รันเอง) · ห้ามรัน `php artisan migrate`
+- ❌ ห้ามแก้ข้อความภาษาไทยในไฟล์ที่เหลือ
+- ❌ ห้าม "เผื่อไว้ก่อน" ลบไฟล์ที่ไม่มีในลิสต์ — ถ้าเจอไฟล์ที่คิดว่าน่าลบเพิ่ม ให้**รายงาน ไม่ใช่ลบ**
+
+## หลังจบ Tier A (งานของ claude ไม่ใช่ agy)
+
+1. `git diff --stat` + `git status` ตรวจว่าลบตรงลิสต์เป๊ะ ไม่มีไฟล์แปลกปลอม
+2. commit แยก 6 ก้อนตามเกาะ
+3. ผู้ใช้รัน `npm run build`
+4. เปิดเบราว์เซอร์ตรวจ smoke: `/academies/{name}/admin`, `/Learn/Courses`, `/student-card`, `/home-visit`, `/profile`
+5. เปิดงาน Tier B แยก (ลืมรหัสผ่าน + PrivacyPolicy/TermsOfService + CreateNewCourse)
+
+---
+
 # 2026-08-05 — Student Card SSOT: ปิด drift ระหว่างบัตร / ทะเบียนนักเรียน / รายชื่อห้อง
 
 - **Status:** Work Plan (ยังไม่ลงมือ)
