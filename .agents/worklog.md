@@ -1,5 +1,87 @@
 # Work Log — nuxnan project
 
+## 2026-08-09 (รอบดึก) — หน้าบัตรนักเรียนสาธารณะอัพรูปไม่ได้ · แล้วต่อด้วยย่อรูปฝั่ง client
+
+### สถานะ: **เสร็จ · commit 2 ก้อน · push ขึ้น `origin/main` แล้ว** (`7e4f429a` `b5481114`)
+
+> หมายเหตุแก้ความเข้าใจ: entry ก่อนหน้าเขียนว่า `7e4f429a` มาจาก "อีก session ที่ทำคู่ขนาน" — ใช่ครับ คือ session นี้เอง เนื้องานอยู่ข้างล่างนี้ทั้งหมด
+
+### 🐛 อาการที่รายงานมา
+
+`http://localhost:3000/student-card/1/7` — หน้าสาธารณะ **แก้ข้อมูลตัวหนังสือได้ แต่อัพโหลด/ลบรูปไม่ได้** ผู้ใช้เดาว่าเป็นเพราะปิดการ login · หน้านี้ต้องใช้งานได้โดยไม่ต้องล็อกอิน
+
+### 🎯 สาเหตุ — รูปภาพไม่มี "เส้นสาธารณะ" ส่วนข้อความมี
+
+`ui/components/student-card/StudentCardItem.vue` ถ้าไม่ได้รับ prop `uploadPhoto`/`deletePhoto` (หน้าสาธารณะไม่ส่งมา) จะ fallback ไปที่:
+
+| การกระทำ | เส้นเดิมที่ fallback ไป | อยู่ใน group |
+|---|---|---|
+| อัพโหลดรูป | `POST /api/student-card/admin/upload-photo/{id}` | `auth:api` ⇒ 401 |
+| ลบรูป | `DELETE /api/student-card/{id}/photo` | `auth:api` ⇒ 401 |
+| แก้ข้อความ | `PUT /api/student-card/public-update/{level}/{room}/{card}` | สาธารณะ ⇒ ผ่าน |
+
+**แก้:** แยกการตรวจ "บัตรใบนี้อยู่ในห้องตาม URL จริงไหม" ออกจาก `publicUpdate()` เป็น `assertCardInRoom()` แล้วเพิ่ม `publicUpdateImage()` / `publicDestroyPhoto()` ที่ใช้ guard ตัวเดียวกัน · route ใหม่ (นอก `auth:api`, throttle 20/นาที):
+
+```
+POST   /api/student-card/public-photo/{level}/{room}/{student_card}
+DELETE /api/student-card/public-photo/{level}/{room}/{student_card}
+```
+
+guard ยืนยันด้วยการยิงจริงแล้ว: บัตร ม.1/1 ยิงเข้า URL ม.2/5 · ม.3/8 · ม.1/2 · ม.9/99 → **404 ทุกอัน** และสุ่มเทสต์ ม.1/1 ถึง ม.6/1 ผ่านหมด (ครอบคลุมทั้ง 53 ห้องในปีปัจจุบัน ไม่ได้ hardcode 1/7)
+
+### 📏 งานต่อเนื่อง — ตามหาเพดานขนาดไฟล์ แล้วขยาย + ย่อรูปฝั่ง client
+
+วัดขอบเขตด้วยการยิงไฟล์จริง เจอว่าเพดานตอนนั้นคือ **2 MiB พอดี (2,097,152 bytes ผ่าน / 2,097,200 ไม่ผ่าน)** ซึ่งมาจาก `upload_max_filesize` ใน php.ini **ไม่ใช่** `max:5120` ที่เขียนไว้ใน validation (ไม่มีวันได้ทำงาน เพราะ PHP ทิ้งไฟล์ก่อน แล้วโผล่เป็น `The photo field is required.` ที่ไม่บอกสาเหตุจริง)
+
+ผู้ใช้เลือกทาง **"ย่อ ≤8MB + ขยาย server"** ⇒ ทำ 3 ชั้น:
+
+1. **`ui/composables/useImageCompressor.ts` (ไฟล์ใหม่)** — ลด quality ก่อน (0.9→0.5) ไม่พอค่อยหดขนาดทีละ 20% · cap ด้านยาวสุด 1600px · ไฟล์ที่อยู่ในงบแล้ว**ไม่แตะ** · decode ไม่ได้ (HEIC) ส่งต้นฉบับให้ server ตัดสิน · re-encode แล้วเปลี่ยนนามสกุลเป็น `.jpg` เสมอ (สำคัญ — `StudentPhotoService::store()` ตั้งชื่อไฟล์ที่เก็บจาก `getClientOriginalExtension()`) · PNG โปร่งใสรองพื้นขาวไม่ให้กลายเป็นดำ
+2. **validation** `max:5120` → `max:8192` (8 MiB ตรงกับ `MAX_STUDENT_PHOTO_BYTES` ใน `ui/constants/studentCard.ts`)
+3. **php.ini** — ดูหัวข้อถัดไป ⚠️
+
+การย่อเกิดใน `handlePhotoUpload()` ซึ่งใช้ร่วมกันทั้งสองหน้า ⇒ **หน้า `/academies/*/admin/student-cards` ได้ผลนี้ไปด้วย** โดยไม่ต้องแก้อะไรเพิ่ม
+
+### ⚠️⚠️ php.ini ไม่ได้อยู่ใน repo — เครื่องอีกที่ต้องแก้เอง ไม่งั้นเจอเพดานเดิม
+
+ไฟล์อยู่นอก git ที่ `C:\wamp64\bin\php\php8.4.15\` · **ต้องแก้ทั้งสองไฟล์**:
+
+| ไฟล์ | ใครใช้ | ค่าที่ต้องได้ |
+|---|---|---|
+| `php.ini` | `php artisan serve` (CLI) | `upload_max_filesize = 32M` · `post_max_size = 64M` |
+| `phpForApache.ini` | Apache/WAMP | `upload_max_filesize = 32M` · `post_max_size = 64M` |
+
+```bash
+grep -n "^post_max_size\|^upload_max_filesize" /c/wamp64/bin/php/php8.4.15/php.ini /c/wamp64/bin/php/php8.4.15/phpForApache.ini
+```
+
+สำรองไฟล์เดิมไว้แล้วที่ `*.bak-before-nuxnan-upload-20260809` (เฉพาะเครื่องนี้) · ค่าเดิมฝั่ง Apache คือ `post_max_size = 8M` + `upload_max_filesize = 2048M` ซึ่งเพี้ยนหนัก (post เป็นตัวคุมจริง ส่วน 2048M อันตรายโดยไม่จำเป็น) ตอนนี้ปรับให้ตรงกับ CLI แล้ว
+
+**กับดักที่เสียเวลาไปจริงในเซสชันนี้:** แก้ php.ini แล้วค่าไม่ขยับ เพราะ **process `php artisan serve` โหลด ini ตอนสตาร์ทครั้งเดียว** — ต้อง restart ถึงจะรับค่าใหม่ (Apache ก็เหมือนกัน) · เสียเวลาไปหลายรอบกว่าจะจับได้ว่าไฟล์บนดิสก์เป็น 32M แล้วแต่ process ยังบังคับ 2M อยู่
+
+### ✅ หลักฐานการทดสอบ
+
+- **เพดานหลัง restart**: 2.43 / 3.88 / 5.80 MB → 200 · 8.75 MB → 422 พร้อมข้อความที่บอกเหตุผลชัด `The photo field must not be greater than 8192 kilobytes.`
+- **compressor (รันโมดูลจริงในเบราว์เซอร์)**: 4.0 MB → ไม่แตะ · 18.8 MB → 1.7 MB · 44.5 MB → 1.3 MB · PNG โปร่งใส 29.4 MB → 1.7 MB `.jpg` พื้นขาว
+- **E2E ผ่าน UI จริง**: ยิงไฟล์ **32.2 MB** เข้า input ของการ์ด 2436 → POST 200 → ไฟล์ที่ลงดิสก์ **1.34 MB**
+- รูปทดสอบลบออกหมด นักเรียน 2436 กลับเป็น `profile_image = NULL` เหมือนเดิม · Pint ผ่าน
+- **ยังไม่ได้รัน `npm run build`** (ผู้ใช้รันเอง)
+
+### งานที่ค้างอยู่ (TODO ต่อ)
+
+- [ ] **เครื่องอีกที่: แก้ php.ini ทั้ง 2 ไฟล์ตามตารางข้างบน แล้ว restart Apache + `artisan serve`** ไม่งั้นอัพรูป >2MB ไม่ได้เหมือนเดิม
+- [ ] ยังไม่ได้ตรวจว่าใช้งานผ่าน **Apache/WAMP** (`localhost:80`) ได้จริง — ทดสอบทั้งหมดทำผ่าน `artisan serve` port 8000 เท่านั้น
+- [ ] ตอนที่จะ **ลบ public student-card route ทิ้ง** (ตามแผนเดิม) ต้องลบ `public-photo` ทั้งสองเส้น + `publicUpdateImage()` / `publicDestroyPhoto()` / `assertCardInRoom()` ไปพร้อมกัน — ตอนนี้ทั้งชุดเปิดให้ใครก็ได้แก้บัตร กันแค่ throttle + ต้องรู้ level/room/card id
+- [ ] `bulkUploadPhotos()` ใน `StudentCardController` ยังเป็น stub คืน 501 อยู่ (ถ้าจะทำ ควรใช้ compressor ตัวเดียวกัน)
+
+### Branch / Git State
+
+- Branch: `main`
+- Uncommitted: ไม่มี (working tree สะอาด)
+- Push status: **push ครบแล้ว** — `origin/main` = `b5481114`
+- หมายเหตุ: backend ที่รันอยู่ตอนจบ session เป็น process ที่ Claude สตาร์ทไว้ (port 8000) ถ้าหายไปก็ `php artisan serve` ใหม่ได้ตามปกติ
+
+---
+
 ## 2026-08-09 (ปิดท้าย) — สลับเมนู admin แล้วบางหน้าไม่โหลดข้อมูล · แก้ที่ "รูปทรงของไฟล์ page" ไม่ใช่ที่ API
 
 ### สถานะ: **เสร็จ · commit 3 ก้อน · push ขึ้น `origin/main` แล้ว** (`f20d0842` `21988a8a` `0a072f7d`) · `npm run build` ผ่าน
