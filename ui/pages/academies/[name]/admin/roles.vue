@@ -636,7 +636,6 @@ const colorOptions = [
         </div>
       </div>
     </Teleport>
-  </div>
     <Teleport to="body">
       <div v-if="showPreviewModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50" @click="showPreviewModal = false" />
@@ -653,4 +652,5 @@ const colorOptions = [
         </div>
       </div>
     </Teleport>
+  </div>
 </template>

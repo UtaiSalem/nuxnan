@@ -1142,8 +1142,10 @@ watch(() => academy.value?.id, (id) => {
 </script>
 
 <template>
-  <AcademyDonationModal v-if="academy" v-model:visible="showAcademyDonation" :academy-id="academy.id" :academy-name="academy.name" @donated="handleAcademyDonated" />
   <div>
+    <!-- ต้องมี root node เดียวเท่านั้น ไม่งั้น <Transition> ของ NuxtPage สลับหน้าไม่ได้ -->
+    <AcademyDonationModal v-if="academy" v-model:visible="showAcademyDonation" :academy-id="academy.id" :academy-name="academy.name" @donated="handleAcademyDonated" />
+
     <!-- Child Route Content (admin, dashboard, etc.) -->
     <NuxtPage v-if="isChildRoute" />
     
