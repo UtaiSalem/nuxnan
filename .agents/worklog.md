@@ -1,5 +1,86 @@
 # Work Log — nuxnan project
 
+## 2026-08-09 (ปิดท้าย) — สลับเมนู admin แล้วบางหน้าไม่โหลดข้อมูล · แก้ที่ "รูปทรงของไฟล์ page" ไม่ใช่ที่ API
+
+### สถานะ: **เสร็จ · commit 3 ก้อน · push ขึ้น `origin/main` แล้ว** (`f20d0842` `21988a8a` `0a072f7d`) · `npm run build` ผ่าน
+
+### 🐛 อาการที่รายงานมา
+
+ที่ `/academies/โรงเรียนจริยธรรมศึกษามูลนิธิ/admin` กดสลับเมนูใน sidebar แล้ว **บางเมนูไม่โหลดข้อมูล** — ผู้ใช้เดาว่า "น่าจะเป็นที่เลย์เอ้าท์" · reproduce ได้จริงในเบราว์เซอร์: URL เปลี่ยน แต่เนื้อหายังเป็นหน้าเดิม บางครั้ง renderer ค้างจนถ่าย screenshot ไม่ได้
+
+### 🎯 สาเหตุที่ 1 (ตัวหลัก) — page template มี root node เกิน 1 ตัว
+
+`<NuxtPage>` ห่อ page ไว้ใน `<Transition mode="out-in">` ซึ่ง**ต้องการ root element เดียว** · ถ้าเป็น fragment → หน้าที่กำลังออกไม่จบ transition → **หน้าเก่าค้างจอ หน้าใหม่ไม่ mount `onMounted` ไม่ทำงาน** ⇒ เห็นเป็น "ไม่โหลดข้อมูล"
+
+หลักฐานใน console (เงียบมาก ไม่มี error):
+```
+[nuxt] pages/academies/[name].vue does not have a single root node
+       and will cause errors when navigating between routes.
+[Vue warn]: Component inside <Transition> renders non-element root node
+```
+
+`pages/academies/[name].vue` เป็น route parent ของ `/academies/*` **ทั้งต้นไม้** ⇒ พังทุกเมนูใน admin · แก้ 3 ไฟล์:
+
+| ไฟล์ | root ที่เกินมา |
+|---|---|
+| `ui/pages/academies/[name].vue:1145` | `<AcademyDonationModal v-if>` วางคู่กับ `<div>` |
+| `ui/pages/academies/[name]/admin/roles.vue:638` | `</div>` ปิดก่อน `<Teleport>` ตัวสุดท้าย |
+| `ui/pages/academies/[name]/elections/[id]/station.vue:38` | `<div v-if>` วางคู่กับ `<main>` |
+
+### 🎯 สาเหตุที่ 2 — page ที่เป็น route parent แต่ไม่มี `<NuxtPage />`
+
+ไฟล์ `foo.vue` ที่มีโฟลเดอร์ `foo/` วางข้าง ๆ → Nuxt ทำให้เป็น **route parent** · ถ้าไม่มี `<NuxtPage />` ลูกจะไม่เรนเดอร์เลย (URL เปลี่ยนแต่เห็นเนื้อหาของ parent) · เจอ 5 จุด แก้โดยย้ายเป็น `<name>/index.vue`:
+
+- `admin/members.vue` → `admin/members/index.vue` — เดิม `/admin/members/invitations` และ `/admin/members/{id}` โชว์ "รายชื่อสมาชิก" แทน (ยืนยันด้วยตาแล้วทั้งก่อนและหลังแก้)
+- `Earn/Marketplace.vue` (เป็น 301 redirect) บัง `History.vue` `Sales.vue`
+- `Learn/Academy/[name]/Settings.vue` บัง `General/Members/Roles`
+- `Learn/Courses/[id]/groups/[groupId].vue` บัง `edit.vue`
+- `Learn/Academy/[name]/curriculum.vue` บัง `curriculum/index.vue` + `[curriculumId].vue`
+
+**ลบไฟล์ซ้ำ 2 ตัว (ผู้ใช้อนุมัติแล้ว)**: `curriculum.vue` (เก่ากว่า ไม่มี handler แก้ไข/ลบ/เข้าหน้ารายละเอียด) และ `lessons/create/index.vue` (เก่ากว่า มี debug div `test` สีแดงค้าง + path `/courses/` ที่ไม่มีแล้ว · เข้าไม่ถึงอยู่แล้ว) ⇒ `lessons/create.vue` กลายเป็น leaf route ปกติ
+
+### 🎨 งานพ่วง — 24 หน้าใน admin กลับมามี app shell
+
+24 หน้าย่อยใช้ `definePageMeta({ layout: false })` ⇒ **ไม่มี top nav / คอลัมน์โปรไฟล์** และการสลับเข้าออกหน้าพวกนี้ทำให้ NuxtLayout ถูก teardown+rebuild ทั้งก้อน (ช้า + fetch ซ้ำ) · เปลี่ยนเป็น `layout: 'main'` ทั้งหมด
+
+**ยกเว้น `admin/student-cards/print.vue` ที่คง `layout: false` ไว้** — เป็นหน้าพิมพ์จริง มี `@media print` + คลาส `print:hidden` ที่ออกแบบบนสมมติฐานว่าไม่มี app chrome
+
+### 🔴 กับดักที่เสียเวลาไปในเซสชันนี้ — อ่านก่อนทำงานคล้ายกัน
+
+1. **คอมเมนต์ HTML ที่ root ของ `<template>` ก็นับเป็น node** — ตอนแก้ `[name].vue` รอบแรกผมใส่คอมเมนต์ไว้เหนือ `<div>` แล้วมันยังพังเหมือนเดิม เพราะ `RouteProvider` เช็ค `vnode.el.nodeName ∈ {#comment, #text}` ⇒ **คอมเมนต์ต้องอยู่ข้างในทุกกรณี**
+2. **อย่า replace `layout: false` → `layout: 'main'` ผ่าน `node -e '...'` ที่ครอบด้วย single quote** — shell กินเครื่องหมาย `'` รอบ `main` ทิ้ง กลายเป็น `layout: main` (ไม่มี quote) แล้วทั้งแอปพัง 500 `main is not defined` · ใช้ heredoc เขียนสคริปต์ลงไฟล์แล้วค่อย `node file.cjs`
+3. **`git commit` เก็บทุกอย่างที่อยู่ใน index ไม่ใช่แค่ path ที่เพิ่ง `git add`** — `git mv` stage ให้อัตโนมัติ ⇒ commit แรกกลืน rename ทั้งหมดไปโดยที่ message ไม่ตรง · แก้ด้วย `git reset` (mixed) แล้ว stage ใหม่ทีละกลุ่ม (ทำก่อน push จึงไม่กระทบ remote)
+
+### 🧰 สคริปต์ตรวจ (ใช้ซ้ำได้ รันใน `ui/`)
+
+```bash
+# หา page ที่ root เกิน 1 — parse ด้วย @vue/compiler-sfc แล้วนับ template.ast.children
+#   (ต้องรวม v-else / v-else-if เข้ากับ v-if ตัวหน้า ไม่งั้น false positive เพียบ)
+# หา route parent ที่ขาด <NuxtPage /> — ไฟล์ foo.vue ที่มีโฟลเดอร์ foo/ อยู่ข้าง ๆ
+```
+ผลหลังแก้: root node ใน `pages/academies/` **ผ่านหมด** · parent ที่ขาด `<NuxtPage />` **เหลือ 0 ทั้งโปรเจค**
+
+### ⚠️ ยังไม่ได้ตรวจด้วยตา — ต้องทำต่อ
+
+ยืนยันด้วยเบราว์เซอร์แล้ว **เฉพาะส่วนแรก** (สลับเมนู แดชบอร์ด → สมาชิก → คำขอเข้าร่วม → ห้องเรียน → บทบาท → ผลการเรียน → บัตรนักเรียน ขึ้นข้อมูลครบ · `/admin/members/invitations` ถูกต้อง)
+
+หลังจากนั้น dev server restart แล้ว **session หลุดไป `/auth`** เลยตรวจงาน `layout: 'main'` ต่อไม่ได้ → **ผ่านแค่ `npm run build`**
+
+### งานที่ค้างอยู่ (TODO ต่อ)
+
+- [ ] **ตรวจด้วยตา** ว่า 24 หน้าที่เปลี่ยนเป็น `layout: 'main'` หน้าตาไม่เพี้ยน — ตัวอย่างที่ควรดู: `/admin/store/products`, `/admin/gradebook/subjects`, `/admin/gradebook/rollover`, `/admin/home-visits/zones`, `/admin/students/import`
+- [ ] เช็ค `/admin/student-cards/print` ว่ายังพิมพ์ออกมาถูก (เป็นหน้าเดียวที่ยังคง `layout: false`)
+- [ ] หน้าใต้ `Learn/Academy/[name]/Settings/*` และ `curriculum/*` ที่เพิ่งปลดล็อกให้เข้าถึงได้ **เป็นโค้ด Inertia เก่า** (`@inertiajs/vue3` ไม่ได้ติดตั้งจริง ใช้ shim ที่ `ui/shims/inertia-vue3.ts` + alias ใน `nuxt.config.ts:11`) และรับ `defineProps({academy, isAcademyAdmin})` ที่ไม่มีใครส่งให้ ⇒ **เข้าถึงได้แล้วแต่ยังไม่ทำงาน** ต้องตัดสินใจว่าจะรื้อหรือลบทิ้ง (ทั้งโปรเจคมี 51 ไฟล์ที่ import Inertia)
+
+### Branch / Git State
+
+- Branch: `main`
+- Uncommitted: ไม่มี (working tree สะอาด)
+- Push status: **push ครบแล้ว**
+- หมายเหตุ: ระหว่างเซสชันนี้มี **อีก session ทำงานคู่ขนานบน branch เดียวกัน** — ระหว่างที่ผมแก้ฝั่ง `ui/pages` มี diff โผล่ใน `api/.../StudentCardController.php` + `routes/studentcard/studentcard.php` ซึ่งไม่ใช่ของงานนี้ (ผม `git add` เฉพาะ `ui/pages` ทุกครั้งจึงไม่ปนเข้ามา) ภายหลังถูก commit เป็น `7e4f429a fix(student-card): let the public room page upload and delete photos` และ push ไปแล้ว · **ครั้งหน้าถ้าทำสองที่พร้อมกัน ให้ `git add` แบบระบุ path เสมอ อย่าใช้ `git add -A` ลอย ๆ**
+
+---
+
 ## 2026-08-09 — หน้าบัตรนักเรียนแสดงคนไม่ครบ · แก้ครบทั้ง 3 ชั้น (อาการ + ข้อมูลค้าง + กันซ้ำ)
 
 ### สถานะ: **เสร็จครบ · commit 4 ก้อน · push ขึ้น `origin/main` แล้ว** (`6bdd6bf1` `127a255a` `9bdc9f6c` `64266ffa`) · working tree สะอาด
