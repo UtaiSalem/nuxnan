@@ -2,7 +2,6 @@
 import { Icon } from '@iconify/vue'
 import GroupsList from '~/components/learn/course/GroupsList.vue'
 import GroupForm from '~/components/learn/course/GroupForm.vue'
-import { usePage } from '@inertiajs/vue3'
 import { useCourseMemberStore } from '~/stores/courseMember'
 import { useAuthStore } from '~/stores/auth'
 import { useCourseStore } from '~/stores/course'
@@ -18,7 +17,6 @@ const courseMemberStore = useCourseMemberStore()
 const authStore = useAuthStore()
 const courseStore = useCourseStore()
 const route = useRoute()
-const page = usePage()
 
 // State
 const groups = computed(() => courseGroupStore.groups)
