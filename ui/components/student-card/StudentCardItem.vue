@@ -128,7 +128,7 @@ const handlePhotoUploadToServer = async (id, studentNumber, file) => {
     try {
         const response = props.uploadPhoto
             ? await props.uploadPhoto(formData, props.studentInfo)
-            : await $fetch(`${apiBase}/api/student-card/admin/upload-photo/${id}`, {
+            : await $fetch(`${apiBase}/api/student-card/public-photo/${props.studentInfo.class_level}/${props.studentInfo.class_section}/${id}`, {
                 method: 'POST',
                 body: formData,
             })
@@ -202,7 +202,7 @@ const handleDeletePhoto = async () => {
         isDeletingStudentPhoto.value = true
         const response = props.deletePhoto
             ? await props.deletePhoto(props.studentInfo)
-            : await $fetch(`${apiBase}/api/student-card/${props.studentInfo.id}/photo`, { method: 'DELETE' })
+            : await $fetch(`${apiBase}/api/student-card/public-photo/${props.studentInfo.class_level}/${props.studentInfo.class_section}/${props.studentInfo.id}`, { method: 'DELETE' })
         if (response.success) {
             previewImage.value = null
             tempPhoto.value = null

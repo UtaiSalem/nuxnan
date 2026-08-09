@@ -763,10 +763,10 @@ class StudentCardController extends Controller
     }
 
     /**
-     * Temporary public update endpoint for the classroom management page.
-     * The card must belong to the level and room supplied by the page.
+     * บัตรใบนี้ต้องอยู่ในห้องที่ URL สาธารณะระบุมาจริง ๆ ไม่งั้น 404
+     * ใช้ร่วมกันทุก endpoint สาธารณะที่แก้บัตรได้ (แก้ข้อมูล / อัพโหลดรูป / ลบรูป)
      */
-    public function publicUpdate(Request $request, string $level, string $room, StudentCard $student_card)
+    private function assertCardInRoom(string $level, string $room, StudentCard $student_card): void
     {
         $student_card->load('student.classroomEnrollments.classroom.academicYear');
         $requestedLevel = (int) preg_replace('/\D+/', '', $level);
@@ -787,8 +787,38 @@ class StudentCardController extends Controller
         if (! $belongsToRoom && ($cardLevel !== $requestedLevel || $cardRoom !== $requestedRoom)) {
             abort(404);
         }
+    }
+
+    /**
+     * Temporary public update endpoint for the classroom management page.
+     * The card must belong to the level and room supplied by the page.
+     */
+    public function publicUpdate(Request $request, string $level, string $room, StudentCard $student_card)
+    {
+        $this->assertCardInRoom($level, $room, $student_card);
 
         return $this->update($request, $student_card, null);
+    }
+
+    /**
+     * อัพโหลดรูปบัตรจากหน้าสาธารณะ — คู่กับ publicUpdate
+     * ถ้าไม่มีเส้นนี้ หน้าชั่วคราวจะเด้ง 401 เพราะไปตกที่เส้น admin ที่ต้องล็อกอิน
+     */
+    public function publicUpdateImage(Request $request, string $level, string $room, StudentCard $student_card)
+    {
+        $this->assertCardInRoom($level, $room, $student_card);
+
+        return $this->updateImage($request, $student_card, null);
+    }
+
+    /**
+     * ลบรูปบัตรจากหน้าสาธารณะ — คู่กับ publicUpdateImage
+     */
+    public function publicDestroyPhoto(Request $request, string $level, string $room, StudentCard $student_card)
+    {
+        $this->assertCardInRoom($level, $room, $student_card);
+
+        return $this->destroyPhoto($request, $student_card, null);
     }
 
     /**

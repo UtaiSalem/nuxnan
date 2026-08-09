@@ -46,10 +46,18 @@ Route::prefix('student-card')->name('student-card.')->group(function () {
         Route::delete('/{student_card}/photo', [StudentCardController::class, 'destroyPhoto'])->name('photo.destroy');
     });
 
-    // Temporary public classroom-management endpoint, scoped to the current room.
+    // Temporary public classroom-management endpoints, scoped to the current room.
     Route::put('/public-update/{level}/{room}/{student_card}', [StudentCardController::class, 'publicUpdate'])
         ->middleware('throttle:10,1')
         ->name('public-update');
+
+    Route::post('/public-photo/{level}/{room}/{student_card}', [StudentCardController::class, 'publicUpdateImage'])
+        ->middleware('throttle:20,1')
+        ->name('public-photo.store');
+
+    Route::delete('/public-photo/{level}/{room}/{student_card}', [StudentCardController::class, 'publicDestroyPhoto'])
+        ->middleware('throttle:20,1')
+        ->name('public-photo.destroy');
 
     // Admin Functions (Public - with admin password verification per action)
     Route::prefix('admin')->name('admin.')->group(function () {
