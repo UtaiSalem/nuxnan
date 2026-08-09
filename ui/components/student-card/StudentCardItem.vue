@@ -4,7 +4,7 @@ import QRCodeVue3 from "qrcode-vue3"
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/vue'
-import { DEFAULT_STUDENT_CARD_SCHOOL } from '~/constants/studentCard'
+import { DEFAULT_STUDENT_CARD_SCHOOL, MAX_STUDENT_PHOTO_BYTES } from '~/constants/studentCard'
 
 const props = defineProps({
     studentInfo: { type: Object, required: true },
@@ -109,16 +109,45 @@ const cardBgStyle = computed(() => ({
     background: `url('${apiBase}/storage/images/std_card_bg2.png') center center / cover no-repeat`
 }))
 
-const handlePhotoUpload = (event) => {
+const { compressImage, formatBytes } = useImageCompressor({ maxBytes: MAX_STUDENT_PHOTO_BYTES })
+
+const handlePhotoUpload = async (event) => {
     const file = event.target.files[0]
     if (!file) return
+
+    isEditStudentPhoto.value = true
+
+    // ย่อก่อนอ่านเป็น preview ไม่งั้นรูปมือถือ 12MB จะกลายเป็น data URL ~16MB ค้างในหน้า
+    let picked = file
+    try {
+        const result = await compressImage(file)
+        picked = result.file
+        if (result.bytes > MAX_STUDENT_PHOTO_BYTES) {
+            isEditStudentPhoto.value = false
+            if (fileInput.value) fileInput.value.value = ''
+            Swal.fire({
+                icon: 'error',
+                title: 'ไฟล์ใหญ่เกินไป',
+                text: `ย่อแล้วยังได้ ${formatBytes(result.bytes)} ซึ่งเกิน ${formatBytes(MAX_STUDENT_PHOTO_BYTES)} กรุณาเลือกรูปที่เล็กลง`,
+                confirmButtonText: 'ตกลง',
+            })
+            return
+        }
+    } catch {
+        picked = file // ย่อไม่ได้ก็ส่งต้นฉบับไป ให้ฝั่งเซิร์ฟเวอร์เป็นคนตัดสิน
+    }
+
     const reader = new FileReader()
     reader.onload = (e) => {
         previewImage.value = e.target.result
-        isEditStudentPhoto.value = true
-        handlePhotoUploadToServer(props.studentInfo.id, props.studentInfo.student_number, file)
+        handlePhotoUploadToServer(props.studentInfo.id, props.studentInfo.student_number, picked)
     }
-    reader.readAsDataURL(file)
+    reader.onerror = () => {
+        isEditStudentPhoto.value = false
+        if (fileInput.value) fileInput.value.value = ''
+        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'อ่านไฟล์รูปไม่สำเร็จ', confirmButtonText: 'ตกลง' })
+    }
+    reader.readAsDataURL(picked)
 }
 
 const handlePhotoUploadToServer = async (id, studentNumber, file) => {

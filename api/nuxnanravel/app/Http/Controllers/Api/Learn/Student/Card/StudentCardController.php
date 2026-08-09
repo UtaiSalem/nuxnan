@@ -533,8 +533,11 @@ class StudentCardController extends Controller
         [$academy, $student_card] = $this->resolveCardRouteParameters($academy, $student_card);
         $this->ensureCardBelongsToAcademy($student_card, $academy);
         $this->ensureCanManageCard($request, $academy, $student_card);
+        // 8192 KB = 8 MiB ต้องตรงกับ MAX_STUDENT_PHOTO_BYTES ฝั่ง ui และต้องต่ำกว่า
+        // upload_max_filesize/post_max_size ใน php.ini ไม่งั้น PHP ทิ้งไฟล์ก่อนถึงตรงนี้
+        // แล้วครูจะเห็นแค่ "The photo field is required." ซึ่งไม่ได้บอกสาเหตุจริง
         $request->validate([
-            'photo' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'photo' => 'required|image|mimes:jpeg,png,jpg,webp|max:8192',
         ]);
 
         try {

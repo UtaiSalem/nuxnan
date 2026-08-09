@@ -21,3 +21,13 @@ export const DEFAULT_STUDENT_CARD_SCHOOL: StudentCardSchool = {
     address: '148 ม.8 ต.สะกอม อ.จะนะ จ.สงขลา 90130 โทร.081-5412281',
     logo_url: null,
 }
+
+/**
+ * งบขนาดไฟล์รูปบัตรหลังย่อฝั่ง client (8 MiB)
+ *
+ * ต้องเดินคู่กับสามค่านี้เสมอ ไม่งั้นครูจะเจอ error ที่อ่านไม่รู้เรื่อง:
+ *   - validation 'photo' => max:8192 ใน StudentCardController::updateImage()
+ *   - upload_max_filesize ใน php.ini (ตั้งไว้ 10M เผื่อ overhead)
+ *   - post_max_size ใน php.ini (ตั้งไว้ 12M — ต้องมากกว่า upload_max_filesize)
+ */
+export const MAX_STUDENT_PHOTO_BYTES = 8 * 1024 * 1024
