@@ -5,6 +5,7 @@ import { useApi } from '@/composables/useApi'
 import { useSweetAlert } from '@/composables/useSweetAlert'
 import ImageLightbox from '~/components/play/feed/ImageLightbox.vue'
 import LessonQuizCompletionCard from './LessonQuizCompletionCard.vue'
+import QuestionImportModal from '~/components/learn/course/questions/QuestionImportModal.vue'
 
 interface NextLesson {
   id: number
@@ -49,6 +50,14 @@ const emit = defineEmits<{
 
 const api = useApi()
 const swal = useSweetAlert()
+
+const showImportModal = ref(false)
+const importScope = computed(() => ({ type: 'lesson' as const, lessonId: props.lessonId }))
+const onQuestionsImported = async () => {
+  showImportModal.value = false
+  const res: any = await api.get(`/api/lessons/${props.lessonId}/questions`)
+  emit('update:questions', res?.data ?? res ?? [])
+}
 
 const hasQuestions = computed(() => props.questions && props.questions.length > 0)
 
@@ -425,24 +434,32 @@ onUnmounted(() => {
   <div class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6">
     <!-- Header -->
     <div class="mb-4">
-      <div class="flex items-center justify-between">
-        <h3 class="flex items-center gap-2 text-xl font-bold text-gray-900 dark:text-white">
-            <Icon icon="fluent:quiz-new-24-filled" class="w-6 h-6 text-orange-600" />
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h3 class="flex flex-wrap items-center gap-2 text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
+            <Icon icon="fluent:quiz-new-24-filled" class="w-6 h-6 text-orange-600 flex-shrink-0" />
             แบบทดสอบ
-            <span class="px-2 py-0.5 text-sm font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full">
+            <span class="px-2 py-0.5 text-sm font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full whitespace-nowrap">
             {{ questions.length }} ข้อ
             </span>
         </h3>
-        
+
         <!-- Admin Actions -->
-        <button 
-            v-if="isCreator"
-            @click="emit('create')"
-            class="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
-        >
-            <Icon icon="fluent:add-24-filled" class="w-4 h-4" />
-            เพิ่มคำถาม
-        </button>
+        <div v-if="isCreator" class="grid grid-cols-2 sm:flex sm:items-center gap-2">
+            <button
+                @click="showImportModal = true"
+                class="flex items-center justify-center gap-2 min-h-[44px] px-3 sm:px-4 py-2 border border-orange-300 text-orange-600 rounded-lg hover:bg-orange-50 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-900/30 transition-colors text-sm font-medium"
+            >
+                <Icon icon="fluent:arrow-upload-24-regular" class="w-4 h-4 flex-shrink-0" />
+                อัปโหลดข้อสอบ
+            </button>
+            <button
+                @click="emit('create')"
+                class="flex items-center justify-center gap-2 min-h-[44px] px-3 sm:px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
+            >
+                <Icon icon="fluent:add-24-filled" class="w-4 h-4 flex-shrink-0" />
+                เพิ่มคำถาม
+            </button>
+        </div>
       </div>
     </div>
 
@@ -797,6 +814,7 @@ onUnmounted(() => {
         </div>
       </Transition>
     </Teleport>
+    <QuestionImportModal v-if="isCreator" :show="showImportModal" :scope="importScope" @close="showImportModal = false" @imported="onQuestionsImported" />
   </div>
 </template>
 

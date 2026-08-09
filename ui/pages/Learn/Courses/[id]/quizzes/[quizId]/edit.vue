@@ -4,12 +4,21 @@ import { Icon } from '@iconify/vue'
 // import '@vuepic/vue-datepicker/dist/main.css'
 import Swal from 'sweetalert2'
 import QuizRewardForm from '~/components/learn/course/points/QuizRewardForm.vue'
+import QuestionImportModal from '~/components/learn/course/questions/QuestionImportModal.vue'
 
 const route = useRoute()
 const courseId = route.params.id
 const quizId = route.params.quizId
 const api = useApi()
 const { account, fetchAccount } = useCoursePoints(courseId)
+
+const showImportModal = ref(false)
+const importScope = computed(() => ({ type: 'quiz' as const, courseId, quizId }))
+const onQuestionsImported = async (count: number) => {
+  showImportModal.value = false
+  await fetchData()
+  Swal.fire('สำเร็จ', `นำเข้าข้อสอบ ${count} ข้อเรียบร้อยแล้ว`, 'success')
+}
 
 definePageMeta({
   middleware: ['auth', async (to) => {
@@ -643,60 +652,78 @@ const deleteQuestion = async (qId: number) => {
         </div>
 
         <!-- Questions Tab -->
-        <div v-show="activeTab === 'questions'" class="p-4 sm:p-6">
-            <div class="flex justify-between items-center mb-6">
+        <div v-show="activeTab === 'questions'" class="p-3 sm:p-6">
+            <!-- หัวข้อ + ปุ่ม: mobile ซ้อนกันและปุ่มเต็มความกว้าง, sm+ อยู่แถวเดียวกัน -->
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4 sm:mb-6">
                 <h3 class="font-bold text-gray-900 dark:text-white">รายการคำถาม</h3>
-                <button 
-                  @click="openAddQuestion"
-                  class="px-4 py-2 rounded-lg bg-purple-100 text-purple-600 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50 transition-colors flex items-center gap-2 font-medium"
-                >
-                  <Icon icon="fluent:add-circle-24-regular" class="w-5 h-5" />
-                  เพิ่มข้อสอบ
-                </button>
+                <div class="grid grid-cols-2 sm:flex sm:items-center gap-2">
+                  <button
+                    @click="showImportModal = true"
+                    class="w-full sm:w-auto min-h-[44px] px-3 sm:px-4 py-2 rounded-lg border border-purple-200 text-purple-600 hover:bg-purple-50 dark:border-purple-800 dark:text-purple-400 dark:hover:bg-purple-900/30 transition-colors flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
+                  >
+                    <Icon icon="fluent:arrow-upload-24-regular" class="w-5 h-5 flex-shrink-0" />
+                    อัปโหลดข้อสอบ
+                  </button>
+                  <button
+                    @click="openAddQuestion"
+                    class="w-full sm:w-auto min-h-[44px] px-3 sm:px-4 py-2 rounded-lg bg-purple-100 text-purple-600 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50 transition-colors flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
+                  >
+                    <Icon icon="fluent:add-circle-24-regular" class="w-5 h-5 flex-shrink-0" />
+                    เพิ่มข้อสอบ
+                  </button>
+                </div>
             </div>
 
-            <div v-if="questions.length === 0" class="text-center py-12 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
+            <div v-if="questions.length === 0" class="text-center py-10 sm:py-12 px-4 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
                 <Icon icon="fluent:quiz-new-24-regular" class="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p class="text-gray-500">ยังไม่มีข้อสอบในชุดนี้</p>
-                <button @click="openAddQuestion" class="text-purple-600 hover:underline mt-2">เพิ่มข้อสอบแรก</button>
+                <button @click="openAddQuestion" class="text-purple-600 hover:underline mt-2 min-h-[44px] px-2">เพิ่มข้อสอบแรก</button>
             </div>
 
-            <div v-else class="space-y-4">
-                <div v-for="(q, index) in questions" :key="q.id" class="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4 border border-gray-100 dark:border-gray-700">
-                    <div class="flex items-start justify-between gap-4">
-                        <div class="flex gap-3">
-                            <div class="w-8 h-8 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center font-bold text-gray-500 text-sm shadow-sm">
-                                {{ index + 1 }}
-                            </div>
-                            <div>
-                                <h4 class="font-medium text-gray-900 dark:text-white mb-2">{{ q.text }}</h4>
+            <div v-else class="space-y-3 sm:space-y-4">
+                <div v-for="(q, index) in questions" :key="q.id" class="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3 sm:p-4 border border-gray-100 dark:border-gray-700">
+                    <div class="flex gap-2.5 sm:gap-3">
+                        <!-- เลขข้อ: อยู่นอกส่วนที่ reflow เสมอ -->
+                        <div class="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center font-bold text-gray-500 text-xs sm:text-sm shadow-sm">
+                            {{ index + 1 }}
+                        </div>
+
+                        <!-- เนื้อหา + แถบคะแนน/ปุ่ม: mobile ซ้อนกัน, sm+ วางข้างกัน -->
+                        <div class="min-w-0 flex-1 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2.5 sm:gap-4">
+                            <div class="min-w-0">
+                                <h4 class="font-medium text-gray-900 dark:text-white mb-2 break-words">{{ q.text }}</h4>
                                 <!-- Question Images -->
                                 <div v-if="q.images && q.images.length" class="flex flex-wrap gap-2 mb-2">
-                                    <img v-for="img in q.images" :key="img.id" :src="img.full_url || img.url" class="h-16 w-auto rounded-lg object-cover border border-gray-200 dark:border-gray-600" />
+                                    <img v-for="img in q.images" :key="img.id" :src="img.full_url || img.url" class="h-16 w-auto max-w-full rounded-lg object-cover border border-gray-200 dark:border-gray-600" />
                                 </div>
                                 <div class="space-y-1">
-                                    <div v-for="opt in q.options" :key="opt.id" class="flex items-center gap-2 text-sm">
-                                        <Icon 
-                                            :icon="opt.is_correct ? 'fluent:checkmark-circle-24-filled' : 'fluent:circle-24-regular'" 
-                                            :class="opt.is_correct ? 'text-green-500' : 'text-gray-400'"
+                                    <div v-for="opt in q.options" :key="opt.id" class="flex items-start gap-2 text-sm">
+                                        <Icon
+                                            :icon="opt.is_correct ? 'fluent:checkmark-circle-24-filled' : 'fluent:circle-24-regular'"
+                                            :class="[opt.is_correct ? 'text-green-500' : 'text-gray-400', 'w-5 h-5 flex-shrink-0 mt-0.5']"
                                         />
-                                        <span :class="opt.is_correct ? 'text-green-700 dark:text-green-400 font-medium' : 'text-gray-600 dark:text-gray-400'">
+                                        <span :class="[opt.is_correct ? 'text-green-700 dark:text-green-400 font-medium' : 'text-gray-600 dark:text-gray-400', 'min-w-0 break-words']">
                                             {{ opt.text }}
                                         </span>
-                                        <img v-if="opt.images && opt.images.length" :src="opt.images[0].full_url || opt.images[0].url" class="h-8 w-auto rounded object-cover border border-gray-200 dark:border-gray-600" />
+                                        <img v-if="opt.images && opt.images.length" :src="opt.images[0].full_url || opt.images[0].url" class="h-8 w-auto flex-shrink-0 rounded object-cover border border-gray-200 dark:border-gray-600" />
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="flex items-center gap-1">
-                            <span class="text-xs font-bold px-2 py-1 bg-blue-100 dark:bg-blue-900/30 rounded text-blue-600 dark:text-blue-300 mr-1">{{ q.points }} คะแนน</span>
-                            <span class="text-xs font-bold px-2 py-1 bg-orange-100 dark:bg-orange-900/30 rounded text-orange-600 dark:text-orange-300 mr-2">{{ q.pp_fine || 0 }} แต้ม</span>
-                            <button @click="openEditQuestion(q)" class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-colors" title="แก้ไขคำถาม">
-                                <Icon icon="fluent:edit-20-regular" class="w-5 h-5" />
-                            </button>
-                            <button @click="deleteQuestion(q.id)" class="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors" title="ลบคำถาม">
-                                <Icon icon="fluent:delete-20-regular" class="w-5 h-5" />
-                            </button>
+
+                            <div class="flex items-center justify-between gap-2 flex-shrink-0 border-t border-gray-200/70 dark:border-gray-600/50 pt-2 sm:border-0 sm:pt-0 sm:justify-end">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-xs font-bold px-2 py-1 whitespace-nowrap bg-blue-100 dark:bg-blue-900/30 rounded text-blue-600 dark:text-blue-300">{{ q.points }} คะแนน</span>
+                                    <span class="text-xs font-bold px-2 py-1 whitespace-nowrap bg-orange-100 dark:bg-orange-900/30 rounded text-orange-600 dark:text-orange-300">{{ q.pp_fine || 0 }} แต้ม</span>
+                                </div>
+                                <div class="flex items-center gap-0.5 sm:ml-1">
+                                    <button @click="openEditQuestion(q)" class="p-3 sm:p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-colors" title="แก้ไขคำถาม">
+                                        <Icon icon="fluent:edit-20-regular" class="w-5 h-5" />
+                                    </button>
+                                    <button @click="deleteQuestion(q.id)" class="p-3 sm:p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors" title="ลบคำถาม">
+                                        <Icon icon="fluent:delete-20-regular" class="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -852,5 +879,7 @@ const deleteQuestion = async (qId: number) => {
     <div v-show="activeTab === 'reward'" class="p-4 sm:p-6">
         <QuizRewardForm :course-id="courseId" :quiz-id="Number(quizId)" :available-balance="account?.available_balance || 0" />
     </div>
+
+    <QuestionImportModal :show="showImportModal" :scope="importScope" @close="showImportModal = false" @imported="onQuestionsImported" />
   </div>
 </template>
