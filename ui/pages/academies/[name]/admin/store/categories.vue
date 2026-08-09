@@ -121,12 +121,12 @@ const toggleActive = async (category: any) => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <div>
     <div v-if="isLoading" class="flex items-center justify-center py-20">
       <div class="animate-spin rounded-full h-10 w-10 border-4 border-primary-500 border-t-transparent"></div>
     </div>
 
-    <div v-else class="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+    <div v-else class="space-y-6">
       <!-- Back -->
       <NuxtLink :to="`/academies/${academyName}/admin/store`"
         class="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary-600 transition-colors">
