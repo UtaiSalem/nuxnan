@@ -1,5 +1,104 @@
 # Work Log — nuxnan project
 
+## 2026-08-10 — ตัดสินชะตา 51 ไฟล์ Inertia · ลบเกาะที่ตายแล้วออก 75 ไฟล์ (Tier A + C)
+
+### สถานะ: **เสร็จ · 8 commit** — Tier A (6 เกาะ) + Tier C · **⚠️ ยังไม่ได้รัน `npm run build`** · เหลือ Tier B 9 ไฟล์
+
+> ปิด TODO ที่ค้างมาจาก 2026-08-09 (ปิดท้าย): *"หน้าใต้ `Learn/Academy/[name]/Settings/*` และ `curriculum/*` เป็นโค้ด Inertia เก่า … ต้องตัดสินใจว่าจะรื้อหรือลบทิ้ง"* → **คำตอบคือลบ** เพราะเป็น orphan ล้วน
+
+### 🔍 51 ไฟล์นั้น "ไม่ใช่ก้อนเดียวกัน" — แยกได้ 4 ชั้น
+
+แผนเต็มพร้อมรายชื่อไฟล์ทุกตัวอยู่ที่ [`.agents/latest-analysis.md`](.agents/latest-analysis.md) **entry บนสุด** (`2026-08-09 — 🅰️ ลบเกาะ Inertia legacy`)
+
+| ชั้น | จำนวน | ชะตา | สถานะ |
+|---|---|---|---|
+| 🅰️ orphan ล้วน 0 inbound link | 75 ไฟล์ | ลบ | ✅ เสร็จ |
+| 🅱️ live แต่พังจริง | 9 ไฟล์ | เขียนใหม่ | ⏳ ยังไม่ทำ |
+| 🅲 เศษ import บรรทัดเดียว | 1 ไฟล์ | ลบบรรทัด | ✅ เสร็จ |
+| 🅳 ตัว shim + alias | 3 จุด | ลบหลัง B จบ | ⏳ ยังไม่ทำ (ยังมีคนใช้ 9 ไฟล์) |
+
+**วิธีพิสูจน์ว่าเป็น orphan** (ทำครบ 6 ด้านก่อนลบสักไฟล์): สแกน `import`/`import()` ทุก `.vue/.ts/.js` · สแกน route-string · สแกน auto-import tag ทั้งชื่อสั้นและชื่อ prefix ของ Nuxt (`<PartialsNavbar>` ฯลฯ) · สแกน layout name ใน `definePageMeta` · ตรวจว่าเกาะลิงก์หากันเองล้วน · ยืนยันว่าของใหม่ที่แทนแล้วมีจริง
+⇒ เจอเส้น inbound จากแอปจริง **เส้นเดียว** คือ `Learn/Courses/create.vue:2 → Learn/Course/CreateNewCourse.vue` (จึงกันไฟล์นั้นออกจากลิสต์ลบ)
+
+### 🗑️ commit ที่ลง (เรียงตามเกาะ · เสี่ยงน้อย → มาก)
+
+| commit | เกาะ | ไฟล์ |
+|---|---|---|
+| `ce944b6e` | เขียนแผนลง `latest-analysis.md` | — |
+| `a4093743` | 1 · Jetstream leftovers — `pages/Teams/` `pages/API/` `pages/profile/Partials/` `profile/Show.vue` | 14 |
+| `3055501d` | 2 · `pages/Learn/Student/HomeVisit/` | 18 |
+| `84a56449` | 3 · `pages/Learn/Student/Card/` (โฟลเดอร์ `Learn/Student/` หายไปเลย) | 7 |
+| `e2b7fa86` | 4 · `pages/Test.vue` `components/Banner.vue` `layouts/GuestLayout.vue` | 3 |
+| `9476499f` | 5 · `pages/Learn/Academy/` + `pages/Academy.vue` + `layouts/AcademyLayout.vue` + `components/partials/Navbar.vue` + `AcademyNavbarTab.vue` + `posts/CreateAcademyPost.vue` | 19 |
+| `42a4e9b9` | 6 · `pages/Learn/Course/` (เว้น `CreateNewCourse.vue`) + `pages/Learn/Lesson/` + `layouts/CourseLayout.vue` | 14 |
+| `bcefe3dc` | 🅲 ลบ `usePage()` ที่ไม่ถูกใช้ใน `Learn/Courses/[id]/groups/index.vue` | 2 บรรทัด |
+| `6156c563` | อัพเดท Status ในแผนเป็น "ทำเสร็จแล้ว" | — |
+
+**รวม −18,773 บรรทัด** · ไฟล์ `.vue` ที่ import Inertia: **50 → 9**
+
+### ✅ เกณฑ์ผ่านที่รันจริง (ไม่ได้ใช้ `npm run build`)
+
+1. **ไฟล์ที่ต้องเหลือ** — `pages/Learn/Course/` เหลือ `CreateNewCourse.vue` ตัวเดียว · `layouts/` เหลือ 5 (`CoursesLayout` `NuxnanAdminLayout` `auth` `course` `main`) · `pages/profile/` เหลือ 4 · `components/ImageGalleryModal.vue` + `components/learn/academy/curriculum/*` ยังอยู่
+2. **ไม่มี import ค้าง** — grep 2 ชุด ว่างทั้งคู่ (⚠️ ห้ามใช้ negative lookahead ใน grep/ripgrep — rust regex ไม่รองรับ ต้องแยกเป็น 2 คำสั่งแล้ว pipe `grep -v`)
+3. **compile ทุก SFC ที่เหลือ** ด้วย `@vue/compiler-sfc` — 734 ไฟล์ · fail 1 ตัวคือ `components/academy/rollover/RolloverStepIndicator.vue` ซึ่ง**มีมาก่อนงานนี้** (มาจาก `bea9d5bb` Phase 5 rollover wizard) — `defineProps()` อ้าง `defaultSteps` ที่ประกาศในไฟล์เดียวกัน
+4. **ตรวจ route table จาก router สดในเบราว์เซอร์** (263 routes) — 11 route ที่ต้องหาย หายครบ · 10 route ที่ต้องอยู่ อยู่ครบ · `/academies/**` ยังครบ 86 route
+
+### 🔴 กับดักที่ต้องอ่านก่อนแตะงานนี้ต่อ — ชื่อคล้ายกันจนลบผิดได้
+
+| เก็บ ✅ | ลบไปแล้ว ❌ | ต่างกัน |
+|---|---|---|
+| `pages/Learn/Courses/**` | `pages/Learn/Course/**` | ตัว **s** — `Courses` คือหน้าคอร์สหลักที่ใช้ทุกวัน |
+| `layouts/CoursesLayout.vue` | `layouts/CourseLayout.vue` | ตัว **s** — `CoursesLayout` ถูก `CreateNewCourse.vue:7` ใช้ |
+| `layouts/course.vue` | `layouts/CourseLayout.vue` | คนละไฟล์ — `course.vue` ถูก `pages/courses/[name]/{instructor-dashboard,reports}.vue` ใช้ |
+| `components/ImageGalleryModal.vue` | `…/HomeVisit/Teacher/Components/ImageGalleryModal.vue` | **ชื่อชนกันเป๊ะ** — ตัวที่ `components/learn/course/*` ใช้ (5 จุด) คือตัวใน `components/` |
+| `components/learn/academy/curriculum/**` | `pages/Learn/Academy/[name]/curriculum/**` | ตัวใน `components/` ถูก `academies/[name]/admin/curriculums.vue` ใช้ |
+| `components/learn/academy/CreateNewAcademyCourse.vue` | `pages/Learn/Academy/CreateNewAcademyCourse.vue` | ชื่อชนกัน คนละโฟลเดอร์ |
+
+### 🐛 หลักฐาน Tier B ที่พิสูจน์บนเบราว์เซอร์แล้ว (ยังไม่แก้)
+
+**`route()` ใช้ได้เฉพาะใน template** — `plugins/inertia-shim.ts:86` ใส่ไว้ที่ `globalProperties` ⇒ หน้าไหนเรียกใน `<script setup>` ตายทันที
+
+- `/auth/ForgotPassword` — **ลิงก์จริงจาก [`pages/nuxnan-admin/login.vue:149`](ui/pages/nuxnan-admin/login.vue:149)** · กรอกอีเมลแล้วกดปุ่ม → console: `Uncaught ReferenceError: route is not defined (at submit)` · **ปุ่มไม่ทำอะไรเลย**
+- `/PrivacyPolicy` + `/TermsOfService` — **ลิงก์จาก footer หน้า landing 3 จุด** ([`ModernFooterSection.vue:113,146,149`](ui/components/landing/ModernFooterSection.vue:113)) · `PrivacyPolicy.vue:20` ใช้ `v-html="policy"` โดย `policy` เป็น prop ที่ไม่มีใครส่ง (เดิม Jetstream ส่งจาก server) ⇒ **เปิดจริงแล้วเป็นหน้าว่าง เหลือแค่โลโก้ "P" ของ Plearnd ซึ่งเป็นแบรนด์เก่า** — คนนอกเข้าถึงได้
+- `<Link>` ของ shim resolve `NuxtLink` ไม่เจอตอน SSR → `[Vue warn] Failed to resolve component: NuxtLink at <InertiaLink> at <AuthenticationCardLogo>`
+- `pages/Learn/Course/CreateNewCourse.vue:626` เรียก `router.push()` แต่ **shim ไม่มีเมธอด `push`** (มีแค่ `visit/get/post/put/patch/delete`) ⇒ ปุ่มยกเลิกโยน TypeError · หน้านี้ live ผ่าน `Learn/Courses/create.vue` ที่ลิงก์จาก [`academies/[name].vue:1469`](ui/pages/academies/[name].vue:1469) และ [`Learn/Courses/index.vue:574`](ui/pages/Learn/Courses/index.vue:574)
+- **multi-root ยังเหลือ** ในไฟล์ Tier B (`<Head>` + เนื้อหาวางคู่กัน) — เซสชัน 2026-08-09 กวาดเฉพาะ `pages/academies/` เท่านั้น
+
+### งานที่ค้างอยู่ (TODO ต่อ)
+
+- [ ] **รัน `npm run build`** — ยังไม่เคยรันหลังลบ 75 ไฟล์ **และโค้ดอยู่บน `origin/main` แล้ว** (ดูหัวข้อ Git State) ⇒ ควรรันก่อนเครื่องอื่น pull
+- [ ] **🅱️ Tier B — 9 ไฟล์ที่ยัง import Inertia** ต้องเขียนใหม่ ไม่ใช่ลบ:
+  `components/AuthenticationCardLogo.vue` · `pages/PrivacyPolicy.vue` · `pages/TermsOfService.vue` · `pages/auth/{ConfirmPassword,ForgotPassword,ResetPassword,TwoFactorChallenge,VerifyEmail}.vue` · `pages/Learn/Course/CreateNewCourse.vue`
+  → ลำดับที่แนะนำ: PrivacyPolicy/TermsOfService ก่อน (หน้าสาธารณะ เนื้อหาว่างอยู่) → ForgotPassword (มีลิงก์จริง) → CreateNewCourse (ย้ายไปเป็น component ใน `components/learn/course/` จะดีกว่าปล่อยเป็น route `/Learn/Course/CreateNewCourse` ที่พังอยู่)
+- [ ] **🅳 ถอด Inertia ออกถาวร** หลัง Tier B จบ — ลบ `ui/shims/inertia-vue3.ts` · `ui/plugins/inertia-shim.ts` · alias ที่ `ui/nuxt.config.ts:11`
+- [ ] **`components/academy/rollover/RolloverStepIndicator.vue:25-27`** — `defineProps()` อ้าง `defaultSteps` ที่ประกาศในไฟล์เดียวกัน (compiler ห้าม) · มีมาก่อนงานนี้ ไม่ได้เกิดจากการลบ · ตรวจว่า build ผ่านจริงไหม
+- [ ] **(ค้างจากรอบก่อน)** S-S4 schema คะแนนกีฬาสี (ไม่มีอะไรบล็อกแล้ว) · ตั้งชื่อคณะสีจริงแทน 4 ชื่อชั่วคราวแล้วสั่งแบ่งใหม่ · ไฟล์ SQL สำหรับ prod **ล้าหลัง 12 migrations แล้ว ไม่ใช่ 9** (`2026_08_05_160000` → `2026_08_09_100000`)
+
+### ✅ TODO เก่าที่ปิดไปแล้ว (worklog รอบก่อนตกข่าว)
+
+- `down()` ของ `2026_08_06_100100` ที่พังกับ generated column → แก้แล้วที่ `8aed7728`
+- `StudentCardPublicResource` dead code → ลบแล้วที่ `a5d65991`
+- ลบกิ่ง `fix/student-card-room-roster` → ไม่มีในลิสต์ branch แล้ว
+- `php artisan migrate` บนเครื่องนี้ → ไม่มี pending (batch ล่าสุด 121, `2026_08_09_100000` = Ran batch 120)
+- ตรวจ 24 หน้า `layout: 'main'` ด้วยตา → session คู่ขนานทำแล้ว (`be473a41`)
+
+### Context สำคัญ
+
+- **ทำไมถึงเลือก "ลบ" ไม่ใช่ "รื้อ"** — เกาะ `Learn/Academy` / `Learn/Course` / `Learn/Student` ทั้งหมดมีของใหม่แทนครบแล้ว (`academies/[name]/**` · `Learn/Courses/**` · `student-card/**` · `home-visit/` + `admin/home-visits/`) และไม่มีเส้นลิงก์จากแอปจริงเข้าไปเลยสักเส้น · ส่วน `Teams/` `API/` `profile/Partials/` เป็นซาก Jetstream/Sanctum ที่โปรเจคนี้ไม่ได้ใช้ (ใช้ JWT)
+- **`pages/*/Partials/` เคยเป็น route จริง** — `/profile/Partials/UpdatePasswordForm` เข้าถึงได้จริงก่อนลบ · หายไปแล้วและเป็นสิ่งที่ต้องการ
+- **ตอนลบไฟล์ใต้ dev server ที่รันอยู่** vite จะทิ้ง error ค้างใน console (`[vite] Failed to reload /pages/Learn/Student/Card/...`) — เป็นขยะ HMR ไม่ใช่ของจริง · restart dev server แล้วหาย · ตัวที่เชื่อได้คือ route table ที่อ่านจาก `$router.getRoutes()` สด ๆ
+- **agy ใช้ไม่ได้ในเซสชันนี้** — สั่งผ่าน Bash และ PowerShell แล้วโดน Claude Code auto-mode classifier บล็อกทั้งคู่ (`Permission for this action was denied`) · ตัว exe อยู่ที่ `C:\Users\Bhupha\AppData\Local\agy\bin\agy.exe` และ settings ก็มี · ถ้าจะใช้ครั้งหน้าต้องเพิ่ม permission rule ใน `.claude/settings.json` ก่อน · **รอบนี้ claude ลบเองทั้งหมดโดยผู้ใช้อนุมัติ**
+
+### Branch / Git State
+
+- Branch: `main`
+- Uncommitted: ไม่มี (working tree สะอาด)
+- Push status: **⚠️ Tier A ทั้ง 6 เกาะถูก push ไปแล้ว** — `origin/main` = `be473a41` ซึ่งเป็น**ลูกของ `42a4e9b9` (เกาะ 6)** · **session คู่ขนานบน branch เดียวกัน** commit worklog ทับขึ้นมาแล้ว push ทั้งชุดไปโดยที่ยังไม่มีใครรัน `npm run build`
+- ค้างบนเครื่องนี้ 2 ก้อน: `bcefe3dc` (Tier C) · `6156c563` (docs)
+- 🔴 **บทเรียนซ้ำจาก 2026-08-09**: ทำงานสองที่พร้อมกันบน `main` ให้ `git add` ระบุ path เสมอ และเช็ค `git log origin/main..main` ก่อนสรุปสถานะทุกครั้ง — รอบนี้ผมสรุปว่า "ยังไม่ push" ไปแล้วรอบหนึ่งก่อนจะพบว่ามันถูก push ไปแล้ว
+
+---
+
 ## 2026-08-09 (รอบดึก) — หน้าบัตรนักเรียนสาธารณะอัพรูปไม่ได้ · แล้วต่อด้วยย่อรูปฝั่ง client
 
 ### สถานะ: **เสร็จ · commit 2 ก้อน · push ขึ้น `origin/main` แล้ว** (`7e4f429a` `b5481114`)
