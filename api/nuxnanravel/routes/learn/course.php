@@ -45,6 +45,7 @@ use App\Http\Controllers\Api\Learn\Course\posts\CoursePostReactionController;
 use App\Http\Controllers\Api\Learn\Course\questions\QuestionAnswerController;
 use App\Http\Controllers\Api\Learn\Course\questions\QuestionController;
 use App\Http\Controllers\Api\Learn\Course\questions\QuestionImageController;
+use App\Http\Controllers\Api\Learn\Course\questions\QuestionImportController;
 use App\Http\Controllers\Api\Learn\Course\questions\QuestionOptionController;
 use App\Http\Controllers\Api\Learn\Course\questions\UserAnswerQuestionController;
 use App\Http\Controllers\Api\Learn\Course\quizzes\CourseQuizController;
@@ -132,6 +133,9 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses')->group(function 
     // in one transaction. The old unMemberGroup() route was removed — it only cleared
     // course_members.group_id and left course_group_members stale.
 
+    Route::get('/{course}/quizzes/{quiz}/questions/import/template', [QuestionImportController::class, 'quizTemplate'])->name('course.quiz.questions.import.template');
+    Route::post('/{course}/quizzes/{quiz}/questions/import/preview', [QuestionImportController::class, 'quizPreview'])->name('course.quiz.questions.import.preview');
+    Route::post('/{course}/quizzes/{quiz}/questions/import', [QuestionImportController::class, 'quizImport'])->name('course.quiz.questions.import');
     Route::resource('/{course}/quizzes/{quiz}/questions', CourseQuizQuestionController::class)->names('course.quiz.questions');
     Route::resource('/{course}/quizzes/{quiz}/results', CourseQuizResultController::class);
     Route::post('/{course}/quizzes/{quiz}/recalculate', [CourseQuizController::class, 'recalculateResults'])->name('course.quiz.recalculate');
@@ -208,6 +212,9 @@ Route::middleware(['auth:api', 'verified'])->prefix('/lessons')->group(function 
     Route::resource('/', LessonController::class);
     Route::resource('/{lesson}/images', LessonImageController::class)->names('lesson.images');
     Route::resource('/{lesson}/assignments', LessonAssignmentController::class)->names('lesson.assignments');
+    Route::get('/{lesson}/questions/import/template', [QuestionImportController::class, 'lessonTemplate'])->name('lesson.questions.import.template');
+    Route::post('/{lesson}/questions/import/preview', [QuestionImportController::class, 'lessonPreview'])->name('lesson.questions.import.preview');
+    Route::post('/{lesson}/questions/import', [QuestionImportController::class, 'lessonImport'])->name('lesson.questions.import');
     Route::resource('/{lesson}/questions', LessonQuestionController::class, [
         'names' => [
             'index' => 'lesson.questions.index',
