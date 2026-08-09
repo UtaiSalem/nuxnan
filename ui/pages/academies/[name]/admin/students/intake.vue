@@ -3,7 +3,7 @@ import { Icon } from '@iconify/vue'
 import IntakeWizard from '~/components/academy/student-intake/IntakeWizard.vue'
 
 definePageMeta({
-  layout: false
+  layout: 'main'
 })
 
 const route = useRoute()

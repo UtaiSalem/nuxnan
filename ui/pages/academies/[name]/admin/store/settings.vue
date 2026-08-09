@@ -6,7 +6,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 
-definePageMeta({ layout: false })
+definePageMeta({ layout: 'main' })
 
 const route = useRoute()
 const academyName = computed(() => route.params.name as string)

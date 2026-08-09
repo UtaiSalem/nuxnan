@@ -5,7 +5,7 @@ import RolloverBatchHistoryCard from '~/components/academy/rollover/RolloverBatc
 import type { RolloverBatchDTO } from '~/types/enrollment'
 
 definePageMeta({
-  layout: false,
+  layout: 'main',
 })
 
 const route = useRoute()

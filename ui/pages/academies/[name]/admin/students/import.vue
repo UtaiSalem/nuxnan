@@ -29,7 +29,7 @@ import { useRoute } from 'vue-router'
 import ImportWizard from '../../../../components/academy/student-import/ImportWizard.vue'
 
 definePageMeta({
-  layout: false,
+  layout: 'main',
   middleware: ['auth'],
 })
 

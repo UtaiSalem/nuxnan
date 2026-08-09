@@ -3,7 +3,7 @@ import { Icon } from '@iconify/vue'
 import { useStudentImportService } from '~/services/studentImportService'
 
 definePageMeta({
-  layout: false,
+  layout: 'main',
 })
 
 const route = useRoute()

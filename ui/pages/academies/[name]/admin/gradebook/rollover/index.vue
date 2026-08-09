@@ -11,7 +11,7 @@ import type {
 } from '~/types/enrollment'
 
 definePageMeta({
-  layout: false,
+  layout: 'main',
 })
 
 interface YearForm {

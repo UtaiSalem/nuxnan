@@ -20,7 +20,7 @@ import type {
 import { ENROLLMENT_STATUS } from '~/types/enrollment'
 
 definePageMeta({
-  layout: false
+  layout: 'main'
 })
 
 const route = useRoute()
