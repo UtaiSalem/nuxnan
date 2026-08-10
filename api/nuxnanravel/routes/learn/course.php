@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\Learn\Course\lessons\comments\LessonCommentReaction
 use App\Http\Controllers\Api\Learn\Course\lessons\CourseLessonController;
 use App\Http\Controllers\Api\Learn\Course\lessons\CourseLessonReactionController;
 use App\Http\Controllers\Api\Learn\Course\lessons\images\LessonImageController;
+use App\Http\Controllers\Api\Learn\Course\lessons\LessonAttachmentController;
 use App\Http\Controllers\Api\Learn\Course\lessons\LessonController;
 use App\Http\Controllers\Api\Learn\Course\lessons\LessonProgressController;
 use App\Http\Controllers\Api\Learn\Course\lessons\questions\LessonAnswerQuestionController;
@@ -210,6 +211,12 @@ Route::middleware(['auth:api', 'verified'])->prefix('/lessons/{lesson}')->group(
 
 Route::middleware(['auth:api', 'verified'])->prefix('/lessons')->group(function () {
     Route::resource('/', LessonController::class);
+
+    Route::get('/{lesson}/attachments/{attachment}/download', [LessonAttachmentController::class, 'download'])->name('lesson.attachments.download');
+    Route::get('/{lesson}/attachments', [LessonAttachmentController::class, 'index'])->name('lesson.attachments.index');
+    Route::post('/{lesson}/attachments', [LessonAttachmentController::class, 'store'])->name('lesson.attachments.store');
+    Route::delete('/{lesson}/attachments/{attachment}', [LessonAttachmentController::class, 'destroy'])->name('lesson.attachments.destroy');
+
     Route::resource('/{lesson}/images', LessonImageController::class)->names('lesson.images');
     Route::resource('/{lesson}/assignments', LessonAssignmentController::class)->names('lesson.assignments');
     Route::get('/{lesson}/questions/import/template', [QuestionImportController::class, 'lessonTemplate'])->name('lesson.questions.import.template');
@@ -235,6 +242,11 @@ Route::middleware(['auth:api', 'verified'])->prefix('/lessons')->group(function 
 });
 
 Route::middleware(['auth:api', 'verified'])->prefix('/topics/{topic}')->group(function () {
+    Route::get('/attachments/{attachment}/download', [LessonAttachmentController::class, 'download'])->name('topic.attachments.download');
+    Route::get('/attachments', [LessonAttachmentController::class, 'index'])->name('topic.attachments.index');
+    Route::post('/attachments', [LessonAttachmentController::class, 'store'])->name('topic.attachments.store');
+    Route::delete('/attachments/{attachment}', [LessonAttachmentController::class, 'destroy'])->name('topic.attachments.destroy');
+
     Route::resource('/images', TopicImageController::class)->names('topic.images');
     Route::post('/reading/start', [TopicReadProgressController::class, 'start'])->name('topic.reading.start');
     Route::post('/reading/complete', [TopicReadProgressController::class, 'complete'])->name('topic.reading.complete');

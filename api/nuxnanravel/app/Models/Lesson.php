@@ -71,6 +71,11 @@ class Lesson extends Model
         return $this->morphMany(Assignment::class, 'assignmentable');
     }
 
+    public function attachments(): MorphMany
+    {
+        return $this->morphMany(LessonAttachment::class, 'attachable')->orderBy('order')->orderBy('id');
+    }
+
     public function questions(): MorphMany
     {
         return $this->morphMany(Question::class, 'questionable');

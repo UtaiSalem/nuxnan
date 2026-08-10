@@ -24,6 +24,7 @@ class TopicResource extends JsonResource
             'youtube_url' => $this->youtube_url,
             'min_read' => $this->min_read,
             'images' => TopicImageResource::collection($this->images),
+            'attachments' => LessonAttachmentResource::collection($this->attachments),
             'view_count' => $this->view_count,
             'status' => $this->status,
             'sort_order' => $this->sort_order,

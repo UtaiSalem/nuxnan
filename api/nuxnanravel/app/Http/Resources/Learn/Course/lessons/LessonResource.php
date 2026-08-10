@@ -78,6 +78,7 @@ class LessonResource extends JsonResource
                 'content' => null,
                 'youtube_url' => null,
                 'topics' => [],
+                'attachments' => [],
                 'assignments' => [],
                 'questions' => [],
                 'comments' => [],
@@ -100,6 +101,7 @@ class LessonResource extends JsonResource
                 return $this->progress->where('user_id', auth()->guard('api')->id())->first();
             }),
             'topics' => TopicResource::collection($this->topics),
+            'attachments' => LessonAttachmentResource::collection($this->attachments),
             'assignments' => AssignmentResource::collection(
                 $this->assignments->filter(function ($assignment) {
                     if (auth()->id() === $this->course->user_id) {
