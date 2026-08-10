@@ -113,7 +113,7 @@ const deleteAssignment = async (assignment: any) => {
   }
 }
 
-const handleSubmitAnswer = async (assignmentId: number, answerData: { content: string, files: File[], deleted_images?: number[] }) => {
+const handleSubmitAnswer = async (assignmentId: number, answerData: { content: string, files: File[], deleted_images?: number[], attachments?: File[], deleted_attachments?: number[] }) => {
   try {
     const formData = new FormData()
     formData.append('content', answerData.content)
@@ -131,6 +131,18 @@ const handleSubmitAnswer = async (assignmentId: number, answerData: { content: s
     if (answerData.deleted_images && answerData.deleted_images.length > 0) {
       answerData.deleted_images.forEach((id) => {
         formData.append('deleted_images[]', id.toString())
+      })
+    }
+
+    if (answerData.attachments) {
+      answerData.attachments.forEach((file) => {
+        formData.append('attachments[]', file)
+      })
+    }
+
+    if (answerData.deleted_attachments && answerData.deleted_attachments.length > 0) {
+      answerData.deleted_attachments.forEach((id) => {
+        formData.append('deleted_attachments[]', id.toString())
       })
     }
     

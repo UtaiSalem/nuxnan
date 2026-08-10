@@ -4,6 +4,7 @@ import { Icon } from '@iconify/vue'
 import AssignmentGradingView from '~/components/learn/course/AssignmentGradingView.vue'
 import AssignmentSubmissionForm from '~/components/learn/course/AssignmentSubmissionForm.vue'
 import ContentLoader from '~/components/accessories/ContentLoader.vue'
+import AnswerAttachmentList from '~/components/learn/course/assignments/AnswerAttachmentList.vue'
 
 const route = useRoute()
 const api = useApi()
@@ -26,6 +27,9 @@ const answerContent = ref('')
 const answerFiles = ref<File[]>([])
 const existingImages = ref<any[]>([])
 const deletedImageIds = ref<number[]>([])
+const answerAttachments = ref<File[]>([])
+const existingAttachments = ref<any[]>([])
+const deletedAttachmentIds = ref<number[]>([])
 const isSubmitting = ref(false)
 const isEditing = ref(false)
 
@@ -120,8 +124,11 @@ const editAnswer = () => {
     if(!userAnswer.value) return
     answerContent.value = userAnswer.value.content || ''
     existingImages.value = [...(userAnswer.value.images || [])]
+    existingAttachments.value = [...(userAnswer.value.attachments || [])]
     deletedImageIds.value = []
     answerFiles.value = []
+    deletedAttachmentIds.value = []
+    answerAttachments.value = []
     isEditing.value = true
 }
 
@@ -131,10 +138,13 @@ const cancelEdit = () => {
     answerFiles.value = []
     existingImages.value = []
     deletedImageIds.value = []
+    answerAttachments.value = []
+    existingAttachments.value = []
+    deletedAttachmentIds.value = []
 }
 
 const submitAnswer = async () => {
-    if (!answerContent.value.trim() && answerFiles.value.length === 0 && existingImages.value.length === 0) return
+    if (!answerContent.value.trim() && answerFiles.value.length === 0 && existingImages.value.length === 0 && answerAttachments.value.length === 0 && existingAttachments.value.length === 0) return
 
     isSubmitting.value = true
     try {
@@ -151,6 +161,16 @@ const submitAnswer = async () => {
                formData.append(`deleted_images[${index}]`, id.toString())
            })
         }
+
+        answerAttachments.value.forEach((file, index) => {
+            formData.append(`attachments[${index}]`, file)
+        })
+
+        if (deletedAttachmentIds.value.length > 0) {
+           deletedAttachmentIds.value.forEach((id, index) => {
+               formData.append(`deleted_attachments[${index}]`, id.toString())
+           })
+        }
         
         await api.post(`/api/assignments/${assignmentId}/answers`, formData) // Assuming this endpoint handles update if answer exists
         
@@ -159,6 +179,9 @@ const submitAnswer = async () => {
         answerContent.value = ''
         answerFiles.value = []
         deletedImageIds.value = []
+        answerAttachments.value = []
+        existingAttachments.value = []
+        deletedAttachmentIds.value = []
 
         swal.toast('ส่งคำตอบเรียบร้อยแล้ว', 'success')
     } catch (error) {
@@ -290,6 +313,8 @@ onMounted(() => {
            <div v-if="userAnswer.images?.length" class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
               <img v-for="img in userAnswer.images" :key="img.id" :src="img.full_url || img.image_url" class="w-full h-32 object-cover rounded-lg border border-blue-100 dark:border-blue-800" />
            </div>
+
+           <AnswerAttachmentList :attachments="userAnswer.attachments" title="ไฟล์แนบที่ส่ง" />
 
            <div v-if="userAnswer.graded_score !== null" class="mt-4 bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-100 dark:border-amber-800/50 flex items-center gap-3">
               <div class="p-2 bg-amber-100 dark:bg-amber-800/50 rounded-full text-amber-600 dark:text-amber-400">

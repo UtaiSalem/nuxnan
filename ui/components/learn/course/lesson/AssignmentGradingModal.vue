@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import RichTextViewer from '~/components/RichTextViewer.vue'
+import AnswerAttachmentList from '~/components/learn/course/assignments/AnswerAttachmentList.vue'
 
 interface Props {
   show: boolean
@@ -35,8 +36,10 @@ watch(() => props.show, async (newVal) => {
     selectedAnswer.value = null
     feedback.value = ''
     try {
-      const response = await api.get(`/api/assignments/${props.assignment.id}/answers`) as { answers: any[] }
-      answers.value = response.answers || []
+      // The endpoint returns a paginated resource collection: { data, links, meta }.
+      // Reading `.answers` here meant the list was always empty.
+      const response = await api.get(`/api/assignments/${props.assignment.id}/answers`) as { data: any[] }
+      answers.value = response.data || []
     } catch (error) {
       console.error('Failed to fetch answers:', error)
       swal.toast('ไม่สามารถโหลดคำตอบได้', 'error')
@@ -214,6 +217,7 @@ const formatDate = (date: string) => {
                     <img :src="img.full_url || img.image_url" class="w-full h-32 object-cover" />
                   </a>
                 </div>
+                <AnswerAttachmentList :attachments="selectedAnswer.attachments" title="ไฟล์แนบ" class="mt-4" />
               </div>
             </div>
 

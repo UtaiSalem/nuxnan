@@ -8,6 +8,7 @@ import ImageGalleryModal from '~/components/ImageGalleryModal.vue';
 import ReadingUnlockPanel from '~/components/learn/course/ReadingUnlockPanel.vue';
 import { inject, onUnmounted } from 'vue';
 import { stripHtml } from '~/utils/textUtils';
+import AnswerAttachmentList from '~/components/learn/course/assignments/AnswerAttachmentList.vue';
 
 const { $echo } = useNuxtApp();
 const authStore = useAuthStore();
@@ -989,6 +990,7 @@ const showGradeAcceptance = computed(() => {
                                                           @click="openGallery(gradingAnswer.images, index, 'รูปภาพจากงานที่ส่ง')"
                                                       />
                                                   </div>
+                                                  <AnswerAttachmentList :attachments="gradingAnswer.attachments" title="ไฟล์แนบ" class="mt-3" />
                                               </div>
                                               
                                               <div class="flex items-center gap-3">

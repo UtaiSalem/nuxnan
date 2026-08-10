@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import ImageGalleryModal from '~/components/ImageGalleryModal.vue'
 import { stripHtml } from '~/utils/textUtils'
+import AnswerAttachmentList from '~/components/learn/course/assignments/AnswerAttachmentList.vue'
 
 const props = defineProps<{
   assignment: any
@@ -464,6 +465,7 @@ const scrollToTop = () => {
                                         />
                                      </div>
                                   </div>
+                                  <AnswerAttachmentList :attachments="answer.attachments" title="ไฟล์แนบ" class="mt-3" />
                                </div>
                           </div>
 

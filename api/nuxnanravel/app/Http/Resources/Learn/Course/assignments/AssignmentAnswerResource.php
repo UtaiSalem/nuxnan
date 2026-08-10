@@ -45,6 +45,7 @@ class AssignmentAnswerResource extends JsonResource
             'feedback' => $this->feedback,
             'late_submission' => $this->late_submission,
             'images' => $this->images,
+            'attachments' => AssignmentAnswerAttachmentResource::collection($this->attachments),
             'created_at' => Carbon::parse($this->created_at)->setTimezone('Asia/Bangkok')->toIso8601String(),
             'updated_at' => $this->updated_at,
         ];

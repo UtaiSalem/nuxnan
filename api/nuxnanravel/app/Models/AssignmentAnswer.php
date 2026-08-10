@@ -35,4 +35,9 @@ class AssignmentAnswer extends Model
     {
         return $this->hasMany(AssignmentAnswerImage::class);
     }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(AssignmentAnswerAttachment::class);
+    }
 }

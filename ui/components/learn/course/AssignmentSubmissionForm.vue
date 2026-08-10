@@ -2,6 +2,7 @@
 import { ref, onMounted, watch, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import RichTextEditor from '../../RichTextEditor.vue'
+import AnswerAttachmentPicker from '~/components/learn/course/assignments/AnswerAttachmentPicker.vue'
 
 const props = defineProps<{
   assignment: any
@@ -24,6 +25,9 @@ const answerFiles = ref<File[]>([])
 const imagePreviews = ref<string[]>([]) // เก็บ preview URLs
 const existingImages = ref<any[]>([])
 const deletedImageIds = ref<number[]>([])
+const answerAttachments = ref<File[]>([])
+const existingAttachments = ref<any[]>([])
+const deletedAttachmentIds = ref<number[]>([])
 const isSubmitting = ref(false)
 
 const handleAnswerImageError = (event: Event) => {
@@ -42,9 +46,11 @@ watch(() => props.existingAnswer, (newVal) => {
     if (newVal) {
         answerContent.value = newVal.content || ''
         existingImages.value = [...(newVal.images || [])]
+        existingAttachments.value = [...(newVal.attachments || [])]
     } else {
         answerContent.value = ''
         existingImages.value = []
+        existingAttachments.value = []
     }
 }, { immediate: true, deep: true })
 
@@ -80,8 +86,16 @@ const removeExistingImage = (imageId: number) => {
   }
 }
 
+const onRemoveExistingAttachment = (id: number) => {
+  const index = existingAttachments.value.findIndex(att => att.id === id)
+  if (index !== -1) {
+    existingAttachments.value.splice(index, 1)
+    deletedAttachmentIds.value.push(id)
+  }
+}
+
 const submitAnswer = async () => {
-    if (!answerContent.value.trim() && answerFiles.value.length === 0 && existingImages.value.length === 0) return
+    if (!answerContent.value.trim() && answerFiles.value.length === 0 && existingImages.value.length === 0 && answerAttachments.value.length === 0 && existingAttachments.value.length === 0) return
 
     isSubmitting.value = true
     try {
@@ -98,6 +112,16 @@ const submitAnswer = async () => {
                formData.append(`deleted_images[${index}]`, id.toString())
            })
         }
+
+        answerAttachments.value.forEach((file, index) => {
+            formData.append(`attachments[${index}]`, file)
+        })
+
+        if (deletedAttachmentIds.value.length > 0) {
+           deletedAttachmentIds.value.forEach((id, index) => {
+               formData.append(`deleted_attachments[${index}]`, id.toString())
+           })
+        }
         
         await api.post(`/api/assignments/${props.assignment.id}/answers`, formData)
         
@@ -109,6 +133,9 @@ const submitAnswer = async () => {
         answerFiles.value = []
         imagePreviews.value = []
         deletedImageIds.value = []
+        answerAttachments.value = []
+        existingAttachments.value = []
+        deletedAttachmentIds.value = []
     } catch (error) {
         console.error('Submission error:', error)
         swal.toast('ส่งคำตอบไม่สำเร็จ', 'error')
@@ -193,6 +220,12 @@ const submitAnswer = async () => {
                </div>
              </div>
            </div>
+
+           <AnswerAttachmentPicker 
+             v-model="answerAttachments" 
+             :existing="existingAttachments"
+             @remove-existing="onRemoveExistingAttachment" 
+           />
        </div>
        
        <div class="mt-6 flex gap-3 justify-end">

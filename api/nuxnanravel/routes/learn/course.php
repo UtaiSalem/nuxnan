@@ -257,6 +257,7 @@ Route::middleware(['auth:api', 'verified'])->group(function () {
     Route::resource('/asmimages', AssignmentImageController::class);
     Route::resource('/assignments/{assignment}/answers', AssignmentAnswerController::class);
     Route::post('/assignments/{assignment}/answers/{answer}/set-points', [AssignmentAnswerController::class, 'setAnswerPoints'])->name('assignments.answers.setAnswerPoints');
+    Route::get('/assignments/{assignment}/answers/{answer}/attachments/{attachment}/download', [AssignmentAnswerController::class, 'downloadAttachment'])->name('assignments.answers.attachments.download');
 });
 
 Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}')->group(function () {

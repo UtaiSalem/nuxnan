@@ -3,6 +3,8 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import RichTextViewer from '~/components/RichTextViewer.vue'
 import RichTextEditor from '~/components/RichTextEditor.vue'
+import AnswerAttachmentPicker from '~/components/learn/course/assignments/AnswerAttachmentPicker.vue'
+import AnswerAttachmentList from '~/components/learn/course/assignments/AnswerAttachmentList.vue'
 
 interface Props {
   assignments: any[]
@@ -34,6 +36,9 @@ const allAnswers = ref<any[]>([])
 const isFetchingAnswers = ref(false)
 const existingImages = ref<any[]>([])
 const deletedImageIds = ref<number[]>([])
+const answerAttachments = ref<File[]>([])
+const existingAttachments = ref<any[]>([])
+const deletedAttachmentIds = ref<number[]>([])
 const isEditing = ref(false)
 const userAvatar = (user: any) => getAvatarUrl(user)
 
@@ -88,8 +93,10 @@ const fetchAnswers = async () => {
   
   isFetchingAnswers.value = true
   try {
-    const response = await api.get(`/api/assignments/${activeAssignment.value.id}/answers`) as { answers: any[] }
-    allAnswers.value = (response.answers || []).map(a => ({
+    // The endpoint returns a paginated resource collection: { data, links, meta }.
+    // Reading `.answers` here meant the list was always empty.
+    const response = await api.get(`/api/assignments/${activeAssignment.value.id}/answers`) as { data: any[] }
+    allAnswers.value = (response.data || []).map(a => ({
       ...a,
       points: a.points,
       originalPoints: a.points,
@@ -175,6 +182,9 @@ const selectAssignment = (id: number) => {
   answerFiles.value = []
   existingImages.value = []
   deletedImageIds.value = []
+  answerAttachments.value = []
+  existingAttachments.value = []
+  deletedAttachmentIds.value = []
   isEditing.value = false
 }
 
@@ -193,8 +203,11 @@ const editAnswer = () => {
   if (!userAnswer.value) return
   answerContent.value = userAnswer.value.content || ''
   existingImages.value = [...(userAnswer.value.images || [])]
+  existingAttachments.value = [...(userAnswer.value.attachments || [])]
   deletedImageIds.value = []
   answerFiles.value = []
+  deletedAttachmentIds.value = []
+  answerAttachments.value = []
   isEditing.value = true
   
   // Scroll to form
@@ -210,6 +223,9 @@ const cancelEdit = () => {
   answerFiles.value = []
   existingImages.value = []
   deletedImageIds.value = []
+  answerAttachments.value = []
+  existingAttachments.value = []
+  deletedAttachmentIds.value = []
 }
 
 const removeExistingImage = (imageId: number) => {
@@ -220,8 +236,16 @@ const removeExistingImage = (imageId: number) => {
   }
 }
 
+const onRemoveExistingAttachment = (id: number) => {
+  const index = existingAttachments.value.findIndex(att => att.id === id)
+  if (index !== -1) {
+    existingAttachments.value.splice(index, 1)
+    deletedAttachmentIds.value.push(id)
+  }
+}
+
 const submitAnswer = async () => {
-  if (!activeAssignment.value || (!answerContent.value.trim() && answerFiles.value.length === 0 && existingImages.value.length === 0)) {
+  if (!activeAssignment.value || (!answerContent.value.trim() && answerFiles.value.length === 0 && existingImages.value.length === 0 && answerAttachments.value.length === 0 && existingAttachments.value.length === 0)) {
     return
   }
 
@@ -231,19 +255,11 @@ const submitAnswer = async () => {
     const payload = {
        content: answerContent.value,
        files: answerFiles.value,
-       deleted_images: deletedImageIds.value
+       deleted_images: deletedImageIds.value,
+       attachments: answerAttachments.value,
+       deleted_attachments: deletedAttachmentIds.value
     }
     
-    // We emit 'submit' but the parent component expects (id, {content, files}).
-    // We need to either update the parent or adhere to the interface.
-    // The parent function handleSubmitAnswer creates FormData.
-    // Let's modify the emit payload to include deleted_images, 
-    // BUT the parent needs to handle it. 
-    // Wait, the emit definition is: submit: [assignmentId: number, answer: any]
-    // The parent uses `answerData.content` and `answerData.files`.
-    // I need to update the parent component (LessonInteractionTabs) to handle `deleted_images` too.
-    // However, I can just pass it in the object since `answer: any` is generic.
-
     emit('submit', activeAssignment.value.id, payload)
     
     // Reset form
@@ -251,6 +267,9 @@ const submitAnswer = async () => {
     answerFiles.value = []
     existingImages.value = []
     deletedImageIds.value = []
+    answerAttachments.value = []
+    existingAttachments.value = []
+    deletedAttachmentIds.value = []
     isEditing.value = false
   } finally {
     isSubmitting.value = false
@@ -541,6 +560,8 @@ const formatDate = (date: string) => {
            />
         </div>
 
+        <AnswerAttachmentList :attachments="userAnswer.attachments" title="ไฟล์แนบที่ส่ง" />
+
         <!-- Score if graded -->
         <div
           v-if="userAnswer.graded_score !== undefined && userAnswer.graded_score !== null"
@@ -589,11 +610,11 @@ const formatDate = (date: string) => {
             class="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-gray-500 dark:text-gray-400 hover:border-green-500 hover:text-green-500 cursor-pointer transition-colors"
           >
             <Icon icon="fluent:attach-24-regular" class="w-5 h-5" />
-            <span>แนบไฟล์ / รูปภาพ</span>
+            <span>แนบรูปภาพ</span>
             <input
               type="file"
               multiple
-              accept="image/*,.pdf,.doc,.docx"
+              accept="image/*"
               class="hidden"
               @change="handleFileSelect"
             />
@@ -639,10 +660,18 @@ const formatDate = (date: string) => {
           </div>
         </div>
 
+        <div class="mt-4">
+          <AnswerAttachmentPicker 
+             v-model="answerAttachments" 
+             :existing="existingAttachments"
+             @remove-existing="onRemoveExistingAttachment" 
+           />
+        </div>
+
         <!-- Submit Button -->
         <button
           @click="submitAnswer"
-          :disabled="isSubmitting || (!answerContent.trim() && answerFiles.length === 0)"
+          :disabled="isSubmitting || (!answerContent.trim() && answerFiles.length === 0 && existingImages.length === 0 && answerAttachments.length === 0 && existingAttachments.length === 0)"
           class="mt-4 w-full px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold rounded-xl hover:from-green-600 hover:to-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
         >
           <Icon

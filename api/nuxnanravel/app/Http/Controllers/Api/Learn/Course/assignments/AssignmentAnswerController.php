@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Learn\Course\assignments\AssignmentAnswerResource;
 use App\Models\Assignment;
 use App\Models\AssignmentAnswer;
+use App\Models\AssignmentAnswerAttachment;
 use App\Models\Course;
 use App\Models\CourseMember;
 use App\Services\ContentVisibilityService;
@@ -16,6 +17,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class AssignmentAnswerController extends Controller
 {
@@ -27,25 +30,28 @@ class AssignmentAnswerController extends Controller
     }
 
     /**
+     * Resolve the course this assignment belongs to.
+     *
+     * Always derived from the assignment itself, never from a request parameter:
+     * a client-supplied course_id would let a user point isAdmin() at a course they
+     * happen to own and read or download another student's work.
+     */
+    private function resolveCourse(Assignment $assignment): ?Course
+    {
+        if ($assignment->assignmentable_type === Course::class) {
+            return Course::find($assignment->assignmentable_id);
+        }
+
+        return $assignment->getLesson()?->course;
+    }
+
+    /**
      * Display a listing of the resource.
      */
     public function index(Assignment $assignment, Request $request)
     {
         $user = auth()->user();
-        $courseId = $request->course_id;
-
-        // Try to resolve course from assignment if not provided
-        $course = null;
-        if ($courseId) {
-            $course = Course::find($courseId);
-        } else {
-            $lesson = $assignment->getLesson();
-            if ($assignment->assignmentable_type === Course::class) {
-                $course = Course::find($assignment->assignmentable_id);
-            } elseif ($lesson) {
-                $course = $lesson->course;
-            }
-        }
+        $course = $this->resolveCourse($assignment);
 
         $isCourseAdmin = $course ? $course->isAdmin($user) : false;
 
@@ -54,7 +60,13 @@ class AssignmentAnswerController extends Controller
             $this->visibility->assertVisibleOrFail($assignment, $user, 404);
         }
 
-        $query = $assignment->answers()->with('user', 'images')->latest();
+        $query = $assignment->answers()->with('user', 'images', 'attachments')->latest();
+
+        // Students may only ever see their own submission, never a classmate's.
+        // AssignmentResource already scopes answers this way; this endpoint did not.
+        if (! $isCourseAdmin) {
+            $query->where('user_id', $user->id);
+        }
 
         if ($request->filled('group_id') && $request->group_id != 'all') {
             $groupId = $request->group_id;
@@ -76,19 +88,7 @@ class AssignmentAnswerController extends Controller
     public function store(Assignment $assignment, Request $request)
     {
         $user = auth()->user();
-        $courseId = $request->course_id;
-
-        $course = null;
-        if ($courseId) {
-            $course = Course::find($courseId);
-        } else {
-            $lesson = $assignment->getLesson();
-            if ($assignment->assignmentable_type === Course::class) {
-                $course = Course::find($assignment->assignmentable_id);
-            } elseif ($lesson) {
-                $course = $lesson->course;
-            }
-        }
+        $course = $this->resolveCourse($assignment);
 
         $isCourseAdmin = $course ? $course->isAdmin($user) : false;
 
@@ -121,6 +121,27 @@ class AssignmentAnswerController extends Controller
             }
         }
 
+        try {
+            $validated = $request->validate([
+                'content' => 'nullable|string',
+                'course_id' => 'nullable|integer',
+                'images' => 'nullable|array|max:10',
+                'images.*' => 'file|image|mimes:jpg,jpeg,png,gif,webp|max:5120',
+                'attachments' => 'nullable|array|max:5',
+                'attachments.*' => 'file|mimes:pdf,doc,docx,ppt,pptx,xls,xlsx,txt,csv,zip|max:20480',
+                'deleted_images' => 'nullable|array',
+                'deleted_images.*' => 'integer',
+                'deleted_attachments' => 'nullable|array',
+                'deleted_attachments.*' => 'integer',
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ข้อมูลไม่ถูกต้อง',
+                'errors' => $e->errors(),
+            ], 422);
+        }
+
         $answer = $assignment->answers()->where('user_id', auth()->id())->first();
         if ($answer) {
             $oldPoints = $answer->points ?? 0;
@@ -147,6 +168,21 @@ class AssignmentAnswerController extends Controller
                             // Log error but continue
                         }
                         $img->delete();
+                    }
+                }
+            }
+
+            if ($request->filled('deleted_attachments')) {
+                $deletedIds = $request->input('deleted_attachments');
+                if (is_array($deletedIds)) {
+                    $attachmentsToDelete = $answer->attachments()->whereIn('id', $deletedIds)->get();
+                    foreach ($attachmentsToDelete as $att) {
+                        try {
+                            Storage::disk('local')->delete('course-materials/assignment-answers/'.$att->filename);
+                        } catch (\Exception $e) {
+                            // Log error but continue
+                        }
+                        $att->delete();
                     }
                 }
             }
@@ -177,6 +213,33 @@ class AssignmentAnswerController extends Controller
             }
         }
 
+        if ($request->hasFile('attachments')) {
+            $courseIdForFile = $course?->id;
+            $maxOrder = $answer->attachments()->max('order') ?? 0;
+
+            foreach ($request->file('attachments') as $file) {
+                $maxOrder++;
+                $extension = $file->getClientOriginalExtension();
+                $filename = (string) Str::uuid().'.'.$extension;
+
+                Storage::disk('local')->putFileAs('course-materials/assignment-answers', $file, $filename);
+
+                $answer->attachments()->create([
+                    'assignment_id' => $assignment->id,
+                    'course_id' => $courseIdForFile,
+                    'uploaded_by' => auth()->id(),
+                    'filename' => $filename,
+                    'original_name' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(),
+                    'extension' => $extension,
+                    'size' => $file->getSize(),
+                    'order' => $maxOrder,
+                ]);
+            }
+        }
+
+        $answer->load('images', 'attachments');
+
         return response()->json([
             'success' => true,
             'newAnswer' => new AssignmentAnswerResource($answer),
@@ -189,9 +252,10 @@ class AssignmentAnswerController extends Controller
     public function destroy(Assignment $assignment, AssignmentAnswer $answer, Request $request)
     {
         $user = auth()->user();
+        $course = $this->resolveCourse($assignment);
 
         // Ownership check: if student, can only delete their own answer
-        if (! $assignment->course->isAdmin($user)) {
+        if (! ($course && $course->isAdmin($user))) {
             if ($answer->user_id !== $user->id) {
                 return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
             }
@@ -214,8 +278,12 @@ class AssignmentAnswerController extends Controller
             foreach ($answer->images as $image) {
                 Storage::disk('public')->delete('images/courses/assignments/answers/'.$image->filename);
             }
+            foreach ($answer->attachments as $attachment) {
+                Storage::disk('local')->delete('course-materials/assignment-answers/'.$attachment->filename);
+            }
 
             $answer->images()->delete();
+            $answer->attachments()->delete();
             $answer->delete();
 
             DB::commit();
@@ -265,5 +333,42 @@ class AssignmentAnswerController extends Controller
         return response()->json([
             'success' => true,
         ], 200);
+    }
+
+    public function downloadAttachment(Assignment $assignment, AssignmentAnswer $answer, $attachment)
+    {
+        $attachment = $attachment instanceof AssignmentAnswerAttachment
+            ? $attachment
+            : AssignmentAnswerAttachment::findOrFail($attachment);
+
+        $course = $this->resolveCourse($assignment);
+
+        if ($attachment->assignment_answer_id !== $answer->id || $answer->assignment_id !== $assignment->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไฟล์แนบนี้ไม่ได้อยู่ในคำตอบที่ระบุ',
+            ], 404);
+        }
+
+        $user = auth()->user();
+        if (! (($course && $course->isAdmin($user)) || $answer->user_id === $user->id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'คุณไม่มีสิทธิ์ดาวน์โหลดไฟล์นี้',
+            ], 403);
+        }
+
+        $path = 'course-materials/assignment-answers/'.$attachment->filename;
+
+        if (! Storage::disk('local')->exists($path)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่พบไฟล์ หรือคุณไม่มีสิทธิ์ดาวน์โหลดไฟล์นี้',
+            ], 403);
+        }
+
+        $attachment->increment('download_count');
+
+        return Storage::disk('local')->download($path, $attachment->original_name);
     }
 }
