@@ -7,6 +7,8 @@ use App\Http\Resources\Learn\Course\questions\QuestionResource;
 use App\Models\Course;
 use App\Models\CourseQuiz;
 use App\Models\Question;
+use App\Models\QuestionImage;
+use App\Services\CourseMediaService;
 use App\Services\CourseScoreService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
@@ -36,17 +38,7 @@ class CourseQuizQuestionController extends Controller
         $quiz->increment('total_score', $request->points);
         $quiz->increment('total_questions');
 
-        if ($request->hasFile('images')) {
-            $q_images = $request->file('images');
-            foreach ($q_images as $q_image) {
-                $q_img_filename = uniqid().'.'.$q_image->getClientOriginalExtension();
-                $image_path = Storage::disk('public')->putFileAs('images/courses/quizzes/questions', $q_image, $q_img_filename);
-                $new_question->images()->create([
-                    'filename' => $q_img_filename,
-                    'image_url' => $image_path,
-                ]);
-            }
-        }
+        $this->storeQuestionImages($new_question, $request);
 
         // if($request->question_id){
 
@@ -118,22 +110,45 @@ class CourseQuizQuestionController extends Controller
         app(CourseScoreService::class)->syncCourseTotalScore($course);
         $quiz->increment('total_score', $request->points);
 
-        if ($request->hasFile('images')) {
-            $q_images = $request->file('images');
-            foreach ($q_images as $q_image) {
-                $q_img_filename = uniqid().'.'.$q_image->getClientOriginalExtension();
-                $image_path = Storage::disk('public')->putFileAs('images/courses/quizzes/questions', $q_image, $q_img_filename);
-                $question->images()->create([
-                    'filename' => $q_img_filename,
-                    'image_url' => $image_path,
-                ]);
-            }
-        }
+        // The editor holds a single picture per question, so an upload replaces
+        // what is there instead of stacking a second image on top of it.
+        $this->storeQuestionImages($question, $request, replace: true);
 
         return response()->json([
             'success' => true,
-            'question' => new QuestionResource($question),
+            'question' => new QuestionResource($question->fresh('images')),
         ], 200);
+    }
+
+    /**
+     * Persist uploaded question images.
+     *
+     * `question_images` only has a `filename` column — writing `image_url` here
+     * used to throw "Unknown column", which silently lost every image attached
+     * while editing a question.
+     */
+    private function storeQuestionImages(Question $question, Request $request, bool $replace = false): void
+    {
+        if (! $request->hasFile('images')) {
+            return;
+        }
+
+        if ($replace) {
+            $media = app(CourseMediaService::class);
+
+            foreach ($question->images as $old) {
+                $media->deleteUnused('quiz_question_image', QuestionImage::class, 'filename', $old->filename, $old->id);
+                $old->delete();
+            }
+        }
+
+        foreach ($request->file('images') as $q_image) {
+            $q_img_filename = uniqid().'.'.$q_image->getClientOriginalExtension();
+            Storage::disk('public')->putFileAs('images/courses/quizzes/questions', $q_image, $q_img_filename);
+            $question->images()->create([
+                'filename' => $q_img_filename,
+            ]);
+        }
     }
 
     public function destroy(Course $course, CourseQuiz $quiz, Question $question)
