@@ -4,6 +4,8 @@ import { Icon } from '@iconify/vue'
 import { useObjectUrl } from '@vueuse/core'
 import RichTextEditor from '~/components/Common/RichTextEditor.vue'
 import LessonRewardForm from '~/components/learn/course/points/LessonRewardForm.vue'
+import LessonAttachmentList from './LessonAttachmentList.vue'
+import LessonAttachmentUploader from './LessonAttachmentUploader.vue'
 
 interface Props {
   lesson?: any
@@ -73,6 +75,7 @@ const existingImages = ref<any[]>([])
 const isDragActive = ref(false)
 const isSubmitting = ref(false)
 const errors = ref<Record<string, string>>({})
+const lessonAttachments = ref<any[]>([])
 
 // Initialize form with lesson data if editing
 watch(
@@ -94,6 +97,7 @@ watch(
         require_completion_before_exercises: !!lesson.require_completion_before_exercises,
       }
       existingImages.value = lesson.images || []
+      lessonAttachments.value = lesson.attachments || []
     }
   },
   { immediate: true }
@@ -147,6 +151,18 @@ const deleteExistingImage = async (index: number, imageId: number) => {
   } catch (err) {
     console.error('Failed to delete image:', err)
     swal.error('ไม่สามารถลบรูปภาพได้')
+  }
+}
+
+const handleDeleteAttachment = async (attachment: any) => {
+  try {
+    const url = new URL(attachment.download_url)
+    const endpoint = url.pathname.replace('/download', '')
+    await api.delete(endpoint)
+    lessonAttachments.value = lessonAttachments.value.filter(a => a.id !== attachment.id)
+    swal.toast('ลบไฟล์แนบสำเร็จ', 'success')
+  } catch (error) {
+    swal.toast('ไม่สามารถลบไฟล์แนบได้', 'error')
   }
 }
 
@@ -374,6 +390,29 @@ const handleCancel = () => {
             </p>
             <p class="text-sm text-gray-500 dark:text-gray-500 mt-1">PNG, JPG, GIF สูงสุด 10MB</p>
           </div>
+        </div>
+      </div>
+
+      <!-- Attachments -->
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+          เอกสารประกอบการเรียน
+        </label>
+        
+        <div v-if="isEdit && props.lesson?.id">
+          <LessonAttachmentList 
+            :attachments="lessonAttachments" 
+            :is-admin="true" 
+            @delete="handleDeleteAttachment" 
+          />
+          <LessonAttachmentUploader 
+            attachable-type="lesson" 
+            :attachable-id="props.lesson.id" 
+            @uploaded="(newAttachments) => lessonAttachments.push(...newAttachments)" 
+          />
+        </div>
+        <div v-else class="text-sm text-gray-500 bg-gray-50 dark:bg-gray-800 p-4 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 text-center">
+          บันทึกบทเรียนก่อน แล้วจึงแนบไฟล์ได้
         </div>
       </div>
 

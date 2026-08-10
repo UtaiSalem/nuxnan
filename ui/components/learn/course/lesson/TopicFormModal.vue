@@ -3,6 +3,8 @@ import { ref, computed, watch, reactive } from 'vue'
 import { Icon } from '@iconify/vue'
 import Modal from '~/components/Modal.vue'
 import RichTextEditor from '~/components/RichTextEditor.vue'
+import LessonAttachmentList from './LessonAttachmentList.vue'
+import LessonAttachmentUploader from './LessonAttachmentUploader.vue'
 
 interface Props {
   show: boolean
@@ -22,6 +24,9 @@ const emit = defineEmits<{
   'delete-image': [imageId: number]
 }>()
 
+const api = useApi()
+const swal = useSweetAlert()
+
 // Form State
 const form = reactive({
   title: '',
@@ -35,6 +40,9 @@ const errors = ref<Record<string, string[]>>({})
 // Image State
 const newImages = ref<File[]>([])
 const imageInput = ref<HTMLInputElement | null>(null)
+
+// Attachment State
+const topicAttachments = ref<any[]>([])
 
 // Computed Image Previews
 const imagePreviews = computed(() => {
@@ -69,8 +77,10 @@ watch(() => props.topic, (newTopic) => {
     form.content = newTopic.content || ''
     form.youtube_url = newTopic.youtube_url || ''
     form.min_read = newTopic.min_read || 5
+    topicAttachments.value = newTopic.attachments || []
   } else {
     resetForm()
+    topicAttachments.value = []
   }
 }, { immediate: true })
 
@@ -135,6 +145,18 @@ const handleImageError = (event: Event) => {
 }
 
 const isEditMode = computed(() => !!props.topic)
+
+const handleDeleteAttachment = async (attachment: any) => {
+  try {
+    const url = new URL(attachment.download_url)
+    const endpoint = url.pathname.replace('/download', '')
+    await api.delete(endpoint)
+    topicAttachments.value = topicAttachments.value.filter(a => a.id !== attachment.id)
+    swal.toast('ลบไฟล์แนบสำเร็จ', 'success')
+  } catch (error) {
+    swal.toast('ไม่สามารถลบไฟล์แนบได้', 'error')
+  }
+}
 </script>
 
 <template>
@@ -247,6 +269,27 @@ const isEditMode = computed(() => !!props.topic)
                 <Icon icon="fluent:image-add-24-regular" class="w-6 h-6" />
                 <span>คลิกเพื่อเพิ่มรูปภาพ</span>
             </button>
+          </div>
+
+          <!-- Attachments Section -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">เอกสารประกอบการเรียน</label>
+            
+            <div v-if="topic && topic.id">
+              <LessonAttachmentList 
+                :attachments="topicAttachments" 
+                :is-admin="true" 
+                @delete="handleDeleteAttachment" 
+              />
+              <LessonAttachmentUploader 
+                attachable-type="topic" 
+                :attachable-id="topic.id" 
+                @uploaded="(newAttachments) => topicAttachments.push(...newAttachments)" 
+              />
+            </div>
+            <div v-else class="text-sm text-gray-500 bg-gray-50 dark:bg-gray-800 p-4 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 text-center">
+              บันทึกหัวข้อย่อยก่อน แล้วจึงแนบไฟล์ได้
+            </div>
           </div>
 
         </form>

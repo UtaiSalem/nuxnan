@@ -4,6 +4,7 @@ import { Icon } from '@iconify/vue'
 import RichTextViewer from '~/components/RichTextViewer.vue'
 import VideoModal from '~/components/media/VideoModal.vue'
 import LessonRewardBadge from '~/components/learn/course/points/LessonRewardBadge.vue'
+import LessonAttachmentList from './LessonAttachmentList.vue'
 import TopicAccordion from './TopicAccordion.vue'
 import TopicFormModal from './TopicFormModal.vue'
 import TopicOrderWidget from './TopicOrderWidget.vue'
@@ -896,6 +897,15 @@ const publicationStatusColor = computed(() => {
                <p class="text-gray-500 dark:text-gray-400 mb-2">ยังไม่มีหัวข้อย่อยในบทเรียนนี้</p>
                <button v-if="isAdmin" @click="openCreateTopicModal" class="text-purple-600 hover:text-purple-700 font-medium hover:underline">เพิ่มหัวข้อแรกเลย</button>
           </div>
+        </div>
+
+        <!-- Attachments Section -->
+        <div v-if="lesson.attachments && lesson.attachments.length > 0" class="mt-8">
+          <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <Icon icon="fluent:folder-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            เอกสารประกอบการเรียน
+          </h3>
+          <LessonAttachmentList :attachments="lesson.attachments" />
         </div>
 
         <!-- Interaction Tabs (Reaction / Assignment / Quiz) -->

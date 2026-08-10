@@ -4,6 +4,7 @@ import { Icon } from '@iconify/vue'
 import RichTextViewer from '~/components/RichTextViewer.vue'
 import ImageGalleryModal from '~/components/ImageGalleryModal.vue'
 import VideoModal from '~/components/media/VideoModal.vue'
+import LessonAttachmentList from './LessonAttachmentList.vue'
 import { getYoutubeVideoId, getYoutubeThumbnailUrl } from '~/utils/youtube'
 
 interface Props {
@@ -241,6 +242,15 @@ const handleImageError = (event: Event) => {
             @click="openTopicImage(index)"
             @error="handleImageError"
           />
+        </div>
+
+        <!-- Attachments Section -->
+        <div v-if="topic.attachments && topic.attachments.length > 0" class="pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div class="flex items-center gap-2 mb-3">
+            <Icon icon="fluent:folder-24-filled" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <h5 class="font-semibold text-gray-900 dark:text-white">เอกสารประกอบการเรียน</h5>
+          </div>
+          <LessonAttachmentList :attachments="topic.attachments" />
         </div>
 
         <!-- Assignments for this topic -->
