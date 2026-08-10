@@ -24,10 +24,25 @@ class CourseScoreService
             $cache = [];
 
             // 1. Quizzes
-            $courseQuizzes = DB::table('course_quizzes')->where('course_id', $courseId)->get(['id', 'total_score']);
-            $cache['quizMax'] = (float) $courseQuizzes->sum('total_score');
-            $cache['quizIds'] = $courseQuizzes->pluck('id')->toArray();
-            $cache['quizCount'] = count($cache['quizIds']);
+            $courseQuizzes = DB::table('course_quizzes')
+                ->where('course_id', $courseId)
+                ->get(['id', 'total_score']);
+
+            $quizIds = $courseQuizzes->pluck('id')->toArray();
+
+            // Fall back to the stored counter only when there are no questions
+            $realPointsByQuiz = empty($quizIds) ? collect() : DB::table('questions')
+                ->where('questionable_type', 'App\Models\CourseQuiz')
+                ->whereIn('questionable_id', $quizIds)
+                ->groupBy('questionable_id')
+                ->selectRaw('questionable_id, SUM(COALESCE(points, 1)) as real_points')
+                ->pluck('real_points', 'questionable_id');
+
+            $cache['quizMax'] = (float) $courseQuizzes->sum(
+                fn ($q) => (float) ($realPointsByQuiz[$q->id] ?? $q->total_score ?? 0)
+            );
+            $cache['quizIds'] = $quizIds;
+            $cache['quizCount'] = count($quizIds);
 
             // 2. Course Assignments
             $courseAssignments = DB::table('assignments')

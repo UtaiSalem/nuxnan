@@ -14,6 +14,41 @@ class Question extends Model
 
     protected $guarded = [];
 
+    public static bool $skipQuizCounterSync = false;
+
+    /**
+     * Counter drift caused 0% / FAILED on perfect papers.
+     * This observer ensures the counter stays in sync by recomputing the authoritative value
+     * whenever questions are created, updated or deleted.
+     */
+    protected static function booted(): void
+    {
+        $sync = function (Question $question) {
+            if (self::$skipQuizCounterSync) {
+                return;
+            }
+
+            $quizIds = array_unique(array_filter([
+                $question->getOriginal('questionable_id'),
+                $question->questionable_id,
+            ]));
+
+            foreach ($quizIds as $quizId) {
+                $type = $quizId === $question->getOriginal('questionable_id')
+                    ? $question->getOriginal('questionable_type')
+                    : $question->questionable_type;
+
+                if ($type === CourseQuiz::class || $type === 'App\Models\CourseQuiz') {
+                    CourseQuiz::find($quizId)?->syncQuestionCounters();
+                }
+            }
+        };
+
+        static::created($sync);
+        static::updated($sync);
+        static::deleted($sync);
+    }
+
     /**
      * Get the user that owns the Question
      */

@@ -217,9 +217,6 @@ class QuestionController extends Controller
         $new_question->save();
 
         if ($request->quiz_id) {
-            $quiz->increment('total_score', $question->points);
-            $quiz->increment('total_questions');
-
             $course = $quiz->course;
             app(CourseScoreService::class)->syncCourseTotalScore($course);
         }

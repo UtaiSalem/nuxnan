@@ -16,13 +16,14 @@ class QuizEfficiencyService
      */
     public function calculateEfficiency(CourseQuizResult $result, CourseQuiz $quiz)
     {
-        if ($quiz->total_score <= 0) {
+        $quizTotalScore = $quiz->effectiveTotalScore();
+        if ($quizTotalScore <= 0) {
             return 0;
         }
 
         // Basic efficiency: Percentage of correct answers relative to total score
         // We can add time factors later if needed.
-        $efficiency = ($result->score / $quiz->total_score) * 100;
+        $efficiency = ($result->score / $quizTotalScore) * 100;
 
         return round($efficiency, 2);
     }

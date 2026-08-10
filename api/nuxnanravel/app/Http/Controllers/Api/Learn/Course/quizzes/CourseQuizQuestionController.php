@@ -35,8 +35,6 @@ class CourseQuizQuestionController extends Controller
         ]);
 
         app(CourseScoreService::class)->syncCourseTotalScore($course);
-        $quiz->increment('total_score', $request->points);
-        $quiz->increment('total_questions');
 
         $this->storeQuestionImages($new_question, $request);
 
@@ -90,8 +88,6 @@ class CourseQuizQuestionController extends Controller
 
     public function update(Course $course, CourseQuiz $quiz, Question $question, Request $request)
     {
-        app(CourseScoreService::class)->syncCourseTotalScore($course);
-        $quiz->decrement('total_score', $question->points);
 
         $validatedData = $request->validate([
             'text' => 'required|string',
@@ -108,7 +104,6 @@ class CourseQuizQuestionController extends Controller
         ]);
 
         app(CourseScoreService::class)->syncCourseTotalScore($course);
-        $quiz->increment('total_score', $request->points);
 
         // The editor holds a single picture per question, so an upload replaces
         // what is there instead of stacking a second image on top of it.
@@ -178,11 +173,9 @@ class CourseQuizQuestionController extends Controller
             $answer->delete();
         }
 
-        app(CourseScoreService::class)->syncCourseTotalScore($course);
-        $quiz->decrement('total_score', $question->points);
-        $quiz->decrement('total_questions');
-
         $question->delete();
+
+        app(CourseScoreService::class)->syncCourseTotalScore($course);
 
         return response()->json([
             'success' => true,

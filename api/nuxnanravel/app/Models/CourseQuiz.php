@@ -66,4 +66,41 @@ class CourseQuiz extends Model
     {
         return $this->hasMany(CourseQuizResult::class, 'quiz_id');
     }
+
+    /**
+     * The real maximum score of this quiz.
+     *
+     * `total_score` is a denormalized counter that historically drifted to 0 whenever
+     * questions were created outside CourseQuizQuestionController (seeders, clones,
+     * bulk import). Dividing by it produced 0% and a FAILED status on perfect papers,
+     * so every score calculation must go through here instead.
+     */
+    public function effectiveTotalScore(): float
+    {
+        $stored = (float) ($this->total_score ?? 0);
+        if ($stored > 0) {
+            return $stored;
+        }
+
+        return (float) $this->questions()->sum('points');
+    }
+
+    /**
+     * Recompute the denormalized counters from the questions that actually exist.
+     * Returns the new total score.
+     */
+    public function syncQuestionCounters(): float
+    {
+        $totalScore = (float) $this->questions()->sum('points');
+        $totalQuestions = (int) $this->questions()->count();
+
+        if ((float) $this->total_score !== $totalScore || (int) $this->total_questions !== $totalQuestions) {
+            $this->forceFill([
+                'total_score' => $totalScore,
+                'total_questions' => $totalQuestions,
+            ])->save();
+        }
+
+        return $totalScore;
+    }
 }

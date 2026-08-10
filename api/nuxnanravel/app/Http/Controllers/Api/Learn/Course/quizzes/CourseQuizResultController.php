@@ -129,8 +129,9 @@ class CourseQuizResultController extends Controller
         $data['attempted_questions'] = $quizUserAnswers->count();
         $data['correct_answers'] = $quizUserAnswers->filter(fn ($a) => $a->points > 0)->count();
         $data['incorrect_answers'] = $quizUserAnswers->filter(fn ($a) => $a->points == 0)->count();
-        $data['percentage'] = $quiz->total_score > 0
-            ? round(($data['score'] / $quiz->total_score) * 100, 2)
+        $quizTotalScore = $quiz->effectiveTotalScore();
+        $data['percentage'] = $quizTotalScore > 0
+            ? round(($data['score'] / $quizTotalScore) * 100, 2)
             : 0;
         $data['status'] = $data['percentage'] >= $quiz->passing_score
             ? QuizConstants::STATUS_PASSED

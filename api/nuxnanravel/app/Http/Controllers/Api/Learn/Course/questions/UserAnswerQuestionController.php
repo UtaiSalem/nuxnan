@@ -312,7 +312,7 @@ class UserAnswerQuestionController extends Controller
         })->count();
 
         $courseQuizResult->score = $quiz_user_answers->sum('points');
-        $courseQuizResult->percentage = $this->calculatePercentage($quiz->total_score, $courseQuizResult->score);
+        $courseQuizResult->percentage = $this->calculatePercentage($quiz->effectiveTotalScore(), $courseQuizResult->score);
         $courseQuizResult->status = round($courseQuizResult->percentage, 2) >= $quiz->passing_score
             ? QuizConstants::STATUS_PASSED
             : QuizConstants::STATUS_FAILED;
@@ -344,7 +344,7 @@ class UserAnswerQuestionController extends Controller
         })->count();
 
         // Don't recalculate score as it's already updated in the calling method
-        $courseQuizResult->percentage = $this->calculatePercentage($quiz->total_score, $courseQuizResult->score);
+        $courseQuizResult->percentage = $this->calculatePercentage($quiz->effectiveTotalScore(), $courseQuizResult->score);
         $courseQuizResult->status = round($courseQuizResult->percentage, 2) >= $quiz->passing_score
             ? QuizConstants::STATUS_PASSED
             : QuizConstants::STATUS_FAILED;
