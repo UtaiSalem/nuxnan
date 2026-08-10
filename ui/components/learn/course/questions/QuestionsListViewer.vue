@@ -25,11 +25,21 @@
                       </div>
                   </div>
                   
-                  <!-- Question Images -->
+                   <!-- Question Images -->
                    <div v-if="q.images && q.images.length > 0" class="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div v-for="img in q.images" :key="img.id" class="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-                             <img :src="img.full_url" class="w-full h-auto object-cover" loading="lazy" />
-                        </div>
+                        <button 
+                            type="button"
+                            v-for="(img, idx) in q.images" 
+                            :key="img.id" 
+                            @click="openGallery(q.images, idx)"
+                            aria-label="ดูรูปขนาดเต็ม"
+                            class="relative rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700"
+                        >
+                             <img :src="img.full_url" class="w-full h-auto object-contain max-h-64 sm:max-h-72 mx-auto cursor-zoom-in" loading="lazy" />
+                             <div class="absolute bottom-2 right-2 bg-black/50 text-white rounded-full p-1.5 flex items-center justify-center">
+                                 <Icon icon="heroicons:magnifying-glass-plus" class="w-5 h-5" />
+                             </div>
+                        </button>
                    </div>
 
                   <div class="space-y-3">
@@ -62,9 +72,19 @@
                               </span>
                                <!-- Option Images -->
                                <div v-if="opt.images && opt.images.length > 0" class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    <div v-for="optImg in opt.images" :key="optImg.id" class="rounded overflow-hidden border border-gray-200 dark:border-gray-700">
-                                         <img :src="optImg.full_url" class="w-full h-auto aspect-video sm:h-32 sm:aspect-auto object-cover" loading="lazy" />
-                                    </div>
+                                    <button 
+                                        type="button"
+                                        v-for="(optImg, idx) in opt.images" 
+                                        :key="optImg.id" 
+                                        @click.stop="openGallery(opt.images, idx)"
+                                        aria-label="ดูรูปขนาดเต็ม"
+                                        class="relative rounded overflow-hidden border border-gray-200 dark:border-gray-700"
+                                    >
+                                         <img :src="optImg.full_url" class="w-full h-auto object-contain max-h-48 sm:max-h-40 mx-auto cursor-zoom-in" loading="lazy" />
+                                         <div class="absolute bottom-2 right-2 bg-black/50 text-white rounded-full p-1.5 flex items-center justify-center">
+                                             <Icon icon="heroicons:magnifying-glass-plus" class="w-5 h-5" />
+                                         </div>
+                                    </button>
                                </div>
                           </div>
                       </div>
@@ -118,15 +138,41 @@
               </div>
           </div>
       </div>
+      <ImageGalleryModal
+        :show="showGallery"
+        :images="galleryImages"
+        :start-index="galleryIndex"
+        :title="galleryTitle"
+        @close="closeGallery"
+      />
   </div>
 </template>
 
 <script setup>
 import { Icon } from '@iconify/vue'
 import { ref, onMounted } from 'vue'
+import ImageGalleryModal from '@/components/ImageGalleryModal.vue'
 import Swal from 'sweetalert2'
 import { useQuestionAnswersStore } from '@/stores/questionAnswers'
 import { useAuthStore } from '@/stores/auth'
+
+const showGallery = ref(false)
+const galleryImages = ref([])
+const galleryIndex = ref(0)
+const galleryTitle = ref('')
+
+const openGallery = (images, index, title = 'รูปภาพประกอบข้อสอบ') => {
+    galleryImages.value = (images || []).map(img => ({ ...img, url: img.full_url || img.image_url }))
+    galleryIndex.value = index
+    galleryTitle.value = title
+    showGallery.value = true
+}
+
+const closeGallery = () => {
+    showGallery.value = false
+    galleryImages.value = []
+    galleryIndex.value = 0
+}
 
 const props = defineProps({
     courseId: { type: [Number, String], required: false },
