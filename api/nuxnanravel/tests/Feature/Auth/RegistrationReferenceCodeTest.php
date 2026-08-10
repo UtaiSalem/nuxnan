@@ -13,7 +13,7 @@ class RegistrationReferenceCodeTest extends TestCase
     public function test_multiple_users_can_register_with_admin_referral_code(): void
     {
         $firstResponse = $this->postJson('/api/register', [
-            'name' => 'firstuser',
+            'username' => 'firstuser',
             'email' => 'first@example.com',
             'password' => 'password123',
             'password_confirmation' => 'password123',
@@ -21,7 +21,7 @@ class RegistrationReferenceCodeTest extends TestCase
         ]);
 
         $secondResponse = $this->postJson('/api/register', [
-            'name' => 'seconduser',
+            'username' => 'seconduser',
             'email' => 'second@example.com',
             'password' => 'password123',
             'password_confirmation' => 'password123',
@@ -48,7 +48,7 @@ class RegistrationReferenceCodeTest extends TestCase
         ]);
 
         $allowedResponse = $this->postJson('/api/register', [
-            'name' => 'alloweduser',
+            'username' => 'alloweduser',
             'email' => 'allowed@example.com',
             'password' => 'password123',
             'password_confirmation' => 'password123',
@@ -56,7 +56,7 @@ class RegistrationReferenceCodeTest extends TestCase
         ]);
 
         $blockedResponse = $this->postJson('/api/register', [
-            'name' => 'blockeduser',
+            'username' => 'blockeduser',
             'email' => 'blocked@example.com',
             'password' => 'password123',
             'password_confirmation' => 'password123',

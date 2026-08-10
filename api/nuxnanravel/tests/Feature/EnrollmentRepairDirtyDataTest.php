@@ -10,6 +10,7 @@ use App\Models\Student;
 use App\Models\StudentAcademicInfo;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class EnrollmentRepairDirtyDataTest extends TestCase
@@ -231,6 +232,32 @@ class EnrollmentRepairDirtyDataTest extends TestCase
         $this->assertTrue($newInfo->refresh()->is_current);
     }
 
+    /**
+     * Run a callback with foreign keys off.
+     *
+     * RefreshDatabase keeps every test inside a transaction, and SQLite refuses
+     * to flip `PRAGMA foreign_keys` there — `defer_foreign_keys` is the one that
+     * works, and since the transaction is rolled back the check never fires.
+     */
+    private function withoutForeignKeyChecks(callable $callback): void
+    {
+        $connection = Schema::getConnection();
+
+        if ($connection->getDriverName() === 'sqlite') {
+            $connection->statement('PRAGMA defer_foreign_keys = ON');
+
+            try {
+                $callback();
+            } finally {
+                $connection->statement('PRAGMA defer_foreign_keys = OFF');
+            }
+
+            return;
+        }
+
+        Schema::withoutForeignKeyConstraints($callback);
+    }
+
     public function test_manual_review_items_detected()
     {
         [$user, $academy, $academicYear, $classroom, $student] = $this->createSetup();
@@ -246,16 +273,20 @@ class EnrollmentRepairDirtyDataTest extends TestCase
             'enrolled_at' => now(),
         ]);
 
-        // Case 2: active enrollment with deleted classroom
-        ClassroomStudent::create([
-            'academy_id' => $academy->id,
-            'classroom_id' => 99999, // Non-existent
-            'student_id' => $student->id,
-            'academic_year_id' => $academicYear->id,
-            'student_number' => 16,
-            'status' => 'active',
-            'enrolled_at' => now(),
-        ]);
+        // Case 2: active enrollment with deleted classroom. classroom_id now has
+        // a foreign key, so this orphan only survives as legacy data — force it
+        // in to keep the repair command's branch covered.
+        $this->withoutForeignKeyChecks(function () use ($academy, $student, $academicYear) {
+            ClassroomStudent::create([
+                'academy_id' => $academy->id,
+                'classroom_id' => 99999, // Non-existent
+                'student_id' => $student->id,
+                'academic_year_id' => $academicYear->id,
+                'student_number' => 16,
+                'status' => 'active',
+                'enrolled_at' => now(),
+            ]);
+        });
 
         // Run the command and assert counts
         $this->artisan('enrollment:repair-dirty-data')

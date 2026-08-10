@@ -17,6 +17,8 @@ class AuthenticationTest extends TestCase
             'email' => 'test@example.com',
             'password' => 'password',
             'password_confirmation' => 'password',
+            // Registration requires a suggester code; the admin one is unlimited.
+            'reference_code' => User::ADMIN_SUGGESTER_CODE,
         ]);
 
         $response->assertStatus(200)
@@ -29,7 +31,6 @@ class AuthenticationTest extends TestCase
                     'username',
                     'email',
                     'created_at',
-                    'updated_at',
                 ],
             ]);
 
@@ -68,10 +69,14 @@ class AuthenticationTest extends TestCase
             'Authorization' => 'Bearer '.$token,
         ])->getJson('/api/me');
 
+        // /api/me wraps the user in {success, data}.
         $response->assertStatus(200)
             ->assertJson([
-                'id' => $user->id,
-                'email' => $user->email,
+                'success' => true,
+                'data' => [
+                    'id' => $user->id,
+                    'email' => $user->email,
+                ],
             ]);
     }
 

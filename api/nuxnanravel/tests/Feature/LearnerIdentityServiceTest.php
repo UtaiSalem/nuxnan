@@ -110,6 +110,9 @@ class LearnerIdentityServiceTest extends TestCase
 
         $classroom = new Classroom([
             'academy_id' => $academy->id,
+            // classrooms.academic_year_id is NOT NULL since classrooms became the
+            // source of truth for enrolment.
+            'academic_year_id' => $academicYear->id,
             'name' => '6/1',
             'grade_level' => 'ม.6',
             'section' => '1',

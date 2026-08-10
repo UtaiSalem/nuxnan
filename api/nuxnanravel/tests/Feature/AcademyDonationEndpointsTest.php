@@ -55,10 +55,21 @@ class AcademyDonationEndpointsTest extends TestCase
         $this->postJson("/api/academies/{$academy->id}/donations/points", ['points_amount' => 1])->assertUnauthorized();
     }
 
-    public function test_donor_cannot_donate_to_own_academy(): void
+    /**
+     * Self-donation is allowed on purpose: an owner may fund and advertise on
+     * their own academy. The endpoint used to block it — assert it no longer does.
+     */
+    public function test_owner_can_donate_to_their_own_academy(): void
     {
         [$owner, , $academy] = $this->makeAcademy();
-        $this->actingAs($owner, 'api')->postJson("/api/academies/{$academy->id}/donations/points", ['points_amount' => 1])->assertForbidden();
+        $owner->update(['pp' => 1000]);
+
+        $this->actingAs($owner, 'api')
+            ->postJson("/api/academies/{$academy->id}/donations/points", ['points_amount' => 100])
+            ->assertCreated()
+            ->assertJsonPath('data.donation_type', 'point');
+
+        $this->assertEquals(900, $owner->fresh()->pp);
     }
 
     public function test_amount_below_min_returns_422(): void

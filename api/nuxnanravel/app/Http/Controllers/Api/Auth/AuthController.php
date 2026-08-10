@@ -6,6 +6,7 @@ use App\Enums\UsageEventType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Services\AuthService;
 use App\Services\UsageEventService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -154,14 +155,12 @@ class AuthController extends Controller
                     $referrer->increment('no_of_ref');
                 }
 
+                // Same default role the OAuth sign-up path grants — without it,
+                // accounts made here carry no role at all.
+                app(AuthService::class)->assignDefaultRole($user);
+
                 return $user;
             });
-
-            // Assign STUDENT role if it exists
-            // $studentRole = \App\Models\Role::where('name', 'STUDENT')->first();
-            // if ($studentRole) {
-            //     $user->assignRole('STUDENT');
-            // }
 
             $token = auth('api')->login($user);
 
