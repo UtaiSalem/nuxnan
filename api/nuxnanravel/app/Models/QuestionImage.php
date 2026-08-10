@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\CourseMediaService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -25,22 +26,14 @@ class QuestionImage extends Model
             return asset('storage/'.$this->attributes['image_url']);
         }
 
-        // Define all potential base paths where images might be stored
-        $candidatePaths = [];
+        // Uploads are spread across several directories (quiz questions and their
+        // options share one, lesson questions another), so the file has to be
+        // looked up. CourseMediaService owns that list — keep it single-sourced.
+        $path = app(CourseMediaService::class)
+            ->locate($this->filename, CourseMediaService::QUESTION_IMAGE_SEARCH_PATHS);
 
-        // 1. Quizzes (Preferred for this context)
-        // Note: User confirmed options are also here: images/courses/quizzes/questions/
-        $candidatePaths[] = 'storage/images/courses/quizzes/questions/'.$this->filename;
-        $candidatePaths[] = 'storage/images/courses/quizzes/questions/options/'.$this->filename;
-
-        // 2. Lessons (Legacy/Other context)
-        $candidatePaths[] = 'storage/images/courses/lessons/questions/'.$this->filename;
-        $candidatePaths[] = 'storage/images/courses/lessons/questions/options/'.$this->filename;
-
-        foreach ($candidatePaths as $path) {
-            if (file_exists(public_path($path))) {
-                return asset($path);
-            }
+        if ($path) {
+            return asset('storage/'.$path.'/'.$this->filename);
         }
 
         // Fallback based on type if not found (to maintain old behavior preference or just default)

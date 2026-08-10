@@ -12,6 +12,7 @@ use App\Models\Topic;
 use App\Models\User;
 use App\Services\Support\CourseCloneContext;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class CourseCloneService
@@ -314,6 +315,13 @@ class CourseCloneService
                     $newQuestion->images()->create([
                         'filename' => $newFilename,
                     ]);
+                } else {
+                    Log::warning('Question image skipped while cloning course', [
+                        'question_image_id' => $image->id,
+                        'source_question_id' => $question->id,
+                        'new_question_id' => $newQuestion->id,
+                        'filename' => $filename,
+                    ]);
                 }
             }
 
@@ -344,6 +352,13 @@ class CourseCloneService
                     if ($newFilename) {
                         $newOption->images()->create([
                             'filename' => $newFilename,
+                        ]);
+                    } else {
+                        Log::warning('Option image skipped while cloning course', [
+                            'question_image_id' => $image->id,
+                            'source_option_id' => $option->id,
+                            'new_option_id' => $newOption->id,
+                            'filename' => $filename,
                         ]);
                     }
                 }

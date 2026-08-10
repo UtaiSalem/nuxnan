@@ -3,7 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Course;
+use App\Models\CourseQuiz;
 use App\Models\Lesson;
+use App\Models\Question;
+use App\Models\QuestionOption;
 use App\Models\User;
 use App\Services\CourseCloneService;
 use App\Services\CourseMediaService;
@@ -71,6 +74,183 @@ class CourseMediaTest extends TestCase
         $this->assertNotEquals($lessonImageFilename, $clonedLessonImage->filename);
         Storage::disk('public')->assertExists('images/courses/lessons/'.$lessonImageFilename);
         Storage::disk('public')->assertExists('images/courses/lessons/'.$clonedLessonImage->filename);
+    }
+
+    public function test_cloning_course_copies_quiz_question_and_option_images()
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $course = Course::create([
+            'name' => 'Quiz Course',
+            'slug' => 'quiz-course',
+            'user_id' => $user->id,
+            'instructor_id' => $user->id,
+        ]);
+
+        $quiz = CourseQuiz::create([
+            'course_id' => $course->id,
+            'user_id' => $user->id,
+            'title' => 'Image Quiz',
+        ]);
+
+        $question = Question::create([
+            'questionable_type' => 'App\Models\CourseQuiz',
+            'questionable_id' => $quiz->id,
+            'course_id' => $course->id,
+            'user_id' => $user->id,
+            'text' => 'จากรูปภาพ คือสัญลักษณ์อะไร',
+            'points' => 1,
+        ]);
+
+        // Both question and option images are uploaded to the quiz question
+        // directory — options do NOT get their own `options/` subfolder.
+        $questionImage = 'q_'.uniqid().'.png';
+        $optionImage = 'o_'.uniqid().'.png';
+        Storage::disk('public')->put('images/courses/quizzes/questions/'.$questionImage, 'q');
+        Storage::disk('public')->put('images/courses/quizzes/questions/'.$optionImage, 'o');
+
+        $question->images()->create(['filename' => $questionImage]);
+
+        $option = QuestionOption::create([
+            'optionable_type' => 'App\Models\Question',
+            'optionable_id' => $question->id,
+            'text' => '',
+            'is_correct' => 1,
+            'position' => 1,
+        ]);
+        $option->images()->create(['filename' => $optionImage]);
+
+        $clonedCourse = app(CourseCloneService::class)->clone($course, $user);
+
+        $clonedQuestion = Question::where('questionable_type', 'App\Models\CourseQuiz')
+            ->where('questionable_id', $clonedCourse->courseQuizzes->first()->id)
+            ->first();
+
+        $clonedQuestionImage = $clonedQuestion->images->first();
+        $this->assertNotNull($clonedQuestionImage, 'Question image was not cloned');
+        $this->assertNotEquals($questionImage, $clonedQuestionImage->filename);
+        Storage::disk('public')->assertExists('images/courses/quizzes/questions/'.$clonedQuestionImage->filename);
+
+        $clonedOption = $clonedQuestion->options->first();
+        $clonedOptionImage = $clonedOption->images->first();
+        $this->assertNotNull($clonedOptionImage, 'Option image was not cloned');
+        $this->assertNotEquals($optionImage, $clonedOptionImage->filename);
+        Storage::disk('public')->assertExists('images/courses/quizzes/questions/'.$clonedOptionImage->filename);
+
+        // The original files must survive the copy.
+        Storage::disk('public')->assertExists('images/courses/quizzes/questions/'.$questionImage);
+        Storage::disk('public')->assertExists('images/courses/quizzes/questions/'.$optionImage);
+
+        // And the copies must resolve to a real URL, not the not-found fallback.
+        $this->assertStringContainsString(
+            'storage/images/courses/quizzes/questions/'.$clonedOptionImage->filename,
+            $clonedOptionImage->url
+        );
+    }
+
+    public function test_repair_command_restores_option_images_lost_by_an_earlier_clone()
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $course = Course::create([
+            'name' => 'Quiz Course',
+            'slug' => 'quiz-course-repair',
+            'user_id' => $user->id,
+            'instructor_id' => $user->id,
+        ]);
+
+        $quiz = CourseQuiz::create([
+            'course_id' => $course->id,
+            'user_id' => $user->id,
+            'title' => 'Image Quiz',
+        ]);
+
+        $question = Question::create([
+            'questionable_type' => 'App\Models\CourseQuiz',
+            'questionable_id' => $quiz->id,
+            'course_id' => $course->id,
+            'user_id' => $user->id,
+            'text' => 'ข้อใดต่อไปนี้คือไอคอนโปรแกรม',
+            'points' => 1,
+        ]);
+
+        $optionImage = 'o_'.uniqid().'.png';
+        Storage::disk('public')->put('images/courses/quizzes/questions/'.$optionImage, 'o');
+
+        $option = QuestionOption::create([
+            'optionable_type' => 'App\Models\Question',
+            'optionable_id' => $question->id,
+            'text' => '',
+            'is_correct' => 1,
+            'position' => 1,
+        ]);
+        $option->images()->create(['filename' => $optionImage]);
+
+        $clonedCourse = app(CourseCloneService::class)->clone($course, $user);
+
+        // Reproduce the broken state: the clone exists but its option image row
+        // was never created.
+        $clonedQuestion = Question::where('questionable_type', 'App\Models\CourseQuiz')
+            ->where('questionable_id', $clonedCourse->courseQuizzes->first()->id)
+            ->first();
+        $clonedOption = $clonedQuestion->options->first();
+        $clonedOption->images()->delete();
+
+        $this->assertCount(0, $clonedOption->fresh()->images);
+
+        $this->artisan('courses:repair-cloned-question-images', ['--course' => [$clonedCourse->id]])
+            ->assertExitCode(0);
+
+        $restored = $clonedOption->fresh()->images->first();
+        $this->assertNotNull($restored, 'Repair did not restore the option image');
+        $this->assertNotEquals($optionImage, $restored->filename);
+        Storage::disk('public')->assertExists('images/courses/quizzes/questions/'.$restored->filename);
+        Storage::disk('public')->assertExists('images/courses/quizzes/questions/'.$optionImage);
+    }
+
+    public function test_repair_command_is_idempotent()
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $course = Course::create([
+            'name' => 'Quiz Course',
+            'slug' => 'quiz-course-idempotent',
+            'user_id' => $user->id,
+            'instructor_id' => $user->id,
+        ]);
+
+        $quiz = CourseQuiz::create([
+            'course_id' => $course->id,
+            'user_id' => $user->id,
+            'title' => 'Image Quiz',
+        ]);
+
+        $question = Question::create([
+            'questionable_type' => 'App\Models\CourseQuiz',
+            'questionable_id' => $quiz->id,
+            'course_id' => $course->id,
+            'user_id' => $user->id,
+            'text' => 'คำถามมีรูป',
+            'points' => 1,
+        ]);
+
+        $imageName = 'q_'.uniqid().'.png';
+        Storage::disk('public')->put('images/courses/quizzes/questions/'.$imageName, 'q');
+        $question->images()->create(['filename' => $imageName]);
+
+        $clonedCourse = app(CourseCloneService::class)->clone($course, $user);
+
+        $this->artisan('courses:repair-cloned-question-images', ['--course' => [$clonedCourse->id]]);
+        $this->artisan('courses:repair-cloned-question-images', ['--course' => [$clonedCourse->id]]);
+
+        $clonedQuestion = Question::where('questionable_type', 'App\Models\CourseQuiz')
+            ->where('questionable_id', $clonedCourse->courseQuizzes->first()->id)
+            ->first();
+
+        $this->assertCount(1, $clonedQuestion->images, 'Repair duplicated an existing image');
     }
 
     public function test_deleting_cloned_course_does_not_delete_original_media()

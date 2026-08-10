@@ -24,6 +24,8 @@ class CourseMediaService
         'option_image' => 'images/courses/lessons/questions/options',
         'quiz_question_image' => 'images/courses/quizzes/questions',
         'quiz_option_image' => 'images/courses/quizzes/questions/options',
+        'legacy_question_image' => 'images/courses/questions',
+        'legacy_option_image' => 'images/courses/questions/options',
     ];
 
     /**
@@ -86,42 +88,85 @@ class CourseMediaService
     }
 
     /**
+     * Every directory a question or option image may physically live in.
+     *
+     * Uploads are not consistent: quiz questions AND their options both land in
+     * `images/courses/quizzes/questions` (see QuestionOptionController and
+     * CourseQuizQuestionController), while lesson questions use the
+     * `lessons/questions` pair. A copy must look in all of them or the image is
+     * silently lost. Mirrors QuestionImage::getUrlAttribute().
+     */
+    const QUESTION_IMAGE_SEARCH_PATHS = [
+        'quiz_question_image',
+        'question_image',
+        'quiz_option_image',
+        'option_image',
+        'legacy_question_image',
+        'legacy_option_image',
+    ];
+
+    /**
+     * Find the directory that actually holds the file.
+     *
+     * @param  array<int, string>  $pathKeys  keys of self::PATHS (or raw paths)
+     * @return string|null the directory, not the full path
+     */
+    public function locate(?string $filename, array $pathKeys): ?string
+    {
+        if (empty($filename)) {
+            return null;
+        }
+
+        $basename = basename($filename);
+
+        foreach ($pathKeys as $key) {
+            $path = self::PATHS[$key] ?? $key;
+
+            if (Storage::disk('public')->exists($path.'/'.$basename)) {
+                return $path;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Copy a file that may live in any of the given directories, into whichever
+     * directory it was found in.
+     *
+     * @param  array<int, string>  $pathKeys  keys of self::PATHS (or raw paths)
+     */
+    public function copyFileFromAny(?string $filename, array $pathKeys): ?string
+    {
+        if (empty($filename)) {
+            return null;
+        }
+
+        $basename = basename($filename);
+        $path = $this->locate($basename, $pathKeys);
+
+        if (! $path) {
+            Log::warning("Media file not found in any candidate path: {$basename}", [
+                'paths' => array_map(fn ($key) => self::PATHS[$key] ?? $key, $pathKeys),
+            ]);
+
+            return null;
+        }
+
+        return $this->copyFile($basename, $path);
+    }
+
+    /**
      * Question images can be in multiple locations. We'll try to find it.
      */
     public function copyQuestionImage(?string $filename): ?string
     {
-        if (empty($filename)) {
-            return null;
-        }
-
-        $filename = basename($filename);
-
-        // Try standard path
-        $newFile = $this->copyFile($filename, self::PATHS['question_image']);
-        if ($newFile) {
-            return $newFile;
-        }
-
-        // Try quiz path
-        return $this->copyFile($filename, self::PATHS['quiz_question_image']);
+        return $this->copyFileFromAny($filename, self::QUESTION_IMAGE_SEARCH_PATHS);
     }
 
     public function copyOptionImage(?string $filename): ?string
     {
-        if (empty($filename)) {
-            return null;
-        }
-
-        $filename = basename($filename);
-
-        // Try standard path
-        $newFile = $this->copyFile($filename, self::PATHS['option_image']);
-        if ($newFile) {
-            return $newFile;
-        }
-
-        // Try quiz path
-        return $this->copyFile($filename, self::PATHS['quiz_option_image']);
+        return $this->copyFileFromAny($filename, self::QUESTION_IMAGE_SEARCH_PATHS);
     }
 
     /**
