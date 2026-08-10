@@ -64,6 +64,19 @@ const isDeletingStudentPhoto = ref(false)
 const isSaving = ref(false)
 const isEditModalOpen = ref(false)
 
+// กรอบของ modal ต้องพอดีกับพื้นที่เหนือแป้นพิมพ์มือถือ ไม่ใช่ความสูงเต็มจอ
+const { overlayStyle: modalViewportStyle } = useVisualViewport(isEditModalOpen)
+
+// 16px ขึ้นไปกันไม่ให้ iOS Safari ซูมเข้าตอนโฟกัส (การซูมทำให้ layout กระโดดจนหาช่องไม่เจอ)
+const fieldClass = 'block w-full min-h-[44px] rounded-lg border border-gray-300 px-3 py-2.5 text-base sm:text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none'
+
+// แป้นพิมพ์ใช้เวลาเด้งขึ้นสักครู่ visual viewport ถึงจะหด — รอให้กรอบ modal
+// คำนวณใหม่เสร็จก่อน แล้วค่อยเลื่อนช่องที่โฟกัสมากลางพื้นที่ที่เหลือ
+const keepFieldVisible = (event) => {
+    const el = event.target
+    setTimeout(() => el?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300)
+}
+
 const editForm = reactive({
     id: props.studentInfo.id,
     student_number: props.studentInfo.student_number,
@@ -431,18 +444,37 @@ const studentPrefixName = (prefix) => {
 
             <!-- Edit Modal -->
             <Dialog as="div" @close="isEditModalOpen = false" :open="isEditModalOpen" class="relative z-50">
-                <div class="fixed inset-0 bg-black/30" aria-hidden="true" />
-                <div class="fixed inset-0 flex items-center justify-center p-4">
-                    <DialogPanel class="w-full max-w-md bg-white rounded-lg p-6 shadow-xl">
-                        <DialogTitle class="text-lg font-medium text-gray-900 mb-4">แก้ไขข้อมูลนักเรียน</DialogTitle>
-                        <form @submit.prevent="handleSubmit" class="space-y-4">
+                <div class="fixed inset-0 bg-black/40" aria-hidden="true" />
+                <!--
+                    ห้ามใช้ `inset-0` ตรงนี้ — layout viewport ไม่หดตอนแป้นพิมพ์มือถือเด้งขึ้นมา
+                    ฟอร์มที่จัดกึ่งกลางจะไปจมใต้แป้นพิมพ์ จึงผูกกรอบกับ visual viewport แทน
+                -->
+                <div class="fixed inset-x-0 flex items-end sm:items-center justify-center p-0 sm:p-4"
+                    :style="modalViewportStyle">
+                    <DialogPanel
+                        class="w-full sm:max-w-md max-h-full flex flex-col bg-white rounded-t-2xl sm:rounded-2xl shadow-xl overflow-hidden">
+                        <div class="flex-shrink-0 flex items-center gap-2 px-4 py-3 sm:px-6 sm:py-4 border-b border-gray-200">
+                            <DialogTitle class="min-w-0 flex-1 text-base sm:text-lg font-semibold text-gray-900 break-words">
+                                แก้ไขข้อมูลนักเรียน
+                            </DialogTitle>
+                            <button type="button" @click="isEditModalOpen = false" aria-label="ปิด"
+                                class="flex-shrink-0 -mr-1 p-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100">
+                                <Icon icon="heroicons:x-mark" class="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <!-- ตัวฟอร์มเลื่อนได้เอง เพื่อให้ช่องที่โฟกัสถูกเลื่อนขึ้นมาเหนือแป้นพิมพ์ได้ -->
+                        <form id="student-card-edit-form" @submit.prevent="handleSubmit"
+                            class="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 space-y-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">รหัสนักเรียน</label>
-                                <input type="text" v-model="editForm.student_number" class="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                                <input type="text" inputmode="numeric" v-model="editForm.student_number"
+                                    @focus="keepFieldVisible" :class="fieldClass" />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">คำนำหน้าชื่อ</label>
-                                <select id="student-title-name" v-model="editForm.title_name" class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">คำนำหน้าชื่อ</label>
+                                <select id="student-title-name" v-model="editForm.title_name"
+                                    @focus="keepFieldVisible" :class="[fieldClass, 'bg-white']">
                                     <option value="">ไม่ระบุ</option>
                                     <option value="เด็กชาย">เด็กชาย</option>
                                     <option value="เด็กหญิง">เด็กหญิง</option>
@@ -452,36 +484,46 @@ const studentPrefixName = (prefix) => {
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">ชื่อ</label>
-                                <input type="text" v-model="editForm.first_name_thai" class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                                <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ</label>
+                                <input type="text" enterkeyhint="next" v-model="editForm.first_name_thai"
+                                    @focus="keepFieldVisible" :class="fieldClass" />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">นามสกุล</label>
-                                <input type="text" v-model="editForm.last_name_thai" class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                                <label class="block text-sm font-medium text-gray-700 mb-1">นามสกุล</label>
+                                <input type="text" enterkeyhint="next" v-model="editForm.last_name_thai"
+                                    @focus="keepFieldVisible" :class="fieldClass" />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ (อังกฤษ)</label>
-                                <input type="text" v-model="editForm.first_name_english" class="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                                <input type="text" enterkeyhint="next" v-model="editForm.first_name_english"
+                                    @focus="keepFieldVisible" :class="fieldClass" />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">นามสกุล (อังกฤษ)</label>
-                                <input type="text" v-model="editForm.last_name_english" class="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                                <input type="text" enterkeyhint="next" v-model="editForm.last_name_english"
+                                    @focus="keepFieldVisible" :class="fieldClass" />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">เลขประจำตัวประชาชน</label>
-                                <input type="text" v-model="editForm.national_id" class="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                                <input type="text" inputmode="numeric" maxlength="13" v-model="editForm.national_id"
+                                    @focus="keepFieldVisible" :class="fieldClass" />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">วันเกิด</label>
-                                <input type="date" v-model="editForm.birth_date" class="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" />
-                            </div>
-                            <div class="flex justify-end gap-2 pt-2">
-                                <button type="button" @click="isEditModalOpen = false" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">ยกเลิก</button>
-                                <button type="submit" :disabled="isSaving" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50">
-                                    {{ isSaving ? 'กำลังบันทึก...' : 'บันทึก' }}
-                                </button>
+                                <input type="date" v-model="editForm.birth_date"
+                                    @focus="keepFieldVisible" :class="fieldClass" />
                             </div>
                         </form>
+
+                        <!-- ปุ่มอยู่นอกกล่องที่เลื่อน จึงเห็นตลอดแม้แป้นพิมพ์เปิดอยู่ -->
+                        <div class="flex-shrink-0 flex gap-2 px-4 py-3 sm:px-6 border-t border-gray-200 bg-white pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                            <button type="button" @click="isEditModalOpen = false"
+                                class="flex-1 sm:flex-none min-h-[44px] px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">ยกเลิก</button>
+                            <button type="submit" form="student-card-edit-form" :disabled="isSaving"
+                                class="flex-1 sm:ml-auto sm:flex-none min-h-[44px] px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                                {{ isSaving ? 'กำลังบันทึก...' : 'บันทึก' }}
+                            </button>
+                        </div>
                     </DialogPanel>
                 </div>
             </Dialog>
