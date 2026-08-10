@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Api\Learn\Course\questions;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Learn\Course\questions\QuestionResource;
 use App\Models\Course;
+use App\Models\CourseQuiz;
 use App\Models\Question;
+use App\Models\QuestionImage;
+use App\Services\CourseMediaService;
 use App\Services\CourseScoreService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 
 class QuestionController extends Controller
@@ -62,7 +64,9 @@ class QuestionController extends Controller
             $q_images = $request->file('images');
             foreach ($q_images as $q_image) {
                 $q_img_filename = uniqid().'.'.$q_image->getClientOriginalExtension();
-                Storage::disk('public')->putFileAs('images/courses/questions', $q_image, $q_img_filename);
+                // Canonical directory for question and option pictures. Writing
+                // to `images/courses/questions` left them where nothing looks.
+                Storage::disk('public')->putFileAs('images/courses/quizzes/questions', $q_image, $q_img_filename);
                 $new_question->images()->create([
                     'filename' => $q_img_filename,
                 ]);
@@ -102,7 +106,9 @@ class QuestionController extends Controller
             $q_images = $request->file('images');
             foreach ($q_images as $q_image) {
                 $q_img_filename = uniqid().'.'.$q_image->getClientOriginalExtension();
-                Storage::disk('public')->putFileAs('images/courses/questions', $q_image, $q_img_filename);
+                // Canonical directory for question and option pictures. Writing
+                // to `images/courses/questions` left them where nothing looks.
+                Storage::disk('public')->putFileAs('images/courses/quizzes/questions', $q_image, $q_img_filename);
                 $question->images()->create([
                     'filename' => $q_img_filename,
                 ]);
@@ -155,7 +161,7 @@ class QuestionController extends Controller
 
         if ($question->images) {
             foreach ($question->images as $q_image) {
-                Storage::disk('public')->delete('images/courses/questions/'.$q_image->filename);
+                $this->deleteImageFile($q_image);
             }
             $question->images()->delete();
         }
@@ -164,7 +170,7 @@ class QuestionController extends Controller
             foreach ($question->options as $option) {
                 if ($option->images) {
                     foreach ($option->images as $o_image) {
-                        Storage::disk('public')->delete('images/courses/questions/'.$o_image->filename);
+                        $this->deleteImageFile($o_image);
                     }
                     $option->images()->delete();
                 }
@@ -180,17 +186,37 @@ class QuestionController extends Controller
         ], 204);
     }
 
+    /**
+     * Remove an image's file, wherever it was uploaded to.
+     */
+    private function deleteImageFile($image): void
+    {
+        $media = app(CourseMediaService::class);
+        $path = $media->locate($image->filename, CourseMediaService::QUESTION_IMAGE_SEARCH_PATHS);
+
+        if (! $path) {
+            return;
+        }
+
+        $media->deleteIfUnused($path.'/'.$image->filename, QuestionImage::class, 'filename', $image->filename, $image->id);
+    }
+
     public function duplicateQuestion(Question $question, Request $request)
     {
         $new_question = $question->replicate();
         if ($request->quiz_id) {
+            $quiz = CourseQuiz::findOrFail($request->quiz_id);
+
             $new_question->questionable_type = 'App\Models\CourseQuiz';
-            $new_question->questionable_id = $request->quiz_id;
+            $new_question->questionable_id = $quiz->id;
+            // replicate() carries over the origin course and author — retag the copy
+            // or questions.course_id stops matching the quiz it now lives in.
+            $new_question->course_id = $quiz->course_id;
+            $new_question->user_id = auth()->id();
         }
         $new_question->save();
 
         if ($request->quiz_id) {
-            $quiz = $new_question->questionable;
             $quiz->increment('total_score', $question->points);
             $quiz->increment('total_questions');
 
@@ -209,14 +235,16 @@ class QuestionController extends Controller
                 // ]);
                 // Storage::disk('public')->move($old_q_image->url, $new_q_image_url);
 
+                // The file may sit under the quiz or the lesson directory — search both,
+                // otherwise the copy silently loses the image.
+                $new_q_image_filename = app(CourseMediaService::class)->copyQuestionImage($old_q_image->filename);
+
+                if (! $new_q_image_filename) {
+                    continue;
+                }
+
                 $new_q_image = $old_q_image->replicate();
                 $new_q_image->imageable_id = $new_question->id;
-
-                $new_q_image_file_extention = File::extension($old_q_image->url);
-                $new_q_image_filename = uniqid().'.'.$new_q_image_file_extention;
-                $new_q_image_url = 'images/courses/quizzes/questions/'.$new_q_image_filename;
-                Storage::disk('public')->copy('images/courses/quizzes/questions/'.$old_q_image->filename, $new_q_image_url);
-
                 $new_q_image->filename = $new_q_image_filename;
 
                 $new_q_image->save();
@@ -246,11 +274,11 @@ class QuestionController extends Controller
                 if ($old_q_option->images) {
 
                     foreach ($old_q_option->images as $old_q_opt_image) {
-                        $opt_img_file_extention = File::extension($old_q_opt_image->url);
-                        $new_opt_img_filename = uniqid().'.'.$opt_img_file_extention;
-                        $new_opt_image_url = 'images/courses/quizzes/questions/'.$new_opt_img_filename;
+                        $new_opt_img_filename = app(CourseMediaService::class)->copyOptionImage($old_q_opt_image->filename);
 
-                        Storage::disk('public')->copy('images/courses/quizzes/questions/'.$old_q_opt_image->filename, $new_opt_image_url);
+                        if (! $new_opt_img_filename) {
+                            continue;
+                        }
 
                         $new_q_option->images()->create([
                             'filename' => $new_opt_img_filename,

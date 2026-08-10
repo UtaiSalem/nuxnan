@@ -474,6 +474,32 @@ class Course extends Model
     }
 
     /**
+     * Restrict a query to the courses the user may administer.
+     *
+     * The query form of isAdmin() — keep the two in step, or listings will offer
+     * courses whose write endpoints then answer 403.
+     */
+    public function scopeAdministeredBy($query, $user)
+    {
+        if (! $user) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        if ($user->isSuperAdmin()) {
+            return $query;
+        }
+
+        return $query->where(function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+                ->orWhereHas('courseMembers', function ($member) use ($user) {
+                    $member->where('user_id', $user->id)
+                        ->where('role', 4)
+                        ->where('status', 1);
+                });
+        });
+    }
+
+    /**
      * Check if the given user has a specific permission for this course.
      */
     public function hasPermission($user, string $permission): bool

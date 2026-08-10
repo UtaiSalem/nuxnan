@@ -422,13 +422,10 @@ class GradebookController extends Controller
             return true;
         }
 
-        // Course admin
-        $isAdmin = $course->courseMembers()
-            ->where('user_id', $user->id)
-            ->whereIn('role', ['admin', 'teacher', 'instructor'])
-            ->exists();
-
-        return $isAdmin;
+        // Course admin. course_members.role is a tinyint (1=student,
+        // 2=student_leader, 3=teacher, 4=admin) — matching it against role names
+        // never returned a row, locking co-admins out of the gradebook.
+        return $course->isAdmin($user);
     }
 
     protected function canManageGradebook(Course $course): bool

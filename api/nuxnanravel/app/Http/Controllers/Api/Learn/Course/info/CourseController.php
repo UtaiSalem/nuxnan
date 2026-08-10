@@ -334,14 +334,10 @@ class CourseController extends Controller
 
         $user = auth()->user();
 
-        // Get courses where user is admin
-        $coursesQuery = Course::where(function ($q) use ($user) {
-            $q->where('user_id', $user->id)
-                ->orWhereHas('courseMembers', function ($q2) use ($user) {
-                    $q2->where('user_id', $user->id)
-                        ->whereIn('role', ['admin', 'teacher', 'instructor']);
-                });
-        });
+        // Get courses where user is admin. The old inline filter compared role
+        // names against a tinyint column, so co-admins matched nothing and only
+        // owners ever saw results.
+        $coursesQuery = Course::administeredBy($user);
 
         if (strlen($query) >= 2) {
             $coursesQuery->where(function ($q) use ($query) {

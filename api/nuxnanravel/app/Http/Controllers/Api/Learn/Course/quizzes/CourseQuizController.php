@@ -28,8 +28,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Storage;
 
 class CourseQuizController extends Controller
 {
@@ -430,14 +428,9 @@ class CourseQuizController extends Controller
 
         $user = auth()->user();
 
-        // Get course IDs where user is admin
-        $adminCourseIds = Course::where(function ($q) use ($user) {
-            $q->where('user_id', $user->id)
-                ->orWhereHas('courseMembers', function ($q2) use ($user) {
-                    $q2->where('user_id', $user->id)
-                        ->whereIn('role', ['admin', 'teacher', 'instructor']);
-                });
-        })->pluck('id');
+        // Get course IDs where user is admin — same rule duplicateQuiz enforces,
+        // so nothing is listed that cannot then be copied.
+        $adminCourseIds = Course::administeredBy($user)->pluck('id');
 
         // Search quizzes from courses user can admin
         $quizzes = CourseQuiz::with(['course:id,name,code'])
@@ -457,11 +450,29 @@ class CourseQuizController extends Controller
 
     public function duplicateQuiz(CourseQuiz $quiz, Request $request): JsonResponse
     {
+        $validated = $request->validate([
+            'course_id' => 'required|integer|exists:courses,id',
+            'title' => 'nullable|string|max:255',
+        ]);
+
+        $user = auth()->user();
+        $sourceCourse = $quiz->course;
+        $targetCourse = Course::find($validated['course_id']);
+
+        // The quiz carries its answer key, so both ends must belong to the user:
+        // the source to read it, the destination to write into.
+        if (! $sourceCourse || ! $sourceCourse->isAdmin($user) || ! $targetCourse->isAdmin($user)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 403);
+        }
+
         try {
             DB::beginTransaction();
 
-            $customTitle = $request->input('title');
-            $newQuiz = $this->createDuplicateQuiz($quiz, $request->course_id, $customTitle);
+            $customTitle = $validated['title'] ?? null;
+            $newQuiz = $this->createDuplicateQuiz($quiz, $targetCourse, $customTitle);
             $this->duplicateQuestions($quiz, $newQuiz);
             $this->updateCourseTotalScore($newQuiz, $quiz->total_score);
 
@@ -483,10 +494,13 @@ class CourseQuizController extends Controller
         }
     }
 
-    private function createDuplicateQuiz(CourseQuiz $quiz, int $courseId, ?string $customTitle = null): CourseQuiz
+    private function createDuplicateQuiz(CourseQuiz $quiz, Course $targetCourse, ?string $customTitle = null): CourseQuiz
     {
         $newQuiz = $quiz->replicate();
-        $newQuiz->course_id = $courseId;
+        $newQuiz->course_id = $targetCourse->id;
+        // replicate() keeps the source owner — the copy belongs to whoever made it,
+        // same as CourseQuizController@store.
+        $newQuiz->user_id = auth()->id();
         if ($customTitle) {
             $newQuiz->title = $customTitle;
         }
@@ -498,16 +512,20 @@ class CourseQuizController extends Controller
     private function duplicateQuestions(CourseQuiz $originalQuiz, CourseQuiz $newQuiz): void
     {
         $originalQuiz->questions->each(function ($question) use ($newQuiz) {
-            $newQuestion = $this->duplicateQuestion($question, $newQuiz->id);
+            $newQuestion = $this->duplicateQuestion($question, $newQuiz);
             $this->duplicateQuestionImages($question, $newQuestion);
             $this->duplicateOptions($question, $newQuestion);
         });
     }
 
-    private function duplicateQuestion($question, int $quizId): Question
+    private function duplicateQuestion($question, CourseQuiz $newQuiz): Question
     {
         $newQuestion = $question->replicate();
-        $newQuestion->questionable_id = $quizId;
+        $newQuestion->questionable_id = $newQuiz->id;
+        // Without these the copy stays tagged with the course and author it came
+        // from, which breaks any lookup that trusts questions.course_id.
+        $newQuestion->course_id = $newQuiz->course_id;
+        $newQuestion->user_id = auth()->id();
         $newQuestion->correct_answers = null;
         $newQuestion->correct_option_id = null;
         $newQuestion->save();
@@ -524,22 +542,24 @@ class CourseQuizController extends Controller
 
     private function duplicateImage($image, int $newImageableId): void
     {
-        if (! Storage::disk('public')->exists(self::QUIZ_IMAGE_PATH.$image->filename)) {
+        $media = app(CourseMediaService::class);
+
+        // Question and option images do not all live under the quiz path — lesson
+        // questions moved into a quiz keep their original directory. Search them all.
+        $sourcePath = $media->locate($image->filename, CourseMediaService::QUESTION_IMAGE_SEARCH_PATHS);
+
+        if (! $sourcePath) {
             throw new ImageNotFoundException('Original image file not found');
+        }
+
+        $newImageFilename = $media->copyFile($image->filename, $sourcePath);
+
+        if (! $newImageFilename) {
+            throw new ImageCopyException('Failed to copy image file');
         }
 
         $newImage = $image->replicate();
         $newImage->imageable_id = $newImageableId;
-        $newImageFilename = uniqid().'.'.File::extension($image->url);
-        $newImageUrl = self::QUIZ_IMAGE_PATH.$newImageFilename;
-
-        if (! Storage::disk('public')->copy(
-            self::QUIZ_IMAGE_PATH.$image->filename,
-            $newImageUrl
-        )) {
-            throw new ImageCopyException('Failed to copy image file');
-        }
-
         $newImage->filename = $newImageFilename;
         $newImage->save();
     }
