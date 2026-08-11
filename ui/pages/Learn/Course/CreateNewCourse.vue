@@ -178,9 +178,15 @@ function handleSelectLevel(level) {
     isOpenLevelOptions.value = false
     isOpenYearOptions.value = false
 }
+function closeLevelOptions() {
+    isOpenLevelOptions.value = false
+}
 
 function handleSelectYear(year) {
     form.value.education_year = year
+    isOpenYearOptions.value = false
+}
+function closeYearOptions() {
     isOpenYearOptions.value = false
 }
 function handleSelectEducationLevel(option) {
@@ -442,7 +448,7 @@ async function handleSubmitForm(){
                         <!-- Level -->
                         <div class="grid grid-cols-2 gap-3">
                             <!-- education_level dropdown -->
-                            <div class="relative">
+                            <div class="relative" v-click-outside="closeLevelOptions">
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ระดับการศึกษา</label>
                                 <div class="relative">
                                     <button type="button" @click="isOpenLevelOptions = !isOpenLevelOptions"
@@ -462,7 +468,7 @@ async function handleSubmitForm(){
                                 </div>
                             </div>
                             <!-- education_year dropdown -->
-                            <div class="relative">
+                            <div class="relative" v-click-outside="closeYearOptions">
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ชั้นปีที่</label>
                                 <div class="relative">
                                     <button type="button"
