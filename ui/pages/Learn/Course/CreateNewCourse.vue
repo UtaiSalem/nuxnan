@@ -2,7 +2,6 @@
 import { ref, computed } from 'vue';
 import { Icon } from '@iconify/vue';
 import Swal from 'sweetalert2';
-import { router } from '@inertiajs/vue3';
 
 import CoursesLayout from '~/layouts/CoursesLayout.vue';
 
@@ -18,6 +17,7 @@ const headerTitle = ref('สร้างรายวิชาใหม่');
 
 
 const config = useRuntimeConfig();
+const api = useApi();
 const tempCover = ref(`${config.public.apiBase}/storage/images/courses/covers/default_cover.jpg`);
 const coverInput = ref(null);
 const isOpenCategoryOptions = ref(false);
@@ -209,7 +209,6 @@ const netPrice = computed(() => {
 
 async function handleSubmitForm(){
   try {
-    const config = { headers: { 'content-type': 'multipart/form-data' } }
     const courseFormData = new FormData();
 
     courseFormData.append('academy_id', form.value.academy_id ?? null);
@@ -233,33 +232,34 @@ async function handleSubmitForm(){
     courseFormData.append('semester', form.value.semester);
     courseFormData.append('academic_year', form.value.academic_year);
     courseFormData.append('status', form.value.status ? 1 : 0);
-    
+
     // form.value.cover ? courseFormData.append('cover', form.value.cover): null;
     if (form.value.cover) {
       courseFormData.append('cover', form.value.cover);
     }
 
-    const courseResp = await axios.post(`/courses`, courseFormData , config);
+    const courseResp = await api.post('/api/courses', courseFormData);
 
-      if (courseResp.data && courseResp.data.success) {
-        // Dev-only logging
-
-        Swal.fire(
+    if (courseResp?.success) {
+      await Swal.fire(
           'สำเร็จ',
           'การบันทึกข้อมูลเสร็จสมบูรณ์',
           'success'
       );
 
-      // router.get(`/academies/${props.academy.data.id}/courses/${newCourse.id}`);
-      router.get(`/Learn/Courses/${courseResp.data.newCourse.id}`);
-
+      await navigateTo(`/Learn/Courses/${courseResp.newCourse.id}`);
     }
 
   } catch (error) {
     // form.value = defaultFormValue.value;
+    const validationErrors = error?.data?.errors
+      ? Object.values(error.data.errors).flat().join('<br />')
+      : null;
+    const detail = validationErrors || error?.data?.message || error?.message || '';
+
     Swal.fire(
         'ล้มเหลว',
-        'เกิดข้อผิดพลาดในการบันทึกข้อมูล, <br />กรุณาตรวจสอบความถูกต้องของข้อมูล' + ' ' + error.message ,
+        'เกิดข้อผิดพลาดในการบันทึกข้อมูล, <br />กรุณาตรวจสอบความถูกต้องของข้อมูล<br />' + detail,
         'error'
     );
   }
@@ -623,7 +623,7 @@ async function handleSubmitForm(){
                 
                 <!-- Action Buttons -->
                 <div class="flex items-center justify-end gap-4 pt-4 pb-12">
-                     <button type="button" @click="router.push('/Learn/Courses')" 
+                     <button type="button" @click="navigateTo('/Learn/Courses')" 
                         class="px-6 py-3 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                      >
                          ยกเลิก
