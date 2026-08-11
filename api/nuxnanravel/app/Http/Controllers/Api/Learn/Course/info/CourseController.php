@@ -542,7 +542,7 @@ class CourseController extends Controller
                 'code' => 'nullable',
                 'name' => 'required|string|max:255',
                 'description' => 'nullable|string',
-                'category' => 'nullable|string',
+                'category' => 'nullable|string|max:255',
                 'semester' => ['nullable', Rule::in(['1', '2', '3', 'summer', 'weekend'])],
                 'academic_year' => ['nullable', 'integer', 'min:2560', 'max:2580'],
                 'level' => 'nullable|string',

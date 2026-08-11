@@ -119,6 +119,20 @@ const courseCategories = ref([
     { name: 'การงานอาชีพและเทคโนโลยี' },
     { name: 'ภาษาต่างประเทศ' },
 ]);
+
+// Category is a combobox: the list above is only a suggestion set, a teacher
+// may type any subject group that is not listed.
+const filteredCategories = computed(() => {
+    const q = (form.value.category || '').trim().toLowerCase();
+    if (!q) return courseCategories.value;
+    return courseCategories.value.filter(c => c.name.toLowerCase().includes(q));
+});
+
+const isCustomCategory = computed(() => {
+    const q = (form.value.category || '').trim();
+    return q.length > 0 && !courseCategories.value.some(c => c.name === q);
+});
+
 const educationLevelOptions = [
     { value: 'ประถมศึกษา', label: 'ประถมศึกษา', hasYear: true, maxYear: 6 },
     { value: 'มัธยมศึกษา', label: 'มัธยมศึกษา', hasYear: true, maxYear: 6 },
@@ -153,6 +167,9 @@ function onCoverInputChange(event){
 }
 function handleSelectCategory(category){
   form.value.category = category;
+  isOpenCategoryOptions.value = false;
+}
+function closeCategoryOptions(){
   isOpenCategoryOptions.value = false;
 }
 function handleSelectLevel(level) {
@@ -215,7 +232,7 @@ async function handleSubmitForm(){
     courseFormData.append('code', form.value.code);
     courseFormData.append('name', form.value.name);
     courseFormData.append('description', form.value.description);
-    courseFormData.append('category', form.value.category);
+    courseFormData.append('category', (form.value.category || '').trim());
     courseFormData.append('level', form.value.level);
     if (form.value.education_level) courseFormData.append('education_level', form.value.education_level)
     if (form.value.education_year)  courseFormData.append('education_year',  form.value.education_year)
@@ -378,26 +395,45 @@ async function handleSubmitForm(){
                     </h2>
                     <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-gray-700 grid grid-cols-1 md:grid-cols-2 gap-6">
                         
-                        <!-- Category -->
-                         <div class="relative">
+                        <!-- Category (combobox: pick from the list or type a custom subject group) -->
+                         <div class="relative" v-click-outside="closeCategoryOptions">
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">กลุ่มสาระการเรียนรู้</label>
                             <div class="relative">
-                                <button type="button" @click="isOpenCategoryOptions = !isOpenCategoryOptions"
-                                    class="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-left px-4 py-3 rounded-xl flex items-center justify-between hover:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
+                                <input
+                                    v-model="form.category"
+                                    type="text"
+                                    maxlength="255"
+                                    autocomplete="off"
+                                    placeholder="เลือกหรือพิมพ์กลุ่มสาระเอง"
+                                    @focus="isOpenCategoryOptions = true"
+                                    class="w-full min-h-[44px] bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-400 px-4 py-3 pr-12 rounded-xl hover:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
+                                />
+                                <button type="button" tabindex="-1"
+                                    @click="isOpenCategoryOptions = !isOpenCategoryOptions"
+                                    class="absolute inset-y-0 right-0 w-11 flex items-center justify-center text-gray-400"
                                 >
-                                    <span :class="form.category ? 'text-gray-900 dark:text-white' : 'text-gray-400'">
-                                        {{ form.category || 'เลือกกลุ่มสาระ' }}
-                                    </span>
-                                    <Icon icon="heroicons:chevron-down" class="w-5 h-5 text-gray-400" />
+                                    <Icon icon="heroicons:chevron-down" class="w-5 h-5" />
                                 </button>
-                                
+
                                 <!-- Dropdown -->
                                 <div v-if="isOpenCategoryOptions" class="absolute z-10 mt-2 w-full bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 max-h-60 overflow-y-auto">
-                                    <div v-for="cat in courseCategories" :key="cat.name" 
+                                    <div v-if="isCustomCategory"
+                                        @click="handleSelectCategory(form.category.trim())"
+                                        class="min-h-[44px] px-4 py-3 hover:bg-violet-50 dark:hover:bg-violet-900/20 cursor-pointer text-violet-600 dark:text-violet-300 text-sm transition-colors border-b border-gray-50 dark:border-gray-700/50 flex items-center gap-2"
+                                    >
+                                        <Icon icon="heroicons:plus-circle" class="w-4 h-4 flex-shrink-0" />
+                                        <span class="min-w-0 flex-1 break-words">ใช้ "{{ form.category.trim() }}" เป็นกลุ่มสาระใหม่</span>
+                                    </div>
+                                    <div v-for="cat in filteredCategories" :key="cat.name"
                                         @click="handleSelectCategory(cat.name)"
-                                        class="px-4 py-3 hover:bg-violet-50 dark:hover:bg-violet-900/20 cursor-pointer text-gray-700 dark:text-gray-200 text-sm transition-colors border-b border-gray-50 dark:border-gray-700/50 last:border-0"
+                                        class="min-h-[44px] px-4 py-3 hover:bg-violet-50 dark:hover:bg-violet-900/20 cursor-pointer text-gray-700 dark:text-gray-200 text-sm transition-colors border-b border-gray-50 dark:border-gray-700/50 last:border-0 flex items-center"
                                     >
                                         {{ cat.name }}
+                                    </div>
+                                    <div v-if="!filteredCategories.length && !isCustomCategory"
+                                        class="px-4 py-3 text-sm text-gray-400"
+                                    >
+                                        ไม่พบกลุ่มสาระที่ตรงกัน
                                     </div>
                                 </div>
                             </div>
