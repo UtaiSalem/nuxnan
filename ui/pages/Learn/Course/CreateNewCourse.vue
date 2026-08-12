@@ -75,7 +75,6 @@ const defaultFormValue = ref({
   saleable: true,
   price: 0,
   discount: 0,
-  discount_type: 'fixed',
   semester: initialSemester,
   academic_year: initialAcademicYear.toString(),
   status: true,
@@ -101,7 +100,6 @@ const form = ref({
   saleable: true,
   price: 0,
   discount: 0,
-  discount_type: 'fixed',
   semester: initialSemester,
   academic_year: initialAcademicYear.toString(),
   status: true,
@@ -220,14 +218,11 @@ function handleEndDateSelection(endDateData){
 const netPrice = computed(() => {
     if (!form.value.saleable) return 0;
     const price = Number(form.value.price) || 0;
-    const discount = Number(form.value.discount) || 0;
-    
-    if (form.value.discount_type === 'percent') {
-        const discountAmount = (price * discount) / 100;
-        return Math.max(0, price - discountAmount);
-    }
-    
-    return Math.max(0, price - discount);
+    // Every backend money path applies `discount` as a percentage of the price,
+    // so the form only offers percent — see CourseController@store.
+    const discount = Math.min(100, Math.max(0, Number(form.value.discount) || 0));
+
+    return Math.max(0, price - (price * discount) / 100);
 });
 
 async function handleSubmitForm(){
@@ -251,7 +246,6 @@ async function handleSubmitForm(){
     courseFormData.append('saleable', form.value.saleable ? 1 : 0);
     courseFormData.append('price', form.value.price);
     courseFormData.append('discount', form.value.discount);
-    courseFormData.append('discount_type', form.value.discount_type);
     courseFormData.append('semester', form.value.semester);
     courseFormData.append('academic_year', form.value.academic_year);
     courseFormData.append('status', form.value.status ? 1 : 0);
@@ -622,16 +616,13 @@ async function handleSubmitForm(){
                              <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ส่วนลด</label>
                                 <div class="flex">
-                                    <div class="relative flex-1">
-                                        <input type="number" v-model="form.discount" min="0" 
+                                    <div class="relative flex-1 min-w-0">
+                                        <input type="number" v-model="form.discount" min="0" max="100"
                                             class="block w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-l-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 z-10"
                                             placeholder="0"
                                         />
                                     </div>
-                                    <select v-model="form.discount_type" class="px-3 border-y border-r border-gray-200 dark:border-gray-600 rounded-r-xl bg-gray-50 dark:bg-gray-600 text-gray-700 dark:text-white focus:outline-none">
-                                        <option value="fixed">฿</option>
-                                        <option value="percent">%</option>
-                                    </select>
+                                    <span class="flex-shrink-0 px-4 flex items-center border-y border-r border-gray-200 dark:border-gray-600 rounded-r-xl bg-gray-50 dark:bg-gray-600 text-gray-700 dark:text-white font-medium">%</span>
                                 </div>
                             </div>
 
@@ -641,7 +632,7 @@ async function handleSubmitForm(){
                                 <div class="text-right">
                                     <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">฿{{ netPrice.toLocaleString() }}</div>
                                     <div v-if="Number(form.discount) > 0" class="text-xs text-emerald-600/70">
-                                        (ลด {{ form.discount_type === 'percent' ? form.discount + '%' : '฿' + form.discount }})
+                                        (ลด {{ form.discount }}%)
                                     </div>
                                 </div>
                             </div>

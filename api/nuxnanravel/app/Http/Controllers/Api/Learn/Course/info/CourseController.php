@@ -567,6 +567,8 @@ class CourseController extends Controller
                 'auto_accept_members' => 'nullable|boolean',
                 'saleable' => 'nullable|boolean',
                 'price' => 'nullable|numeric|min:0',
+                'tuition_fees' => 'nullable|numeric|min:0',
+                'discount' => 'nullable|integer|min:0|max:100',
                 'status' => 'nullable|string',
                 'cover' => 'nullable|image|mimes:jpg,jpeg,png,gif|max:4096',
             ]);
@@ -604,6 +606,16 @@ class CourseController extends Controller
             // $newCourse->auto_accept_members = $request->auto_accept_members;
             $newCourse->saleable = $request->saleable;
             $newCourse->price = $request->price;
+            // A zero tuition fee must stay NULL. The join and purchase paths resolve
+            // the amount with `tuition_fees ?? price`, and `??` only falls through on
+            // null — storing 0 would make every course free instead of charging price.
+            $newCourse->tuition_fees = (int) $request->input('tuition_fees', 0) > 0
+                ? (int) $request->tuition_fees
+                : null;
+            // Every money path applies `discount` as a percentage of the price, so the
+            // form only offers percent and the row is recorded as such.
+            $newCourse->discount = (int) $request->input('discount', 0);
+            $newCourse->discount_type = 'percent';
             $newCourse->status = $request->status;
             $newCourse->cover = $validated['cover'] ?? '';
 
