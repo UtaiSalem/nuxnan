@@ -7,7 +7,10 @@ use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
 use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Models\Course;
 use App\Models\CourseGroup;
+use App\Models\CourseMember;
+use App\Services\AttendanceEligibilityService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -17,7 +20,7 @@ class CourseGroupController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Course $course)
+    public function index(Course $course, AttendanceEligibilityService $eligibilityService)
     {
         // Get ungrouped members (group_id is NULL, exclude admins role=4)
         $ungroupedMembers = $course->courseMembers()
@@ -29,6 +32,12 @@ class CourseGroupController extends Controller
 
         // Eager load members.user to avoid N+1 queries
         $courseGroups = $course->courseGroups()->with(['members.user'])->get();
+
+        $this->attachLiveEligibility(
+            $course,
+            $eligibilityService,
+            $courseGroups->flatMap->members->concat($ungroupedMembers)
+        );
 
         return response()->json([
             'success' => true,
@@ -56,6 +65,8 @@ class CourseGroupController extends Controller
                     'last_activity_at' => $member->last_accessed_at,
                     'lessons_completed' => $member->lessons_completed ?? 0,
                     'attendance_rate' => $member->attendance_rate ?? 0,
+                    'eligibility_status' => $member->live_eligibility_status,
+                    'absence_percent' => $member->live_absence_percent,
                     'user' => $user ? [
                         'id' => $user->id,
                         'name' => $user->name,
@@ -69,6 +80,38 @@ class CourseGroupController extends Controller
             }),
             'courseMemberOfAuth' => $course->courseMembers()->where('user_id', auth()->id())->first(),
         ]);
+    }
+
+    /**
+     * คำนวณสถานะสิทธิ์สอบสดๆ แล้วแปะไว้กับ CourseMember แต่ละคน
+     *
+     * คอลัมน์ course_members.eligibility_status อัพเดทเฉพาะตอนสั่ง refresh หรือปลดล็อค
+     * ถ้าอ่านคอลัมน์ตรงๆ badge จะค้างค่าเก่าเมื่อครูเช็คชื่อเพิ่ม
+     * จึงคำนวณด้วยตรรกะเดียวกับหน้าสรุปสิทธิ์สอบ (batch — ไม่ยิง query ต่อคน)
+     *
+     * @param  Collection<int, CourseMember>  $members
+     */
+    private function attachLiveEligibility(Course $course, AttendanceEligibilityService $eligibilityService, Collection $members): void
+    {
+        // role 1/2 = นักเรียน — ผู้สอน/แอดมินไม่มีสถานะสิทธิ์สอบ
+        $students = $members->filter(fn (CourseMember $member) => in_array($member->role, [1, 2], true));
+
+        if ($students->isEmpty()) {
+            return;
+        }
+
+        $stats = $eligibilityService->calculateStatsForMembers($course, $students);
+
+        foreach ($students as $member) {
+            $memberStats = $stats[$member->id] ?? null;
+
+            if (! $memberStats) {
+                continue;
+            }
+
+            $member->setAttribute('live_eligibility_status', $memberStats['eligibility_status']);
+            $member->setAttribute('live_absence_percent', $memberStats['absence_rate']);
+        }
     }
 
     /**

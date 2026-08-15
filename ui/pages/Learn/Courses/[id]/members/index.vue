@@ -816,14 +816,20 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                     <div class="mb-4 flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                         <img
                             :src="unlockTargetMember?.user?.avatar || unlockTargetMember?.avatar || '/images/default-avatar.png'"
-                            class="w-10 h-10 rounded-full object-cover"
+                            class="w-10 h-10 rounded-full object-cover flex-shrink-0"
                         />
-                        <div>
-                            <p class="font-medium text-gray-900 dark:text-white text-sm">
+                        <div class="min-w-0 flex-1">
+                            <p class="font-medium text-gray-900 dark:text-white text-sm break-words">
                                 {{ unlockTargetMember?.member_name || unlockTargetMember?.user?.name || '-' }}
                             </p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 break-words">
                                 {{ unlockTargetMember?.member_code || unlockTargetMember?.user?.email || '' }}
+                            </p>
+                            <p
+                                v-if="unlockTargetMember?.absence_percent != null"
+                                class="mt-0.5 text-xs font-medium text-red-600 dark:text-red-400"
+                            >
+                                ขาดเรียน {{ Number(unlockTargetMember.absence_percent).toFixed(1) }}%
                             </p>
                         </div>
                     </div>
