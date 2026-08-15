@@ -280,11 +280,29 @@ const submitBulkUnlockGroup = async () => {
       `/api/courses/${course?.value?.id}/eligibility/bulk-unlock`,
       { group_id: bulkUnlockGroupId.value, only_ineligible: true, reason: bulkUnlockGroupReason.value }
     )
-    if (res.success !== false) {
-      toast.success('ปลดล็อคสิทธิ์สอบสำหรับกลุ่มนี้แล้ว')
-      showBulkUnlockConfirm.value = false
-      await courseGroupStore.fetchGroups(course!.value.id, true)
+
+    if (res.success === false) {
+      toast.error(res.message || 'ไม่สามารถปลดล็อคแบบกลุ่มได้')
+      return
     }
+
+    // อ่านผลจริงจาก API — บางคนอาจถูกข้ามหรือปลดล็อคไม่สำเร็จ
+    const unlocked = Number(res?.data?.success ?? 0)
+    const skipped = Number(res?.data?.skipped ?? 0)
+    const failed = res?.data?.errors?.length ?? 0
+
+    if (unlocked > 0) {
+      const extra = [
+        skipped ? `ข้าม ${skipped} คน` : '',
+        failed ? `ผิดพลาด ${failed} คน` : '',
+      ].filter(Boolean).join(', ')
+      toast.success(`ปลดล็อคสิทธิ์สอบ ${unlocked} คนแล้ว${extra ? ` (${extra})` : ''}`)
+    } else {
+      toast.warning(res.message || 'ไม่มีสมาชิกที่หมดสิทธิ์สอบในกลุ่มนี้')
+    }
+
+    showBulkUnlockConfirm.value = false
+    await courseGroupStore.fetchGroups(course!.value.id, true)
   } catch (err) {
     console.error('Failed to bulk unlock group:', err)
     toast.error('ไม่สามารถปลดล็อคแบบกลุ่มได้')

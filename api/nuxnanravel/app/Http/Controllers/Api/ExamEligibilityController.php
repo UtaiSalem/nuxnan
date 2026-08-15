@@ -590,53 +590,53 @@ class ExamEligibilityController extends Controller
             'reason' => 'nullable|string|max:500',
         ]);
 
-        // Resolve member IDs from group_id when provided
-        if ($request->filled('group_id')) {
-            $memberIds = CourseMember::where('course_id', $course->id)
-                ->whereIn('role', [1, 2])
-                ->where('group_id', $request->group_id)
-                ->pluck('id')
-                ->toArray();
-        } elseif ($request->has('member_ids')) {
-            $memberIds = $request->member_ids ?? [];
-        } elseif ($request->boolean('only_ineligible')) {
-            $memberIds = CourseMember::where('course_id', $course->id)
-                ->whereIn('role', [1, 2])
-                ->pluck('id')
-                ->toArray();
-        } else {
-            $memberIds = [];
-        }
+        $query = CourseMember::where('course_id', $course->id)->whereIn('role', [1, 2]);
 
-        if (empty($memberIds)) {
+        // Resolve target members from group_id / member_ids / whole course
+        if ($request->filled('group_id')) {
+            $query->where('group_id', $request->group_id);
+        } elseif ($request->has('member_ids')) {
+            $requestedIds = array_filter((array) $request->input('member_ids', []));
+
+            if (empty($requestedIds)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'ไม่พบสมาชิกที่ต้องการปลดล็อค',
+                ], 422);
+            }
+
+            $query->whereIn('id', $requestedIds);
+        } elseif (! $request->boolean('only_ineligible')) {
             return response()->json([
                 'success' => false,
                 'message' => 'ไม่พบสมาชิกที่ต้องการปลดล็อค',
             ], 422);
         }
 
-        // Filter to only ineligible members when requested
-        if ($request->boolean('only_ineligible')) {
-            $memberIds = CourseMember::whereIn('id', $memberIds)
-                ->where('course_id', $course->id)
-                ->whereIn('role', [1, 2])
-                ->where(function ($query) {
-                    // Not yet unlocked: exam_eligible is false/null, or status is explicitly ineligible
-                    $query->where('exam_eligible', false)
-                        ->orWhereNull('exam_eligible');
-                })
-                ->where(function ($query) {
-                    $query->where('eligibility_status', 'ineligible')
-                        ->orWhereNull('eligibility_status');
-                })
-                ->pluck('id')
-                ->toArray();
+        $members = $query->get();
 
-            if (empty($memberIds)) {
+        if ($members->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่พบสมาชิกที่ต้องการปลดล็อค',
+            ], 422);
+        }
+
+        // Filter to only ineligible members when requested.
+        // ต้องคำนวณสถานะใหม่ก่อน เพราะคอลัมน์ eligibility_status ใน DB
+        // ค้างค่าเก่าได้ (default 'eligible') ทำให้กรองคนที่หมดสิทธิ์จริงหลุดออกไปเงียบๆ
+        if ($request->boolean('only_ineligible')) {
+            $stats = $this->eligibilityService->syncEligibilityForMembers($course, $members);
+
+            $members = $members->filter(
+                fn (CourseMember $member) => ($stats[$member->id]['eligibility_status'] ?? null) === 'ineligible'
+            );
+
+            if ($members->isEmpty()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'ไม่มีสมาชิกที่ไม่มีสิทธิ์สอบในกลุ่มนี้',
-                    'data' => ['success' => 0, 'skipped' => 0],
+                    'message' => 'ไม่มีสมาชิกที่หมดสิทธิ์สอบในรายการนี้',
+                    'data' => ['success' => 0, 'skipped' => 0, 'errors' => []],
                 ]);
             }
         }
@@ -645,14 +645,20 @@ class ExamEligibilityController extends Controller
 
         $results = $this->eligibilityService->bulkUnlock(
             $course,
-            $memberIds,
+            $members->pluck('id')->all(),
             $request->user(),
             $reason
         );
 
+        $message = sprintf('ปลดล็อคสำเร็จ %d คน, ข้าม %d คน', $results['success'], $results['skipped']);
+
+        if (! empty($results['errors'])) {
+            $message .= sprintf(', ผิดพลาด %d คน', count($results['errors']));
+        }
+
         return response()->json([
             'success' => true,
-            'message' => sprintf('ปลดล็อคสำเร็จ %d คน, ข้าม %d คน', $results['success'], $results['skipped']),
+            'message' => $message,
             'data' => $results,
         ]);
     }

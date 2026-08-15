@@ -153,6 +153,8 @@ class AttendanceEligibilityService
     public function updateCourseEligibility(Course $course): array
     {
         $members = $course->courseMembers()->whereIn('role', [1, 2])->get();
+        $stats = $this->syncEligibilityForMembers($course, $members);
+
         $results = [
             'total' => $members->count(),
             'eligible' => 0,
@@ -162,14 +164,102 @@ class AttendanceEligibilityService
         ];
 
         foreach ($members as $member) {
-            $updated = $this->updateEligibilityStatus($member);
-            $status = $updated->eligibility_status ?? 'eligible';
+            $status = $stats[$member->id]['eligibility_status'] ?? 'eligible';
             if (isset($results[$status])) {
                 $results[$status]++;
             }
         }
 
         return $results;
+    }
+
+    /**
+     * คำนวณสถานะสิทธิ์สอบใหม่แล้วบันทึกลง DB แบบ batch
+     *
+     * คอลัมน์ eligibility_status / exam_eligible ใน course_members มีค่า default
+     * เป็น 'eligible' / true และจะอัพเดทก็ต่อเมื่อมีคนสั่ง refresh เท่านั้น
+     * ส่วนหน้าจอสรุปสิทธิ์สอบคำนวณสดทุกครั้ง ทำให้สองฝั่งไม่ตรงกันได้
+     * จึงต้อง sync ก่อนทุกครั้งที่จะใช้คอลัมน์เหล่านี้คัดกรองสมาชิก
+     *
+     * @param  Collection<int, CourseMember>  $members
+     * @return array<int, array> [course_member_id => stats]
+     */
+    public function syncEligibilityForMembers(Course $course, Collection $members): array
+    {
+        $statsByMember = $this->calculateStatsForMembers($course, $members);
+
+        foreach ($members as $member) {
+            $stats = $statsByMember[$member->id] ?? null;
+
+            if (! $stats || $member->eligibility_status === 'unlocked') {
+                continue;
+            }
+
+            $oldStatus = $member->eligibility_status;
+            $newStatus = $stats['eligibility_status'];
+
+            $member->update([
+                'exam_eligible' => $stats['is_eligible'],
+                'eligibility_status' => $newStatus,
+                'absence_percent' => $stats['absence_rate'],
+            ]);
+
+            if ($oldStatus !== $newStatus) {
+                EligibilityAuditLog::log(
+                    $member,
+                    $newStatus,
+                    EligibilityAuditLog::TYPE_AUTO_CALC,
+                    null,
+                    null,
+                    ['absence_rate' => $stats['absence_rate'], 'total_sessions' => $stats['total_sessions']]
+                );
+            }
+        }
+
+        return $statsByMember;
+    }
+
+    /**
+     * คำนวณสถิติการเข้าเรียนของสมาชิกหลายคนพร้อมกัน (ไม่ยิง query ต่อคน)
+     *
+     * @param  Collection<int, CourseMember>  $members
+     * @return array<int, array> [course_member_id => stats]
+     */
+    public function calculateStatsForMembers(Course $course, Collection $members): array
+    {
+        if ($members->isEmpty()) {
+            return [];
+        }
+
+        $sessionCountsByGroup = CourseAttendance::where('course_id', $course->id)
+            ->selectRaw('COALESCE(group_id, 0) as grp, COUNT(*) as cnt')
+            ->groupByRaw('COALESCE(group_id, 0)')
+            ->pluck('cnt', 'grp');
+
+        $totalSessionsAll = CourseAttendance::where('course_id', $course->id)->count();
+
+        $allDetails = AttendanceDetail::where('course_id', $course->id)
+            ->whereIn('course_member_id', $members->pluck('id'))
+            ->get()
+            ->groupBy('course_member_id');
+
+        $minSessions = $course->min_sessions_for_eligibility_check ?? 3;
+        $maxAbsencePercent = $course->max_absence_percent ?? 20;
+
+        $statsByMember = [];
+
+        foreach ($members as $member) {
+            $totalSessions = $member->group_id
+                ? ($sessionCountsByGroup->get($member->group_id, 0))
+                : $totalSessionsAll;
+
+            $statsByMember[$member->id] = $this->calculateAttendanceStatsBatch(
+                $member, $course, $totalSessions, $minSessions, $maxAbsencePercent,
+                $allDetails->get($member->id, collect())
+            );
+        }
+
+        return $statsByMember;
     }
 
     // ─── Duplicate prevention helper ───
@@ -794,31 +884,10 @@ class AttendanceEligibilityService
             ->get()
             ->keyBy('course_member_id');
 
-        $sessionCountsByGroup = CourseAttendance::where('course_id', $course->id)
-            ->selectRaw('COALESCE(group_id, 0) as grp, COUNT(*) as cnt')
-            ->groupByRaw('COALESCE(group_id, 0)')
-            ->pluck('cnt', 'grp');
-
-        $totalSessionsAll = CourseAttendance::where('course_id', $course->id)->count();
-
-        $memberIds = $members->pluck('id');
-        $allDetails = AttendanceDetail::where('course_id', $course->id)
-            ->whereIn('course_member_id', $memberIds)
-            ->get()
-            ->groupBy('course_member_id');
-
-        $minSessions = $course->min_sessions_for_eligibility_check ?? 3;
-        $maxAbsencePercent = $course->max_absence_percent ?? 20;
+        $statsByMember = $this->calculateStatsForMembers($course, $members);
 
         foreach ($members as $member) {
-            $totalSessions = $member->group_id
-                ? ($sessionCountsByGroup->get($member->group_id, 0))
-                : $totalSessionsAll;
-
-            $stats = $this->calculateAttendanceStatsBatch(
-                $member, $course, $totalSessions, $minSessions, $maxAbsencePercent,
-                $allDetails->get($member->id, collect())
-            );
+            $stats = $statsByMember[$member->id];
 
             $status = $stats['eligibility_status'];
             if (isset($summary[$status])) {
