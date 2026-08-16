@@ -1,5 +1,57 @@
 # Work Log — nuxnan project
 
+## 2026-08-17 — S-S4 (ฐานคะแนนกีฬาสี) + S-S6a (หน้าจอคะแนน) · เจอบั๊ก auto-import ที่ทำให้ component หายเงียบ ๆ
+
+### สถานะ: **S-S6a เสร็จ ตรวจในเบราว์เซอร์จริงที่ 375px แล้ว** · commit ของรอบนี้ยังไม่ push
+
+#### สิ่งที่ลงไปแล้ว
+
+| ก้อน | commit |
+|---|---|
+| S-S4 backend (schema + service + controller + 3 route กลุ่ม) | `412faf8b` `9d9c7757` `e417135e` |
+| S-S6a หน้าจอ (composable + 4 component + หน้า + เมนู) | รอบนี้ |
+| แก้ auto-import ที่หน้า house-assignments | รอบนี้ |
+
+**S-S6 ถูกแยกเป็น 2 ก้อน** เพราะของเดิมพ่วง "ตารางแข่ง/กรอกผลรายคู่" ซึ่งต้องรอ S-S5 ที่ยังตัด S-D3 (bracket) ไม่ได้
+→ **S-S6a** = ตารางคะแนน · จัดการรายการแข่ง · ให้คะแนน 3 ที่มา · ประวัติ/ยกเลิก (ทำได้ด้วยของที่ S-S4 มีอยู่แล้ว)
+→ **S-S6b** = ตารางแข่งรายคู่ + กรอกผล + สรุปเหรียญละเอียด (รอ S-S5) · สเปกอยู่ที่ [`27-sports-day.md` §11](.agents/school-admin/27-sports-day.md)
+
+#### 🔴 ค้นพบสำคัญ — `<SportsEditionPanel />` ไม่เคย render จริงเลย
+
+เรพนี้ **ไม่ได้ตั้ง `components.pathPrefix: false`** ใน `ui/nuxt.config.ts` → Nuxt จดชื่อ component ตามโฟลเดอร์+ชื่อไฟล์
+`components/academy/sports/SportsEditionPanel.vue` → ชื่อจริงคือ **`AcademySportsEditionPanel`** (ดู `ui/.nuxt/components.d.ts` เป็นตัวตัดสิน)
+
+เขียนชื่อสั้น ๆ Vue จะ render เป็น custom element เปล่า **ไม่มี error ไม่มี warning ใน console** — พิสูจน์ในเบราว์เซอร์แล้ว DOM ออกมาเป็น `<sportsstandingsboard standings="[object Object]...">`
+
+⇒ **แผงเลือก "ครั้งที่จัด" ในหน้า `admin/house-assignments` หายไปทั้งแผงมาตั้งแต่ S-S3e** ทั้งที่ §9.6 บันทึกว่า frontend เสร็จ (ตอนนั้นตรวจจากการอ่านโค้ด ไม่ได้เปิดดูจริง)
+แก้แล้วทั้ง 2 หน้าด้วยการ **import component เองตรง ๆ** — ผิดชื่อแล้วพังตอน compile ดีกว่าหายเงียบ
+
+🟡 **สแกนต่อทั้งเรพเจออีก 14 หน้าที่ใช้ `<BaseCard>`** (ตัวจริงอยู่ `components/atoms/BaseCard.vue` = `AtomsBaseCard`) — `about`, `Admin/{Points,Wallet}`, `Earn/{donates,Gamification,Points,Rewards,Wallet}`, `events`, `photos`, `Play/{Friends,Messages}`, `PlearndAdmin/DepositApproval`, `videos` · **ยังไม่แก้ในรอบนี้**
+
+#### ✅ เกณฑ์ผ่านที่รันจริง (ไม่ได้ paste จากรายงาน agy)
+
+- `git diff --stat` → ไฟล์เดิมถูกแก้แบบ add-only ล้วน (`admin.vue` +7/−0 · `house-assignments/index.vue` +7/−0)
+- compile SFC ผ่านทั้ง 6 ไฟล์ด้วย `@vue/compiler-sfc`
+- เปิดจริงที่ **375px** ด้วยหน้า preview ชั่วคราว (ลบทิ้งแล้ว): อันดับเสมอออกมา **1, 1, 3** · คณะที่ยังไม่ได้คะแนนโชว์ `—` กับ 0 · `document.documentElement.scrollWidth === 375` ไม่มี horizontal scroll · ปุ่ม/ช่องกรอกทุกตัวสูง ≥ 44px · โหมด "ด้วยมือ" กดบันทึกไม่ได้ถ้าไม่กรอกหมายเหตุ และรับ −5 ได้ · ตัวอย่างคะแนน placing: ที่ 1 → 9, ที่ 99 → 0 พร้อมคำเตือน
+- **ยังไม่ได้ทดสอบกับ API จริง** (ต้องล็อกอินเป็นแอดมิน academy) — ทุกอย่างข้างบนทดสอบด้วยข้อมูลจำลอง
+
+#### บั๊กของ agy ที่ต้องแก้เอง 4 จุด
+
+1. `DEFAULT_JUDGED_MAX_SCORE` ถูก destructure จาก `useSportsScoring()` ทั้งที่เป็น export ระดับโมดูล → `undefined` แล้วจอโชว์ "เต็ม 0 คะแนน" (2 ไฟล์)
+2. เทียบ `points !== ''` กับตัวแปร `number | null` → typecheck พัง
+3. ป้าย "ยกเลิกแล้ว" ใส่ `text-white` ทับ `text-rose-700` → ขาวบนชมพูอ่อนในโหมดสว่าง
+4. หน้า `import type` ตัวที่ไม่มีอยู่จริง (`SportsHouseGroup`)
+
+### งานที่ค้างต่อจากรอบนี้
+
+- [ ] **S-D3 (bracket)** ต้องตัดสินก่อน จึงจะเริ่ม **S-S5** (บันทึกผลการแข่งรายคู่) แล้วค่อยต่อ **S-S6b**
+- [ ] **แก้ 14 หน้าที่ใช้ `<BaseCard>`** ตามข้างบน (มี task chip รออยู่)
+- [ ] ทดสอบหน้า `admin/sports-scores` กับ API จริง (สร้างรายการแข่ง → ให้คะแนน → ดูตารางขยับ → void)
+- [ ] `GET /score-entries` ยังไม่มี pagination และไม่ eager-load `awardedBy` → หน้าจอยังบอกไม่ได้ว่าใครเป็นคนให้คะแนน
+- [ ] **push** commit ของรอบนี้ + ที่ค้างจากรอบก่อน
+
+---
+
 ## 2026-08-16 (ถึงเช้า 08-17) — ปิด Tier B + Tier D · ถอด Inertia ออกจากโปรเจคหมดแล้ว · เพิ่มสกิล agy
 
 ### สถานะ: **เสร็จ · 3 commit ยังไม่ push** (`9082e594` `bcb478e8` `745f9e09`) · **⚠️ ยังไม่ได้รัน `npm run build`**
