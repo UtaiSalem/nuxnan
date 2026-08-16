@@ -21,6 +21,7 @@ const api = useApi()
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const { threshold: createCourseThreshold, canCreate: canCreateCourse, fetchThreshold } = useCourseCreateGate()
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const parseBooleanQuery = (value: unknown) => {
@@ -288,6 +289,7 @@ const activeFiltersCount = computed(() => {
 usePageLayoutWidgets({ left: true, right: true })
 
 onMounted(() => {
+  fetchThreshold()
   hydrateFiltersFromQuery()
   fetchFilterOptions()
   if (activeTab.value === 'my') fetchMyCourses()
@@ -571,10 +573,19 @@ watch(() => authStore.user?.id, (id) => {
         <p class="text-gray-500 text-sm">
           {{ activeTab === 'my' ? 'เริ่มสร้างรายวิชาแรกของคุณได้เลย' : activeTab === 'enrolled' ? 'สำรวจรายวิชาในแท็บ "ทั้งหมด" แล้วสมัครเรียน' : 'ลองใช้คำค้นอื่น หรือปรับเปลี่ยนตัวกรอง' }}
         </p>
-        <NuxtLink v-if="activeTab === 'my'" to="/Learn/Courses/create" class="inline-flex items-center gap-2 mt-4 px-6 py-2.5 bg-gradient-vikinger text-white rounded-xl font-bold shadow-vikinger transition-all hover:scale-105">
+        <NuxtLink v-if="activeTab === 'my' && canCreateCourse" to="/Learn/Courses/create" class="inline-flex items-center gap-2 mt-4 px-6 py-2.5 bg-gradient-vikinger text-white rounded-xl font-bold shadow-vikinger transition-all hover:scale-105">
           <Icon icon="fluent:add-24-filled" class="w-4 h-4" />
           สร้างรายวิชา
         </NuxtLink>
+        <template v-else-if="activeTab === 'my'">
+          <button disabled class="inline-flex items-center gap-2 mt-4 px-6 py-2.5 bg-gradient-vikinger text-white rounded-xl font-bold shadow-vikinger opacity-50 cursor-not-allowed">
+            <Icon icon="mdi:lock" class="w-4 h-4" />
+            สร้างรายวิชา
+          </button>
+          <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            ต้องมีคะแนนสะสม {{ formatNumber(createCourseThreshold) }} แต้ม จึงจะสร้างรายวิชาได้
+          </p>
+        </template>
         <button v-else-if="activeTab === 'enrolled'" @click="activeTab = 'all'" class="inline-flex items-center gap-2 mt-4 px-6 py-2.5 bg-gradient-vikinger text-white rounded-xl font-bold shadow-vikinger transition-all hover:scale-105">
           <Icon icon="fluent:globe-24-regular" class="w-4 h-4" />
           ดูรายวิชาทั้งหมด

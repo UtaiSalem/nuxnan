@@ -4,10 +4,7 @@ import { Icon } from '@iconify/vue'
 
 const api = useApi()
 const { user } = useAuth()
-const authStore = useAuthStore()
-const points = computed(() => Number(authStore.points))
-const createCourseThreshold = ref(100) // Default
-const canCreateCourse = computed(() => points.value >= Number(createCourseThreshold.value))
+const { threshold: createCourseThreshold, points, canCreate: canCreateCourse, setThreshold } = useCourseCreateGate()
 const myCourses = ref([])
 const isLoading = ref(true)
 
@@ -70,7 +67,7 @@ const fetchMyCourses = async (isLoadMore = false) => {
     if (res.success) {
       // Update threshold from API
       if (res.create_course_threshold !== undefined) {
-        createCourseThreshold.value = res.create_course_threshold
+        setThreshold(Number(res.create_course_threshold))
       }
 
       const newCourses = res.courses.data || res.courses
