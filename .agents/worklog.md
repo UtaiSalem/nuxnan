@@ -82,7 +82,7 @@ agy --print "Read <spec>.txt and follow it exactly." --add-dir "C:\wamp64\www\nu
 
 - [ ] **รัน `npm run build`** — ยังไม่เคยรันตั้งแต่ลบ 75 ไฟล์ (2026-08-10) และตอนนี้ลบเพิ่มอีก 20 ไฟล์ + แก้ `nuxt.config.ts` แล้ว **ผู้ใช้รันเอง**
 - [ ] **push 3 commit นี้** (`9082e594` `bcb478e8` `745f9e09`) — ยังอยู่แค่บนเครื่องนี้
-- [ ] **หน้า error 500 แทน 404** (ดูหัวข้อบั๊กข้างบน) — กระทบผู้ใช้จริงทุกคนที่พิมพ์ URL ผิด
+- [x] ~~**หน้า error 500 แทน 404**~~ → **แก้แล้ว** ดูหัวข้อ "🩹 แก้ตามมา" ท้าย entry นี้
 - [ ] **`components/academy/rollover/RolloverStepIndicator.vue:25-27`** — `withDefaults()` อ้าง `defaultSteps` ที่ประกาศในไฟล์เดียวกัน (ยังไม่แก้ ค้างมาตั้งแต่ `bea9d5bb`)
 - [ ] **แก้ `<Icon name=` เป็น `icon=` ใน `landing/ModernFooterSection.vue`** + เปลี่ยนแบรนด์ footer เป็น nuxnan
 - [ ] **(ค้างจากรอบก่อน)** S-S4 schema คะแนนกีฬาสี — **ถูกบล็อกโดย S-S3e** (ตาราง `sports_editions` + ย้ายคีย์เป็น `edition_id`) ตาม [`27-sports-day.md:175-176`](.agents/school-admin/27-sports-day.md:175) ไม่ใช่ "ไม่มีอะไรบล็อกแล้ว" อย่างที่ worklog รอบก่อนเขียน · ตั้งชื่อคณะสีจริง · ไฟล์ SQL prod ล้าหลัง 12 migrations
@@ -92,10 +92,28 @@ agy --print "Read <spec>.txt and follow it exactly." --add-dir "C:\wamp64\www\nu
 entry ก่อนหน้าเขียนวันที่ 2026-08-10 แต่มี commit ถึง 08-16 ที่ไม่ถูกบันทึก (จ่ายค่าคอร์สด้วย wallet/points, create-course policy + gate, exam eligibility badge, bulk unlock — ส่วนใหญ่มาจาก branch `claude/group-exam-unlock-function-96fd27` ที่ merge เข้า main แล้ว)
 ผลข้างเคียง: worklog สั่งให้เขียน `Learn/Course/CreateNewCourse.vue` ใหม่ ทั้งที่ commit `17492327` (08-12) ถอด Inertia ออกจากไฟล์นั้นไปแล้ว
 
+### 🩹 แก้ตามมา: หน้า 404 ที่คืน 500 (`ui/plugins/pinia-payload-null-proto.server.ts`)
+
+**อาการ:** เปิด URL ที่ไม่มีจริง → `500` + `obj.hasOwnProperty is not a function` แทนหน้า 404 (ทุก URL ผิด ไม่ใช่เฉพาะที่เพิ่งลบ)
+
+**สาเหตุจริง (จาก stack trace ของ dev server ไม่ใช่การเดา) — ไม่เกี่ยวกับ `ui/error.vue` เลย:**
+1. Nuxt เรนเดอร์หน้า error ผ่าน route ภายใน `/__nuxt_error` แล้วสร้าง error object ด้วย `const ssrError = getQuery(event)` (`@nuxt/nitro-server/dist/runtime/handlers/renderer.mjs`) — `getQuery` ของ h3 คืน object ที่สร้างจาก **`Object.create(null)` = ไม่มี prototype**
+2. object นั้นอยู่ใน payload → devalue เดินทุก node ตอน `renderPayloadJsonScript`
+3. reducer ของ `@pinia/nuxt` (`payload-plugin.js:11`) เรียก `shouldHydrate()` ของ pinia ที่เขียนว่า
+   `return !isPlainObject(obj) || !obj.hasOwnProperty(skipHydrateSymbol)`
+   → `isPlainObject` ผ่าน แต่ไม่มี prototype ⇒ `obj.hasOwnProperty` เป็น `undefined` ⇒ **TypeError** ⇒ payload พัง ⇒ 500
+
+⇒ บั๊กจากการเจอกันของ **Nuxt 4.4.2 (h3 query ไม่มี prototype) × pinia 2.3.1** ไม่ใช่โค้ดของโปรเจคผิด
+
+**วิธีแก้:** ลงทะเบียน payload reducer ชื่อ `skipHydrate` **ทับของ pinia** จาก user plugin (Nuxt เก็บเป็น `ssrContext["~payloadReducers"][name]` คนลงทีหลังทับ และ user plugin รันหลัง plugin ของ module) โดยข้าม object ที่ไม่มี prototype แล้วปล่อยเคสที่เหลือให้ pinia ตัดสินเหมือนเดิม
+**ไม่แตะ `node_modules` ไม่อัปเกรด pinia** — ถ้าวันหนึ่ง pinia แก้ `shouldHydrate` ให้ปลอดภัย ลบไฟล์นี้ทิ้งได้เลย
+
+**ตรวจจริงหลัง restart dev server:** URL มั่ว → **404** (เดิม 500) · `/auth/VerifyEmail` ที่ลบไป → **404** · `/PrivacyPolicy` → 200 · หน้า error เรนเดอร์ของเราเอง (h1 "404" + ปุ่ม Back to Home สูง 48px) · ที่ 375px ไม่มี horizontal scroll · กดปุ่มแล้ว `clearError` พากลับ `/` จริง · server log ไม่มี error
+
 ### Branch / Git State
 
 - Branch: `main` · working tree สะอาด
-- 3 commit ใหม่ **ยังไม่ push** (`git log origin/main..main` = 3 ก้อน)
+- 4 commit แรก push ขึ้น `origin/main` แล้ว (`edc09839..9fe24df7`) · commit ตัวแก้ 404 ตามมาทีหลัง
 - dev server ที่ใช้ตรวจงานเปิดที่ port ชั่วคราว (3000 ถูกใช้อยู่) — ปิดได้เลย
 
 ---
