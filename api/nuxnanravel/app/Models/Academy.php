@@ -119,7 +119,6 @@ class Academy extends Model
         }
 
         return $this->user_id === $user->id ||
-               $this->owner_id === $user->id ||
                $this->academyAdmins()->where('user_id', $user->id)->exists();
     }
 

@@ -290,7 +290,7 @@ class CourseController extends Controller
         return response()->json([
             'success' => true,
             'courses' => CourseResource::collection($paginated),
-            'create_course_threshold' => config('features.create_course_threshold', 100),
+            'create_course_threshold' => config('features.create_course_threshold', 120000),
             'pagination' => [
                 'total' => $paginated->total(),
                 'per_page' => $paginated->perPage(),
@@ -531,6 +531,18 @@ class CourseController extends Controller
     {
 
         try {
+            $threshold = (int) config('features.create_course_threshold', 120000);
+            $currentPoints = (int) auth()->user()->pp;
+
+            if ($currentPoints < $threshold) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'ต้องมีคะแนนสะสมอย่างน้อย '.number_format($threshold).' แต้ม เพื่อสร้างรายวิชา',
+                    'required_points' => $threshold,
+                    'current_points' => $currentPoints,
+                ], 403);
+            }
+
             // $validated = $request->validate([
             //     'name'              => 'required|string|max:255',
             //     'cover'                => 'nullable|image|mimes:jpg,jpeg,png,gif,svg|max:4096',

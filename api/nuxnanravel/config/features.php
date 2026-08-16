@@ -1,5 +1,5 @@
 <?php
 
 return [
-    'create_course_threshold' => 1200000,
+    'create_course_threshold' => (int) env('CREATE_COURSE_THRESHOLD', 120000),
 ];
