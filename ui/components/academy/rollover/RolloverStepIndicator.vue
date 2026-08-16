@@ -24,12 +24,13 @@ const defaultSteps: StepItem[] = [
 
 const props = withDefaults(defineProps<Props>(), {
   unlockedThrough: undefined,
-  steps: () => defaultSteps,
 })
 
 const emit = defineEmits<{
   select: [step: number]
 }>()
+
+const resolvedSteps = computed(() => props.steps ?? defaultSteps)
 
 const unlocked = computed(() => Math.max(props.current, props.unlockedThrough ?? props.current))
 
@@ -55,7 +56,7 @@ function selectStep(idx: number) {
     aria-label="ขั้นตอนการเลื่อนชั้น"
   >
     <ol class="hidden items-center gap-2 md:flex">
-      <li v-for="(step, idx) in steps" :key="`${idx}-${step.label}`" class="flex min-w-0 flex-1 items-center">
+      <li v-for="(step, idx) in resolvedSteps" :key="`${idx}-${step.label}`" class="flex min-w-0 flex-1 items-center">
         <button
           type="button"
           :disabled="stateOf(idx) === 'locked'"
@@ -98,7 +99,7 @@ function selectStep(idx: number) {
         </button>
 
         <span
-          v-if="idx < steps.length - 1"
+          v-if="idx < resolvedSteps.length - 1"
           :class="[
             'mx-1 h-0.5 flex-1 rounded-full transition',
             idx + 1 < current ? 'bg-emerald-400' : 'bg-gray-200 dark:bg-gray-700',
@@ -108,7 +109,7 @@ function selectStep(idx: number) {
     </ol>
 
     <ol class="flex flex-col gap-2 md:hidden">
-      <li v-for="(step, idx) in steps" :key="`mobile-${idx}-${step.label}`">
+      <li v-for="(step, idx) in resolvedSteps" :key="`mobile-${idx}-${step.label}`">
         <button
           type="button"
           class="flex w-full items-center gap-3 rounded-xl px-1 py-1 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30"
