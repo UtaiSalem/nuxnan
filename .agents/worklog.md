@@ -1,5 +1,105 @@
 # Work Log — nuxnan project
 
+## 2026-08-16 (ถึงเช้า 08-17) — ปิด Tier B + Tier D · ถอด Inertia ออกจากโปรเจคหมดแล้ว · เพิ่มสกิล agy
+
+### สถานะ: **เสร็จ · 3 commit ยังไม่ push** (`9082e594` `bcb478e8` `745f9e09`) · **⚠️ ยังไม่ได้รัน `npm run build`**
+
+> ปิด TODO ที่ค้างจาก 2026-08-10 ครบ 2 ข้อใหญ่: 🅱️ Tier B (9 ไฟล์) และ 🅳 ถอด Inertia ถาวร
+> **รวมทั้งเซสชัน +503 / −1,773 บรรทัด · 22 ไฟล์**
+
+### 🆕 สกิลใหม่: มอบงาน implement ให้ agy เป็นตัวช่วยหลัก
+
+ผู้ใช้สั่งให้ทำเป็นสกิลถาวร — บทบาทคือ **Claude = วิเคราะห์ + แตก shard + เขียนสเปค + ตรวจ · agy = คนเขียนโค้ด**
+
+| ไฟล์ | หน้าที่ |
+|---|---|
+| [`.agents/skills/agy-delegate/SKILL.md`](.agents/skills/agy-delegate/SKILL.md) | ตัวจริง — สูตรเขียนสเปค, คำสั่งเรียก agy, เช็คลิสต์ตรวจผล |
+| [`.claude/skills/agy/SKILL.md`](.claude/skills/agy/SKILL.md) | pointer เรียกด้วย `/agy` |
+| `CLAUDE.md` | หัวข้อ "การลงมือเขียนโค้ด — ใช้ agy เป็นตัวช่วยหลัก" |
+
+**บังคับไว้ในสกิล:** ทุกสเปคที่แตะ `ui/` ต้องแปะบล็อกกติกา **mobile-first** ลงไป (375px ก่อน · class ไม่มี prefix = มือถือ · touch target 44px · `min-w-0 flex-1 break-words` กันภาษาไทยแตกแนวตั้ง · ตารางกว้างอยู่ใน `overflow-x-auto` ของตัวเอง)
+
+คำสั่งที่ใช้จริงรอบนี้ (4 shard ผ่านหมด):
+```
+agy --print "Read <spec>.txt and follow it exactly." --add-dir "C:\wamp64\www\nuxnan" --add-dir "<scratchpad>" --model gemini-3.1-pro-high --mode accept-edits --print-timeout 20m
+```
+รันผ่าน Bash `run_in_background` · 2 shard ที่ไฟล์ไม่ทับกันรันขนานได้จริง
+
+### 🅱️ Tier B — เขียนใหม่ 4 ไฟล์ (commit `bcb478e8`)
+
+| ไฟล์ | ทำอะไร |
+|---|---|
+| `ui/pages/PrivacyPolicy.vue` | เขียนใหม่เป็น static ภาษาไทย 9 หัวข้อ (อิง พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล 2562) + สารบัญ + header sticky |
+| `ui/pages/TermsOfService.vue` | 9 หัวข้อ ครอบคลุมค่าเล่าเรียน/แต้ม-wallet ว่าไม่ใช่เงินตรา |
+| `ui/pages/auth/ForgotPassword.vue` | เปลี่ยนเป็นหน้า "ติดต่อผู้ดูแลระบบ" ไม่มีฟอร์ม (เหตุผลข้างล่าง) |
+| `ui/components/AuthenticationCardLogo.vue` | แก้เป็น NuxtLink — **แล้วถูกลบทิ้งใน Tier D** เพราะกลายเป็น orphan |
+
+**ชื่อแบรนด์บนหน้าสาธารณะ = `nuxnan`** (ผู้ใช้เลือก) — เดิมในเรพปนกัน: title หน้า landing เขียน "nuxnan" แต่ footer เขียน "PlearnD"
+เก็บ `contact@plearnd.com` และไฟล์ `plearnd-logo.png` ไว้ตามเดิม (อีเมลจริง / ชื่อไฟล์)
+
+### 🔴 ค้นพบสำคัญ: `/api/forgot-password/*` ไม่ใช่ระบบลืมรหัสผ่าน
+
+[`ForgotPasswordController.php:70`](api/nuxnanravel/app/Http/Controllers/Api/Shared/ForgotPasswordController.php:70) คือ**เครื่องมือของแอดมิน** — แอดมินรีเซ็ตรหัสให้สมาชิกโดย**หัก 4,800 แต้ม** (ใช้ wallet ร่วมได้ อัตรา 1 บาท = 1,080 แต้ม) และทั้งชุดอยู่หลัง `auth:api`
+⇒ **ไม่มี endpoint `password.email` ในระบบเลย** คนที่ล็อกอินไม่ได้ใช้ไม่ได้อยู่แล้ว · หน้าใหม่จึงบอกขั้นตอนติดต่อแอดมิน + แจ้งค่าดำเนินการ 4,800 แต้มไว้ในหน้า
+(ถ้าจะทำ self-service จริงต้องเพิ่ม API + ตั้งค่า mail ใน `.env` — ตาราง `password_reset_tokens` มีอยู่แล้ว)
+
+### 🅳 Tier D — ถอด Inertia ถาวร (commit `745f9e09`, −1,756 บรรทัด)
+
+1. **ตัดตัวสุดท้ายที่พึ่ง shim** — `pages/Learn/Course/CreateNewCourse.vue` ใช้ `$page.props.auth.user` 3 จุดในการ์ด "ผู้สอน" → เปลี่ยนเป็น `authUser` จาก `useAuthStore()` (+5/−3)
+2. **ลบ shim + plugin** — `ui/shims/inertia-vue3.ts` · `ui/shims/inertia-vue3.js` (มี 2 ไฟล์ซ้ำ) · `ui/plugins/inertia-shim.ts`
+3. **`ui/nuxt.config.ts`** — ลบ alias `'@inertiajs/vue3'` และลบ `import { fileURLToPath }` ที่กลายเป็น dead import
+4. **ลบหน้า/store/component ที่เป็น orphan**
+   - 4 หน้า auth: `ConfirmPassword` `ResetPassword` `TwoFactorChallenge` `VerifyEmail` (ไม่มี endpoint + ไม่มีลิงก์เข้า)
+   - 2 store ที่ไม่มีใครเรียก: `stores/attendance.js` (341) `stores/courseProfile.js` (497)
+   - 9 component ซาก Jetstream: `AuthenticationCardLogo` `AuthenticationCard` `ApplicationMark` `ConfirmsPassword` `DangerButton` `InputError` `InputLabel` `PrimaryButton` `TextInput`
+
+⚠️ **`SecondaryButton.vue` ห้ามลบ** — ยังถูก `components/learn/course/gradebook/MissingSourcesModal.vue` ใช้อยู่จริง
+ซาก Jetstream ที่ยังเหลือใน `ui/components/` (ยังไม่ได้ตรวจว่ามีใครใช้): `ActionMessage` `ActionSection` `Checkbox` `DialogModal` `Dropdown` `Modal` `SectionBorder` `SectionTitle`
+
+### ✅ เกณฑ์ผ่านที่รันจริง (ไม่ได้ paste จากรายงาน agy)
+
+1. `git grep` หา `@inertiajs` / `$page` / `inertiaPage` ทั่ว `ui/` → **ว่างทั้งสามคำ**
+2. compile ทุกไฟล์ที่แก้ด้วย `@vue/compiler-sfc` → ผ่าน · template root เดียวทุกไฟล์
+3. **restart dev server ใหม่ทั้งหมด** แล้วยิง 10 route → **200 ทุกตัว** (`/` `/auth` `/auth/ForgotPassword` `/PrivacyPolicy` `/TermsOfService` `/Learn/Courses` `/Learn/Courses/create` `/dashboard` `/academies` `/nuxnan-admin/login`)
+4. console error = 0 · หน้า hydrate จริง · กดลิงก์แล้ว client-side routing ทำงาน (path+title เปลี่ยนโดยไม่ full reload)
+5. ตรวจ mobile-first ที่ **375px จริง**: ไม่มี horizontal scroll (`scrollWidth == clientWidth`) · ไม่มี touch target < 44px · ที่ 1280px สารบัญ sticky ทำงาน
+6. 4 route ที่ลบ หายจริง (ยิงแล้วไม่เจอ) · 5 route ที่ต้องอยู่ อยู่ครบ
+
+### 🐛 บั๊กที่เจอระหว่างทาง (ยังไม่แก้ — คนละงาน)
+
+- **หน้า error ของแอปพัง**: route ที่ไม่มีจริงคืน **500 + `obj.hasOwnProperty is not a function`** แทนหน้า 404 (ทดสอบด้วย `/definitely-not-a-real-route-xyz` ก็เหมือนกัน)
+- **ไอคอนไม่ขึ้นในหน้า landing**: [`ModernFooterSection.vue`](ui/components/landing/ModernFooterSection.vue) เขียน `<Icon name="heroicons:phone">` แต่เรพนี้ import `Icon` จาก `@iconify/vue` ซึ่งต้องใช้ prop **`icon`** (มี 1,453 จุดในเรพที่ใช้ `icon=` ถูกแล้ว) — **agy ลอกรูปแบบผิดนี้มาใส่หน้าใหม่ ผมจับได้ตอนตรวจและแก้เอง**
+- footer หน้า landing ยังเขียนแบรนด์ "PlearnD" อยู่ (หน้าสาธารณะใหม่ใช้ "nuxnan" แล้ว)
+
+### 🔴 บทเรียนเรื่อง agy รอบนี้
+
+- **ซื่อสัตย์ทั้ง 4 shard** — ไม่แตะไฟล์นอกสเปคเลยสักไฟล์ (`git status` ยืนยัน) และ diff ตรงกับที่รายงาน
+- **แต่ยังต้องตรวจเอง 100%** เพราะจุดที่พลาดคือ "ลอก pattern ผิดจากไฟล์ข้างเคียง" ซึ่งรายงานของมันไม่มีทางบอก
+  ⇒ สเปคครั้งหน้าต้อง **ระบุ convention เฉพาะของเรพให้ชัด** (เช่น "ไอคอนใช้ prop `icon` ห้ามใช้ `name`")
+- สูตรที่ได้ผล: วิเคราะห์ root cause จบก่อน → แปะโค้ดเป้าหมายเต็ม ๆ → ระบุไฟล์ห้ามแตะเป็นชื่อ ๆ → เกณฑ์ผ่านเป็นคำสั่ง shell
+
+### งานที่ค้างอยู่ (TODO ต่อ)
+
+- [ ] **รัน `npm run build`** — ยังไม่เคยรันตั้งแต่ลบ 75 ไฟล์ (2026-08-10) และตอนนี้ลบเพิ่มอีก 20 ไฟล์ + แก้ `nuxt.config.ts` แล้ว **ผู้ใช้รันเอง**
+- [ ] **push 3 commit นี้** (`9082e594` `bcb478e8` `745f9e09`) — ยังอยู่แค่บนเครื่องนี้
+- [ ] **หน้า error 500 แทน 404** (ดูหัวข้อบั๊กข้างบน) — กระทบผู้ใช้จริงทุกคนที่พิมพ์ URL ผิด
+- [ ] **`components/academy/rollover/RolloverStepIndicator.vue:25-27`** — `withDefaults()` อ้าง `defaultSteps` ที่ประกาศในไฟล์เดียวกัน (ยังไม่แก้ ค้างมาตั้งแต่ `bea9d5bb`)
+- [ ] **แก้ `<Icon name=` เป็น `icon=` ใน `landing/ModernFooterSection.vue`** + เปลี่ยนแบรนด์ footer เป็น nuxnan
+- [ ] **(ค้างจากรอบก่อน)** S-S4 schema คะแนนกีฬาสี — **ถูกบล็อกโดย S-S3e** (ตาราง `sports_editions` + ย้ายคีย์เป็น `edition_id`) ตาม [`27-sports-day.md:175-176`](.agents/school-admin/27-sports-day.md:175) ไม่ใช่ "ไม่มีอะไรบล็อกแล้ว" อย่างที่ worklog รอบก่อนเขียน · ตั้งชื่อคณะสีจริง · ไฟล์ SQL prod ล้าหลัง 12 migrations
+
+### ⚠️ worklog เคยล้าหลัง 6 วัน
+
+entry ก่อนหน้าเขียนวันที่ 2026-08-10 แต่มี commit ถึง 08-16 ที่ไม่ถูกบันทึก (จ่ายค่าคอร์สด้วย wallet/points, create-course policy + gate, exam eligibility badge, bulk unlock — ส่วนใหญ่มาจาก branch `claude/group-exam-unlock-function-96fd27` ที่ merge เข้า main แล้ว)
+ผลข้างเคียง: worklog สั่งให้เขียน `Learn/Course/CreateNewCourse.vue` ใหม่ ทั้งที่ commit `17492327` (08-12) ถอด Inertia ออกจากไฟล์นั้นไปแล้ว
+
+### Branch / Git State
+
+- Branch: `main` · working tree สะอาด
+- 3 commit ใหม่ **ยังไม่ push** (`git log origin/main..main` = 3 ก้อน)
+- dev server ที่ใช้ตรวจงานเปิดที่ port ชั่วคราว (3000 ถูกใช้อยู่) — ปิดได้เลย
+
+---
+
 ## 2026-08-10 — ตัดสินชะตา 51 ไฟล์ Inertia · ลบเกาะที่ตายแล้วออก 75 ไฟล์ (Tier A + C)
 
 ### สถานะ: **เสร็จ · 8 commit** — Tier A (6 เกาะ) + Tier C · **⚠️ ยังไม่ได้รัน `npm run build`** · เหลือ Tier B 9 ไฟล์
