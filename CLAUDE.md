@@ -169,6 +169,13 @@ php artisan reverb:start             # websocket server
 5. รัน lint/test ที่เกี่ยวข้อง: `./vendor/bin/pint` (backend), build check (frontend)
 6. ตรวจ `git diff` แล้ว commit เป็นชุดที่เล็กพอจะ revert ได้
 
+## การลงมือเขียนโค้ด — ใช้ agy เป็นตัวช่วยหลัก
+
+งาน implement ที่ขอบเขตชัดเจน ให้ใช้สกิล `agy` (`.agents/skills/agy-delegate/SKILL.md`):
+Claude = วิเคราะห์ + แตก shard + เขียนสเปคเป็นไฟล์ + **ตรวจผลเอง** · agy = ผู้เขียนโค้ด
+ทุกสเปคที่เป็นงานใน `ui/` ต้องแปะบล็อกกติกา **mobile-first** ลงไปด้วยเสมอ
+รายงานของ agy เชื่อไม่ได้ — ต้อง `git diff --stat` (อ่านเลข deletion) + `git diff` + รันเกณฑ์ผ่านเองทุกครั้ง
+
 ## Subagents ที่มีในโปรเจคนี้
 
 ดู `.claude/agents/` มี:
