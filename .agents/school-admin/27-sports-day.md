@@ -125,6 +125,7 @@ sports_editions                            ← งานกีฬาสี 1 ค
 | **S-D5** | คะแนนโผล่ที่ไหน | ⏸ ยังไม่ถึงคิว |
 | **S-D6** | ปีถัดไป | ✅ **แบ่งใหม่ทุกครั้งที่จัด** (เดิมเขียนว่า "ทุกปี" — ขยายความ 2026-08-08 เพราะจัดได้หลายครั้ง/ปี) → สมาชิกภาพคณะสี**ผูกกับ `sports_editions` ไม่ใช่ `academic_year_id`** · ปีการศึกษาเป็นคุณสมบัติของ edition |
 | **S-D7** *(ใหม่)* | เกณฑ์กระจายของตัวสุ่ม | ✅ ค่าเริ่มต้น = **คละทุกห้องเท่า ๆ กัน + สมดุลชาย/หญิง** · และต้องมีตัวเลือก **สุ่มล้วนทั้งโรงเรียน** ให้เลือกตอนรัน |
+| **S-D8** *(ใหม่ 2026-08-17)* | คะแนนเท่ากัน (อันดับร่วม) | ✅ **ได้คะแนนเท่ากัน แล้วข้ามอันดับถัดไป** (`1,1,3`) ทั้งตอนแปลงอันดับเป็นคะแนนและตอนจัดอันดับตารางรวม · ไม่มี tie-breaker อัตโนมัติ (ดู §10.2) |
 
 ### 5.1 ผลที่ตามมาจาก S-D6 — ห้ามเก็บสมาชิกคณะสีใน `academy_group_members`
 
@@ -375,3 +376,92 @@ sports_edition_houses                 ← "ครั้งนี้มีกี�
 | tests | `php artisan test tests/Feature/Sports` → **33 passed / 118 assertions** รวมเคส "a second active edition is rejected by the database", "two editions in one year keep separate memberships", "activate demotes the previous edition and reprojects" |
 
 **หมายเหตุความต่างจากสเปก 1 จุด:** `active_key` ถูกสร้างเป็น **VIRTUAL** generated column ไม่ใช่ STORED ตามที่ §9.1 เขียนไว้ — ผลลัพธ์เท่ากันเพราะ MySQL ทำ UNIQUE index บน virtual column ได้ และเทสต์ยืนยันว่า active ซ้อนกันถูก DB ปฏิเสธจริง จึงไม่ต้องแก้
+
+---
+
+## 10. S-S4 — ฐานคะแนนคณะสี (สเปกล็อก 2026-08-17)
+
+### 10.0 ขอบเขต — ตัดสินแล้วโดยผู้ใช้ 2026-08-17
+
+| ประเด็น | ผลตัดสิน |
+|---|---|
+| **S-S4 ครอบคลุมแค่ไหน** | ✅ **ฐานคะแนนก่อน** — `sports_disciplines` + `sports_score_entries` (event log) + `sports_house_standings` (aggregate) + กติกาอันดับร่วม + API ให้/หักคะแนนด้วยมือ · **ไม่มี `sports_matches` / `sports_match_results` ในก้อนนี้** ไปอยู่ S-S5 ที่เป็นเจ้าของการบันทึกผลการแข่ง (S-D3 bracket ยังเป็น ⏸ จึงยังไม่ต้องตัด) |
+| **S-D8 *(ใหม่)* คะแนนเท่ากัน** | ✅ **อันดับร่วมได้คะแนนเท่ากัน แล้วข้ามอันดับถัดไป** — ที่ 1 ร่วม 2 คณะ → ได้ 9 ทั้งคู่ ไม่มีที่ 2 คณะถัดไปคือที่ 3 (standard competition ranking `1,1,3`) · ใช้กฎเดียวกันทั้งตอนแปลงอันดับเป็นคะแนน และตอนจัดอันดับตารางคะแนนรวม |
+| **UI** | ไม่อยู่ใน S-S4 — หน้าจอทั้งหมดอยู่ที่ S-S6 · S-S4 เป็น backend ล้วน |
+
+### 10.1 ตารางใหม่ 3 ตาราง — ทุกตาราง key ที่ `edition_id`
+
+```
+sports_disciplines                    ← รายการที่ให้คะแนนได้ 1 รายการ (ฟุตบอล, วิ่ง 100 ม., พาเหรด, กองเชียร์)
+  id · edition_id FK cascade · academy_id FK cascade      ← academy_id เขียนจาก $edition->academy_id เท่านั้น ห้ามรับจาก request
+  name varchar(150)
+  type enum(team|individual|judged)   ← 3 รูปแบบคะแนนตาม §3
+  scoring_table json nullable         ← {"1":9,"2":8,...} ใช้เมื่อ type != judged
+  max_score decimal(8,2) nullable     ← ใช้เมื่อ type = judged (ค่าตั้งต้น 100)
+  display_order unsigned smallint default 0
+  timestamps
+  UNIQUE [edition_id, name]  ชื่อ index `sd_edition_name_unique`
+  index [edition_id, display_order]   ชื่อ `sd_edition_order_idx`
+
+sports_score_entries                  ← event log: ทุกแต้มที่คณะสีได้ต้องมีแถวที่นี่ (§4 หลักการข้อ 2)
+  id · edition_id FK cascade · academy_id FK cascade
+  house_group_id FK academy_groups cascade
+  discipline_id nullable FK sports_disciplines nullOnDelete   ← null ได้เมื่อเป็นคะแนนให้/หักด้วยมือล้วน
+  source enum(placing|judged|manual)
+  placing unsigned smallint nullable  ← ใช้เมื่อ source=placing (อันดับร่วมใส่เลขเดียวกันได้)
+  points decimal(8,2)                 ← ติดลบได้ (หักคะแนน) · judged ใส่ทศนิยมได้
+  note varchar(255) nullable
+  ref_type varchar(60) nullable · ref_id unsigned bigint nullable
+      ↑ เผื่อ S-S5 ผูกกลับไปที่ sports_match_results ได้โดยไม่ต้อง migration ใหม่
+  awarded_by_user_id FK users
+  voided_at nullable · voided_by_user_id nullable FK users
+  timestamps
+  index [edition_id, house_group_id]  ชื่อ `sse_edition_house_idx`
+  index [edition_id, discipline_id]   ชื่อ `sse_edition_discipline_idx`
+
+sports_house_standings                ← aggregate ล้วน สร้างใหม่จาก event log ได้เสมอ (§4 หลักการข้อ 3)
+  id · edition_id FK cascade · house_group_id FK academy_groups cascade
+  total_points decimal(10,2) default 0
+  gold_count / silver_count / bronze_count unsigned int default 0
+  rank unsigned smallint default 0    ← 0 = ยังไม่คำนวณ
+  computed_at timestamp nullable
+  timestamps
+  UNIQUE [edition_id, house_group_id] ชื่อ `shs_edition_house_unique`
+  index [edition_id, rank]            ชื่อ `shs_edition_rank_idx`
+```
+
+⚠️ **ชื่อ index ต้องสั้นและตั้งเอง** — MySQL จำกัดชื่อ index ที่ 64 ตัวอักษร และชื่อ auto ของ Laravel บนตารางชื่อยาวเคยทะลุมาแล้ว (บทเรียนเดียวกับ `hm_edition_student_unique` ใน §9)
+
+### 10.2 กติกาคะแนน (S-D8) — เขียนไว้ที่เดียว ห้ามกระจาย
+
+- **แปลงอันดับเป็นคะแนน**: `points = scoring_table[placing]` · อันดับร่วมใส่ `placing` เท่ากัน ⇒ ได้คะแนนเท่ากันโดยอัตโนมัติ · ถ้า `placing` เกินตารางให้ได้ 0 (ไม่ใช่ error — โรงเรียนให้คะแนนเฉพาะอันดับต้น ๆ)
+- **จัดอันดับตารางคะแนนรวม**: เรียงตาม `total_points` มาก→น้อย · คะแนนเท่ากันได้ `rank` เท่ากัน แล้ว**ข้าม** rank ถัดไปตามจำนวนที่เสมอ (`1,1,3`)
+- **ไม่มี tie-breaker อัตโนมัติ** — ไม่เอาจำนวนเหรียญมาตัดสินแทนคะแนน เพราะ §3 ไม่ได้กำหนดไว้ และการเดาเองจะกลายเป็นกฎที่ไม่มีใครสั่ง · `gold/silver/bronze_count` เก็บไว้แสดงผลเท่านั้น
+- **แก้คะแนนที่ลงผิด = void แล้วลงใหม่** ห้าม UPDATE ทับ `points` และห้าม DELETE — แถวที่ `voided_at` ไม่ null ต้องไม่ถูกนับใน standings
+
+### 10.3 Service — ตัวเขียน standings มีตัวเดียว (แบบเดียวกับ `HouseMembershipProjector`)
+
+| ไฟล์ใหม่ | หน้าที่ |
+|---|---|
+| `app/Services/Sports/SportsScoringService.php` | `pointsForPlacing(SportsDiscipline, int $placing): float` · `award(...)` สร้างแถว event log แล้วสั่ง rebuild · `void(SportsScoreEntry, User)` |
+| `app/Services/Sports/SportsStandingsProjector.php` | `rebuild(SportsEdition): void` — ลบ standings เดิมของ edition นั้น แล้วสร้างใหม่จาก event log ที่ยังไม่ถูก void **โดยต้องมีแถวของทุกคณะสีใน `sports_edition_houses` แม้ได้ 0 แต้ม** (เหตุผลเดียวกับ §9.1) · จัดอันดับตามกติกา 10.2 · ทำใน `DB::transaction` |
+
+### 10.4 API — ทุก route อยู่ใต้ `{academy}/sports-editions/{edition}` และใช้ permission เดิม
+
+| method + path | permission |
+|---|---|
+| `GET  /disciplines` · `POST /disciplines` · `PUT /disciplines/{discipline}` · `DELETE /disciplines/{discipline}` | view / manage / manage / manage |
+| `GET  /score-entries` (กรองด้วย house_group_id, discipline_id ได้) | `sports.view` |
+| `POST /score-entries` (source=placing ส่ง discipline_id+placing · source=judged ส่ง discipline_id+points · source=manual ส่ง points+note) | `sports.manage` |
+| `POST /score-entries/{entry}/void` | `sports.manage` |
+| `GET  /standings` | `sports.view` |
+| `POST /standings/rebuild` | `sports.manage` |
+
+- ทุก route ต้อง scope ด้วย academy แบบเดียวกับ `HouseAssignmentController::scoped()` — edition ที่ไม่ใช่ของ academy นั้น = 404
+- `house_group_id` ที่ส่งมาต้องอยู่ใน `sports_edition_houses` ของ edition นั้น มิฉะนั้น 422 (กฎเดียวกับ "preview rejects houses that are not in the edition" ของ S-S3e)
+
+### 10.5 เกณฑ์จบงาน
+
+- migration รันบน MySQL จริงได้ + `down()` คืนรูปเดิมได้ (ตารางใหม่ล้วน ไม่มีข้อมูลเดิมให้ระวัง)
+- เทสต์ใหม่ต้องครอบ: อันดับร่วมได้คะแนนเท่ากันและข้ามอันดับ · standings มีแถวคณะที่ได้ 0 แต้ม · แถวที่ void แล้วไม่ถูกนับ · คะแนนติดลบ (หักคะแนน) ทำงาน · house นอก edition ถูกปฏิเสธ 422 · edition ข้าม academy ได้ 404 · route ถูกกันด้วย permission
+- `./vendor/bin/pint --test` ผ่าน
