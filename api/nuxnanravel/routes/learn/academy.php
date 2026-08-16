@@ -55,6 +55,7 @@ use App\Http\Controllers\Api\Learn\Academy\RolloverController;
 use App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController;
 use App\Http\Controllers\Api\Learn\Academy\SchoolEventController;
 use App\Http\Controllers\Api\Learn\Academy\SportsEditionController;
+use App\Http\Controllers\Api\Learn\Academy\SportsScoringController;
 use App\Http\Controllers\Api\Learn\Academy\StaffAttendanceController;
 use App\Http\Controllers\Api\Learn\Academy\StaffController;
 use App\Http\Controllers\Api\Learn\Academy\StudentAccountController;
@@ -965,6 +966,18 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::post('/{edition}/activate', [SportsEditionController::class, 'activate'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-editions.activate');
         Route::post('/{edition}/close', [SportsEditionController::class, 'close'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-editions.close');
         Route::delete('/{edition}', [SportsEditionController::class, 'destroy'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-editions.destroy');
+    });
+
+    Route::prefix('{academy}/sports-editions/{edition}')->group(function () {
+        Route::get('/disciplines', [SportsScoringController::class, 'disciplines'])->middleware('academy.permission:sports.view')->name('api.academy.sports-disciplines.index');
+        Route::post('/disciplines', [SportsScoringController::class, 'storeDiscipline'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-disciplines.store');
+        Route::put('/disciplines/{discipline}', [SportsScoringController::class, 'updateDiscipline'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-disciplines.update');
+        Route::delete('/disciplines/{discipline}', [SportsScoringController::class, 'destroyDiscipline'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-disciplines.destroy');
+        Route::get('/score-entries', [SportsScoringController::class, 'entries'])->middleware('academy.permission:sports.view')->name('api.academy.sports-score-entries.index');
+        Route::post('/score-entries', [SportsScoringController::class, 'storeEntry'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-score-entries.store');
+        Route::post('/score-entries/{entry}/void', [SportsScoringController::class, 'voidEntry'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-score-entries.void');
+        Route::get('/standings', [SportsScoringController::class, 'standings'])->middleware('academy.permission:sports.view')->name('api.academy.sports-standings.index');
+        Route::post('/standings/rebuild', [SportsScoringController::class, 'rebuildStandings'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-standings.rebuild');
     });
 
     Route::prefix('{academy}/house-assignments')->group(function () {
