@@ -39,25 +39,25 @@
         <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-8 sm:mb-12 px-4">
           <NuxtLink to="/auth" class="w-full sm:w-auto btn-gradient inline-flex items-center justify-center gap-2 px-8 sm:px-10 py-4 sm:py-5 text-base sm:text-lg">
             <span>สมัครใช้งานฟรี</span>
-            <Icon name="heroicons:arrow-right" class="w-5 h-5" />
+            <Icon icon="heroicons:arrow-right" class="w-5 h-5" />
           </NuxtLink>
           <button class="w-full sm:w-auto btn-gradient-outline inline-flex items-center justify-center gap-2 px-8 sm:px-10 py-4 sm:py-5 text-base sm:text-lg">
-            <Icon name="heroicons:phone" class="w-5 h-5" />
+            <Icon icon="heroicons:phone" class="w-5 h-5" />
             <span>ติดต่อเรา</span>
           </button>
         </div>
 
         <div class="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-gray-400 px-4">
           <div class="flex items-center gap-2">
-            <Icon name="heroicons:check-circle" class="w-4 sm:w-5 h-4 sm:h-5 text-vikinger-green" />
+            <Icon icon="heroicons:check-circle" class="w-4 sm:w-5 h-4 sm:h-5 text-vikinger-green" />
             <span class="text-xs sm:text-sm">ทดลองใช้ฟรี</span>
           </div>
           <div class="flex items-center gap-2">
-            <Icon name="heroicons:check-circle" class="w-4 sm:w-5 h-4 sm:h-5 text-vikinger-green" />
+            <Icon icon="heroicons:check-circle" class="w-4 sm:w-5 h-4 sm:h-5 text-vikinger-green" />
             <span class="text-xs sm:text-sm">ไม่ต้องใช้บัตรเครดิต</span>
           </div>
           <div class="flex items-center gap-2">
-            <Icon name="heroicons:check-circle" class="w-4 sm:w-5 h-4 sm:h-5 text-vikinger-green" />
+            <Icon icon="heroicons:check-circle" class="w-4 sm:w-5 h-4 sm:h-5 text-vikinger-green" />
             <span class="text-xs sm:text-sm">ยกเลิกได้ตลอดเวลา</span>
           </div>
         </div>

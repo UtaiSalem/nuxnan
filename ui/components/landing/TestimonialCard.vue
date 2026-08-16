@@ -19,7 +19,7 @@
       <Icon 
         v-for="i in 5" 
         :key="i" 
-        name="heroicons:star-solid" 
+        icon="heroicons:star-solid" 
         class="w-3 sm:w-4 h-3 sm:h-4"
         :class="i <= testimonial.rating ? 'text-vikinger-yellow' : 'text-gray-600'"
       />

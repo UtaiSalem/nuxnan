@@ -11,7 +11,7 @@
         <div class="sm:col-span-2 lg:col-span-2">
           <div class="flex items-center gap-3 mb-4 sm:mb-6">
             <div class="w-10 h-10 bg-gradient-vikinger rounded-xl flex items-center justify-center">
-              <Icon name="heroicons:play" class="w-6 h-6 text-white" />
+              <Icon icon="heroicons:play" class="w-6 h-6 text-white" />
             </div>
             <span class="text-lg sm:text-xl font-bold text-white">PlearnD</span>
           </div>
@@ -22,16 +22,16 @@
           <!-- Social Links -->
           <div class="flex gap-3">
             <a href="#" class="w-10 h-10 bg-white/5 hover:bg-vikinger-cyan/20 rounded-lg flex items-center justify-center transition-all duration-300 group">
-              <Icon name="bi:facebook" class="w-5 h-5 text-gray-400 group-hover:text-vikinger-cyan transition-colors" />
+              <Icon icon="bi:facebook" class="w-5 h-5 text-gray-400 group-hover:text-vikinger-cyan transition-colors" />
             </a>
             <a href="#" class="w-10 h-10 bg-white/5 hover:bg-vikinger-purple/20 rounded-lg flex items-center justify-center transition-all duration-300 group">
-              <Icon name="bi:twitter-x" class="w-5 h-5 text-gray-400 group-hover:text-vikinger-purple transition-colors" />
+              <Icon icon="bi:twitter-x" class="w-5 h-5 text-gray-400 group-hover:text-vikinger-purple transition-colors" />
             </a>
             <a href="#" class="w-10 h-10 bg-white/5 hover:bg-vikinger-green/20 rounded-lg flex items-center justify-center transition-all duration-300 group">
-              <Icon name="bi:line" class="w-5 h-5 text-gray-400 group-hover:text-vikinger-green transition-colors" />
+              <Icon icon="bi:line" class="w-5 h-5 text-gray-400 group-hover:text-vikinger-green transition-colors" />
             </a>
             <a href="#" class="w-10 h-10 bg-white/5 hover:bg-vikinger-pink/20 rounded-lg flex items-center justify-center transition-all duration-300 group">
-              <Icon name="bi:youtube" class="w-5 h-5 text-gray-400 group-hover:text-vikinger-pink transition-colors" />
+              <Icon icon="bi:youtube" class="w-5 h-5 text-gray-400 group-hover:text-vikinger-pink transition-colors" />
             </a>
           </div>
         </div>
@@ -121,17 +121,17 @@
       <!-- Contact Cards -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 lg:mb-12">
         <div class="glass-card p-4 sm:p-6 text-center">
-          <Icon name="heroicons:phone" class="w-6 sm:w-8 h-6 sm:h-8 text-vikinger-cyan mx-auto mb-2 sm:mb-3" />
+          <Icon icon="heroicons:phone" class="w-6 sm:w-8 h-6 sm:h-8 text-vikinger-cyan mx-auto mb-2 sm:mb-3" />
           <h4 class="font-semibold text-white mb-1 text-sm sm:text-base">โทรศัพท์</h4>
           <p class="text-gray-400 text-sm">02-123-4567</p>
         </div>
         <div class="glass-card p-4 sm:p-6 text-center">
-          <Icon name="heroicons:envelope" class="w-6 sm:w-8 h-6 sm:h-8 text-vikinger-green mx-auto mb-2 sm:mb-3" />
+          <Icon icon="heroicons:envelope" class="w-6 sm:w-8 h-6 sm:h-8 text-vikinger-green mx-auto mb-2 sm:mb-3" />
           <h4 class="font-semibold text-white mb-1 text-sm sm:text-base">อีเมล</h4>
           <p class="text-gray-400 text-sm">contact@plearnd.com</p>
         </div>
         <div class="glass-card p-4 sm:p-6 text-center">
-          <Icon name="bi:line" class="w-6 sm:w-8 h-6 sm:h-8 text-vikinger-orange mx-auto mb-2 sm:mb-3" />
+          <Icon icon="bi:line" class="w-6 sm:w-8 h-6 sm:h-8 text-vikinger-orange mx-auto mb-2 sm:mb-3" />
           <h4 class="font-semibold text-white mb-1 text-sm sm:text-base">ไลน์</h4>
           <p class="text-gray-400 text-sm">@plearnd</p>
         </div>

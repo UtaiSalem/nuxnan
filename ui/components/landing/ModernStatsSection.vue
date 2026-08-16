@@ -27,7 +27,7 @@
           <div class="w-16 sm:w-20 lg:w-24 h-16 sm:h-20 lg:h-24 mx-auto rounded-full border-4 border-white/10 flex items-center justify-center overflow-hidden relative">
             <div class="liquid-fill absolute bottom-0 left-0 right-0" 
                  :style="{ height: animated ? '85%' : '0%' }"></div>
-            <Icon name="heroicons:users" 
+            <Icon icon="heroicons:users" 
                   class="w-6 sm:w-8 lg:w-10 h-6 sm:h-8 lg:h-10 relative z-10 transition-colors duration-500"
                   :class="animated ? 'text-white' : 'text-gray-400'" />
           </div>
@@ -48,7 +48,7 @@
             <div class="liquid-fill absolute bottom-0 left-0 right-0" 
                  style="background: linear-gradient(to top, #059669, #10B981);"
                  :style="{ height: animated ? '78%' : '0%' }"></div>
-            <Icon name="heroicons:book-open" 
+            <Icon icon="heroicons:book-open" 
                   class="w-6 sm:w-8 lg:w-10 h-6 sm:h-8 lg:h-10 relative z-10 transition-colors duration-500"
                   :class="animated ? 'text-white' : 'text-gray-400'" />
           </div>
@@ -69,7 +69,7 @@
             <div class="liquid-fill absolute bottom-0 left-0 right-0" 
                  style="background: linear-gradient(to top, #D97706, #F59E0B);"
                  :style="{ height: animated ? '92%' : '0%' }"></div>
-            <Icon name="heroicons:star" 
+            <Icon icon="heroicons:star" 
                   class="w-6 sm:w-8 lg:w-10 h-6 sm:h-8 lg:h-10 relative z-10 transition-colors duration-500"
                   :class="animated ? 'text-white' : 'text-gray-400'" />
           </div>
@@ -90,7 +90,7 @@
             <div class="liquid-fill absolute bottom-0 left-0 right-0" 
                  style="background: linear-gradient(to top, #DB2777, #EC4899);"
                  :style="{ height: animated ? '99%' : '0%' }"></div>
-            <Icon name="heroicons:heart" 
+            <Icon icon="heroicons:heart" 
                   class="w-6 sm:w-8 lg:w-10 h-6 sm:h-8 lg:h-10 relative z-10 transition-colors duration-500"
                   :class="animated ? 'text-white' : 'text-gray-400'" />
           </div>
@@ -108,15 +108,15 @@
     <!-- Trust Badges -->
     <div class="mt-12 sm:mt-20 flex flex-wrap items-center justify-center gap-4 sm:gap-6 opacity-50 section-reveal" ref="trustBadges">
       <div class="flex items-center gap-2">
-        <Icon name="heroicons:trophy" class="w-4 sm:w-5 h-4 sm:h-5 text-vikinger-yellow" />
+        <Icon icon="heroicons:trophy" class="w-4 sm:w-5 h-4 sm:h-5 text-vikinger-yellow" />
         <span class="text-xs sm:text-sm text-gray-400">EdTech Award 2024</span>
       </div>
       <div class="flex items-center gap-2">
-        <Icon name="heroicons:star" class="w-4 sm:w-5 h-4 sm:h-5 text-vikinger-yellow" />
+        <Icon icon="heroicons:star" class="w-4 sm:w-5 h-4 sm:h-5 text-vikinger-yellow" />
         <span class="text-xs sm:text-sm text-gray-400">คะแนนรีวิว 4.9/5.0</span>
       </div>
       <div class="flex items-center gap-2">
-        <Icon name="heroicons:check-badge" class="w-4 sm:w-5 h-4 sm:h-5 text-vikinger-green" />
+        <Icon icon="heroicons:check-badge" class="w-4 sm:w-5 h-4 sm:h-5 text-vikinger-green" />
         <span class="text-xs sm:text-sm text-gray-400">รับรองคุณภาพ</span>
       </div>
     </div>

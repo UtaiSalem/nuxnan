@@ -11,7 +11,7 @@
         :class="{ 'active': activeSection === 'hero' }"
         @click.prevent="scrollTo('hero')"
       >
-        <Icon name="heroicons:home" class="w-5 h-5" />
+        <Icon icon="heroicons:home" class="w-5 h-5" />
         <span class="nav-tooltip">หน้าแรก</span>
       </a>
 
@@ -22,7 +22,7 @@
         :class="{ 'active': activeSection === 'features' }"
         @click.prevent="scrollTo('features')"
       >
-        <Icon name="heroicons:squares-2x2" class="w-5 h-5" />
+        <Icon icon="heroicons:squares-2x2" class="w-5 h-5" />
         <span class="nav-tooltip">ฟีเจอร์</span>
       </a>
 
@@ -33,7 +33,7 @@
         :class="{ 'active': activeSection === 'stats' }"
         @click.prevent="scrollTo('stats')"
       >
-        <Icon name="heroicons:chart-bar" class="w-5 h-5" />
+        <Icon icon="heroicons:chart-bar" class="w-5 h-5" />
         <span class="nav-tooltip">สถิติ</span>
       </a>
 
@@ -44,7 +44,7 @@
         :class="{ 'active': activeSection === 'testimonials' }"
         @click.prevent="scrollTo('testimonials')"
       >
-        <Icon name="heroicons:chat-bubble-left-ellipsis" class="w-5 h-5" />
+        <Icon icon="heroicons:chat-bubble-left-ellipsis" class="w-5 h-5" />
         <span class="nav-tooltip">รีวิว</span>
       </a>
 
@@ -56,7 +56,7 @@
         to="/auth" 
         class="nav-item nav-item-cta"
       >
-        <Icon name="heroicons:arrow-right-on-rectangle" class="w-5 h-5" />
+        <Icon icon="heroicons:arrow-right-on-rectangle" class="w-5 h-5" />
         <span class="nav-tooltip">เข้าสู่ระบบ</span>
       </NuxtLink>
     </div>

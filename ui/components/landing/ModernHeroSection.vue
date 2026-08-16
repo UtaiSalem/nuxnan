@@ -17,27 +17,27 @@
         
         <!-- Orbital Cards -->
         <div class="absolute glass-card p-2 sm:p-3" style="left: 50%; top: 10%; transform: translate(-50%, -50%); animation: float 6s ease-in-out infinite;">
-          <Icon name="heroicons:play" class="w-4 h-4 sm:w-5 sm:h-5 text-vikinger-cyan" />
+          <Icon icon="heroicons:play" class="w-4 h-4 sm:w-5 sm:h-5 text-vikinger-cyan" />
           <span class="text-[10px] sm:text-xs text-white/80 mt-1 block">Play</span>
         </div>
         <div class="absolute glass-card p-2 sm:p-3" style="left: 85%; top: 35%; transform: translate(-50%, -50%); animation: float 6s ease-in-out infinite 1s;">
-          <Icon name="heroicons:book-open" class="w-4 h-4 sm:w-5 sm:h-5 text-vikinger-green" />
+          <Icon icon="heroicons:book-open" class="w-4 h-4 sm:w-5 sm:h-5 text-vikinger-green" />
           <span class="text-[10px] sm:text-xs text-white/80 mt-1 block">Learn</span>
         </div>
         <div class="absolute glass-card p-2 sm:p-3" style="left: 85%; top: 65%; transform: translate(-50%, -50%); animation: float 6s ease-in-out infinite 2s;">
-          <Icon name="heroicons:currency-dollar" class="w-4 h-4 sm:w-5 sm:h-5 text-vikinger-orange" />
+          <Icon icon="heroicons:currency-dollar" class="w-4 h-4 sm:w-5 sm:h-5 text-vikinger-orange" />
           <span class="text-[10px] sm:text-xs text-white/80 mt-1 block">Earn</span>
         </div>
         <div class="absolute glass-card p-2 sm:p-3" style="left: 50%; top: 90%; transform: translate(-50%, -50%); animation: float 6s ease-in-out infinite 3s;">
-          <Icon name="heroicons:trophy" class="w-4 h-4 sm:w-5 sm:h-5 text-vikinger-yellow" />
+          <Icon icon="heroicons:trophy" class="w-4 h-4 sm:w-5 sm:h-5 text-vikinger-yellow" />
           <span class="text-[10px] sm:text-xs text-white/80 mt-1 block">Reward</span>
         </div>
         <div class="absolute glass-card p-2 sm:p-3" style="left: 15%; top: 65%; transform: translate(-50%, -50%); animation: float 6s ease-in-out infinite 4s;">
-          <Icon name="heroicons:users" class="w-4 h-4 sm:w-5 sm:h-5 text-vikinger-purple" />
+          <Icon icon="heroicons:users" class="w-4 h-4 sm:w-5 sm:h-5 text-vikinger-purple" />
           <span class="text-[10px] sm:text-xs text-white/80 mt-1 block">Community</span>
         </div>
         <div class="absolute glass-card p-2 sm:p-3" style="left: 15%; top: 35%; transform: translate(-50%, -50%); animation: float 6s ease-in-out infinite 5s;">
-          <Icon name="heroicons:star" class="w-4 h-4 sm:w-5 sm:h-5 text-vikinger-pink" />
+          <Icon icon="heroicons:star" class="w-4 h-4 sm:w-5 sm:h-5 text-vikinger-pink" />
           <span class="text-[10px] sm:text-xs text-white/80 mt-1 block">Badge</span>
         </div>
       </div>
@@ -68,10 +68,10 @@
       <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 animate-fade-in-up animation-delay-400 px-4">
         <NuxtLink to="/auth" class="w-full sm:w-auto btn-gradient inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4">
           <span>เริ่มต้นใช้งาน</span>
-          <Icon name="heroicons:arrow-right" class="w-5 h-5" />
+          <Icon icon="heroicons:arrow-right" class="w-5 h-5" />
         </NuxtLink>
         <button class="w-full sm:w-auto btn-gradient-outline inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4">
-          <Icon name="heroicons:play" class="w-5 h-5" />
+          <Icon icon="heroicons:play" class="w-5 h-5" />
           <span>ดูวิดีโอแนะนำ</span>
         </button>
       </div>
@@ -79,15 +79,15 @@
       <!-- Trust Badges -->
       <div class="mt-12 sm:mt-16 flex flex-wrap items-center justify-center gap-4 sm:gap-8 opacity-60 animate-fade-in-up animation-delay-600">
         <div class="flex items-center gap-2">
-          <Icon name="heroicons:shield-check" class="w-4 h-4 sm:w-5 sm:h-5 text-vikinger-green" />
+          <Icon icon="heroicons:shield-check" class="w-4 h-4 sm:w-5 sm:h-5 text-vikinger-green" />
           <span class="text-xs sm:text-sm text-gray-400">ปลอดภัย 100%</span>
         </div>
         <div class="flex items-center gap-2">
-          <Icon name="heroicons:bolt" class="w-4 h-4 sm:w-5 sm:h-5 text-vikinger-orange" />
+          <Icon icon="heroicons:bolt" class="w-4 h-4 sm:w-5 sm:h-5 text-vikinger-orange" />
           <span class="text-xs sm:text-sm text-gray-400">เร็วทันใจ</span>
         </div>
         <div class="flex items-center gap-2">
-          <Icon name="heroicons:chat-bubble-left-right" class="w-4 h-4 sm:w-5 sm:h-5 text-vikinger-cyan" />
+          <Icon icon="heroicons:chat-bubble-left-right" class="w-4 h-4 sm:w-5 sm:h-5 text-vikinger-cyan" />
           <span class="text-xs sm:text-sm text-gray-400">สนับสนุน 24/7</span>
         </div>
       </div>
@@ -115,11 +115,11 @@
           <div class="glass-card p-4">
             <div class="flex items-center justify-between mb-3">
               <span class="text-xs text-gray-400">แต้มสะสม</span>
-              <Icon name="heroicons:star" class="w-5 h-5 text-vikinger-yellow" />
+              <Icon icon="heroicons:star" class="w-5 h-5 text-vikinger-yellow" />
             </div>
             <div class="text-2xl font-bold text-white">12,500</div>
             <div class="flex items-center gap-1 mt-2 text-vikinger-green text-xs">
-              <Icon name="heroicons:arrow-trending-up" class="w-4 h-4" />
+              <Icon icon="heroicons:arrow-trending-up" class="w-4 h-4" />
               <span>+245 วันนี้</span>
             </div>
           </div>
@@ -127,7 +127,7 @@
           <div class="glass-card p-4">
             <div class="flex items-center justify-between mb-3">
               <span class="text-xs text-gray-400">คอร์สที่เรียน</span>
-              <Icon name="heroicons:book-open" class="w-5 h-5 text-vikinger-cyan" />
+              <Icon icon="heroicons:book-open" class="w-5 h-5 text-vikinger-cyan" />
             </div>
             <div class="text-2xl font-bold text-white">8</div>
             <div class="text-xs text-gray-400 mt-2">3 กำลังเรียน</div>
@@ -136,7 +136,7 @@
           <div class="glass-card p-4">
             <div class="flex items-center justify-between mb-3">
               <span class="text-xs text-gray-400">เหรียญรางวัล</span>
-              <Icon name="heroicons:trophy" class="w-5 h-5 text-vikinger-orange" />
+              <Icon icon="heroicons:trophy" class="w-5 h-5 text-vikinger-orange" />
             </div>
             <div class="text-2xl font-bold text-white">24</div>
             <div class="text-xs text-gray-400 mt-2">3 ใหม่</div>
@@ -147,7 +147,7 @@
 
     <!-- Scroll Indicator -->
     <div class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce z-40 hidden sm:block">
-      <Icon name="heroicons:chevron-down" class="w-6 h-6 text-gray-400" />
+      <Icon icon="heroicons:chevron-down" class="w-6 h-6 text-gray-400" />
     </div>
   </section>
 </template>

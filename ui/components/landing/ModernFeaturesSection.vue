@@ -21,7 +21,7 @@
         <div class="flex flex-col lg:flex-row lg:items-start gap-4 sm:gap-6">
           <div class="flex-shrink-0">
             <div class="w-12 sm:w-16 h-12 sm:h-16 bg-vikinger-cyan/20 rounded-2xl flex items-center justify-center">
-              <Icon name="heroicons:play" class="w-6 sm:w-8 h-6 sm:h-8 text-vikinger-cyan" />
+              <Icon icon="heroicons:play" class="w-6 sm:w-8 h-6 sm:h-8 text-vikinger-cyan" />
             </div>
           </div>
           <div class="flex-1">
@@ -42,7 +42,7 @@
       <!-- Feature Card - Learn -->
       <div class="glass-card-hover p-6 sm:p-8 section-reveal" ref="feature2">
         <div class="w-12 sm:w-14 h-12 sm:h-14 bg-vikinger-green/20 rounded-2xl flex items-center justify-center mb-4 sm:mb-6">
-          <Icon name="heroicons:book-open" class="w-6 sm:w-7 h-6 sm:h-7 text-vikinger-green" />
+          <Icon icon="heroicons:book-open" class="w-6 sm:w-7 h-6 sm:h-7 text-vikinger-green" />
         </div>
         <h3 class="text-lg sm:text-xl font-bold text-white mb-2 sm:mb-3">คอร์สเรียนคุณภาพ</h3>
         <p class="text-sm sm:text-base text-gray-400 leading-relaxed">
@@ -53,7 +53,7 @@
       <!-- Feature Card - Earn -->
       <div class="glass-card-hover p-6 sm:p-8 section-reveal" ref="feature3">
         <div class="w-12 sm:w-14 h-12 sm:h-14 bg-vikinger-orange/20 rounded-2xl flex items-center justify-center mb-4 sm:mb-6">
-          <Icon name="heroicons:currency-dollar" class="w-6 sm:w-7 h-6 sm:h-7 text-vikinger-orange" />
+          <Icon icon="heroicons:currency-dollar" class="w-6 sm:w-7 h-6 sm:h-7 text-vikinger-orange" />
         </div>
         <h3 class="text-lg sm:text-xl font-bold text-white mb-2 sm:mb-3">สร้างรายได้</h3>
         <p class="text-sm sm:text-base text-gray-400 leading-relaxed">
@@ -64,7 +64,7 @@
       <!-- Feature Card - Rewards -->
       <div class="glass-card-hover p-6 sm:p-8 section-reveal" ref="feature4">
         <div class="w-12 sm:w-14 h-12 sm:h-14 bg-vikinger-yellow/20 rounded-2xl flex items-center justify-center mb-4 sm:mb-6">
-          <Icon name="heroicons:trophy" class="w-6 sm:w-7 h-6 sm:h-7 text-vikinger-yellow" />
+          <Icon icon="heroicons:trophy" class="w-6 sm:w-7 h-6 sm:h-7 text-vikinger-yellow" />
         </div>
         <h3 class="text-lg sm:text-xl font-bold text-white mb-2 sm:mb-3">รางวัลและเหรียญ</h3>
         <p class="text-sm sm:text-base text-gray-400 leading-relaxed">
@@ -75,7 +75,7 @@
       <!-- Feature Card - Community -->
       <div class="glass-card-hover p-6 sm:p-8 section-reveal" ref="feature5">
         <div class="w-12 sm:w-14 h-12 sm:h-14 bg-vikinger-purple/20 rounded-2xl flex items-center justify-center mb-4 sm:mb-6">
-          <Icon name="heroicons:users" class="w-6 sm:w-7 h-6 sm:h-7 text-vikinger-purple" />
+          <Icon icon="heroicons:users" class="w-6 sm:w-7 h-6 sm:h-7 text-vikinger-purple" />
         </div>
         <h3 class="text-lg sm:text-xl font-bold text-white mb-2 sm:mb-3">ชุมชนเรียนรู้</h3>
         <p class="text-sm sm:text-base text-gray-400 leading-relaxed">
@@ -88,7 +88,7 @@
         <div class="flex flex-col lg:flex-row lg:items-center gap-4 sm:gap-6">
           <div class="flex-1">
             <div class="w-12 sm:w-14 h-12 sm:h-14 bg-vikinger-pink/20 rounded-2xl flex items-center justify-center mb-4 sm:mb-6">
-              <Icon name="heroicons:shield-check" class="w-6 sm:w-7 h-6 sm:h-7 text-vikinger-pink" />
+              <Icon icon="heroicons:shield-check" class="w-6 sm:w-7 h-6 sm:h-7 text-vikinger-pink" />
             </div>
             <h3 class="text-lg sm:text-xl lg:text-2xl font-bold text-white mb-2 sm:mb-3">ความปลอดภัยระดับสูง</h3>
             <p class="text-sm sm:text-base text-gray-400 leading-relaxed">
@@ -99,19 +99,19 @@
           <div class="flex-shrink-0 flex items-center gap-3 sm:gap-4">
             <div class="text-center">
               <div class="w-12 sm:w-16 h-12 sm:h-16 bg-vikinger-green/20 rounded-full flex items-center justify-center mb-2">
-                <Icon name="heroicons:lock-closed" class="w-6 sm:w-8 h-6 sm:h-8 text-vikinger-green" />
+                <Icon icon="heroicons:lock-closed" class="w-6 sm:w-8 h-6 sm:h-8 text-vikinger-green" />
               </div>
               <span class="text-[10px] sm:text-xs text-gray-400">SSL</span>
             </div>
             <div class="text-center">
               <div class="w-12 sm:w-16 h-12 sm:h-16 bg-vikinger-cyan/20 rounded-full flex items-center justify-center mb-2">
-                <Icon name="heroicons:finger-print" class="w-6 sm:w-8 h-6 sm:h-8 text-vikinger-cyan" />
+                <Icon icon="heroicons:finger-print" class="w-6 sm:w-8 h-6 sm:h-8 text-vikinger-cyan" />
               </div>
               <span class="text-[10px] sm:text-xs text-gray-400">2FA</span>
             </div>
             <div class="text-center">
               <div class="w-12 sm:w-16 h-12 sm:h-16 bg-vikinger-orange/20 rounded-full flex items-center justify-center mb-2">
-                <Icon name="heroicons:server-stack" class="w-6 sm:w-8 h-6 sm:h-8 text-vikinger-orange" />
+                <Icon icon="heroicons:server-stack" class="w-6 sm:w-8 h-6 sm:h-8 text-vikinger-orange" />
               </div>
               <span class="text-[10px] sm:text-xs text-gray-400">Backup</span>
             </div>
