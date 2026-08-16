@@ -214,6 +214,13 @@ const menuItems = computed(() => [
         // ต้องตรงกับด่านตรวจในหน้านั้นเอง ไม่งั้นแอดมินที่ไม่ใช่เจ้าของจะเข้าหน้าได้แต่ไม่เห็นเมนู
         show: isAdmin.value || can('sports.manage'),
       },
+      {
+        name: 'คะแนนกีฬาสี',
+        icon: 'fluent:trophy-24-regular',
+        to: `/academies/${academyName.value}/admin/sports-scores`,
+        // ด่านตรวจของหน้านั้นยอมให้ sports.view เข้าได้ด้วย เมนูจึงต้องกว้างเท่ากัน
+        show: isAdmin.value || can('sports.view') || can('sports.manage'),
+      },
     ]
   },
   {
