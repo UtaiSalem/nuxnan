@@ -9,6 +9,13 @@
  * ชุดเดียว ไม่ได้แยกตามโหมด
  */
 import { Icon } from '@iconify/vue'
+/**
+ * ⚠️ ต้อง import เอง — auto-import ของเรพนี้จดชื่อเป็น `AcademySportsEditionPanel`
+ * (โฟลเดอร์ academy/sports + ชื่อไฟล์) เพราะไม่ได้ตั้ง `components.pathPrefix: false`
+ * เขียน <SportsEditionPanel> เฉย ๆ Vue จะ render เป็น custom element เปล่า **เงียบ ๆ ไม่มี error**
+ * → แผงเลือก "ครั้งที่จัด" ทั้งแผงหายไปจากหน้านี้ (พิสูจน์ในเบราว์เซอร์แล้ว 2026-08-17)
+ */
+import SportsEditionPanel from '~/components/academy/sports/SportsEditionPanel.vue'
 import type { HouseAssignmentBatch, HouseAssignmentRow, HouseRowStatus } from '~/composables/useHouseAssignments'
 
 definePageMeta({ layout: 'main' })
