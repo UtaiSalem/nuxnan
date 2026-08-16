@@ -24,11 +24,11 @@ use App\Models\Question;
 use App\Models\TopicReadProgress;
 use App\Models\UserAnswerQuestion;
 use App\Services\AttendanceEligibilityService;
+use App\Services\CourseEnrollmentPaymentService;
 use App\Services\CourseMemberRemovalService;
 use App\Services\CourseScoreService;
 use App\Services\LearnerIdentityService;
 use App\Services\UsageEventService;
-use App\Services\WalletService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
@@ -432,38 +432,28 @@ class CourseMemberController extends Controller
             ], 422);
         }
 
-        // Calculate course price
-        $price = $course->tuition_fees ?? $course->price ?? 0;
-
-        // Apply discount if exists
-        if ($price > 0 && $course->discount > 0) {
-            $price = $price - ($price * $course->discount / 100);
-        }
+        $enrollmentPayment = app(CourseEnrollmentPaymentService::class);
+        $price = $enrollmentPayment->priceFor($course);
 
         $courseAutoAcceptMembers = ($course->courseSettings->auto_accept_members ?? 1) === 0 ? 0 : 1;
         $requiresApproval = $courseAutoAcceptMembers === 0;
 
+        $paymentResult = null;
+
         // For paid courses, only charge immediately if auto-approved (no approval required)
         if ($price > 0 && ! $requiresApproval) {
-            // Check wallet balance
-            if ($user->wallet < $price) {
-                return response()->json([
-                    'success' => false,
-                    'msg' => 'ยอดเงินในกระเป๋าไม่เพียงพอ กรุณาเติมเงินก่อนสมัครเรียน',
-                    'required' => $price,
-                    'current_balance' => $user->wallet,
-                    'need_topup' => true,
-                ], 400);
-            }
-
-            // Process payment via WalletService
             try {
-                $walletService = app(WalletService::class);
-                $transaction = $walletService->purchaseCourse($user, $course);
+                $paymentResult = $enrollmentPayment->charge(
+                    $user,
+                    $course,
+                    $request->input('payment_mode', 'wallet')
+                );
             } catch (\Exception $e) {
                 return response()->json([
                     'success' => false,
-                    'msg' => 'การชำระเงินล้มเหลว: '.$e->getMessage(),
+                    'msg' => $e->getMessage(),
+                    'need_topup' => true,
+                    'payment_options' => $enrollmentPayment->quote($user, $course),
                 ], 400);
             }
         }
@@ -480,6 +470,23 @@ class CourseMemberController extends Controller
         $this->identityService->autoPopulate($new_course_member);
 
         $new_course_member->save();
+
+        if ($paymentResult && $paymentResult['mode'] !== 'free') {
+            CoursePurchase::create([
+                'purchase_type' => 'enrollment',
+                'source_course_id' => $course->id,
+                'buyer_id' => $user->id,
+                'seller_id' => $course->user_id,
+                'course_member_id' => $new_course_member->id,
+                'amount_wallet' => $paymentResult['wallet_portion'],
+                'amount_points' => $paymentResult['points_portion'],
+                'wallet_transaction_id' => $paymentResult['wallet_transaction_id'],
+                'points_transaction_id' => $paymentResult['points_transaction_id'],
+                'payment_mode' => $paymentResult['mode'],
+                'status' => 'completed',
+                'paid_at' => now(),
+            ]);
+        }
 
         // Fire gamification event
         UsageEventService::fire($user, UsageEventType::COURSE_JOIN->value, 'course', $course->id);
@@ -807,6 +814,14 @@ class CourseMemberController extends Controller
         return response()->json(['success' => true, 'message' => 'ปฏิเสธคำขอเรียบร้อยแล้ว']);
     }
 
+    public function enrollmentPaymentOptions(Course $course)
+    {
+        return response()->json([
+            'success' => true,
+            ...app(CourseEnrollmentPaymentService::class)->quote(auth()->user(), $course),
+        ]);
+    }
+
     public function completePayment(Course $course, CourseMember $member)
     {
         if ($member->user_id !== auth()->id()) {
@@ -819,7 +834,9 @@ class CourseMemberController extends Controller
             return response()->json(['success' => false, 'message' => 'ไม่อยู่ในสถานะรอชำระเงิน'], 422);
         }
 
-        $price = $course->tuition_fees ?? $course->price ?? 0;
+        $enrollmentPayment = app(CourseEnrollmentPaymentService::class);
+        $price = $enrollmentPayment->priceFor($course);
+
         if ($price <= 0) {
             // self-heal: คอร์สฟรีที่ค้างอยู่ -> activate เลย
             $member->update(['status' => 1]);
@@ -828,19 +845,13 @@ class CourseMemberController extends Controller
         }
 
         $user = auth()->user();
-        if ($user->wallet < $price) {
-            return response()->json([
-                'success' => false,
-                'msg' => 'ยอดเงินในกระเป๋าไม่เพียงพอ กรุณาเติมเงินก่อน',
-                'required' => $price,
-                'current_balance' => $user->wallet,
-                'need_topup' => true,
-            ], 400);
-        }
 
         try {
-            $walletService = app(WalletService::class);
-            $transaction = $walletService->purchaseCourse($user, $course);
+            $paymentResult = $enrollmentPayment->charge(
+                $user,
+                $course,
+                request()->input('payment_mode', 'wallet')
+            );
 
             // Record the purchase for refund traceability
             CoursePurchase::create([
@@ -849,14 +860,21 @@ class CourseMemberController extends Controller
                 'buyer_id' => $user->id,
                 'seller_id' => $course->user_id, // Course owner
                 'course_member_id' => $member->id,
-                'amount_wallet' => $price,
-                'wallet_transaction_id' => $transaction->id,
-                'payment_mode' => 'wallet',
+                'amount_wallet' => $paymentResult['wallet_portion'],
+                'amount_points' => $paymentResult['points_portion'],
+                'wallet_transaction_id' => $paymentResult['wallet_transaction_id'],
+                'points_transaction_id' => $paymentResult['points_transaction_id'],
+                'payment_mode' => $paymentResult['mode'],
                 'status' => 'completed',
                 'paid_at' => now(),
             ]);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'msg' => 'การชำระเงินล้มเหลว: '.$e->getMessage()], 400);
+            return response()->json([
+                'success' => false,
+                'msg' => $e->getMessage(),
+                'need_topup' => true,
+                'payment_options' => $enrollmentPayment->quote($user, $course),
+            ], 400);
         }
 
         $member->update(['status' => 1]);
@@ -864,7 +882,7 @@ class CourseMemberController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'ชำระเงินสำเร็จ เริ่มเรียนได้เลย',
-            'transaction_id' => $transaction->id,
+            'payment' => $paymentResult,
         ]);
     }
 

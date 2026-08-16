@@ -290,6 +290,7 @@ Route::middleware(['auth:api', 'verified'])->group(function () {
 
 Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/members')->group(function () {
     Route::get('/member-requesters', [CourseMemberController::class, 'getMembersRequesters'])->name('course.members.requesters');
+    Route::get('/payment-options', [CourseMemberController::class, 'enrollmentPaymentOptions'])->name('course.members.payment-options');
     Route::get('/', [CourseMemberController::class, 'index'])->name('course.members.index');
     Route::post('/', [CourseMemberController::class, 'storemember'])->name('course.members.storemember');
     Route::get('/{member}/progress', [CourseMemberController::class, 'show'])->name('course.member.show');
