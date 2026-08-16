@@ -130,7 +130,7 @@ const statusOptions = [
           :to="`/academies/${academyName}/admin/home-visits`"
           class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
         >
-          <Icon name="fluent:arrow-left-24-regular" class="w-5 h-5" />
+          <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />
         </NuxtLink>
         <div>
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">ส่งออกข้อมูลการเยี่ยมบ้าน</h1>
@@ -140,7 +140,7 @@ const statusOptions = [
 
       <!-- Success Message -->
       <div v-if="exportSuccess" class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 flex items-center gap-3">
-        <Icon name="fluent:checkmark-circle-24-regular" class="w-6 h-6 text-green-500" />
+        <Icon icon="fluent:checkmark-circle-24-regular" class="w-6 h-6 text-green-500" />
         <p class="text-green-800 dark:text-green-200">เริ่มการดาวน์โหลดแล้ว กรุณาตรวจสอบโฟลเดอร์ดาวน์โหลดของคุณ</p>
       </div>
 
@@ -167,7 +167,7 @@ const statusOptions = [
                   v-model="exportOptions.format"
                   class="sr-only"
                 />
-                <Icon :name="format.icon" class="w-6 h-6 text-gray-500" />
+                <Icon :icon="format.icon" class="w-6 h-6 text-gray-500" />
                 <span class="text-gray-900 dark:text-white">{{ format.label }}</span>
               </label>
             </div>
@@ -234,8 +234,8 @@ const statusOptions = [
             :disabled="isExporting"
             class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 flex items-center gap-2"
           >
-            <Icon v-if="isExporting" name="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
-            <Icon v-else name="fluent:arrow-download-24-regular" class="w-5 h-5" />
+            <Icon v-if="isExporting" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
+            <Icon v-else icon="fluent:arrow-download-24-regular" class="w-5 h-5" />
             <span>{{ isExporting ? 'กำลังส่งออก...' : 'ส่งออกข้อมูล' }}</span>
           </button>
         </div>

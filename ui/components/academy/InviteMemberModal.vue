@@ -169,7 +169,7 @@ const close = () => {
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white">เชิญสมาชิกใหม่</h3>
           <button @click="close" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-            <Icon name="fluent:dismiss-24-regular" class="w-5 h-5" />
+            <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
           </button>
         </div>
 
@@ -205,7 +205,7 @@ const close = () => {
           <div v-if="inviteMethod === 'search'" class="space-y-4">
             <!-- Search Input -->
             <div class="relative">
-              <Icon name="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 v-model="searchQuery"
                 @input="onSearchInput"
@@ -238,7 +238,7 @@ const close = () => {
                   <p class="font-medium text-gray-900 dark:text-white truncate">{{ user.name }}</p>
                   <p class="text-sm text-gray-500 truncate">{{ user.email }}</p>
                 </div>
-                <Icon name="fluent:add-circle-24-regular" class="w-5 h-5 text-primary-500" />
+                <Icon icon="fluent:add-circle-24-regular" class="w-5 h-5 text-primary-500" />
               </div>
             </div>
 
@@ -260,7 +260,7 @@ const close = () => {
                   />
                   <span class="text-sm text-primary-700 dark:text-primary-300">{{ user.name }}</span>
                   <button @click="removeUser(user.id)" class="text-primary-500 hover:text-primary-700">
-                    <Icon name="fluent:dismiss-12-regular" class="w-4 h-4" />
+                    <Icon icon="fluent:dismiss-12-regular" class="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -287,7 +287,7 @@ const close = () => {
                   :disabled="!emailInput || !isValidEmail(emailInput)"
                   class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Icon name="fluent:add-24-regular" class="w-5 h-5" />
+                  <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
                 </button>
               </div>
             </div>
@@ -303,10 +303,10 @@ const close = () => {
                   :key="email"
                   class="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-full"
                 >
-                  <Icon name="fluent:mail-24-regular" class="w-4 h-4 text-gray-500" />
+                  <Icon icon="fluent:mail-24-regular" class="w-4 h-4 text-gray-500" />
                   <span class="text-sm text-gray-700 dark:text-gray-300">{{ email }}</span>
                   <button @click="removeEmail(email)" class="text-gray-500 hover:text-red-500">
-                    <Icon name="fluent:dismiss-12-regular" class="w-4 h-4" />
+                    <Icon icon="fluent:dismiss-12-regular" class="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -355,7 +355,7 @@ const close = () => {
             class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <span v-if="isInviting" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
-            <Icon v-else name="fluent:send-24-regular" class="w-5 h-5" />
+            <Icon v-else icon="fluent:send-24-regular" class="w-5 h-5" />
             ส่งคำเชิญ
           </button>
         </div>

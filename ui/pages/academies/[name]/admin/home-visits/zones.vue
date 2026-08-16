@@ -152,7 +152,7 @@ const colors = [
             :to="`/academies/${academyName}/admin/home-visits`"
             class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
           >
-            <Icon name="fluent:arrow-left-24-regular" class="w-5 h-5" />
+            <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />
           </NuxtLink>
           <div>
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">จัดการโซนเยี่ยมบ้าน</h1>
@@ -164,18 +164,18 @@ const colors = [
           @click="openCreateModal"
           class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2"
         >
-          <Icon name="fluent:add-24-regular" class="w-5 h-5" />
+          <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
           <span>เพิ่มโซน</span>
         </button>
       </div>
 
       <!-- Zones List -->
       <div v-if="isLoading" class="flex items-center justify-center py-12">
-        <Icon name="fluent:spinner-ios-20-regular" class="w-8 h-8 animate-spin text-primary-600" />
+        <Icon icon="fluent:spinner-ios-20-regular" class="w-8 h-8 animate-spin text-primary-600" />
       </div>
 
       <div v-else-if="zones.length === 0" class="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-        <Icon name="fluent:map-24-regular" class="w-16 h-16 mx-auto text-gray-300 mb-4" />
+        <Icon icon="fluent:map-24-regular" class="w-16 h-16 mx-auto text-gray-300 mb-4" />
         <p class="text-gray-500 dark:text-gray-400 mb-4">ยังไม่มีโซนเยี่ยมบ้าน</p>
         <button
           @click="openCreateModal"
@@ -214,19 +214,19 @@ const colors = [
                   @click="openEditModal(zone)"
                   class="p-2 text-gray-400 hover:text-primary-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                 >
-                  <Icon name="fluent:edit-24-regular" class="w-4 h-4" />
+                  <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
                 </button>
                 <button
                   @click="confirmDelete(zone)"
                   class="p-2 text-gray-400 hover:text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                 >
-                  <Icon name="fluent:delete-24-regular" class="w-4 h-4" />
+                  <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
                 </button>
               </div>
             </div>
             
             <div class="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 mb-3">
-              <Icon name="fluent:home-24-regular" class="w-4 h-4" />
+              <Icon icon="fluent:home-24-regular" class="w-4 h-4" />
               {{ zone.home_visits_count || 0 }} รายการเยี่ยมบ้าน
             </div>
           </div>
@@ -299,7 +299,7 @@ const colors = [
               :disabled="!form.name.trim() || isSaving"
               class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 flex items-center gap-2"
             >
-              <Icon v-if="isSaving" name="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
+              <Icon v-if="isSaving" icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
               <span>{{ isSaving ? 'กำลังบันทึก...' : 'บันทึก' }}</span>
             </button>
           </div>

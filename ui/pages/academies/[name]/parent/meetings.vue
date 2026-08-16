@@ -199,7 +199,7 @@ const getStatusLabel = (status: string) => {
             :to="`/academies/${academyName}/parent`"
             class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
           >
-            <Icon name="fluent:arrow-left-24-regular" class="w-6 h-6 text-gray-500" />
+            <Icon icon="fluent:arrow-left-24-regular" class="w-6 h-6 text-gray-500" />
           </NuxtLink>
           <h1 class="text-xl font-bold text-gray-900 dark:text-white">นัดพบครูผู้สอน</h1>
         </div>
@@ -235,13 +235,13 @@ const getStatusLabel = (status: string) => {
                   <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ teacher.position || 'ครูผู้สอน' }}</p>
                 </div>
                 <div v-if="selectedTeacherId === teacher.user_id" class="text-blue-600">
-                  <Icon name="fluent:checkmark-circle-24-filled" class="w-6 h-6" />
+                  <Icon icon="fluent:checkmark-circle-24-filled" class="w-6 h-6" />
                 </div>
               </div>
             </div>
             
             <div v-if="teachers.length === 0" class="text-center py-10 text-gray-400">
-              <Icon name="fluent:person-prohibited-24-regular" class="w-12 h-12 mx-auto mb-2 opacity-20" />
+              <Icon icon="fluent:person-prohibited-24-regular" class="w-12 h-12 mx-auto mb-2 opacity-20" />
               <p>ยังไม่มีข้อมูลครูในระบบ</p>
             </div>
           </section>
@@ -258,7 +258,7 @@ const getStatusLabel = (status: string) => {
             </div>
 
             <div v-else-if="availableSlots.length === 0" class="text-center py-12 bg-gray-50 dark:bg-gray-900/30 rounded-2xl">
-              <Icon name="fluent:calendar-cancel-24-regular" class="w-16 h-16 mx-auto text-gray-300 mb-2 opacity-50" />
+              <Icon icon="fluent:calendar-cancel-24-regular" class="w-16 h-16 mx-auto text-gray-300 mb-2 opacity-50" />
               <p class="text-gray-500">ครูยังไม่ได้เปิดตารางนัดหมายในช่วงนี้</p>
             </div>
 
@@ -280,7 +280,7 @@ const getStatusLabel = (status: string) => {
                       </div>
                     </div>
                     <div class="p-2 bg-gray-50 dark:bg-gray-900 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                      <Icon :name="slot.meeting_type === 'video_call' ? 'fluent:video-24-regular' : 'fluent:location-24-regular'" class="w-6 h-6" />
+                      <Icon :icon="slot.meeting_type === 'video_call' ? 'fluent:video-24-regular' : 'fluent:location-24-regular'" class="w-6 h-6" />
                     </div>
                   </div>
                   
@@ -304,7 +304,7 @@ const getStatusLabel = (status: string) => {
         <!-- Right: My Bookings -->
         <div class="space-y-6">
           <h2 class="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-            <Icon name="fluent:calendar-clock-24-regular" class="w-6 h-6 text-purple-600" />
+            <Icon icon="fluent:calendar-clock-24-regular" class="w-6 h-6 text-purple-600" />
             คิวที่นัดไว้แล้ว
           </h2>
 
@@ -328,7 +328,7 @@ const getStatusLabel = (status: string) => {
                     @click="cancelBooking(booking.id)"
                     class="p-1.5 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded-full transition-colors"
                   >
-                    <Icon name="fluent:delete-24-regular" class="w-5 h-5" />
+                    <Icon icon="fluent:delete-24-regular" class="w-5 h-5" />
                   </button>
                 </div>
                 
@@ -342,15 +342,15 @@ const getStatusLabel = (status: string) => {
 
                 <div class="space-y-3 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-2xl">
                   <div class="flex items-center gap-3 text-sm">
-                    <Icon name="fluent:calendar-ltr-24-regular" class="w-5 h-5 text-blue-600" />
+                    <Icon icon="fluent:calendar-ltr-24-regular" class="w-5 h-5 text-blue-600" />
                     <span class="font-bold text-gray-700 dark:text-gray-300">{{ new Date(booking.slot?.meeting_date).toLocaleDateString('th-TH') }}</span>
                   </div>
                   <div class="flex items-center gap-3 text-sm">
-                    <Icon name="fluent:clock-24-regular" class="w-5 h-5 text-blue-600" />
+                    <Icon icon="fluent:clock-24-regular" class="w-5 h-5 text-blue-600" />
                     <span class="font-bold text-gray-700 dark:text-gray-300">{{ booking.slot?.start_time.substring(0, 5) }} น.</span>
                   </div>
                   <div class="flex items-center gap-3 text-sm">
-                    <Icon :name="booking.slot?.meeting_type === 'video_call' ? 'fluent:video-24-regular' : 'fluent:location-24-regular'" class="w-5 h-5 text-blue-600" />
+                    <Icon :icon="booking.slot?.meeting_type === 'video_call' ? 'fluent:video-24-regular' : 'fluent:location-24-regular'" class="w-5 h-5 text-blue-600" />
                     <span class="text-gray-600 dark:text-gray-400">{{ booking.slot?.location || 'ออนไลน์' }}</span>
                   </div>
                 </div>
@@ -373,7 +373,7 @@ const getStatusLabel = (status: string) => {
           <div class="flex items-center justify-between mb-8">
             <h3 class="text-2xl font-black text-gray-900 dark:text-white tracking-tight">ยืนยันการนัดพบ</h3>
             <button @click="showBookingModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
-              <Icon name="fluent:dismiss-24-regular" class="w-6 h-6 text-gray-400" />
+              <Icon icon="fluent:dismiss-24-regular" class="w-6 h-6 text-gray-400" />
             </button>
           </div>
 
@@ -443,7 +443,7 @@ const getStatusLabel = (status: string) => {
                 :disabled="isBooking"
                 class="flex-[2] px-6 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-xl shadow-blue-200 dark:shadow-none hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                <Icon v-if="isBooking" name="fluent:spinner-24-regular" class="w-5 h-5 animate-spin" />
+                <Icon v-if="isBooking" icon="fluent:spinner-24-regular" class="w-5 h-5 animate-spin" />
                 <span>{{ isBooking ? 'กำลังจอง...' : 'ยืนยันการจอง' }}</span>
               </button>
             </div>

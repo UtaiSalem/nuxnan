@@ -4,7 +4,7 @@
       <!-- Page Header -->
       <div class="text-center mb-8">
         <div class="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
-          <Icon name="mdi:view-dashboard-outline" class="w-10 h-10 text-white" />
+          <Icon icon="mdi:view-dashboard-outline" class="w-10 h-10 text-white" />
         </div>
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           ภาพรวม
@@ -16,7 +16,7 @@
 
       <!-- Coming Soon Card -->
       <BaseCard class="text-center py-12">
-        <Icon name="mdi:clock-outline" class="w-16 h-16 mx-auto text-blue-500 mb-4" />
+        <Icon icon="mdi:clock-outline" class="w-16 h-16 mx-auto text-blue-500 mb-4" />
         <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
           เร็วๆ นี้
         </h2>

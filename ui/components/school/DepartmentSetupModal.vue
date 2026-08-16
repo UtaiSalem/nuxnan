@@ -119,7 +119,7 @@ const confirmForce = () => {
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">โครงสร้าง 5 ฝ่ายตามแนวทาง สพฐ. ({{ totalCount }} รายการ)</p>
           </div>
           <button @click="emit('close')" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-            <Icon name="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
+            <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
           </button>
         </div>
 
@@ -132,7 +132,7 @@ const confirmForce = () => {
           <!-- Existing warning -->
           <div v-else-if="hasExisting" class="text-center py-8 space-y-4">
             <div class="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
-              <Icon name="fluent:warning-24-filled" class="w-10 h-10 text-amber-500 mx-auto mb-3" />
+              <Icon icon="fluent:warning-24-filled" class="w-10 h-10 text-amber-500 mx-auto mb-3" />
               <h4 class="font-medium text-gray-900 dark:text-white mb-1">มีโครงสร้างฝ่ายงานอยู่แล้ว</h4>
               <p class="text-sm text-gray-600 dark:text-gray-400">หากต้องการสร้างเพิ่มเติม ระบบจะข้ามรายการที่มีชื่อซ้ำ</p>
             </div>
@@ -161,7 +161,7 @@ const confirmForce = () => {
               <div class="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <div class="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-900/20">
                   <div :class="['p-2 rounded-lg', typeColors[item.type]]">
-                    <Icon :name="typeIcons[item.type]" class="w-5 h-5" />
+                    <Icon :icon="typeIcons[item.type]" class="w-5 h-5" />
                   </div>
                   <div class="flex-1 min-w-0">
                     <p class="font-semibold text-gray-900 dark:text-white text-sm">{{ item.name }}</p>
@@ -174,7 +174,7 @@ const confirmForce = () => {
                   <div v-for="dept in item.children" :key="dept.name" class="p-3 pl-8">
                     <div class="flex items-center gap-3 mb-2">
                       <div :class="['p-1.5 rounded-lg', typeColors[dept.type]]">
-                        <Icon :name="typeIcons[dept.type]" class="w-4 h-4" />
+                        <Icon :icon="typeIcons[dept.type]" class="w-4 h-4" />
                       </div>
                       <div>
                         <p class="font-medium text-gray-900 dark:text-white text-sm">{{ dept.name }}</p>
@@ -190,7 +190,7 @@ const confirmForce = () => {
                         class="flex items-center gap-2 py-1.5 px-3 rounded-lg bg-gray-50 dark:bg-gray-700/30"
                       >
                         <div :class="['p-1 rounded', typeColors[child.type]]">
-                          <Icon :name="typeIcons[child.type]" class="w-3.5 h-3.5" />
+                          <Icon :icon="typeIcons[child.type]" class="w-3.5 h-3.5" />
                         </div>
                         <span class="text-sm text-gray-700 dark:text-gray-300">{{ child.name }}</span>
                         <span class="text-xs text-gray-400 dark:text-gray-500 ml-auto">{{ typeLabels[child.type] }}</span>
@@ -217,7 +217,7 @@ const confirmForce = () => {
             class="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-primary-500/20"
           >
             <div v-if="isSubmitting" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-            <Icon v-else name="fluent:building-24-filled" class="w-5 h-5" />
+            <Icon v-else icon="fluent:building-24-filled" class="w-5 h-5" />
             <span>{{ isSubmitting ? 'กำลังสร้าง...' : 'สร้างโครงสร้างฝ่ายงาน' }}</span>
           </button>
         </div>

@@ -4,7 +4,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
       <div>
         <h1 class="text-2xl font-bold text-gray-900">
-          <Icon name="mdi:history" class="w-7 h-7 mr-2 inline text-purple-600" />
+          <Icon icon="mdi:history" class="w-7 h-7 mr-2 inline text-purple-600" />
           ประวัติกิจกรรมสมาชิก
         </h1>
         <p class="text-gray-500 mt-1">ติดตามการเปลี่ยนแปลงและกิจกรรมต่างๆ ของสมาชิก</p>
@@ -20,7 +20,7 @@
             <p class="text-2xl font-bold text-gray-900">{{ stats.total || 0 }}</p>
           </div>
           <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-            <Icon name="mdi:history" class="w-6 h-6 text-purple-600" />
+            <Icon icon="mdi:history" class="w-6 h-6 text-purple-600" />
           </div>
         </div>
       </div>
@@ -32,7 +32,7 @@
             <p class="text-2xl font-bold text-green-600">{{ stats.by_action?.approve || 0 }}</p>
           </div>
           <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-            <Icon name="mdi:account-plus" class="w-6 h-6 text-green-600" />
+            <Icon icon="mdi:account-plus" class="w-6 h-6 text-green-600" />
           </div>
         </div>
       </div>
@@ -44,7 +44,7 @@
             <p class="text-2xl font-bold text-blue-600">{{ stats.by_action?.role_change || 0 }}</p>
           </div>
           <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-            <Icon name="mdi:badge-account" class="w-6 h-6 text-blue-600" />
+            <Icon icon="mdi:badge-account" class="w-6 h-6 text-blue-600" />
           </div>
         </div>
       </div>
@@ -56,7 +56,7 @@
             <p class="text-2xl font-bold text-orange-600">{{ stats.by_action?.suspend || 0 }}</p>
           </div>
           <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-            <Icon name="mdi:account-lock" class="w-6 h-6 text-orange-600" />
+            <Icon icon="mdi:account-lock" class="w-6 h-6 text-orange-600" />
           </div>
         </div>
       </div>
@@ -95,7 +95,7 @@
           @click="resetFilters"
           class="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
         >
-          <Icon name="mdi:filter-remove" class="w-5 h-5 mr-1 inline" />
+          <Icon icon="mdi:filter-remove" class="w-5 h-5 mr-1 inline" />
           ล้างตัวกรอง
         </button>
       </div>
@@ -110,7 +110,7 @@
 
       <!-- Empty -->
       <div v-else-if="logs.length === 0" class="text-center py-12">
-        <Icon name="mdi:timeline-clock-outline" class="w-16 h-16 mx-auto text-gray-300 mb-4" />
+        <Icon icon="mdi:timeline-clock-outline" class="w-16 h-16 mx-auto text-gray-300 mb-4" />
         <p class="text-gray-500">ไม่พบประวัติกิจกรรม</p>
       </div>
 
@@ -127,7 +127,7 @@
               class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
               :class="getIconBgClass(log.color)"
             >
-              <Icon :name="log.icon" class="w-5 h-5" :class="getIconColorClass(log.color)" />
+              <Icon :icon="log.icon" class="w-5 h-5" :class="getIconColorClass(log.color)" />
             </div>
 
             <!-- Content -->
@@ -151,7 +151,7 @@
               <!-- Role change details -->
               <div v-if="log.action === 'role_change' && log.old_values && log.new_values" class="mt-1 text-sm text-gray-500">
                 <span class="bg-gray-100 px-2 py-0.5 rounded">{{ log.old_values.role || 'ไม่มี' }}</span>
-                <Icon name="mdi:arrow-right" class="w-4 h-4 mx-1 inline" />
+                <Icon icon="mdi:arrow-right" class="w-4 h-4 mx-1 inline" />
                 <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">{{ log.new_values.role }}</span>
               </div>
 
@@ -162,7 +162,7 @@
 
               <!-- Timestamp -->
               <div class="mt-1 text-xs text-gray-400">
-                <Icon name="mdi:clock-outline" class="w-3 h-3 inline mr-1" />
+                <Icon icon="mdi:clock-outline" class="w-3 h-3 inline mr-1" />
                 {{ log.created_at_human }}
                 <span class="mx-1">·</span>
                 {{ formatDate(log.created_at) }}

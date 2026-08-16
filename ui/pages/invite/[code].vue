@@ -10,7 +10,7 @@
       <!-- Invalid Link -->
       <div v-else-if="!isValid" class="bg-white rounded-2xl shadow-xl p-8 text-center">
         <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Icon name="mdi:link-off" class="w-8 h-8 text-red-600" />
+          <Icon icon="mdi:link-off" class="w-8 h-8 text-red-600" />
         </div>
         <h1 class="text-xl font-bold text-gray-900 mb-2">ลิงก์ไม่ถูกต้อง</h1>
         <p class="text-gray-500 mb-6">{{ errorMessage || 'ลิงก์เชิญนี้ไม่สามารถใช้งานได้' }}</p>
@@ -18,7 +18,7 @@
           to="/"
           class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
         >
-          <Icon name="mdi:home" class="w-5 h-5 mr-2" />
+          <Icon icon="mdi:home" class="w-5 h-5 mr-2" />
           กลับหน้าแรก
         </NuxtLink>
       </div>
@@ -54,15 +54,15 @@
           <!-- Info Cards -->
           <div class="space-y-3 mb-6">
             <div v-if="requireApproval" class="flex items-center p-3 bg-orange-50 rounded-lg">
-              <Icon name="mdi:clock-outline" class="w-5 h-5 text-orange-500 mr-3" />
+              <Icon icon="mdi:clock-outline" class="w-5 h-5 text-orange-500 mr-3" />
               <span class="text-sm text-orange-700">ต้องรอการอนุมัติจากผู้ดูแล</span>
             </div>
             <div v-if="remainingUses !== null" class="flex items-center p-3 bg-blue-50 rounded-lg">
-              <Icon name="mdi:account-group" class="w-5 h-5 text-blue-500 mr-3" />
+              <Icon icon="mdi:account-group" class="w-5 h-5 text-blue-500 mr-3" />
               <span class="text-sm text-blue-700">เหลือที่ว่าง {{ remainingUses }} ที่</span>
             </div>
             <div v-if="expiresAt" class="flex items-center p-3 bg-gray-50 rounded-lg">
-              <Icon name="mdi:calendar-clock" class="w-5 h-5 text-gray-500 mr-3" />
+              <Icon icon="mdi:calendar-clock" class="w-5 h-5 text-gray-500 mr-3" />
               <span class="text-sm text-gray-700">หมดอายุ: {{ formatDate(expiresAt) }}</span>
             </div>
           </div>
@@ -76,14 +76,14 @@
               :to="`/login?redirect=/invite/${code}`"
               class="w-full flex items-center justify-center px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
             >
-              <Icon name="mdi:login" class="w-5 h-5 mr-2" />
+              <Icon icon="mdi:login" class="w-5 h-5 mr-2" />
               เข้าสู่ระบบ
             </NuxtLink>
             <NuxtLink
               :to="`/register?redirect=/invite/${code}`"
               class="w-full flex items-center justify-center px-4 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              <Icon name="mdi:account-plus" class="w-5 h-5 mr-2" />
+              <Icon icon="mdi:account-plus" class="w-5 h-5 mr-2" />
               สมัครสมาชิกใหม่
             </NuxtLink>
           </div>
@@ -91,7 +91,7 @@
           <!-- Logged In - Join Button -->
           <div v-else class="space-y-3">
             <div class="flex items-center p-3 bg-green-50 rounded-lg mb-4">
-              <Icon name="mdi:account-check" class="w-5 h-5 text-green-500 mr-3" />
+              <Icon icon="mdi:account-check" class="w-5 h-5 text-green-500 mr-3" />
               <span class="text-sm text-green-700">เข้าสู่ระบบแล้วในชื่อ {{ currentUser?.name }}</span>
             </div>
             <button
@@ -99,8 +99,8 @@
               :disabled="joining"
               class="w-full flex items-center justify-center px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Icon v-if="joining" name="mdi:loading" class="w-5 h-5 mr-2 animate-spin" />
-              <Icon v-else name="mdi:check" class="w-5 h-5 mr-2" />
+              <Icon v-if="joining" icon="mdi:loading" class="w-5 h-5 mr-2 animate-spin" />
+              <Icon v-else icon="mdi:check" class="w-5 h-5 mr-2" />
               {{ joining ? 'กำลังดำเนินการ...' : 'เข้าร่วมเลย' }}
             </button>
           </div>

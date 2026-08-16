@@ -81,7 +81,7 @@ onMounted(async () => {
       
       <!-- Error -->
       <div v-else-if="error" class="flex flex-col items-center gap-4">
-        <Icon name="fluent:error-circle-24-regular" class="w-12 h-12 text-red-500" />
+        <Icon icon="fluent:error-circle-24-regular" class="w-12 h-12 text-red-500" />
         <p class="text-red-500">{{ error }}</p>
         <NuxtLink 
           :to="`/academies/${academyName}`"

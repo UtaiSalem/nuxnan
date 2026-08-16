@@ -104,7 +104,7 @@ const getStatusBadge = (status: string) => {
 <template>
   <div>
     <div v-if="isLoading" class="flex items-center justify-center py-12">
-      <Icon name="fluent:spinner-ios-20-regular" class="w-8 h-8 animate-spin text-primary-600" />
+      <Icon icon="fluent:spinner-ios-20-regular" class="w-8 h-8 animate-spin text-primary-600" />
     </div>
 
     <div v-else-if="visit" class="space-y-6">
@@ -115,7 +115,7 @@ const getStatusBadge = (status: string) => {
             :to="`/academies/${academyName}/admin/home-visits`"
             class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg mt-1"
           >
-            <Icon name="fluent:arrow-left-24-regular" class="w-5 h-5" />
+            <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />
           </NuxtLink>
           <div>
             <div class="flex items-center gap-3 mb-1">
@@ -137,14 +137,14 @@ const getStatusBadge = (status: string) => {
             :to="`/academies/${academyName}/admin/home-visits/${visitId}/edit`"
             class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
           >
-            <Icon name="fluent:edit-24-regular" class="w-5 h-5" />
+            <Icon icon="fluent:edit-24-regular" class="w-5 h-5" />
             <span class="hidden sm:inline">แก้ไข</span>
           </NuxtLink>
           <button
             @click="showDeleteModal = true"
             class="px-4 py-2 border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
           >
-            <Icon name="fluent:delete-24-regular" class="w-5 h-5" />
+            <Icon icon="fluent:delete-24-regular" class="w-5 h-5" />
             <span class="hidden sm:inline">ลบ</span>
           </button>
         </div>
@@ -157,7 +157,7 @@ const getStatusBadge = (status: string) => {
           <!-- Visit Info -->
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <Icon name="fluent:document-24-regular" class="w-5 h-5 text-primary-600" />
+              <Icon icon="fluent:document-24-regular" class="w-5 h-5 text-primary-600" />
               ข้อมูลการเยี่ยมบ้าน
             </h2>
             
@@ -194,7 +194,7 @@ const getStatusBadge = (status: string) => {
           <!-- Location Info -->
           <div v-if="visit.address || visit.latitude" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <Icon name="fluent:location-24-regular" class="w-5 h-5 text-primary-600" />
+              <Icon icon="fluent:location-24-regular" class="w-5 h-5 text-primary-600" />
               ที่ตั้งบ้าน
             </h2>
             
@@ -213,7 +213,7 @@ const getStatusBadge = (status: string) => {
           <!-- Photos -->
           <div v-if="visit.photos && visit.photos.length > 0" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <Icon name="fluent:image-24-regular" class="w-5 h-5 text-primary-600" />
+              <Icon icon="fluent:image-24-regular" class="w-5 h-5 text-primary-600" />
               รูปภาพ ({{ visit.photos.length }})
             </h2>
             
@@ -237,7 +237,7 @@ const getStatusBadge = (status: string) => {
           <!-- Student Info -->
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <Icon name="fluent:person-24-regular" class="w-5 h-5 text-primary-600" />
+              <Icon icon="fluent:person-24-regular" class="w-5 h-5 text-primary-600" />
               ข้อมูลนักเรียน
             </h2>
             
@@ -269,7 +269,7 @@ const getStatusBadge = (status: string) => {
           <!-- Teacher Info -->
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <Icon name="fluent:person-board-24-regular" class="w-5 h-5 text-primary-600" />
+              <Icon icon="fluent:person-board-24-regular" class="w-5 h-5 text-primary-600" />
               ครูผู้เยี่ยมบ้าน
             </h2>
             
@@ -320,7 +320,7 @@ const getStatusBadge = (status: string) => {
               :disabled="isDeleting"
               class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
             >
-              <Icon v-if="isDeleting" name="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
+              <Icon v-if="isDeleting" icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
               ลบ
             </button>
           </div>

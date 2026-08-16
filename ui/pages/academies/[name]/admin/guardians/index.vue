@@ -5,7 +5,7 @@
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 class="text-2xl font-bold text-gray-900">
-            <Icon name="mdi:account-child" class="w-7 h-7 mr-2 inline text-blue-600" />
+            <Icon icon="mdi:account-child" class="w-7 h-7 mr-2 inline text-blue-600" />
             จัดการผู้ปกครอง
           </h1>
           <p class="text-gray-500 mt-1">รายการผู้ปกครองทั้งหมดของนักเรียนในโรงเรียน</p>
@@ -22,7 +22,7 @@
             <p class="text-2xl font-bold text-gray-900">{{ stats.total || 0 }}</p>
           </div>
           <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-            <Icon name="mdi:account-group" class="w-6 h-6 text-blue-600" />
+            <Icon icon="mdi:account-group" class="w-6 h-6 text-blue-600" />
           </div>
         </div>
       </div>
@@ -58,7 +58,7 @@
             <p class="text-2xl font-bold text-green-600">{{ stats.with_contact || 0 }}</p>
           </div>
           <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-            <Icon name="mdi:phone-check" class="w-6 h-6 text-green-600" />
+            <Icon icon="mdi:phone-check" class="w-6 h-6 text-green-600" />
           </div>
         </div>
       </div>
@@ -68,7 +68,7 @@
     <div class="bg-white rounded-xl shadow-sm border p-4 mb-6">
       <div class="flex flex-col sm:flex-row gap-4">
         <div class="flex-1 relative">
-          <Icon name="mdi:magnify" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Icon icon="mdi:magnify" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           <input
             v-model="searchQuery"
             type="text"
@@ -102,7 +102,7 @@
 
       <!-- Empty -->
       <div v-else-if="guardians.length === 0" class="text-center py-12">
-        <Icon name="mdi:account-search-outline" class="w-16 h-16 mx-auto text-gray-300 mb-4" />
+        <Icon icon="mdi:account-search-outline" class="w-16 h-16 mx-auto text-gray-300 mb-4" />
         <p class="text-gray-500">ไม่พบข้อมูลผู้ปกครอง</p>
       </div>
 
@@ -132,7 +132,7 @@
                   <div>
                     <div class="font-medium text-gray-900">{{ guardian.full_name }}</div>
                     <div v-if="guardian.is_primary_contact" class="text-xs text-green-600">
-                      <Icon name="mdi:check-circle" class="w-3 h-3 inline" />
+                      <Icon icon="mdi:check-circle" class="w-3 h-3 inline" />
                       ผู้ติดต่อหลัก
                     </div>
                   </div>
@@ -161,7 +161,7 @@
                     class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                     title="ดูข้อมูลนักเรียน"
                   >
-                    <Icon name="mdi:account-search" class="w-5 h-5" />
+                    <Icon icon="mdi:account-search" class="w-5 h-5" />
                   </NuxtLink>
                   <button
                     @click="callGuardian(guardian)"
@@ -169,7 +169,7 @@
                     class="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                     title="โทร"
                   >
-                    <Icon name="mdi:phone" class="w-5 h-5" />
+                    <Icon icon="mdi:phone" class="w-5 h-5" />
                   </button>
                 </div>
               </td>

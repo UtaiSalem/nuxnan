@@ -164,7 +164,7 @@ const purposes = [
 <template>
   <div>
     <div v-if="isLoading" class="flex items-center justify-center py-12">
-      <Icon name="fluent:spinner-ios-20-regular" class="w-8 h-8 animate-spin text-primary-600" />
+      <Icon icon="fluent:spinner-ios-20-regular" class="w-8 h-8 animate-spin text-primary-600" />
     </div>
 
     <div v-else class="max-w-4xl mx-auto space-y-6">
@@ -174,7 +174,7 @@ const purposes = [
           :to="`/academies/${academyName}/admin/home-visits`"
           class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
         >
-          <Icon name="fluent:arrow-left-24-regular" class="w-5 h-5" />
+          <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />
         </NuxtLink>
         <div>
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">บันทึกการเยี่ยมบ้านใหม่</h1>
@@ -187,13 +187,13 @@ const purposes = [
         <!-- Student Selection -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Icon name="fluent:person-24-regular" class="w-5 h-5 text-primary-600" />
+            <Icon icon="fluent:person-24-regular" class="w-5 h-5 text-primary-600" />
             เลือกนักเรียน
           </h2>
           
           <div v-if="!selectedStudent" class="relative">
             <div class="relative">
-              <Icon name="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 v-model="studentSearch"
                 @focus="showStudentDropdown = true"
@@ -243,7 +243,7 @@ const purposes = [
               </p>
             </div>
             <button type="button" @click="clearStudent" class="p-2 text-gray-400 hover:text-red-500">
-              <Icon name="fluent:dismiss-24-regular" class="w-5 h-5" />
+              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -251,7 +251,7 @@ const purposes = [
         <!-- Visit Details -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Icon name="fluent:calendar-24-regular" class="w-5 h-5 text-primary-600" />
+            <Icon icon="fluent:calendar-24-regular" class="w-5 h-5 text-primary-600" />
             รายละเอียดการเยี่ยมบ้าน
           </h2>
           
@@ -331,7 +331,7 @@ const purposes = [
         <!-- Observations -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Icon name="fluent:notepad-24-regular" class="w-5 h-5 text-primary-600" />
+            <Icon icon="fluent:notepad-24-regular" class="w-5 h-5 text-primary-600" />
             บันทึกการเยี่ยมบ้าน
           </h2>
           
@@ -375,8 +375,8 @@ const purposes = [
             :disabled="isSaving"
             class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 flex items-center gap-2"
           >
-            <Icon v-if="isSaving" name="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
-            <Icon v-else name="fluent:save-24-regular" class="w-5 h-5" />
+            <Icon v-if="isSaving" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
+            <Icon v-else icon="fluent:save-24-regular" class="w-5 h-5" />
             <span>{{ isSaving ? 'กำลังบันทึก...' : 'บันทึก' }}</span>
           </button>
         </div>

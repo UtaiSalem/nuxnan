@@ -76,7 +76,7 @@ const getActionLabel = (action: string) => {
     </div>
 
     <div v-else-if="logs.length === 0" class="text-center py-10 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
-      <Icon name="fluent:history-24-regular" class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
+      <Icon icon="fluent:history-24-regular" class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
       <p class="text-gray-500 dark:text-gray-400">ไม่พบประวัติการแก้ไข</p>
     </div>
 
@@ -93,7 +93,7 @@ const getActionLabel = (action: string) => {
                   getActionColor(log.action)
                 ]">
                   <Icon 
-                    :name="log.action === 'created' ? 'fluent:add-24-regular' : log.action === 'updated' ? 'fluent:edit-24-regular' : 'fluent:delete-24-regular'" 
+                    :icon="log.action === 'created' ? 'fluent:add-24-regular' : log.action === 'updated' ? 'fluent:edit-24-regular' : 'fluent:delete-24-regular'" 
                     class="w-5 h-5"
                   />
                 </div>
@@ -121,7 +121,7 @@ const getActionLabel = (action: string) => {
                       <span class="text-red-500 line-through text-xs" v-if="log.old_values && log.old_values[field]">
                         {{ log.old_values[field] }}
                       </span>
-                      <Icon name="fluent:arrow-right-12-regular" class="w-3 h-3 text-gray-400" v-if="log.old_values && log.old_values[field]" />
+                      <Icon icon="fluent:arrow-right-12-regular" class="w-3 h-3 text-gray-400" v-if="log.old_values && log.old_values[field]" />
                       <span class="text-green-600 dark:text-green-400">{{ val }}</span>
                     </div>
                   </div>

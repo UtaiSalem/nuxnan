@@ -609,14 +609,14 @@ const onSetupSuccess = async () => {
             @click="showSetupModal = true"
             class="inline-flex items-center gap-2 px-4 py-2.5 border border-primary-300 dark:border-primary-700 text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-xl font-medium transition-colors"
           >
-            <Icon name="heroicons:building-office" class="w-5 h-5" />
+            <Icon icon="heroicons:building-office" class="w-5 h-5" />
             <span>โครงสร้างมาตรฐาน</span>
           </button>
           <button
             @click="openCreateModal"
             class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
           >
-            <Icon name="fluent:add-24-filled" class="w-5 h-5" />
+            <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
             <span>สร้างแผนก</span>
           </button>
         </div>
@@ -627,7 +627,7 @@ const onSetupSuccess = async () => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-xl">
-              <Icon name="fluent:building-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Icon icon="fluent:building-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ statistics.total_departments }}</p>
@@ -639,7 +639,7 @@ const onSetupSuccess = async () => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-green-100 dark:bg-green-900/50 rounded-xl">
-              <Icon name="fluent:people-24-filled" class="w-6 h-6 text-green-600 dark:text-green-400" />
+              <Icon icon="fluent:people-24-filled" class="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ statistics.total_members }}</p>
@@ -651,7 +651,7 @@ const onSetupSuccess = async () => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-amber-100 dark:bg-amber-900/50 rounded-xl">
-              <Icon name="fluent:person-star-24-filled" class="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              <Icon icon="fluent:person-star-24-filled" class="w-6 h-6 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ statistics.departments_with_head }}</p>
@@ -663,7 +663,7 @@ const onSetupSuccess = async () => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-purple-100 dark:bg-purple-900/50 rounded-xl">
-              <Icon name="fluent:chart-multiple-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Icon icon="fluent:chart-multiple-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ (statistics.total_members / (statistics.total_departments || 1)).toFixed(1) }}</p>
@@ -676,7 +676,7 @@ const onSetupSuccess = async () => {
       <!-- Search Bar -->
       <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
         <div class="relative">
-          <Icon name="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             v-model="searchQuery"
             @input="handleSearch"
@@ -693,7 +693,7 @@ const onSetupSuccess = async () => {
       </div>
 
       <div v-else-if="departments.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-sm border border-gray-100 dark:border-gray-700">
-        <Icon name="heroicons:building-office" class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+        <Icon icon="heroicons:building-office" class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
         <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">ยังไม่มีแผนก</h3>
         <p class="text-gray-500 dark:text-gray-400 mb-6">เริ่มต้นสร้างโครงสร้างฝ่ายงานมาตรฐาน 5 ฝ่ายตามแนวทาง สพฐ. หรือสร้างแผนกเอง</p>
         <div class="flex items-center justify-center gap-3">
@@ -701,14 +701,14 @@ const onSetupSuccess = async () => {
             @click="showSetupModal = true"
             class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors shadow-lg shadow-primary-500/20"
           >
-            <Icon name="heroicons:building-office" class="w-5 h-5" />
+            <Icon icon="heroicons:building-office" class="w-5 h-5" />
             <span>ตั้งค่าโครงสร้างมาตรฐาน</span>
           </button>
           <button
             @click="openCreateModal"
             class="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
-            <Icon name="fluent:add-24-filled" class="w-5 h-5" />
+            <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
             <span>สร้างแผนกเอง</span>
           </button>
         </div>
@@ -724,7 +724,7 @@ const onSetupSuccess = async () => {
             <div class="flex items-start justify-between mb-3">
               <div class="flex items-center gap-3">
                 <div class="p-2.5 bg-blue-100 dark:bg-blue-900/50 rounded-xl">
-                  <Icon name="fluent:building-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  <Icon icon="fluent:building-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
                   <NuxtLink
@@ -739,35 +739,35 @@ const onSetupSuccess = async () => {
               </div>
               <div class="relative group">
                 <button class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                  <Icon name="fluent:more-vertical-24-regular" class="w-5 h-5 text-gray-400" />
+                  <Icon icon="fluent:more-vertical-24-regular" class="w-5 h-5 text-gray-400" />
                 </button>
                 <div class="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
                   <button
                     @click="openMembersModal(department)"
                     class="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 first:rounded-t-xl"
                   >
-                    <Icon name="fluent:people-24-regular" class="w-4 h-4" />
+                    <Icon icon="fluent:people-24-regular" class="w-4 h-4" />
                     จัดการสมาชิก
                   </button>
                   <button
                     @click="openPermissionsModal(department)"
                     class="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
                   >
-                    <Icon name="fluent:shield-lock-24-regular" class="w-4 h-4" />
+                    <Icon icon="fluent:shield-lock-24-regular" class="w-4 h-4" />
                     สิทธิ์การใช้งาน
                   </button>
                   <button
                     @click="openEditModal(department)"
                     class="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
                   >
-                    <Icon name="fluent:edit-24-regular" class="w-4 h-4" />
+                    <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
                     แก้ไข
                   </button>
                   <button
                     @click="deleteDepartment(department)"
                     class="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2 last:rounded-b-xl"
                   >
-                    <Icon name="fluent:delete-24-regular" class="w-4 h-4" />
+                    <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
                     ลบ
                   </button>
                 </div>
@@ -800,7 +800,7 @@ const onSetupSuccess = async () => {
               @click="openMembersModal(department)"
               class="text-sm text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1"
             >
-              <Icon name="fluent:people-24-regular" class="w-4 h-4" />
+              <Icon icon="fluent:people-24-regular" class="w-4 h-4" />
               ดูสมาชิก
             </button>
             <NuxtLink
@@ -809,7 +809,7 @@ const onSetupSuccess = async () => {
               class="text-sm font-medium text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400"
             >
               ดูรายละเอียด
-              <Icon name="fluent:arrow-right-24-regular" class="ml-1 inline-block h-4 w-4" />
+              <Icon icon="fluent:arrow-right-24-regular" class="ml-1 inline-block h-4 w-4" />
             </NuxtLink>
             <span class="text-xs text-gray-400">
               สร้างเมื่อ {{ new Date(department.created_at).toLocaleDateString('th-TH') }}
@@ -848,7 +848,7 @@ const onSetupSuccess = async () => {
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">สร้างแผนกใหม่</h3>
             <button @click="showCreateModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              <Icon name="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
+              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
           
@@ -905,7 +905,7 @@ const onSetupSuccess = async () => {
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">แก้ไขแผนก</h3>
             <button @click="showEditModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              <Icon name="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
+              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
           
@@ -967,11 +967,11 @@ const onSetupSuccess = async () => {
                 @click="openAddMemberModal"
                 class="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded-lg font-medium transition-colors flex items-center gap-1"
               >
-                <Icon name="fluent:add-24-regular" class="w-4 h-4" />
+                <Icon icon="fluent:add-24-regular" class="w-4 h-4" />
                 เพิ่มสมาชิก
               </button>
               <button @click="showMembersModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                <Icon name="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
+                <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
               </button>
             </div>
           </div>
@@ -982,7 +982,7 @@ const onSetupSuccess = async () => {
             </div>
             
             <div v-else-if="departmentMembers.length === 0" class="text-center py-12">
-              <Icon name="fluent:people-24-regular" class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+              <Icon icon="fluent:people-24-regular" class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
               <p class="text-gray-500 dark:text-gray-400">ยังไม่มีสมาชิกในแผนกนี้</p>
             </div>
             
@@ -1013,7 +1013,7 @@ const onSetupSuccess = async () => {
                     @click="removeMember(member.id)"
                     class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                   >
-                    <Icon name="fluent:delete-24-regular" class="w-4 h-4" />
+                    <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -1031,13 +1031,13 @@ const onSetupSuccess = async () => {
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">เพิ่มสมาชิก</h3>
             <button @click="showAddMemberModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              <Icon name="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
+              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
           
           <div class="p-5 border-b border-gray-200 dark:border-gray-700 space-y-4">
             <div class="relative">
-              <Icon name="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 v-model="memberSearchQuery"
                 @input="scheduleMemberSearch"
@@ -1154,7 +1154,7 @@ const onSetupSuccess = async () => {
               <p class="text-sm text-gray-500 dark:text-gray-400">{{ selectedDepartment?.name }}</p>
             </div>
             <button @click="showPermissionsModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-              <Icon name="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
+              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
           

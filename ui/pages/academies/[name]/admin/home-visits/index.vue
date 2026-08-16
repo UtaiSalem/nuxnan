@@ -190,7 +190,7 @@ const formatDate = (date: string) => {
             :to="`/academies/${academyName}/admin/home-visits/zones`"
             class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
           >
-            <Icon name="fluent:map-24-regular" class="w-5 h-5" />
+            <Icon icon="fluent:map-24-regular" class="w-5 h-5" />
             <span>จัดการโซน</span>
           </NuxtLink>
           
@@ -198,7 +198,7 @@ const formatDate = (date: string) => {
             :to="`/academies/${academyName}/admin/home-visits/export`"
             class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
           >
-            <Icon name="fluent:arrow-download-24-regular" class="w-5 h-5" />
+            <Icon icon="fluent:arrow-download-24-regular" class="w-5 h-5" />
             <span>ส่งออกข้อมูล</span>
           </NuxtLink>
           
@@ -206,7 +206,7 @@ const formatDate = (date: string) => {
             :to="`/academies/${academyName}/admin/home-visits/create`"
             class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2"
           >
-            <Icon name="fluent:add-24-regular" class="w-5 h-5" />
+            <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
             <span>เพิ่มการเยี่ยม</span>
           </NuxtLink>
         </div>
@@ -217,7 +217,7 @@ const formatDate = (date: string) => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-xl">
-              <Icon name="fluent:home-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Icon icon="fluent:home-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.totalVisits }}</p>
@@ -229,7 +229,7 @@ const formatDate = (date: string) => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-green-100 dark:bg-green-900/50 rounded-xl">
-              <Icon name="fluent:checkmark-circle-24-filled" class="w-6 h-6 text-green-600 dark:text-green-400" />
+              <Icon icon="fluent:checkmark-circle-24-filled" class="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.completedVisits }}</p>
@@ -241,7 +241,7 @@ const formatDate = (date: string) => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-yellow-100 dark:bg-yellow-900/50 rounded-xl">
-              <Icon name="fluent:clock-24-filled" class="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <Icon icon="fluent:clock-24-filled" class="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.pendingVisits }}</p>
@@ -253,7 +253,7 @@ const formatDate = (date: string) => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-purple-100 dark:bg-purple-900/50 rounded-xl">
-              <Icon name="fluent:people-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Icon icon="fluent:people-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.totalStudents }}</p>
@@ -265,7 +265,7 @@ const formatDate = (date: string) => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-cyan-100 dark:bg-cyan-900/50 rounded-xl">
-              <Icon name="fluent:person-home-24-filled" class="w-6 h-6 text-cyan-600 dark:text-cyan-400" />
+              <Icon icon="fluent:person-home-24-filled" class="w-6 h-6 text-cyan-600 dark:text-cyan-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.visitedStudents }}</p>
@@ -277,7 +277,7 @@ const formatDate = (date: string) => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-emerald-100 dark:bg-emerald-900/50 rounded-xl">
-              <Icon name="fluent:chart-multiple-24-filled" class="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+              <Icon icon="fluent:chart-multiple-24-filled" class="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.visitRate }}%</p>
@@ -292,7 +292,7 @@ const formatDate = (date: string) => {
         <div class="flex flex-col lg:flex-row gap-4">
           <div class="flex-1">
             <div class="relative">
-              <Icon name="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 v-model="searchQuery"
                 type="text"
@@ -409,7 +409,7 @@ const formatDate = (date: string) => {
                       class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/50 rounded-lg"
                       title="ดูรายละเอียด"
                     >
-                      <Icon name="fluent:eye-24-regular" class="w-5 h-5" />
+                      <Icon icon="fluent:eye-24-regular" class="w-5 h-5" />
                     </button>
                   </div>
                 </td>
@@ -417,7 +417,7 @@ const formatDate = (date: string) => {
               
               <tr v-if="visits.length === 0">
                 <td colspan="7" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
-                  <Icon name="fluent:home-24-regular" class="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <Icon icon="fluent:home-24-regular" class="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>ไม่พบข้อมูลการเยี่ยมบ้าน</p>
                 </td>
               </tr>

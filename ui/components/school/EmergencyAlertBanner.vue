@@ -84,7 +84,7 @@ const getSeverityIcon = (severity: string) => {
       :class="['w-full rounded-lg shadow-md p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between transition-all', getSeverityColor(alert.severity)]"
     >
       <div class="flex items-start gap-3">
-        <Icon :name="getSeverityIcon(alert.severity)" class="w-6 h-6 flex-shrink-0 mt-0.5" />
+        <Icon :icon="getSeverityIcon(alert.severity)" class="w-6 h-6 flex-shrink-0 mt-0.5" />
         <div>
           <h3 class="font-bold text-lg">{{ alert.title }}</h3>
           <p class="text-sm opacity-90 mt-1 whitespace-pre-wrap">{{ alert.message }}</p>
@@ -96,19 +96,19 @@ const getSeverityIcon = (severity: string) => {
           @click="acknowledge(alert.id, 'safe')"
           class="flex-1 sm:flex-none px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold backdrop-blur-sm transition-colors whitespace-nowrap"
         >
-          <Icon name="fluent:checkmark-circle-24-regular" class="w-4 h-4 inline mr-1" />
+          <Icon icon="fluent:checkmark-circle-24-regular" class="w-4 h-4 inline mr-1" />
           ปลอดภัยแล้ว
         </button>
         <button 
           @click="acknowledge(alert.id, 'need_help')"
           class="flex-1 sm:flex-none px-4 py-2 bg-red-900/40 hover:bg-red-900/60 rounded-lg text-sm font-semibold backdrop-blur-sm transition-colors whitespace-nowrap"
         >
-          <Icon name="fluent:person-support-24-regular" class="w-4 h-4 inline mr-1" />
+          <Icon icon="fluent:person-support-24-regular" class="w-4 h-4 inline mr-1" />
           ต้องการความช่วยเหลือ
         </button>
       </div>
       <div v-else class="px-4 py-2 bg-black/10 rounded-lg text-sm font-medium flex items-center gap-2 backdrop-blur-sm">
-        <Icon name="fluent:checkmark-circle-24-filled" class="w-5 h-5" />
+        <Icon icon="fluent:checkmark-circle-24-filled" class="w-5 h-5" />
         รับทราบแล้ว
       </div>
     </div>

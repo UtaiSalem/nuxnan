@@ -390,7 +390,7 @@ const deleteSchedule = async (schedule: any) => {
           @click="openCreateModal()"
           class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
         >
-          <Icon name="fluent:add-24-filled" class="w-5 h-5" />
+          <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
           <span>เพิ่มตารางเรียน</span>
         </button>
       </div>
@@ -409,7 +409,7 @@ const deleteSchedule = async (schedule: any) => {
                   : 'text-gray-600 dark:text-gray-400'
               ]"
             >
-              <Icon name="fluent:building-24-regular" class="w-4 h-4 inline mr-1" />
+              <Icon icon="fluent:building-24-regular" class="w-4 h-4 inline mr-1" />
               ห้องเรียน
             </button>
             <button
@@ -421,7 +421,7 @@ const deleteSchedule = async (schedule: any) => {
                   : 'text-gray-600 dark:text-gray-400'
               ]"
             >
-              <Icon name="fluent:person-24-regular" class="w-4 h-4 inline mr-1" />
+              <Icon icon="fluent:person-24-regular" class="w-4 h-4 inline mr-1" />
               ครูผู้สอน
             </button>
           </div>
@@ -459,13 +459,13 @@ const deleteSchedule = async (schedule: any) => {
         </div>
         
         <div v-else-if="!selectedClassroom && viewMode === 'classroom'" class="p-12 text-center">
-          <Icon name="fluent:building-24-regular" class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+          <Icon icon="fluent:building-24-regular" class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">เลือกห้องเรียน</h3>
           <p class="text-gray-500 dark:text-gray-400">กรุณาเลือกห้องเรียนเพื่อดูตารางเรียน</p>
         </div>
         
         <div v-else-if="!selectedTeacher && viewMode === 'teacher'" class="p-12 text-center">
-          <Icon name="fluent:person-24-regular" class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+          <Icon icon="fluent:person-24-regular" class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">เลือกครูผู้สอน</h3>
           <p class="text-gray-500 dark:text-gray-400">กรุณาเลือกครูเพื่อดูตารางสอน</p>
         </div>
@@ -512,11 +512,11 @@ const deleteSchedule = async (schedule: any) => {
                       {{ getScheduleAt(day.value, time)?.start_time }} - {{ getScheduleAt(day.value, time)?.end_time }}
                     </p>
                     <p v-if="viewMode === 'classroom' && getScheduleAt(day.value, time)?.teacher" class="text-xs text-gray-500 dark:text-gray-400 truncate mt-1">
-                      <Icon name="fluent:person-24-regular" class="w-3 h-3 inline" />
+                      <Icon icon="fluent:person-24-regular" class="w-3 h-3 inline" />
                       {{ getScheduleAt(day.value, time)?.teacher?.name }}
                     </p>
                     <p v-if="viewMode === 'teacher' && getScheduleAt(day.value, time)?.classroom" class="text-xs text-gray-500 dark:text-gray-400 truncate mt-1">
-                      <Icon name="fluent:building-24-regular" class="w-3 h-3 inline" />
+                      <Icon icon="fluent:building-24-regular" class="w-3 h-3 inline" />
                       {{ getScheduleAt(day.value, time)?.classroom?.name }}
                     </p>
                     
@@ -525,14 +525,14 @@ const deleteSchedule = async (schedule: any) => {
                       @click.stop="deleteSchedule(getScheduleAt(day.value, time))"
                       class="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      <Icon name="fluent:dismiss-12-regular" class="w-3 h-3" />
+                      <Icon icon="fluent:dismiss-12-regular" class="w-3 h-3" />
                     </button>
                   </div>
                   <div
                     v-else
                     class="h-full w-full rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-primary-400 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors cursor-pointer flex items-center justify-center"
                   >
-                    <Icon name="fluent:add-24-regular" class="w-4 h-4 text-gray-300 dark:text-gray-600" />
+                    <Icon icon="fluent:add-24-regular" class="w-4 h-4 text-gray-300 dark:text-gray-600" />
                   </div>
                 </td>
               </tr>
@@ -552,7 +552,7 @@ const deleteSchedule = async (schedule: any) => {
               {{ showEditModal ? 'แก้ไขตารางเรียน' : 'เพิ่มตารางเรียน' }}
             </h3>
             <button @click="showCreateModal = false; showEditModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              <Icon name="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
+              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
           

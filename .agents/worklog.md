@@ -84,7 +84,10 @@ agy --print "Read <spec>.txt and follow it exactly." --add-dir "C:\wamp64\www\nu
 - [ ] **push 3 commit นี้** (`9082e594` `bcb478e8` `745f9e09`) — ยังอยู่แค่บนเครื่องนี้
 - [x] ~~**หน้า error 500 แทน 404**~~ → **แก้แล้ว** ดูหัวข้อ "🩹 แก้ตามมา" ท้าย entry นี้
 - [ ] **`components/academy/rollover/RolloverStepIndicator.vue:25-27`** — `withDefaults()` อ้าง `defaultSteps` ที่ประกาศในไฟล์เดียวกัน (ยังไม่แก้ ค้างมาตั้งแต่ `bea9d5bb`)
-- [ ] **แก้ `<Icon name=` เป็น `icon=` ใน `landing/ModernFooterSection.vue`** + เปลี่ยนแบรนด์ footer เป็น nuxnan
+- [x] ~~**แก้ `<Icon name=` เป็น `icon=`**~~ → **เสร็จทั้งเรพ 45 ไฟล์ / 410 จุด** (commit `562e003e` หน้า landing 7 ไฟล์ + commit ถัดมา 38 ไฟล์ใต้ `pages/academies/**`, `components/{academy,school}/**` และหน้าเดี่ยวอีก 6 หน้า)
+  วิธีตรวจที่ใช้: สแกนด้วย regex ที่จับ `<Icon>` แบบคร่อมบรรทัด (`/<Icon\b[^>]*?\s:?name=/gs`) ทั้งเรพ → เหลือ 0 · diff ทุกบรรทัดต้องมีคำว่า `<Icon`/`icon=`/`name=` (กัน `<input name=>` `<Transition name=>` โดนลูกหลง) · compile ทุกไฟล์ที่แก้
+  ⚠️ **หน้าใต้ `academies/**` ยืนยันด้วยตาไม่ได้เพราะต้องล็อกอิน** — ยืนยันด้วย static analysis + เห็นผลจริงบนหน้าที่เปิดได้ (`/landing-demo` 50/50 · `/quests` 31 · `/badges` 31)
+- [ ] **เปลี่ยนแบรนด์ footer หน้า landing เป็น nuxnan** (ยังเขียน "PlearnD" อยู่)
 - [ ] **(ค้างจากรอบก่อน)** S-S4 schema คะแนนกีฬาสี — **ถูกบล็อกโดย S-S3e** (ตาราง `sports_editions` + ย้ายคีย์เป็น `edition_id`) ตาม [`27-sports-day.md:175-176`](.agents/school-admin/27-sports-day.md:175) ไม่ใช่ "ไม่มีอะไรบล็อกแล้ว" อย่างที่ worklog รอบก่อนเขียน · ตั้งชื่อคณะสีจริง · ไฟล์ SQL prod ล้าหลัง 12 migrations
 
 ### ⚠️ worklog เคยล้าหลัง 6 วัน

@@ -190,7 +190,7 @@ const quickActions = computed(() => [
             สวัสดี, {{ user?.name?.split(' ')[0] || 'นักเรียน' }} 👋
           </h1>
           <span :class="['px-3 py-1 rounded-full text-sm font-medium', roleColor]">
-            <Icon :name="roleIcon" class="w-4 h-4 inline mr-1" />
+            <Icon :icon="roleIcon" class="w-4 h-4 inline mr-1" />
             {{ roleDisplayName }}
           </span>
         </div>
@@ -204,7 +204,7 @@ const quickActions = computed(() => [
         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
           <div class="flex items-center gap-3">
             <div class="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-              <Icon name="fluent:book-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Icon icon="fluent:book-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.enrolledCourses }}</p>
@@ -216,7 +216,7 @@ const quickActions = computed(() => [
         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
           <div class="flex items-center gap-3">
             <div class="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-              <Icon name="fluent:checkmark-circle-24-filled" class="w-6 h-6 text-green-600 dark:text-green-400" />
+              <Icon icon="fluent:checkmark-circle-24-filled" class="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.completedLessons }}</p>
@@ -228,7 +228,7 @@ const quickActions = computed(() => [
         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
           <div class="flex items-center gap-3">
             <div class="p-2 bg-amber-100 dark:bg-amber-900 rounded-lg">
-              <Icon name="fluent:star-24-filled" class="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              <Icon icon="fluent:star-24-filled" class="w-6 h-6 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ user?.total_points?.toLocaleString() || 0 }}</p>
@@ -240,7 +240,7 @@ const quickActions = computed(() => [
         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
           <div class="flex items-center gap-3">
             <div class="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-              <Icon name="fluent:person-available-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Icon icon="fluent:person-available-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.attendanceRate }}%</p>
@@ -261,7 +261,7 @@ const quickActions = computed(() => [
             class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col items-center gap-3 text-center"
           >
             <div :class="['p-3 rounded-full text-white', action.color]">
-              <Icon :name="action.icon" class="w-6 h-6" />
+              <Icon :icon="action.icon" class="w-6 h-6" />
             </div>
             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ action.title }}</span>
           </NuxtLink>
@@ -282,7 +282,7 @@ const quickActions = computed(() => [
           </div>
           <div class="p-4">
             <div v-if="enrolledCourses.length === 0" class="text-center py-8 text-gray-500">
-              <Icon name="fluent:book-search-24-regular" class="w-12 h-12 mx-auto mb-2" />
+              <Icon icon="fluent:book-search-24-regular" class="w-12 h-12 mx-auto mb-2" />
               <p>ยังไม่ได้ลงทะเบียนเรียน</p>
               <NuxtLink 
                 :to="`/academies/${academyName}`"
@@ -337,7 +337,7 @@ const quickActions = computed(() => [
             </div>
             <div class="p-4">
               <div v-if="upcomingAssignments.length === 0" class="text-center py-4 text-gray-500">
-                <Icon name="fluent:checkmark-circle-24-regular" class="w-8 h-8 mx-auto mb-2 text-green-500" />
+                <Icon icon="fluent:checkmark-circle-24-regular" class="w-8 h-8 mx-auto mb-2 text-green-500" />
                 <p class="text-sm">ไม่มีงานค้าง!</p>
               </div>
               <div v-else class="space-y-3">
@@ -349,7 +349,7 @@ const quickActions = computed(() => [
                   <p class="font-medium text-gray-900 dark:text-white text-sm">{{ assignment.title }}</p>
                   <p class="text-xs text-gray-500 mt-1">{{ assignment.course }}</p>
                   <p class="text-xs text-red-500 mt-1">
-                    <Icon name="fluent:clock-24-regular" class="w-3 h-3 inline" />
+                    <Icon icon="fluent:clock-24-regular" class="w-3 h-3 inline" />
                     กำหนดส่ง: {{ assignment.dueDate }}
                   </p>
                 </div>

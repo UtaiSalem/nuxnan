@@ -534,7 +534,7 @@ const getStatusBadge = (status: string) => {
           @click="openCreateModal"
           class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
         >
-          <Icon name="fluent:add-24-filled" class="w-5 h-5" />
+          <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
           <span>สร้างหลักสูตร</span>
         </button>
       </div>
@@ -544,7 +544,7 @@ const getStatusBadge = (status: string) => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-purple-100 dark:bg-purple-900/50 rounded-xl">
-              <Icon name="fluent:book-multiple-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Icon icon="fluent:book-multiple-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ statistics.total_curriculums }}</p>
@@ -556,7 +556,7 @@ const getStatusBadge = (status: string) => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-green-100 dark:bg-green-900/50 rounded-xl">
-              <Icon name="fluent:checkmark-circle-24-filled" class="w-6 h-6 text-green-600 dark:text-green-400" />
+              <Icon icon="fluent:checkmark-circle-24-filled" class="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ statistics.active_curriculums }}</p>
@@ -568,7 +568,7 @@ const getStatusBadge = (status: string) => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-xl">
-              <Icon name="fluent:people-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Icon icon="fluent:people-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ statistics.total_students }}</p>
@@ -580,7 +580,7 @@ const getStatusBadge = (status: string) => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-amber-100 dark:bg-amber-900/50 rounded-xl">
-              <Icon name="fluent:hat-graduation-24-filled" class="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              <Icon icon="fluent:hat-graduation-24-filled" class="w-6 h-6 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ statistics.graduated_students }}</p>
@@ -594,7 +594,7 @@ const getStatusBadge = (status: string) => {
       <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
         <div class="flex flex-col sm:flex-row gap-4">
           <div class="flex-1 relative">
-            <Icon name="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               v-model="searchQuery"
               @input="handleSearch"
@@ -630,14 +630,14 @@ const getStatusBadge = (status: string) => {
       </div>
 
       <div v-else-if="curriculums.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-sm border border-gray-100 dark:border-gray-700">
-        <Icon name="fluent:book-multiple-24-regular" class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+        <Icon icon="fluent:book-multiple-24-regular" class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
         <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">ยังไม่มีหลักสูตร</h3>
         <p class="text-gray-500 dark:text-gray-400 mb-4">เริ่มต้นสร้างหลักสูตรแรกของโรงเรียน</p>
         <button
           @click="openCreateModal"
           class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
         >
-          <Icon name="fluent:add-24-filled" class="w-5 h-5" />
+          <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
           <span>สร้างหลักสูตร</span>
         </button>
       </div>
@@ -652,7 +652,7 @@ const getStatusBadge = (status: string) => {
             <div class="flex items-start justify-between mb-3">
               <div class="flex items-center gap-3">
                 <div class="p-2.5 bg-purple-100 dark:bg-purple-900/50 rounded-xl">
-                  <Icon name="fluent:book-multiple-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                  <Icon icon="fluent:book-multiple-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div>
                   <h3 class="font-semibold text-gray-900 dark:text-white">{{ curriculum.name }}</h3>
@@ -670,35 +670,35 @@ const getStatusBadge = (status: string) => {
                 </span>
                 <div class="relative group">
                   <button class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                    <Icon name="fluent:more-vertical-24-regular" class="w-5 h-5 text-gray-400" />
+                    <Icon icon="fluent:more-vertical-24-regular" class="w-5 h-5 text-gray-400" />
                   </button>
                   <div class="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
                     <button
                       @click="openCoursesModal(curriculum)"
                       class="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 first:rounded-t-xl"
                     >
-                      <Icon name="fluent:book-24-regular" class="w-4 h-4" />
+                      <Icon icon="fluent:book-24-regular" class="w-4 h-4" />
                       จัดการรายวิชา
                     </button>
                     <button
                       @click="openStudentsModal(curriculum)"
                       class="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
                     >
-                      <Icon name="fluent:people-24-regular" class="w-4 h-4" />
+                      <Icon icon="fluent:people-24-regular" class="w-4 h-4" />
                       ดูนักเรียน
                     </button>
                     <button
                       @click="openEditModal(curriculum)"
                       class="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
                     >
-                      <Icon name="fluent:edit-24-regular" class="w-4 h-4" />
+                      <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
                       แก้ไข
                     </button>
                     <button
                       @click="deleteCurriculum(curriculum)"
                       class="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2 last:rounded-b-xl"
                     >
-                      <Icon name="fluent:delete-24-regular" class="w-4 h-4" />
+                      <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
                       ลบ
                     </button>
                   </div>
@@ -734,11 +734,11 @@ const getStatusBadge = (status: string) => {
             <div class="flex items-center justify-between text-sm">
               <div class="flex items-center gap-4">
                 <span class="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-                  <Icon name="fluent:book-24-regular" class="w-4 h-4" />
+                  <Icon icon="fluent:book-24-regular" class="w-4 h-4" />
                   {{ curriculum.curriculum_courses_count || 0 }} รายวิชา
                 </span>
                 <span class="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-                  <Icon name="fluent:people-24-regular" class="w-4 h-4" />
+                  <Icon icon="fluent:people-24-regular" class="w-4 h-4" />
                   {{ curriculum.active_students_count || 0 }} นักเรียน
                 </span>
               </div>
@@ -779,7 +779,7 @@ const getStatusBadge = (status: string) => {
               {{ showCreateModal ? 'สร้างหลักสูตรใหม่' : 'แก้ไขหลักสูตร' }}
             </h3>
             <button @click="showCreateModal = false; showEditModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              <Icon name="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
+              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
           
@@ -927,11 +927,11 @@ const getStatusBadge = (status: string) => {
                 @click="openAddCoursesModal"
                 class="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded-lg font-medium transition-colors flex items-center gap-1"
               >
-                <Icon name="fluent:add-24-regular" class="w-4 h-4" />
+                <Icon icon="fluent:add-24-regular" class="w-4 h-4" />
                 เพิ่มรายวิชา
               </button>
               <button @click="showCoursesModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                <Icon name="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
+                <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
               </button>
             </div>
           </div>
@@ -942,7 +942,7 @@ const getStatusBadge = (status: string) => {
             </div>
             
             <div v-else-if="curriculumCourses.length === 0" class="text-center py-12">
-              <Icon name="fluent:book-24-regular" class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+              <Icon icon="fluent:book-24-regular" class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
               <p class="text-gray-500 dark:text-gray-400">ยังไม่มีรายวิชาในหลักสูตรนี้</p>
             </div>
             
@@ -975,7 +975,7 @@ const getStatusBadge = (status: string) => {
                   @click="removeCourse(cc.id)"
                   class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                 >
-                  <Icon name="fluent:delete-24-regular" class="w-4 h-4" />
+                  <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -992,13 +992,13 @@ const getStatusBadge = (status: string) => {
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">เพิ่มรายวิชา</h3>
             <button @click="showAddCoursesModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              <Icon name="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
+              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
           
           <div class="p-5 border-b border-gray-200 dark:border-gray-700 space-y-4">
             <div class="relative">
-              <Icon name="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 v-model="courseSearchQuery"
                 type="text"
@@ -1095,7 +1095,7 @@ const getStatusBadge = (status: string) => {
               <p class="text-sm text-gray-500 dark:text-gray-400">{{ selectedCurriculum?.name }}</p>
             </div>
             <button @click="showStudentsModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              <Icon name="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
+              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
           
@@ -1105,7 +1105,7 @@ const getStatusBadge = (status: string) => {
             </div>
             
             <div v-else-if="curriculumStudents.length === 0" class="text-center py-12">
-              <Icon name="fluent:people-24-regular" class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+              <Icon icon="fluent:people-24-regular" class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
               <p class="text-gray-500 dark:text-gray-400">ยังไม่มีนักเรียนในหลักสูตรนี้</p>
             </div>
             

@@ -171,7 +171,7 @@ const visibleQuickActions = computed(() => quickActions.value.filter(a => a.show
             สวัสดี, {{ user?.name?.split(' ')[0] || 'ผู้ปกครอง' }} 👋
           </h1>
           <span :class="['px-3 py-1 rounded-full text-sm font-medium', roleColor]">
-            <Icon :name="roleIcon" class="w-4 h-4 inline mr-1" />
+            <Icon :icon="roleIcon" class="w-4 h-4 inline mr-1" />
             {{ roleDisplayName }}
           </span>
         </div>
@@ -213,7 +213,7 @@ const visibleQuickActions = computed(() => quickActions.value.filter(a => a.show
       <!-- No Children Notice -->
       <div v-if="children.length === 0" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-6 mb-8">
         <div class="flex items-start gap-4">
-          <Icon name="fluent:info-24-filled" class="w-6 h-6 text-amber-500 flex-shrink-0" />
+          <Icon icon="fluent:info-24-filled" class="w-6 h-6 text-amber-500 flex-shrink-0" />
           <div>
             <h3 class="font-medium text-amber-800 dark:text-amber-200">ยังไม่มีข้อมูลบุตรหลาน</h3>
             <p class="text-sm text-amber-700 dark:text-amber-300 mt-1">
@@ -228,7 +228,7 @@ const visibleQuickActions = computed(() => quickActions.value.filter(a => a.show
         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
           <div class="flex items-center gap-3">
             <div class="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-              <Icon name="fluent:book-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Icon icon="fluent:book-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ childStats.enrolledCourses }}</p>
@@ -240,7 +240,7 @@ const visibleQuickActions = computed(() => quickActions.value.filter(a => a.show
         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
           <div class="flex items-center gap-3">
             <div class="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-              <Icon name="fluent:person-available-24-filled" class="w-6 h-6 text-green-600 dark:text-green-400" />
+              <Icon icon="fluent:person-available-24-filled" class="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ childStats.attendanceRate }}%</p>
@@ -252,7 +252,7 @@ const visibleQuickActions = computed(() => quickActions.value.filter(a => a.show
         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
           <div class="flex items-center gap-3">
             <div class="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-              <Icon name="fluent:trophy-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Icon icon="fluent:trophy-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ childStats.averageGrade || '-' }}</p>
@@ -264,7 +264,7 @@ const visibleQuickActions = computed(() => quickActions.value.filter(a => a.show
         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
           <div class="flex items-center gap-3">
             <div class="p-2 bg-amber-100 dark:bg-amber-900 rounded-lg">
-              <Icon name="fluent:star-24-filled" class="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              <Icon icon="fluent:star-24-filled" class="w-6 h-6 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ childStats.totalPoints.toLocaleString() }}</p>
@@ -285,7 +285,7 @@ const visibleQuickActions = computed(() => quickActions.value.filter(a => a.show
             class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col items-center gap-3 text-center"
           >
             <div :class="['p-3 rounded-full text-white', action.color]">
-              <Icon :name="action.icon" class="w-6 h-6" />
+              <Icon :icon="action.icon" class="w-6 h-6" />
             </div>
             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ action.title }}</span>
           </NuxtLink>
@@ -310,7 +310,7 @@ const visibleQuickActions = computed(() => quickActions.value.filter(a => a.show
             </div>
             <div class="p-4">
               <div class="text-center py-8 text-gray-500">
-                <Icon name="fluent:book-24-regular" class="w-12 h-12 mx-auto mb-2" />
+                <Icon icon="fluent:book-24-regular" class="w-12 h-12 mx-auto mb-2" />
                 <p>กรุณาเลือกบุตรหลานเพื่อดูรายวิชา</p>
               </div>
             </div>
@@ -363,7 +363,7 @@ const visibleQuickActions = computed(() => quickActions.value.filter(a => a.show
             </div>
             <div class="p-4">
               <div v-if="notifications.length === 0" class="text-center py-4 text-gray-500">
-                <Icon name="fluent:bell-24-regular" class="w-8 h-8 mx-auto mb-2" />
+                <Icon icon="fluent:bell-24-regular" class="w-8 h-8 mx-auto mb-2" />
                 <p class="text-sm">ไม่มีการแจ้งเตือนใหม่</p>
               </div>
               <div v-else class="space-y-3">
@@ -398,7 +398,7 @@ const visibleQuickActions = computed(() => quickActions.value.filter(a => a.show
             </div>
             <div class="p-4">
               <div v-if="recentPayments.length === 0" class="text-center py-4 text-gray-500">
-                <Icon name="fluent:receipt-24-regular" class="w-8 h-8 mx-auto mb-2" />
+                <Icon icon="fluent:receipt-24-regular" class="w-8 h-8 mx-auto mb-2" />
                 <p class="text-sm">ไม่มีประวัติการชำระเงิน</p>
               </div>
               <div v-else class="space-y-3">
@@ -424,7 +424,7 @@ const visibleQuickActions = computed(() => quickActions.value.filter(a => a.show
 
           <!-- Quick Contact -->
           <div class="bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl p-6 text-white">
-            <Icon name="fluent:chat-24-filled" class="w-8 h-8 mb-3" />
+            <Icon icon="fluent:chat-24-filled" class="w-8 h-8 mb-3" />
             <h3 class="font-semibold mb-2">ต้องการติดต่อสถาบัน?</h3>
             <p class="text-sm opacity-90 mb-4">สามารถส่งข้อความหรือโทรติดต่อได้ตลอดเวลา</p>
             <NuxtLink 

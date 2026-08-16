@@ -4,7 +4,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
       <div>
         <h1 class="text-2xl font-bold text-gray-900">
-          <Icon name="mdi:link-variant" class="w-7 h-7 mr-2 inline text-indigo-600" />
+          <Icon icon="mdi:link-variant" class="w-7 h-7 mr-2 inline text-indigo-600" />
           ลิงก์เชิญเข้าร่วม
         </h1>
         <p class="text-gray-500 mt-1">สร้างลิงก์เชิญหรือ QR Code สำหรับเชิญสมาชิกใหม่</p>
@@ -13,7 +13,7 @@
         @click="showCreateModal = true"
         class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center"
       >
-        <Icon name="mdi:plus" class="w-5 h-5 mr-1" />
+        <Icon icon="mdi:plus" class="w-5 h-5 mr-1" />
         สร้างลิงก์ใหม่
       </button>
     </div>
@@ -27,14 +27,14 @@
 
       <!-- Empty -->
       <div v-else-if="links.length === 0" class="bg-white rounded-xl shadow-sm border p-12 text-center">
-        <Icon name="mdi:link-variant-off" class="w-16 h-16 mx-auto text-gray-300 mb-4" />
+        <Icon icon="mdi:link-variant-off" class="w-16 h-16 mx-auto text-gray-300 mb-4" />
         <h3 class="text-lg font-medium text-gray-700 mb-2">ยังไม่มีลิงก์เชิญ</h3>
         <p class="text-gray-500 mb-4">สร้างลิงก์เชิญเพื่อให้ผู้ใช้เข้าร่วมได้ง่ายขึ้น</p>
         <button
           @click="showCreateModal = true"
           class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
         >
-          <Icon name="mdi:plus" class="w-5 h-5 mr-1 inline" />
+          <Icon icon="mdi:plus" class="w-5 h-5 mr-1 inline" />
           สร้างลิงก์แรก
         </button>
       </div>
@@ -78,26 +78,26 @@
                   class="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                   title="คัดลอก"
                 >
-                  <Icon name="mdi:content-copy" class="w-5 h-5" />
+                  <Icon icon="mdi:content-copy" class="w-5 h-5" />
                 </button>
               </div>
 
               <!-- Stats -->
               <div class="flex flex-wrap gap-4 text-sm">
                 <div class="flex items-center text-gray-500">
-                  <Icon name="mdi:account-group" class="w-4 h-4 mr-1" />
+                  <Icon icon="mdi:account-group" class="w-4 h-4 mr-1" />
                   ใช้แล้ว: {{ link.use_count }}{{ link.max_uses ? ` / ${link.max_uses}` : '' }}
                 </div>
                 <div v-if="link.role" class="flex items-center text-gray-500">
-                  <Icon name="mdi:badge-account" class="w-4 h-4 mr-1" />
+                  <Icon icon="mdi:badge-account" class="w-4 h-4 mr-1" />
                   บทบาท: {{ link.role.display_name || link.role.name }}
                 </div>
                 <div v-if="link.expires_at" class="flex items-center text-gray-500">
-                  <Icon name="mdi:clock-outline" class="w-4 h-4 mr-1" />
+                  <Icon icon="mdi:clock-outline" class="w-4 h-4 mr-1" />
                   หมดอายุ: {{ formatDate(link.expires_at) }}
                 </div>
                 <div v-if="link.require_approval" class="flex items-center text-orange-500">
-                  <Icon name="mdi:check-circle-outline" class="w-4 h-4 mr-1" />
+                  <Icon icon="mdi:check-circle-outline" class="w-4 h-4 mr-1" />
                   ต้องอนุมัติ
                 </div>
               </div>
@@ -110,7 +110,7 @@
                 class="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                 title="ดาวน์โหลด QR"
               >
-                <Icon name="mdi:download" class="w-5 h-5" />
+                <Icon icon="mdi:download" class="w-5 h-5" />
               </button>
               <button
                 @click="toggleActive(link)"
@@ -118,14 +118,14 @@
                 class="p-2 text-gray-400 rounded-lg transition-colors"
                 :title="link.is_active ? 'ปิดใช้งาน' : 'เปิดใช้งาน'"
               >
-                <Icon :name="link.is_active ? 'mdi:pause-circle' : 'mdi:play-circle'" class="w-5 h-5" />
+                <Icon :icon="link.is_active ? 'mdi:pause-circle' : 'mdi:play-circle'" class="w-5 h-5" />
               </button>
               <button
                 @click="confirmDelete(link)"
                 class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                 title="ลบ"
               >
-                <Icon name="mdi:delete-outline" class="w-5 h-5" />
+                <Icon icon="mdi:delete-outline" class="w-5 h-5" />
               </button>
             </div>
           </div>
@@ -147,7 +147,7 @@
           <div class="flex items-center justify-between px-6 py-4 border-b">
             <h3 class="text-lg font-semibold">สร้างลิงก์เชิญใหม่</h3>
             <button @click="showCreateModal = false" class="text-gray-400 hover:text-gray-600">
-              <Icon name="mdi:close" class="w-5 h-5" />
+              <Icon icon="mdi:close" class="w-5 h-5" />
             </button>
           </div>
 
@@ -231,7 +231,7 @@
               :disabled="creating"
               class="px-4 py-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
             >
-              <Icon v-if="creating" name="mdi:loading" class="w-4 h-4 mr-1 inline animate-spin" />
+              <Icon v-if="creating" icon="mdi:loading" class="w-4 h-4 mr-1 inline animate-spin" />
               สร้างลิงก์
             </button>
           </div>

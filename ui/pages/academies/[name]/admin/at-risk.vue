@@ -84,7 +84,7 @@ const getFactorLabel = (factor: string) => {
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 class="text-3xl font-black text-gray-900 dark:text-white flex items-center gap-3">
-            <Icon name="fluent:person-warning-24-filled" class="w-10 h-10 text-red-500" />
+            <Icon icon="fluent:person-warning-24-filled" class="w-10 h-10 text-red-500" />
             นักเรียนกลุ่มเสี่ยง (At-Risk)
           </h1>
           <p class="text-gray-500 dark:text-gray-400 mt-1">ติดตามและให้ความช่วยเหลือนักเรียนที่ต้องการความดูแลเป็นพิเศษ</p>
@@ -110,7 +110,7 @@ const getFactorLabel = (factor: string) => {
       <!-- Empty State -->
       <div v-else-if="students.length === 0" class="bg-white dark:bg-gray-800 rounded-[2.5rem] p-20 text-center shadow-sm">
         <div class="w-32 h-32 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-6 text-green-500">
-          <Icon name="fluent:checkmark-starburst-24-filled" class="w-16 h-16" />
+          <Icon icon="fluent:checkmark-starburst-24-filled" class="w-16 h-16" />
         </div>
         <h2 class="text-2xl font-black text-gray-900 dark:text-white">เยี่ยมมาก!</h2>
         <p class="text-gray-500 mt-2">ไม่มีนักเรียนที่เข้าข่ายกลุ่มเสี่ยงตามเกณฑ์ที่กำหนด</p>

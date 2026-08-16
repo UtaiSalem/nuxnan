@@ -192,7 +192,7 @@ const quickActions = computed(() => [
             {{ academy?.name || 'Dashboard' }}
           </h1>
           <span :class="['px-3 py-1 rounded-full text-sm font-medium', roleColor]">
-            <Icon :name="roleIcon" class="w-4 h-4 inline mr-1" />
+            <Icon :icon="roleIcon" class="w-4 h-4 inline mr-1" />
             {{ roleDisplayName }}
           </span>
         </div>
@@ -206,7 +206,7 @@ const quickActions = computed(() => [
         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
           <div class="flex items-center gap-3">
             <div class="p-2 bg-emerald-100 dark:bg-emerald-900 rounded-lg">
-              <Icon name="fluent:hat-graduation-24-filled" class="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+              <Icon icon="fluent:hat-graduation-24-filled" class="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.totalStudents }}</p>
@@ -218,7 +218,7 @@ const quickActions = computed(() => [
         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
           <div class="flex items-center gap-3">
             <div class="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-              <Icon name="fluent:person-board-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Icon icon="fluent:person-board-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.totalTeachers }}</p>
@@ -230,7 +230,7 @@ const quickActions = computed(() => [
         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
           <div class="flex items-center gap-3">
             <div class="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-              <Icon name="fluent:book-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Icon icon="fluent:book-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.totalCourses }}</p>
@@ -242,7 +242,7 @@ const quickActions = computed(() => [
         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
           <div class="flex items-center gap-3">
             <div class="p-2 bg-cyan-100 dark:bg-cyan-900 rounded-lg">
-              <Icon name="fluent:people-community-24-filled" class="w-6 h-6 text-cyan-600 dark:text-cyan-400" />
+              <Icon icon="fluent:people-community-24-filled" class="w-6 h-6 text-cyan-600 dark:text-cyan-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.totalGroups }}</p>
@@ -254,7 +254,7 @@ const quickActions = computed(() => [
         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
           <div class="flex items-center gap-3">
             <div class="p-2 bg-amber-100 dark:bg-amber-900 rounded-lg">
-              <Icon name="fluent:person-clock-24-filled" class="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              <Icon icon="fluent:person-clock-24-filled" class="w-6 h-6 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.pendingRequests }}</p>
@@ -266,7 +266,7 @@ const quickActions = computed(() => [
         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
           <div class="flex items-center gap-3">
             <div class="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-              <Icon name="fluent:pulse-24-filled" class="w-6 h-6 text-green-600 dark:text-green-400" />
+              <Icon icon="fluent:pulse-24-filled" class="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.activeToday }}</p>
@@ -287,7 +287,7 @@ const quickActions = computed(() => [
               class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col items-center gap-3 text-center"
             >
               <div :class="['p-3 rounded-full text-white', action.color]">
-                <Icon :name="action.icon" class="w-6 h-6" />
+                <Icon :icon="action.icon" class="w-6 h-6" />
               </div>
               <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ action.title }}</span>
             </NuxtLink>
@@ -309,7 +309,7 @@ const quickActions = computed(() => [
           </div>
           <div class="p-4">
             <div v-if="pendingRequests.length === 0" class="text-center py-8 text-gray-500">
-              <Icon name="fluent:checkmark-circle-24-regular" class="w-12 h-12 mx-auto mb-2 text-green-500" />
+              <Icon icon="fluent:checkmark-circle-24-regular" class="w-12 h-12 mx-auto mb-2 text-green-500" />
               <p>ไม่มีคำขอรอดำเนินการ</p>
             </div>
             <div v-else class="space-y-3">
@@ -355,7 +355,7 @@ const quickActions = computed(() => [
           </div>
           <div class="p-4">
             <div v-if="recentActivities.length === 0" class="text-center py-8 text-gray-500">
-              <Icon name="fluent:document-24-regular" class="w-12 h-12 mx-auto mb-2" />
+              <Icon icon="fluent:document-24-regular" class="w-12 h-12 mx-auto mb-2" />
               <p>ยังไม่มีกิจกรรม</p>
             </div>
             <div v-else class="space-y-3">
@@ -391,7 +391,7 @@ const quickActions = computed(() => [
             :to="`/academies/${academyName}/admin/members`"
             class="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
           >
-            <Icon name="fluent:people-24-regular" class="w-6 h-6 text-blue-500" />
+            <Icon icon="fluent:people-24-regular" class="w-6 h-6 text-blue-500" />
             <span class="font-medium">สมาชิก</span>
           </NuxtLink>
           
@@ -400,7 +400,7 @@ const quickActions = computed(() => [
             :to="`/academies/${academyName}/admin/courses`"
             class="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
           >
-            <Icon name="fluent:book-24-regular" class="w-6 h-6 text-purple-500" />
+            <Icon icon="fluent:book-24-regular" class="w-6 h-6 text-purple-500" />
             <span class="font-medium">รายวิชา</span>
           </NuxtLink>
           
@@ -409,7 +409,7 @@ const quickActions = computed(() => [
             :to="`/academies/${academyName}/admin/students`"
             class="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
           >
-            <Icon name="fluent:hat-graduation-24-regular" class="w-6 h-6 text-emerald-500" />
+            <Icon icon="fluent:hat-graduation-24-regular" class="w-6 h-6 text-emerald-500" />
             <span class="font-medium">นักเรียน</span>
           </NuxtLink>
           
@@ -418,7 +418,7 @@ const quickActions = computed(() => [
             :to="`/academies/${academyName}/admin/teachers`"
             class="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
           >
-            <Icon name="fluent:person-board-24-regular" class="w-6 h-6 text-blue-500" />
+            <Icon icon="fluent:person-board-24-regular" class="w-6 h-6 text-blue-500" />
             <span class="font-medium">ครูอาจารย์</span>
           </NuxtLink>
           
@@ -427,7 +427,7 @@ const quickActions = computed(() => [
             :to="`/academies/${academyName}/admin/announcements`"
             class="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
           >
-            <Icon name="fluent:megaphone-24-regular" class="w-6 h-6 text-amber-500" />
+            <Icon icon="fluent:megaphone-24-regular" class="w-6 h-6 text-amber-500" />
             <span class="font-medium">ประกาศ</span>
           </NuxtLink>
           
@@ -436,7 +436,7 @@ const quickActions = computed(() => [
             :to="`/academies/${academyName}/admin/home-visits`"
             class="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
           >
-            <Icon name="fluent:home-24-regular" class="w-6 h-6 text-rose-500" />
+            <Icon icon="fluent:home-24-regular" class="w-6 h-6 text-rose-500" />
             <span class="font-medium">เยี่ยมบ้าน</span>
           </NuxtLink>
           
@@ -445,7 +445,7 @@ const quickActions = computed(() => [
             :to="`/academies/${academyName}/admin/finance`"
             class="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
           >
-            <Icon name="fluent:money-24-regular" class="w-6 h-6 text-green-500" />
+            <Icon icon="fluent:money-24-regular" class="w-6 h-6 text-green-500" />
             <span class="font-medium">การเงิน</span>
           </NuxtLink>
           
@@ -454,7 +454,7 @@ const quickActions = computed(() => [
             :to="`/academies/${academyName}/admin/reports`"
             class="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
           >
-            <Icon name="fluent:chart-multiple-24-regular" class="w-6 h-6 text-indigo-500" />
+            <Icon icon="fluent:chart-multiple-24-regular" class="w-6 h-6 text-indigo-500" />
             <span class="font-medium">รายงาน</span>
           </NuxtLink>
         </div>

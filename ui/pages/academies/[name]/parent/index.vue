@@ -6,7 +6,7 @@
         <div class="flex flex-col sm:flex-row items-center justify-between gap-6">
           <div class="flex items-center space-x-4">
             <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-              <Icon name="fluent:person-heart-24-filled" class="w-10 h-10" />
+              <Icon icon="fluent:person-heart-24-filled" class="w-10 h-10" />
             </div>
             <div>
               <h1 class="text-2xl font-bold">สวัสดี, {{ $auth?.user?.name }}</h1>
@@ -18,7 +18,7 @@
               :to="`/academies/${academyName}/parent/meetings`"
               class="px-4 py-2 bg-white text-blue-700 hover:bg-blue-50 rounded-xl font-semibold shadow-sm transition-colors flex items-center gap-2"
             >
-              <Icon name="fluent:calendar-chat-24-regular" class="w-5 h-5" />
+              <Icon icon="fluent:calendar-chat-24-regular" class="w-5 h-5" />
               นัดพบครู
             </NuxtLink>
           </div>
@@ -31,7 +31,7 @@
       <section>
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-            <Icon name="fluent:people-community-24-regular" class="w-6 h-6 text-blue-600" />
+            <Icon icon="fluent:people-community-24-regular" class="w-6 h-6 text-blue-600" />
             บุตรหลานของฉัน
           </h2>
         </div>
@@ -42,7 +42,7 @@
 
         <div v-else-if="children.length === 0" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center">
           <div class="w-20 h-20 bg-gray-50 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Icon name="fluent:person-search-24-regular" class="w-10 h-10 text-gray-400" />
+            <Icon icon="fluent:person-search-24-regular" class="w-10 h-10 text-gray-400" />
           </div>
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white">ไม่พบข้อมูลบุตรหลาน</h3>
           <p class="text-gray-500 dark:text-gray-400 mt-1 max-w-xs mx-auto">หากคุณมีบุตรหลานเรียนอยู่ที่นี่ กรุณาติดต่อฝ่ายธุรการเพื่อเชื่อมโยงบัญชี</p>
@@ -75,12 +75,12 @@
                   <p class="text-sm text-gray-500 dark:text-gray-400">รหัส: {{ child.student_id }}</p>
                   <p class="text-sm font-medium text-blue-600 dark:text-blue-400 mt-0.5">{{ child.classroom }}</p>
                 </div>
-                <Icon name="fluent:chevron-right-24-regular" class="w-6 h-6 text-gray-300 group-hover:translate-x-1 transition-transform" />
+                <Icon icon="fluent:chevron-right-24-regular" class="w-6 h-6 text-gray-300 group-hover:translate-x-1 transition-transform" />
               </div>
             </div>
             <div class="bg-gray-50 dark:bg-gray-900/50 px-5 py-3 flex items-center justify-between text-xs font-medium text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700">
               <span class="flex items-center gap-1">
-                <Icon name="fluent:tag-24-regular" class="w-3.5 h-3.5" />
+                <Icon icon="fluent:tag-24-regular" class="w-3.5 h-3.5" />
                 เลขที่: {{ child.student_number }}
               </span>
               <span class="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 rounded-full">
@@ -100,7 +100,7 @@
               <h3 class="text-xl font-bold text-gray-900 dark:text-white">ข้อมูลของ {{ selectedChild.name }}</h3>
             </div>
             <button @click="selectedChild = null" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
-              <Icon name="fluent:dismiss-24-regular" class="w-6 h-6 text-gray-400" />
+              <Icon icon="fluent:dismiss-24-regular" class="w-6 h-6 text-gray-400" />
             </button>
           </div>
 
@@ -117,7 +117,7 @@
                   : 'border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
               ]"
             >
-              <Icon :name="tab.icon" class="w-5 h-5" />
+              <Icon :icon="tab.icon" class="w-5 h-5" />
               {{ tab.label }}
             </button>
           </div>
@@ -131,7 +131,7 @@
                 <p class="text-gray-500">กำลังโหลดผลการเรียน...</p>
               </div>
               <div v-else-if="grades.length === 0" class="text-center py-20 bg-gray-50 dark:bg-gray-900/30 rounded-2xl">
-                <Icon name="fluent:document-error-24-regular" class="w-16 h-16 mx-auto text-gray-300 mb-2" />
+                <Icon icon="fluent:document-error-24-regular" class="w-16 h-16 mx-auto text-gray-300 mb-2" />
                 <p class="text-gray-500">ยังไม่มีข้อมูลผลการเรียนในเทอมนี้</p>
               </div>
               <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -142,7 +142,7 @@
                 >
                   <div class="flex items-center gap-3">
                     <div class="w-12 h-12 bg-blue-50 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-                      <Icon name="fluent:book-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                      <Icon icon="fluent:book-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
                       <div class="font-bold text-gray-900 dark:text-white">{{ grade.course_name }}</div>
@@ -249,7 +249,7 @@
                     <div>
                       <div class="font-bold text-gray-900 dark:text-white">{{ fee.description }}</div>
                       <div class="text-xs text-gray-500 mt-1 flex items-center gap-2">
-                        <Icon name="fluent:calendar-clock-24-regular" class="w-3.5 h-3.5" />
+                        <Icon icon="fluent:calendar-clock-24-regular" class="w-3.5 h-3.5" />
                         ครบกำหนด: {{ formatDate(fee.due_date) }}
                       </div>
                     </div>
@@ -272,7 +272,7 @@
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-4">
                   <h4 class="font-bold text-blue-600 dark:text-blue-400 flex items-center gap-2">
-                    <Icon name="fluent:person-info-24-regular" class="w-5 h-5" />
+                    <Icon icon="fluent:person-info-24-regular" class="w-5 h-5" />
                     ข้อมูลทั่วไป
                   </h4>
                   <div class="space-y-3 bg-gray-50 dark:bg-gray-900/50 p-6 rounded-2xl">
@@ -297,7 +297,7 @@
 
                 <div class="space-y-4">
                   <h4 class="font-bold text-purple-600 dark:text-purple-400 flex items-center gap-2">
-                    <Icon name="fluent:people-24-regular" class="w-5 h-5" />
+                    <Icon icon="fluent:people-24-regular" class="w-5 h-5" />
                     ผู้ปกครองในระบบ
                   </h4>
                   <div class="space-y-3">
@@ -326,7 +326,7 @@
         <section>
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-              <Icon name="fluent:megaphone-24-regular" class="w-6 h-6 text-orange-500" />
+              <Icon icon="fluent:megaphone-24-regular" class="w-6 h-6 text-orange-500" />
               ประกาศจากโรงเรียน
             </h2>
           </div>
@@ -346,20 +346,20 @@
               class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 hover:shadow-md transition-shadow relative overflow-hidden group"
             >
               <div v-if="ann.is_pinned" class="absolute top-0 right-0 p-1 bg-red-500 text-white rounded-bl-xl shadow-sm">
-                <Icon name="fluent:pin-16-filled" class="w-4 h-4" />
+                <Icon icon="fluent:pin-16-filled" class="w-4 h-4" />
               </div>
               <div class="flex items-start gap-4">
                 <div class="w-12 h-12 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center flex-shrink-0">
-                  <Icon name="fluent:news-24-regular" class="w-6 h-6 text-orange-600" />
+                  <Icon icon="fluent:news-24-regular" class="w-6 h-6 text-orange-600" />
                 </div>
                 <div class="flex-1">
                   <h3 class="font-bold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors">{{ ann.title }}</h3>
                   <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{{ ann.excerpt }}</p>
                   <div class="flex items-center mt-3 text-[10px] font-black uppercase tracking-widest text-gray-400">
-                    <Icon name="fluent:calendar-16-regular" class="w-3.5 h-3.5 mr-1" />
+                    <Icon icon="fluent:calendar-16-regular" class="w-3.5 h-3.5 mr-1" />
                     {{ formatDate(ann.published_at) }}
                     <span class="mx-2 text-gray-200">|</span>
-                    <Icon name="fluent:person-16-regular" class="w-3.5 h-3.5 mr-1" />
+                    <Icon icon="fluent:person-16-regular" class="w-3.5 h-3.5 mr-1" />
                     {{ ann.author }}
                   </div>
                 </div>
@@ -372,7 +372,7 @@
         <section>
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-              <Icon name="fluent:calendar-star-24-regular" class="w-6 h-6 text-purple-500" />
+              <Icon icon="fluent:calendar-star-24-regular" class="w-6 h-6 text-purple-500" />
               กิจกรรมที่จะมาถึง
             </h2>
           </div>
@@ -395,7 +395,7 @@
                 <h3 class="font-bold text-gray-900 dark:text-white">{{ event.title }}</h3>
                 <div class="flex items-center gap-3 mt-1 text-xs font-medium text-gray-500 dark:text-gray-400">
                   <span class="flex items-center gap-1">
-                    <Icon name="fluent:location-16-regular" class="w-3.5 h-3.5" />
+                    <Icon icon="fluent:location-16-regular" class="w-3.5 h-3.5" />
                     {{ event.location || 'ไม่ระบุสถานที่' }}
                   </span>
                   <span v-if="event.is_holiday" class="px-2 py-0.5 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded-full text-[10px] font-black uppercase">วันหยุด</span>

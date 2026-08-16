@@ -389,7 +389,7 @@ const formatDate = (dateString: string) => {
           @click="openCreateModal"
           class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
         >
-          <Icon name="fluent:add-24-filled" class="w-5 h-5" />
+          <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
           <span>สร้างประกาศ</span>
         </button>
       </div>
@@ -399,7 +399,7 @@ const formatDate = (dateString: string) => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-xl">
-              <Icon name="fluent:megaphone-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <Icon icon="fluent:megaphone-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ statistics.total || 0 }}</p>
@@ -411,7 +411,7 @@ const formatDate = (dateString: string) => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-green-100 dark:bg-green-900/50 rounded-xl">
-              <Icon name="fluent:checkmark-circle-24-filled" class="w-6 h-6 text-green-600 dark:text-green-400" />
+              <Icon icon="fluent:checkmark-circle-24-filled" class="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ statistics.published || 0 }}</p>
@@ -423,7 +423,7 @@ const formatDate = (dateString: string) => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-amber-100 dark:bg-amber-900/50 rounded-xl">
-              <Icon name="fluent:drafts-24-filled" class="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              <Icon icon="fluent:drafts-24-filled" class="w-6 h-6 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ statistics.draft || 0 }}</p>
@@ -435,7 +435,7 @@ const formatDate = (dateString: string) => {
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="p-3 bg-purple-100 dark:bg-purple-900/50 rounded-xl">
-              <Icon name="fluent:pin-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <Icon icon="fluent:pin-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ statistics.pinned || 0 }}</p>
@@ -449,7 +449,7 @@ const formatDate = (dateString: string) => {
       <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
         <div class="flex flex-col sm:flex-row gap-4">
           <div class="relative flex-1">
-            <Icon name="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               v-model="searchQuery"
               @input="handleSearch"
@@ -486,14 +486,14 @@ const formatDate = (dateString: string) => {
       </div>
 
       <div v-else-if="announcements.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-sm border border-gray-100 dark:border-gray-700">
-        <Icon name="fluent:megaphone-24-regular" class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+        <Icon icon="fluent:megaphone-24-regular" class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
         <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">ยังไม่มีประกาศ</h3>
         <p class="text-gray-500 dark:text-gray-400 mb-4">เริ่มต้นสร้างประกาศแรกของโรงเรียน</p>
         <button
           @click="openCreateModal"
           class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
         >
-          <Icon name="fluent:add-24-filled" class="w-5 h-5" />
+          <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
           <span>สร้างประกาศ</span>
         </button>
       </div>
@@ -516,7 +516,7 @@ const formatDate = (dateString: string) => {
                       `dark:bg-${getTypeInfo(announcement.announcement_type).color}-900/50 dark:text-${getTypeInfo(announcement.announcement_type).color}-300`
                     ]"
                   >
-                    <Icon :name="getTypeInfo(announcement.announcement_type).icon" class="w-3.5 h-3.5" />
+                    <Icon :icon="getTypeInfo(announcement.announcement_type).icon" class="w-3.5 h-3.5" />
                     {{ getTypeInfo(announcement.announcement_type).label }}
                   </span>
                   
@@ -535,7 +535,7 @@ const formatDate = (dateString: string) => {
                   
                   <!-- Pinned Badge -->
                   <span v-if="announcement.is_pinned" class="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 dark:bg-purple-900/50 rounded-lg text-xs font-medium text-purple-700 dark:text-purple-300">
-                    <Icon name="fluent:pin-24-filled" class="w-3.5 h-3.5" />
+                    <Icon icon="fluent:pin-24-filled" class="w-3.5 h-3.5" />
                     ปักหมุด
                   </span>
                   
@@ -561,15 +561,15 @@ const formatDate = (dateString: string) => {
                 
                 <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
                   <span class="flex items-center gap-1">
-                    <Icon name="fluent:person-24-regular" class="w-4 h-4" />
+                    <Icon icon="fluent:person-24-regular" class="w-4 h-4" />
                     {{ announcement.creator?.name || 'Unknown' }}
                   </span>
                   <span class="flex items-center gap-1">
-                    <Icon name="fluent:calendar-24-regular" class="w-4 h-4" />
+                    <Icon icon="fluent:calendar-24-regular" class="w-4 h-4" />
                     {{ formatDate(announcement.created_at) }}
                   </span>
                   <span v-if="announcement.published_at" class="flex items-center gap-1">
-                    <Icon name="fluent:send-24-regular" class="w-4 h-4" />
+                    <Icon icon="fluent:send-24-regular" class="w-4 h-4" />
                     เผยแพร่: {{ formatDate(announcement.published_at) }}
                   </span>
                 </div>
@@ -582,14 +582,14 @@ const formatDate = (dateString: string) => {
                   class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                   title="ดู"
                 >
-                  <Icon name="fluent:eye-24-regular" class="w-5 h-5 text-gray-500" />
+                  <Icon icon="fluent:eye-24-regular" class="w-5 h-5 text-gray-500" />
                 </button>
                 <button
                   @click="openEditModal(announcement)"
                   class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                   title="แก้ไข"
                 >
-                  <Icon name="fluent:edit-24-regular" class="w-5 h-5 text-gray-500" />
+                  <Icon icon="fluent:edit-24-regular" class="w-5 h-5 text-gray-500" />
                 </button>
                 <button
                   @click="togglePublish(announcement)"
@@ -602,7 +602,7 @@ const formatDate = (dateString: string) => {
                   :title="announcement.is_published ? 'ยกเลิกเผยแพร่' : 'เผยแพร่'"
                 >
                   <Icon
-                    :name="announcement.is_published ? 'fluent:arrow-undo-24-regular' : 'fluent:send-24-regular'"
+                    :icon="announcement.is_published ? 'fluent:arrow-undo-24-regular' : 'fluent:send-24-regular'"
                     :class="[
                       'w-5 h-5',
                       announcement.is_published ? 'text-amber-600' : 'text-green-600'
@@ -614,7 +614,7 @@ const formatDate = (dateString: string) => {
                   class="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                   title="ลบ"
                 >
-                  <Icon name="fluent:delete-24-regular" class="w-5 h-5 text-red-500" />
+                  <Icon icon="fluent:delete-24-regular" class="w-5 h-5 text-red-500" />
                 </button>
               </div>
             </div>
@@ -652,7 +652,7 @@ const formatDate = (dateString: string) => {
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">สร้างประกาศใหม่</h3>
             <button @click="showCreateModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              <Icon name="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
+              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
           
@@ -764,7 +764,7 @@ const formatDate = (dateString: string) => {
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">แก้ไขประกาศ</h3>
             <button @click="showEditModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              <Icon name="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
+              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
           
@@ -871,7 +871,7 @@ const formatDate = (dateString: string) => {
                   `bg-${getTypeInfo(selectedAnnouncement.announcement_type).color}-100 text-${getTypeInfo(selectedAnnouncement.announcement_type).color}-700`
                 ]"
               >
-                <Icon :name="getTypeInfo(selectedAnnouncement.announcement_type).icon" class="w-3.5 h-3.5" />
+                <Icon :icon="getTypeInfo(selectedAnnouncement.announcement_type).icon" class="w-3.5 h-3.5" />
                 {{ getTypeInfo(selectedAnnouncement.announcement_type).label }}
               </span>
               <span
@@ -886,7 +886,7 @@ const formatDate = (dateString: string) => {
               </span>
             </div>
             <button @click="showViewModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              <Icon name="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
+              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
           
@@ -897,11 +897,11 @@ const formatDate = (dateString: string) => {
             <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
               <div class="flex items-center gap-4">
                 <span class="flex items-center gap-1">
-                  <Icon name="fluent:person-24-regular" class="w-4 h-4" />
+                  <Icon icon="fluent:person-24-regular" class="w-4 h-4" />
                   {{ selectedAnnouncement.creator?.name }}
                 </span>
                 <span class="flex items-center gap-1">
-                  <Icon name="fluent:calendar-24-regular" class="w-4 h-4" />
+                  <Icon icon="fluent:calendar-24-regular" class="w-4 h-4" />
                   {{ formatDate(selectedAnnouncement.created_at) }}
                 </span>
               </div>
@@ -909,7 +909,7 @@ const formatDate = (dateString: string) => {
                 @click="showViewModal = false; openEditModal(selectedAnnouncement)"
                 class="inline-flex items-center gap-1 text-primary-600 hover:underline"
               >
-                <Icon name="fluent:edit-24-regular" class="w-4 h-4" />
+                <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
                 แก้ไข
               </button>
             </div>

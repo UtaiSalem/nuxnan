@@ -61,7 +61,7 @@ watch(() => props.sessionId, refreshQR)
     <div class="w-full flex justify-between items-center mb-6">
       <div class="flex items-center gap-3">
         <div class="p-2 bg-violet-100 dark:bg-violet-900 rounded-xl">
-          <Icon name="fluent:qr-code-24-filled" class="text-2xl text-violet-600 dark:text-violet-400" />
+          <Icon icon="fluent:qr-code-24-filled" class="text-2xl text-violet-600 dark:text-violet-400" />
         </div>
         <div>
           <h3 class="text-xl font-bold text-gray-900 dark:text-white">สแกนเพื่อเช็คชื่อกิจกรรม</h3>
@@ -75,7 +75,7 @@ watch(() => props.sessionId, refreshQR)
         title="ขยายเต็มจอ"
       >
         <Icon
-          :name="isFullscreen ? 'fluent:full-screen-minimize-24-regular' : 'fluent:full-screen-maximize-24-regular'"
+          :icon="isFullscreen ? 'fluent:full-screen-minimize-24-regular' : 'fluent:full-screen-maximize-24-regular'"
           class="text-2xl text-gray-500"
         />
       </button>
@@ -87,7 +87,7 @@ watch(() => props.sessionId, refreshQR)
         v-if="isLoading"
         class="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-800/80 z-10 rounded-2xl backdrop-blur-sm"
       >
-        <Icon name="eos-icons:loading" class="text-4xl text-violet-600" />
+        <Icon icon="eos-icons:loading" class="text-4xl text-violet-600" />
       </div>
 
       <div class="p-4 bg-white rounded-2xl shadow-inner border-4 border-violet-50 dark:border-gray-700">
@@ -111,7 +111,7 @@ watch(() => props.sessionId, refreshQR)
         :disabled="isLoading"
         class="flex items-center gap-2 px-6 py-3 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white font-bold rounded-2xl shadow-lg shadow-violet-200 dark:shadow-none transition-all active:scale-95"
       >
-        <Icon name="fluent:arrow-sync-24-filled" :class="{ 'animate-spin': isLoading }" />
+        <Icon icon="fluent:arrow-sync-24-filled" :class="{ 'animate-spin': isLoading }" />
         สร้าง QR ใหม่
       </button>
 

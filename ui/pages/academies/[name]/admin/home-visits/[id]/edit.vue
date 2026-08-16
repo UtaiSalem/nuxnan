@@ -144,7 +144,7 @@ const getStatusBadge = (status: string) => {
 <template>
   <div>
     <div v-if="isLoading" class="flex items-center justify-center py-12">
-      <Icon name="fluent:spinner-ios-20-regular" class="w-8 h-8 animate-spin text-primary-600" />
+      <Icon icon="fluent:spinner-ios-20-regular" class="w-8 h-8 animate-spin text-primary-600" />
     </div>
 
     <div v-else-if="visit" class="max-w-4xl mx-auto space-y-6">
@@ -154,7 +154,7 @@ const getStatusBadge = (status: string) => {
           :to="`/academies/${academyName}/admin/home-visits/${visitId}`"
           class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
         >
-          <Icon name="fluent:arrow-left-24-regular" class="w-5 h-5" />
+          <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />
         </NuxtLink>
         <div>
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">แก้ไขการเยี่ยมบ้าน</h1>
@@ -167,7 +167,7 @@ const getStatusBadge = (status: string) => {
       <!-- Student Info (Read-only) -->
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-          <Icon name="fluent:person-24-regular" class="w-5 h-5 text-primary-600" />
+          <Icon icon="fluent:person-24-regular" class="w-5 h-5 text-primary-600" />
           นักเรียน
         </h2>
         
@@ -195,7 +195,7 @@ const getStatusBadge = (status: string) => {
         <!-- Visit Details -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Icon name="fluent:calendar-24-regular" class="w-5 h-5 text-primary-600" />
+            <Icon icon="fluent:calendar-24-regular" class="w-5 h-5 text-primary-600" />
             รายละเอียดการเยี่ยมบ้าน
           </h2>
           
@@ -275,7 +275,7 @@ const getStatusBadge = (status: string) => {
         <!-- Observations -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Icon name="fluent:notepad-24-regular" class="w-5 h-5 text-primary-600" />
+            <Icon icon="fluent:notepad-24-regular" class="w-5 h-5 text-primary-600" />
             บันทึกการเยี่ยมบ้าน
           </h2>
           
@@ -319,8 +319,8 @@ const getStatusBadge = (status: string) => {
             :disabled="isSaving"
             class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 flex items-center gap-2"
           >
-            <Icon v-if="isSaving" name="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
-            <Icon v-else name="fluent:save-24-regular" class="w-5 h-5" />
+            <Icon v-if="isSaving" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
+            <Icon v-else icon="fluent:save-24-regular" class="w-5 h-5" />
             <span>{{ isSaving ? 'กำลังบันทึก...' : 'บันทึก' }}</span>
           </button>
         </div>

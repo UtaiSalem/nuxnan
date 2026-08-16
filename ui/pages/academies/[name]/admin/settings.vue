@@ -221,7 +221,7 @@ const joinModeOptions = [
           class="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-2 disabled:opacity-50"
         >
           <span v-if="isSaving" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
-          <Icon v-else name="fluent:save-24-regular" class="w-5 h-5" />
+          <Icon v-else icon="fluent:save-24-regular" class="w-5 h-5" />
           บันทึก
         </button>
       </div>
@@ -242,7 +242,7 @@ const joinModeOptions = [
                 tab.id === 'danger' && 'text-red-600 dark:text-red-400'
               ]"
             >
-              <Icon :name="tab.icon" class="w-5 h-5" />
+              <Icon :icon="tab.icon" class="w-5 h-5" />
               <span class="text-sm font-medium">{{ tab.label }}</span>
             </button>
           </nav>
@@ -265,7 +265,7 @@ const joinModeOptions = [
                     class="w-full h-full object-cover"
                   />
                   <label class="absolute inset-0 flex items-center justify-center cursor-pointer hover:bg-black/20 transition-colors">
-                    <Icon name="fluent:camera-24-regular" class="w-8 h-8 text-gray-400" />
+                    <Icon icon="fluent:camera-24-regular" class="w-8 h-8 text-gray-400" />
                     <input type="file" accept="image/*" @change="onCoverChange" class="hidden" />
                   </label>
                 </div>
@@ -280,7 +280,7 @@ const joinModeOptions = [
                       class="w-20 h-20 rounded-xl object-cover"
                     />
                     <label class="absolute inset-0 flex items-center justify-center cursor-pointer rounded-xl hover:bg-black/20 transition-colors">
-                      <Icon name="fluent:camera-24-regular" class="w-6 h-6 text-white/80" />
+                      <Icon icon="fluent:camera-24-regular" class="w-6 h-6 text-white/80" />
                       <input type="file" accept="image/*" @change="onAvatarChange" class="hidden" />
                     </label>
                   </div>
@@ -348,7 +348,7 @@ const joinModeOptions = [
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">อีเมล</label>
                 <div class="relative">
-                  <Icon name="fluent:mail-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Icon icon="fluent:mail-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     v-model="form.email"
                     type="email"
@@ -360,7 +360,7 @@ const joinModeOptions = [
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">โทรศัพท์</label>
                 <div class="relative">
-                  <Icon name="fluent:call-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Icon icon="fluent:call-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     v-model="form.phone"
                     type="tel"
@@ -374,7 +374,7 @@ const joinModeOptions = [
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">เว็บไซต์</label>
               <div class="relative">
-                <Icon name="fluent:globe-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Icon icon="fluent:globe-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   v-model="form.website"
                   type="url"
@@ -509,7 +509,7 @@ const joinModeOptions = [
           <!-- Danger Zone -->
           <div v-if="activeTab === 'danger'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-red-200 dark:border-red-900/50 p-6 space-y-6">
             <h2 class="font-semibold text-red-600 dark:text-red-400 flex items-center gap-2">
-              <Icon name="fluent:warning-24-regular" class="w-5 h-5" />
+              <Icon icon="fluent:warning-24-regular" class="w-5 h-5" />
               โซนอันตราย
             </h2>
 

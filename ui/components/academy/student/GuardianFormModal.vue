@@ -9,11 +9,11 @@
         <!-- Header -->
         <div class="flex items-center justify-between px-6 py-4 border-b">
           <h3 class="text-lg font-semibold text-gray-900">
-            <Icon :name="isEdit ? 'mdi:pencil' : 'mdi:account-plus'" class="w-5 h-5 mr-2 inline text-blue-600" />
+            <Icon :icon="isEdit ? 'mdi:pencil' : 'mdi:account-plus'" class="w-5 h-5 mr-2 inline text-blue-600" />
             {{ isEdit ? 'แก้ไขผู้ปกครอง' : 'เพิ่มผู้ปกครอง' }}
           </h3>
           <button @click="$emit('close')" class="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
-            <Icon name="mdi:close" class="w-5 h-5" />
+            <Icon icon="mdi:close" class="w-5 h-5" />
           </button>
         </div>
 
@@ -181,8 +181,8 @@
             :disabled="saving"
             class="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
           >
-            <Icon v-if="saving" name="mdi:loading" class="w-4 h-4 mr-2 animate-spin" />
-            <Icon v-else :name="isEdit ? 'mdi:check' : 'mdi:plus'" class="w-4 h-4 mr-2" />
+            <Icon v-if="saving" icon="mdi:loading" class="w-4 h-4 mr-2 animate-spin" />
+            <Icon v-else :icon="isEdit ? 'mdi:check' : 'mdi:plus'" class="w-4 h-4 mr-2" />
             {{ isEdit ? 'บันทึกการแก้ไข' : 'เพิ่มผู้ปกครอง' }}
           </button>
         </div>

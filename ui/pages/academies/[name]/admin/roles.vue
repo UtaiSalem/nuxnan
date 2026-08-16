@@ -329,7 +329,7 @@ const colorOptions = [
           @click="openCreateModal"
           class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-2"
         >
-          <Icon name="fluent:add-24-regular" class="w-5 h-5" />
+          <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
           สร้างบทบาทใหม่
         </button>
       </div>
@@ -338,7 +338,7 @@ const colorOptions = [
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
           <h2 class="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <Icon name="fluent:lock-closed-24-regular" class="w-5 h-5 text-gray-400" />
+            <Icon icon="fluent:lock-closed-24-regular" class="w-5 h-5 text-gray-400" />
             บทบาทระบบ
           </h2>
           <p class="text-sm text-gray-500 mt-1">บทบาทเหล่านี้เป็นบทบาทมาตรฐานที่ไม่สามารถแก้ไขหรือลบได้</p>
@@ -354,7 +354,7 @@ const colorOptions = [
                 class="w-10 h-10 rounded-lg flex items-center justify-center"
                 :style="{ backgroundColor: role.color + '20', color: role.color }"
               >
-                <Icon :name="role.icon || 'fluent:person-24-regular'" class="w-5 h-5" />
+                <Icon :icon="role.icon || 'fluent:person-24-regular'" class="w-5 h-5" />
               </div>
               <div>
                 <p class="font-medium text-gray-900 dark:text-white">{{ role.display_name_th }}</p>
@@ -365,8 +365,8 @@ const colorOptions = [
               </div>
             </div>
             <div class="flex justify-end gap-1 mt-3">
-              <button @click="openPreview(role)" title="ดูสิทธิ์" class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg"><Icon name="fluent:eye-24-regular" class="w-4 h-4" /></button>
-              <button @click="duplicateRole(role)" title="ทำสำเนา" class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg"><Icon name="fluent:copy-24-regular" class="w-4 h-4" /></button>
+              <button @click="openPreview(role)" title="ดูสิทธิ์" class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg"><Icon icon="fluent:eye-24-regular" class="w-4 h-4" /></button>
+              <button @click="duplicateRole(role)" title="ทำสำเนา" class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg"><Icon icon="fluent:copy-24-regular" class="w-4 h-4" /></button>
             </div>
             <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
               {{ role.description || 'ไม่มีคำอธิบาย' }}
@@ -379,20 +379,20 @@ const colorOptions = [
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
           <h2 class="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <Icon name="fluent:wrench-24-regular" class="w-5 h-5 text-gray-400" />
+            <Icon icon="fluent:wrench-24-regular" class="w-5 h-5 text-gray-400" />
             บทบาทกำหนดเอง
           </h2>
           <p class="text-sm text-gray-500 mt-1">สร้างบทบาทเฉพาะสำหรับโรงเรียนของคุณ</p>
         </div>
         
         <div v-if="roles.filter(r => !isSystemRole(r)).length === 0" class="p-12 text-center">
-          <Icon name="fluent:shield-add-24-regular" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
+          <Icon icon="fluent:shield-add-24-regular" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
           <p class="text-gray-500 dark:text-gray-400 mb-4">ยังไม่มีบทบาทกำหนดเอง</p>
           <button 
             @click="openCreateModal"
             class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors inline-flex items-center gap-2"
           >
-            <Icon name="fluent:add-24-regular" class="w-5 h-5" />
+            <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
             สร้างบทบาทแรก
           </button>
         </div>
@@ -409,7 +409,7 @@ const colorOptions = [
                   class="w-10 h-10 rounded-lg flex items-center justify-center"
                   :style="{ backgroundColor: role.color + '20', color: role.color }"
                 >
-                  <Icon :name="role.icon || 'fluent:person-24-regular'" class="w-5 h-5" />
+                  <Icon :icon="role.icon || 'fluent:person-24-regular'" class="w-5 h-5" />
                 </div>
                 <div>
                   <p class="font-medium text-gray-900 dark:text-white">{{ role.display_name_th }}</p>
@@ -418,22 +418,22 @@ const colorOptions = [
               </div>
               <div class="flex items-center gap-1">
                 <button @click="openPreview(role)" title="ดูสิทธิ์" class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg">
-                  <Icon name="fluent:eye-24-regular" class="w-4 h-4" />
+                  <Icon icon="fluent:eye-24-regular" class="w-4 h-4" />
                 </button>
                 <button @click="duplicateRole(role)" title="ทำสำเนา" class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg">
-                  <Icon name="fluent:copy-24-regular" class="w-4 h-4" />
+                  <Icon icon="fluent:copy-24-regular" class="w-4 h-4" />
                 </button>
                 <button 
                   @click="openEditModal(role)"
                   class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg"
                 >
-                  <Icon name="fluent:edit-24-regular" class="w-4 h-4" />
+                  <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
                 </button>
                 <button 
                   @click="deleteRole(role)"
                   class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"
                 >
-                  <Icon name="fluent:delete-24-regular" class="w-4 h-4" />
+                  <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -441,7 +441,7 @@ const colorOptions = [
               {{ role.description || 'ไม่มีคำอธิบาย' }}
             </p>
             <div class="flex items-center gap-2 text-xs text-gray-500">
-              <Icon name="fluent:key-24-regular" class="w-4 h-4" />
+              <Icon icon="fluent:key-24-regular" class="w-4 h-4" />
               <span>{{ role.permissions?.length || 0 }} สิทธิ์</span>
             </div>
           </div>
@@ -463,7 +463,7 @@ const colorOptions = [
               {{ editingRole ? 'แก้ไขบทบาท' : 'สร้างบทบาทใหม่' }}
             </h3>
             <button @click="showRoleModal = false" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-              <Icon name="fluent:dismiss-24-regular" class="w-5 h-5" />
+              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
             </button>
           </div>
 
@@ -537,7 +537,7 @@ const colorOptions = [
                         : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'
                     ]"
                   >
-                    <Icon :name="icon" class="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                    <Icon :icon="icon" class="w-5 h-5 text-gray-700 dark:text-gray-300" />
                   </button>
                 </div>
               </div>
@@ -590,7 +590,7 @@ const colorOptions = [
                       >
                         <Icon 
                           v-if="isGroupFullySelected(group) || isGroupPartiallySelected(group)"
-                          name="fluent:checkmark-12-filled" 
+                          icon="fluent:checkmark-12-filled" 
                           class="w-3 h-3 text-white"
                         />
                       </div>
@@ -642,11 +642,11 @@ const colorOptions = [
         <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
           <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <div><h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ previewingRole?.display_name_th }}</h3><p class="text-xs text-gray-500">{{ previewingRole?.name }}</p></div>
-            <button @click="showPreviewModal = false" class="p-2 text-gray-400"><Icon name="fluent:dismiss-24-regular" class="w-5 h-5" /></button>
+            <button @click="showPreviewModal = false" class="p-2 text-gray-400"><Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" /></button>
           </div>
           <div class="p-6 overflow-y-auto max-h-[70vh]"><p class="text-sm text-gray-600 dark:text-gray-400 mb-5">{{ previewingRole?.description || 'ไม่มีคำอธิบาย' }}</p>
             <div v-if="previewingRole?.name === 'owner' && previewingRole?.permissions?.includes('*')" class="rounded-lg bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 p-4 font-medium">สิทธิ์ทั้งหมด (Owner)</div>
-            <div v-else class="space-y-5"><div v-for="group in permissionGroups" :key="group.name"><h4 class="font-medium text-gray-900 dark:text-white mb-2">{{ group.name }}</h4><div class="space-y-1"><div v-for="permission in group.permissions" :key="permission.key" class="flex items-center gap-2 text-sm" :class="previewingRole?.permissions?.includes(permission.key) ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'"><Icon :name="previewingRole?.permissions?.includes(permission.key) ? 'fluent:checkmark-circle-24-filled' : 'fluent:circle-24-regular'" class="w-4 h-4" /><span>{{ permission.key }} — {{ permission.label }}</span></div></div></div></div>
+            <div v-else class="space-y-5"><div v-for="group in permissionGroups" :key="group.name"><h4 class="font-medium text-gray-900 dark:text-white mb-2">{{ group.name }}</h4><div class="space-y-1"><div v-for="permission in group.permissions" :key="permission.key" class="flex items-center gap-2 text-sm" :class="previewingRole?.permissions?.includes(permission.key) ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-gray-500'"><Icon :icon="previewingRole?.permissions?.includes(permission.key) ? 'fluent:checkmark-circle-24-filled' : 'fluent:circle-24-regular'" class="w-4 h-4" /><span>{{ permission.key }} — {{ permission.label }}</span></div></div></div></div>
           </div>
           <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end"><button @click="showPreviewModal = false" class="px-5 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg">ปิด</button></div>
         </div>

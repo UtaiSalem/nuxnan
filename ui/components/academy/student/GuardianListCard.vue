@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
       <h3 class="text-lg font-semibold text-gray-800">
-        <Icon name="mdi:account-child" class="w-5 h-5 mr-2 inline text-blue-600" />
+        <Icon icon="mdi:account-child" class="w-5 h-5 mr-2 inline text-blue-600" />
         ข้อมูลผู้ปกครอง
       </h3>
       <button
@@ -11,7 +11,7 @@
         @click="showAddModal = true"
         class="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
       >
-        <Icon name="mdi:plus" class="w-4 h-4 mr-1 inline" />
+        <Icon icon="mdi:plus" class="w-4 h-4 mr-1 inline" />
         เพิ่มผู้ปกครอง
       </button>
     </div>
@@ -23,7 +23,7 @@
 
     <!-- Empty State -->
     <div v-else-if="guardians.length === 0" class="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-      <Icon name="mdi:account-child-outline" class="w-12 h-12 mx-auto text-gray-400 mb-3" />
+      <Icon icon="mdi:account-child-outline" class="w-12 h-12 mx-auto text-gray-400 mb-3" />
       <p class="text-gray-500">ยังไม่มีข้อมูลผู้ปกครอง</p>
       <button
         v-if="canEdit"
@@ -62,7 +62,7 @@
                 <span v-if="guardian.relationship"> · {{ guardian.relationship }}</span>
               </div>
               <div v-if="guardian.primary_phone" class="text-sm text-gray-600 mt-1">
-                <Icon name="mdi:phone" class="w-4 h-4 inline mr-1" />
+                <Icon icon="mdi:phone" class="w-4 h-4 inline mr-1" />
                 {{ guardian.primary_phone }}
               </div>
             </div>
@@ -75,14 +75,14 @@
               class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
               title="แก้ไข"
             >
-              <Icon name="mdi:pencil-outline" class="w-5 h-5" />
+              <Icon icon="mdi:pencil-outline" class="w-5 h-5" />
             </button>
             <button
               @click="confirmDelete(guardian)"
               class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
               title="ลบ"
             >
-              <Icon name="mdi:delete-outline" class="w-5 h-5" />
+              <Icon icon="mdi:delete-outline" class="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -90,7 +90,7 @@
         <!-- Additional Info -->
         <div v-if="guardian.occupation || guardian.workplace" class="mt-3 pt-3 border-t border-gray-100 text-sm text-gray-600">
           <div v-if="guardian.occupation" class="flex items-center">
-            <Icon name="mdi:briefcase-outline" class="w-4 h-4 mr-2 text-gray-400" />
+            <Icon icon="mdi:briefcase-outline" class="w-4 h-4 mr-2 text-gray-400" />
             {{ guardian.occupation }}
             <span v-if="guardian.workplace" class="ml-1 text-gray-400">· {{ guardian.workplace }}</span>
           </div>
@@ -105,7 +105,7 @@
               :key="contact.id"
               class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded"
             >
-              <Icon :name="getContactIcon(contact.contact_type)" class="w-3 h-3 inline mr-1" />
+              <Icon :icon="getContactIcon(contact.contact_type)" class="w-3 h-3 inline mr-1" />
               {{ contact.contact_value }}
             </div>
           </div>
