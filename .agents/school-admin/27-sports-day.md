@@ -172,8 +172,8 @@ $table->unique(['academic_year_id', 'student_id']);   // 1 นักเรีย
 | **S-S3** | เครื่องมือแบ่งนักเรียนเข้าคณะสี — **โหมดสุ่ม** + batch/commit/undo/projection ผ่านเส้นทางเดียวกัน (§7) | S-S1 | ✅ `f5fe814e` (16 เทสต์) |
 | **S-S3i** | **โหมดนำเข้า** — parser + matcher บนตารางและ commit path เดียวกัน (§7.6) | S-S3 | ✅ (9 เทสต์) |
 | **S-S3b** | หน้าจอแบ่งคณะสี (เลือกโหมด → preview → commit → undo) + เมนูใน admin.vue | S-S3i | ✅ `f065ce19` |
-| **S-S3e** *(ใหม่ 2026-08-08 — แทรกก่อน S-S4)* | **หน่วย "ครั้งที่จัด"** — ตาราง `sports_editions` + `sports_edition_houses` · ย้ายคีย์ของ `house_memberships`/`house_assignment_batches` จาก `academic_year_id` → `edition_id` · projector ฉายจาก edition ที่ `active` เท่านั้น (§9) | S-S3b | ⚪ |
-| **S-S4** | schema กีฬาสี (§4) + ให้คะแนนแก่คณะสีผ่าน event log + จัดการคะแนนเท่ากัน — **ทุกตาราง key ที่ `edition_id`** | **S-S3e** | ⚪ |
+| **S-S3e** *(ใหม่ 2026-08-08 — แทรกก่อน S-S4)* | **หน่วย "ครั้งที่จัด"** — ตาราง `sports_editions` + `sports_edition_houses` · ย้ายคีย์ของ `house_memberships`/`house_assignment_batches` จาก `academic_year_id` → `edition_id` · projector ฉายจาก edition ที่ `active` เท่านั้น (§9) | S-S3b | ✅ `d89f9796` (backend+schema) + `2a348218` (หน้าจอ) — **ยืนยันสถานะจริง 2026-08-17** ดู §9.6 |
+| **S-S4** | schema กีฬาสี (§4) + ให้คะแนนแก่คณะสีผ่าน event log + จัดการคะแนนเท่ากัน — **ทุกตาราง key ที่ `edition_id`** | **S-S3e** | ⚪ **ไม่มีอะไรบล็อกแล้ว** (S-S3e เสร็จ) |
 | **S-S5** | บันทึกผลการแข่ง (อันดับ → คะแนนตามตาราง) + คะแนนกรรมการตามเกณฑ์ย่อย (§3) | S-S4 | ⚪ |
 | **S-S6** | หน้าจอ: ตารางคะแนนคณะสี · ตารางแข่ง · กรอกผล · สรุปเหรียญ | S-S5 | ⚪ |
 | **S-S7** | อัลบั้มภาพผูกกับงาน (ต้องเพิ่ม owner ให้ `albums` หรือทำตารางใหม่ — ดู §1.3) | S-S6 | ⚪ |
@@ -356,3 +356,22 @@ sports_edition_houses                 ← "ครั้งนี้มีกี�
 - **ประวัติไม่ถูกทับ** — เดิมแบ่งใหม่ในปีเดียวกัน `upsert` กลืนสีเดิมทิ้ง เหลือร่องรอยแค่ใน `house_assignment_rows` · ตอนนี้แต่ละครั้งมีแถวของตัวเอง ย้อนดูได้ว่าปีที่แล้วเด็กคนนี้อยู่สีอะไร
 - **`previous_house_group_id` (§7.3.1) ความหมายชัดขึ้น** — "สีเดิมภายในครั้งนี้" ไม่ใช่ "สีเดิมที่อาจมาจากงานคนละงาน"
 - **เปลี่ยนจำนวนสีระหว่างครั้งไม่ต้องคิดเรื่องคนตกค้าง** — ครั้งใหม่เริ่มจากศูนย์เสมอ ไม่มีเคส "สีที่ถูกยุบยังมีสมาชิกค้าง"
+
+### 9.6 สถานะจริงที่ตรวจสอบแล้ว (2026-08-17) — S-S3e **ทำเสร็จไปแล้ว**
+
+ตารางสถานะใน §6 เคยค้างเป็น ⚪ อยู่ ทั้งที่งานลงไปแล้วตั้งแต่ commit `d89f9796` + `2a348218` (อยู่บน `origin/main` แล้วทั้งคู่)
+หลักฐานที่รันจริงบนเครื่อง dev:
+
+| ตรวจ | ผล |
+|---|---|
+| `php artisan migrate:status` | `2026_08_08_000001_create_sports_editions_tables` = Ran batch 118 · `2026_08_08_000002_rekey_house_tables_to_edition` = Ran batch 119 |
+| schema `sports_editions` | มีครบ + `active_key` เป็น generated column พร้อม `se_active_key_unique` |
+| schema `sports_edition_houses` | UNIQUE `[edition_id, house_group_id]` ✔ |
+| schema `house_memberships` | `edition_id` · UNIQUE `[edition_id, student_id]` · index `[edition_id, house_group_id]` · **ไม่มี `academic_year_id` แล้ว** ✔ |
+| schema `house_assignment_batches` | `edition_id` · index `[edition_id, status]` · **ไม่มี `academic_year_id` แล้ว** ✔ |
+| backend | `HouseAssignmentService` / `HouseImportMatcher` / `HouseMembershipProjector` / `HouseAssignmentController` รับ `SportsEdition` แล้ว · ปีอ่านจาก `$edition->academic_year_id` ตอน query `classroom_students` ตามสเปก |
+| routes | `{academy}/sports-editions` index/store/update/activate มี middleware `sports.view` / `sports.manage` |
+| frontend | `components/academy/sports/SportsEditionPanel.vue` + `useHouseAssignments.ts` + หน้า `house-assignments/index.vue` ใช้ edition แล้ว |
+| tests | `php artisan test tests/Feature/Sports` → **33 passed / 118 assertions** รวมเคส "a second active edition is rejected by the database", "two editions in one year keep separate memberships", "activate demotes the previous edition and reprojects" |
+
+**หมายเหตุความต่างจากสเปก 1 จุด:** `active_key` ถูกสร้างเป็น **VIRTUAL** generated column ไม่ใช่ STORED ตามที่ §9.1 เขียนไว้ — ผลลัพธ์เท่ากันเพราะ MySQL ทำ UNIQUE index บน virtual column ได้ และเทสต์ยืนยันว่า active ซ้อนกันถูก DB ปฏิเสธจริง จึงไม่ต้องแก้

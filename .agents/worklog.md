@@ -88,7 +88,8 @@ agy --print "Read <spec>.txt and follow it exactly." --add-dir "C:\wamp64\www\nu
   วิธีตรวจที่ใช้: สแกนด้วย regex ที่จับ `<Icon>` แบบคร่อมบรรทัด (`/<Icon\b[^>]*?\s:?name=/gs`) ทั้งเรพ → เหลือ 0 · diff ทุกบรรทัดต้องมีคำว่า `<Icon`/`icon=`/`name=` (กัน `<input name=>` `<Transition name=>` โดนลูกหลง) · compile ทุกไฟล์ที่แก้
   ⚠️ **หน้าใต้ `academies/**` ยืนยันด้วยตาไม่ได้เพราะต้องล็อกอิน** — ยืนยันด้วย static analysis + เห็นผลจริงบนหน้าที่เปิดได้ (`/landing-demo` 50/50 · `/quests` 31 · `/badges` 31)
 - [ ] **เปลี่ยนแบรนด์ footer หน้า landing เป็น nuxnan** (ยังเขียน "PlearnD" อยู่)
-- [ ] **(ค้างจากรอบก่อน)** S-S4 schema คะแนนกีฬาสี — **ถูกบล็อกโดย S-S3e** (ตาราง `sports_editions` + ย้ายคีย์เป็น `edition_id`) ตาม [`27-sports-day.md:175-176`](.agents/school-admin/27-sports-day.md:175) ไม่ใช่ "ไม่มีอะไรบล็อกแล้ว" อย่างที่ worklog รอบก่อนเขียน · ตั้งชื่อคณะสีจริง · ไฟล์ SQL prod ล้าหลัง 12 migrations
+- [x] ~~**S-S3e** (หน่วย "ครั้งที่จัด")~~ → **ทำเสร็จไปแล้วตั้งแต่ `d89f9796` + `2a348218`** ตารางสถานะในเอกสารค้างเป็น ⚪ เฉย ๆ · ตรวจจริง 2026-08-17: migration Ran batch 118/119 · schema ตรงสเปก (`edition_id`, UNIQUE `[edition_id, student_id]`, `active_key` generated + UNIQUE, ไม่เหลือ `academic_year_id`) · `php artisan test tests/Feature/Sports` = **33 passed / 118 assertions** · แก้สถานะในเอกสารแล้ว ดู [`27-sports-day.md` §9.6](.agents/school-admin/27-sports-day.md)
+- [ ] **(ค้างจากรอบก่อน)** **S-S4** schema คะแนนกีฬาสี (§4) + ให้คะแนนผ่าน event log + จัดการคะแนนเท่ากัน — **ไม่มีอะไรบล็อกแล้ว** ทุกตารางต้อง key ที่ `edition_id` · ตั้งชื่อคณะสีจริงแทน 4 ชื่อชั่วคราวแล้วสั่งแบ่งใหม่ · ไฟล์ SQL prod ล้าหลัง 12 migrations
 
 ### ⚠️ worklog เคยล้าหลัง 6 วัน
 
