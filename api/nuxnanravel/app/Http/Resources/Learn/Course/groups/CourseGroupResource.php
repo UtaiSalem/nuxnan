@@ -71,6 +71,9 @@ class CourseGroupResource extends JsonResource
                     'role' => $member->role,
                     'status' => $member->status,
                     'course_member_status' => $member->course_member_status,
+                    // สถานะสิทธิ์สอบที่คำนวณสด — แปะมาจาก CourseGroupController::attachLiveEligibility()
+                    'eligibility_status' => $member->live_eligibility_status,
+                    'absence_percent' => $member->live_absence_percent,
                     'user' => $user ? [
                         'id' => $user->id,
                         'name' => $user->name,
