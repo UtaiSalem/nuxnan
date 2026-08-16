@@ -1,16 +1,9 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
-import { fileURLToPath } from 'url'
-
 export default defineNuxtConfig({
   compatibilityDate: '2024-04-04',
   devtools: { enabled: false },
 
   vite: {
-    resolve: {
-      alias: {
-        '@inertiajs/vue3': fileURLToPath(new URL('./shims/inertia-vue3', import.meta.url)),
-      },
-    },
     // Optimize Vite build for memory efficiency
     build: {
       chunkSizeWarningLimit: 2000,

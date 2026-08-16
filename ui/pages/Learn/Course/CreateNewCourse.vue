@@ -18,6 +18,8 @@ const headerTitle = ref('สร้างรายวิชาใหม่');
 
 const config = useRuntimeConfig();
 const api = useApi();
+const authStore = useAuthStore();
+const authUser = computed(() => authStore.user || {});
 const tempCover = ref(`${config.public.apiBase}/storage/images/courses/covers/default_cover.jpg`);
 const coverInput = ref(null);
 const isOpenCategoryOptions = ref(false);
@@ -331,12 +333,12 @@ async function handleSubmitForm(){
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">ผู้สอน</label>
                     <div class="flex items-center gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50">
                         <img 
-                            :src="$page.props.auth.user.avatar || $page.props.auth.user.profile_photo_url" 
-                            :alt="$page.props.auth.user.name"
+                            :src="authUser.avatar || authUser.profile_photo_url || '/images/default-avatar.png'" 
+                            :alt="authUser.name"
                             class="w-12 h-12 rounded-full ring-2 ring-white dark:ring-gray-600 object-cover"
                         >
                         <div>
-                            <h3 class="font-bold text-gray-900 dark:text-gray-100">{{ $page.props.auth.user.name }}</h3>
+                            <h3 class="font-bold text-gray-900 dark:text-gray-100">{{ authUser.name }}</h3>
                             <p class="text-xs text-gray-500 dark:text-gray-400">Instructor</p>
                         </div>
                     </div>
