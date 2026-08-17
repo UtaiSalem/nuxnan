@@ -29,4 +29,14 @@ class SportsDiscipline extends Model
     {
         return $this->hasMany(SportsScoreEntry::class, 'discipline_id');
     }
+
+    public function matches(): HasMany
+    {
+        return $this->hasMany(SportsMatch::class, 'discipline_id');
+    }
+
+    public function results(): HasMany
+    {
+        return $this->hasMany(SportsDisciplineResult::class, 'discipline_id');
+    }
 }
