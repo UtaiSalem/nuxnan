@@ -9,6 +9,7 @@
  * ชุดเดียว ไม่ได้แยกตามโหมด
  */
 import { Icon } from '@iconify/vue'
+import SportsEditionPanel from '~/components/academy/sports/SportsEditionPanel.vue'
 import type { HouseAssignmentBatch, HouseAssignmentRow, HouseRowStatus } from '~/composables/useHouseAssignments'
 
 definePageMeta({ layout: 'main' })

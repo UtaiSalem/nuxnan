@@ -47,6 +47,8 @@
 </template>
 
 <script setup lang="ts">
+import TestimonialCard from '~/components/landing/TestimonialCard.vue'
+
 interface Testimonial {
   name: string
   role: string

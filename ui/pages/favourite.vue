@@ -59,6 +59,7 @@
 <script setup>
 import { courseService } from '~/services/courseService'
 import { Icon } from '@iconify/vue'
+import CourseCard from '~/components/learn/course/CourseCard.vue'
 
 definePageMeta({
   title: 'My Favorites',

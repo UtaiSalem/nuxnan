@@ -129,6 +129,7 @@
 import { Icon } from '@iconify/vue'
 import { ref, onMounted } from 'vue'
 import Swal from 'sweetalert2'
+import GuardianFormModal from '~/components/academy/student/GuardianFormModal.vue'
 
 const props = defineProps<{
   studentId: number
