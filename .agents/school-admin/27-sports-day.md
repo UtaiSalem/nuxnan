@@ -120,7 +120,7 @@ sports_editions                            ← งานกีฬาสี 1 ค
 |---|---|---|
 | **S-D1** | วิธีแบ่งนักเรียนเข้าคณะสี | ✅ **รองรับทั้งสุ่มและนำเข้า** — ทั้งสองโหมดต้องเดินผ่าน **เส้นทางเดียวกัน** (batch → preview → commit → undo) ไม่ใช่สองฟีเจอร์แยก |
 | **S-D2** | กี่คณะสี | ✅ **ตัดสินแล้ว 2026-08-08 — ไม่มีจำนวนตายตัว** จำนวนคณะสีกำหนดได้ **แล้วแต่สถาบันการศึกษา** และ **แล้วแต่ครั้งที่จัด** → จำนวน = จำนวนแถว `sports_edition_houses` ของครั้งนั้น (ดู §5.4) · ยัง**ห้าม seed คณะสีตัวอย่าง** · ครั้งแรกของจริง: **ปี 2569 ใช้ 4 คณะสี** |
-| **S-D3** | bracket | ⏸ ยังไม่ถึงคิว (S-S4 ขึ้นไป) |
+| **S-D3** | bracket | ✅ **ตัดสินแล้ว 2026-08-17 — รองรับครบทุกรูปแบบรวมกรีฑา** (แพ้คัดออก · พบกันหมด · ฮีตจับเวลา) พร้อมตัวสร้างคู่อัตโนมัติ · **อันดับสุดท้ายระบบเสนอ ครูกดยืนยัน** ไม่ลงคะแนนเอง · แมตช์เก็บช่อง `activity_session_id` ไว้แต่ยังไม่ทำ QR เช็คชื่อ (ดู §12) |
 | **S-D4** | นักกีฬาสมัครเอง | ⏸ ยังไม่ถึงคิว |
 | **S-D5** | คะแนนโผล่ที่ไหน | ⏸ ยังไม่ถึงคิว |
 | **S-D6** | ปีถัดไป | ✅ **แบ่งใหม่ทุกครั้งที่จัด** (เดิมเขียนว่า "ทุกปี" — ขยายความ 2026-08-08 เพราะจัดได้หลายครั้ง/ปี) → สมาชิกภาพคณะสี**ผูกกับ `sports_editions` ไม่ใช่ `academic_year_id`** · ปีการศึกษาเป็นคุณสมบัติของ edition |
@@ -175,9 +175,11 @@ $table->unique(['academic_year_id', 'student_id']);   // 1 นักเรีย
 | **S-S3b** | หน้าจอแบ่งคณะสี (เลือกโหมด → preview → commit → undo) + เมนูใน admin.vue | S-S3i | ✅ `f065ce19` |
 | **S-S3e** *(ใหม่ 2026-08-08 — แทรกก่อน S-S4)* | **หน่วย "ครั้งที่จัด"** — ตาราง `sports_editions` + `sports_edition_houses` · ย้ายคีย์ของ `house_memberships`/`house_assignment_batches` จาก `academic_year_id` → `edition_id` · projector ฉายจาก edition ที่ `active` เท่านั้น (§9) | S-S3b | ✅ `d89f9796` (backend+schema) + `2a348218` (หน้าจอ) — **ยืนยันสถานะจริง 2026-08-17** ดู §9.6 |
 | **S-S4** | schema กีฬาสี (§4) + ให้คะแนนแก่คณะสีผ่าน event log + จัดการคะแนนเท่ากัน — **ทุกตาราง key ที่ `edition_id`** | **S-S3e** | ⚪ **ไม่มีอะไรบล็อกแล้ว** (S-S3e เสร็จ) |
-| **S-S5** | บันทึกผลการแข่ง (อันดับ → คะแนนตามตาราง) + คะแนนกรรมการตามเกณฑ์ย่อย (§3) | S-S4 | ⏸ **รอ S-D3 (bracket)** |
+| **S-S5a** | schema แมตช์ (`sports_matches` + `sports_match_participants`) + CRUD คู่แข่ง + บันทึกผลรายแมตช์ (§12.2–12.3) | S-S4 | ⚪ **ไม่มีอะไรบล็อกแล้ว** (S-D3 ตัดสินแล้ว) |
+| **S-S5b** | ตัวสร้างคู่อัตโนมัติ 3 รูปแบบ + เลื่อนสายแพ้คัดออก (§12.4) | S-S5a | ⚪ |
+| **S-S5c** | ตัวเสนออันดับ + หน้ายืนยันอันดับ → ลง event log คะแนน (§12.5) | S-S5b | ⚪ |
 | **S-S6a** *(แยกใหม่ 2026-08-17)* | หน้าจอชุดแรกที่ผู้ใช้เห็นของจริง: ตารางคะแนนคณะสี · จัดการรายการแข่ง · ให้คะแนนด้วยมือ · ประวัติคะแนน/ยกเลิก — **ทำได้เลยด้วยของที่ S-S4 มีอยู่ ไม่ต้องรอ S-S5** (§11) | **S-S4** | 🟡 กำลังทำ |
-| **S-S6b** | หน้าจอตารางแข่ง/กรอกผลรายคู่ + สรุปเหรียญละเอียด | S-S5 | ⏸ |
+| **S-S6b** | หน้าจอ: ตารางแข่ง/สายการแข่ง · กรอกผลรายแมตช์ · จอยืนยันอันดับ · สรุปเหรียญละเอียด | S-S5c | ⏸ |
 | **S-S7** | อัลบั้มภาพผูกกับงาน (ต้องเพิ่ม owner ให้ `albums` หรือทำตารางใหม่ — ดู §1.3) | S-S6b | ⚪ |
 
 ---
@@ -517,3 +519,126 @@ S-S4 ให้คะแนนคณะสีได้ครบทั้ง 3 ท
 
 - `GET /score-entries` **ไม่มีการแบ่งหน้า** คืนทุกแถวของครั้งนั้น — งานจริงหนึ่งครั้งอาจมีหลายร้อยแถว หน้าจอจึงกรองฝั่ง client ไปก่อน ถ้าเริ่มช้าค่อยเพิ่ม pagination ที่ API
 - `entries()` ไม่ eager-load `houseGroup`/`awardedBy` → หน้าจอแปลงชื่อคณะสีเองจากรายชื่อกลุ่ม และยัง**ไม่แสดงว่าใครเป็นคนให้คะแนน** (ต้องเพิ่ม `with('awardedBy')` ฝั่ง API ก่อนถึงจะแสดงได้)
+
+### 11.4 ยืนยันกับ API จริงแล้ว 2026-08-17
+
+เดินครบทั้งเส้นบนเครื่อง dev ด้วยบัญชีเจ้าของโรงเรียน (ข้อมูลทดสอบขึ้นต้นด้วย `ทดสอบ-` และลบออกหมดแล้ว — ตรวจซ้ำว่า `academy_groups` กลับมา 35 แถวเท่าเดิม):
+
+| ตรวจ | ผล |
+|---|---|
+| แผง "งานกีฬาสี" ที่หน้า house-assignments | ✅ แสดงจริงหลังแก้ auto-import (ก่อนแก้ไม่มีบล็อกนี้เลย) |
+| สร้างครั้งที่จัด + เลือกคณะสีผ่านฟอร์ม | ✅ |
+| ตารางคะแนนตอนยังไม่มีคะแนน | ✅ แสดงครบทุกคณะที่ 0 อันดับ `—` ทั้งที่ API คืน `[]` |
+| สร้างรายการแข่ง 3 ประเภท | ✅ ค่าตั้งต้น 9→2 / 5→2 / เต็ม 100 ถูกทุกอัน |
+| อันดับ 1 ร่วม 2 คณะ | ✅ ได้ +9 ทั้งคู่ · ตัวอย่างคะแนนก่อนกดตรงกับที่ API คิด |
+| หักคะแนนด้วยมือ −5 | ✅ บังคับกรอกหมายเหตุก่อนถึงกดได้ |
+| void คะแนนกรรมการ 87.5 | ✅ ตัวนับเป็น "นับ 3 / ยกเลิก 1" · แถวยังอยู่ในประวัติ |
+| อันดับหลัง void | ✅ **1, 1, 3** (แดง 9 · น้ำเงิน 9 · เขียว −5) |
+| จอ 375px | ✅ ไม่มี horizontal scroll · ปุ่มของหน้านี้ ≥44px ครบ |
+
+⚠️ **กับดักของ dev server ที่เสียเวลาไป 20 นาที** — Nuxt/Vite เด้ง `504 (Outdated Optimize Dep)` หลังเพิ่มไฟล์ใหม่ ทำให้ทุกหน้าใต้ `academies/**` กลายเป็น "500 Page Not Found" ทั้งที่โค้ดไม่ผิด · แก้ด้วย `rm -rf ui/node_modules/.vite` แล้วรีสตาร์ท dev server
+
+---
+
+## 12. S-D3 + S-S5 — ตารางแข่งและผลการแข่งขัน (สเปกล็อก 2026-08-17)
+
+### 12.0 ข้อตัดสิน S-D3 (ผู้ใช้ตัดสิน 2026-08-17)
+
+| ประเด็น | ผลตัดสิน |
+|---|---|
+| **ระบบช่วยจัดตารางแข่งแค่ไหน** | ✅ **ครบทุกรูปแบบรวมกรีฑา** — แพ้คัดออก (knockout) · พบกันหมด (round-robin) · ฮีตจับเวลา (heats) · และ `none` สำหรับรายการที่กรรมการให้คะแนนล้วน |
+| **อันดับสุดท้ายมาจากไหน** | ✅ **ระบบเสนอ ครูกดยืนยัน** — ตัวเสนอคำนวณจากผลแมตช์ แต่ไม่มีแต้มไหนลง event log จนกว่าคนจะกดยืนยัน (กันเคสจริงที่ผลไม่ตรงสูตร: ทีมถอนตัว ปรับแพ้ ตัดสินใหม่) |
+| **QR เช็คชื่อนักกีฬา** | ✅ **เก็บช่อง `activity_session_id` แบบ nullable ไว้ตั้งแต่แรก แต่ยังไม่ทำหน้าจอ** → ไม่ต้องบังคับให้ edition ผูกกับ `school_events` ตอนนี้ และเติมทีหลังได้โดยไม่ต้อง migration ใหม่ |
+
+**เหตุผลที่ต้องแยกตัวเสนอออกจากตัวลงคะแนนให้ชัด** — §10.2 ล็อกไว้แล้วว่าแก้คะแนนคือ void แล้วลงใหม่ ห้าม UPDATE ทับ ถ้าให้ผลแมตช์ยิงเข้า event log อัตโนมัติ ทุกครั้งที่ครูแก้สกอร์ที่พิมพ์ผิดจะเกิดแถวคะแนนใหม่ทับกันเป็นชั้น ๆ โดยไม่มีใครสั่ง
+
+### 12.1 หลักการที่ยึด
+
+1. **แมตช์ไม่ใช่แหล่งของคะแนน** — แหล่งของคะแนนยังเป็น `sports_score_entries` เหมือนเดิม แมตช์เป็นแค่ที่มาที่อ้างกลับได้ผ่าน `ref_type`/`ref_id` ที่เตรียมไว้แล้วใน §10.1
+2. **1 แมตช์มีผู้เข้าแข่งกี่คณะก็ได้** ไม่ใช่ 2 เสมอ — ฮีตกรีฑามี 4–8 ลู่ในแมตช์เดียว ถ้าออกแบบเป็น `house_a` / `house_b` จะรองรับกรีฑาไม่ได้เลยและต้องรื้อ
+3. **เวลาเก็บเป็นจำนวนเต็มมิลลิวินาที** ไม่ใช่ float วินาที — กรีฑาตัดสินกันที่ 1/100 วินาที และ float ทำให้ 12.34 กับ 12.34 ไม่เท่ากันได้ (บทเรียนเดียวกับที่ต้อง `round()` ใน `SportsStandingsProjector`)
+4. **สถานะรายคน `dq/dns/dnf` ต้องมีตั้งแต่แรก** — ผิดกติกา/ไม่มาแข่ง/ไม่จบการแข่ง เป็นเรื่องปกติของงานกีฬา ถ้าไม่มีจะถูกยัดเป็น "เวลา 0" แล้วกลายเป็นที่ 1
+
+### 12.2 schema ใหม่ 3 ตาราง + 1 คอลัมน์
+
+```
+sports_disciplines (มีอยู่แล้ว)
+  + format enum(none|knockout|round_robin|heats) default 'none'   ← ใหม่ · บอกว่าใช้ตัวสร้างคู่/ตัวเสนออันดับตัวไหน
+
+sports_matches                        ← 1 คู่ / 1 ฮีต / 1 รอบ
+  id · edition_id FK cascade · academy_id FK cascade   ← academy_id เขียนจาก $edition เท่านั้น
+  discipline_id FK sports_disciplines cascade
+  activity_session_id nullable FK activity_sessions nullOnDelete   ← เก็บช่องไว้ ยังไม่ใช้ (S-D3)
+  round_label varchar(60) nullable      ← 'รอบแรก' 'รอบรองชนะเลิศ' 'ชิงชนะเลิศ' 'ฮีต 1'
+  round_order unsigned smallint default 0 · match_number unsigned smallint default 1
+  scheduled_at datetime nullable · location varchar(150) nullable
+  status enum(scheduled|in_progress|finished|cancelled) default 'scheduled'
+  winner_house_group_id nullable FK academy_groups nullOnDelete
+  next_match_id nullable FK sports_matches nullOnDelete   ← สายแพ้คัดออก: ผู้ชนะไปคู่ไหนต่อ
+  next_match_slot unsigned tinyint nullable               ← ไปเป็นลู่/ฝั่งที่เท่าไหร่ของคู่นั้น
+  note varchar(255) nullable · timestamps
+  index [edition_id, discipline_id, round_order]  ชื่อ sm_ed_disc_round_idx
+
+sports_match_participants             ← ใครลงแข่งในแมตช์นั้น (n คณะ ไม่ใช่ 2)
+  id · match_id FK cascade · house_group_id FK academy_groups cascade
+  slot unsigned tinyint default 1       ← ลู่/ฝั่งที่เท่าไหร่
+  score decimal(8,2) nullable           ← สกอร์ (ฟุตบอล 3-1)
+  time_ms unsigned int nullable         ← เวลา หน่วยมิลลิวินาที (ดู 12.1 ข้อ 3)
+  placing unsigned smallint nullable    ← อันดับ "ในแมตช์นี้" อันดับร่วมใส่เลขเดียวกันได้
+  status enum(ok|dq|dns|dnf) default 'ok'
+  timestamps
+  UNIQUE [match_id, house_group_id]  ชื่อ smp_match_house_unique
+  index [match_id, slot]             ชื่อ smp_match_slot_idx
+
+sports_discipline_results             ← อันดับสุดท้ายของรายการ ที่ "ยืนยันแล้ว" เท่านั้น
+  id · edition_id FK cascade · discipline_id FK cascade
+  house_group_id FK academy_groups cascade
+  placing unsigned smallint             ← อันดับร่วมใส่เลขเดียวกันได้ (S-D8)
+  source enum(suggested|manual)         ← ยืนยันตามที่ระบบเสนอ หรือครูแก้เอง
+  score_entry_id nullable FK sports_score_entries nullOnDelete  ← แต้มที่ลงจากอันดับนี้
+  confirmed_at · confirmed_by_user_id FK users · timestamps
+  UNIQUE [discipline_id, house_group_id]  ชื่อ sdr_disc_house_unique
+```
+
+⚠️ ชื่อ index ต้องสั้นและตั้งเอง (ข้อจำกัด 64 ตัวอักษรของ MySQL — บทเรียนเดิมจาก §9/§10)
+
+### 12.3 บันทึกผลรายแมตช์ (S-S5a)
+
+`PUT /matches/{match}/result` รับ `participants[]` = `{house_group_id, score?, time_ms?, placing?, status}` แล้ว:
+- เขียนทับผลของแมตช์นั้นได้ตามปกติ (**แมตช์ไม่ใช่ event log** — ที่ห้ามแก้ทับคือ `sports_score_entries` เท่านั้น)
+- ตั้ง `status='finished'` + `winner_house_group_id` = คนที่ `placing=1` (ถ้ามีคนเดียว)
+- ถ้า `next_match_id` ไม่ null → ใส่ผู้ชนะลงเป็นผู้เข้าแข่งของแมตช์ถัดไปที่ `next_match_slot` (upsert ไม่ใช่ insert ซ้ำ)
+- ⛔ **ห้ามแตะ `sports_score_entries` ในขั้นนี้เด็ดขาด**
+
+### 12.4 ตัวสร้างคู่อัตโนมัติ (S-S5b) — `app/Services/Sports/SportsFixtureGenerator.php`
+
+`POST /disciplines/{discipline}/generate-fixtures` · body: `{format, house_group_ids[], options}`
+- **ต้องปฏิเสธ 422 ถ้ารายการนั้นมีแมตช์ที่ `finished` แล้ว** (ไม่งั้นการกดปุ่มซ้ำจะล้างผลที่บันทึกไปแล้วทิ้ง) · มีแค่แมตช์ `scheduled` ให้ล้างแล้วสร้างใหม่ได้
+- `round_robin` — circle method · n คณะ → n(n−1)/2 คู่ · n คี่ใส่ bye
+- `knockout` — เติม bye ให้ครบกำลังของ 2 · สร้างทุกคู่ล่วงหน้าพร้อมผูก `next_match_id`/`next_match_slot` · option `third_place: true` สร้างคู่ชิงที่ 3
+- `heats` — option `lanes_per_heat` (ค่าตั้งต้น 8) · แบ่งคณะเป็นฮีต + สร้างรอบชิง 1 แมตช์ที่ `round_order` สูงสุด
+- `none` — 422 บอกว่ารายการรูปแบบนี้ไม่มีตารางแข่ง
+
+### 12.5 ตัวเสนออันดับ + ยืนยัน (S-S5c) — `SportsPlacingSuggester.php`
+
+`GET /disciplines/{discipline}/suggested-placings` → คืน `{house_group_id, placing, reason}` **โดยไม่เขียนอะไรลง DB เลย**
+
+| format | วิธีเสนอ |
+|---|---|
+| `knockout` | ผู้ชนะรอบชิง = 1 · ผู้แพ้รอบชิง = 2 · ผู้ชนะคู่ชิงที่ 3 = 3 (ถ้าไม่มีคู่ชิงที่ 3 → ผู้แพ้รอบรองฯ ได้ที่ 3 ร่วมทั้งคู่) |
+| `round_robin` | ชนะ 3 เสมอ 1 แพ้ 0 → เรียงแต้ม → ผลต่างสกอร์ → สกอร์ได้ · **เท่ากันทุกตัวชี้ขาด = อันดับร่วม ห้ามเดา** |
+| `heats` | เรียง `time_ms` ของแมตช์ `round_order` สูงสุด จากน้อยไปมาก · `dq/dns/dnf` ไม่ได้อันดับ |
+| `none` | ไม่เสนอ (คืน []) ครูกรอกเอง |
+
+`POST /disciplines/{discipline}/confirm-placings` · body: `{placings: [{house_group_id, placing}], source}` →
+1. เขียน `sports_discipline_results`
+2. เรียก `SportsScoringService::award()` ให้ทุกคณะ (source=`placing`) พร้อม `ref_type='sports_discipline_results'` + `ref_id`
+3. เก็บ `score_entry_id` กลับลงแถวผลลัพธ์
+4. **ยืนยันซ้ำ = void แถวคะแนนเดิมทั้งชุดก่อน แล้วลงใหม่** ห้าม UPDATE ทับ (§10.2) และ `sports_discipline_results` ต้องบันทึกว่าเป็นการยืนยันรอบใหม่
+
+### 12.6 เกณฑ์จบงานของแต่ละ shard
+
+**S-S5a** — migration รันบน MySQL จริง + `down()` คืนรูปเดิมได้ · เทสต์: แมตช์ 1 ใบมีผู้เข้าแข่ง 6 คณะได้ · `time_ms` เก็บ/อ่านกลับตรง · คณะนอก edition ถูกปฏิเสธ 422 · แมตช์ข้าม academy ได้ 404 · บันทึกผลแล้ว **ไม่มีแถวใน `sports_score_entries` เพิ่มแม้แต่แถวเดียว**
+**S-S5b** — เทสต์: round-robin 4 คณะได้ 6 คู่ · knockout 4 คณะได้ 3 คู่ (รองฯ 2 + ชิง 1) และผูก `next_match_id` ถูก · knockout 5 คณะได้ bye ที่ถูกต้อง · heats 12 คณะ 8 ลู่ = 2 ฮีต + ชิง · **กด generate ซ้ำตอนมีแมตช์ finished แล้ว = 422 ไม่ล้างผล**
+**S-S5c** — เทสต์: เสนออันดับถูกทั้ง 3 format · เสมอกันหมดใน round-robin ได้อันดับร่วม · `dq` ไม่ได้อันดับ · ยืนยันแล้วคะแนนเข้าตารางถูกตามตาราง scoring · **ยืนยันซ้ำแล้วคะแนนไม่บวกซ้ำ** (แถวเดิมถูก void) · `GET suggested-placings` ไม่เขียน DB
+ทุก shard: `./vendor/bin/pint --test` ผ่าน · ทุก route มี `academy.permission:sports.view|manage` ตาม §10.4
