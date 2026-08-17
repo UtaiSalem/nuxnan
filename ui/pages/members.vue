@@ -30,6 +30,7 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import BaseCard from '~/components/atoms/BaseCard.vue'
 
 definePageMeta({
   layout: 'main'
