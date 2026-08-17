@@ -40,6 +40,8 @@
 import { ref, reactive } from 'vue'
 import { usePublicSchools } from '~/composables/usePublicSchools'
 import SchoolSupportCard from '~/components/discovery/SchoolSupportCard.vue'
+import InputText from 'primevue/inputtext'
+import Paginator from 'primevue/paginator'
 
 const { t } = useI18n()
 useHead({ title: () => t('discoverySchools.title') })

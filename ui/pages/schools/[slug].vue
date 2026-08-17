@@ -55,6 +55,7 @@
 import { ref } from 'vue'
 import { usePublicSchools } from '~/composables/usePublicSchools'
 import AcademyDonationModal from '~/components/donation/AcademyDonationModal.vue'
+import Button from 'primevue/button'
 
 const route = useRoute()
 const { t } = useI18n()
