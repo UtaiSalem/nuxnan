@@ -55,6 +55,7 @@ use App\Http\Controllers\Api\Learn\Academy\RolloverController;
 use App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController;
 use App\Http\Controllers\Api\Learn\Academy\SchoolEventController;
 use App\Http\Controllers\Api\Learn\Academy\SportsEditionController;
+use App\Http\Controllers\Api\Learn\Academy\SportsMatchController;
 use App\Http\Controllers\Api\Learn\Academy\SportsScoringController;
 use App\Http\Controllers\Api\Learn\Academy\StaffAttendanceController;
 use App\Http\Controllers\Api\Learn\Academy\StaffController;
@@ -978,6 +979,12 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::post('/score-entries/{entry}/void', [SportsScoringController::class, 'voidEntry'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-score-entries.void');
         Route::get('/standings', [SportsScoringController::class, 'standings'])->middleware('academy.permission:sports.view')->name('api.academy.sports-standings.index');
         Route::post('/standings/rebuild', [SportsScoringController::class, 'rebuildStandings'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-standings.rebuild');
+
+        Route::get('/matches', [SportsMatchController::class, 'index'])->middleware('academy.permission:sports.view')->name('api.academy.sports-matches.index');
+        Route::post('/matches', [SportsMatchController::class, 'store'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-matches.store');
+        Route::put('/matches/{match}', [SportsMatchController::class, 'update'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-matches.update');
+        Route::delete('/matches/{match}', [SportsMatchController::class, 'destroy'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-matches.destroy');
+        Route::put('/matches/{match}/result', [SportsMatchController::class, 'recordResult'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-matches.result');
     });
 
     Route::prefix('{academy}/house-assignments')->group(function () {
