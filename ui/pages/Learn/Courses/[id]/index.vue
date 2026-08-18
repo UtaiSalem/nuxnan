@@ -290,6 +290,13 @@ const formatPrice = (price: number) => {
   }).format(price || 0)
 }
 
+// The course payload is cached in the store, so lessons created/edited from
+// another tab would otherwise show up stale here. Ask the parent to re-read it
+// on every visit — fetchCourse() still serves the cache when it is untouched.
+onMounted(() => {
+  refreshCourse?.()
+})
+
 const pendingInvitation = computed(() => {
   return course.value?.pending_invitation
 })

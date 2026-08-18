@@ -23,6 +23,7 @@ const emit = defineEmits<{
 }>()
 
 const api = useApi()
+const courseStore = useCourseStore()
 const swal = useSweetAlert()
 const config = useRuntimeConfig()
 
@@ -226,6 +227,10 @@ const handleSubmit = async () => {
     // Clear temp images after successful upload
     tempImages.value.forEach((img) => URL.revokeObjectURL(img.url))
     tempImages.value = []
+
+    // The course payload (and its lessons list) is cached in the store — drop it
+    // so the course info page shows this lesson instead of the stale copy.
+    courseStore.invalidateCourse()
 
     swal.success(props.isEdit ? 'แก้ไขบทเรียนสำเร็จ' : 'สร้างบทเรียนสำเร็จ')
     emit('submit', response)

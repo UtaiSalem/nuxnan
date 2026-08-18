@@ -50,6 +50,14 @@ export const useCourseStore = defineStore('course', () => {
     }
   }
 
+  // Drop the cache timestamp so the next fetchCourse() hits the API again.
+  // Call this after any mutation that changes what /courses/{id}/feeds returns
+  // (lessons, topics, ordering) — otherwise the course page keeps serving the
+  // stale copy for up to `cacheDuration`.
+  const invalidateCourse = () => {
+    lastFetchTime.value = null
+  }
+
   const clearCourse = () => {
     currentCourse.value = null
     academy.value = null
@@ -144,6 +152,7 @@ export const useCourseStore = defineStore('course', () => {
       const response = await api.patch(`/api/courses/${courseId}/lessons/reorder`, {
         lessons: lessonIds
       })
+      invalidateCourse()
       return response
     } catch (err: any) {
       console.error('Error reordering lessons in store:', err)
@@ -157,6 +166,7 @@ export const useCourseStore = defineStore('course', () => {
       const response = await api.patch(`/api/lessons/${lessonId}/topics/reorder`, {
         topics: topicIds
       })
+      invalidateCourse()
       return response
     } catch (err: any) {
       console.error('Error reordering topics in store:', err)
@@ -199,6 +209,7 @@ export const useCourseStore = defineStore('course', () => {
     setCourseMemberOfAuth,
     setCourseGroups,
     updateCourse,
+    invalidateCourse,
     clearCourse,
     fetchCourse,
     fetchLessons,

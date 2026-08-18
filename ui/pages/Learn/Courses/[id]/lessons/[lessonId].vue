@@ -126,6 +126,7 @@ const handleDelete = async (lessonIdToDelete: number) => {
   if (result) {
     try {
       const response = await api.delete(`/api/courses/${courseId.value}/lessons/${lessonIdToDelete}`) as any
+      courseStore.invalidateCourse()
       swal.success(response.message || 'ลบบทเรียนสำเร็จ', 'สำเร็จ')
       router.push(`/Learn/Courses/${courseId.value}/lessons`)
     } catch (err: any) {

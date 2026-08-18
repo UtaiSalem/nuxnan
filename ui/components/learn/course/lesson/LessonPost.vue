@@ -52,6 +52,7 @@ const emit = defineEmits<{
 }>()
 
 const api = useApi()
+const courseStore = useCourseStore()
 const swal = useSweetAlert()
 const route = useRoute()
 
@@ -186,6 +187,8 @@ const handleTopicSubmit = async (formData: any) => {
                 emit('refresh')
             }
         }
+        // Topic counts live on the cached course payload — refetch it next time.
+        courseStore.invalidateCourse()
         showTopicModal.value = false
     } catch (err: any) {
         console.error(err)
@@ -242,6 +245,7 @@ const deleteTopic = async (topic: any) => {
     if (result.isConfirmed) {
         try {
             await api.delete(`/api/lessons/${props.lesson.id}/topics/${topic.id}`)
+            courseStore.invalidateCourse()
             swal.toast('ลบหัวข้อเรียบร้อย', 'success')
             emit('topic-deleted', topic.id)
         } catch (err) {

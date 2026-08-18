@@ -64,6 +64,7 @@ const handleDeleteLesson = async (id: number) => {
     isDeleting.value = true
     try {
         const response = await api.delete(`/api/courses/${course.value.id}/lessons/${id}`) as any
+        courseStore.invalidateCourse()
         swal.success(response.message || 'ลบบทเรียนสำเร็จ', 'สำเร็จ')
         await fetchLessons()
     } catch (err: any) {
