@@ -56,6 +56,16 @@ const courseStore = useCourseStore()
 const swal = useSweetAlert()
 const route = useRoute()
 
+// Permalink to the lesson's own page. The card is reused on that page too, so
+// the title stays plain text there instead of linking to itself.
+const lessonLink = computed(() => {
+  const courseId = props.lesson?.course_id ?? route.params.id
+  return `/Learn/Courses/${courseId}/lessons/${props.lesson?.id}`
+})
+const isOnLessonPage = computed(
+  () => String(route.params.lessonId ?? '') === String(props.lesson?.id ?? '')
+)
+
 // Locked state logic
 const isLocked = computed(() => props.lesson?.is_locked === true)
 const accessType = computed(() => props.lesson?.access_type ?? 'free')
@@ -602,7 +612,14 @@ const publicationStatusColor = computed(() => {
       <!-- Title & Meta -->
       <div>
         <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4 leading-tight flex items-center gap-3">
-          {{ lesson.title }}
+          <NuxtLink
+            v-if="!isOnLessonPage"
+            :to="lessonLink"
+            class="min-w-0 break-words hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+          >
+            {{ lesson.title }}
+          </NuxtLink>
+          <span v-else class="min-w-0 break-words">{{ lesson.title }}</span>
           <LessonRewardBadge
             v-if="!isAdmin"
             :reward="lesson?.reward ?? null"
