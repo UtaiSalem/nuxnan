@@ -417,13 +417,6 @@ const respondToInvitation = async (accept: boolean) => {
       </div>
     </div>
 
-    <!-- Course points claim section (student-facing; widget hides itself when no campaigns are available) -->
-    <CourseSupportPanel
-      v-if="course"
-      :course="course"
-      :is-course-admin="isCourseAdmin"
-    />
-
     <!-- Curriculum Card -->
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
       <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -518,6 +511,13 @@ const respondToInvitation = async (accept: boolean) => {
       v-if="course"
       :course-id="course.id"
       :is-member="isMember"
+    />
+
+    <!-- Course points claim section (student-facing; widget hides itself when no campaigns are available) -->
+    <CourseSupportPanel
+      v-if="course"
+      :course="course"
+      :is-course-admin="isCourseAdmin"
     />
 
     <!-- Purchase Modal -->
