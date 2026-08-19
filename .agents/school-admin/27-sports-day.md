@@ -174,11 +174,11 @@ $table->unique(['academic_year_id', 'student_id']);   // 1 นักเรีย
 | **S-S3i** | **โหมดนำเข้า** — parser + matcher บนตารางและ commit path เดียวกัน (§7.6) | S-S3 | ✅ (9 เทสต์) |
 | **S-S3b** | หน้าจอแบ่งคณะสี (เลือกโหมด → preview → commit → undo) + เมนูใน admin.vue | S-S3i | ✅ `f065ce19` |
 | **S-S3e** *(ใหม่ 2026-08-08 — แทรกก่อน S-S4)* | **หน่วย "ครั้งที่จัด"** — ตาราง `sports_editions` + `sports_edition_houses` · ย้ายคีย์ของ `house_memberships`/`house_assignment_batches` จาก `academic_year_id` → `edition_id` · projector ฉายจาก edition ที่ `active` เท่านั้น (§9) | S-S3b | ✅ `d89f9796` (backend+schema) + `2a348218` (หน้าจอ) — **ยืนยันสถานะจริง 2026-08-17** ดู §9.6 |
-| **S-S4** | schema กีฬาสี (§4) + ให้คะแนนแก่คณะสีผ่าน event log + จัดการคะแนนเท่ากัน — **ทุกตาราง key ที่ `edition_id`** | **S-S3e** | ⚪ **ไม่มีอะไรบล็อกแล้ว** (S-S3e เสร็จ) |
-| **S-S5a** | schema แมตช์ (`sports_matches` + `sports_match_participants`) + CRUD คู่แข่ง + บันทึกผลรายแมตช์ (§12.2–12.3) | S-S4 | ⚪ **ไม่มีอะไรบล็อกแล้ว** (S-D3 ตัดสินแล้ว) |
-| **S-S5b** | ตัวสร้างคู่อัตโนมัติ 3 รูปแบบ + เลื่อนสายแพ้คัดออก (§12.4) | S-S5a | ⚪ |
+| **S-S4** | schema กีฬาสี (§4) + ให้คะแนนแก่คณะสีผ่าน event log + จัดการคะแนนเท่ากัน — **ทุกตาราง key ที่ `edition_id`** | **S-S3e** | ✅ `412faf8b` `9d9c7757` `e417135e` |
+| **S-S5a** | schema แมตช์ (`sports_matches` + `sports_match_participants`) + CRUD คู่แข่ง + บันทึกผลรายแมตช์ (§12.2–12.3) | S-S4 | ✅ `6d16c8c7` `5db39daa` `8b298208` (13 เทสต์) |
+| **S-S5b** | ตัวสร้างคู่อัตโนมัติ 3 รูปแบบ + เลื่อนสายแพ้คัดออก (§12.4) | S-S5a | ✅ 2026-08-20 — `SportsFixtureGenerator` + `POST .../disciplines/{discipline}/generate-fixtures` (14 เทสต์ / 64 assertion) ดู §12.7 · **ยังไม่ commit** |
 | **S-S5c** | ตัวเสนออันดับ + หน้ายืนยันอันดับ → ลง event log คะแนน (§12.5) | S-S5b | ⚪ |
-| **S-S6a** *(แยกใหม่ 2026-08-17)* | หน้าจอชุดแรกที่ผู้ใช้เห็นของจริง: ตารางคะแนนคณะสี · จัดการรายการแข่ง · ให้คะแนนด้วยมือ · ประวัติคะแนน/ยกเลิก — **ทำได้เลยด้วยของที่ S-S4 มีอยู่ ไม่ต้องรอ S-S5** (§11) | **S-S4** | 🟡 กำลังทำ |
+| **S-S6a** *(แยกใหม่ 2026-08-17)* | หน้าจอชุดแรกที่ผู้ใช้เห็นของจริง: ตารางคะแนนคณะสี · จัดการรายการแข่ง · ให้คะแนนด้วยมือ · ประวัติคะแนน/ยกเลิก — **ทำได้เลยด้วยของที่ S-S4 มีอยู่ ไม่ต้องรอ S-S5** (§11) | **S-S4** | ✅ `d3f33d0d` `b1aaaaf9` `cd9c495e` — ยืนยันกับ API จริงแล้ว ดู §11.4 |
 | **S-S6b** | หน้าจอ: ตารางแข่ง/สายการแข่ง · กรอกผลรายแมตช์ · จอยืนยันอันดับ · สรุปเหรียญละเอียด | S-S5c | ⏸ |
 | **S-S7** | อัลบั้มภาพผูกกับงาน (ต้องเพิ่ม owner ให้ `albums` หรือทำตารางใหม่ — ดู §1.3) | S-S6b | ⚪ |
 
@@ -642,3 +642,30 @@ sports_discipline_results             ← อันดับสุดท้า�
 **S-S5b** — เทสต์: round-robin 4 คณะได้ 6 คู่ · knockout 4 คณะได้ 3 คู่ (รองฯ 2 + ชิง 1) และผูก `next_match_id` ถูก · knockout 5 คณะได้ bye ที่ถูกต้อง · heats 12 คณะ 8 ลู่ = 2 ฮีต + ชิง · **กด generate ซ้ำตอนมีแมตช์ finished แล้ว = 422 ไม่ล้างผล**
 **S-S5c** — เทสต์: เสนออันดับถูกทั้ง 3 format · เสมอกันหมดใน round-robin ได้อันดับร่วม · `dq` ไม่ได้อันดับ · ยืนยันแล้วคะแนนเข้าตารางถูกตามตาราง scoring · **ยืนยันซ้ำแล้วคะแนนไม่บวกซ้ำ** (แถวเดิมถูก void) · `GET suggested-placings` ไม่เขียน DB
 ทุก shard: `./vendor/bin/pint --test` ผ่าน · ทุก route มี `academy.permission:sports.view|manage` ตาม §10.4
+
+---
+
+## 12.7 S-S5b — สิ่งที่ลงไปจริง + ข้อตัดสินที่ล็อกเพิ่ม (2026-08-20)
+
+`POST /api/academies/{academy}/sports-editions/{edition}/disciplines/{discipline}/generate-fixtures`
+middleware `academy.permission:sports.manage` · route name `api.academy.sports-fixtures.generate`
+body: `{format?, house_group_ids[], options{third_place?, lanes_per_heat?}}` — **ลำดับใน `house_group_ids` = ลำดับ seed**
+ไฟล์: `app/Services/Sports/SportsFixtureGenerator.php` (ใหม่) · `SportsMatchController::generateFixtures()` · 1 route · `tests/Feature/Sports/SportsFixtureTest.php` (14 เทสต์)
+**ไม่มี migration ใหม่** — ตารางทั้งหมดมาจาก S-S5a แล้ว
+
+### ข้อตัดสินที่ §12.4 ไม่ได้เขียนไว้ — ล็อกตอนทำ S-S5b
+
+| # | ข้อตัดสิน | เหตุผล |
+|---|---|---|
+| 1 | บล็อกการ generate ซ้ำเมื่อมีแมตช์ **status ใดก็ตามที่ไม่ใช่ `scheduled`** ไม่ใช่เฉพาะ `finished` | §12.4 เขียนว่า "มีแค่แมตช์ scheduled ให้ล้างแล้วสร้างใหม่ได้" ⇒ `in_progress`/`cancelled` ก็ต้องกัน |
+| 2 | knockout: คู่ที่เจอ bye **ไม่สร้างแมตช์** แต่ยกคณะจริงไปวางเป็นผู้เข้าแข่งของรอบถัดไปทันที | ไม่ให้มีแมตช์เปล่าที่ไม่มีใครแข่งค้างอยู่ในสาย |
+| 3 | **รอบชิงชนะเลิศ = แมตช์ที่ `round_order` สูงสุด **และ** `match_number = 1` เสมอ** · คู่ชิงที่ 3 ใช้ `round_order` เดียวกันแต่ `match_number = 2` | 🔴 **S-S5c ต้องใช้กติกานี้หาแมตช์ชิง** ห้ามหาจาก `round_order` อย่างเดียว |
+| 4 | `heats` ที่ได้ **ฮีตเดียว จะไม่สร้างรอบชิง** | S-S5c เสนออันดับจาก `time_ms` ของแมตช์ `round_order` สูงสุด — ถ้าสร้างรอบชิงเปล่าไว้ แมตช์นั้นจะว่าง แล้วเสนออันดับไม่ได้เลย |
+| 5 | `heats` แจกคณะแบบวนรอบให้ทุกฮีตจำนวนใกล้เคียงกัน (12 คณะ 8 ลู่ = 6+6 ไม่ใช่ 8+4) | ฮีตที่คนน้อยกว่ามากได้เปรียบเรื่องลู่ |
+| 6 | ถ้า body ส่ง `format` ต่างจาก `discipline->format` → เขียนทับลง discipline ด้วย **แต่ทำหลังผ่าน 422 ทุกด่านแล้วเท่านั้น** | S-S5c อ่าน `discipline->format` · และคำขอที่ถูกปฏิเสธต้องไม่ทิ้งผลข้างเคียง (มีเทสต์ล็อกไว้) |
+| 7 | ก่อน `delete()` แมตช์เดิม ต้อง `update(['next_match_id' => null])` ก่อนเสมอ | FK `sports_matches.next_match_id` ชี้ตัวเอง |
+
+### ที่ยังไม่ได้ทำ/ยังไม่ได้ทดสอบ
+- ยังไม่ได้ยิงกับ API จริง (เทสต์ทั้งหมดรันบน sqlite in-memory ตาม `phpunit.xml`)
+- ผู้แพ้รอบรองฯ **ไม่ถูกเติมอัตโนมัติ** ลงคู่ชิงที่ 3 — `recordResult` เลื่อนเฉพาะผู้ชนะ (ครูกรอกเอง) ถ้าต้องการอัตโนมัติคือขอบเขตของ S-S5c/S-S6b
+- ยังไม่มีหน้าจอ (เป็นงาน S-S6b)
