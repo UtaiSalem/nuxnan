@@ -9,6 +9,7 @@ use App\Models\SportsEdition;
 use App\Models\SportsMatch;
 use App\Models\SportsMatchParticipant;
 use App\Services\Sports\SportsFixtureGenerator;
+use App\Services\Sports\SportsPlacingSuggester;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -273,5 +274,59 @@ class SportsMatchController extends Controller
         $matches = $generator->generate($edition, $discipline, $format, $houseGroupIds, $options);
 
         return response()->json($matches, 201);
+    }
+
+    public function suggestedPlacings(
+        Academy $academy,
+        SportsEdition $edition,
+        SportsDiscipline $discipline,
+        SportsPlacingSuggester $suggester
+    ) {
+        abort_unless((int) $edition->academy_id === (int) $academy->id, 404);
+        abort_unless((int) $discipline->edition_id === (int) $edition->id, 404);
+
+        return response()->json([
+            'format' => $discipline->format,
+            'placings' => $suggester->suggest($discipline),
+        ]);
+    }
+
+    public function confirmPlacings(
+        Request $request,
+        Academy $academy,
+        SportsEdition $edition,
+        SportsDiscipline $discipline,
+        SportsPlacingSuggester $suggester
+    ) {
+        abort_unless((int) $edition->academy_id === (int) $academy->id, 404);
+        abort_unless((int) $discipline->edition_id === (int) $edition->id, 404);
+
+        $validated = $request->validate([
+            'placings' => 'required|array|min:1',
+            'placings.*.house_group_id' => 'required|integer',
+            'placings.*.placing' => 'required|integer|min:1',
+            'source' => ['nullable', Rule::in(['suggested', 'manual'])],
+        ]);
+
+        $houseGroupIds = $edition->houseGroupIds();
+        $participantsData = $validated['placings'];
+
+        $seenHouses = [];
+        foreach ($participantsData as $p) {
+            $houseId = (int) $p['house_group_id'];
+            if (! in_array($houseId, array_map('intval', $houseGroupIds), true)) {
+                abort(422, 'House is not part of this edition.');
+            }
+            if (in_array($houseId, $seenHouses, true)) {
+                abort(422, 'Duplicate house in the placing request.');
+            }
+            $seenHouses[] = $houseId;
+        }
+
+        $source = $validated['source'] ?? 'suggested';
+
+        $results = $suggester->confirm($edition, $discipline, $participantsData, $source, $request->user());
+
+        return response()->json($results);
     }
 }

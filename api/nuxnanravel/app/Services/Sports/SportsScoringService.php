@@ -45,6 +45,14 @@ class SportsScoringService
                 $entry->note = $data['note'];
             }
 
+            if (isset($data['ref_type'])) {
+                $entry->ref_type = $data['ref_type'];
+            }
+
+            if (isset($data['ref_id'])) {
+                $entry->ref_id = $data['ref_id'];
+            }
+
             if ($data['source'] === 'placing') {
                 $entry->discipline_id = $data['discipline_id'];
                 $entry->placing = $data['placing'];
