@@ -177,9 +177,9 @@ $table->unique(['academic_year_id', 'student_id']);   // 1 นักเรีย
 | **S-S4** | schema กีฬาสี (§4) + ให้คะแนนแก่คณะสีผ่าน event log + จัดการคะแนนเท่ากัน — **ทุกตาราง key ที่ `edition_id`** | **S-S3e** | ✅ `412faf8b` `9d9c7757` `e417135e` |
 | **S-S5a** | schema แมตช์ (`sports_matches` + `sports_match_participants`) + CRUD คู่แข่ง + บันทึกผลรายแมตช์ (§12.2–12.3) | S-S4 | ✅ `6d16c8c7` `5db39daa` `8b298208` (13 เทสต์) |
 | **S-S5b** | ตัวสร้างคู่อัตโนมัติ 3 รูปแบบ + เลื่อนสายแพ้คัดออก (§12.4) | S-S5a | ✅ 2026-08-20 — `SportsFixtureGenerator` + `POST .../disciplines/{discipline}/generate-fixtures` (14 เทสต์ / 64 assertion) ดู §12.7 · **ยังไม่ commit** |
-| **S-S5c** | ตัวเสนออันดับ + หน้ายืนยันอันดับ → ลง event log คะแนน (§12.5) | S-S5b | ⚪ |
+| **S-S5c** | ตัวเสนออันดับ + หน้ายืนยันอันดับ → ลง event log คะแนน (§12.5) | S-S5b | ✅ 2026-08-20 — `SportsPlacingSuggester` + `GET suggested-placings` / `POST confirm-placings` (15 เทสต์ / 64 assertion) ดู §12.8 |
 | **S-S6a** *(แยกใหม่ 2026-08-17)* | หน้าจอชุดแรกที่ผู้ใช้เห็นของจริง: ตารางคะแนนคณะสี · จัดการรายการแข่ง · ให้คะแนนด้วยมือ · ประวัติคะแนน/ยกเลิก — **ทำได้เลยด้วยของที่ S-S4 มีอยู่ ไม่ต้องรอ S-S5** (§11) | **S-S4** | ✅ `d3f33d0d` `b1aaaaf9` `cd9c495e` — ยืนยันกับ API จริงแล้ว ดู §11.4 |
-| **S-S6b** | หน้าจอ: ตารางแข่ง/สายการแข่ง · กรอกผลรายแมตช์ · จอยืนยันอันดับ · สรุปเหรียญละเอียด | S-S5c | ⏸ |
+| **S-S6b** | หน้าจอ: ตารางแข่ง/สายการแข่ง · กรอกผลรายแมตช์ · จอยืนยันอันดับ · สรุปเหรียญละเอียด | S-S5c | ⚪ **ไม่มีอะไรบล็อกแล้ว** (S-S5c เสร็จ) |
 | **S-S7** | อัลบั้มภาพผูกกับงาน (ต้องเพิ่ม owner ให้ `albums` หรือทำตารางใหม่ — ดู §1.3) | S-S6b | ⚪ |
 
 ---
@@ -669,3 +669,33 @@ body: `{format?, house_group_ids[], options{third_place?, lanes_per_heat?}}` —
 - ยังไม่ได้ยิงกับ API จริง (เทสต์ทั้งหมดรันบน sqlite in-memory ตาม `phpunit.xml`)
 - ผู้แพ้รอบรองฯ **ไม่ถูกเติมอัตโนมัติ** ลงคู่ชิงที่ 3 — `recordResult` เลื่อนเฉพาะผู้ชนะ (ครูกรอกเอง) ถ้าต้องการอัตโนมัติคือขอบเขตของ S-S5c/S-S6b
 - ยังไม่มีหน้าจอ (เป็นงาน S-S6b)
+
+---
+
+## 12.8 S-S5c — สิ่งที่ลงไปจริง + ข้อตัดสินที่ล็อกเพิ่ม (2026-08-20)
+
+`GET  /api/academies/{academy}/sports-editions/{edition}/disciplines/{discipline}/suggested-placings` (`sports.view`)
+→ `{format, placings: [{house_group_id, placing, reason}]}` · **ไม่เขียน DB เลย** (มีเทสต์ล็อกไว้)
+`POST /api/academies/{academy}/sports-editions/{edition}/disciplines/{discipline}/confirm-placings` (`sports.manage`)
+body `{placings: [{house_group_id, placing}], source?}` — `source` = `suggested` (ค่าตั้งต้น) หรือ `manual`
+
+ไฟล์: `app/Services/Sports/SportsPlacingSuggester.php` (ใหม่ — `suggest()` + `confirm()` อยู่ไฟล์เดียวตามชื่อที่ §12.5 ล็อกไว้) ·
+`SportsScoringService::award()` (+6 บรรทัด) · `SportsMatchController` (+2 เมธอด) · 2 route · `tests/Feature/Sports/SportsPlacingTest.php` (15 เทสต์)
+**ไม่มี migration ใหม่**
+
+### ข้อตัดสินที่ §12.5 ไม่ได้เขียนไว้ — ล็อกตอนทำ S-S5c
+
+| # | ข้อตัดสิน | เหตุผล |
+|---|---|---|
+| 1 | `award()` เดิม**ไม่เคยเขียน `ref_type`/`ref_id`** ทั้งที่คอลัมน์มีมาตั้งแต่ S-S4 → ต่อเติมแบบ add-only ให้รับ 2 คีย์นี้จาก `$data` | §12.5 บังคับให้แถวคะแนนผูกกลับไปหา `sports_discipline_results` ได้ |
+| 2 | ยืนยันซ้ำ = **void แถวคะแนน `source='placing'` ของรายการแข่งนั้นทั้งหมด** (รวมแถวที่ครูลงเองผ่าน `POST /score-entries`) แล้วค่อยลงชุดใหม่ | ถ้า void เฉพาะแถวที่ ref ตรง แถวที่ครูลงมือเองจะค้างและคะแนนบวกซ้ำ · ต้องเรียกผ่าน `SportsScoringService::void()` เท่านั้น เพื่อให้ `voided_by_user_id` + standings ถูกอัปเดต |
+| 3 | "บันทึกว่าเป็นการยืนยันรอบใหม่" = อัปเดต `confirmed_at` / `confirmed_by_user_id` / `score_entry_id` ของแถวเดิม | ตาราง unique ที่ `(discipline_id, house_group_id)` บังคับให้ต้อง `updateOrCreate` อยู่แล้ว · ไม่เพิ่มคอลัมน์ ไม่มี migration |
+| 4 | คณะที่หลุดจากการยืนยันรอบใหม่ → **ลบแถว `sports_discipline_results`** แต่แถวคะแนนแค่ถูก void ไม่ถูกลบ | ตารางผลลัพธ์คือ "ผลปัจจุบัน" ส่วน `sports_score_entries` คือ event log (§10.2 ห้าม DELETE) |
+| 5 | round_robin ตัดสินแพ้/ชนะตามลำดับ: `score` ทั้งสองฝั่งไม่ null → เทียบ score · ไม่งั้นใช้ `winner_house_group_id` · ไม่งั้นนับเสมอ | §12.5 ไม่ได้บอกว่าเอาผลจากไหน และแมตช์เก็บได้ทั้ง score และ winner |
+| 6 | heats: `time_ms` เป็น null = **ไม่ได้อันดับ** เหมือน `dq`/`dns`/`dnf` | จัดอันดับจากเวลาที่ไม่มีไม่ได้ |
+| 7 | รอบชิงยังไม่ `finished` หรือเสมอในรอบชิง (ไม่มี `winner_house_group_id`) → **คืน `[]`** · คู่ชิงที่ 3 ที่ยังไม่จบ → เสนอแค่อันดับ 1-2 | ห้ามเดาอันดับ (§12.5) |
+
+### ที่ยังไม่ได้ทำ/ยังไม่ได้ทดสอบ
+- ยังไม่ได้ยิงกับ API จริง (เทสต์รันบน sqlite in-memory ตาม `phpunit.xml`)
+- `confirm()` เรียก `award()` ทีละคณะ และ `award()`/`void()` สั่ง `SportsStandingsProjector::rebuild()` ทุกครั้ง ⇒ ยืนยัน n คณะ = rebuild หลายรอบ **ผลลัพธ์ถูกต้องแต่เปลืองรอบ** ถ้าช้าค่อยยุบเป็น rebuild ครั้งเดียวท้าย transaction
+- ยังไม่มีหน้าจอ — จอยืนยันอันดับเป็นงาน **S-S6b** ซึ่งตอนนี้ไม่มีอะไรบล็อกแล้ว
