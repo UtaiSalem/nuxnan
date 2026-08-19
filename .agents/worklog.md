@@ -1,5 +1,56 @@
 # Work Log — nuxnan project
 
+## 2026-08-20 — ปิด S-S5b + S-S5c · ตารางแข่งกีฬาสีครบเส้นตั้งแต่สร้างคู่ → กรอกผล → ยืนยันอันดับ → ลงคะแนน
+
+### สถานะ: **เสร็จทั้ง 2 shard · push ขึ้น `origin/main` แล้ว** (6 commit `7f4e4d93`..`61d66c34`)
+
+> backend ของกีฬาสีจบทั้งสาย เหลือแค่หน้าจอ (S-S6b) · **ไม่มี migration ใหม่ทั้ง 2 shard** ตารางมาจาก S-S4/S-S5a หมดแล้ว
+
+| ก้อน | commit |
+|---|---|
+| S-S5b — `SportsFixtureGenerator` + `POST .../disciplines/{discipline}/generate-fixtures` | `7f4e4d93` `6de76ed1` `1fe17cc5` |
+| S-S5c — `SportsPlacingSuggester` + `GET suggested-placings` / `POST confirm-placings` | `e0239a0f` `6799152f` `61d66c34` |
+
+สเปคเต็มของทั้งสอง shard + ข้อตัดสินที่ล็อกเพิ่มอยู่ที่ [`27-sports-day.md` §12.7 และ §12.8](.agents/school-admin/27-sports-day.md)
+
+#### ✅ เกณฑ์ผ่านที่รันเอง (ไม่ได้ copy จากรายงาน agy)
+
+- `SportsFixtureTest` **14 passed / 64 assertions** · `SportsPlacingTest` **15 passed / 64 assertions**
+- ของเดิมไม่พังเลย: `SportsMatchTest` 13/36 · `SportsScoring*` 23/113 · `SportsHouseLeaderboard`+`HouseAssignmentTest` 28/106
+- `./vendor/bin/pint --test` exit 0 · `git diff --stat` ฝั่งโค้ด **deletion = 0 ทั้ง 2 รอบ**
+- **revert-check 2 ครั้ง** (ยืนยันว่าเทสต์ใหม่จับของจริง ไม่ได้ผ่านลอย ๆ):
+  ถอดการย้ายลำดับ `$discipline->update()` ออก → เทสต์ `a rejected request does not change the discipline format` FAIL ·
+  ถอด loop void แถวคะแนนเดิมออก → FAIL 2 ข้อ (`confirming twice...`, `a house dropped...`)
+
+#### 🔴 กติกาที่ล็อกไว้แล้วและห้ามลืมตอนทำ S-S6b
+
+1. **รอบชิงชนะเลิศ = แมตช์ที่ `round_order` สูงสุด _และ_ `match_number = 1`** · คู่ชิงอันดับ 3 = `round_order` เดียวกันแต่ `match_number = 2`
+   หาแมตช์ชิงจาก `round_order` อย่างเดียวจะไปเจอคู่ชิงที่ 3 แทน
+2. **`POST confirm-placings` จะ void แถวคะแนน `source='placing'` ของรายการแข่งนั้นทั้งหมด** รวมแถวที่ครูลงเองผ่าน `POST /score-entries`
+   → **หน้าจอต้องเตือนก่อนกดยืนยันซ้ำ** (ตั้งใจให้เป็นแบบนี้ ไม่งั้นคะแนนบวกซ้ำ)
+3. `heats` ที่ได้ฮีตเดียวจะ **ไม่สร้างรอบชิง** — ตัวเสนออันดับอ่านจากแมตช์ `round_order` สูงสุด ถ้ามีใบว่างจะเสนอไม่ได้
+4. generate ซ้ำตอนมีแมตช์ที่ **status ไม่ใช่ `scheduled`** = 422 (กันล้างผลที่บันทึกไปแล้ว)
+
+#### บั๊กของ agy ที่ต้องแก้เอง — รอบนี้เจอจุดเดียว
+
+S-S5b: agy วาง `$discipline->update(['format' => ...])` ไว้**ก่อน**ด่าน 422 ⇒ คำขอที่ถูกปฏิเสธก็เปลี่ยนรูปแบบการแข่งไปแล้ว
+ย้ายไปหลังด่าน 422 ทุกด่าน + เพิ่มเทสต์ล็อกไว้ · **S-S5c agy ทำถูกทั้งหมด ไม่ต้องแก้เลย**
+
+### งานที่ค้างต่อจากรอบนี้
+
+- [ ] **S-S6b** — หน้าจอตารางแข่ง/สายการแข่ง · กรอกผลรายแมตช์ · จอยืนยันอันดับ · สรุปเหรียญ · **ไม่มีอะไรบล็อกแล้ว**
+- [ ] ทั้ง S-S5b/S-S5c **ยังไม่ได้ยิงกับ API จริง** — เทสต์รันบน sqlite in-memory ตาม `phpunit.xml`
+- [ ] `confirm()` สั่ง `SportsStandingsProjector::rebuild()` หลายรอบต่อการยืนยัน 1 ครั้ง (ผลถูก แต่เปลืองรอบ) ถ้าช้าค่อยยุบเป็นครั้งเดียวท้าย transaction
+- [ ] ค้างจากรอบก่อน: **14 หน้าที่ใช้ `<BaseCard>` ชื่อสั้น** · ทดสอบ `admin/sports-scores` กับ API จริง · `GET /score-entries` ยังไม่มี pagination + ไม่ eager-load `awardedBy`
+
+### งานฝั่ง course/lesson ที่ทำไว้ 2026-08-19 (ยังไม่เคยลง worklog)
+
+- `34656578` — ล้าง cache ของ course payload เมื่อบทเรียนเปลี่ยน (store + 5 จุดที่เรียกใช้)
+- `6d6b07b9` — ย้ายการ์ดสนับสนุนไปท้ายแท็บข้อมูล
+- `2bdb98ba` — ทำหัวข้อการ์ดบทเรียนให้ลิงก์ไปหน้าบทเรียนของตัวเอง
+
+---
+
 ## 2026-08-17 — S-S4 (ฐานคะแนนกีฬาสี) + S-S6a (หน้าจอคะแนน) · เจอบั๊ก auto-import ที่ทำให้ component หายเงียบ ๆ
 
 ### สถานะ: **S-S6a เสร็จ ตรวจในเบราว์เซอร์จริงที่ 375px แล้ว** · **push ขึ้น `origin/main` แล้ว** (`d3f33d0d` `b1aaaaf9` `cd9c495e`)
