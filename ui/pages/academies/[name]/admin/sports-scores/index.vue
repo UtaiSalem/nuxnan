@@ -11,6 +11,8 @@ import SportsStandingsBoard from '~/components/academy/sports/SportsStandingsBoa
 import SportsDisciplineManager from '~/components/academy/sports/SportsDisciplineManager.vue'
 import SportsScoreEntryForm from '~/components/academy/sports/SportsScoreEntryForm.vue'
 import SportsScoreLog from '~/components/academy/sports/SportsScoreLog.vue'
+import SportsMatchBoard from '~/components/academy/sports/SportsMatchBoard.vue'
+import SportsPlacingPanel from '~/components/academy/sports/SportsPlacingPanel.vue'
 import type { SportsEdition } from '~/composables/useHouseAssignments'
 import type { SportsDiscipline, SportsScoreEntry, SportsHouseStanding } from '~/composables/useSportsScoring'
 
@@ -38,7 +40,7 @@ const disciplines = ref<SportsDiscipline[]>([])
 const isLoading = ref(true)
 const isWorking = ref(false)
 const errorMessage = ref('')
-const activeTab = ref<'standings' | 'disciplines' | 'award' | 'log'>('standings')
+const activeTab = ref<'standings' | 'matches' | 'placings' | 'disciplines' | 'award' | 'log'>('standings')
 
 const canManage = computed(() => isAdmin.value || can('sports.manage'))
 
@@ -228,6 +230,23 @@ const editionStatusText = (status?: string) => {
                   ตารางคะแนน
                 </button>
                 <button
+                  class="min-h-[44px] pb-3 text-sm font-semibold transition-all border-b-2 flex items-center gap-2"
+                  :class="activeTab === 'matches' ? 'text-purple-600 border-purple-600 dark:text-purple-400 dark:border-purple-400' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300'"
+                  @click="activeTab = 'matches'"
+                >
+                  <Icon icon="fluent:trophy-24-filled" class="w-5 h-5" />
+                  ตารางแข่ง
+                </button>
+                <button
+                  v-if="canManage"
+                  class="min-h-[44px] pb-3 text-sm font-semibold transition-all border-b-2 flex items-center gap-2"
+                  :class="activeTab === 'placings' ? 'text-purple-600 border-purple-600 dark:text-purple-400 dark:border-purple-400' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300'"
+                  @click="activeTab = 'placings'"
+                >
+                  <Icon icon="fluent:checkmark-starburst-24-filled" class="w-5 h-5" />
+                  ยืนยันอันดับ
+                </button>
+                <button
                   v-if="canManage"
                   class="min-h-[44px] pb-3 text-sm font-semibold transition-all border-b-2 flex items-center gap-2"
                   :class="activeTab === 'disciplines' ? 'text-purple-600 border-purple-600 dark:text-purple-400 dark:border-purple-400' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300'"
@@ -267,6 +286,27 @@ const editionStatusText = (status?: string) => {
               :is-loading="isWorking"
               :can-manage="canManage"
               @rebuild="onRebuild"
+            />
+            
+            <SportsMatchBoard
+              v-show="activeTab === 'matches'"
+              :academy-id="academyId!"
+              :edition-id="Number(selectedEditionId)"
+              :disciplines="disciplines"
+              :houses="editionHouses"
+              :can-manage="canManage"
+              @refresh="loadAll"
+            />
+
+            <SportsPlacingPanel
+              v-if="canManage"
+              v-show="activeTab === 'placings'"
+              :academy-id="academyId!"
+              :edition-id="Number(selectedEditionId)"
+              :disciplines="disciplines"
+              :houses="editionHouses"
+              :can-manage="canManage"
+              @refresh="loadAll"
             />
             
             <template v-if="canManage">
