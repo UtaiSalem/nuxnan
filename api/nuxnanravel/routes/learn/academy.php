@@ -985,6 +985,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::put('/matches/{match}', [SportsMatchController::class, 'update'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-matches.update');
         Route::delete('/matches/{match}', [SportsMatchController::class, 'destroy'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-matches.destroy');
         Route::put('/matches/{match}/result', [SportsMatchController::class, 'recordResult'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-matches.result');
+        Route::post('/disciplines/{discipline}/generate-fixtures', [SportsMatchController::class, 'generateFixtures'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-fixtures.generate');
     });
 
     Route::prefix('{academy}/house-assignments')->group(function () {

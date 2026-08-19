@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
+use App\Models\SportsDiscipline;
 use App\Models\SportsEdition;
 use App\Models\SportsMatch;
 use App\Models\SportsMatchParticipant;
+use App\Services\Sports\SportsFixtureGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -216,5 +218,60 @@ class SportsMatchController extends Controller
         $match->load('participants');
 
         return response()->json($match);
+    }
+
+    public function generateFixtures(
+        Request $request,
+        Academy $academy,
+        SportsEdition $edition,
+        SportsDiscipline $discipline,
+        SportsFixtureGenerator $generator
+    ) {
+        abort_unless((int) $edition->academy_id === (int) $academy->id, 404);
+        abort_unless((int) $discipline->edition_id === (int) $edition->id, 404);
+
+        $validated = $request->validate([
+            'format' => ['nullable', Rule::in(['none', 'knockout', 'round_robin', 'heats'])],
+            'house_group_ids' => 'required|array|min:2',
+            'house_group_ids.*' => 'required|integer',
+            'options' => 'nullable|array',
+            'options.third_place' => 'nullable|boolean',
+            'options.lanes_per_heat' => 'nullable|integer|min:2|max:20',
+        ]);
+
+        $format = $validated['format'] ?? $discipline->format;
+        if ($format === 'none') {
+            abort(422, 'This discipline has no fixture format.');
+        }
+
+        $houseGroupIds = $validated['house_group_ids'];
+        $uniqueHouseGroupIds = array_unique($houseGroupIds);
+        if (count($houseGroupIds) !== count($uniqueHouseGroupIds)) {
+            abort(422, 'Duplicate house in the fixture request.');
+        }
+
+        $editionHouseGroupIds = $edition->houseGroupIds();
+        $editionHouseGroupIdsInt = array_map('intval', $editionHouseGroupIds);
+        foreach ($houseGroupIds as $houseId) {
+            if (! in_array((int) $houseId, $editionHouseGroupIdsInt, true)) {
+                abort(422, 'House is not part of this edition.');
+            }
+        }
+
+        $hasNotScheduledMatches = SportsMatch::where('discipline_id', $discipline->id)
+            ->where('status', '!=', 'scheduled')
+            ->exists();
+        if ($hasNotScheduledMatches) {
+            abort(422, 'This discipline already has matches that are not scheduled.');
+        }
+
+        if (isset($validated['format']) && $validated['format'] !== $discipline->format) {
+            $discipline->update(['format' => $validated['format']]);
+        }
+
+        $options = $validated['options'] ?? [];
+        $matches = $generator->generate($edition, $discipline, $format, $houseGroupIds, $options);
+
+        return response()->json($matches, 201);
     }
 }
