@@ -54,6 +54,7 @@ use App\Http\Controllers\Api\Learn\Academy\ReportController;
 use App\Http\Controllers\Api\Learn\Academy\RolloverController;
 use App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController;
 use App\Http\Controllers\Api\Learn\Academy\SchoolEventController;
+use App\Http\Controllers\Api\Learn\Academy\SportsAlbumController;
 use App\Http\Controllers\Api\Learn\Academy\SportsEditionController;
 use App\Http\Controllers\Api\Learn\Academy\SportsMatchController;
 use App\Http\Controllers\Api\Learn\Academy\SportsScoringController;
@@ -988,6 +989,15 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::post('/disciplines/{discipline}/generate-fixtures', [SportsMatchController::class, 'generateFixtures'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-fixtures.generate');
         Route::get('/disciplines/{discipline}/suggested-placings', [SportsMatchController::class, 'suggestedPlacings'])->middleware('academy.permission:sports.view')->name('api.academy.sports-placings.suggested');
         Route::post('/disciplines/{discipline}/confirm-placings', [SportsMatchController::class, 'confirmPlacings'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-placings.confirm');
+        Route::get('/albums', [SportsAlbumController::class, 'index'])->middleware('academy.permission:sports.view')->name('api.academy.sports-albums.index');
+        Route::post('/albums', [SportsAlbumController::class, 'store'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-albums.store');
+        Route::get('/albums/{album}', [SportsAlbumController::class, 'show'])->middleware('academy.permission:sports.view')->name('api.academy.sports-albums.show');
+        Route::put('/albums/{album}', [SportsAlbumController::class, 'update'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-albums.update');
+        Route::delete('/albums/{album}', [SportsAlbumController::class, 'destroy'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-albums.destroy');
+        Route::get('/albums/{album}/photos', [SportsAlbumController::class, 'photos'])->middleware('academy.permission:sports.view')->name('api.academy.sports-photos.index');
+        Route::post('/albums/{album}/photos', [SportsAlbumController::class, 'uploadPhotos'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-photos.store');
+        Route::put('/photos/{photo}', [SportsAlbumController::class, 'updatePhoto'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-photos.update');
+        Route::delete('/photos/{photo}', [SportsAlbumController::class, 'destroyPhoto'])->middleware('academy.permission:sports.manage')->name('api.academy.sports-photos.destroy');
     });
 
     Route::prefix('{academy}/house-assignments')->group(function () {
