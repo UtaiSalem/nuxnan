@@ -1,5 +1,68 @@
 # Work Log — nuxnan project
 
+## 2026-08-20 (ต่อ 2) — ปิด S-S7 · **กีฬาสีจบครบทั้ง S-S1 → S-S7** · เป็นที่แรกในเรพที่ย่อรูปได้จริง
+
+### สถานะ: **เสร็จ · push ขึ้น `origin/main` แล้ว** (6 commit `eb1c536c`..`2d430c82`)
+
+> ⚠️ **ต้องรัน `php artisan migrate` เอง ก่อนใช้งานจริง** — ดูหัวข้อ "migration ค้าง" ข้างล่าง
+
+| ก้อน | ไฟล์ |
+|---|---|
+| backend | migration 2 ตาราง · `SportsAlbum`/`SportsPhoto` · `SportsPhotoService` · `SportsAlbumController` + 9 route · 13 เทสต์ |
+| หน้าจอ | `useSportsAlbums.ts` · `SportsAlbumBoard.vue` (รายการอัลบั้ม ↔ แกลเลอรี · อัปโหลดหลายใบ · ตั้งปก/ลบ · lightbox เขียนเอง) · +แท็บที่ 7 ในหน้า `admin/sports-scores` |
+
+สเปคเต็ม + ข้อตัดสิน อยู่ที่ [`27-sports-day.md` §12.10 และ §12.10.1](.agents/school-admin/27-sports-day.md)
+
+#### ข้อตัดสินที่ผู้ใช้เลือกเอง
+1. **สร้างตารางใหม่ `sports_albums` + `sports_photos`** ไม่ต่อ owner ให้ตาราง `albums` เดิม ⇒ ความเสี่ยงต่อระบบอัลบั้มส่วนตัวของผู้ใช้ = 0 (แลกกับไม่ได้ไลก์/คอมเมนต์มาฟรี)
+2. **ย่อรูปจริงด้วย intervention/image v3** ในงานนี้เลย
+
+#### 🔴 ค้นพบสำคัญ — ทั้งเรพไม่เคยย่อรูปได้จริงเลยสักที่
+
+`PostMediaService` ที่เอกสารเดิมอ้างว่าเป็น "แม่แบบย่อรูป 2048/400" — **โค้ดย่อรูปกับ thumbnail ถูก comment ทิ้งทั้งหมด**
+`AcademyController` ก็ comment เหมือนกัน สาเหตุคือ intervention อัปเป็น v3 แล้วเลิกใช้ `Image::make()` แบบ v2
+⇒ **S-S7 คือที่แรกที่ย่อรูปได้จริง** · API ที่ใช้ได้ (ทดสอบเองบนเครื่องนี้: GD เปิด · Imagick ไม่มี):
+`new ImageManager(new Gd\Driver())` → `read()` → `scaleDown(2048,2048)` → `cover(400,400)` → `toJpeg(85)`
+**ถ้าจะทำที่อื่นต่อ ให้ลอกจาก `SportsPhotoService` ไม่ใช่จาก `PostMediaService`**
+
+#### 🔴 บั๊กหน่วยความจำ — สเปคของ Claude เองสั่งผิด
+
+สเปครอบแรกให้ **ถอดรหัสไฟล์ต้นฉบับ 2 ครั้ง** (รูปเต็มครั้งหนึ่ง thumbnail อีกครั้ง)
+⇒ รันทีละเทสต์ผ่าน แต่รันทั้งคลาสตายด้วย `Allowed memory size of 134217728 bytes exhausted` ที่ `Gd\Cloner.php`
+แก้เป็น **ถอดรหัสครั้งเดียว แล้วทำ thumbnail ต่อจากรูปที่ย่อแล้ว** + `unset($image)` ก่อนวนไฟล์ถัดไป
+⇒ ของจริงก็ดีขึ้น: อัปรูป 12MP หลายใบต่อคำขอเดียวไม่ระเบิด memory_limit ของเว็บ
+และตั้ง `<ini name="memory_limit" value="512M"/>` ใน `phpunit.xml` (งานภาพต้องการมากกว่า 128M ของ php.ini)
+
+#### ✅ เกณฑ์ผ่านที่รันเอง
+
+- `SportsAlbumTest` **13 passed / 49 assertions** · เทสต์เดิมไม่พังสักข้อ (Placing 15 · Fixture 14 · Match 13 · Scoring 23)
+- `pint --test` exit 0 (agy ส่งมาแบบ pint ไม่ผ่าน 2 ไฟล์ — รัน pint แก้เอง)
+- **375px**: `scrollWidth === 375` · ล้นขอบ 0 ชิ้น · ไม่มีปุ่ม/ช่องกรอกต่ำกว่า 44px · **1280px** ล้น 0 ชิ้น
+- `git diff` หน้าเพจ **+18 / −1** (deletion เดียวคือบรรทัด `activeTab`)
+
+#### บั๊กของ agy ที่ต้องแก้เอง 2 จุด (หน้าจอ)
+1. การ์ดรูปเป็น `<button>` ที่มี `<button>` ซ้อนข้างใน — HTML ไม่ถูกต้อง เบราว์เซอร์จัดการ event ไม่แน่นอน → `div role="button" tabindex="0"` + Enter/Space
+2. label ของ checkbox สูง 20px → ทำเป็น 44px
+
+### 🔴 migration ค้าง 2 ตัว — ต้องรันเองก่อนใช้งาน
+
+`php artisan migrate:status` บอกว่ายัง **Pending**:
+- `2026_08_17_000002_create_sports_match_tables` (ของ S-S5a ตั้งแต่ 08-17 — **ไม่เคยรันบน MySQL เลย**)
+- `2026_08_20_000001_create_sports_album_tables` (ของ S-S7)
+
+⇒ **แมตช์ / ยืนยันอันดับ / อัลบั้ม ยังไม่เคยแตะ DB จริง** เทสต์ที่เขียวทั้งหมดรันบน sqlite in-memory
+ตรวจ SQL ล่วงหน้าด้วย `php artisan migrate --pretend` แล้ว — สร้างตารางใหม่ล้วน ไม่มี ALTER ตารางเดิม ไม่แตะข้อมูล
+
+### งานที่ค้างต่อจากรอบนี้
+
+- [ ] **รัน migration แล้วทดสอบเส้นเต็มกับ API จริง** (ต้องล็อกอินเป็นแอดมิน academy):
+  สร้างตารางแข่ง → กรอกผล → ยืนยันอันดับ → ดูคะแนนขยับ → สร้างอัลบั้ม → อัปรูป → ตั้งปก → ลบรูปที่เป็นปก
+- [ ] แกลเลอรี/lightbox/อัปโหลด **ยังไม่เคยเห็นทำงานจริง** (ต้องมีข้อมูลจาก API)
+- [ ] ไม่มีโควตาพื้นที่ต่อ academy · ลบ edition แล้วไฟล์รูปบน disk ยังค้าง (FK cascade ลบแค่แถวใน DB)
+- [ ] ค้างจากรอบก่อน: 14 หน้าที่ใช้ `<BaseCard>` ชื่อสั้น · `GET /score-entries` ไม่มี pagination + ไม่ eager-load `awardedBy` · `confirm()` สั่ง rebuild standings หลายรอบต่อการยืนยัน 1 ครั้ง
+
+---
+
 ## 2026-08-20 (ต่อ) — ปิด S-S6b · **กีฬาสีครบทั้งระบบแล้ว** เหลือแค่ S-S7 (อัลบั้มภาพ)
 
 ### สถานะ: **เสร็จ · push ขึ้น `origin/main` แล้ว** (3 commit `9d7b8072` `916c2e05` `b9254800`)
