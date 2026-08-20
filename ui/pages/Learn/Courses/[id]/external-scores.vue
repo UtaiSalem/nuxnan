@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import ExternalScoreTopicsPanel from '~/components/learn/course/scores/ExternalScoreTopicsPanel.vue'
+import ExternalScoreImportModal from '~/components/learn/course/scores/ExternalScoreImportModal.vue'
+import HorizontalScrollBar from '~/components/Common/HorizontalScrollBar.vue'
+import { useExternalScoreImportService } from '~/services/externalScoreImportService'
 
 interface ScoreColumn {
   id: number
@@ -98,6 +102,7 @@ const scrollToEnd = async () => {
   await nextTick()
   if (tableContainer.value) {
     tableContainer.value.scrollLeft = tableContainer.value.scrollWidth
+    updateTableFades()
   }
 }
 
@@ -389,6 +394,42 @@ const activeColumn = computed(() => {
   return columns.value.find(c => c.id === activeColumnId.value) || null
 })
 
+const importService = useExternalScoreImportService()
+
+const showImportModal = ref(false)
+const importTopicId = ref<number | null>(null)
+const downloadingColumnId = ref<number | null>(null)
+
+const selectedGroup = computed(() => groups.value.find(g => g.id === selectedGroupId.value) ?? null)
+const groupLabel = computed(() => selectedGroup.value?.name ?? 'ทุกกลุ่มเรียน')
+
+const importTopics = computed(() => columns.value.map(c => ({
+  id: c.id, title: c.title, max_score: c.max_score,
+})))
+
+const handleDownloadTemplate = async (col: ScoreColumn) => {
+  if (!course?.value?.id) return
+  downloadingColumnId.value = col.id
+  try {
+    await importService.downloadTemplate(course.value.id, col.id, selectedGroupId.value)
+  } catch (err: any) {
+    swal.error('ผิดพลาด', err?.message || 'ดาวน์โหลดแบบฟอร์มไม่สำเร็จ')
+  } finally {
+    downloadingColumnId.value = null
+  }
+}
+
+const openImportModal = (col: ScoreColumn | null) => {
+  importTopicId.value = col?.id ?? null
+  showImportModal.value = true
+  showColumnMenu.value = false
+}
+
+const onImported = async () => {
+  showImportModal.value = false
+  await fetchTableData(selectedGroupId.value)
+}
+
 // Column stats
 const getColumnStats = (columnId: number) => {
   const scored = members.value.filter(m => m.scores[columnId]?.score !== null && m.scores[columnId]?.score !== undefined)
@@ -429,7 +470,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="space-y-4 sm:space-y-6 px-3 sm:px-4 lg:px-0 pb-6">
+  <div class="space-y-4 sm:space-y-6 -mx-4 px-2 sm:mx-0 sm:px-4 lg:px-0 pb-6">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
       <div>
@@ -455,6 +496,17 @@ onUnmounted(() => {
         </button>
       </div>
     </div>
+
+    <ExternalScoreTopicsPanel
+      :columns="columns"
+      :is-course-admin="!!isCourseAdmin"
+      :member-total="members.length"
+      :group-label="groupLabel"
+      @create="showCreateForm = true"
+      @edit="openEdit"
+      @download="handleDownloadTemplate"
+      @upload="openImportModal"
+    />
 
     <!-- Group Filter (optional - for display filtering only) -->
     <div v-if="isCourseAdmin && groups.length > 1" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 border border-gray-200 dark:border-gray-700">
@@ -518,19 +570,40 @@ onUnmounted(() => {
     </div>
 
     <!-- Matrix Table -->
-    <div v-else-if="members.length > 0" class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div v-else-if="members.length > 0" class="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div v-if="isCourseAdmin" class="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4 border-b border-gray-200 dark:border-gray-700">
+        <div class="min-w-0 flex-1 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+          <Icon icon="fluent:people-team-20-regular" class="w-5 h-5 flex-shrink-0 text-blue-500" />
+          <span class="min-w-0 break-words">
+            กำลังบันทึกคะแนนของ <span class="font-semibold">{{ groupLabel }}</span> ({{ members.length }} คน)
+          </span>
+        </div>
+        <button
+          @click="openImportModal(null)"
+          :disabled="columns.length === 0"
+          class="w-full sm:w-auto flex-shrink-0 min-h-[44px] inline-flex items-center justify-center gap-2 px-4 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 text-sm font-medium whitespace-nowrap"
+        >
+          <Icon icon="mdi:file-upload-outline" class="w-5 h-5" />
+          อัปโหลดคะแนนจากไฟล์
+        </button>
+      </div>
+      <HorizontalScrollBar
+        :target="tableContainer"
+        hint="ลากแถบนี้ หรือปัดตารางซ้าย–ขวา เพื่อดูคอลัมน์คะแนน"
+      />
       <div class="relative">
   <div v-show="showTableLeftFade" class="pointer-events-none absolute left-0 top-0 bottom-0 w-6 z-30 bg-gradient-to-r from-white dark:from-gray-800 to-transparent"></div>
   <div v-show="showTableRightFade" class="pointer-events-none absolute right-0 top-0 bottom-0 w-6 z-30 bg-gradient-to-l from-white dark:from-gray-800 to-transparent"></div>
   <div ref="tableContainer" 
-       class="relative overflow-x-auto scroll-smooth -mx-3 sm:mx-0 px-3 sm:px-0"
-       style="-webkit-overflow-scrolling: touch;">
+       class="relative overflow-x-auto scroll-smooth always-scrollbar-x"
+       style="-webkit-overflow-scrolling: touch;"
+       @scroll.passive="updateTableFades">
         <table class="w-full">
           <!-- Table Header -->
           <thead class="bg-gradient-to-r from-gray-50 via-gray-100 to-slate-100 dark:from-gray-700 dark:via-gray-800 dark:to-gray-700 border-b-2 border-gray-200 dark:border-gray-600">
             <tr class="text-center">
               <!-- Member column - STICKY LEFT -->
-              <th scope="col" class="px-6 py-4 border border-slate-300 dark:border-gray-600 font-black text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 min-w-[280px] sticky left-0 z-20">
+              <th scope="col" class="px-6 py-4 border border-slate-300 dark:border-gray-600 font-black text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-800 min-w-[280px] sm:sticky sm:left-0 sm:z-20">
                 <div class="flex items-center justify-center gap-3">
                   <div class="w-10 h-10 bg-gradient-to-br from-violet-100 to-purple-100 dark:from-violet-900 dark:to-purple-900 rounded-xl flex items-center justify-center shadow-sm">
                     <Icon icon="fluent:people-24-filled" class="w-5 h-5 text-violet-600 dark:text-violet-400" />
@@ -557,28 +630,18 @@ onUnmounted(() => {
                 </button>
               </th>
 
-              <!-- Add new column - STICKY RIGHT -->
-              <th v-if="isCourseAdmin" scope="col" class="px-3 py-4 border bg-white dark:bg-gray-800 sticky right-0 z-20">
-                <button
-                  @click="showCreateForm = true"
-                  class="flex justify-center items-center mx-auto text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl p-3 transition-all duration-300 transform hover:scale-105 shadow-sm hover:shadow-md"
-                  title="เพิ่มหัวข้อคะแนนใหม่"
-                >
-                  <Icon icon="fluent:add-circle-24-filled" width="24" height="24" />
-                </button>
-              </th>
             </tr>
           </thead>
 
           <!-- Table Body -->
-          <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
             <tr
               v-for="member in members"
               :key="member.id"
-              class="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 dark:hover:from-blue-900/20 dark:hover:to-indigo-900/20 transition-all duration-200"
+              class="odd:bg-white even:bg-slate-100 dark:odd:bg-gray-800 dark:even:bg-gray-900/60 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200"
             >
               <!-- Member info - STICKY LEFT -->
-              <td class="p-2 border border-slate-300 dark:border-gray-600 whitespace-nowrap sticky left-0 z-10 bg-white dark:bg-gray-800">
+              <td class="p-2 border border-slate-300 dark:border-gray-600 whitespace-nowrap sm:sticky sm:left-0 sm:z-10 bg-inherit">
                 <div class="flex items-center min-w-fit group">
                   <div class="relative">
                     <img
@@ -650,14 +713,11 @@ onUnmounted(() => {
                 </div>
               </td>
 
-              <!-- Empty cell for add column - STICKY RIGHT -->
-              <td v-if="isCourseAdmin" class="p-2 border border-slate-300 dark:border-gray-600 sticky right-0 z-10 bg-white dark:bg-gray-800">
-              </td>
             </tr>
 
             <!-- Empty members -->
             <tr v-if="members.length === 0">
-              <td :colspan="columns.length + (isCourseAdmin ? 2 : 1)" class="p-12 text-center">
+              <td :colspan="columns.length + 1" class="p-12 text-center">
                 <div class="flex flex-col items-center justify-center">
                   <Icon icon="fluent:people-24-regular" class="w-16 h-16 text-gray-400 dark:text-gray-600 mb-4" />
                   <p class="text-gray-500 dark:text-gray-400 font-medium">ไม่มีสมาชิกในกลุ่มนี้</p>
@@ -669,7 +729,7 @@ onUnmounted(() => {
           <!-- Table Footer: Stats -->
           <tfoot v-if="columns.length > 0 && members.length > 0" class="bg-gray-50 dark:bg-gray-700/50 border-t-2 border-gray-200 dark:border-gray-600">
             <tr>
-              <td class="px-4 py-3 border border-slate-300 dark:border-gray-600 sticky left-0 z-10 bg-gray-50 dark:bg-gray-700/50">
+              <td class="px-4 py-3 border border-slate-300 dark:border-gray-600 sm:sticky sm:left-0 sm:z-10 bg-gray-50 dark:bg-gray-700/50">
                 <span class="text-sm font-semibold text-gray-600 dark:text-gray-300">สถิติ</span>
               </td>
               <td
@@ -682,7 +742,6 @@ onUnmounted(() => {
                   <div class="font-semibold text-gray-700 dark:text-gray-200">x̄ {{ getColumnStats(col.id).avg }}</div>
                 </div>
               </td>
-              <td v-if="isCourseAdmin" class="border border-slate-300 dark:border-gray-600 sticky right-0 z-10 bg-gray-50 dark:bg-gray-700/50"></td>
             </tr>
           </tfoot>
         </table>
@@ -705,21 +764,6 @@ onUnmounted(() => {
           บันทึกทั้งหมด
         </button>
       </div>
-    </div>
-
-    <!-- Empty: no columns and no groups or group selected -->
-    <div v-else-if="!loading && columns.length === 0" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 sm:p-12 text-center">
-      <Icon icon="mdi:clipboard-text-off-outline" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-      <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">ยังไม่มีหัวข้อคะแนน</h3>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">สร้างหัวข้อเพื่อเริ่มบันทึกคะแนนจากการสอบหรือกิจกรรมนอกระบบ</p>
-      <button
-        v-if="isCourseAdmin"
-        @click="showCreateForm = true"
-        class="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
-      >
-        <Icon icon="mdi:plus" class="w-5 h-5" />
-        สร้างหัวข้อคะแนน
-      </button>
     </div>
 
     <!-- ============ COLUMN MENU POPUP ============ -->
@@ -774,6 +818,16 @@ onUnmounted(() => {
               class="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">
               <Icon icon="mdi:content-save-outline" class="w-5 h-5 text-blue-500" />
               บันทึกคะแนนหัวข้อนี้
+            </button>
+            <button @click="handleDownloadTemplate(activeColumn); closeColumnMenu()"
+              class="w-full flex items-center gap-3 px-3 py-2.5 min-h-[44px] text-sm text-gray-700 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors">
+              <Icon icon="mdi:file-download-outline" class="w-5 h-5 flex-shrink-0 text-amber-500" />
+              <span class="min-w-0 flex-1 text-left break-words">ดาวน์โหลดรายชื่อ ({{ groupLabel }})</span>
+            </button>
+            <button @click="openImportModal(activeColumn)"
+              class="w-full flex items-center gap-3 px-3 py-2.5 min-h-[44px] text-sm text-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors">
+              <Icon icon="mdi:file-upload-outline" class="w-5 h-5 flex-shrink-0 text-emerald-500" />
+              <span class="min-w-0 flex-1 text-left break-words">อัปโหลดคะแนนจากไฟล์</span>
             </button>
             <hr class="my-1 border-gray-200 dark:border-gray-700" />
             <button @click="openEdit(activeColumn)"
@@ -838,6 +892,14 @@ onUnmounted(() => {
             <div class="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm text-blue-700 dark:text-blue-300">
               <Icon icon="mdi:information-outline" class="w-5 h-5 flex-shrink-0" />
               <span>คะแนนจะถูกบันทึกให้นักเรียนทุกคนในรายวิชา</span>
+            </div>
+
+            <div class="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
+              <Icon icon="mdi:alert-circle-outline" class="w-5 h-5 flex-shrink-0 text-amber-500 mt-0.5" />
+              <p class="min-w-0 flex-1 text-xs sm:text-sm text-amber-700 dark:text-amber-300 break-words">
+                เมื่อสร้างหัวข้อนี้ คะแนนเต็มของรายวิชาจะเพิ่มขึ้น {{ createForm.max_score || 0 }} คะแนนทันที
+                และเปอร์เซ็นต์/เกรดของนักเรียนทุกคนจะถูกคำนวณใหม่ จนกว่าจะบันทึกคะแนนครบ
+              </p>
             </div>
 
             <div class="flex justify-end gap-2 pt-2">
@@ -913,5 +975,17 @@ onUnmounted(() => {
         </div>
       </div>
     </Teleport>
+
+    <ExternalScoreImportModal
+      v-if="isCourseAdmin"
+      :show="showImportModal"
+      :course-id="course?.id"
+      :topics="importTopics"
+      :initial-topic-id="importTopicId"
+      :group-id="selectedGroupId"
+      :group-name="selectedGroup?.name ?? null"
+      @close="showImportModal = false"
+      @imported="onImported"
+    />
   </div>
 </template>
