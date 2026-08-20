@@ -83,6 +83,7 @@ class CourseScoreService
             // 4. External Scores
             $externalScores = DB::table('course_external_scores')
                 ->where('course_id', $courseId)
+                ->where('is_active', true)
                 ->get(['id', 'max_score']);
             $cache['externalMax'] = (float) $externalScores->sum('max_score');
             $cache['externalScoreIds'] = $externalScores->pluck('id')->toArray();
@@ -450,7 +451,7 @@ class CourseScoreService
     public function syncCourseTotalScore(Course $course): int
     {
         $internalTotal = $this->calculateInternalTotalScore($course);
-        $externalTotal = CourseExternalScore::where('course_id', $course->id)->sum('max_score');
+        $externalTotal = CourseExternalScore::where('course_id', $course->id)->where('is_active', true)->sum('max_score');
 
         $newTotal = max(0, $internalTotal + $externalTotal);
         $course->update(['total_score' => $newTotal]);
