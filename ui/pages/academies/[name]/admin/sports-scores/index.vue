@@ -13,6 +13,7 @@ import SportsScoreEntryForm from '~/components/academy/sports/SportsScoreEntryFo
 import SportsScoreLog from '~/components/academy/sports/SportsScoreLog.vue'
 import SportsMatchBoard from '~/components/academy/sports/SportsMatchBoard.vue'
 import SportsPlacingPanel from '~/components/academy/sports/SportsPlacingPanel.vue'
+import SportsAlbumBoard from '~/components/academy/sports/SportsAlbumBoard.vue'
 import type { SportsEdition } from '~/composables/useHouseAssignments'
 import type { SportsDiscipline, SportsScoreEntry, SportsHouseStanding } from '~/composables/useSportsScoring'
 
@@ -40,7 +41,7 @@ const disciplines = ref<SportsDiscipline[]>([])
 const isLoading = ref(true)
 const isWorking = ref(false)
 const errorMessage = ref('')
-const activeTab = ref<'standings' | 'matches' | 'placings' | 'disciplines' | 'award' | 'log'>('standings')
+const activeTab = ref<'standings' | 'matches' | 'placings' | 'disciplines' | 'award' | 'log' | 'albums'>('standings')
 
 const canManage = computed(() => isAdmin.value || can('sports.manage'))
 
@@ -272,6 +273,14 @@ const editionStatusText = (status?: string) => {
                   <Icon icon="fluent:history-24-filled" class="w-5 h-5" />
                   ประวัติคะแนน
                 </button>
+                <button
+                  class="min-h-[44px] pb-3 text-sm font-semibold transition-all border-b-2 flex items-center gap-2"
+                  :class="activeTab === 'albums' ? 'text-purple-600 border-purple-600 dark:text-purple-400 dark:border-purple-400' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300'"
+                  @click="activeTab = 'albums'"
+                >
+                  <Icon icon="fluent:image-multiple-24-filled" class="w-5 h-5" />
+                  อัลบั้มภาพ
+                </button>
               </nav>
             </div>
           </div>
@@ -339,6 +348,14 @@ const editionStatusText = (status?: string) => {
               :is-loading="isWorking"
               :can-manage="canManage"
               @refresh="loadAll"
+            />
+            <SportsAlbumBoard
+              v-show="activeTab === 'albums'"
+              :academy-id="academyId!"
+              :edition-id="Number(selectedEditionId)"
+              :disciplines="disciplines"
+              :houses="editionHouses"
+              :can-manage="canManage"
             />
           </div>
         </template>
