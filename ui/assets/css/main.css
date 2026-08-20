@@ -115,6 +115,41 @@
     display: none;
   }
 
+  /* Horizontal scroll container that ALWAYS shows its scrollbar.
+     Mobile browsers use overlay scrollbars that fade out, so a wide table
+     gives the user no hint that it can be swiped. Force a persistent bar. */
+  .always-scrollbar-x {
+    scrollbar-width: thin;                       /* Firefox */
+    scrollbar-color: rgb(148 163 184) transparent;
+    padding-bottom: 2px;
+  }
+  .always-scrollbar-x::-webkit-scrollbar {
+    -webkit-appearance: none;
+    height: 10px;
+  }
+  .always-scrollbar-x::-webkit-scrollbar-track {
+    background: rgb(241 245 249);
+    border-radius: 9999px;
+  }
+  .always-scrollbar-x::-webkit-scrollbar-thumb {
+    background: rgb(148 163 184);
+    border-radius: 9999px;
+    border: 2px solid rgb(241 245 249);
+  }
+  .always-scrollbar-x::-webkit-scrollbar-thumb:hover {
+    background: rgb(100 116 139);
+  }
+  .dark .always-scrollbar-x {
+    scrollbar-color: rgb(71 85 105) transparent;
+  }
+  .dark .always-scrollbar-x::-webkit-scrollbar-track {
+    background: rgb(30 41 59);
+  }
+  .dark .always-scrollbar-x::-webkit-scrollbar-thumb {
+    background: rgb(71 85 105);
+    border-color: rgb(30 41 59);
+  }
+
   /* Full-width sections on mobile, contained on desktop */
   .mobile-full {
     @apply -mx-4 px-4 sm:mx-0 sm:px-0;
