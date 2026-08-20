@@ -54,6 +54,7 @@ use App\Http\Controllers\Api\Learn\Course\quizzes\CourseQuizQuestionController;
 use App\Http\Controllers\Api\Learn\Course\quizzes\CourseQuizResultController;
 use App\Http\Controllers\Api\Learn\Course\reviews\CourseReviewController;
 use App\Http\Controllers\Api\Learn\Course\scores\CourseExternalScoreController;
+use App\Http\Controllers\Api\Learn\Course\scores\CourseExternalScoreImportController;
 use App\Http\Controllers\Api\Learn\Course\scores\CourseScoreBreakdownController;
 use App\Http\Controllers\CoursePostShareController;
 use Illuminate\Support\Facades\Route;
@@ -477,6 +478,8 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/external-
     Route::get('/', [CourseExternalScoreController::class, 'index'])->name('course.external-scores.index');
     Route::post('/', [CourseExternalScoreController::class, 'store'])->name('course.external-scores.store');
     Route::get('/table-view/{groupId?}', [CourseExternalScoreController::class, 'tableView'])->name('course.external-scores.table-view');
+    Route::get('/import/{externalScore}/template/{groupId?}', [CourseExternalScoreImportController::class, 'template'])->name('course.external-scores.import.template');
+    Route::post('/import/{externalScore}/preview', [CourseExternalScoreImportController::class, 'preview'])->name('course.external-scores.import.preview');
     Route::get('/{externalScore}', [CourseExternalScoreController::class, 'show'])->name('course.external-scores.show');
     Route::patch('/{externalScore}', [CourseExternalScoreController::class, 'update'])->name('course.external-scores.update');
     Route::delete('/{externalScore}', [CourseExternalScoreController::class, 'destroy'])->name('course.external-scores.destroy');
