@@ -152,10 +152,7 @@ watch(
       :academy-id="academyId || 0"
       :election="election"
       @close="showEdit = false"
-      @saved="
-        showEdit = false
-        load()
-      "
+      @saved="showEdit = false; load()"
     />
   </div>
 </template>
