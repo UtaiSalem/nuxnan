@@ -6,7 +6,7 @@ export const useElections = () => {
   const openStation = (a: number, e: number, s: number) => api.call(`${base(a, e, s)}/open`, { method: 'POST' })
   const closeStation = (a: number, e: number, s: number) => api.call(`${base(a, e, s)}/close`, { method: 'POST' })
   const stationProgress = (a: number, e: number, s: number) => api.call(`${base(a, e, s)}/progress`)
-  const lookupVoter = (a: number, e: number, s: number, identifier: string) => api.call(`${base(a, e, s)}/lookup`, { method: 'POST', body: { identifier } })
+  const lookupVoter = (a: number, e: number, s: number, identifiers: string | { user_id?: number; member_code?: string }) => api.call(`${base(a, e, s)}/lookup`, { method: 'POST', body: typeof identifiers === 'string' ? { identifier: identifiers } : identifiers })
   const searchVoters = (a: number, e: number, s: number, q: string) => api.call(`${base(a, e, s)}/search?q=${encodeURIComponent(q)}`)
   const issueBallot = (a: number, e: number, s: number, userId: number) => api.call(`${base(a, e, s)}/issue`, { method: 'POST', body: { user_id: userId } })
   const voidBallot = (a: number, e: number, s: number, receiptId: number | string, reason: string) => api.call(`${base(a, e, s)}/void`, { method: 'POST', body: { receipt_id: receiptId, reason } })

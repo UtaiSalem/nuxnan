@@ -37,7 +37,7 @@ class ElectionStationService
         return $station->fresh();
     }
 
-    public function lookup(ElectionStation $station, string $identifier): array
+    public function lookup(ElectionStation $station, string $identifier = '', ?int $userId = null, ?string $memberCode = null): array
     {
         $identifier = trim($identifier);
         $election = $station->election()->firstOrFail();
@@ -47,7 +47,9 @@ class ElectionStationService
             }
             $identifier = $m[2];
         }
-        $resolved = app(StudentIdentifierResolver::class)->resolve($election->academy_id, $identifier);
+        $resolved = $userId !== null
+            ? ['user_id' => $userId, 'student_name' => null]
+            : app(StudentIdentifierResolver::class)->resolve($election->academy_id, $memberCode ?? $identifier);
         $voter = $resolved['user_id'] ? ElectionVoter::where('election_id', $election->id)->where('user_id', $resolved['user_id'])->first() : null;
         $user = $resolved['user_id'] ? User::find($resolved['user_id']) : null;
         $member = $resolved['user_id']

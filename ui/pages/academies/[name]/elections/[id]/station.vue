@@ -74,7 +74,14 @@ const search = async () => {
 }
 const selectCandidate = async (candidate: any) => {
   searchResults.value = []
-  await identify(candidate.member_code || String(candidate.user_id))
+  const args = apiArgs()
+  if (!args) return
+  error.value = ''
+  try {
+    voter.value = unwrap(await lookupVoter(...args, candidate.member_code
+      ? { member_code: String(candidate.member_code) }
+      : { user_id: Number(candidate.user_id) }))
+  } catch (e) { handleError(e) }
 }
 const issue = async () => {
   const args = apiArgs()
@@ -84,7 +91,7 @@ const issue = async () => {
     token.value = data.ballot_token
     ballotParties.value = data.parties || []
     station.value.allow_abstain = data.allow_abstain
-    seconds.value = data.ballot_ttl_seconds
+    seconds.value = Number.isFinite(Number(data.ballot_ttl_seconds)) ? Number(data.ballot_ttl_seconds) : 180
     mode.value = 'ballot'
     startTimer()
   } catch (e) { handleError(e) }
