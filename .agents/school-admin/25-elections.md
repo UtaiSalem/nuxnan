@@ -484,7 +484,7 @@ Prefix: `/api/academies/{academy}/elections`
 | **E-S8b** | **อุดผลตรวจ E-S8** — จัดสัญญาข้อมูลให้ตรงตาม §7.1 · เพิ่มปุ่มเปิด/ปิดหน่วย · แหล่งรูปจากบัตรนักเรียน · ล้างสถานะหลังลงคะแนน | E-S8 | FE + BE (`lookup`/`progress`) | 🟢 **verified 2026-08-23** (`194bbbb5` + `73d21076`) |
 | **E-S8c** | **แก้ route-model binding ของโดเมนเลือกตั้ง (§7.2)** — ตั้งชื่ออาร์กิวเมนต์ให้ตรง route parameter ทั้ง `ElectionStationController` (9 เมธอด รวม `cast`) และ `ElectionPartyController` (6 เมธอด) · เทสต์ระดับ HTTP · แยก `user_id` ออกจาก `member_code` ตอนเลือกจากผลค้นหา | E-S8b | BE + FE | 🟢 **verified 2026-08-23** (`a015b208` + `b71a9475`) — ยิง HTTP จริงแล้วได้ 200 ทุกเส้น · `cast` เพิ่มบัตรจริง 1 ใบ |
 | **E-S9** | **หน้าแอดมิน** — index + [id] 6 แท็บ + เมนูใน `admin.vue` | E-S7 | FE | 🟢 **ปิดแล้ว 2026-08-23** ผ่าน E-S9a → E-S9d2 |
-| **E-S10** | **หน้าสมัครพรรค + หน้าผลคะแนน + turnout realtime** | E-S9 | FE | ⚪ |
+| **E-S10** | **หน้าสมัครพรรค + หน้าผลคะแนน + turnout realtime** — สเปกเต็มใน §12 · แตกเป็น E-S10a (BE) / E-S10b (apply) / E-S10c (results+index) | E-S9 | BE + FE | 🟢 โค้ดครบ 2026-08-24 · **ติดบล็อกเกอร์สิทธิ์/ข้อมูล §12.6** |
 | **E-S11** | **Hardening** — throttle `/cast` และ `/issue` · กวาด receipt ค้างเป็น `expired` (scheduled) · pint + ชุดเทสต์เต็ม | E-S10 | BE | ⚪ |
 | **E-S12** | **ต่อยอด: ตั้งคณะกรรมการสภานักเรียนจากผลเลือกตั้ง** — สร้าง `AcademyGroup` type ใหม่ (`student_council`) จากพรรคที่ชนะ · **ต้องเพิ่ม type ทั้ง `AcademyGroupTypes.php` และ `ui/constants/academyGroupTypes.ts` (สองไฟล์นี้เป็น mirror กัน)** | E-S7 | BE + FE | ⚪ |
 
@@ -536,6 +536,22 @@ E-S4 เจอบั๊ก **3 รอบติด และทั้ง 3 รอ
 
 ## 10. Review Log
 
+- **2026-08-24 E-S10 (a/a2/a3 codex + b/c agy, ขนานกัน)** — claude ตรวจ → **โค้ดผ่าน แต่เมนูนี้ยังใช้จริงไม่ได้เพราะสิทธิ์กับข้อมูล** · รายละเอียดสเปก §12 · ผลตรวจ §12.6
+  - **หน้าใหม่ 3 หน้า:** `elections/index.vue` (177 บรรทัด) · `elections/[id]/apply.vue` (517) · `elections/[id]/results.vue` (401) + ลิงก์ "การเลือกตั้ง" ใน quickActions ของ dashboard นักเรียน (+6 บรรทัด ไม่มี deletion)
+  - **backend:** `GET /{e}/candidates` · `GET /{e}/parties/mine` · turnout คีย์ใหม่ · ซ่อน draft · กรองผู้สมัครตามระดับ · แยก `eligibleMembersQuery()`
+  - **claude ยิง HTTP จริงเองทุกเส้น** (สร้าง election ชั่วคราว 2 ตัวในฐาน dev แล้วลบทิ้งหมด · ฐานกลับสภาพเดิม):
+    `GET /elections` เจ้าของเห็น draft / สมาชิก view-only ไม่เห็น · `parties/mine` 200 + `data: null` ตอนยังไม่สมัคร ·
+    `candidates?q=<1 ตัว>` 422 ข้อความไทย · `candidates?q=สุ` คืน 20 แถวมีครบ 6 ฟิลด์ ไม่มี PII เกิน ·
+    `POST /parties` ด้วยบัญชีนักเรียนจริง 201 แล้ว `parties/mine` เห็นใบสมัครตัวเอง · `turnout` คีย์ใหม่ครบ ไม่มี NaN
+  - **A1 พิสูจน์ว่าไม่เปลี่ยนพฤติกรรมด้วยการรันเทียบสองรอบ** — `lock()` กับ DB จริงใน transaction ทั้งโค้ดใหม่และโค้ดเก่า (`git stash` แล้วรันซ้ำ) ได้ **ตัวเลขเท่ากันทั้ง 10 คีย์ + จำนวน query เท่ากัน** (2321 / 2193 / 0 · queries 32/34/15) แล้ว rollback
+  - **เทสต์ 139 ผ่าน (301 assertions) · pint ผ่าน** — claude รันเอง (ฐานเดิม 131/254 · เพิ่ม 8 เทสต์ยิงผ่าน route จริงทั้งหมด)
+  - 🟢 **เทสต์ method spoofing ผ่าน** — `POST /parties/{party}` พร้อม `_method=PUT` แบบ multipart เข้าเมธอด `update()` จริง → เส้นทางอัปโหลดโลโก้ตอนแก้ใบสมัครของ `apply.vue` ใช้ได้
+  - 🔴 **บล็อกเกอร์ 1 — นักเรียนไม่มี `elections.view` เลยสักคน** ยิงจริงได้ **403 `Insufficient permissions`** · role `student` (id 7) มี permission 7 ตัวไม่มี `elections.*` · และ **สมาชิกที่อนุมัติแล้ว 2,448 จาก 2,613 คนไม่มี role ผูกอยู่เลย** (`academy_role_id = NULL` → `hasPermission()` false เสมอ) · §4 เขียนว่า `elections.view` = "ทุกคนในโรงเรียน" แต่ข้อมูลจริงไม่เป็นแบบนั้น → **ทั้ง 3 หน้าใหม่เด้งนักเรียนออกหมด** · การลงคะแนนไม่กระทบเพราะ `/cast` ใช้ `ballot_token` ไม่มี permission guard
+  - 🔴 **บล็อกเกอร์ 2 — ข้อมูลประถมหายไปแล้ว** `student_academic_info` ที่ `is_current = 1` มี 2,194 แถว **เป็น `education_level = 2` ทั้งหมด ไม่มีระดับ 1 เหลือเลย** → รัน `lock()` ของการเลือกตั้งประถมได้ **total = 0 · skipped_other_level = 2193** · ตัวเลข 449 คนใน §9.1 ไม่ตรงกับข้อมูลปัจจุบันแล้ว
+  - 🟡 **codex สรุปผิดหนึ่งครั้งแล้วเกือบทำให้แก้ production ผิดจุด** — รอบ a2 รายงานว่า "เจอ production bug: สมาชิก view-only ยังเห็น draft" ที่จริงเป็น fixture ของเทสต์ตัวเอง (หยิบ `$actor` ที่มี `elections.manage` มาใช้เป็น viewer) · **ที่จับได้เพราะ claude ยิง HTTP จริงก่อนเชื่อรายงาน** · รอบ a3 แก้ fixture แล้วเขียวครบ
+  - 🟡 codex รอบแรกเขียนโค้ดครบแต่**ไม่ได้เขียนเทสต์เลยและรายงานตรง ๆ** จึงต้องแยกเป็น shard a2/a3 · agy ทั้งสองงานทำครบตามสเปกและไม่ออกนอกไฟล์ที่กำหนด
+  - **หนี้รูปแบบ:** บรรทัดยาวสุด 238 (index) / 184 (results) / 260 (apply) — ยาวกว่าเกณฑ์ ~120 แต่ทั้งหมดเป็นสตริง class ของ Tailwind
+  - **ยังไม่ได้ทำ:** เปิดหน้าจริงที่ 375px (ต้องล็อกอินด้วยบัญชีเจ้าของโปรเจค) · แก้บล็อกเกอร์ 1/2 (รอการตัดสินใจ)
 - **2026-08-23 E-S9d2** — codex ทำ, claude ตรวจ → **ผ่าน** (commit `f9340fe3`) · **หน้าแอดมินของเมนู #25 ครบทั้ง 6 แท็บแล้ว (E-S9 ปิด)**
   - **D1 ปิดแล้ว** — `publish()` เซ็ต `elections.published_at` ในทรานแซกชันเดียวกันแล้ว · **claude ยิงตามลำดับเองเพื่อยืนยัน:** `close-and-count` 200 → `GET /results` **404** (ยังไม่ประกาศ) → `publish` 200 → `GET /results` **200 พร้อมแถวผลจริง** (`votes:1 rank:1 is_winner:true` + ออบเจกต์ `party`) → ประกาศซ้ำ **422** ตามเดิม
   - **เทสต์ที่ codex เพิ่มยิงผ่าน route จริง** (`test_http_publish_exposes_results_and_rejects_republication`) ซึ่งเป็นรูปแบบที่ E-S7 ขาดไปและทำให้บั๊กนี้รอดมาสามสัปดาห์
@@ -857,3 +873,117 @@ E-S4 เจอบั๊ก **3 รอบติด และทั้ง 3 รอ
 และ `GET /results` ก็เข้าไม่ได้ในสถานะ `closed` (ตามด่าน 404) → **แอดมินมองไม่เห็นตัวเลขก่อนกดประกาศ** ซึ่งขัดกับ §11.4 ที่ระบุว่าสถานะ `closed` ต้องโชว์ผลที่แช่ไว้ + ปุ่มประกาศ
 ทางแก้ที่ไม่ต้องแตะสิทธิ์: เก็บผลจาก response ของ `closeAndCount` ไว้ใน state แทนการ reload หน้า
 
+
+---
+
+## 12. สเปก E-S10 — หน้าสมัครพรรค + หน้าผลคะแนนสาธารณะ (เขียน 2026-08-24)
+
+### 12.0 เป้าหมาย
+
+ปิดฝั่งที่ **สมาชิกทั่วไป (นักเรียน/ครู) ใช้เอง** ซึ่งยังไม่มีเลยสักหน้า — ทุกอย่างที่ทำมาถึง E-S9
+เป็นหน้าของ กกต. กับกรรมการประจำหน่วยล้วน ๆ
+
+| หน้า | path | สิทธิ์ |
+|---|---|---|
+| รวมการเลือกตั้ง (ทางเข้าของสมาชิก) | `ui/pages/academies/[name]/elections/index.vue` | `elections.view` |
+| สมัครพรรค | `.../elections/[id]/apply.vue` | `elections.view` + เป็นผู้มีสิทธิ์ |
+| ผลคะแนน + turnout สด | `.../elections/[id]/results.vue` | `elections.view` |
+
+**นอกขอบเขต:** throttle/scheduled cleanup (E-S11) · ตั้งคณะกรรมการสภาฯ (E-S12)
+
+**หน้ารวม + ลิงก์ใน dashboard นักเรียนเป็นส่วนที่เพิ่มจากสเปกเดิมใน §7** เพราะถ้าไม่มี
+สองหน้าที่ §7 สั่งไว้จะไม่มีทางเข้าถึงได้เลยจากตัวระบบ (ต้องพิมพ์ URL เอง)
+
+### 12.1 ช่องว่าง backend ที่เจอตอนเขียนสเปก (E-S10a — ต้องอุดก่อน หน้าถึงจะทำงานได้)
+
+| # | ช่องว่าง | ทำไมถึงบล็อก |
+|---|---|---|
+| **A2** | ไม่มี endpoint ค้นหาคนมาเข้าทีมพรรค | ฟอร์มสมัครต้องเลือกเพื่อนร่วมทีม แต่ `POST /parties` รับแค่ `user_id` ดิบ · `GET /members/search` ของ academy คืน PII เต็มและไม่ผูกกับสิทธิ์เลือกตั้ง → เพิ่ม `GET /{election}/candidates?q=` คืน 6 ฟิลด์เท่านั้น |
+| **A3** | ไม่มีทางดูใบสมัครของตัวเอง | `GET /{election}/parties` เป็น `elections.manage` → ผู้สมัครเปิดหน้ามาแล้วไม่รู้ว่าตัวเองสมัครไปหรือยัง/ถูกปฏิเสธเพราะอะไร → เพิ่ม `GET /{election}/parties/mine` (200 + `data: null` ถ้ายังไม่สมัคร) |
+| **A5** | `GET /elections` คืน `draft` ให้ทุกคน | นักเรียนทุกคนมี `elections.view` → เห็นการเลือกตั้งที่ยังร่างอยู่ · เช็คสิทธิ์ต้องเผื่อ **เจ้าของโรงเรียนที่ไม่มีแถวใน `academy_members`** ด้วย (`Academy::isAdmin()`) |
+
+### 12.2 🔴 บั๊กเก่าที่เจอระหว่างอ่านโค้ดรอบนี้ (ไม่ใช่ของ E-S10 แต่ต้องแก้พร้อมกัน)
+
+- **A4 — `turnout()` คำนวณเปอร์เซ็นต์ผิดความหมายมาตลอด** `ElectionResultService::turnout()` ตั้ง
+  `$total` = จำนวน **ใบเสร็จ (`election_voter_receipts`)** ไม่ใช่จำนวนผู้มีสิทธิ์ →
+  `percentage = cast / issued` ซึ่งจะเข้าใกล้ 100% เสมอเพราะคนที่รับบัตรแล้วเกือบทุกคนลงคะแนน
+  → **หน้าแอดมินโชว์ "Turnout" ที่ไม่ใช่ turnout มาตั้งแต่ E-S9** · แก้เป็น `total` = จำนวนแถวใน
+  `election_voters` และเพิ่มคีย์ `issued` ไว้แทนค่าเดิม (คีย์ `voted`/`total`/`percentage` ที่หน้าเดิมอ่านอยู่ไม่เปลี่ยนชื่อ)
+- **A6 — ใบสมัครไม่ถูกกรองตามระดับการศึกษา** `ElectionPartyService::validateMembers()` เช็คแค่ว่าเป็น
+  `AcademyMember` ที่ `status = 2` ไม่ได้ดู `elections.education_level` เลย →
+  **นักเรียนประถมสมัครในการเลือกตั้งของมัธยมได้** ทั้งที่ไม่มีสิทธิ์ลงคะแนนในครั้งนั้นด้วยซ้ำ
+  → ให้ใช้เกณฑ์ชุดเดียวกับ `lock()` ผ่านเมธอดที่แยกออกมาใหม่ `ElectionVoterRollService::eligibleMembersQuery()`
+
+### 12.3 การแบ่ง shard
+
+| shard | ขอบเขต | ไฟล์ | ส่งให้ | สถานะ |
+|---|---|---|---|---|
+| **E-S10a** | A1 แยก `eligibleMembersQuery()` · A2 `/candidates` · A3 `/parties/mine` · A4 turnout · A5 ซ่อน draft · A6 กรองระดับ + เทสต์ HTTP จริง | routes/learn/election.php · ElectionParty/Election Controller · PartyService · VoterRollService · ResultService | codex | 🟢 verified · เทสต์แยกไป E-S10a2/a3 |
+| **E-S10b** | `apply.vue` + เพิ่ม 5 ฟังก์ชันใน `useElections.ts` | 2 ไฟล์ใน `ui/` | agy | 🟢 verified (ยังไม่เปิดจอจริง) |
+| **E-S10c** | `elections/index.vue` + `results.vue` + 1 บรรทัดใน `dashboard/student.vue` | 3 ไฟล์ใน `ui/` | agy | 🟢 verified (ยังไม่เปิดจอจริง) |
+| **E-S10a2/a3** | เทสต์ 8 ตัวยิงผ่าน route จริง (a2 เขียน · a3 แก้ fixture) | tests/Feature/Election/ElectionMemberFacingTest.php | codex | 🟢 139 ผ่าน / 301 assertions |
+
+**ทำขนานกันได้ทั้งสาม** เพราะไฟล์ไม่ทับกันเลย (b ถือ `useElections.ts` คนเดียว · c ห้ามแตะไฟล์นั้น)
+b/c เขียนตาม **สัญญา API ที่ล็อกไว้ในสเปก** โดยไม่ต้องรอ a เสร็จ — และ claude ตรวจการจับคู่คีย์เองตอนท้าย
+
+### 12.4 กติกาการอัปโหลดโลโก้ (จุดที่พังง่ายที่สุดของ shard b)
+
+`useApi.call` รองรับ `FormData` อยู่แล้ว **แต่ PHP อ่าน multipart จาก `PUT` ตรง ๆ ไม่ได้** →
+ตอนแก้ใบสมัครพร้อมเปลี่ยนโลโก้ต้องยิง **`POST` ไปที่ URL ของ `PUT` พร้อม `_method=PUT` ใน FormData**
+(method spoofing ของ Laravel) · มีเทสต์ข้อ 7 ของ E-S10a คุมไว้โดยเฉพาะ
+
+### 12.5 เกณฑ์ตรวจรับ (claude ตรวจเอง ไม่เชื่อรายงาน)
+
+1. `git diff --stat` + อ่าน diff จริงทุกไฟล์ (ดูเลข deletion)
+2. **เทียบคีย์ทุกตัวที่ 3 หน้าใหม่อ่าน กับ payload จริงจาก controller** — บทเรียน §7.1
+3. ทุก endpoint ใหม่ต้องมีเทสต์ยิงผ่าน route จริง (`actingAs(...,'api')`) — บทเรียน §7.2
+4. **A1 ต้องพิสูจน์ว่าไม่เปลี่ยนพฤติกรรม**: รัน `lock()` กับ DB จริงใน transaction แล้ว rollback
+   ดู `counts` ทั้ง 10 คีย์ว่ายังได้ ~2,789 / 2,212 / 449 ตาม §9.1 (ตัวเลขเป็นบริบท **ห้ามฮาร์ดโค้ด**)
+5. `./vendor/bin/pint --test` + `php artisan test --filter Election` — **ฐาน 131 เทสต์ / 254 assertions ห้ามลดลง**
+6. `route:list --path=elections` — route ใหม่ 2 ตัวต้องมี guard
+7. เปิดจริงที่ 375px
+
+### 12.6 ผลตรวจ E-S10 — โค้ดผ่าน แต่เหลือสองบล็อกเกอร์ที่ไม่ใช่โค้ด (2026-08-24)
+
+#### 🔴 P1 — `elections.view` ไปไม่ถึงนักเรียน ทั้งเมนูจึงยังใช้จริงไม่ได้
+
+ยิงจริงด้วย JWT ของนักเรียนจริงในฐาน dev:
+```
+GET /api/academies/1/elections  →  403 {"success":false,"message":"Insufficient permissions"}
+```
+- role `student` (id 7) มี permission 7 ตัว: `academy.view, courses.view.enrolled, assignments.view.own,
+  assignments.submit, grades.view.own, schedule.view.own, announcements.view` — **ไม่มี `elections.*`**
+- **สมาชิกที่อนุมัติแล้ว 2,448 จาก 2,613 คนไม่มี role เลย** (`academy_role_id = NULL`) และ
+  `AcademyMember::hasPermission()` คืน `false` ทันทีเมื่อไม่มี role → ต่อให้เติมสิทธิ์ให้ role `student`
+  คนกลุ่มใหญ่ที่สุดก็ยังเข้าไม่ได้อยู่ดี
+- `CheckAcademyPermission` ไม่มีทางลัดให้สมาชิกทั่วไป — ผ่านได้แค่ super admin · `Academy::isAdmin()`
+  · role ที่มีสิทธิ์ · หรือ group grant
+- **ผลกระทบ:** หน้ารวม/หน้าสมัคร/หน้าผล เด้งนักเรียนออกทั้งหมด และ endpoint ทุกตัวตอบ 403
+  **การลงคะแนนไม่กระทบ** เพราะ `/cast` ไม่มี permission guard (ใช้ `ballot_token` เป็นหลักฐาน)
+- **ทางเลือก:** (ก) migration เติม `elections.view` ให้ role ที่ควรได้ **+ แก้ปัญหาสมาชิกไม่มี role**
+  · (ข) ให้ `CheckAcademyPermission` ถือว่าสมาชิก status = 2 มีสิทธิ์อ่านขั้นต่ำบางชุด (กระทบทั้งระบบ ต้องคิดให้รอบ)
+  · (ค) ใช้ group grant เฉพาะกิจตอนซ้อม §9
+  🔴 ทุกทางต้องออกเป็น **migration** ตามกติกาโปรเจค ห้ามแก้ตรงในฐาน
+
+#### 🔴 P2 — ไม่มีข้อมูลนักเรียนประถมเหลือแล้ว การเลือกตั้งประถมจะได้ผู้มีสิทธิ์ 0 คน
+
+`student_academic_info` ที่ `is_current = 1` มี **2,194 แถว และเป็น `education_level = 2` ทั้งหมด**
+รัน `lock()` จริงกับ DB (ใน transaction แล้ว rollback) ได้:
+
+| ระดับของ election | total | students | staff | skipped_other_level | staff_without_level |
+|---|---|---|---|---|---|
+| `null` (ทั้งโรงเรียน) | **2,321** | 2,193 | 128 | 0 | 0 |
+| `2` (มัธยม) | **2,193** | 2,193 | 0 | 0 | 131 |
+| `1` (ประถม) | **0** | 0 | 0 | **2,193** | 131 |
+
+→ ตัวเลข 2,789 / 2,212 / 449 ใน §9.1 **ไม่ตรงกับข้อมูลปัจจุบันแล้ว** (roster เปลี่ยนหลังขึ้นปี 2569)
+· ต้องตัดสินใจก่อนวันจริงว่าจะจัดเลือกตั้งประถมไหม ถ้าจะจัดต้องเขียน `education_level = 1` กลับเข้าไปใหม่
+· `skipped_inactive_student = 287` ทุกรอบ — สมาชิกที่อนุมัติแล้วแต่แถว `students` ไม่ active
+
+#### บทเรียนของรอบนี้
+
+- **codex สรุปผิดว่าเจอ production bug** (บอกว่าสมาชิก view-only ยังเห็น draft) ทั้งที่เป็น fixture ของ
+  เทสต์ตัวเองที่หยิบ `$actor` ซึ่งมี `elections.manage` มาใช้เป็น "viewer" — **จับได้เพราะยิง HTTP จริงก่อนเชื่อรายงาน**
+  ถ้าเชื่อตามนั้นจะไปแก้ `index()` ที่ทำงานถูกอยู่แล้วให้พังแทน
+- การ extract query ที่แตะข้อมูลทั้งโรงเรียน **พิสูจน์ด้วยการรันเทียบสองรอบ** (`git stash` โค้ดเก่ากลับมารันซ้ำ
+  แล้วเทียบ counts + จำนวน query) ได้ผลชัดกว่าการอ่าน diff อย่างเดียว — ใช้วิธีนี้ต่อไปกับทุก shard ที่แตะ `lock()`
