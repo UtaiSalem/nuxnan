@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\Learn\Course\attendances\AttendanceDetailController
 use App\Http\Controllers\Api\Learn\Course\attendances\AttendanceSimulatorController;
 use App\Http\Controllers\Api\Learn\Course\attendances\CourseAttendanceController;
 use App\Http\Controllers\Api\Learn\Course\CourseMarketplaceController;
+use App\Http\Controllers\Api\Learn\Course\groups\CourseGroupClassroomController;
 use App\Http\Controllers\Api\Learn\Course\groups\CourseGroupController;
 use App\Http\Controllers\Api\Learn\Course\groups\CourseGroupMemberController;
 use App\Http\Controllers\Api\Learn\Course\info\CourseActivityController;
@@ -113,6 +114,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses')->group(function 
     Route::delete('/{course}', [CourseController::class, 'destroy'])->name('course.destroy');
     Route::post('/{course}/duplicate', [CourseController::class, 'duplicate'])->name('course.duplicate');
     Route::get('/{course}/progress', [CourseController::class, 'progress'])->name('course.progress');
+    Route::get('/{course}/classroom-sources', [CourseGroupClassroomController::class, 'index'])->name('course.classroomSources');
     Route::get('/{course}/top-performers', [CourseController::class, 'topPerformers'])->name('course.top-performers');
     Route::get('/{course}/export/results', [CourseController::class, 'exportLearningResults'])->name('course.export.results');
     Route::post('/{course}/favorite', [CourseController::class, 'toggleFavorite'])->name('course.favorite');
@@ -155,9 +157,12 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/groups')-
     Route::get('/', [CourseGroupController::class, 'index'])->name('course.groups.index');
     Route::post('/', [CourseGroupController::class, 'store'])->name('course.groups.store');
     Route::patch('/reorder', [CourseGroupController::class, 'reorder'])->name('course.groups.reorder');
+    Route::post('/import-from-classrooms', [CourseGroupClassroomController::class, 'importFromClassrooms'])->name('course.groups.importFromClassrooms');
     Route::get('/{group}', [CourseGroupController::class, 'show'])->name('course.groups.show');
     Route::patch('/{group}', [CourseGroupController::class, 'update'])->name('course.groups.update');
     Route::delete('/{group}', [CourseGroupController::class, 'destroy'])->name('course.groups.destroy');
+    Route::put('/{group}/classrooms', [CourseGroupClassroomController::class, 'linkClassrooms'])->name('course.groups.classrooms.link');
+    Route::post('/{group}/sync-classroom', [CourseGroupClassroomController::class, 'syncClassroom'])->name('course.groups.syncClassroom');
 
     // Group Members
     Route::prefix('/{group}/members')->group(function () {
