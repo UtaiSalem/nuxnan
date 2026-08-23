@@ -425,6 +425,48 @@ Prefix: `/api/academies/{academy}/elections`
 **สิ่งที่หน้านี้ทำถูกแล้วและห้ามแก้ให้เสีย:** โหมด `ballot` ไม่แสดงชื่อผู้ลงคะแนนบนจอ · หน้า `done` ไม่ทวนว่าเลือกเบอร์อะไร · `onUnmounted` ปิดกล้อง + เคลียร์ timer · abstain ส่ง `party_id: null` ตรงกับที่ controller คาด
 
 
+---
+
+## 7.2 🔴 route-model binding ของโดเมนเลือกตั้งพัง — พิสูจน์แล้วด้วย HTTP จริง (2026-08-23)
+
+**ทั้ง §7.1 ของ claude และเทสต์ทั้ง 121 ตัวของ codex ตรวจที่ชั้น service ทั้งหมด ไม่มีใครยิงผ่าน HTTP สักครั้ง** — พอยิงจริงถึงเห็นว่าชั้น routing พังมาตั้งแต่ E-S3/E-S5
+
+### ต้นเหตุ
+
+`ImplicitRouteBinding::resolveForRoute()` ของ Laravel จับคู่ route parameter กับอาร์กิวเมนต์ **ด้วยชื่อ** (`getParameterName()` เทียบชื่อตรงหรือ snake_case) แต่สองคอนโทรลเลอร์นี้ตั้งชื่อย่อ:
+
+| คอนโทรลเลอร์ | ลายเซ็น | route parameter | ตรงกันไหม |
+|---|---|---|---|
+| `ElectionStationController` (9 เมธอด รวม `cast`) | `$a, $e, $s` | `{academy} {election} {station}` | ❌ |
+| `ElectionPartyController` (6 เมธอด) | `$a, $e, $p` | `{academy} {election} {party}` | ❌ |
+| `ElectionController` (ทุกเมธอด) | `$academy, $election` | เหมือนกัน | ✅ |
+| `ElectionVoterRollController` | เลี่ยงด้วย `Academy::findOrFail($r->route('academy'))` เอง | — | ✅ (เลี่ยงไว้แล้ว) |
+
+พอจับคู่ไม่ได้ Laravel ไม่ throw — มันข้ามไป แล้ว `RouteDependencyResolverTrait` สร้าง **อินสแตนซ์เปล่า** จาก container ยัดให้แทน
+ผลคือ `abort_if($election->academy_id !== $academy->id, 404)` กลายเป็น `null !== null` = ผ่านด่านไปเฉย ๆ แล้วไปพังหรือคืนค่าว่างที่ชั้นล่าง
+
+### ผลการยิงจริง (feature test ผ่าน `actingAs(...,'api')` บน route จริง)
+
+| endpoint | ผล |
+|---|---|
+| `POST .../stations/{s}/open` | **404** `No query results for model [Election]` · `is_open` ใน DB ยัง `false` |
+| `POST .../stations/{s}/lookup` | **404** |
+| `POST .../stations/{s}/issue` | **404** |
+| `GET .../stations/{s}/progress` | **404** |
+| `GET .../stations/{s}/search` | **200 แต่ paginator ว่าง** (ค้นใน election ที่ไม่มีตัวตน) — ผิดแบบเงียบ อันตรายกว่า 404 |
+| **`POST .../elections/{e}/cast`** | **422 "ไม่พบบัตรลงคะแนนที่ใช้งานได้" · `election_ballots` 0 แถว** → **นักเรียนลงคะแนนไม่ได้แม้ถือ token ที่ถูกต้อง** |
+| `GET .../elections/{e}/parties` | **200 แต่ `data: []`** ทั้งที่มีพรรคอยู่จริง |
+| `GET .../elections/{e}` (ตัวควบคุม, ชื่ออาร์กิวเมนต์ถูก) | **200 พร้อมข้อมูลจริง** → ยืนยันว่าปัญหาอยู่ที่ชื่ออาร์กิวเมนต์ ไม่ใช่ที่ auth/middleware/สภาพแวดล้อม |
+
+### ทำไมเทสต์ 121 ตัวจับไม่ได้
+
+- `ElectionStationTest` เรียก `app(ElectionStationService::class)->...` ตรง ๆ ทุกเคส
+- เทสต์ `progress` ที่ codex เพิ่งเพิ่ม เรียก `app(ElectionStationController::class)->progress($a, $e, (string) $station->id)` — **เรียกเมธอดตรง ๆ ข้าม routing ทั้งชั้น**
+- เทสต์ HTTP ตัวเดียวที่มี (`test_station_from_another_election_is_not_found`) คาดหวัง **404 อยู่แล้ว** → มันผ่านด้วยเหตุผลที่ผิด
+
+→ **กฎเพิ่มจากรอบนี้: ทุก endpoint ที่หน้าจอเรียกจริง ต้องมีเทสต์ที่ยิงผ่าน route จริงอย่างน้อยหนึ่งเคสที่คาดหวัง 200** เทสต์ระดับ service พิสูจน์แค่ตรรกะ ไม่ได้พิสูจน์ว่าเรียกถึง
+
+
 ## 8. Implementation Tasks
 
 | Step | Title | Depends | Deliverable | Status |
@@ -437,7 +479,8 @@ Prefix: `/api/academies/{academy}/elections`
 | **E-S6** | **ลงคะแนน (บัตรลับ)** — `/cast` ตามรูป `CampaignViewService::rewardedView()` · **ต้องมีเทสต์ยืนยันว่าไม่มีคอลัมน์ใดใน `election_ballots` ชี้กลับหาผู้ลงคะแนน** | E-S5 | controller + service + tests | 🟢 **verified 2026-07-31** |
 | **E-S7** | **ปิดหีบ + นับ + ประกาศผล** — ตรวจ invariant §2.3 ก่อนเสมอ · แช่ผลใน `election_results` · `/results` ปฏิเสธก่อน published · จัดอันดับ **พร้อมจัดการคะแนนเท่ากัน** (เมนูอื่นในระบบยังไม่มีตัวไหนทำ) | E-S6 | service + tests | 🟢 **verified 2026-07-31** |
 | **E-S8** | **หน้าหน่วยเลือกตั้ง (station.vue)** — งาน frontend ที่สำคัญที่สุด ตาม §7 | E-S6 | FE | 🔴 **ตรวจ 2026-08-23 → ไม่ผ่าน** · โค้ดขึ้นแล้ว (`4e21d176`) แต่ชื่อฟิลด์ไม่ตรงกับ backend เกือบทุกจุด → ออกบัตรไม่ได้เลยทั้ง 3 ทางเข้า ดู §7.1 + §10 |
-| **E-S8b** | **อุดผลตรวจ E-S8** — จัดสัญญาข้อมูลให้ตรงตาม §7.1 · เพิ่มปุ่มเปิด/ปิดหน่วย · เลือกหน่วยจากรายการจริง · แหล่งรูปจากบัตรนักเรียน · ล้างสถานะหลังลงคะแนน · แตกไฟล์ตาม `hopeui-port` | E-S8 | FE + BE (`lookup`/`progress`) | ⚪ **งานถัดไป** |
+| **E-S8b** | **อุดผลตรวจ E-S8** — จัดสัญญาข้อมูลให้ตรงตาม §7.1 · เพิ่มปุ่มเปิด/ปิดหน่วย · แหล่งรูปจากบัตรนักเรียน · ล้างสถานะหลังลงคะแนน | E-S8 | FE + BE (`lookup`/`progress`) | 🟡 **ตรวจ 2026-08-23 — ผ่านเฉพาะชั้น service** · สัญญาข้อมูลตรงแล้วและพิสูจน์กับ DB จริง · เทสต์ 121 ผ่าน · pint ผ่าน · **แต่หน้ายังใช้งานจริงไม่ได้ เพราะ §7.2** + เหลือบั๊กระบุตัวตนจากช่องค้นหา |
+| **E-S8c** | 🔴 **route-model binding ของโดเมนเลือกตั้งพัง (§7.2)** — `ElectionStationController` (9 เมธอด รวม `cast`) และ `ElectionPartyController` (6 เมธอด) ตั้งชื่ออาร์กิวเมนต์เป็น `$a/$e/$s/$p` ไม่ตรงกับ `{academy}/{election}/{station}/{party}` → Laravel ฉีด **โมเดลเปล่า** เข้าไปแทน · ทุก endpoint 404 หรือคืนข้อมูลว่างเงียบ ๆ **ลงคะแนนไม่ได้เลย** · แก้ชื่ออาร์กิวเมนต์ + เพิ่มเทสต์ระดับ HTTP | E-S8b | BE | ⚪ **ต้องทำก่อนใช้งานจริงทุกกรณี** |
 | **E-S9** | **หน้าแอดมิน** — index + [id] 6 แท็บ + เมนูใน `admin.vue` | E-S7 | FE | ⚪ |
 | **E-S10** | **หน้าสมัครพรรค + หน้าผลคะแนน + turnout realtime** | E-S9 | FE | ⚪ |
 | **E-S11** | **Hardening** — throttle `/cast` และ `/issue` · กวาด receipt ค้างเป็น `expired` (scheduled) · pint + ชุดเทสต์เต็ม | E-S10 | BE | ⚪ |
@@ -491,6 +534,13 @@ E-S4 เจอบั๊ก **3 รอบติด และทั้ง 3 รอ
 
 ## 10. Review Log
 
+- **2026-08-23 E-S8b** — codex ทำ, claude ตรวจ → **ผ่านเฉพาะชั้น service · หน้ายังใช้งานจริงไม่ได้** (เปิดงานต่อเป็น E-S8c)
+  - **ที่ทำได้จริงและยืนยันแล้ว** (รันกับ DB จริงใน transaction แล้ว rollback): `lookup` คืนครบ 7 คีย์ · `photo` มาจาก `student_cards.profile_image` จริง (`http://.../storage/images/students/profiles/122.jpg`) โดยคนคนนั้น `users.profile_photo_path` เป็น NULL — ตรงเป้าที่ต้องการ · `grade_level` มาแล้ว · `issue` คืน `ballot_ttl_seconds = 90` ตรงกับที่ตั้งใน election · `progress` คืน `name`/`is_open`/`location` เพิ่มโดยคีย์เดิมยังอยู่ · ฝั่งหน้า: ชื่อฟิลด์ตรงหมด · ปุ่มเปิด/ปิดหน่วยมาแล้ว · ล้างสถานะหลังลงคะแนนครบ · จอ "ไม่พบหน่วยเลือกตั้ง" มาแล้ว · ลบ `toast` ที่ตายแล้ว · ปุ่มสแกนเรียกถูกตัว · ผลค้นหาย้ายเข้ามาใน `<main>` · touch target ขึ้นเป็น 52px · บัตรเป็น `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3` แบบ mobile-first
+  - **เทสต์ 121 ผ่าน (206 assertions) · pint ผ่าน** — claude รันเองทั้งคู่ ไม่ได้อ่านจากรายงาน
+  - 🔴 **แต่พอยิงผ่าน HTTP จริงเป็นครั้งแรก พบว่าทั้งโดเมนนี้เรียกไม่ถึงคอนโทรลเลอร์ที่ถูกต้อง** — ดู §7.2 · `open`/`lookup`/`issue`/`progress` = 404 · `cast` = 422 และไม่มีบัตรเกิดขึ้น · `search`/`parties` = 200 แต่ข้อมูลว่างเงียบ ๆ · **นี่คือช่องว่างของสเปกที่ claude เขียนเอง** — §7.1 ตรวจที่ชั้น service เหมือนกับที่ codex ทำ จึงมองไม่เห็นชั้น routing ทั้งชั้น
+  - 🔴 **บั๊กระบุตัวตนที่ต้องแก้ก่อนวันจริง:** `selectCandidate()` ส่ง `candidate.member_code || String(candidate.user_id)` เข้า `lookup` · `StudentIdentifierResolver` ตีความเลขล้วนเป็น **member_code** → คนที่ไม่มี member_code (4 คน) จะถูกค้นด้วย user_id แล้ว **ไปเจอคนอื่น** · ยืนยันกับข้อมูลจริง: member_code อยู่ในช่วง 48–12,848 ส่วน user_id 2–17,501 และ **มีอยู่แล้ว 1 คนที่ user_id ของตัวเองไปตรงกับ member_code ของคนอื่น** → ที่หน่วยเลือกตั้งแปลว่าอาจออกบัตรให้ผิดคน
+  - 🟡 ค้างเล็ก ๆ: ไม่มีเทสต์ยืนยันว่า `photo` เลือกจากบัตรก่อน (เทสต์ใหม่เช็คแค่ `arrayHasKey`) · `seconds.value = data.ballot_ttl_seconds` ไม่มี fallback ถ้าคีย์หาย จะเป็น NaN · `progress()` เปลี่ยนลายเซ็นเป็น `string $station` ต่างจากเมธอดพี่น้องโดยไม่จำเป็น (จะหายไปเองเมื่อทำ E-S8c) · template ยังเป็นบรรทัดยาวมากอยู่หลายจุด
+  - codex **ไม่ได้ commit** ให้ตามที่สั่ง (ทิ้งไว้ใน working tree)
 - **2026-08-23 E-S8** — claude ตรวจ (โค้ดมาจาก `4e21d176` เมื่อ 2026-08-01 ซึ่งไม่เคยมีใครตรวจ) → **ไม่ผ่าน ส่งกลับเป็น E-S8b**
   - **วิธีตรวจ:** ไม่เชื่อทั้ง commit message และตาราง — สร้าง election + หน่วย + พรรค + ผู้มีสิทธิ์จริงใน transaction แล้วเรียก `ElectionStationService::lookup()/issue()/searchByName()` ตรง ๆ พิมพ์คีย์ที่ได้จริงมาเทียบกับสิ่งที่หน้าอ่านทีละตัว แล้ว `rollBack()` (ตารางกลับเป็น 0 แถว)
   - **ผลรวม: หน้านี้ออกบัตรเลือกตั้งไม่ได้เลยสักทางเดียว** — `lookup` ส่ง `status` แต่หน้าเช็ค `voter.status_code` ซึ่งเป็น `undefined` เสมอ → ปุ่ม "ออกบัตรเลือกตั้ง" ไม่ถูก render และ `issue()` ก็ `return` ออกก่อนถึง API · ทางค้นหาด้วยชื่อก็ตายด้วยเหตุผลเดียวกัน (แถว `election_voters` ไม่มีคอลัมน์ `status_code`)
@@ -548,6 +598,8 @@ E-S4 เจอบั๊ก **3 รอบติด และทั้ง 3 รอ
 **นอกขอบเขต:** หน้าสมัครพรรคของนักเรียน · หน้าผลคะแนนสาธารณะ (ทั้งคู่เป็น E-S10) · throttle/scheduled cleanup (E-S11)
 
 **ข้อบังคับก่อนเริ่ม:** E-S8b ต้องจบก่อน เพราะแท็บ "หน่วย" ต้องแจกลิงก์ `?station=` ให้หน้าหน่วยเลือกตั้ง และสองงานนี้แก้ `progress`/`lookup` ชุดเดียวกัน
+
+🔴 **และ E-S8c ต้องจบก่อนด้วย (§7.2)** — `ElectionPartyController` ทั้ง 6 เมธอดโดนบั๊ก route-model binding ตัวเดียวกัน → ตอนนี้ `GET /parties` คืน `data: []` เสมอแม้มีพรรคอยู่จริง · ถ้าเริ่มแท็บ "พรรค" ก่อนแก้ จะไล่หาสาเหตุผิดทางแน่นอน
 
 ### 11.1 ไฟล์ที่ต้องมี
 
@@ -629,6 +681,7 @@ E-S4 เจอบั๊ก **3 รอบติด และทั้ง 3 รอ
 
 1. `git diff --stat` + อ่าน diff จริงทุกไฟล์ (ดูเลข deletion — กันเคส "ย้ายของดีทิ้งเวอร์ชันตัดฟีเจอร์" แบบ A-S4)
 2. **เทียบคีย์ทุกตัวที่หน้าอ่าน กับ payload จริงจาก controller** — บทเรียนตรงจาก E-S8 §7.1 · ห้ามผ่านด้วย build เขียวอย่างเดียว
+2b. **ทุก endpoint ที่หน้าเรียก ต้องมีเทสต์ยิงผ่าน route จริง (`actingAs(...,'api')->getJson/postJson`) อย่างน้อยหนึ่งเคสที่คาดหวัง 200** — บทเรียนจาก §7.2 ที่เทสต์ระดับ service 121 ตัวจับไม่ได้เลย
 3. เดินครบหนึ่งวงจรกับ **DB จริงใน transaction แล้ว rollback**: สร้าง → พรรค 3 พรรค → อนุมัติ+ให้เบอร์ → ล็อกบัญชี (ดูตัวเลขจริง ~2,789 คน + จำนวน query/memory ตามกฎ §8) → เปิดหน่วย → ออกบัตร+ลงคะแนน 3 ใบ → ปิดหีบ → ประกาศ → เปิดทั้ง 6 แท็บ
 4. แท็บ "บันทึก" ต้องเห็นครบทุก action ที่เพิ่งทำในข้อ 3 (พิสูจน์ว่า G2 ปิดจริง)
 5. `route:list --json` — route ใหม่ของ G1 ต้องมี guard
