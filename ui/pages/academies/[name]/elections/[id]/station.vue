@@ -29,6 +29,8 @@ const token = ref('')
 const selected = ref<any>(null)
 const seconds = ref(180)
 let timer: ReturnType<typeof setInterval> | undefined
+const rateLimitSeconds = ref(0)
+let rateLimitTimer: ReturnType<typeof setInterval> | undefined
 const video = ref<HTMLVideoElement>()
 const canvas = ref<HTMLCanvasElement>()
 
@@ -42,6 +44,20 @@ const imageUrl = (path: string | null) => {
   return `${config.public.apiBase}${path.startsWith('/') ? '' : '/storage/'}${path}`
 }
 const handleError = (e: any) => {
+  clearInterval(rateLimitTimer)
+  rateLimitSeconds.value = 0
+  if (e?.statusCode === 429 || e?.status === 429 || e?.response?.status === 429) {
+    error.value = t('elections.station.rateLimit')
+    rateLimitSeconds.value = e?.data?.retry_after || parseInt(e?.response?.headers?.['retry-after']) || 12
+    rateLimitTimer = setInterval(() => {
+      rateLimitSeconds.value -= 1
+      if (rateLimitSeconds.value <= 0) {
+        clearInterval(rateLimitTimer)
+        if (error.value === t('elections.station.rateLimit')) error.value = ''
+      }
+    }, 1000)
+    return null
+  }
   error.value = e?.data?.message || e?.message || 'เกิดข้อผิดพลาด'
   return null
 }
@@ -179,7 +195,7 @@ onMounted(async () => {
     await refresh()
   } catch (e) { handleError(e) }
 })
-onUnmounted(() => { stopScanning(); clearInterval(timer) })
+onUnmounted(() => { stopScanning(); clearInterval(timer); clearInterval(rateLimitTimer) })
 const statusClass = computed(() => voter.value?.status === 'eligible' ? 'text-emerald-600' : 'text-amber-600')
 </script>
 
@@ -204,7 +220,15 @@ const statusClass = computed(() => voter.value?.status === 'eligible' ? 'text-em
       </section>
       <section v-else-if="mode === 'ballot'" class="mx-auto max-w-5xl py-10"><div class="mb-8 flex items-center justify-between gap-4"><h2 class="text-3xl font-bold">{{ t('elections.station.ballotHeading') }}</h2><span class="shrink-0 rounded-full bg-amber-100 px-4 py-2 font-bold text-amber-800">{{ seconds }}s</span></div><div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"><button v-for="party in ballotParties" :key="party.id" class="rounded-2xl bg-white p-5 text-left shadow-sm dark:bg-slate-900" @click="choose(party)"><div class="flex items-center gap-3"><span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-100 text-2xl font-bold text-primary-700">{{ party.number }}</span><img v-if="party.logo_path" :src="imageUrl(party.logo_path) || undefined" class="h-12 w-12 rounded-lg object-contain" /></div><p class="mt-5 text-xl font-bold">{{ party.name }}</p></button><button v-if="station.allow_abstain !== false" class="min-h-[100px] rounded-2xl border-2 border-dashed border-slate-300 p-5 text-xl font-bold dark:border-slate-700" @click="choose({ id: null })">{{ t('elections.station.abstain') }}</button></div><div v-if="selected" class="fixed inset-x-4 bottom-4 mx-auto max-w-xl rounded-2xl bg-white p-5 shadow-2xl dark:bg-slate-900"><p class="text-center">{{ t('elections.station.confirmPrompt') }}</p><div class="mt-4 flex gap-3"><button class="min-h-[44px] flex-1 rounded-xl border px-4 py-3" @click="selected = null">{{ t('common.cancel') }}</button><button class="min-h-[44px] flex-1 rounded-xl bg-primary-600 px-4 py-3 font-semibold text-white" @click="cast">{{ t('common.confirm') }}</button></div></div></section>
       <section v-else class="flex min-h-[calc(100vh-8rem)] items-center justify-center"><div class="text-center"><Icon icon="lucide:check-circle-2" class="mx-auto text-7xl text-emerald-500" /><h2 class="mt-6 text-3xl font-bold">{{ t('elections.station.castSuccess') }}</h2></div></section>
-      <p v-if="error" class="fixed bottom-4 left-4 right-4 mx-auto max-w-xl rounded-xl bg-rose-100 p-4 text-center text-rose-800">{{ error }}</p>
+      <div v-if="error" :class="[selected ? 'bottom-40' : 'bottom-4']" class="fixed left-4 right-4 z-50 mx-auto flex max-w-xl items-center justify-between gap-3 rounded-xl bg-rose-100 p-4 text-rose-800 shadow-lg">
+        <div class="min-w-0 flex-1 break-words">
+          <p class="font-medium">{{ error }}</p>
+          <p v-if="rateLimitSeconds > 0" class="mt-1 text-sm">{{ t('elections.station.rateLimitWait', { seconds: rateLimitSeconds }) }}</p>
+        </div>
+        <button type="button" @click="error = ''; rateLimitSeconds = 0; clearInterval(rateLimitTimer)" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-rose-200 text-rose-900 transition-colors hover:bg-rose-300">
+          <Icon icon="lucide:x" class="text-xl" />
+        </button>
+      </div>
     </template>
   </main>
 </template>
