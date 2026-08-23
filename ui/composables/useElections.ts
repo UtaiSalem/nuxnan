@@ -24,6 +24,14 @@ export const useElections = () => {
   const deleteElection = (a: number, e: number) => api.call(`${electionsBase(a)}/${e}`, { method: 'DELETE' })
   const transitionStatus = (a: number, e: number, status: string) => api.call(`${electionsBase(a)}/${e}/status`, { method: 'POST', body: { status } })
   const getTurnout = (a: number, e: number) => api.call(`${electionsBase(a)}/${e}/turnout`)
+  const listParties = (a: number, e: number) => api.call(`${electionsBase(a)}/${e}/parties`)
+  const approveParty = (a: number, e: number, p: number, number?: number | null) => api.call(`${electionsBase(a)}/${e}/parties/${p}/approve`, { method: 'POST', body: number === undefined ? {} : { number } })
+  const rejectParty = (a: number, e: number, p: number, review_note: string) => api.call(`${electionsBase(a)}/${e}/parties/${p}/reject`, { method: 'POST', body: { review_note } })
+  const withdrawParty = (a: number, e: number, p: number) => api.call(`${electionsBase(a)}/${e}/parties/${p}/withdraw`, { method: 'POST' })
+  const lockVoterRoll = (a: number, e: number) => api.call(`${electionsBase(a)}/${e}/voter-roll/lock`, { method: 'POST' })
+  const listVoters = (a: number, e: number, params: Record<string, string | number | undefined> = {}) => { const query = new URLSearchParams(); Object.entries(params).forEach(([key, value]) => { if (value !== undefined && value !== '') query.set(key, String(value)) }); return api.call(`${electionsBase(a)}/${e}/voter-roll${query.toString() ? `?${query}` : ''}`) }
+  const voterRollStats = (a: number, e: number) => api.call(`${electionsBase(a)}/${e}/voter-roll/stats`)
+  const setMemberEducationLevel = (a: number, member: number, level: number | null) => api.call(`/api/academies/${a}/members/${member}/education-level`, { method: 'PUT', body: { education_level: level } })
 
-  return { openStation, closeStation, stationProgress, lookupVoter, searchVoters, issueBallot, voidBallot, castBallot, listElections, getElection, createElection, updateElection, deleteElection, transitionStatus, getTurnout }
+  return { openStation, closeStation, stationProgress, lookupVoter, searchVoters, issueBallot, voidBallot, castBallot, listElections, getElection, createElection, updateElection, deleteElection, transitionStatus, getTurnout, listParties, approveParty, rejectParty, withdrawParty, lockVoterRoll, listVoters, voterRollStats, setMemberEducationLevel }
 }
