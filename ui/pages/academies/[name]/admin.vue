@@ -215,6 +215,12 @@ const menuItems = computed(() => [
         show: isAdmin.value || can('sports.manage'),
       },
       {
+        name: 'การเลือกตั้งสภานักเรียน',
+        icon: 'fluent:vote-24-regular',
+        to: `/academies/${academyName.value}/admin/elections`,
+        show: isAdmin.value || can('elections.view') || can('elections.manage'),
+      },
+      {
         name: 'คะแนนกีฬาสี',
         icon: 'fluent:trophy-24-regular',
         to: `/academies/${academyName.value}/admin/sports-scores`,
