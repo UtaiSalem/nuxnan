@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Election;
 
+use App\Http\Controllers\Api\Learn\Academy\ElectionStationController;
 use App\Models\Academy;
 use App\Models\AcademyMember;
 use App\Models\AcademyRole;
@@ -99,6 +100,30 @@ class ElectionStationTest extends TestCase
         ElectionVoterReceipt::create(['election_id' => $e->id, 'election_voter_id' => $voter->id, 'user_id' => $voter->user_id, 'status' => 'cast', 'station_id' => $station->id, 'issued_by' => $actor->id, 'issued_at' => now()]);
         $this->assertSame('already_voted', $service->lookup($station, '123')['status']);
         $this->assertSame('ลงคะแนนแล้ว', $service->lookup($station, '123')['status_label']);
+    }
+
+    public function test_lookup_includes_grade_and_issue_returns_ttl(): void
+    {
+        [$a, $actor, $e, $station, $voter] = $this->votingContext(true, null, ['ballot_ttl_seconds' => 42]);
+        $voter->update(['grade_level' => 'ม.1']);
+        $lookup = app(ElectionStationService::class)->lookup($station, '123');
+        $this->assertSame('ม.1', $lookup['grade_level']);
+        $this->assertArrayHasKey('photo', $lookup);
+        $this->assertSame(42, app(ElectionStationService::class)->issue($station, $voter->user_id, $actor)['ballot_ttl_seconds']);
+    }
+
+    public function test_progress_includes_station_metadata(): void
+    {
+        [$a, $actor, $e, $station] = $this->votingContext(false);
+        $station->update(['location' => 'Room 1']);
+        $response = app(ElectionStationController::class)->progress($a, $e, (string) $station->id);
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame('Station', $response->getData(true)['data']['name']);
+        $this->assertFalse($response->getData(true)['data']['is_open']);
+        $this->assertSame('Room 1', $response->getData(true)['data']['location']);
+        $this->assertArrayHasKey('issued', $response->getData(true)['data']);
+        $this->assertArrayHasKey('cast', $response->getData(true)['data']);
+        $this->assertArrayHasKey('remaining', $response->getData(true)['data']);
     }
 
     public function test_lookup_accepts_matching_qr_and_rejects_other_academy(): void

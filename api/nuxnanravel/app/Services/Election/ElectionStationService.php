@@ -2,12 +2,14 @@
 
 namespace App\Services\Election;
 
+use App\Models\AcademyMember;
 use App\Models\Election;
 use App\Models\ElectionParty;
 use App\Models\ElectionStation;
 use App\Models\ElectionVoter;
 use App\Models\ElectionVoterReceipt;
 use App\Models\MemberActivityLog;
+use App\Models\StudentCard;
 use App\Models\User;
 use App\Services\StudentIdentifierResolver;
 use DomainException;
@@ -48,11 +50,31 @@ class ElectionStationService
         $resolved = app(StudentIdentifierResolver::class)->resolve($election->academy_id, $identifier);
         $voter = $resolved['user_id'] ? ElectionVoter::where('election_id', $election->id)->where('user_id', $resolved['user_id'])->first() : null;
         $user = $resolved['user_id'] ? User::find($resolved['user_id']) : null;
+        $member = $resolved['user_id']
+            ? AcademyMember::where('user_id', $resolved['user_id'])
+                ->where('academy_id', $election->academy_id)
+                ->first()
+            : null;
+        $card = $member?->student_id
+            ? StudentCard::where('student_id', $member->student_id)
+                ->where('academy_id', $election->academy_id)
+                ->where('is_active_flag', 1)
+                ->latest('id')
+                ->first()
+            : null;
 
         $status = ! $voter ? 'not_on_roll' : ($voter->receipt?->status === 'cast' ? 'already_voted' : 'eligible');
         $statusLabels = ['not_on_roll' => 'ไม่มีรายชื่อผู้มีสิทธิ์เลือกตั้ง', 'already_voted' => 'ลงคะแนนแล้ว', 'eligible' => 'มีสิทธิ์ลงคะแนน'];
 
-        return ['user_id' => $resolved['user_id'], 'name' => $voter?->display_name ?? $resolved['student_name'] ?? $user?->name, 'photo' => $resolved['student_photo'] ?? $user?->profile_photo_path, 'classroom' => $voter?->classroom_name, 'status' => $status, 'status_label' => $statusLabels[$status]];
+        return [
+            'user_id' => $resolved['user_id'],
+            'name' => $voter?->display_name ?? $resolved['student_name'] ?? $user?->name,
+            'photo' => $card?->profile_image_url ?? $user?->profile_photo_path,
+            'classroom' => $voter?->classroom_name,
+            'grade_level' => $voter?->grade_level,
+            'status' => $status,
+            'status_label' => $statusLabels[$status],
+        ];
     }
 
     public function searchByName(ElectionStation $station, string $term)
@@ -85,7 +107,12 @@ class ElectionStationService
             }
             $this->log($e, $actor, MemberActivityLog::ACTION_ELECTION_BALLOT_ISSUE, ['election_id' => $e->id, 'station_id' => $station->id, 'user_id' => $userId]);
 
-            return ['ballot_token' => $token, 'parties' => $e->parties()->where('status', ElectionParty::STATUS_APPROVED)->orderBy('number')->get(), 'allow_abstain' => (bool) $e->allow_abstain];
+            return [
+                'ballot_token' => $token,
+                'parties' => $e->parties()->where('status', ElectionParty::STATUS_APPROVED)->orderBy('number')->get(),
+                'allow_abstain' => (bool) $e->allow_abstain,
+                'ballot_ttl_seconds' => $e->ballot_ttl_seconds ?? 180,
+            ];
         });
     }
 

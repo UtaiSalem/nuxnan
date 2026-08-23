@@ -116,10 +116,17 @@ class ElectionStationController extends Controller
         }
     }
 
-    public function progress(Academy $a, Election $e, ElectionStation $s)
+    public function progress(Academy $a, Election $e, string $station)
     {
-        $s = $this->station($a, $e, $s);
+        $s = $this->station($a, $e, $e->stations()->findOrFail($station));
 
-        return response()->json(['success' => true, 'data' => ['issued' => $s->receipts()->where('status', 'issued')->count(), 'cast' => $s->receipts()->where('status', 'cast')->count(), 'remaining' => $e->voters()->count() - $e->receipts()->where('status', 'cast')->count()]]);
+        return response()->json(['success' => true, 'data' => [
+            'name' => $s->name,
+            'is_open' => (bool) $s->is_open,
+            'location' => $s->location,
+            'issued' => $s->receipts()->where('status', 'issued')->count(),
+            'cast' => $s->receipts()->where('status', 'cast')->count(),
+            'remaining' => $e->voters()->count() - $e->receipts()->where('status', 'cast')->count(),
+        ]]);
     }
 }
