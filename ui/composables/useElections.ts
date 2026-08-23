@@ -108,7 +108,7 @@ export const useElections = () => {
   const getResults = (a: number, e: number) => api.call(`${electionsBase(a)}/${e}/results`)
   const getAuditLog = (a: number, e: number, page = 1) =>
     api.call(`${electionsBase(a)}/${e}/audit-log?page=${page}`)
-  const getActivityActions = (a: number) => api.call(`/api/academies/${a}/activity-log/actions`)
+  const getActivityActions = (a: number) => api.call('/api/academies/activity-log/actions')
   const setMemberEducationLevel = (a: number, member: number, level: number | null) =>
     api.call(`/api/academies/${a}/members/${member}/education-level`, {
       method: 'PUT',

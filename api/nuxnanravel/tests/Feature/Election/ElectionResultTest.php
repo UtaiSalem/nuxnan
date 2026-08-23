@@ -104,6 +104,22 @@ class ElectionResultTest extends TestCase
         $this->assertNotSame(200, $this->getJson("/api/academies/{$e->academy_id}/elections/{$e->id}/results")->status());
     }
 
+    public function test_http_publish_exposes_results_and_rejects_republication(): void
+    {
+        [$e, $a, $party] = $this->context();
+        $this->vote($e, 1, $party);
+        $base = "/api/academies/{$e->academy_id}/elections/{$e->id}";
+        $this->actingAs($a, 'api')->postJson("{$base}/close-and-count")->assertOk();
+        $this->actingAs($a, 'api')->getJson("{$base}/results")->assertNotFound();
+
+        $this->actingAs($a, 'api')->postJson("{$base}/publish")->assertOk();
+        $this->actingAs($a, 'api')->getJson("{$base}/results")
+            ->assertOk()
+            ->assertJsonPath('data.0.party_id', $party->id)
+            ->assertJsonPath('data.0.votes', 1);
+        $this->actingAs($a, 'api')->postJson("{$base}/publish")->assertStatus(422);
+    }
+
     public function test_publish_sets_timestamp_and_status(): void
     {
         [$e,$a] = $this->context();

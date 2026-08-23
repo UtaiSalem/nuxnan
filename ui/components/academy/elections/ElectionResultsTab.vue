@@ -9,9 +9,11 @@ const { getTurnout, closeAndCount, publishResults, getResults } = useElections()
 const turnout = ref<any>(null)
 const results = ref<any[]>([])
 const publishedError = ref(false)
+const published = ref(false)
 const load = async () => {
   turnout.value = ((await getTurnout(props.academyId, props.electionId)) as any)?.data
-  if (props.election.status === 'published') {
+  published.value = props.election.status === 'published'
+  if (published.value) {
     try {
       results.value = ((await getResults(props.academyId, props.electionId)) as any)?.data || []
     } catch {
@@ -21,14 +23,15 @@ const load = async () => {
 }
 const count = async () => {
   if (confirm('ยืนยันปิดหีบและนับคะแนน?')) {
-    await closeAndCount(props.academyId, props.electionId)
-    window.location.reload()
+    const response = (await closeAndCount(props.academyId, props.electionId)) as any
+    results.value = response?.data?.results || []
   }
 }
 const publish = async () => {
   if (confirm('ยืนยันประกาศผล?')) {
     await publishResults(props.academyId, props.electionId)
-    window.location.reload()
+    published.value = true
+    results.value = ((await getResults(props.academyId, props.electionId)) as any)?.data || []
   }
 }
 watch(() => props.election.status, load, { immediate: true })
@@ -51,7 +54,7 @@ watch(() => props.election.status, load, { immediate: true })
       ปิดหีบและนับคะแนน
     </button>
     <button
-      v-if="election.status === 'closed' && canManage"
+      v-if="election.status === 'closed' && canManage && !published"
       class="min-h-[44px] rounded-lg bg-primary-600 px-4 text-white"
       @click="publish"
     >

@@ -67,6 +67,7 @@ class ElectionResultService
             }
             ElectionResult::where('election_id', $e->id)->update(['published_at' => now(), 'published_by' => $actor->id]);
             $this->elections->transitionTo($e, Election::STATUS_PUBLISHED, $actor);
+            $e->update(['published_at' => now()]);
             MemberActivityLog::logActivity(['academy_id' => $e->academy_id, 'user_id' => $actor->id, 'action' => MemberActivityLog::ACTION_ELECTION_PUBLISH, 'description' => 'ประกาศผลการเลือกตั้ง', 'new_values' => ['election_id' => $e->id]]);
         });
     }
