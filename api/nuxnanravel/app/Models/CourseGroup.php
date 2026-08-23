@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CourseGroup extends Model
@@ -24,11 +25,13 @@ class CourseGroup extends Model
         'max_members',
         'cover',
         'sort_order',
+        'classroom_synced_at',
     ];
 
     protected $casts = [
         'auto_accept_member' => 'boolean',
         'max_members' => 'integer',
+        'classroom_synced_at' => 'datetime',
     ];
 
     protected static function booted()
@@ -58,5 +61,17 @@ class CourseGroup extends Model
     public function attendances(): HasMany
     {
         return $this->hasMany(CourseAttendance::class, 'group_id');
+    }
+
+    public function classroomLinks(): HasMany
+    {
+        return $this->hasMany(CourseGroupClassroom::class, 'course_group_id');
+    }
+
+    public function classrooms(): BelongsToMany
+    {
+        return $this->belongsToMany(Classroom::class, 'course_group_classrooms', 'course_group_id', 'classroom_id')
+            ->withPivot('academic_year_id')
+            ->withTimestamps();
     }
 }
