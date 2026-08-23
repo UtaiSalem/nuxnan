@@ -36,7 +36,8 @@ class ElectionVoterRollController extends Controller
     {
         $e = $this->find(Academy::findOrFail($r->route('academy')), $r->route('election'));
         $missing = $r->query('missing');
-        $q = ElectionVoter::where('election_id', $e->id);
+        $q = ElectionVoter::where('election_id', $e->id)
+            ->with(['academyMember:id,education_level']);
         if ($r->filled('voter_type')) {
             $q->where('voter_type', $r->voter_type);
         }
@@ -61,7 +62,15 @@ class ElectionVoterRollController extends Controller
             }
         }
 
-        return response()->json(['success' => true, 'data' => $q->paginate($r->integer('per_page', 50))]);
+        $page = $q->paginate($r->integer('per_page', 50));
+        $page->getCollection()->transform(function (ElectionVoter $voter) {
+            $voter->education_level = $voter->academyMember?->education_level;
+            unset($voter->academyMember);
+
+            return $voter;
+        });
+
+        return response()->json(['success' => true, 'data' => $page]);
     }
 
     public function stats(Academy $a, Request $r)
