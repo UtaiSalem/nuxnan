@@ -18,11 +18,11 @@ class ElectionStationController extends Controller
 {
     public function __construct(private ElectionStationService $service) {}
 
-    public function cast(Academy $a, Election $e, Request $r, ElectionBallotService $ballots)
+    public function cast(Academy $academy, Election $election, Request $r, ElectionBallotService $ballots)
     {
-        abort_if($e->academy_id !== $a->id, 404);
+        abort_if($election->academy_id !== $academy->id, 404);
         try {
-            return response()->json(['success' => true, 'data' => $ballots->cast($e, $r->string('ballot_token')->toString(), $r->has('party_id') && $r->input('party_id') !== null ? (int) $r->input('party_id') : null, $r->user())]);
+            return response()->json(['success' => true, 'data' => $ballots->cast($election, $r->string('ballot_token')->toString(), $r->has('party_id') && $r->input('party_id') !== null ? (int) $r->input('party_id') : null, $r->user())]);
         } catch (DomainException $x) {
             return $this->fail($x);
         }
@@ -63,52 +63,57 @@ class ElectionStationController extends Controller
         return response()->json(['success' => true]);
     }
 
-    public function open(Academy $a, Election $e, ElectionStation $s, Request $r)
+    public function open(Academy $academy, Election $election, ElectionStation $station, Request $r)
     {
         try {
-            return response()->json(['success' => true, 'data' => $this->service->open($this->station($a, $e, $s), $r->user())]);
+            return response()->json(['success' => true, 'data' => $this->service->open($this->station($academy, $election, $station), $r->user())]);
         } catch (DomainException $x) {
             return $this->fail($x);
         }
     }
 
-    public function close(Academy $a, Election $e, ElectionStation $s, Request $r)
+    public function close(Academy $academy, Election $election, ElectionStation $station, Request $r)
     {
         try {
-            return response()->json(['success' => true, 'data' => $this->service->close($this->station($a, $e, $s), $r->user())]);
+            return response()->json(['success' => true, 'data' => $this->service->close($this->station($academy, $election, $station), $r->user())]);
         } catch (DomainException $x) {
             return $this->fail($x);
         }
     }
 
-    public function lookup(Academy $a, Election $e, ElectionStation $s, Request $r)
+    public function lookup(Academy $academy, Election $election, ElectionStation $station, Request $r)
     {
         try {
-            return response()->json(['success' => true, 'data' => $this->service->lookup($this->station($a, $e, $s), $r->string('identifier')->toString())]);
+            return response()->json(['success' => true, 'data' => $this->service->lookup(
+                $this->station($academy, $election, $station),
+                $r->string('identifier')->toString(),
+                $r->filled('user_id') ? (int) $r->input('user_id') : null,
+                $r->filled('member_code') ? $r->string('member_code')->toString() : null,
+            )]);
         } catch (DomainException $x) {
             return $this->fail($x);
         }
     }
 
-    public function search(Academy $a, Election $e, ElectionStation $s, Request $r)
+    public function search(Academy $academy, Election $election, ElectionStation $station, Request $r)
     {
-        return response()->json(['success' => true, 'data' => $this->service->searchByName($this->station($a, $e, $s), $r->string('q')->toString())]);
+        return response()->json(['success' => true, 'data' => $this->service->searchByName($this->station($academy, $election, $station), $r->string('q')->toString())]);
     }
 
-    public function issue(Academy $a, Election $e, ElectionStation $s, Request $r)
+    public function issue(Academy $academy, Election $election, ElectionStation $station, Request $r)
     {
         try {
-            return response()->json(['success' => true, 'data' => $this->service->issue($this->station($a, $e, $s), (int) $r->input('user_id'), $r->user())]);
+            return response()->json(['success' => true, 'data' => $this->service->issue($this->station($academy, $election, $station), (int) $r->input('user_id'), $r->user())]);
         } catch (DomainException $x) {
             return $this->fail($x);
         }
     }
 
-    public function void(Academy $a, Election $e, ElectionStation $s, Request $r)
+    public function void(Academy $academy, Election $election, ElectionStation $station, Request $r)
     {
         try {
-            $this->station($a, $e, $s);
-            $receipt = ElectionVoterReceipt::whereKey($r->input('receipt_id'))->where('election_id', $e->id)->firstOrFail();
+            $this->station($academy, $election, $station);
+            $receipt = ElectionVoterReceipt::whereKey($r->input('receipt_id'))->where('election_id', $election->id)->firstOrFail();
 
             return response()->json(['success' => true, 'data' => $this->service->void($receipt, $r->input('reason', ''), $r->user())]);
         } catch (DomainException $x) {
@@ -116,9 +121,9 @@ class ElectionStationController extends Controller
         }
     }
 
-    public function progress(Academy $a, Election $e, string $station)
+    public function progress(Academy $academy, Election $election, ElectionStation $station)
     {
-        $s = $this->station($a, $e, $e->stations()->findOrFail($station));
+        $s = $this->station($academy, $election, $station);
 
         return response()->json(['success' => true, 'data' => [
             'name' => $s->name,
@@ -126,7 +131,7 @@ class ElectionStationController extends Controller
             'location' => $s->location,
             'issued' => $s->receipts()->where('status', 'issued')->count(),
             'cast' => $s->receipts()->where('status', 'cast')->count(),
-            'remaining' => $e->voters()->count() - $e->receipts()->where('status', 'cast')->count(),
+            'remaining' => $election->voters()->count() - $election->receipts()->where('status', 'cast')->count(),
         ]]);
     }
 }

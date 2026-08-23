@@ -116,7 +116,7 @@ class ElectionStationTest extends TestCase
     {
         [$a, $actor, $e, $station] = $this->votingContext(false);
         $station->update(['location' => 'Room 1']);
-        $response = app(ElectionStationController::class)->progress($a, $e, (string) $station->id);
+        $response = app(ElectionStationController::class)->progress($a, $e, $station);
         $this->assertSame(200, $response->getStatusCode());
         $this->assertSame('Station', $response->getData(true)['data']['name']);
         $this->assertFalse($response->getData(true)['data']['is_open']);
