@@ -51,7 +51,13 @@ class ElectionVoterRollController extends Controller
                 $q->where(fn ($x) => $x->whereNull('member_code')->orWhere('member_code', '')->orWhere('member_code', 0));
             }
             if ($missing === 'student_card') {
-                $q->where('voter_type', 'student')->whereNotExists(fn ($x) => $x->from('student_cards')->whereColumn('student_cards.student_id', 'election_voters.user_id')->where('is_active_flag', 1));
+                $q->where('voter_type', 'student')->whereNotExists(function ($cards) use ($e) {
+                    $cards->selectRaw('1')->from('student_cards')
+                        ->join('academy_members as card_members', 'card_members.student_id', '=', 'student_cards.student_id')
+                        ->whereColumn('card_members.id', 'election_voters.academy_member_id')
+                        ->where('student_cards.academy_id', $e->academy_id)
+                        ->where('student_cards.is_active_flag', 1);
+                });
             }
         }
 

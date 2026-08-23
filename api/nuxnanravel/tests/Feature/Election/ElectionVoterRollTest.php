@@ -333,6 +333,20 @@ class ElectionVoterRollTest extends TestCase
         $response->assertOk()->assertJsonCount(1, 'data.data');
     }
 
+    public function test_missing_student_card_filter_matches_lock_count(): void
+    {
+        [$a, $actor, $e] = $this->context();
+        $student = Student::create(['academy_id' => $a->id, 'student_id' => uniqid('S'), 'first_name_th' => 'Card', 'last_name_th' => 'Test']);
+        $user = $this->member($a, ['student_id' => $student->id]);
+        DB::table('student_cards')->insert(['academy_id' => $a->id, 'student_id' => $student->id, 'student_status' => 'expired', 'created_at' => now(), 'updated_at' => now()]);
+        $counts = app(ElectionVoterRollService::class)->lock($e, $actor);
+
+        $response = $this->actingAs($actor, 'api')->getJson("/api/academies/$a->id/elections/$e->id/voter-roll?missing=student_card");
+
+        $response->assertOk();
+        $this->assertSame($counts['without_student_card'], $response->json('data.total'));
+    }
+
     public function test_member_without_user_account_is_skipped_and_reported(): void
     {
         [$a, $actor, $e] = $this->context();

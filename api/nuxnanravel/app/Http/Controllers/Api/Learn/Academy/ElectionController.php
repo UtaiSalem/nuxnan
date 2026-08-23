@@ -65,7 +65,7 @@ class ElectionController extends Controller
 
     public function index(Request $request, Academy $academy)
     {
-        $q = $academy->elections()->withCount(['parties as approved_parties_count' => fn ($x) => $x->where('status', 'approved'), 'voters as voters_count', 'receipts as receipts_cast_count' => fn ($x) => $x->where('status', 'cast')]);
+        $q = $academy->elections()->with('academicYear')->withCount(['parties as approved_parties_count' => fn ($x) => $x->where('status', 'approved'), 'voters as voters_count', 'receipts as receipts_cast_count' => fn ($x) => $x->where('status', 'cast')]);
         if ($request->filled('status')) {
             $q->where('status', $request->status);
         } if ($request->filled('academic_year_id')) {
@@ -82,7 +82,7 @@ class ElectionController extends Controller
 
     public function show(Academy $academy, Election $election)
     {
-        return response()->json(['success' => true, 'data' => $this->find($academy, $election)->loadCount(['parties as approved_parties_count' => fn ($x) => $x->where('status', 'approved'), 'voters as voters_count', 'receipts as receipts_cast_count' => fn ($x) => $x->where('status', 'cast')])]);
+        return response()->json(['success' => true, 'data' => $this->find($academy, $election)->load(['academicYear'])->loadCount(['parties as approved_parties_count' => fn ($x) => $x->where('status', 'approved'), 'voters as voters_count', 'receipts as receipts_cast_count' => fn ($x) => $x->where('status', 'cast')])]);
     }
 
     public function update(UpdateElectionRequest $request, Academy $academy, Election $election)
