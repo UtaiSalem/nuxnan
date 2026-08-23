@@ -99,12 +99,7 @@ watch(
             "
             @click="tab = item.key"
           >
-            {{ item.label
-            }}<span
-              v-if="!['overview', 'parties', 'voters'].includes(item.key)"
-              class="ml-1 text-xs"
-              >(อยู่ระหว่างพัฒนา)</span
-            >
+            {{ item.label }}
           </button>
         </nav>
       </div>
@@ -131,9 +126,26 @@ watch(
         :can-manage="canManage"
         :locked-at="election.voter_roll_locked_at"
       />
-      <div v-else class="rounded-xl border border-dashed p-10 text-center text-gray-500">
-        อยู่ระหว่างพัฒนา — จะเปิดใช้งานใน E-S9d
-      </div>
+      <ElectionStationsTab
+        v-else-if="tab === 'stations'"
+        :academy-id="academyId!"
+        :election-id="electionId"
+        :academy-name="String(route.params.name)"
+        :can-manage="canManage"
+        :status="election.status"
+      />
+      <ElectionResultsTab
+        v-else-if="tab === 'results'"
+        :academy-id="academyId!"
+        :election-id="electionId"
+        :election="election"
+        :can-manage="canManage"
+      />
+      <ElectionAuditTab
+        v-else-if="tab === 'audit'"
+        :academy-id="academyId!"
+        :election-id="electionId"
+      />
     </template>
     <ElectionFormModal
       :open="showEdit"
