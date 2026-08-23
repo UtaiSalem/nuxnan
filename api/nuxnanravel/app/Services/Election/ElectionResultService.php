@@ -80,9 +80,10 @@ class ElectionResultService
     public function turnout(Election $e): array
     {
         $base = ElectionVoterReceipt::where('election_voter_receipts.election_id', $e->id)->where('status', 'cast');
-        $total = ElectionVoterReceipt::where('election_id', $e->id)->count();
+        $total = $e->voters()->count();
+        $issued = ElectionVoterReceipt::where('election_id', $e->id)->count();
         $voted = (clone $base)->count();
 
-        return ['voted' => $voted, 'total' => $total, 'percentage' => $total ? round($voted * 100 / $total, 2) : 0, 'by_grade_level' => (clone $base)->join('election_voters', 'election_voters.id', '=', 'election_voter_receipts.election_voter_id')->select('election_voters.grade_level', DB::raw('COUNT(*) as voted'))->groupBy('election_voters.grade_level')->get(), 'by_station' => (clone $base)->select('station_id', DB::raw('COUNT(*) as voted'))->groupBy('station_id')->get()];
+        return ['voted' => $voted, 'total' => $total, 'issued' => $issued, 'percentage' => $total ? round($voted * 100 / $total, 2) : 0, 'by_grade_level' => (clone $base)->join('election_voters', 'election_voters.id', '=', 'election_voter_receipts.election_voter_id')->select('election_voters.grade_level', DB::raw('COUNT(*) as voted'))->groupBy('election_voters.grade_level')->get(), 'by_station' => (clone $base)->leftJoin('election_stations', 'election_stations.id', '=', 'election_voter_receipts.station_id')->select('election_voter_receipts.station_id', 'election_stations.name as station_name', DB::raw('COUNT(*) as voted'))->groupBy('election_voter_receipts.station_id', 'election_stations.name')->get()];
     }
 }

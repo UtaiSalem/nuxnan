@@ -12,39 +12,36 @@ use Illuminate\Support\Facades\DB;
 
 class ElectionVoterRollService
 {
-    public function lock(Election $e, User $actor): array
+    public function eligibleMembersQuery(Election $e)
     {
-        if (! in_array($e->status, [Election::STATUS_DRAFT, Election::STATUS_NOMINATION, Election::STATUS_CAMPAIGN], true)) {
-            throw new DomainException('ไม่สามารถล็อกบัญชีผู้มีสิทธิ์หลังเริ่มลงคะแนนได้');
-        }
-        $eligible = AcademyMember::query()
-            ->where('academy_id', $e->academy_id)
-            ->where('status', 2)
-            ->whereNotNull('user_id')
+        $eligible = AcademyMember::query()->where('academy_id', $e->academy_id)->where('status', 2)->whereNotNull('user_id')
             ->where(function ($query) {
-                $query->whereNull('student_id')
-                    ->orWhereExists(function ($student) {
-                        $student->selectRaw('1')
-                            ->from('students')
-                            ->whereColumn('students.id', 'academy_members.student_id')
-                            ->where('students.status', 'active');
-                    });
+                $query->whereNull('student_id')->orWhereExists(function ($student) {
+                    $student->selectRaw('1')->from('students')->whereColumn('students.id', 'academy_members.student_id')->where('students.status', 'active');
+                });
             });
         if ($e->education_level !== null) {
             $level = $e->education_level;
             $eligible->where(function ($query) use ($level) {
                 $query->where(function ($student) use ($level) {
                     $student->whereNotNull('student_id')->whereExists(function ($academic) use ($level) {
-                        $academic->selectRaw('1')->from('student_academic_info')
-                            ->whereColumn('student_academic_info.student_id', 'academy_members.student_id')
-                            ->where('student_academic_info.is_current', true)
-                            ->where('student_academic_info.education_level', $level);
+                        $academic->selectRaw('1')->from('student_academic_info')->whereColumn('student_academic_info.student_id', 'academy_members.student_id')->where('student_academic_info.is_current', true)->where('student_academic_info.education_level', $level);
                     });
                 })->orWhere(function ($staff) use ($level) {
                     $staff->whereNull('student_id')->where('education_level', $level);
                 });
             });
         }
+
+        return $eligible;
+    }
+
+    public function lock(Election $e, User $actor): array
+    {
+        if (! in_array($e->status, [Election::STATUS_DRAFT, Election::STATUS_NOMINATION, Election::STATUS_CAMPAIGN], true)) {
+            throw new DomainException('ไม่สามารถล็อกบัญชีผู้มีสิทธิ์หลังเริ่มลงคะแนนได้');
+        }
+        $eligible = $this->eligibleMembersQuery($e);
         $skippedNoUserAccount = AcademyMember::query()->where('academy_id', $e->academy_id)->where('status', 2)->whereNull('user_id')->count();
         $skippedInactiveStudent = AcademyMember::query()
             ->where('academy_id', $e->academy_id)

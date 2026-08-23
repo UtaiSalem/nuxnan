@@ -19,11 +19,13 @@ Route::middleware('auth:api')->prefix('academies/{academy}/elections')->group(fu
     Route::post('/{election}/publish', [ElectionController::class, 'publish'])->middleware('academy.permission:elections.manage');
     Route::get('/{election}/results', [ElectionController::class, 'results'])->middleware('academy.permission:elections.view');
     Route::get('/{election}/turnout', [ElectionController::class, 'turnout'])->middleware('academy.permission:elections.view');
+    Route::get('/{election}/candidates', [ElectionPartyController::class, 'candidates'])->middleware(['academy.permission:elections.view', 'throttle:60,1']);
     Route::post('/{election}/cast', [ElectionStationController::class, 'cast'])->middleware('throttle:30,1');
     Route::post('/{election}/voter-roll/lock', [ElectionVoterRollController::class, 'lock'])->middleware('academy.permission:elections.manage');
     Route::get('/{election}/voter-roll', [ElectionVoterRollController::class, 'index'])->middleware('academy.permission:elections.manage');
     Route::get('/{election}/voter-roll/stats', [ElectionVoterRollController::class, 'stats'])->middleware('academy.permission:elections.view');
     Route::post('/{election}/parties', [ElectionPartyController::class, 'store'])->middleware('academy.permission:elections.view');
+    Route::get('/{election}/parties/mine', [ElectionPartyController::class, 'mine'])->middleware('academy.permission:elections.view');
     Route::put('/{election}/parties/{party}', [ElectionPartyController::class, 'update'])->middleware('academy.permission:elections.view');
     Route::post('/{election}/parties/{party}/withdraw', [ElectionPartyController::class, 'withdraw'])->middleware('academy.permission:elections.view');
     Route::get('/{election}/parties', [ElectionPartyController::class, 'index'])->middleware('academy.permission:elections.manage');

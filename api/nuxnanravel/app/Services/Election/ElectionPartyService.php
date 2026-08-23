@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Storage;
 
 class ElectionPartyService
 {
+    public function __construct(private ElectionVoterRollService $voterRoll) {}
+
     public function apply(Election $e, array $data, User $actor): ElectionParty
     {
         $this->nomination($e);
@@ -127,10 +129,16 @@ class ElectionPartyService
             throw new DomainException('ต้องมีผู้สมัครประธาน 1 คนเท่านั้น');
         } if (! collect($members)->pluck('user_id')->contains($actor->id)) {
             throw new DomainException('ผู้สมัครต้องเป็นสมาชิกในทีม');
-        } foreach ($members as $m) {
-            if (! AcademyMember::where(['academy_id' => $e->academy_id, 'user_id' => $m['user_id'], 'status' => 2])->exists()) {
-                throw new DomainException('ผู้สมัครหมายเลข '.$m['user_id'].' ไม่ใช่สมาชิกที่ได้รับอนุมัติ');
-            } $q = ElectionParty::where('election_id', $e->id)->whereNotIn('status', [ElectionParty::STATUS_WITHDRAWN, ElectionParty::STATUS_REJECTED]);
+        }
+        $userIds = collect($members)->pluck('user_id');
+        $eligibleIds = $this->voterRoll->eligibleMembersQuery($e)->whereIn('user_id', $userIds)->pluck('user_id')->unique();
+        foreach ($userIds as $userId) {
+            if (! $eligibleIds->contains($userId)) {
+                throw new DomainException('ผู้สมัครหมายเลข '.$userId.' ไม่มีสิทธิ์ในการเลือกตั้งครั้งนี้');
+            }
+        }
+        foreach ($members as $m) {
+            $q = ElectionParty::where('election_id', $e->id)->whereNotIn('status', [ElectionParty::STATUS_WITHDRAWN, ElectionParty::STATUS_REJECTED]);
             if ($current) {
                 $q->where('id', '!=', $current->id);
             } $old = $q->whereHas('members', fn ($x) => $x->where('user_id', $m['user_id']))->first();

@@ -7,6 +7,7 @@ use App\Http\Requests\Election\StoreElectionRequest;
 use App\Http\Requests\Election\TransitionElectionStatusRequest;
 use App\Http\Requests\Election\UpdateElectionRequest;
 use App\Models\Academy;
+use App\Models\AcademyMember;
 use App\Models\Election;
 use App\Models\MemberActivityLog;
 use App\Services\Election\ElectionResultService;
@@ -66,6 +67,10 @@ class ElectionController extends Controller
     public function index(Request $request, Academy $academy)
     {
         $q = $academy->elections()->with('academicYear')->withCount(['parties as approved_parties_count' => fn ($x) => $x->where('status', 'approved'), 'voters as voters_count', 'receipts as receipts_cast_count' => fn ($x) => $x->where('status', 'cast')]);
+        $canManage = $academy->isAdmin($request->user()) || (bool) AcademyMember::where(['academy_id' => $academy->id, 'user_id' => $request->user()->id, 'status' => 2])->first()?->hasPermission('elections.manage');
+        if (! $canManage) {
+            $q->where('status', '!=', 'draft');
+        }
         if ($request->filled('status')) {
             $q->where('status', $request->status);
         } if ($request->filled('academic_year_id')) {

@@ -10,13 +10,43 @@ use App\Http\Requests\Election\UpdateElectionPartyRequest;
 use App\Models\Academy;
 use App\Models\Election;
 use App\Models\ElectionParty;
+use App\Models\User;
 use App\Services\Election\ElectionPartyService;
+use App\Services\Election\ElectionVoterRollService;
 use DomainException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ElectionPartyController extends Controller
 {
-    public function __construct(private ElectionPartyService $service) {}
+    public function __construct(private ElectionPartyService $service, private ElectionVoterRollService $voterRoll) {}
+
+    public function candidates(Request $r, Academy $academy, Election $election)
+    {
+        abort_if($election->academy_id !== $academy->id, 404);
+        $q = (string) $r->query('q', '');
+        if (mb_strlen($q) < 2) {
+            return response()->json(['success' => false, 'message' => 'กรุณาพิมพ์อย่างน้อย 2 ตัวอักษร'], 422);
+        }
+        $members = $this->voterRoll->eligibleMembersQuery($election)->whereHas('user', fn ($u) => $u->where('name', 'like', '%'.$q.'%'))->with('user')->orderBy(User::select('name')->whereColumn('users.id', 'academy_members.user_id'))->limit(20)->get();
+        $ids = $members->pluck('student_id')->filter();
+        $year = $election->academic_year_id ?: DB::table('academic_years')->where('academy_id', $academy->id)->where('is_current', 1)->value('id');
+        $enrolments = DB::table('classroom_students')->join('classrooms', 'classrooms.id', '=', 'classroom_students.classroom_id')->whereIn('classroom_students.student_id', $ids)->where('classroom_students.status', 'active')->where('classroom_students.academic_year_id', $year)->get(['classroom_students.student_id', 'classrooms.grade_level', 'classrooms.name'])->keyBy('student_id');
+
+        return response()->json(['success' => true, 'data' => $members->sortBy(fn ($m) => $m->user?->name)->map(function ($m) use ($enrolments) {
+            $x = $m->student_id ? $enrolments->get($m->student_id) : null;
+
+            return ['user_id' => $m->user_id, 'display_name' => $m->user?->name, 'voter_type' => $m->student_id ? 'student' : 'staff', 'grade_level' => $x?->grade_level, 'classroom_name' => $x?->name, 'member_code' => $m->member_code];
+        })->values()]);
+    }
+
+    public function mine(Request $r, Academy $academy, Election $election)
+    {
+        abort_if($election->academy_id !== $academy->id, 404);
+        $party = $election->parties()->where(fn ($q) => $q->where('applied_by', $r->user()->id)->orWhereHas('members', fn ($m) => $m->where('user_id', $r->user()->id)))->latest('id')->with('members.user')->first();
+
+        return response()->json(['success' => true, 'data' => $party]);
+    }
 
     private function find(Academy $academy, Election $election, ElectionParty $party): ElectionParty
     {
