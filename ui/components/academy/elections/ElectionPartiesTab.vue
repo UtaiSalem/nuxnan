@@ -9,6 +9,8 @@ const { listParties, approveParty, rejectParty, withdrawParty } = useElections()
 const parties = ref<any[]>([])
 const loading = ref(false)
 const notes = reactive<Record<number, string>>({})
+const numbers = reactive<Record<number, string>>({})
+const errors = reactive<Record<number, string>>({})
 const load = async () => {
   loading.value = true
   const response: any = await listParties(props.academyId, props.electionId)
@@ -16,8 +18,11 @@ const load = async () => {
   loading.value = false
 }
 const approve = async (party: any) => {
-  await approveParty(props.academyId, props.electionId, party.id, party.number || null)
-  await load()
+  errors[party.id] = ''
+  try {
+    await approveParty(props.academyId, props.electionId, party.id, numbers[party.id]?.trim() ? Number(numbers[party.id]) : null)
+    await load()
+  } catch (error: any) { errors[party.id] = error?.data?.message || error?.message || 'ไม่สามารถอนุมัติพรรคได้' }
 }
 const reject = async (party: any) => {
   if (!notes[party.id]?.trim()) return
@@ -70,6 +75,9 @@ watch(
               }}
             </td>
             <td class="p-3">{{ party.status }}</td>
+            <td v-if="party.status === 'rejected'" class="p-3 text-sm text-red-700">
+              <p>{{ party.review_note || '-' }}</p><p>{{ party.reviewed_at || '-' }}</p>
+            </td>
             <td class="space-y-2 p-3">
               <div class="flex gap-2">
                 <button
@@ -99,13 +107,16 @@ watch(
                 >
                   ถอนตัว
                 </button>
+                <input v-if="party.status === 'pending'" v-model="numbers[party.id]" inputmode="numeric" class="min-h-[44px] w-24 rounded-lg border p-2" placeholder="เบอร์ (ว่างได้)" />
               </div>
               <input
                 v-if="party.status === 'pending'"
-                v-model="note"
+                v-model="notes[party.id]"
                 class="min-h-[44px] w-full rounded-lg border p-2"
                 placeholder="เหตุผลปฏิเสธ (บังคับ)"
               />
+              <p v-if="errors[party.id]" class="text-sm text-red-600">{{ errors[party.id] }}</p>
+              <p v-if="party.status === 'rejected'" class="text-sm text-red-700">เหตุผล: {{ party.review_note || '-' }} · {{ party.reviewed_at || '-' }}</p>
             </td>
           </tr>
         </tbody>

@@ -333,6 +333,24 @@ class ElectionVoterRollTest extends TestCase
         $response->assertOk()->assertJsonCount(1, 'data.data');
     }
 
+    public function test_education_level_route_is_reflected_in_voter_roll_without_relationship_leak(): void
+    {
+        [$a, $actor, $e] = $this->context();
+        $staff = $this->member($a, ['student_id' => null]);
+        $member = AcademyMember::where('academy_id', $a->id)->where('user_id', $staff->id)->firstOrFail();
+
+        $this->actingAs($actor, 'api')->putJson("/api/academies/$a->id/members/$member->id/education-level", ['education_level' => 2])->assertOk();
+        $this->actingAs($actor, 'api')->postJson("/api/academies/$a->id/elections/$e->id/voter-roll/lock")->assertOk();
+
+        $row = $this->actingAs($actor, 'api')->getJson("/api/academies/$a->id/elections/$e->id/voter-roll")->assertOk()->json('data.data.1');
+        $this->assertArrayHasKey('education_level', $row);
+        $this->assertSame(2, $row['education_level']);
+        $this->assertArrayNotHasKey('academyMember', $row);
+        $this->assertArrayHasKey('display_name', $row);
+        $this->assertArrayHasKey('member_code', $row);
+        $this->assertArrayHasKey('voter_type', $row);
+    }
+
     public function test_missing_student_card_filter_matches_lock_count(): void
     {
         [$a, $actor, $e] = $this->context();
