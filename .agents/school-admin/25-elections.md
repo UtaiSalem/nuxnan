@@ -540,6 +540,21 @@ E-S4 เจอบั๊ก **3 รอบติด และทั้ง 3 รอ
 
 ## 10. Review Log
 
+- **2026-08-24 E-S11a + E-S11b (+ E-S11ab2 เก็บตก)** — codex ทำ, claude ตรวจ → **ผ่านทั้งคู่ · เหลือ E-S11c (จอ) กับ E-S11d**
+  - **limiter คีย์ต่อหน่วยจริง** — ยืนยันใน vendor ว่า `ThrottleRequests::handleRequestUsingNamedLimiter()` ทำ
+    `md5($limiterName.$limit->key)` → `election-issue` กับ `election-lookup` ที่คีย์ด้วย station id เหมือนกัน **คนละถัง**
+    · เทสต์ยิงเต็ม 60 ที่หน่วย A ได้ 429 แล้วหน่วย B ยังได้ 422 ด้วยบัญชีเดียวกัน · `route:list -v` ไม่เหลือ `throttle:30,1` แล้ว
+  - **429 ตรงสัญญา §13.5** และคง header เดิมทั้งชุด · ตรวจ vendor แล้วว่าคีย์ `Retry-After` ตัวพิมพ์ตรงกัน `retry_after` จึงไม่มีทางเป็น 0
+  - **claude รันกับ DB จริงเองใน `beginTransaction()` … `rollBack()`** — ก่อนกวาด: live count = 1 ขณะที่ `status='issued'` ดิบ = 2
+    → **ข้อตัดสิน §13.3 ข้อ 1 เป็นจริง จอหน่วยถูกโดยไม่ต้องพึ่ง cron** · หลังกวาด `token_hash` เป็น NULL · ใบเสร็จที่ยังไม่หมดอายุไม่ถูกแตะ
+  - 🔴 **รอบแรก E-S11b ไม่ได้เขียนเทสต์เลยสักตัว** — ชุดขึ้นจาก 141 เป็น 142 และ +1 นั้นเป็นของ E-S11a
+    **จับได้เพราะนับจำนวนเทสต์เทียบฐาน ไม่ใช่เพราะอ่านรายงาน** · ต้องส่ง E-S11ab2 กลับไปเก็บ 4 เคสที่ขาด
+  - 🔴 **รอบแรก `expireStaleAll()` เป็น 1+N query** (วน `Election::query()->each()` ยิง UPDATE ทีละตัว)
+    เป็น job ที่รันทุก 5 นาทีและ N โตทุกครั้งที่สร้างการเลือกตั้ง → E-S11ab2 รวบเหลือ **UPDATE เดียว**
+    claude วัดเองกับ 3 election จริง: **1 query** (ก่อนหน้าได้ 2 query ต่อ 1 election)
+  - **เทสต์ 147 ผ่าน (449 assertions) · pint ผ่าน** — claude รันเอง (ฐานก่อนหน้า 141/312)
+  - 🟡 เคสชี้ขาดที่สั่งเป็นพิเศษแล้วได้ผล: ใบเสร็จ `cast` ที่ token หมดอายุแล้ว **ต้องไม่ถูกกวาด** — ถ้าพลาดคือคะแนนหาย
+    และ invariant §2.3 พังตอนปิดหีบ · และเคส B1 ต้องไม่เรียก `expireStaleAll()` ก่อนเช็ค ไม่งั้นเทสต์เขียวโดยไม่พิสูจน์อะไร (claude อ่านโค้ดยืนยันเอง)
 - **2026-08-24 E-S10d + E-S10d2** — codex ทำ, claude กู้ฐาน + ตรวจ → **ผ่าน · P1 ของ §12.6 ปิดแล้ว นักเรียนเข้าเมนู #25 ได้จริง**
   - migration `2026_08_24_000001_backfill_election_permissions_and_member_roles` ทำสองอย่าง:
     เติม `elections.*` ตามเมทริกซ์ §4 (director/admin ครบสามตัว · teacher view+station · staff/finance_staff/registrar/student view · **parent/guest ไม่ได้** · owner เป็น `*` อยู่แล้ว)
@@ -1092,8 +1107,8 @@ cron `* * * * * php artisan schedule:run` ที่ [withdrawal-production-deplo
 
 | shard | ขอบเขต | ไฟล์ | ส่งให้ | สถานะ |
 |---|---|---|---|---|
-| **E-S11a** | H1 + H2 — ตั้ง `RateLimiter::for()` สองตัวใน `AppServiceProvider` ตาม 13.3 ข้อ 3 · เปลี่ยน 4 route ให้ใช้ limiter ที่ตั้งชื่อ · ตอบ 429 เป็น JSON ไทยพร้อม `retry_after` | `AppServiceProvider.php` · `routes/learn/election.php` · `bootstrap/app.php` (render 429) | codex | ⚪ |
-| **E-S11b** | H3 + H4 + H5 — command `elections:expire-stale-receipts` (ต้นแบบ: `CleanupCoursePointReservations`) · บรรทัดใน `routes/console.php` (`everyFiveMinutes`) · `progress()` นับด้วยเงื่อนไขเวลาสด · เปลี่ยนชื่อ `turnout.issued` → `receipts_total` | `app/Console/Commands/` · `routes/console.php` · `ElectionStationController` · `ElectionResultService` | codex | ⚪ |
+| **E-S11a** | H1 + H2 — ตั้ง `RateLimiter::for()` สองตัวใน `AppServiceProvider` ตาม 13.3 ข้อ 3 · เปลี่ยน 4 route ให้ใช้ limiter ที่ตั้งชื่อ · ตอบ 429 เป็น JSON ไทยพร้อม `retry_after` | `AppServiceProvider.php` · `routes/learn/election.php` · `bootstrap/app.php` (render 429) | codex | 🟢 **verified 2026-08-24** |
+| **E-S11b** | H3 + H4 + H5 — command `elections:expire-stale-receipts` (ต้นแบบ: `CleanupCoursePointReservations`) · บรรทัดใน `routes/console.php` (`everyFiveMinutes`) · `progress()` นับด้วยเงื่อนไขเวลาสด · เปลี่ยนชื่อ `turnout.issued` → `receipts_total` | `app/Console/Commands/` · `routes/console.php` · `ElectionStationController` · `ElectionResultService` | codex | 🟢 **verified 2026-08-24** |
 | **E-S11c** | H2 ฝั่งจอ — `station.vue` แปล 429 เป็นข้อความไทยพร้อมนับถอยหลังตาม `retry_after` · **ห้ามแตะไฟล์ backend** | `ui/pages/academies/[name]/elections/[id]/station.vue` · i18n | agy | ⚪ |
 | **E-S11d** | H6 — ลบ try/catch ที่ไม่ทำอะไรออกจาก migration | 1 ไฟล์ | codex | ⚪ |
 
