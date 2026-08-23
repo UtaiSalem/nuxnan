@@ -115,6 +115,16 @@ export const useElections = () => {
       body: { education_level: level },
     })
 
+  const getMyParty = (a: number, e: number) => api.call(`${electionsBase(a)}/${e}/parties/mine`)
+  const searchCandidates = (a: number, e: number, q: string) =>
+    api.call(`${electionsBase(a)}/${e}/candidates?q=${encodeURIComponent(q)}`)
+  const applyParty = (a: number, e: number, body: FormData | Record<string, any>) =>
+    api.call(`${electionsBase(a)}/${e}/parties`, { method: 'POST', body })
+  const updateMyParty = (a: number, e: number, p: number, body: FormData | Record<string, any>) =>
+    api.call(`${electionsBase(a)}/${e}/parties/${p}`, { method: 'PUT', body })
+  const updateMyPartyWithLogo = (a: number, e: number, p: number, body: FormData) =>
+    api.call(`${electionsBase(a)}/${e}/parties/${p}`, { method: 'POST', body })
+
   return {
     openStation,
     closeStation,
@@ -148,5 +158,10 @@ export const useElections = () => {
     getAuditLog,
     getActivityActions,
     setMemberEducationLevel,
+    getMyParty,
+    searchCandidates,
+    applyParty,
+    updateMyParty,
+    updateMyPartyWithLogo,
   }
 }
