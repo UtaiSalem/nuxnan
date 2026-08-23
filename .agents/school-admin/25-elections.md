@@ -1109,8 +1109,8 @@ cron `* * * * * php artisan schedule:run` ที่ [withdrawal-production-deplo
 |---|---|---|---|---|
 | **E-S11a** | H1 + H2 — ตั้ง `RateLimiter::for()` สองตัวใน `AppServiceProvider` ตาม 13.3 ข้อ 3 · เปลี่ยน 4 route ให้ใช้ limiter ที่ตั้งชื่อ · ตอบ 429 เป็น JSON ไทยพร้อม `retry_after` | `AppServiceProvider.php` · `routes/learn/election.php` · `bootstrap/app.php` (render 429) | codex | 🟢 **verified 2026-08-24** |
 | **E-S11b** | H3 + H4 + H5 — command `elections:expire-stale-receipts` (ต้นแบบ: `CleanupCoursePointReservations`) · บรรทัดใน `routes/console.php` (`everyFiveMinutes`) · `progress()` นับด้วยเงื่อนไขเวลาสด · เปลี่ยนชื่อ `turnout.issued` → `receipts_total` | `app/Console/Commands/` · `routes/console.php` · `ElectionStationController` · `ElectionResultService` | codex | 🟢 **verified 2026-08-24** |
-| **E-S11c** | H2 ฝั่งจอ — `station.vue` แปล 429 เป็นข้อความไทยพร้อมนับถอยหลังตาม `retry_after` · **ห้ามแตะไฟล์ backend** | `ui/pages/academies/[name]/elections/[id]/station.vue` · i18n | agy | ⚪ |
-| **E-S11d** | H6 — ลบ try/catch ที่ไม่ทำอะไรออกจาก migration | 1 ไฟล์ | codex | ⚪ |
+| **E-S11c** | H2 ฝั่งจอ — `station.vue` แปล 429 เป็นข้อความไทยพร้อมนับถอยหลังตาม `retry_after` · **ห้ามแตะไฟล์ backend** | `ui/pages/academies/[name]/elections/[id]/station.vue` · i18n | agy | 🟢 **verified 2026-08-24 (ยังไม่เปิดจอจริง — ดู §13.9)** |
+| **E-S11d** | H6 — ลบ try/catch ที่ไม่ทำอะไรออกจาก migration | 1 ไฟล์ | codex | 🟢 **verified 2026-08-24** |
 
 **a กับ b ทำขนานกันได้** (ไฟล์ไม่ทับกัน) · **c ต้องรอสัญญาจาก a** เพราะต้องรู้รูปร่าง payload 429 ที่ตกลงกันแล้ว
 → ล็อกสัญญาไว้ในสเปกนี้แล้ว c จึงเขียนตามได้เลยโดยไม่ต้องรอโค้ดของ a เสร็จ
@@ -1146,3 +1146,18 @@ cron `* * * * * php artisan schedule:run` ที่ [withdrawal-production-deplo
 - **ไม่แตะจุดรั่ว binlog ของ §2.2** — แก้ด้วยโค้ดแอปไม่ได้ ตัดสินไปแล้วว่าไม่ทำในเฟสนี้
 - **ไม่เปลี่ยน `ballot_ttl_seconds`** (ค่า default 180 วินาที) — เป็นค่าต่อการเลือกตั้ง ปรับได้จากข้อมูล ไม่ใช่จากโค้ด
 - **ไม่แตะ `issue()`** — ดูเหตุผลใน 13.3 ข้อ 2
+
+### 13.9 🔴 หนี้ที่ยังค้าง — E-S11c ยังไม่เคยถูกเปิดบนจอจริง
+
+claude ตรวจ E-S11c ด้วยการอ่าน diff · compile SFC · เทียบคีย์ i18n ก่อน/หลังแบบ flatten
+(231 → 233 คีย์ทั้งสองภาษา **ไม่มีคีย์หายสักตัว**) แต่ **เปิดดูที่ 375px จริงไม่ได้** ด้วยสามเหตุผลที่ต้องแก้ก่อนวันซ้อม §9:
+
+1. **dev server ของ Nuxt บนเครื่องนี้พัง** — ทุก route รวมทั้ง `/` ตอบ 500 `IPC connection closed`
+   จาก `@nuxt/vite-builder/dist/vite-node.mjs:140` · **ไม่เกี่ยวกับงานนี้** (พังตั้งแต่หน้าแรกที่ไม่ได้แตะ)
+2. **หน้าหน่วยอยู่หลัง `middleware: ['auth']`** → ต้องล็อกอินก่อน
+3. **ฐาน dev ไม่มี election เหลืออยู่เลยสักตัว** (`Election::first()` คืน null) → ถึงเข้าได้ก็ไม่มีอะไรให้เรนเดอร์
+
+→ **สิ่งที่ต้องทำก่อนวันซ้อม:** แก้ dev server ให้รันได้ · สร้าง election ทดสอบตาม §9 · แล้วเปิดหน้าหน่วยที่ 375px
+ทำให้ 429 เกิดจริงบนจอ แล้วดูว่าแบนเนอร์ไม่ทับแผงยืนยันของโหมด ballot (ทั้งคู่อยู่มุมล่างเหมือนกัน —
+agy แก้ด้วย `:class="[selected ? 'bottom-40' : 'bottom-4']"` ซึ่ง **ยังไม่มีใครเห็นด้วยตา**)
+· ข้อนี้เป็นข้อเดียวกับที่ E-S8 กับ E-S10b/c ค้างไว้ — **ทั้งเมนู #25 ยังไม่เคยถูกเปิดบนเบราว์เซอร์จริงเลยสักหน้า**
