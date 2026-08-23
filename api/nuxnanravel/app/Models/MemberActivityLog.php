@@ -135,6 +135,20 @@ class MemberActivityLog extends Model
 
     public const ACTION_ELECTION_PUBLISH = 'election_publish';
 
+    public static function electionActions(): array
+    {
+        return [
+            self::ACTION_ELECTION_CREATE, self::ACTION_ELECTION_UPDATE, self::ACTION_ELECTION_DELETE,
+            self::ACTION_ELECTION_STATUS_CHANGE, self::ACTION_ELECTION_PARTY_APPLY,
+            self::ACTION_ELECTION_PARTY_UPDATE, self::ACTION_ELECTION_PARTY_APPROVE,
+            self::ACTION_ELECTION_PARTY_REJECT, self::ACTION_ELECTION_PARTY_WITHDRAW,
+            self::ACTION_ELECTION_VOTER_ROLL_LOCK, self::ACTION_ELECTION_STATION_OPEN,
+            self::ACTION_ELECTION_STATION_CLOSE, self::ACTION_ELECTION_BALLOT_ISSUE,
+            self::ACTION_ELECTION_BALLOT_VOID, self::ACTION_ELECTION_CLOSE_COUNT,
+            self::ACTION_ELECTION_PUBLISH,
+        ];
+    }
+
     // Categories
     public const CATEGORY_MEMBER = 'member';
 

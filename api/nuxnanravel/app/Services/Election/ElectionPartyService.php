@@ -156,6 +156,6 @@ class ElectionPartyService
             MemberActivityLog::ACTION_ELECTION_PARTY_APPROVE => 'อนุมัติพรรคเลือกตั้ง',
             MemberActivityLog::ACTION_ELECTION_PARTY_REJECT => 'ปฏิเสธพรรคเลือกตั้ง',
         ];
-        MemberActivityLog::logActivity(['academy_id' => $e->academy_id, 'user_id' => $a->id, 'action' => $action, 'description' => $descriptions[$action] ?? $action, 'new_values' => $values]);
+        MemberActivityLog::logActivity(['academy_id' => $e->academy_id, 'user_id' => $a->id, 'action' => $action, 'description' => $descriptions[$action] ?? $action, 'new_values' => ['election_id' => $e->id, ...$values]]);
     }
 }

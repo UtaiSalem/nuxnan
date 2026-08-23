@@ -132,7 +132,7 @@ class ElectionVoterRollService
             'staff_without_level' => $staffWithoutLevel,
         ];
         $e->update(['voter_roll_locked_at' => now()]);
-        MemberActivityLog::logActivity(['academy_id' => $e->academy_id, 'user_id' => $actor->id, 'action' => MemberActivityLog::ACTION_ELECTION_VOTER_ROLL_LOCK, 'description' => 'ล็อกบัญชีผู้มีสิทธิ์เลือกตั้ง', 'new_values' => $counts]);
+        MemberActivityLog::logActivity(['academy_id' => $e->academy_id, 'user_id' => $actor->id, 'action' => MemberActivityLog::ACTION_ELECTION_VOTER_ROLL_LOCK, 'description' => 'ล็อกบัญชีผู้มีสิทธิ์เลือกตั้ง', 'new_values' => ['election_id' => $e->id, ...$counts]]);
 
         return $counts;
     }

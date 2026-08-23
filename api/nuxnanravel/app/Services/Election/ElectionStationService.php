@@ -145,6 +145,6 @@ class ElectionStationService
             MemberActivityLog::ACTION_ELECTION_BALLOT_ISSUE => 'ออกบัตรลงคะแนน',
             MemberActivityLog::ACTION_ELECTION_BALLOT_VOID => 'ยกเลิกบัตรลงคะแนน',
         ];
-        MemberActivityLog::logActivity(['academy_id' => $e->academy_id, 'user_id' => $actor->id, 'action' => $action, 'description' => $descriptions[$action] ?? $action, 'new_values' => $values]);
+        MemberActivityLog::logActivity(['academy_id' => $e->academy_id, 'user_id' => $actor->id, 'action' => $action, 'description' => $descriptions[$action] ?? $action, 'new_values' => ['election_id' => $e->id, ...$values]]);
     }
 }

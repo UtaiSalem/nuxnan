@@ -30,6 +30,7 @@ Route::middleware('auth:api')->prefix('academies/{academy}/elections')->group(fu
     Route::post('/{election}/parties/{party}/approve', [ElectionPartyController::class, 'approve'])->middleware('academy.permission:elections.manage');
     Route::post('/{election}/parties/{party}/reject', [ElectionPartyController::class, 'reject'])->middleware('academy.permission:elections.manage');
     Route::post('/{election}/stations', [ElectionStationController::class, 'store'])->middleware('academy.permission:elections.manage');
+    Route::get('/{election}/stations', [ElectionStationController::class, 'index'])->middleware('academy.permission:elections.manage');
     Route::put('/{election}/stations/{station}', [ElectionStationController::class, 'update'])->middleware('academy.permission:elections.manage');
     Route::delete('/{election}/stations/{station}', [ElectionStationController::class, 'destroy'])->middleware('academy.permission:elections.manage');
     Route::post('/{election}/stations/{station}/open', [ElectionStationController::class, 'open'])->middleware('academy.permission:elections.station');

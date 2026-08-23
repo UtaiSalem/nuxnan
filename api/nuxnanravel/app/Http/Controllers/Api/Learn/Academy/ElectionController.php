@@ -118,7 +118,7 @@ class ElectionController extends Controller
     {
         $e = $this->find($academy, $election);
 
-        return response()->json(['success' => true, 'data' => MemberActivityLog::where('academy_id', $academy->id)->whereIn('action', [MemberActivityLog::ACTION_ELECTION_CREATE, MemberActivityLog::ACTION_ELECTION_UPDATE, MemberActivityLog::ACTION_ELECTION_DELETE, MemberActivityLog::ACTION_ELECTION_STATUS_CHANGE])->where(function ($q) use ($e) {
+        return response()->json(['success' => true, 'data' => MemberActivityLog::where('academy_id', $academy->id)->whereIn('action', MemberActivityLog::electionActions())->where(function ($q) use ($e) {
             $q->where('new_values->election_id', $e->id)->orWhere('old_values->election_id', $e->id);
         })->latest()->paginate()]);
     }

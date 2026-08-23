@@ -47,6 +47,15 @@ class ElectionStationController extends Controller
         return response()->json(['success' => true, 'data' => $election->stations()->create($request->validated())], 201);
     }
 
+    public function index(Academy $academy, Election $election)
+    {
+        abort_if($election->academy_id !== $academy->id, 404);
+
+        return response()->json(['success' => true, 'data' => $election->stations()
+            ->withCount(['receipts as issued_count' => fn ($q) => $q->where('status', 'issued'), 'receipts as cast_count' => fn ($q) => $q->where('status', 'cast')])
+            ->orderBy('name')->get(['id', 'name', 'location', 'is_open', 'opened_at', 'closed_at'])]);
+    }
+
     public function update(UpdateElectionStationRequest $request, Academy $academy, Election $election, ElectionStation $station)
     {
         $s = $this->station($academy, $election, $station);
