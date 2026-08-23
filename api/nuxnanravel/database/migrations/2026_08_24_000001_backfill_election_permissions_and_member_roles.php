@@ -37,76 +37,72 @@ return new class extends Migration
             });
         }
 
-        try {
-            DB::transaction(function (): void {
-                foreach (self::PERMISSIONS as $name => $permissions) {
-                    DB::table('academy_roles')->where('name', $name)->orderBy('id')->eachById(
-                        function (object $role) use ($permissions): void {
-                            $current = json_decode($role->permissions ?? '[]', true);
-                            $current = is_array($current) ? $current : [];
+        DB::transaction(function (): void {
+            foreach (self::PERMISSIONS as $name => $permissions) {
+                DB::table('academy_roles')->where('name', $name)->orderBy('id')->eachById(
+                    function (object $role) use ($permissions): void {
+                        $current = json_decode($role->permissions ?? '[]', true);
+                        $current = is_array($current) ? $current : [];
 
-                            DB::table('academy_roles')->where('id', $role->id)->update([
-                                'permissions' => json_encode(array_values(array_unique([
-                                    ...$current,
-                                    ...$permissions,
-                                ])), JSON_THROW_ON_ERROR),
-                            ]);
-                        }
-                    );
-                }
+                        DB::table('academy_roles')->where('id', $role->id)->update([
+                            'permissions' => json_encode(array_values(array_unique([
+                                ...$current,
+                                ...$permissions,
+                            ])), JSON_THROW_ON_ERROR),
+                        ]);
+                    }
+                );
+            }
 
-                $roles = DB::table('academy_roles')
-                    ->whereIn('name', ['student', 'staff'])
-                    ->get(['id', 'academy_id', 'name']);
+            $roles = DB::table('academy_roles')
+                ->whereIn('name', ['student', 'staff'])
+                ->get(['id', 'academy_id', 'name']);
 
-                DB::table('academy_members')
-                    ->where('status', 2)
-                    ->whereNull('academy_role_id')
-                    ->whereNotNull('user_id')
-                    ->orderBy('id')
-                    ->chunkById(500, function ($members) use ($roles): void {
-                        $backfills = [];
-                        $updates = ['student' => [], 'staff' => []];
+            DB::table('academy_members')
+                ->where('status', 2)
+                ->whereNull('academy_role_id')
+                ->whereNotNull('user_id')
+                ->orderBy('id')
+                ->chunkById(500, function ($members) use ($roles): void {
+                    $backfills = [];
+                    $updates = ['student' => [], 'staff' => []];
 
-                        foreach ($members as $member) {
-                            $roleName = $member->student_id !== null ? 'student' : 'staff';
-                            $role = $roles->first(fn (object $candidate): bool => $candidate->name === $roleName && $candidate->academy_id === $member->academy_id
-                            ) ?? $roles->first(fn (object $candidate): bool => $candidate->name === $roleName && $candidate->academy_id === null
-                            );
+                    foreach ($members as $member) {
+                        $roleName = $member->student_id !== null ? 'student' : 'staff';
+                        $role = $roles->first(fn (object $candidate): bool => $candidate->name === $roleName && $candidate->academy_id === $member->academy_id
+                        ) ?? $roles->first(fn (object $candidate): bool => $candidate->name === $roleName && $candidate->academy_id === null
+                        );
 
-                            if ($role === null) {
-                                throw new RuntimeException("Required {$roleName} role for academy {$member->academy_id} was not found.");
-                            }
-
-                            $backfills[] = [
-                                'academy_member_id' => $member->id,
-                                'previous_role_id' => null,
-                                'assigned_role_id' => $role->id,
-                                'created_at' => now(),
-                            ];
-                            $updates[$roleName][] = $member->id;
+                        if ($role === null) {
+                            throw new RuntimeException("Required {$roleName} role for academy {$member->academy_id} was not found.");
                         }
 
-                        if ($backfills !== []) {
-                            DB::table('academy_member_role_backfills')->insert($backfills);
-                        }
+                        $backfills[] = [
+                            'academy_member_id' => $member->id,
+                            'previous_role_id' => null,
+                            'assigned_role_id' => $role->id,
+                            'created_at' => now(),
+                        ];
+                        $updates[$roleName][] = $member->id;
+                    }
 
-                        foreach ($updates as $roleName => $memberIds) {
-                            if ($memberIds !== []) {
-                                foreach ($members->whereIn('id', $memberIds)->groupBy('academy_id') as $academyId => $academyMembers) {
-                                    $assignedRole = $roles->first(fn (object $candidate): bool => $candidate->name === $roleName && ((string) $candidate->academy_id === (string) $academyId || $candidate->academy_id === null)
-                                    );
-                                    foreach ($academyMembers->pluck('id')->chunk(500) as $ids) {
-                                        DB::table('academy_members')->whereIn('id', $ids)->update(['academy_role_id' => $assignedRole->id]);
-                                    }
+                    if ($backfills !== []) {
+                        DB::table('academy_member_role_backfills')->insert($backfills);
+                    }
+
+                    foreach ($updates as $roleName => $memberIds) {
+                        if ($memberIds !== []) {
+                            foreach ($members->whereIn('id', $memberIds)->groupBy('academy_id') as $academyId => $academyMembers) {
+                                $assignedRole = $roles->first(fn (object $candidate): bool => $candidate->name === $roleName && ((string) $candidate->academy_id === (string) $academyId || $candidate->academy_id === null)
+                                );
+                                foreach ($academyMembers->pluck('id')->chunk(500) as $ids) {
+                                    DB::table('academy_members')->whereIn('id', $ids)->update(['academy_role_id' => $assignedRole->id]);
                                 }
                             }
                         }
-                    });
-            });
-        } catch (Throwable $exception) {
-            throw $exception;
-        }
+                    }
+                });
+        });
     }
 
     public function down(): void
