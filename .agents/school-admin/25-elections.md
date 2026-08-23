@@ -1068,10 +1068,12 @@ GET /api/academies/1/elections  →  403 {"success":false,"message":"Insufficien
 
 **3. limiter ตั้งชื่อ คีย์ตาม "จุดที่คอขวดอยู่จริง"**
 
-| limiter | ใช้ที่ | คีย์ | เพดานที่เสนอ |
+| limiter | ใช้ที่ | คีย์ | เพดาน |
 |---|---|---|---|
-| `election-issue` | `/issue`, `/lookup`, `/void` | `station_id` จาก route (ไม่ใช่ user) | issue 60/นาที · lookup 120/นาที |
+| `election-issue` | `/issue`, `/void` | `station_id` จาก route (ไม่ใช่ user) | 60/นาที |
+| `election-lookup` | `/lookup` | `station_id` จาก route | 120/นาที |
 | `election-cast` | `/cast` | `election_id` + user id | 60/นาที |
+| `election-candidates` | `/candidates` | `election_id` + user id | 60/นาที |
 
 เหตุผลของเพดานที่ขยับขึ้น: ของเดิมตั้งไว้ตอนยังไม่มีตัวเลขจริง · ตอนนี้รู้แล้วว่าผู้มีสิทธิ์ 2,193 คน
 ถ้าเปิด 4 หน่วย 3 ชั่วโมง = ~3 คน/นาที/หน่วย โดยเฉลี่ย แต่**ช่วงพักกลางวันจะกระจุกหนักกว่าค่าเฉลี่ยหลายเท่า**
