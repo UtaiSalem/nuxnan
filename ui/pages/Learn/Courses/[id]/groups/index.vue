@@ -2,6 +2,7 @@
 import { Icon } from '@iconify/vue'
 import GroupsList from '~/components/learn/course/GroupsList.vue'
 import GroupForm from '~/components/learn/course/GroupForm.vue'
+import ImportFromClassroomsModal from '~/components/learn/course/groups/ImportFromClassroomsModal.vue'
 import { useCourseMemberStore } from '~/stores/courseMember'
 import { useAuthStore } from '~/stores/auth'
 import { useCourseStore } from '~/stores/course'
@@ -34,6 +35,7 @@ const groupStats = computed(() => {
 
 const isLoading = ref(false)
 const showCreateModal = ref(false)
+const showImportModal = ref(false)
 const editingGroup = ref<any>(null)
 
 // API
@@ -245,6 +247,15 @@ watch(() => course?.value?.id, async (newId) => {
         <Icon icon="fluent:presence-available-24-regular" class="w-4 h-4" />
         🟢 {{ groupStats.available }} ว่าง
       </div>
+      
+      <button
+        v-if="course?.academy?.id"
+        @click="showImportModal = true"
+        class="flex items-center justify-center gap-1.5 w-full sm:w-auto sm:ml-auto min-h-[44px] px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors"
+      >
+        <Icon icon="fluent:people-team-add-24-filled" class="w-4 h-4 flex-shrink-0" />
+        <span class="whitespace-nowrap">ดึงรายชื่อจากห้องเรียน</span>
+      </button>
     </div>
 
     <!-- Groups List -->
@@ -287,5 +298,12 @@ watch(() => course?.value?.id, async (newId) => {
         />
       </template>
     </DialogModal>
+
+    <ImportFromClassroomsModal
+      :show="showImportModal"
+      :course-id="course?.id"
+      @close="showImportModal = false"
+      @imported="handleRefresh"
+    />
   </div>
 </template>

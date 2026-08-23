@@ -182,6 +182,37 @@ export const useCourseGroupStore = defineStore('courseGroup', () => {
     }
   }
 
+  const fetchClassroomSources = async (courseId: string | number, academicYearId?: number) => {
+    const api = useApi()
+    const url = academicYearId 
+      ? `/api/courses/${courseId}/classroom-sources?academic_year_id=${academicYearId}`
+      : `/api/courses/${courseId}/classroom-sources`
+    return await api.get(url)
+  }
+
+  const importFromClassrooms = async (courseId: string | number, payload: any) => {
+    const api = useApi()
+    const response = await api.post(`/api/courses/${courseId}/groups/import-from-classrooms`, payload)
+    if (!payload.dry_run) {
+      await fetchGroups(courseId, true)
+    }
+    return response
+  }
+
+  const linkGroupClassrooms = async (courseId: string | number, groupId: string | number, classroomIds: number[]) => {
+    const api = useApi()
+    return await api.put(`/api/courses/${courseId}/groups/${groupId}/classrooms`, { classroom_ids: classroomIds })
+  }
+
+  const syncGroupClassroom = async (courseId: string | number, groupId: string | number, payload: any) => {
+    const api = useApi()
+    const response = await api.post(`/api/courses/${courseId}/groups/${groupId}/sync-classroom`, payload)
+    if (!payload.dry_run) {
+      await fetchGroups(courseId, true)
+    }
+    return response
+  }
+
   return {
     // State
     groups,
@@ -207,6 +238,10 @@ export const useCourseGroupStore = defineStore('courseGroup', () => {
     fetchGroupById,
     createGroup,
     updateGroupData,
-    deleteGroup
+    deleteGroup,
+    fetchClassroomSources,
+    importFromClassrooms,
+    linkGroupClassrooms,
+    syncGroupClassroom
   }
 })

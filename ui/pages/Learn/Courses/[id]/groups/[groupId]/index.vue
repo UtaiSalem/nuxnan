@@ -2,6 +2,7 @@
 import { Icon } from '@iconify/vue'
 import CourseFeedsList from '~/components/learn/course/CourseFeedsList.vue'
 import CourseGroupResources from '~/components/learn/course/groups/CourseGroupResources.vue'
+import SyncClassroomModal from '~/components/learn/course/groups/SyncClassroomModal.vue'
 
 // Inject course data
 const course = inject<Ref<any>>('course')
@@ -24,6 +25,7 @@ const isJoining = ref(false)
 const isLeaving = ref(false)
 
 const showEditModal = ref(false)
+const showSyncModal = ref(false)
 const activeTab = ref('feed')
 
 const tabs = computed(() => {
@@ -356,6 +358,14 @@ onMounted(() => {
             <div class="flex items-center gap-2">
               <!-- Admin Actions -->
               <template v-if="isCourseAdmin">
+                <button
+                  v-if="course?.academy?.id"
+                  @click="showSyncModal = true"
+                  class="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors"
+                  title="ซิงค์กับห้องเรียน"
+                >
+                  <Icon icon="fluent:arrow-sync-24-filled" class="w-5 h-5" />
+                </button>
                 <NuxtLink
                   :to="`/courses/${course.id}/groups/${groupId}/edit`"
                   class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
@@ -875,5 +885,14 @@ onMounted(() => {
         กลับไปหน้ากลุ่ม
       </NuxtLink>
     </div>
+
+    <SyncClassroomModal
+      :show="showSyncModal"
+      :course-id="course?.id"
+      :group-id="groupId"
+      :group-name="group?.name"
+      @close="showSyncModal = false"
+      @synced="loadGroup"
+    />
   </div>
 </template>
