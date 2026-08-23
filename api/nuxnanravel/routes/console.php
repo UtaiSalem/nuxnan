@@ -35,6 +35,7 @@ Schedule::command('wallet:reconcile')
     });
 
 Schedule::command('course-points:cleanup-reservations')->everyFiveMinutes();
+Schedule::command('elections:expire-stale-receipts')->everyFiveMinutes();
 Schedule::command('reconcile:all --emit-risk')->dailyAt('03:00')->timezone('Asia/Bangkok');
 Schedule::command('risk:scan')->dailyAt('03:00');
 

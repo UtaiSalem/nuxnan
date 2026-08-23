@@ -84,7 +84,7 @@ class ElectionMemberFacingTest extends TestCase
         foreach ($voters->take(2) as $i => $voter) {
             ElectionVoterReceipt::create(['election_id' => $election->id, 'election_voter_id' => $voter->id, 'user_id' => $voter->user_id, 'station_id' => $station->id, 'issued_by' => $actor->id, 'status' => $i ? 'cast' : 'issued', 'issued_at' => now()]);
         }
-        $this->actingAs($actor, 'api')->getJson("/api/academies/{$academy->id}/elections/{$election->id}/turnout")->assertOk()->assertJsonPath('data.voted', 1)->assertJsonPath('data.issued', 2)->assertJsonPath('data.total', 4)->assertJsonPath('data.percentage', 25)->assertJsonStructure(['data' => ['by_station' => [['station_name']]]]);
+        $this->actingAs($actor, 'api')->getJson("/api/academies/{$academy->id}/elections/{$election->id}/turnout")->assertOk()->assertJsonPath('data.voted', 1)->assertJsonPath('data.receipts_total', 2)->assertJsonPath('data.total', 4)->assertJsonPath('data.percentage', 25)->assertJsonStructure(['data' => ['by_station' => [['station_name']]]]);
     }
 
     public function test_index_hides_draft_for_viewer_but_owner_sees_it(): void

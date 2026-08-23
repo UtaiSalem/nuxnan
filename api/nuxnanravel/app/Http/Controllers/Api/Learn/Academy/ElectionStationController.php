@@ -138,7 +138,7 @@ class ElectionStationController extends Controller
             'name' => $s->name,
             'is_open' => (bool) $s->is_open,
             'location' => $s->location,
-            'issued' => $s->receipts()->where('status', 'issued')->count(),
+            'issued' => $s->receipts()->where('status', 'issued')->where('token_expires_at', '>', now())->count(),
             'cast' => $s->receipts()->where('status', 'cast')->count(),
             'remaining' => $election->voters()->count() - $election->receipts()->where('status', 'cast')->count(),
         ]]);

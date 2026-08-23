@@ -184,6 +184,57 @@ class ElectionStationTest extends TestCase
         $this->assertLessThanOrEqual(2, count(DB::getQueryLog()));
     }
 
+    public function test_progress_hides_expired_unswept_receipts_through_the_real_route(): void
+    {
+        [$a, $actor, $e, $station, $voter] = $this->votingContext(true);
+        ElectionVoterReceipt::create(['election_id' => $e->id, 'election_voter_id' => $voter->id, 'user_id' => $voter->user_id, 'status' => 'issued', 'token_hash' => str_repeat('a', 64), 'token_expires_at' => now()->subSecond(), 'station_id' => $station->id, 'issued_by' => $actor->id, 'issued_at' => now()]);
+        $live = $this->member($a, ['member_code' => 'LIVE']);
+        $liveVoter = ElectionVoter::create(['election_id' => $e->id, 'user_id' => $live->id, 'display_name' => $live->name, 'member_code' => 'LIVE', 'voter_type' => 'student']);
+        ElectionVoterReceipt::create(['election_id' => $e->id, 'election_voter_id' => $liveVoter->id, 'user_id' => $live->id, 'status' => 'issued', 'token_hash' => str_repeat('b', 64), 'token_expires_at' => now()->addMinute(), 'station_id' => $station->id, 'issued_by' => $actor->id, 'issued_at' => now()]);
+
+        $data = $this->actingAs($actor, 'api')->getJson("/api/academies/{$a->id}/elections/{$e->id}/stations/{$station->id}/progress")->assertOk()->json('data');
+        $this->assertSame(1, $data['issued']);
+    }
+
+    public function test_expire_stale_all_sweeps_receipts_across_two_elections(): void
+    {
+        [$a, $actor, $e, $station, $voter] = $this->votingContext(true);
+        $other = Election::create(['academy_id' => $a->id, 'title' => 'Other', 'created_by' => $actor->id, 'status' => 'voting', 'voter_roll_locked_at' => now()]);
+        $otherStation = ElectionStation::create(['election_id' => $other->id, 'name' => 'Other']);
+        $otherUser = $this->member($a, ['member_code' => 'OTHER']);
+        $otherVoter = ElectionVoter::create(['election_id' => $other->id, 'user_id' => $otherUser->id, 'display_name' => $otherUser->name, 'member_code' => 'OTHER', 'voter_type' => 'student']);
+        foreach ([[$e, $station, $voter], [$other, $otherStation, $otherVoter]] as [$election, $s, $v]) {
+            ElectionVoterReceipt::create(['election_id' => $election->id, 'election_voter_id' => $v->id, 'user_id' => $v->user_id, 'status' => 'issued', 'token_hash' => str_repeat('a', 64), 'token_expires_at' => now()->subSecond(), 'station_id' => $s->id, 'issued_by' => $actor->id, 'issued_at' => now()]);
+        }
+
+        $this->assertSame(2, app(ElectionStationService::class)->expireStaleAll());
+        $this->assertSame(2, ElectionVoterReceipt::where('status', 'expired')->count());
+        $this->assertSame(0, ElectionVoterReceipt::whereNotNull('token_hash')->where('status', 'expired')->count());
+    }
+
+    public function test_expire_stale_all_leaves_live_and_cast_receipts_alone(): void
+    {
+        [$a, $actor, $e, $station, $voter] = $this->votingContext(true);
+        $live = $this->member($a, ['member_code' => 'LIVE']);
+        $liveVoter = ElectionVoter::create(['election_id' => $e->id, 'user_id' => $live->id, 'display_name' => $live->name, 'member_code' => 'LIVE', 'voter_type' => 'student']);
+        foreach ([[$voter, 'issued', now()->addMinute()], [$liveVoter, 'cast', now()->subMinute()]] as [$v, $status, $expires]) {
+            ElectionVoterReceipt::create(['election_id' => $e->id, 'election_voter_id' => $v->id, 'user_id' => $v->user_id, 'status' => $status, 'token_hash' => str_repeat('c', 64), 'token_expires_at' => $expires, 'station_id' => $station->id, 'issued_by' => $actor->id, 'issued_at' => now()]);
+        }
+
+        $this->assertSame(0, app(ElectionStationService::class)->expireStaleAll());
+        $this->assertDatabaseHas('election_voter_receipts', ['user_id' => $voter->user_id, 'status' => 'issued', 'token_hash' => str_repeat('c', 64)]);
+        $this->assertDatabaseHas('election_voter_receipts', ['user_id' => $live->id, 'status' => 'cast', 'token_hash' => str_repeat('c', 64)]);
+    }
+
+    public function test_expire_stale_command_reports_swept_count(): void
+    {
+        [$a, $actor, $e, $station, $voter] = $this->votingContext(true);
+        ElectionVoterReceipt::create(['election_id' => $e->id, 'election_voter_id' => $voter->id, 'user_id' => $voter->user_id, 'status' => 'issued', 'token_hash' => str_repeat('d', 64), 'token_expires_at' => now()->subSecond(), 'station_id' => $station->id, 'issued_by' => $actor->id, 'issued_at' => now()]);
+
+        $this->artisan('elections:expire-stale-receipts')->expectsOutput('Expired 1 stale election receipts.')->assertExitCode(0);
+        $this->assertDatabaseHas('election_voter_receipts', ['status' => 'expired', 'token_hash' => null]);
+    }
+
     public function test_view_only_cannot_issue_but_station_permission_can(): void
     {
         [$a, $actor, $e, $station, $voter] = $this->votingContext(true, null, [], ['elections.view', 'elections.station']);

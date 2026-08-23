@@ -13,6 +13,8 @@ use App\Models\StudentCard;
 use App\Models\User;
 use App\Services\StudentIdentifierResolver;
 use DomainException;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\DB;
 
 class ElectionStationService
@@ -134,7 +136,18 @@ class ElectionStationService
 
     public function expireStale(Election $e): int
     {
-        return $e->receipts()->where('status', 'issued')->where('token_expires_at', '<', now())->update(['status' => 'expired', 'token_hash' => null]);
+        return $this->staleReceipts($e->receipts())->update(['status' => 'expired', 'token_hash' => null]);
+    }
+
+    public function expireStaleAll(): int
+    {
+        return $this->staleReceipts(ElectionVoterReceipt::query())
+            ->update(['status' => 'expired', 'token_hash' => null]);
+    }
+
+    private function staleReceipts(Builder|Relation $query): Builder|Relation
+    {
+        return $query->where('status', 'issued')->where('token_expires_at', '<', now());
     }
 
     private function log(Election $e, User $actor, string $action, array $values): void
