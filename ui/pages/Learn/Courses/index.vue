@@ -337,22 +337,29 @@ watch(() => authStore.user?.id, (id) => {
     <!-- Hero Banner -->
     <ClientOnly><Teleport to="#hero-slot">
       <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-400 shadow-xl">
-        <div class="absolute inset-0 opacity-20">
-          <div class="absolute inset-0" style="background-image: url('/images/resources/animate-bg.png'); background-size: cover;"></div>
-        </div>
-        <div class="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-          <img :src="`${$config.public.apiBase}/storage/images/badge/gold-b.png`" alt="badge" class="w-16 h-16 md:w-20 md:h-20 drop-shadow-lg animate-bounce" style="animation-duration: 2s;" />
-          <img :src="`${$config.public.apiBase}/storage/images/badge/scientist-b.png`" alt="badge" class="w-12 h-12 md:w-16 md:h-16 drop-shadow-lg animate-bounce hidden sm:block" style="animation-duration: 2.5s; animation-delay: 0.3s;" />
-        </div>
-        <div class="relative z-10 px-6 py-8 md:py-10 ml-24 sm:ml-36 md:ml-44">
-          <h1 class="text-2xl md:text-3xl font-black text-white mb-2">รายวิชา</h1>
-          <p class="text-blue-50 font-medium text-sm md:text-base">ค้นหาวิชาเพื่อเรียน หรือซื้อ Master Copy สำหรับสถาบันของคุณ</p>
-        </div>
-        <div class="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 items-center gap-3">
-          <img :src="`${$config.public.apiBase}/storage/images/badge/globet-b.png`" alt="badge" class="w-10 h-10 drop-shadow-lg opacity-70 animate-pulse" />
-          <img :src="`${$config.public.apiBase}/storage/images/badge/collector-b.png`" alt="badge" class="w-14 h-14 drop-shadow-lg opacity-80 animate-bounce" style="animation-duration: 3s;" />
-          <img :src="`${$config.public.apiBase}/storage/images/badge/platinum-b.png`" alt="badge" class="w-12 h-12 drop-shadow-lg opacity-70 animate-pulse" style="animation-delay: 0.5s;" />
-          <img :src="`${$config.public.apiBase}/storage/images/badge/tycoon.png`" alt="badge" class="w-16 h-16 drop-shadow-lg opacity-90 animate-bounce" style="animation-duration: 2.8s; animation-delay: 0.2s;" />
+        <div
+          class="absolute inset-0 opacity-20"
+          aria-hidden="true"
+          style="background-image: radial-gradient(circle, #ffffff 1px, transparent 1px); background-size: 18px 18px;"
+        ></div>
+
+        <div class="relative z-10 flex items-center gap-3 p-4 sm:gap-4 sm:p-6 md:gap-6 md:p-8">
+          <div class="flex flex-shrink-0 items-center gap-2">
+            <img :src="`${$config.public.apiBase}/storage/images/badge/gold-b.png`" alt="badge" class="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 drop-shadow-lg animate-bounce" style="animation-duration: 2s;" />
+            <img :src="`${$config.public.apiBase}/storage/images/badge/scientist-b.png`" alt="badge" class="hidden sm:block w-12 h-12 md:w-16 md:h-16 drop-shadow-lg animate-bounce" style="animation-duration: 2.5s; animation-delay: 0.3s;" />
+          </div>
+
+          <div class="min-w-0 flex-1">
+            <h1 class="text-xl sm:text-2xl md:text-3xl font-black text-white mb-1 sm:mb-2 break-words">รายวิชา</h1>
+            <p class="text-blue-50 font-medium text-xs sm:text-sm md:text-base break-words">ค้นหาวิชาเพื่อเรียน หรือซื้อ Master Copy สำหรับสถาบันของคุณ</p>
+          </div>
+
+          <div class="hidden md:flex flex-shrink-0 items-center gap-3">
+            <img :src="`${$config.public.apiBase}/storage/images/badge/globet-b.png`" alt="badge" class="w-10 h-10 drop-shadow-lg opacity-70 animate-pulse" />
+            <img :src="`${$config.public.apiBase}/storage/images/badge/collector-b.png`" alt="badge" class="w-14 h-14 drop-shadow-lg opacity-80 animate-bounce" style="animation-duration: 3s;" />
+            <img :src="`${$config.public.apiBase}/storage/images/badge/platinum-b.png`" alt="badge" class="w-12 h-12 drop-shadow-lg opacity-70 animate-pulse" style="animation-delay: 0.5s;" />
+            <img :src="`${$config.public.apiBase}/storage/images/badge/tycoon.png`" alt="badge" class="w-16 h-16 drop-shadow-lg opacity-90 animate-bounce" style="animation-duration: 2.8s; animation-delay: 0.2s;" />
+          </div>
         </div>
       </div>
     </Teleport></ClientOnly>

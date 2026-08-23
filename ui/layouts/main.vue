@@ -1793,7 +1793,7 @@ const onQRActionComplete = (result) => {
 
     <!-- Left Panel Toggle (visible < lg when left widgets exist) -->
     <div
-      class="fixed left-0 top-16 z-30 transition-all duration-300"
+      class="fixed left-0 top-1/2 -translate-y-1/2 z-30 transition-all duration-300"
       :class="hasLeft && !layoutWidgets.isLeftPanelOpen ? 'translate-x-0' : '-translate-x-full'"
     >
       <button
@@ -1807,7 +1807,7 @@ const onQRActionComplete = (result) => {
 
     <!-- Right Panel Toggle (visible < xl when right widgets exist) -->
     <div
-      class="fixed right-0 top-16 z-30 transition-all duration-300"
+      class="fixed right-0 top-1/2 -translate-y-1/2 z-30 transition-all duration-300"
       :class="hasRight && !layoutWidgets.isRightPanelOpen ? 'translate-x-0' : 'translate-x-full'"
     >
       <button

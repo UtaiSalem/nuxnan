@@ -151,9 +151,11 @@ watch(() => route.query.view, (newVal) => {
     <!-- Hero Banner -->
     <ClientOnly><Teleport to="#hero-slot">
       <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-500 shadow-xl">
-        <div class="absolute inset-0 opacity-20">
-          <div class="absolute inset-0" style="background-image: url('/images/resources/animate-bg.png'); background-size: cover;"></div>
-        </div>
+        <div
+          class="absolute inset-0 opacity-20"
+          aria-hidden="true"
+          style="background-image: radial-gradient(circle, #ffffff 1px, transparent 1px); background-size: 18px 18px;"
+        ></div>
         
         <div class="absolute left-6 top-1/2 -translate-y-1/2 hidden md:block">
           <Icon icon="fluent:building-multiple-24-filled" class="w-20 h-20 text-white/20 animate-pulse" />
