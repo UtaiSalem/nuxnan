@@ -143,6 +143,12 @@ const fetchAnnouncements = async () => {
 // Quick actions for student
 const quickActions = computed(() => [
   {
+    title: 'การเลือกตั้ง',
+    icon: 'fluent:vote-24-regular',
+    to: `/academies/${academyName.value}/elections`,
+    color: 'bg-rose-500',
+  },
+  {
     title: 'โปรไฟล์ของฉัน',
     icon: 'fluent:person-info-24-regular',
     to: `/academies/${academyName.value}/my-profile`,
