@@ -19,8 +19,8 @@ Route::middleware('auth:api')->prefix('academies/{academy}/elections')->group(fu
     Route::post('/{election}/publish', [ElectionController::class, 'publish'])->middleware('academy.permission:elections.manage');
     Route::get('/{election}/results', [ElectionController::class, 'results'])->middleware('academy.permission:elections.view');
     Route::get('/{election}/turnout', [ElectionController::class, 'turnout'])->middleware('academy.permission:elections.view');
-    Route::get('/{election}/candidates', [ElectionPartyController::class, 'candidates'])->middleware(['academy.permission:elections.view', 'throttle:60,1']);
-    Route::post('/{election}/cast', [ElectionStationController::class, 'cast'])->middleware('throttle:30,1');
+    Route::get('/{election}/candidates', [ElectionPartyController::class, 'candidates'])->middleware(['academy.permission:elections.view', 'throttle:election-candidates']);
+    Route::post('/{election}/cast', [ElectionStationController::class, 'cast'])->middleware('throttle:election-cast');
     Route::post('/{election}/voter-roll/lock', [ElectionVoterRollController::class, 'lock'])->middleware('academy.permission:elections.manage');
     Route::get('/{election}/voter-roll', [ElectionVoterRollController::class, 'index'])->middleware('academy.permission:elections.manage');
     Route::get('/{election}/voter-roll/stats', [ElectionVoterRollController::class, 'stats'])->middleware('academy.permission:elections.view');
@@ -37,10 +37,10 @@ Route::middleware('auth:api')->prefix('academies/{academy}/elections')->group(fu
     Route::delete('/{election}/stations/{station}', [ElectionStationController::class, 'destroy'])->middleware('academy.permission:elections.manage');
     Route::post('/{election}/stations/{station}/open', [ElectionStationController::class, 'open'])->middleware('academy.permission:elections.station');
     Route::post('/{election}/stations/{station}/close', [ElectionStationController::class, 'close'])->middleware('academy.permission:elections.station');
-    Route::post('/{election}/stations/{station}/lookup', [ElectionStationController::class, 'lookup'])->middleware(['academy.permission:elections.station', 'throttle:60,1']);
+    Route::post('/{election}/stations/{station}/lookup', [ElectionStationController::class, 'lookup'])->middleware(['academy.permission:elections.station', 'throttle:election-lookup']);
     Route::get('/{election}/stations/{station}/search', [ElectionStationController::class, 'search'])->middleware('academy.permission:elections.station');
-    Route::post('/{election}/stations/{station}/issue', [ElectionStationController::class, 'issue'])->middleware(['academy.permission:elections.station', 'throttle:30,1']);
-    Route::post('/{election}/stations/{station}/void', [ElectionStationController::class, 'void'])->middleware('academy.permission:elections.station');
+    Route::post('/{election}/stations/{station}/issue', [ElectionStationController::class, 'issue'])->middleware(['academy.permission:elections.station', 'throttle:election-issue']);
+    Route::post('/{election}/stations/{station}/void', [ElectionStationController::class, 'void'])->middleware(['academy.permission:elections.station', 'throttle:election-issue']);
     Route::get('/{election}/stations/{station}/progress', [ElectionStationController::class, 'progress'])->middleware('academy.permission:elections.station');
 });
 

@@ -33,7 +33,10 @@ use App\Policies\CoursePolicy;
 use App\Policies\EnrollmentPolicy;
 use App\Policies\StudentMasterProfilePolicy;
 use App\Policies\WithdrawalPolicy;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Telescope\TelescopeApplicationServiceProvider;
@@ -55,6 +58,21 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $routeKey = static function (Request $request, string $parameter): string {
+            $value = $request->route($parameter);
+
+            return (string) (is_object($value) && method_exists($value, 'getKey')
+                ? $value->getKey()
+                : $value);
+        };
+
+        // Ceilings cover normal bursts while leaving room above the expected ~3 requests/minute/station average.
+        // Do not key these limits by IP: all students in a school may share one NAT address.
+        RateLimiter::for('election-issue', static fn (Request $request) => Limit::perMinute(60)->by($routeKey($request, 'station')));
+        RateLimiter::for('election-lookup', static fn (Request $request) => Limit::perMinute(120)->by($routeKey($request, 'station')));
+        RateLimiter::for('election-cast', static fn (Request $request) => Limit::perMinute(60)->by($routeKey($request, 'election').'|'.(string) $request->user('api')?->getAuthIdentifier()));
+        RateLimiter::for('election-candidates', static fn (Request $request) => Limit::perMinute(60)->by($routeKey($request, 'election').'|'.(string) $request->user('api')?->getAuthIdentifier()));
+
         Schema::defaultStringLength(191);
         Gate::policy(Course::class, CoursePolicy::class);
         Gate::policy(CourseDonate::class, CourseDonatePolicy::class);
