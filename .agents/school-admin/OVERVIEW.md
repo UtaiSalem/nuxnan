@@ -70,7 +70,7 @@ Legend: 🟢 พร้อมใช้งาน (ผ่านการตรว�
 | 22 | ประวัติกิจกรรม | `admin/activity-log/` | `reports.view` | 22-activity-log.md | ⚪ |
 | 23 | รายได้ | `admin/revenue.vue` | `finance.view` / `finance.manage` | 23-revenue.md | 🟡 Phase 1 done |
 | **24** | **แดชบอร์ด** | `admin/index.vue` | `academy.view` | 24-dashboard.md | ⚪ (ทำหลังสุด — รวม signal) |
-| **25** | **การเลือกตั้งสภานักเรียน** | `admin/elections/` + `elections/[id]/station.vue` | `elections.view` / `elections.manage` / `elections.station` | [25-elections.md](25-elections.md) | 🔴 **กำลังทำ** — backend ครบ E-S1–E-S7 · **E-S8 ตรวจ 2026-08-23 ไม่ผ่าน** (สัญญาข้อมูลไม่ตรง ออกบัตรไม่ได้ ดู §7.1) → E-S8b · สเปก E-S9 เขียนแล้ว (§11) |
+| **25** | **การเลือกตั้งสภานักเรียน** | `admin/elections/` + `elections/[id]/station.vue` | `elections.view` / `elections.manage` / `elections.station` | [25-elections.md](25-elections.md) | 🔴 **กำลังทำ** — E-S1–E-S8c ✅ (หน่วยเลือกตั้งใช้งานได้จริงแล้ว ยิง HTTP ผ่านครบ) · **ถัดไป E-S9 หน้าแอดมิน** สเปกอยู่ใน §11 · เหลือ E-S10–E-S12 |
 | **26** | **เช็คชื่อเข้าร่วมกิจกรรม** | `admin/events/` + หน้า session check-in (ยังไม่มี) | `events.view` / `events.manage` | [26-activity-attendance.md](26-activity-attendance.md) | 🟢 **ปิดครบ A-S0–A-S6** (2026-08-01) |
 | **27** | **กีฬาสี** | ยังไม่มี | `sports.*` (เสนอใหม่) | [27-sports-day.md](27-sports-day.md) | 🟢 **ปิดครบ S-S1–S-S7** (2026-08-20) |
 
@@ -95,7 +95,7 @@ Legend: 🟢 พร้อมใช้งาน (ผ่านการตรว�
 
 ### สถานะคิว (ทวนกับโค้ดจริง 2026-08-23)
 
-#26 กับ #27 ปิดครบแล้ว · **#25 เป็นงานที่ค้างอยู่ตัวเดียวในคิวเร่งด่วน** — backend จบตั้งแต่ 2026-07-31 แต่ฝั่งหน้าจอเพิ่ง commit E-S8 ไว้เฉย ๆ โดยไม่มีใครตรวจ และตรวจแล้วไม่ผ่าน · ลำดับต่อจากนี้: **E-S8b → E-S9 (§11) → E-S10 → E-S11 → E-S12** แล้วค่อยกลับไป #9 ที่ยังค้าง D-S6b/D-S7
+#26 กับ #27 ปิดครบแล้ว · **#25 เป็นงานที่ค้างอยู่ตัวเดียวในคิวเร่งด่วน** — backend จบตั้งแต่ 2026-07-31 แต่ฝั่งหน้าจอเพิ่ง commit E-S8 ไว้เฉย ๆ โดยไม่มีใครตรวจ และตรวจแล้วไม่ผ่าน · ลำดับต่อจากนี้: ~~E-S8b · E-S8c~~ ✅ → **E-S9 (§11)** → E-S10 → E-S11 → E-S12 แล้วค่อยกลับไป #9 ที่ยังค้าง D-S6b/D-S7
 
 ---
 
