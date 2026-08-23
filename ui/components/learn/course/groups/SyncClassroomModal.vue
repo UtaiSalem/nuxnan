@@ -295,10 +295,14 @@ const confirmSync = async () => {
                 <Icon icon="fluent:person-add-24-filled" class="w-5 h-5" />
                 จะเพิ่มเข้ากลุ่ม ({{ syncResult.to_add?.length || 0 }} คน)
               </h4>
-              <div class="flex-1 overflow-y-auto max-h-[30vh]">
+              <div class="flex-1">
                 <div v-if="syncResult.to_add?.length === 0" class="text-sm text-gray-500 italic py-2">ไม่มีสมาชิกใหม่</div>
-                <div v-for="s in syncResult.to_add" :key="s.user_id" class="text-sm py-1 border-b border-gray-100 dark:border-gray-800 last:border-0 truncate">
-                  <span class="text-gray-400 mr-2">{{ s.student_number || '-' }}</span> {{ s.name }}
+                <div v-else class="flex flex-wrap gap-1">
+                  <span
+                    v-for="s in syncResult.to_add"
+                    :key="s.user_id"
+                    class="max-w-full truncate rounded-md bg-blue-50 px-1.5 py-0.5 text-[11px] text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                  >{{ s.name }}</span>
                 </div>
               </div>
             </div>
@@ -311,7 +315,7 @@ const confirmSync = async () => {
               </h4>
               <p class="text-[11px] text-gray-500 mb-2">การถอดออกจากกลุ่มจะไม่ลบคะแนนหรือประวัติการเช็คชื่อ นักเรียนยังเป็นสมาชิกรายวิชาอยู่</p>
               
-              <div class="flex-1 overflow-y-auto max-h-[30vh]">
+              <div class="flex-1">
                 <div v-if="syncResult.missing?.length === 0" class="text-sm text-gray-500 italic py-2">ไม่มีสมาชิกที่หลุดจากห้อง</div>
                 <label v-for="s in syncResult.missing" :key="s.course_member_id" class="flex items-center gap-2 py-1.5 border-b border-gray-100 dark:border-gray-800 last:border-0 cursor-pointer min-h-[44px]">
                   <input type="checkbox" :value="s.course_member_id" v-model="detachMemberIds" class="w-4 h-4 text-red-600 rounded border-gray-300 focus:ring-red-500 flex-shrink-0">

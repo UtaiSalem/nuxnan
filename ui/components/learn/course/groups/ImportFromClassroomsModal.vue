@@ -187,20 +187,28 @@ const confirmImport = async () => {
 
     <template #content>
       <!-- Stepper Header -->
-      <div class="flex items-center gap-2 mb-6 border-b border-gray-100 dark:border-gray-700 pb-4">
-        <div class="flex items-center gap-2" :class="step >= 1 ? 'text-emerald-600' : 'text-gray-400'">
-          <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" :class="step >= 1 ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-gray-100 dark:bg-gray-800'">1</span>
-          <span class="text-sm font-medium">เลือกห้องเรียน</span>
-        </div>
-        <div class="flex-1 h-px bg-gray-200 dark:bg-gray-700"></div>
-        <div class="flex items-center gap-2" :class="step >= 2 ? 'text-emerald-600' : 'text-gray-400'">
-          <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" :class="step >= 2 ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-gray-100 dark:bg-gray-800'">2</span>
-          <span class="text-sm font-medium">เลือกโหมด</span>
-        </div>
-        <div class="flex-1 h-px bg-gray-200 dark:bg-gray-700"></div>
-        <div class="flex items-center gap-2" :class="step >= 3 ? 'text-emerald-600' : 'text-gray-400'">
-          <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" :class="step >= 3 ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-gray-100 dark:bg-gray-800'">3</span>
-          <span class="text-sm font-medium">ตรวจสอบ</span>
+      <div class="mb-4 flex items-stretch gap-1.5 sm:gap-2">
+        <div
+          v-for="s in [{ n: 1, label: 'เลือกห้องเรียน' }, { n: 2, label: 'เลือกโหมด' }, { n: 3, label: 'ตรวจสอบ' }]"
+          :key="s.n"
+          class="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-2.5 py-2 sm:px-3"
+          :class="step > s.n
+            ? 'bg-emerald-500 text-white'
+            : step === s.n
+              ? 'bg-emerald-600 text-white shadow-sm'
+              : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'"
+        >
+          <span
+            class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold sm:h-7 sm:w-7 sm:text-sm"
+            :class="step >= s.n ? 'bg-white/25 text-white' : 'bg-white text-gray-500 dark:bg-gray-700 dark:text-gray-300'"
+          >
+            <Icon v-if="step > s.n" icon="heroicons:check-20-solid" class="h-4 w-4" />
+            <template v-else>{{ s.n }}</template>
+          </span>
+          <span
+            class="min-w-0 truncate text-xs font-semibold sm:text-sm"
+            :class="step === s.n ? 'block' : 'hidden sm:block'"
+          >{{ s.label }}</span>
         </div>
       </div>
 
@@ -318,21 +326,21 @@ const confirmImport = async () => {
       <div v-if="step === 3" class="space-y-4">
         <!-- Summary Strip -->
         <div v-if="summary" class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <div class="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-center">
-            <div class="text-xl font-bold text-blue-600 dark:text-blue-400">{{ summary.to_add }}</div>
-            <div class="text-xs text-gray-600 dark:text-gray-400">จะเพิ่มใหม่</div>
+          <div class="flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 dark:bg-blue-900/30">
+            <span class="text-lg font-bold text-blue-600 dark:text-blue-400 sm:text-xl">{{ summary.to_add }}</span>
+            <span class="min-w-0 text-[11px] leading-tight text-gray-600 dark:text-gray-400 sm:text-xs">จะเพิ่มใหม่</span>
           </div>
-          <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
-            <div class="text-xl font-bold text-gray-600 dark:text-gray-400">{{ summary.already_member }}</div>
-            <div class="text-xs text-gray-600 dark:text-gray-400">เป็นสมาชิกอยู่แล้ว</div>
+          <div class="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-800">
+            <span class="text-lg font-bold text-gray-600 dark:text-gray-400 sm:text-xl">{{ summary.already_member }}</span>
+            <span class="min-w-0 text-[11px] leading-tight text-gray-600 dark:text-gray-400 sm:text-xs">เป็นสมาชิกอยู่แล้ว</span>
           </div>
-          <div class="p-3 bg-amber-50 dark:bg-amber-900/30 rounded-lg text-center">
-            <div class="text-xl font-bold text-amber-600 dark:text-amber-400">{{ summary.moving_from_other_group }}</div>
-            <div class="text-xs text-gray-600 dark:text-gray-400">ย้ายกลุ่ม</div>
+          <div class="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 dark:bg-amber-900/30">
+            <span class="text-lg font-bold text-amber-600 dark:text-amber-400 sm:text-xl">{{ summary.moving_from_other_group }}</span>
+            <span class="min-w-0 text-[11px] leading-tight text-gray-600 dark:text-gray-400 sm:text-xs">ย้ายกลุ่ม</span>
           </div>
-          <div class="p-3 bg-red-50 dark:bg-red-900/30 rounded-lg text-center">
-            <div class="text-xl font-bold text-red-600 dark:text-red-400">{{ summary.no_user_account }}</div>
-            <div class="text-xs text-gray-600 dark:text-gray-400">ไม่มีบัญชี</div>
+          <div class="flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 dark:bg-red-900/30">
+            <span class="text-lg font-bold text-red-600 dark:text-red-400 sm:text-xl">{{ summary.no_user_account }}</span>
+            <span class="min-w-0 text-[11px] leading-tight text-gray-600 dark:text-gray-400 sm:text-xs">ไม่มีบัญชี</span>
           </div>
         </div>
 
@@ -368,17 +376,25 @@ const confirmImport = async () => {
               <span v-if="!item.target_group.exists" class="px-1.5 py-0.5 text-[10px] bg-emerald-100 text-emerald-700 rounded">กลุ่มใหม่</span>
             </div>
             
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div v-if="item.to_add.length > 0">
-                <div class="text-xs font-bold text-blue-600 mb-1">จะเพิ่มเข้ากลุ่ม ({{ item.to_add.length }})</div>
-                <div class="text-xs text-gray-600 dark:text-gray-400 max-h-20 overflow-y-auto">
-                  <div v-for="s in item.to_add" :key="s.user_id" class="truncate">- {{ s.name }}</div>
+            <div class="flex flex-col gap-3 sm:flex-row">
+              <div v-if="item.to_add.length > 0" class="min-w-0 flex-1">
+                <div class="mb-1.5 text-xs font-bold text-blue-600 dark:text-blue-400">จะเพิ่มเข้ากลุ่ม ({{ item.to_add.length }})</div>
+                <div class="flex flex-wrap gap-1">
+                  <span
+                    v-for="s in item.to_add"
+                    :key="s.user_id"
+                    class="max-w-full truncate rounded-md bg-blue-50 px-1.5 py-0.5 text-[11px] text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                  >{{ s.name }}</span>
                 </div>
               </div>
-              <div v-if="item.already_member.length > 0">
-                <div class="text-xs font-bold text-gray-500 mb-1">อยู่ในกลุ่มอยู่แล้ว ({{ item.already_member.length }})</div>
-                <div class="text-xs text-gray-400 max-h-20 overflow-y-auto">
-                  <div v-for="s in item.already_member" :key="s.user_id" class="truncate">- {{ s.name }}</div>
+              <div v-if="item.already_member.length > 0" class="min-w-0 flex-1">
+                <div class="mb-1.5 text-xs font-bold text-gray-500 dark:text-gray-400">อยู่ในกลุ่มอยู่แล้ว ({{ item.already_member.length }})</div>
+                <div class="flex flex-wrap gap-1">
+                  <span
+                    v-for="s in item.already_member"
+                    :key="s.user_id"
+                    class="max-w-full truncate rounded-md bg-gray-100 px-1.5 py-0.5 text-[11px] text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                  >{{ s.name }}</span>
                 </div>
               </div>
             </div>
