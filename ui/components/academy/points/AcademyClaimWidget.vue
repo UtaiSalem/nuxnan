@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useAcademyClaimable } from '~/composables/useAcademyPoints'
 import AcademyDonorCard from './AcademyDonorCard.vue'
 
@@ -14,15 +14,32 @@ const isRefreshing = ref(false)
 const loadMoreSentinel = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
 
+// IntersectionObserver ยิง callback เฉพาะตอนเปลี่ยนสถานะ ถ้า sentinel ยังค้างอยู่ในจอ
+// หลังต่อรายการหน้าใหม่ มันจะเงียบไปเลย unobserve แล้ว observe ซ้ำ
+// = บังคับให้มันแจ้งสถานะปัจจุบันใหม่อีกรอบ
+const reobserveSentinel = () => {
+  if (!observer || !loadMoreSentinel.value) return
+  observer.unobserve(loadMoreSentinel.value)
+  observer.observe(loadMoreSentinel.value)
+}
+
 onMounted(fetchClaimable)
 onMounted(async () => {
   await nextTick()
   observer = new IntersectionObserver(([entry]) => {
-    if (entry?.isIntersecting) fetchClaimable(true)
+    if (entry?.isIntersecting) fetchClaimable(true).catch(() => {})
   }, { rootMargin: '240px' })
   if (loadMoreSentinel.value) observer.observe(loadMoreSentinel.value)
 })
 onUnmounted(() => observer?.disconnect())
+
+// รายการยาวขึ้น = เพิ่งต่อหน้าใหม่สำเร็จ จึงถามสถานะ sentinel ซ้ำ
+// ถ้าหมดหน้าแล้วไม่ต้องถาม จะได้ไม่วนต่อ และถ้าโหลดมาแล้วไม่ได้รายการเพิ่ม
+// ความยาวไม่เปลี่ยน watch ก็ไม่ยิง วงจรหยุดเอง
+watch(() => items.value.length, () => {
+  if (!pagination.value.has_more) return
+  nextTick(reobserveSentinel)
+})
 
 const claim = async (result: unknown) => {
   await fetchClaimable()
