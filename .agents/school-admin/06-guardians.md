@@ -281,7 +281,7 @@ guardian_contacts                ← remap ให้ชี้ guardians.id (ค�
 | Step | Title | Depends | Deliverable | Status |
 |---|---|---|---|---|
 | **G-S7** | **Permission guard ระดับฝ่าย** — เพิ่ม key `guardians.*` 5 ตัว, ผูกกับฝ่ายทะเบียน/กิจการนักเรียนตาม §4, ใส่ middleware ทุก route · แตกเป็น a (คีย์+migration) / b (ด่านตรวจ) / c (`/my-role` ส่งสิทธิ์จากฝ่าย) | #9, G-S4 | model + migration + routes + policy + 2 controller + 3 test file | 🟢 **verified 2026-08-25** — ดู §8.1 |
-| **G-S8** | **ฟิลด์อ่อนไหว (D4/Q1)** — ซ่อน `citizen_id`/`monthly_income` ใน response เมื่อไม่มี `guardians.sensitive.view` และ reject การแก้เมื่อไม่มี `.manage` | G-S7 | resource/policy + tests | ⚪ |
+| **G-S8** | **ฟิลด์อ่อนไหว (D4/Q1)** — ซ่อน `citizen_id`/`monthly_income` ใน response เมื่อไม่มี `guardians.sensitive.view` และ reject การแก้เมื่อไม่มี `.manage` · แตกเป็น a (service + GuardianController 2 ตัว) / b (StudentResource · โปรไฟล์ · ห้องเรียน) | G-S7 | service + 4 controller/resource + 2 test file | 🟢 **verified 2026-08-25** — ดู §8.3 |
 | **G-S9** | **Audit log (Q2)** — ผูก `MemberActivityLog` ทั้ง create/update/delete/appoint + event เปิดดูฟิลด์อ่อนไหว | G-S7 | controller/service + tests | ⚪ |
 | **G-S10** | **การแต่งตั้ง 3 ทาง (Q3)** — endpoint + สิทธิ์: นักเรียนแต่งตั้งเอง / ครูประจำชั้น (เฉพาะห้องตน) / ฝ่ายทะเบียน พร้อมบันทึกผู้แต่งตั้ง; ไม่บังคับว่าต้องมีผู้ปกครอง; รองรับ "ผู้ปกครองคนเดิมของพี่น้อง" โดยเลือกคนที่มีอยู่แล้วแทนการสร้างซ้ำ (ผลพลอยได้จาก D5) | G-S7, G-S4 | endpoints + tests | ⚪ |
 | **G-S11** | **FE ยกเครื่อง** — เพิ่ม/แก้/ลบ ผู้ปกครอง, จัดการช่องทางติดต่อ, แสดง "ลูกในโรงเรียน" หลายคนต่อผู้ปกครอง 1 คน, การ์ดสถิติครบประเภท, error/empty state, แก้ convention (`useApi`, `definePageMeta`, dark mode) ตามสกิล `hopeui-port` | G-S7…G-S10 | pages + components | ⚪ |
@@ -319,7 +319,8 @@ Report back: diff summary + ผลเทสต์ + คำสั่งที่�
 ### 8.1 G-S7 — ปิดช่องโหว่สิทธิ์ผู้ปกครอง (2026-08-25, agy 3 shard · claude ตรวจเองทุกข้อ)
 
 **สภาพก่อนแก้ (สแกนเอง ไม่ได้เชื่อสเปกเดิม):** route ผู้ปกครองฝั่งแอดมินมีแค่ `auth:api` ไม่มีด่านสิทธิ์เลย
-⇒ ผู้ใช้ที่ล็อกอินคนไหนก็ได้ (ไม่ต้องเป็นสมาชิกโรงเรียน) อ่านรายชื่อผู้ปกครองทั้งโรงเรียนพร้อมเลขบัตรประชาชน แก้ และลบได้
+⇒ ผู้ใช้ที่ล็อกอินคนไหนก็ได้ (ไม่ต้องเป็นสมาชิกโรงเรียน) อ่านรายชื่อผู้ปกครองทั้งโรงเรียน (ชื่อ-สกุล เบอร์โทร อาชีพ ที่ทำงาน)
+แก้ และลบได้ · **เลขบัตรประชาชนไม่ได้อยู่ในรายการ แต่หลุดทาง response ของ `PATCH`** ซึ่งคนกลุ่มเดียวกันนี้ยิงได้
 — แพตเทิร์นเดียวกับ D1 ของเมนู #9 · **ยืนยันของจริงหลังแก้:** token ของนักเรียนธรรมดายิง `GET /api/academies/1/guardians` ได้ 403
 (เดิมได้ 200 พร้อมข้อมูล) · token ของเจ้าของโรงเรียนได้ 200
 
@@ -363,6 +364,42 @@ Report back: diff summary + ผลเทสต์ + คำสั่งที่�
 `MyRoleDepartmentPermissionsTest` 5 · รวมชุด regression `HomeVisit|StudentProfile|Guardian|MyRole` **68 ผ่าน (208 assertions)** · pint ผ่าน
 · **agy รายงานว่า `GuardianAuthorizationTest` ผ่าน 10/10 ทั้งที่จริงตอนนั้นพัง 5 ข้อ** (`Database\Factories\StudentFactory` ไม่มีอยู่จริง)
 — claude แก้ helper เป็น `Student::create([...])` เองแล้วรันใหม่จนผ่าน
+
+### 8.3 G-S8 — ฟิลด์อ่อนไหวของผู้ปกครอง (2026-08-25, agy 2 shard · claude ตรวจเองทุกข้อ)
+
+**นโยบายที่เจ้าของโปรเจคตัดสิน (ต่างจากเมทริกซ์ §4 หนึ่งช่อง):** นอกจากคนที่มีคีย์ `guardians.sensitive.*` แล้ว
+**นักเรียนเจ้าของโปรไฟล์** และ **ครูประจำชั้นของห้องนั้น** ยังเห็นและแก้ `citizen_id`/`monthly_income` ได้
+(การ์ดใน `my-profile` และงานเยี่ยมบ้าน/บัตรนักเรียนต้องใช้) · เมทริกซ์เดิมเขียนว่า ❌ ทั้งคู่ — **ยึดตามข้อตัดสินนี้**
+· เวลาไม่มีสิทธิ์ให้ **ตัดคีย์ออกจาก response ไปเลย ไม่ mask ไม่ส่ง null** เพราะฟอร์มจะบันทึกค่า mask ทับของจริง
+
+**จุดที่ข้อมูลหลุด — สแกนเจอ 6 ทาง มากกว่าที่สเปกเดิมประเมินไว้ว่าเป็นแค่ "resource/policy":**
+
+| จุด | สภาพก่อนแก้ | ทำอะไร |
+|---|---|---|
+| `Master\GuardianController::show` | ส่ง 2 ฟิลด์ตรง ๆ | ใส่คีย์เฉพาะเมื่อ `canViewSensitive()` |
+| `Academy\GuardianController::store/update` response | คืนโมเดลดิบ → เลขบัตรติดไปทุกครั้ง (**นี่คือทางที่เลขบัตรหลุดตอนก่อน G-S7** เพราะ route ยังไม่มีด่าน) | `hideSensitive()` |
+| `StudentResource:80` `whenLoaded('guardians')` | โยนโมเดล `StudentGuardian` ทั้งแถว · `Master\StudentController::show` ใช้ `authorize('view')` ที่ปล่อย**ครูทุกคน**ผ่าน ⇒ ครูทั่วไปอ่านเลขบัตรผู้ปกครองได้ทั้งโรงเรียน | filter ใน resource |
+| `StudentProfileController` | มีด่านแต่ผูกกับ `accessLevel` ล้วน ๆ **ไม่รู้จักคีย์** ⇒ ฝ่ายทะเบียนที่เพิ่งได้สิทธิ์ถูกกันออก | `$showSensitive` + `canViewSensitive()` |
+| `ClassroomController::getStudent` | คืน `$student` ดิบพร้อม relation `guardians` | `hideSensitive()` |
+| `ChangeRequestController::approve` | อนุมัติแก้ฟิลด์ไหนก็ได้รวมเลขบัตร | **ไม่แก้** — คนอนุมัติคือ admin/director ที่มีสิทธิ์อยู่แล้ว (บันทึกไว้เป็นงานค้างถ้าเปิดให้บทบาทอื่นอนุมัติในอนาคต) |
+
+**ฝั่งเขียน:** 403 **เฉพาะเมื่อค่าที่ส่งมาต่างจากของเดิมจริง** (`changedSensitiveFields()`)
+— เพราะการ์ด `GuardianViewCard` ส่งทั้งฟอร์มเสมอ ถ้า reject แบบเหมารวมจะแก้ชื่อ/ความสัมพันธ์ไม่ได้เลย
+· `workplace` **ย้ายกลับเข้าก้อนที่ทุกคนเห็น** — D4 นิยามฟิลด์อ่อนไหวไว้แค่ 2 ตัว มันไม่ควรถูกซ่อนตั้งแต่แรก
+
+**ตรวจกับ API จริงที่รันอยู่ (ไม่ใช่แค่เทสต์):** token ครูที่ไม่ใช่ครูประจำชั้นยิง `/students/1/profile`
+และ `/api/student/master/1` → ก้อน guardian **ไม่มี** `citizen_id`/`monthly_income` แต่ยังมี `workplace`
+· token เจ้าของโรงเรียน → เห็นครบทั้ง 2 ฟิลด์
+**เทสต์ที่ claude รันเอง:** `GuardianSensitiveFieldsTest` 8 · `GuardianSensitiveFieldsOnStudentSurfacesTest` 6 ·
+ชุด `StudentProfile|StudentCard|HomeVisit|Guardian|MyRole` **132 ผ่าน (414 assertions)** · `Classroom` 114 ผ่าน (1 incomplete เดิม) · pint ผ่าน
+
+**จุดที่ยังไม่มีเทสต์คลุม (ตั้งใจ):** ขา "ซ่อน" ของ `ClassroomController::getStudent` ทดสอบทางลบไม่ได้
+เพราะ endpoint นั้นให้เฉพาะ owner/admin/director เข้า และทั้ง 3 บทบาทมีคีย์ `sensitive.view` จาก migration แล้ว
+· ในฐานจริงตอนนี้ `academy_members.role` ที่เป็น admin/director มี **0 แถว** ⇒ กิ่งนี้เป็น defense in depth ล้วน ๆ
+
+**ผลข้างเคียงที่ต้องรู้:** `StudentProfileController` เดิมให้ `accessLevel = 'admin'` เห็นฟิลด์อ่อนไหวโดยไม่ดูคีย์
+ตอนนี้ต้องผ่าน `canViewSensitive()` — เจ้าของโรงเรียนและ role `admin`/`director` ยังผ่าน (ได้คีย์จาก migration ของ G-S7)
+แต่ถ้าอนาคตมีใครตั้ง `academy_members.role = 'admin'` ให้คนที่ role ไม่มีคีย์ คนนั้นจะไม่เห็นฟิลด์อ่อนไหวอีกต่อไป
 
 ### 8.2 🔴 สิทธิ์จากฝ่ายเคยมีผลแค่ฝั่ง API — หน้าจอมองไม่เห็น (เจอตอน G-S7, แก้แล้ว)
 
