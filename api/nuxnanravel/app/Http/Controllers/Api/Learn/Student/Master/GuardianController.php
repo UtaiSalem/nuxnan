@@ -8,6 +8,7 @@ use App\Models\Academy;
 use App\Models\GuardianContact;
 use App\Models\Student;
 use App\Models\StudentGuardian;
+use App\Services\GuardianAccessService;
 use App\Services\GuardianService;
 use App\Services\GuardianWriteService;
 use App\Traits\HandlesStudentUpdates;
@@ -55,27 +56,37 @@ class GuardianController extends Controller
             $contact = $guardian->guardian?->contacts->where('is_primary', true)->first()
                      ?? $guardian->guardian?->contacts->first();
 
+            $guardianData = [
+                'id' => $guardian->id,
+                'guardian_id' => $guardian->guardian_id,
+                'guardian_type' => $guardian->guardian_type,
+            ];
+
+            if (app(GuardianAccessService::class)->canViewSensitive(auth()->user(), $student)) {
+                $guardianData['citizen_id'] = $guardian->guardian?->citizen_id;
+            }
+
+            $guardianData['title_prefix'] = $guardian->title_prefix;
+            $guardianData['first_name'] = $guardian->first_name;
+            $guardianData['last_name'] = $guardian->last_name;
+            $guardianData['full_name'] = $guardian->full_name;
+            $guardianData['occupation'] = $guardian->occupation;
+            $guardianData['workplace'] = $guardian->workplace;
+
+            if (app(GuardianAccessService::class)->canViewSensitive(auth()->user(), $student)) {
+                $guardianData['monthly_income'] = $guardian->monthly_income;
+            }
+
+            $guardianData['relationship'] = $guardian->relationship;
+            $guardianData['status'] = $guardian->status;
+            $guardianData['nationality'] = $guardian->nationality;
+            $guardianData['is_primary_contact'] = $guardian->is_primary_contact;
+            $guardianData['is_emergency_contact'] = $guardian->is_emergency_contact;
+
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'guardian' => [
-                        'id' => $guardian->id,
-                        'guardian_id' => $guardian->guardian_id,
-                        'guardian_type' => $guardian->guardian_type,
-                        'citizen_id' => $guardian->guardian?->citizen_id,
-                        'title_prefix' => $guardian->title_prefix,
-                        'first_name' => $guardian->first_name,
-                        'last_name' => $guardian->last_name,
-                        'full_name' => $guardian->full_name,
-                        'occupation' => $guardian->occupation,
-                        'workplace' => $guardian->workplace,
-                        'monthly_income' => $guardian->monthly_income,
-                        'relationship' => $guardian->relationship,
-                        'status' => $guardian->status,
-                        'nationality' => $guardian->nationality,
-                        'is_primary_contact' => $guardian->is_primary_contact,
-                        'is_emergency_contact' => $guardian->is_emergency_contact,
-                    ],
+                    'guardian' => $guardianData,
                     'contact' => $contact ? [
                         'id' => $contact->id,
                         'contact_type' => $contact->contact_type,
@@ -110,6 +121,21 @@ class GuardianController extends Controller
 
         try {
             $validatedData = $request->validated();
+
+            $access = app(GuardianAccessService::class);
+            if (! $access->canManageSensitive(auth()->user(), $student)) {
+                $blocked = $access->changedSensitiveFields(
+                    $validatedData['guardian'] ?? [],
+                    null
+                );
+
+                if ($blocked !== []) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'ไม่มีสิทธิ์แก้ไขข้อมูลอ่อนไหวของผู้ปกครอง: '.implode(', ', $blocked),
+                    ], 403);
+                }
+            }
 
             DB::beginTransaction();
 
@@ -174,6 +200,21 @@ class GuardianController extends Controller
             }
 
             $validatedData = $request->validated();
+
+            $access = app(GuardianAccessService::class);
+            if (! $access->canManageSensitive(auth()->user(), $student)) {
+                $blocked = $access->changedSensitiveFields(
+                    $validatedData['guardian'] ?? [],
+                    $guardian
+                );
+
+                if ($blocked !== []) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'ไม่มีสิทธิ์แก้ไขข้อมูลอ่อนไหวของผู้ปกครอง: '.implode(', ', $blocked),
+                    ], 403);
+                }
+            }
 
             DB::beginTransaction();
 

@@ -7,7 +7,7 @@ use App\Models\AcademyMember;
 use App\Models\ClassroomMember;
 use App\Models\Student;
 use App\Models\User;
-use App\Services\AcademyGroupPermissionAccessService;
+use App\Services\GuardianAccessService;
 
 class StudentMasterProfilePolicy
 {
@@ -77,39 +77,7 @@ class StudentMasterProfilePolicy
 
     private function guardianAccess(User $user, Student $student, string $permission): bool
     {
-        // 1) the student themselves
-        if ($student->user_id !== null && $user->id === $student->user_id) {
-            return true;
-        }
-
-        // 2) academy owner / super admin — they normally have no academy_members row
-        if ($this->isAcademyOwner($user, $student->academy_id)) {
-            return true;
-        }
-
-        // 3) homeroom teacher / co-teacher of this student's own classroom
-        if (ClassroomMember::isHomeroomStaffOf($user->id, $student)) {
-            return true;
-        }
-
-        // 4) academy role permission, then explicit department grants
-        $member = AcademyMember::where('user_id', $user->id)
-            ->where('academy_id', $student->academy_id)
-            ->where('status', 2)
-            ->first();
-
-        if (! $member) {
-            return false;
-        }
-
-        if ($member->academyRole?->hasAnyPermission([$permission])) {
-            return true;
-        }
-
-        $academy = Academy::find($student->academy_id);
-
-        return $academy !== null && app(AcademyGroupPermissionAccessService::class)
-            ->hasAnyPermission($user, $academy, [$permission]);
+        return app(GuardianAccessService::class)->allows($user, $student, $permission);
     }
 
     /**

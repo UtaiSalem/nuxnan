@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\Student;
 use App\Models\StudentGuardian;
+use App\Services\GuardianAccessService;
 use App\Services\GuardianService;
 use App\Services\GuardianWriteService;
 use Illuminate\Http\Request;
@@ -90,6 +91,17 @@ class GuardianController extends Controller
             'email' => 'nullable|email|max:100',
         ]);
 
+        $access = app(GuardianAccessService::class);
+        if (! $access->canManageSensitive($request->user() ?? auth()->user(), $student)) {
+            $blocked = $access->changedSensitiveFields($validated, null);
+            if ($blocked !== []) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'ไม่มีสิทธิ์แก้ไขข้อมูลอ่อนไหวของผู้ปกครอง: '.implode(', ', $blocked),
+                ], 403);
+            }
+        }
+
         try {
             // If setting as primary, unset other primaries
             if ($request->boolean('is_primary_contact')) {
@@ -122,10 +134,15 @@ class GuardianController extends Controller
                 'email' => $validated['email'] ?? null,
             ]);
 
+            $responseGuardian = $guardian->load('contacts');
+            if (! $access->canViewSensitive($request->user() ?? auth()->user(), $student)) {
+                $responseGuardian = $access->hideSensitive($responseGuardian);
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'เพิ่มผู้ปกครองเรียบร้อยแล้ว',
-                'guardian' => $guardian->load('contacts'),
+                'guardian' => $responseGuardian,
             ], 201);
         } catch (\Exception $e) {
 
@@ -164,6 +181,17 @@ class GuardianController extends Controller
             'is_emergency_contact' => 'nullable|boolean',
         ]);
 
+        $access = app(GuardianAccessService::class);
+        if (! $access->canManageSensitive($request->user() ?? auth()->user(), $guardian->student)) {
+            $blocked = $access->changedSensitiveFields($validated, $guardian);
+            if ($blocked !== []) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'ไม่มีสิทธิ์แก้ไขข้อมูลอ่อนไหวของผู้ปกครอง: '.implode(', ', $blocked),
+                ], 403);
+            }
+        }
+
         DB::beginTransaction();
         try {
             // If setting as primary, unset other primaries
@@ -181,10 +209,15 @@ class GuardianController extends Controller
 
             DB::commit();
 
+            $responseGuardian = $guardian->fresh(['contacts']);
+            if (! $access->canViewSensitive($request->user() ?? auth()->user(), $guardian->student)) {
+                $responseGuardian = $access->hideSensitive($responseGuardian);
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'อัพเดทข้อมูลผู้ปกครองเรียบร้อยแล้ว',
-                'guardian' => $guardian->fresh(['contacts']),
+                'guardian' => $responseGuardian,
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
