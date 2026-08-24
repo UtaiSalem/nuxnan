@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Constants\AcademyGroupPermissions;
 use App\Models\AcademyGroup;
 use App\Models\AcademyPermission;
 use Illuminate\Support\Collection;
@@ -9,6 +10,13 @@ use Illuminate\Validation\ValidationException;
 
 class AcademyGroupPermissionService
 {
+    public function seedDefaults(AcademyGroup $group): void
+    {
+        foreach (AcademyGroupPermissions::PERMISSIONS as $key => $meta) {
+            $group->permissions()->create(['permission_key' => $key, 'enabled' => $meta['default']]);
+        }
+    }
+
     /**
      * Get enabled permissions for a group
      */

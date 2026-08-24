@@ -17,6 +17,7 @@ Route::middleware('auth:api')->prefix('academies/{academy}/elections')->group(fu
     Route::post('/{election}/status', [ElectionController::class, 'transitionStatus'])->middleware('academy.permission:elections.manage');
     Route::post('/{election}/close-and-count', [ElectionController::class, 'closeAndCount'])->middleware('academy.permission:elections.manage');
     Route::post('/{election}/publish', [ElectionController::class, 'publish'])->middleware('academy.permission:elections.manage');
+    Route::post('/{election}/council', [ElectionController::class, 'council'])->middleware('academy.permission:elections.manage');
     Route::get('/{election}/results', [ElectionController::class, 'results'])->middleware('academy.permission:elections.view');
     Route::get('/{election}/turnout', [ElectionController::class, 'turnout'])->middleware('academy.permission:elections.view');
     Route::get('/{election}/candidates', [ElectionPartyController::class, 'candidates'])->middleware(['academy.permission:elections.view', 'throttle:election-candidates']);

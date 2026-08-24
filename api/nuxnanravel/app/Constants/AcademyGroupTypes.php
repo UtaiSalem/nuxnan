@@ -72,6 +72,10 @@ class AcademyGroupTypes
             'color' => 'purple',
             'order' => 9,
         ],
+        'student_council' => [
+            'label' => 'สภานักเรียน', 'label_en' => 'Student Council',
+            'icon' => 'heroicons:megaphone', 'color' => 'pink', 'order' => 10,
+        ],
     ];
 
     public static function all(): array

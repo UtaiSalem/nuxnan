@@ -10,14 +10,34 @@ use App\Models\Academy;
 use App\Models\AcademyMember;
 use App\Models\Election;
 use App\Models\MemberActivityLog;
+use App\Services\Election\ElectionCouncilService;
 use App\Services\Election\ElectionResultService;
 use App\Services\Election\ElectionService;
 use DomainException;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class ElectionController extends Controller
 {
     public function __construct(private ElectionService $service, private ElectionResultService $results) {}
+
+    public function council(Request $request, Academy $academy, Election $election, ElectionCouncilService $councils)
+    {
+        $validated = $request->validate(['name' => 'nullable|string|max:255']);
+        try {
+            return response()->json(['success' => true, 'data' => $councils->create($this->find($academy, $election), $validated, $request->user())], 201);
+        } catch (ValidationException $e) {
+            $errors = $e->errors();
+            $response = ['success' => false, 'message' => $errors['election'][0] ?? collect($errors)->flatten()->first(), 'errors' => $errors];
+            foreach (['group_id', 'group_name'] as $field) {
+                if (isset($errors[$field][0])) {
+                    $response[$field] = $errors[$field][0];
+                }
+            }
+
+            return response()->json($response, 422);
+        }
+    }
 
     public function closeAndCount(Request $request, Academy $academy, Election $election)
     {

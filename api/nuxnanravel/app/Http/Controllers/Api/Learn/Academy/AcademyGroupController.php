@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\Learn\Academy;
 
-use App\Constants\AcademyGroupPermissions;
 use App\Constants\AcademyGroupTypes;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Play\ActivityResource;
@@ -16,6 +15,7 @@ use App\Models\AcademyPost;
 use App\Models\Activity;
 use App\Models\Notification;
 use App\Models\User;
+use App\Services\AcademyGroupPermissionService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -39,7 +39,7 @@ class AcademyGroupController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Academy $academy, Request $request)
+    public function store(Academy $academy, Request $request, AcademyGroupPermissionService $permissionService)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -51,14 +51,7 @@ class AcademyGroupController extends Controller
 
         $group = $academy->academyGroups()->create($validated);
 
-        // Auto-seed Default Permissions
-        foreach (AcademyGroupPermissions::PERMISSIONS as $key => $meta) {
-            AcademyGroupPermission::create([
-                'academy_group_id' => $group->id,
-                'permission_key' => $key,
-                'enabled' => $meta['default'],
-            ]);
-        }
+        $permissionService->seedDefaults($group);
 
         return response()->json([
             'success' => true,

@@ -135,6 +135,8 @@ class MemberActivityLog extends Model
 
     public const ACTION_ELECTION_PUBLISH = 'election_publish';
 
+    public const ACTION_ELECTION_COUNCIL_CREATE = 'election_council_create';
+
     public static function electionActions(): array
     {
         return [
@@ -145,7 +147,7 @@ class MemberActivityLog extends Model
             self::ACTION_ELECTION_VOTER_ROLL_LOCK, self::ACTION_ELECTION_STATION_OPEN,
             self::ACTION_ELECTION_STATION_CLOSE, self::ACTION_ELECTION_BALLOT_ISSUE,
             self::ACTION_ELECTION_BALLOT_VOID, self::ACTION_ELECTION_CLOSE_COUNT,
-            self::ACTION_ELECTION_PUBLISH,
+            self::ACTION_ELECTION_PUBLISH, self::ACTION_ELECTION_COUNCIL_CREATE,
         ];
     }
 
