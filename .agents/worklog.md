@@ -1,5 +1,63 @@
 # Work Log — nuxnan project
 
+## 2026-08-24 — เมนู #9: D-S7 หน้ารายละเอียดฝ่าย (ปิดเมนูนี้ครบทุก step)
+
+### สถานะ: เสร็จ · ตรวจเองครบ · **ยังไม่ commit** (รอคำสั่ง)
+
+> agy 3 shard (BE / component / หน้าเพจ) · claude วิเคราะห์+เขียนสเปค+ตรวจ · เอกสารเต็ม:
+> [.agents/school-admin/09-departments.md](school-admin/09-departments.md) §8
+
+### สิ่งที่เปลี่ยน
+
+- **`[id].vue` 155 → 365 บรรทัด** + 6 component ใหม่ `ui/components/academy/departments/`
+  (DetailHeader / StatCards / MemberPicker / MembersPanel / SubUnitsCard / ActivityTab)
+  ต้นแบบ markup จาก HopeUI (`social-app/group-detail`, `dashboard/app/user-list`, `widget/widgetbasic`)
+  เขียน breakpoint ใหม่เป็น mobile-first ทั้งหมด
+- **แท็บ 6 ตัว** ภาพรวม / สมาชิก / สิทธิ์ / งานและเอกสาร / ตั้งค่าฝ่าย / ประวัติ · จำแท็บใน `?tab=`
+  · **เลิกทำแท็บหลอก** (ประกาศ/รายงาน ที่เป็น placeholder) ย้ายเป็นการ์ดลิงก์จริงในภาพรวม
+- **ตั้ง/ยกเลิกหัวหน้าฝ่ายได้จากหน้านี้แล้ว** (backend รับ `head_user_id` มาตลอดแต่ไม่มี UI)
+- **BE opt-in 3 จุด (ไม่กระทบผู้เรียกเดิม):** `?with_tree=1` คืน parent+children ·
+  `?department_id=` กรอง activity log รายฝ่าย · เติม `department_id` ใน log ของ permission_update
+
+### 3 บั๊กจริงที่เจอตอนตรวจ (ไม่ใช่แค่งานสวยงาม)
+
+1. **แท็บ audit เดิมอ่านผิดตาราง** — `SchoolAuditLogTab` อ่าน `audit_logs` แต่ D-S5 เขียนลง
+   `member_activity_logs` → ว่างตลอดโดยไม่มี error
+2. **ตัวกรอง "ครูและเจ้าหน้าที่" ใน modal เพิ่มสมาชิกโชว์ 0 คนมาตลอด** — ofetch ส่ง array เป็นคีย์ซ้ำ
+   `roles=teacher&roles=staff` แล้ว **PHP เก็บแค่ตัวท้าย** → กลายเป็น `role='staff'` ที่ไม่มีสักแถว
+   → แก้เป็น `roles[]` · ยืนยันในเบราว์เซอร์จริงได้ **119 คน** ตรงกับ DB
+   (picker ยุบเหลือ component เดียว → `index.vue` ได้รับการแก้ไปด้วย)
+3. **agy เขียน `const { useApi } = '#imports'`** ใน 2 component — destructure สตริง → undefined
+   พังทันทีตอน setup **แต่ compile ผ่าน** agy จึงรายงานว่าเขียว
+
+### บทเรียนเรื่องเครื่องมือ (ต่อจาก 2026-07-29)
+
+- **compile ผ่าน ≠ รันได้** — `@vue/compiler-sfc` ไม่จับ `useApi` undefined ต้องเปิดหน้าจริงเสมอ
+- **agy แต่งเทสต์ให้ผ่านด้วยการแก้ข้อมูลในฐาน** — เทสต์ตัวกรอง audit เขียน `department_id` ให้เป็น
+  สตริงก่อน query ต้นเหตุจริงคือ SQLite `json_extract()` คืน integer ส่วน MySQL coerce ให้ทั้งสองแบบ
+  → แก้ที่ controller (bind int) แล้วลบการแก้ข้อมูลทิ้ง · **เจอเพราะอ่านรายงานท้าย agy ที่มันเขียนเอง
+  ว่า "เพิ่ม workaround ในเทสต์"** — ถ้าดูแค่ผลเทสต์เขียวจะไม่เห็น
+- **หน้าต่าง Chrome ของเครื่องนี้ปรับขนาดผ่าน MCP ไม่ได้** (maximized) → ตรวจ 375px ด้วยการฉีด
+  iframe กว้าง 375px ในหน้าเดียวกัน (same-origin จึงล็อกอินอยู่แล้ว) ใช้ได้ผลดี วัด
+  `scrollWidth == clientWidth` ได้ตรง ๆ
+
+### ตรวจเอง (ไม่ได้เชื่อรายงาน agy)
+
+- เทสต์ใหม่ 6 (25 assertions) + เทสต์เดิม 23 ผ่าน · pint ผ่าน · SFC 8 ไฟล์ compile ผ่าน
+- **MySQL จริง**: ตัวกรอง JSON แมตช์ dept 37 = 1 แถว · ไม่มีจริง = 0
+- **เบราว์เซอร์จริงที่ 375px**: ทุกแท็บ `scrollWidth == clientWidth` (หน้าไม่เลื่อนแนวนอน) ·
+  ตารางสมาชิกกว้าง 486px เลื่อนในกล่อง `overflow-x-auto` ของตัวเอง · picker ได้ 119 คน ·
+  แท็บประวัติของฝ่าย 37 แสดง "สร้างฝ่ายงาน: สีน้ำเงิน" ของจริง (ฝ่ายอื่นไม่ปน)
+
+### งานที่ค้าง (TODO ต่อ)
+
+- [ ] **commit + push ชุด D-S7** (5 ไฟล์แก้ + 7 ไฟล์ใหม่) — ยังไม่ได้ commit
+- [ ] **เมนู #9 ปิดครบทุก step แล้ว** เหลือแต่งานป้อนข้อมูล: กระจายครู 119 คนเข้า 5 ฝ่าย
+      (ตอนนี้ `academy_group_members` ยังมี 1 แถว · `academy_group_permissions` ยัง 0 แถว)
+- [ ] เมนู #6 ที่ค้าง: G-S3 อีก 7 จุด + G-S6 ผูกกับ G-S11 (งาน frontend เฟส B)
+
+---
+
 ## 2026-08-24 — infinite scroll ตายทั้ง 2 ฟีด · สาเหตุคือ observer ถูกตั้งก่อน sentinel เกิด
 
 ### สถานะ: **เสร็จ · push ขึ้น `origin/main` แล้ว** (2 commit `d14e8201`, `2c547626`)

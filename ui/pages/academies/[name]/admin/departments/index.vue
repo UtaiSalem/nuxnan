@@ -65,15 +65,7 @@ const formErrors = ref<Record<string, string[]>>({})
 // Members Management
 const departmentMembers = ref<any[]>([])
 const isLoadingMembers = ref(false)
-const memberSearchQuery = ref('')
 const showAddMemberModal = ref(false)
-const availableMembers = ref<any[]>([])
-const selectedMemberIds = ref<number[]>([])
-const memberRole = ref('member')
-const memberRoleFilter = ref('staff')
-const memberResultsPagination = ref({ current_page: 1, last_page: 1, total: 0 })
-const isLoadingAvailableMembers = ref(false)
-let memberSearchTimer: ReturnType<typeof setTimeout> | null = null
 
 onMounted(async () => {
   try {
@@ -393,101 +385,16 @@ const fetchDepartmentMembers = async (departmentId: number) => {
 }
 
 // Open add member modal
-const openAddMemberModal = async () => {
+const openAddMemberModal = () => {
   showAddMemberModal.value = true
-  selectedMemberIds.value = []
-  memberRole.value = 'member'
-  memberSearchQuery.value = ''
-  memberRoleFilter.value = 'staff'
-  memberResultsPagination.value = { current_page: 1, last_page: 1, total: 0 }
-  await fetchAvailableMembers()
 }
 
-// Fetch a server-filtered page of academy members (academy members not in this department)
-const fetchAvailableMembers = async (page = 1) => {
-  if (!academyId.value) return
-
-  isLoadingAvailableMembers.value = true
-  try {
-    const query: Record<string, any> = {
-      search: memberSearchQuery.value || undefined,
-      status: 2,
-      page,
-      per_page: 25,
-      with_departments: 1
-    }
-    if (memberRoleFilter.value === 'staff') query.roles = ['teacher', 'staff']
-
-    const response: any = await api.get(`/api/academies/${academyId.value}/members/search`, {
-      query
-    })
-
-    if (response.success) {
-      const existingMemberIds = departmentMembers.value.map((m: any) => m.user_id || m.id)
-      availableMembers.value = (response.members || []).filter(
-        (m: any) => !existingMemberIds.includes(m.user_id)
-      )
-      memberResultsPagination.value = response.pagination || { current_page: page, last_page: page, total: availableMembers.value.length }
-    }
-  } catch (err) {
-    console.error('Failed to fetch available members:', err)
-  } finally {
-    isLoadingAvailableMembers.value = false
+const onMembersAddedFromPicker = async () => {
+  showAddMemberModal.value = false
+  if (selectedDepartment.value) {
+    await fetchDepartmentMembers(selectedDepartment.value.id)
   }
-}
-
-const scheduleMemberSearch = () => {
-  if (memberSearchTimer) clearTimeout(memberSearchTimer)
-  memberSearchTimer = setTimeout(() => fetchAvailableMembers(1), 300)
-}
-
-const selectAllMatchingMembers = () => {
-  const ids = availableMembers.value.map((member: any) => member.user_id).filter(Boolean)
-  selectedMemberIds.value = Array.from(new Set([...selectedMemberIds.value, ...ids]))
-}
-
-const clearMemberSelection = () => {
-  selectedMemberIds.value = []
-}
-
-const changeMemberRoleFilter = () => fetchAvailableMembers(1)
-
-// Add members to department
-const addMembersToDepartment = async () => {
-  if (!selectedDepartment.value || !academyId.value || selectedMemberIds.value.length === 0) return
-
-  isSubmitting.value = true
-  try {
-    const response: any = await api.post(
-      `/api/academies/${academyId.value}/departments/${selectedDepartment.value.id}/members/bulk`,
-      {
-        user_ids: selectedMemberIds.value,
-        role: memberRole.value
-      }
-    )
-
-    if (response.success) {
-      showAddMemberModal.value = false
-      await fetchDepartmentMembers(selectedDepartment.value.id)
-      await fetchDepartments()
-
-      Swal.fire({
-        icon: 'success',
-        title: 'เพิ่มสมาชิกสำเร็จ',
-        text: `เพิ่ม ${selectedMemberIds.value.length} คนเข้าแผนกเรียบร้อยแล้ว`,
-        timer: 2000,
-        showConfirmButton: false
-      })
-    }
-  } catch (err: any) {
-    Swal.fire({
-      icon: 'error',
-      title: 'เกิดข้อผิดพลาด',
-      text: err.response?.data?.message || 'ไม่สามารถเพิ่มสมาชิกได้'
-    })
-  } finally {
-    isSubmitting.value = false
-  }
+  await Promise.all([fetchDepartments(), fetchStatistics()])
 }
 
 // Remove member from department
@@ -561,7 +468,6 @@ const updateMemberRole = async (memberId: number, newRole: string) => {
   }
 }
 
-const filteredAvailableMembers = computed(() => availableMembers.value)
 
 // Role options
 const roleOptions = [
@@ -1025,125 +931,15 @@ const onSetupSuccess = async () => {
     </Teleport>
 
     <!-- Add Member Modal -->
-    <Teleport to="body">
-      <div v-if="showAddMemberModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/50" @click="showAddMemberModal = false"></div>
-        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
-          <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">เพิ่มสมาชิก</h3>
-            <button @click="showAddMemberModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
-            </button>
-          </div>
-          
-          <div class="p-5 border-b border-gray-200 dark:border-gray-700 space-y-4">
-            <div class="relative">
-              <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                v-model="memberSearchQuery"
-                @input="scheduleMemberSearch"
-                type="text"
-                placeholder="ค้นหาสมาชิก..."
-                class="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-500"
-              />
-            </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">กลุ่มสมาชิก</label>
-              <select
-                v-model="memberRoleFilter"
-                @change="changeMemberRoleFilter"
-                class="w-full px-4 py-2.5 mb-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-              >
-                <option value="staff">ครูและเจ้าหน้าที่</option>
-                <option value="all">สมาชิกทุกบทบาท</option>
-              </select>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">บทบาทในแผนก</label>
-              <select
-                v-model="memberRole"
-                class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-              >
-                <option v-for="role in roleOptions" :key="role.value" :value="role.value">{{ role.label }}</option>
-              </select>
-            </div>
-          </div>
-          
-          <div class="flex-1 overflow-y-auto p-5">
-            <div class="flex items-center justify-between mb-3 text-sm">
-              <span class="text-gray-500 dark:text-gray-400">พบ {{ memberResultsPagination.total }} คน · เลือกแล้ว {{ selectedMemberIds.length }} คน</span>
-              <div class="flex items-center gap-2">
-                <button type="button" @click="selectAllMatchingMembers" class="text-primary-600 hover:text-primary-700 dark:text-primary-400">เลือกทั้งหมดในผลลัพธ์</button>
-                <button type="button" @click="clearMemberSelection" class="text-gray-500 hover:text-gray-700 dark:text-gray-400">ล้างการเลือก</button>
-              </div>
-            </div>
-            <div v-if="isLoadingAvailableMembers" class="text-center py-8">
-              <div class="animate-spin rounded-full h-8 w-8 border-4 border-primary-500 border-t-transparent mx-auto"></div>
-            </div>
-            <div v-else-if="filteredAvailableMembers.length === 0" class="text-center py-8">
-              <p class="text-gray-500 dark:text-gray-400">ไม่พบสมาชิก</p>
-            </div>
-            
-            <div v-else class="space-y-2">
-              <label
-                v-for="member in filteredAvailableMembers"
-                :key="member.id"
-                class="flex items-center gap-4 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-xl cursor-pointer"
-              >
-                <input
-                  type="checkbox"
-                  :value="member.user_id"
-                  v-model="selectedMemberIds"
-                  class="flex-shrink-0 w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                />
-                <img
-                  :src="member.user?.profile_photo_url || '/images/default-avatar.png'"
-                  :alt="member.user?.name"
-                  class="flex-shrink-0 w-10 h-10 rounded-full object-cover"
-                />
-                <div class="flex-1 min-w-0 break-words">
-                  <p class="font-medium text-gray-900 dark:text-white truncate">{{ member.user?.name }}</p>
-                  <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ member.user?.email }}</p>
-                  <div v-if="member.department_memberships && member.department_memberships.length > 0" class="mt-1.5 flex flex-wrap gap-1.5">
-                    <span
-                      v-for="dept in member.department_memberships"
-                      :key="dept.id"
-                      class="inline-block px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 break-words max-w-full"
-                    >
-                      {{ dept.name }}
-                    </span>
-                  </div>
-                </div>
-              </label>
-            </div>
-          </div>
-          <div v-if="memberResultsPagination.last_page > 1" class="px-5 pb-3 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-            <button type="button" :disabled="memberResultsPagination.current_page <= 1" @click="fetchAvailableMembers(memberResultsPagination.current_page - 1)" class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40">ก่อนหน้า</button>
-            <span>หน้า {{ memberResultsPagination.current_page }} / {{ memberResultsPagination.last_page }}</span>
-            <button type="button" :disabled="memberResultsPagination.current_page >= memberResultsPagination.last_page" @click="fetchAvailableMembers(memberResultsPagination.current_page + 1)" class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40">ถัดไป</button>
-          </div>
-          
-          <div class="p-5 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <p class="text-sm text-gray-500 dark:text-gray-400">เลือก {{ selectedMemberIds.length }} คน</p>
-            <div class="flex items-center gap-3">
-              <button
-                @click="showAddMemberModal = false"
-                class="px-4 py-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                ยกเลิก
-              </button>
-              <button
-                @click="addMembersToDepartment"
-                :disabled="selectedMemberIds.length === 0 || isSubmitting"
-                class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <div v-if="isSubmitting" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                <span>เพิ่มสมาชิก</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <AcademyDepartmentsMemberPicker
+      v-if="selectedDepartment && academyId"
+      :visible="showAddMemberModal"
+      :academy-id="academyId"
+      :department-id="selectedDepartment.id"
+      :exclude-user-ids="departmentMembers.map((m) => m.user_id || m.id)"
+      @close="showAddMemberModal = false"
+      @added="onMembersAddedFromPicker"
+    />
 
     <!-- Department Setup Modal -->
     <SchoolDepartmentSetupModal

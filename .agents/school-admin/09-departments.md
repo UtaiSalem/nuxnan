@@ -93,7 +93,7 @@
 | **D5** | `academy_group_members.role` เป็น varchar default `'student'` ไม่มีนิยามหัวหน้าฝ่าย | 🟡 |
 | **D6** | สมาชิกฝ่ายมี 1 แถว / สิทธิ์ฝ่าย 0 แถว — ต้องมีทางนำคนเข้าฝ่ายจำนวนมาก (จากบุคลากรที่มีอยู่) | 🟡 |
 | **D7** | ไม่มี audit log | 🟡 |
-| **D8** | `[id].vue` บางมาก ยังไม่ใช่หน้าจัดการฝ่ายเชิงลึก | 🟢 |
+| **D8** | `[id].vue` บางมาก ยังไม่ใช่หน้าจัดการฝ่ายเชิงลึก | 🟢 **ปิดแล้ว D-S7** |
 
 ---
 
@@ -126,7 +126,7 @@
 | **D-S5** | **Audit log (D7)** — 8 action ใหม่ (`department_create/update/delete/setup`, `member_add/remove/role_change`, **`permission_update`**) ผูกกับ `DepartmentController` + `AcademyGroupPermissionController` และลงทะเบียนใน `getAvailableActions()` ครบ · log สิทธิ์เก็บ `turned_on`/`turned_off` ให้เลย | D-S1 | model + 3 controller + 5 tests | 🟢 **verified 2026-07-29** |
 | **D-S6** | **นำคนเข้าฝ่าย (D6)** — modal เพิ่มสมาชิกเดิมดึงแค่ 100 คนแรกจาก 3,063 คนแล้วกรองฝั่ง client → **ครู 119 คนอาจไม่โผล่เลย** นี่คือเหตุผลจริงที่สมาชิกฝ่ายมีแค่ 1 คน · แก้เป็นค้นหาฝั่ง server ผ่าน `/members/search` + กรองครู/บุคลากรเป็นค่าเริ่มต้น + เลือกหลายคน + pagination | D-S1 | migration + `departments/index.vue` | 🟢 **verified 2026-07-29** — ค้นหาครูเจอครบ 119/119 |
 | **D-S6b** | **ป้ายบอกว่าอยู่ฝ่ายอื่นแล้ว** — `members/search` ยังไม่ส่งข้อมูลสังกัดฝ่ายมาด้วย ทำให้คนที่กดไม่เห็นว่าครูคนนี้อยู่ฝ่ายอื่นอยู่หรือไม่ก่อนตัดสินใจ · **สเปกเต็มใน [`.agents/tasks/ds6b-department-membership-badge.md`](../tasks/ds6b-department-membership-badge.md)** — opt-in `with_departments=1` เท่านั้น ห้ามแตะ `AcademyMemberResource` · แตกเป็น D-S6b-a (BE) / D-S6b-b (FE) | D-S6 | BE + FE | 🟢 **verified 2026-08-24** |
-| **D-S7** | **หน้ารายละเอียดฝ่าย (D8)** — ยกเครื่อง `[id].vue` ตามสกิล `hopeui-port` | D-S6 | FE | ⚪ |
+| **D-S7** | **หน้ารายละเอียดฝ่าย (D8)** — ยกเครื่อง `[id].vue` ตามสกิล `hopeui-port` · 6 component ใหม่ใน `ui/components/academy/departments/` · แท็บ audit เลิกอ่านตารางผิดใบ · picker ตัวเดียวใช้ร่วมกับ `index.vue` | D-S6 | FE (+ BE opt-in 3 จุด) | 🟢 **verified 2026-08-24** |
 
 **Rule:** ทุก step ต้อง verify (test/build/ตรวจจริง) ก่อนขึ้น 🟢 · ห้ามเปลี่ยนปลายทาง relation เดิม (กฎจาก #6 §6.1)
 
@@ -153,6 +153,29 @@ Report back: diff summary + ผลเทสต์ + คำสั่งที่�
 ## 8. Review Log
 
 - **2026-07-29 D-S3** — codex ทำ, claude ตรวจ → **พบข้อบกพร่องเรื่องลำดับ**: `if (! $role) return 403` อยู่ก่อนด่านฝ่าย ทำให้คนที่ไม่มี academy role (มี **2,898 คนจาก 3,063**) เข้าไม่ถึงสิทธิ์จากฝ่ายเลย — เทสต์ 6 เคสแรกพลาดเพราะทุกเคสสร้างผู้ใช้ที่มี role อยู่แล้ว → แก้เป็น `if ($role && $role->hasAnyPermission(...))` แล้วปล่อยให้ไหลไปด่านฝ่าย + เพิ่ม 3 เทสต์ · **verified: 17 เทสต์ผ่าน** (Department 13 + Guardian 4) · ยืนยันว่าไม่ได้ใช้ `AcademyGroupPermissionService::hasPermission()` ที่ default `true`
+- **2026-08-24 D-S7 (agy 3 shard: BE / component / หน้าเพจ)** — claude ตรวจเอง → **ผ่านหลังแก้ 3 จุดที่ agy ทำพลาด**
+  - **แท็บ audit เดิมอ่านผิดตาราง**: `SchoolAuditLogTab entity-type="AcademyGroup"` อ่าน `audit_logs`
+    แต่ D-S5 เขียนลง `member_activity_logs` → **แท็บว่างตลอดโดยไม่มี error ให้เห็น**
+    → เพิ่มตัวกรอง opt-in `?department_id=` ที่ `MemberActivityLogController::index()`
+    + เติม `department_id` ลง log ของ `department_permission_update` (เดิมไม่มี จึงกรองไม่เจอ)
+  - **ธง opt-in `?with_tree=1`** ที่ `DepartmentController::show()` คืน `parent` + `children`
+    (ไม่ส่งธง = JSON เดิมทุก byte · มีเทสต์คุมข้อนี้) — ปลดล็อกการแสดงหน่วยงานย่อย 12 หน่วยของฝ่ายวิชาการ
+  - **บั๊กที่ตรวจเจอเองตอนกดใช้จริง (ของเดิม ไม่ใช่ของใหม่):** modal เพิ่มสมาชิกส่ง
+    `roles=teacher&roles=staff` (ofetch ทำ array เป็นคีย์ซ้ำ) → **PHP เก็บแค่ตัวท้าย** กลายเป็น
+    `role='staff'` ซึ่งไม่มีสักแถวในคอลัมน์นั้น → ตัวกรอง "ครูและเจ้าหน้าที่" โชว์ 0 คนมาตลอด
+    → แก้เป็นคีย์ `roles[]` · ยืนยันในเบราว์เซอร์จริง **"พบ 119 คน"** ตรงกับ DB (`status=2` + role teacher/staff = 119)
+    → เพราะ picker ถูกยุบเหลือ component เดียว `index.vue` จึงได้รับการแก้ไปพร้อมกัน
+  - **จุดที่ agy ทำพลาดแล้ว claude แก้เอง:** (ก) `const { useApi } = '#imports'` ใน 2 component
+    (destructure สตริง → `useApi` เป็น undefined พังทันทีตอน setup **แต่ compile ผ่าน** agy จึงรายงานว่าเขียว)
+    (ข) เทสต์ตัวกรอง audit ผ่านเพราะ **แก้ข้อมูลในฐานให้เป็นสตริงก่อน query** — ต้นเหตุจริงคือ SQLite
+    `json_extract()` คืน integer (bind สตริง = 0 แถว) ส่วน MySQL coerce ให้ทั้งสองแบบ
+    → เปลี่ยน controller ให้ bind int แล้วลบการแก้ข้อมูลในเทสต์ทิ้ง (ค) ป้ายประเภทลอกตารางแปลชื่อมาซ้ำ
+    ทั้งที่มี `getAcademyGroupTypeMeta` เป็นแหล่งเดียวอยู่แล้ว
+  - **ตรวจเอง:** เทสต์ใหม่ 6 (25 assertions) + เทสต์เดิม 23 ผ่าน · pint ผ่าน · SFC 8 ไฟล์ compile ผ่าน ·
+    ยืนยันบน **MySQL จริง** ว่าตัวกรอง JSON แมตช์ (dept 37 = 1 แถว, ไม่มีจริง = 0) ·
+    เปิดหน้าจริงในเบราว์เซอร์ที่ **375px** (iframe 375 ในหน้าเดียวกัน เพราะหน้าต่าง Chrome ปรับขนาดไม่ได้):
+    `scrollWidth == clientWidth` ทุกแท็บ (ทั้งหน้าไม่เลื่อนแนวนอน) · ตารางสมาชิกกว้าง 486px เลื่อนใน
+    กล่อง `overflow-x-auto` ของตัวเอง · แท็บประวัติของฝ่าย 37 แสดง "สร้างฝ่ายงาน: สีน้ำเงิน" ของจริง
 - **2026-08-24 D-S6b (a: codex · b: agy ขนานกัน)** — claude ตรวจ → **ผ่านทั้งคู่ · เหลือ D-S7 ตัวเดียวในเมนูนี้**
   - `with_departments=1` เป็น opt-in ล้วน · **ไม่แตะ `AcademyMemberResource`** ตามที่กำกับ
     → endpoint นี้ที่หน้าอื่นใช้อยู่ยังตอบเหมือนเดิมทุกประการ และมีเทสต์คุมข้อนี้โดยตรง
