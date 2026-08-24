@@ -137,6 +137,18 @@ class MemberActivityLog extends Model
 
     public const ACTION_ELECTION_COUNCIL_CREATE = 'election_council_create';
 
+    public const ACTION_GUARDIAN_CREATE = 'guardian_create';
+
+    public const ACTION_GUARDIAN_UPDATE = 'guardian_update';
+
+    public const ACTION_GUARDIAN_DELETE = 'guardian_delete';
+
+    /** Reserved for the three-way appointment flow (G-S10); nothing writes it yet. */
+    public const ACTION_GUARDIAN_APPOINT = 'guardian_appoint';
+
+    /** Someone other than the student read a guardian's citizen id / income (G-S9-b). */
+    public const ACTION_GUARDIAN_SENSITIVE_VIEW = 'guardian_sensitive_view';
+
     public static function electionActions(): array
     {
         return [
@@ -272,6 +284,11 @@ class MemberActivityLog extends Model
             self::ACTION_INVITE_LINK_DELETE => 'ลบลิงก์เชิญ',
             self::ACTION_INVITE_LINK_TOGGLE => 'เปลี่ยนสถานะลิงก์เชิญ',
             self::ACTION_TAG_CREATE => 'สร้างแท็ก', self::ACTION_TAG_UPDATE => 'แก้ไขแท็ก', self::ACTION_TAG_DELETE => 'ลบแท็ก', self::ACTION_TAG_ASSIGN => 'เพิ่มแท็กให้สมาชิก', self::ACTION_TAG_REMOVE => 'นำแท็กออกจากสมาชิก',
+            self::ACTION_GUARDIAN_CREATE => 'เพิ่มผู้ปกครอง',
+            self::ACTION_GUARDIAN_UPDATE => 'แก้ไขข้อมูลผู้ปกครอง',
+            self::ACTION_GUARDIAN_DELETE => 'ลบผู้ปกครอง',
+            self::ACTION_GUARDIAN_APPOINT => 'แต่งตั้งผู้ปกครองให้นักเรียน',
+            self::ACTION_GUARDIAN_SENSITIVE_VIEW => 'เปิดดูข้อมูลอ่อนไหวของผู้ปกครอง',
         ];
 
         return $descriptions[$action] ?? $action;
@@ -305,6 +322,11 @@ class MemberActivityLog extends Model
             self::ACTION_INVITE_LINK_DELETE => 'mdi:link-off',
             self::ACTION_INVITE_LINK_TOGGLE => 'mdi:toggle-switch',
             self::ACTION_TAG_CREATE => 'mdi:tag-plus', self::ACTION_TAG_UPDATE => 'mdi:tag-edit', self::ACTION_TAG_DELETE => 'mdi:tag-remove', self::ACTION_TAG_ASSIGN => 'mdi:tag-plus', self::ACTION_TAG_REMOVE => 'mdi:tag-minus',
+            self::ACTION_GUARDIAN_CREATE => 'mdi:account-child',
+            self::ACTION_GUARDIAN_UPDATE => 'mdi:account-edit',
+            self::ACTION_GUARDIAN_DELETE => 'mdi:account-remove',
+            self::ACTION_GUARDIAN_APPOINT => 'mdi:account-star',
+            self::ACTION_GUARDIAN_SENSITIVE_VIEW => 'mdi:eye-lock',
         ];
 
         return $icons[$this->action] ?? 'mdi:circle';
@@ -338,6 +360,11 @@ class MemberActivityLog extends Model
             self::ACTION_INVITE_LINK_DELETE => 'red',
             self::ACTION_INVITE_LINK_TOGGLE => 'orange',
             self::ACTION_TAG_CREATE => 'green', self::ACTION_TAG_UPDATE => 'purple', self::ACTION_TAG_DELETE => 'red', self::ACTION_TAG_ASSIGN => 'blue', self::ACTION_TAG_REMOVE => 'orange',
+            self::ACTION_GUARDIAN_CREATE => 'green',
+            self::ACTION_GUARDIAN_UPDATE => 'purple',
+            self::ACTION_GUARDIAN_DELETE => 'red',
+            self::ACTION_GUARDIAN_APPOINT => 'indigo',
+            self::ACTION_GUARDIAN_SENSITIVE_VIEW => 'orange',
         ];
 
         return $colors[$this->action] ?? 'gray';

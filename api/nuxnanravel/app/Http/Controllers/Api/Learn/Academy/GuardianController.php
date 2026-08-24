@@ -7,6 +7,7 @@ use App\Models\Academy;
 use App\Models\Student;
 use App\Models\StudentGuardian;
 use App\Services\GuardianAccessService;
+use App\Services\GuardianAuditLogger;
 use App\Services\GuardianService;
 use App\Services\GuardianWriteService;
 use Illuminate\Http\Request;
@@ -134,6 +135,8 @@ class GuardianController extends Controller
                 'email' => $validated['email'] ?? null,
             ]);
 
+            app(GuardianAuditLogger::class)->created($student, $guardian, $validated);
+
             $responseGuardian = $guardian->load('contacts');
             if (! $access->canViewSensitive($request->user() ?? auth()->user(), $student)) {
                 $responseGuardian = $access->hideSensitive($responseGuardian);
@@ -209,6 +212,8 @@ class GuardianController extends Controller
 
             DB::commit();
 
+            app(GuardianAuditLogger::class)->updated($guardian->student, $guardian, $validated);
+
             $responseGuardian = $guardian->fresh(['contacts']);
             if (! $access->canViewSensitive($request->user() ?? auth()->user(), $guardian->student)) {
                 $responseGuardian = $access->hideSensitive($responseGuardian);
@@ -242,7 +247,9 @@ class GuardianController extends Controller
         }
 
         try {
+            $student = $guardian->student;
             $this->guardianWriteService->delete($guardian);
+            app(GuardianAuditLogger::class)->deleted($student, $guardian);
 
             return response()->json([
                 'success' => true,

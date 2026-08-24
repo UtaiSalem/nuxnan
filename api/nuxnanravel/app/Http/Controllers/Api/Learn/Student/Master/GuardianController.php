@@ -9,6 +9,7 @@ use App\Models\GuardianContact;
 use App\Models\Student;
 use App\Models\StudentGuardian;
 use App\Services\GuardianAccessService;
+use App\Services\GuardianAuditLogger;
 use App\Services\GuardianService;
 use App\Services\GuardianWriteService;
 use App\Traits\HandlesStudentUpdates;
@@ -157,10 +158,18 @@ class GuardianController extends Controller
 
             DB::commit();
 
+            app(GuardianAuditLogger::class)->created($student, $guardian, $validatedData['guardian'] ?? []);
+
+            $responseGuardian = $guardian->fresh();
+            $access = app(GuardianAccessService::class);
+            if (! $access->canViewSensitive(auth()->user(), $student)) {
+                $responseGuardian = $access->hideSensitive($responseGuardian);
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'guardian' => $guardian->fresh(),
+                    'guardian' => $responseGuardian,
                     'contact' => $contact,
                 ],
                 'message' => 'บันทึกข้อมูลผู้ปกครองสำเร็จ',
@@ -259,10 +268,18 @@ class GuardianController extends Controller
 
             DB::commit();
 
+            app(GuardianAuditLogger::class)->updated($student, $guardian, $validatedData['guardian'] ?? []);
+
+            $responseGuardian = $guardian->fresh();
+            $access = app(GuardianAccessService::class);
+            if (! $access->canViewSensitive(auth()->user(), $student)) {
+                $responseGuardian = $access->hideSensitive($responseGuardian);
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'guardian' => $guardian->fresh(),
+                    'guardian' => $responseGuardian,
                     'contact' => $contact->fresh(),
                 ],
                 'pending_fields' => $guardianResult['pending'] ?? [],
