@@ -19,6 +19,7 @@ use App\Models\SemesterTranscript;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AcademyMemberController extends Controller
 {
@@ -757,9 +758,40 @@ class AcademyMemberController extends Controller
         $perPage = min($request->get('per_page', 20), 100);
         $members = $query->with(['user', 'student', 'academyRole', 'inviter', 'tags'])->paginate($perPage);
 
+        $memberRows = AcademyMemberResource::collection($members);
+        if ($request->has('with_departments')) {
+            $userIds = $members->getCollection()->pluck('user_id')->filter()->unique()->values();
+            $membershipsByUser = DB::table('academy_group_members')
+                ->join('academy_groups', 'academy_groups.id', '=', 'academy_group_members.academy_group_id')
+                ->where('academy_groups.academy_id', $academy->id)
+                ->where('academy_groups.type', 'department')
+                ->whereIn('academy_group_members.user_id', $userIds)
+                ->get([
+                    'academy_group_members.user_id',
+                    'academy_groups.id',
+                    'academy_groups.name',
+                    'academy_group_members.role',
+                ])
+                ->groupBy('user_id');
+
+            $memberRows = collect($memberRows->resolve($request))->map(function (array $row) use ($membershipsByUser) {
+                $row['department_memberships'] = $membershipsByUser
+                    ->get($row['user_id'] ?? null, collect())
+                    ->map(fn ($membership) => [
+                        'id' => $membership->id,
+                        'name' => $membership->name,
+                        'role' => $membership->role,
+                    ])
+                    ->values()
+                    ->all();
+
+                return $row;
+            })->values()->all();
+        }
+
         return response()->json([
             'success' => true,
-            'members' => AcademyMemberResource::collection($members),
+            'members' => $memberRows,
             'pagination' => [
                 'current_page' => $members->currentPage(),
                 'last_page' => $members->lastPage(),
