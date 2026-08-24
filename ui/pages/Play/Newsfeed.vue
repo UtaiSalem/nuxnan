@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import TimeClockWidget from '~/components/widgets/TimeClockWidget.vue'
 import CreatePostBox from '~/components/play/feed/CreatePostBox.vue'
@@ -205,35 +205,41 @@ const handlePostUpdated = (updatedPost) => {
 
 // Setup IntersectionObserver for infinite scroll
 const setupIntersectionObserver = () => {
-  if (observer) observer.disconnect()
-  
+  observer?.disconnect()
+  if (!loadMoreTrigger.value) return
+
   observer = new IntersectionObserver(
     (entries) => {
       const target = entries[0]
-      if (target.isIntersecting && hasMorePages.value && !isLoadingMore.value) {
+      if (target?.isIntersecting && hasMorePages.value && !isLoadingMore.value && !isLoading.value) {
         loadMore()
       }
     },
     {
       root: null,
-      rootMargin: '100px',
-      threshold: 0.1,
+      rootMargin: '200px',
+      threshold: 0,
     }
   )
-  
-  if (loadMoreTrigger.value) {
-    observer.observe(loadMoreTrigger.value)
-  }
+
+  observer.observe(loadMoreTrigger.value)
 }
+
+// sentinel มี v-if จึง unmount/mount ใหม่ทุกครั้งที่ isLoading หรือ hasMorePages เปลี่ยน
+// ต้องผูก observer กับตัว element จริง ไม่ใช่ตั้งครั้งเดียวตอน mount
+watch(loadMoreTrigger, (el) => {
+  if (el) {
+    setupIntersectionObserver()
+  } else {
+    observer?.disconnect()
+  }
+}, { flush: 'post' })
 
 usePageLayoutWidgets({ left: true, right: true })
 
 onMounted(async () => {
   // Fetch activities - sidebar widgets load their own data independently
   await fetchActivities(1, false)
-  
-  // Setup infinite scroll after initial load
-  setupIntersectionObserver()
 })
 
 onUnmounted(() => {
