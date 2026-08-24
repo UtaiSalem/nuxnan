@@ -35,7 +35,7 @@ class GuardianController extends Controller
             ], 403);
         }
 
-        $this->authorize('update', $student);
+        $this->authorize('viewGuardians', $student);
 
         try {
             $guardians = $this->guardianService->forStudent($student);
@@ -106,7 +106,7 @@ class GuardianController extends Controller
             ], 403);
         }
 
-        $this->authorize('update', $student);
+        $this->authorize('manageGuardians', $student);
 
         try {
             $validatedData = $request->validated();
@@ -162,7 +162,7 @@ class GuardianController extends Controller
             ], 403);
         }
 
-        $this->authorize('update', $student);
+        $this->authorize('manageGuardians', $student);
 
         try {
             // Load existing guardian

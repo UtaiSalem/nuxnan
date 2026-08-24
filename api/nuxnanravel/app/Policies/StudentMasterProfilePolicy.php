@@ -7,6 +7,7 @@ use App\Models\AcademyMember;
 use App\Models\ClassroomMember;
 use App\Models\Student;
 use App\Models\User;
+use App\Services\AcademyGroupPermissionAccessService;
 
 class StudentMasterProfilePolicy
 {
@@ -53,6 +54,62 @@ class StudentMasterProfilePolicy
             ->where('academy_id', $student->academy_id)
             ->whereIn('role', ['admin', 'director'])
             ->exists();
+    }
+
+    /**
+     * Read a student's guardian records.
+     *
+     * Homeroom staff and the student themselves keep the access they already had;
+     * registrar/department members reach it through the guardians.view permission.
+     */
+    public function viewGuardians(User $user, Student $student): bool
+    {
+        return $this->guardianAccess($user, $student, 'guardians.view');
+    }
+
+    /**
+     * Add, edit or remove a student's guardian records.
+     */
+    public function manageGuardians(User $user, Student $student): bool
+    {
+        return $this->guardianAccess($user, $student, 'guardians.manage');
+    }
+
+    private function guardianAccess(User $user, Student $student, string $permission): bool
+    {
+        // 1) the student themselves
+        if ($student->user_id !== null && $user->id === $student->user_id) {
+            return true;
+        }
+
+        // 2) academy owner / super admin — they normally have no academy_members row
+        if ($this->isAcademyOwner($user, $student->academy_id)) {
+            return true;
+        }
+
+        // 3) homeroom teacher / co-teacher of this student's own classroom
+        if (ClassroomMember::isHomeroomStaffOf($user->id, $student)) {
+            return true;
+        }
+
+        // 4) academy role permission, then explicit department grants
+        $member = AcademyMember::where('user_id', $user->id)
+            ->where('academy_id', $student->academy_id)
+            ->where('status', 2)
+            ->first();
+
+        if (! $member) {
+            return false;
+        }
+
+        if ($member->academyRole?->hasAnyPermission([$permission])) {
+            return true;
+        }
+
+        $academy = Academy::find($student->academy_id);
+
+        return $academy !== null && app(AcademyGroupPermissionAccessService::class)
+            ->hasAnyPermission($user, $academy, [$permission]);
     }
 
     /**

@@ -4,11 +4,8 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
-use App\Models\AcademyMember;
-use App\Models\AcademyRole;
 use App\Models\Student;
 use App\Models\StudentGuardian;
-use App\Models\User;
 use App\Services\GuardianService;
 use App\Services\GuardianWriteService;
 use Illuminate\Http\Request;
@@ -107,12 +104,13 @@ class GuardianController extends Controller
             $guardian = $this->guardianWriteService->create($student, [
                 'student_id' => $student->id,
                 'student_code' => $student->student_id,
-                'guardian_type' => $validated['guardian_type'],
+                'guardian_type' => $validated['guardian_type'] ?? null,
                 'title_prefix' => $validated['title_prefix'] ?? null,
                 'first_name' => $validated['first_name'],
                 'last_name' => $validated['last_name'],
                 'citizen_id' => $validated['citizen_id'] ?? null,
-                'relationship' => $validated['relationship'] ?? $this->getDefaultRelationship($validated['guardian_type']),
+                'relationship' => $validated['relationship']
+                    ?? (isset($validated['guardian_type']) ? $this->getDefaultRelationship($validated['guardian_type']) : null),
                 'occupation' => $validated['occupation'] ?? null,
                 'workplace' => $validated['workplace'] ?? null,
                 'monthly_income' => $validated['monthly_income'] ?? null,
@@ -181,12 +179,15 @@ class GuardianController extends Controller
 
             $guardian = $this->guardianWriteService->update($guardian, $validated);
 
+            DB::commit();
+
             return response()->json([
                 'success' => true,
                 'message' => 'อัพเดทข้อมูลผู้ปกครองเรียบร้อยแล้ว',
                 'guardian' => $guardian->fresh(['contacts']),
             ], 200);
         } catch (\Exception $e) {
+            DB::rollBack();
 
             return response()->json([
                 'success' => false,
@@ -224,49 +225,18 @@ class GuardianController extends Controller
     }
 
     /**
-     * Link guardian to a user account (for parent login)
+     * Link guardian to a user account (for parent login).
+     *
+     * Parent accounts do not exist yet: the linking flow ships in phase C (G-S12).
+     * The previous body created an approved academy_members row as a side effect and
+     * still answered success without linking anything, so it is refused outright.
      */
     public function linkUser(Academy $academy, StudentGuardian $guardian, Request $request)
     {
-        if (! $guardian->student || $guardian->student->academy_id !== $academy->id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'ไม่พบข้อมูลผู้ปกครอง',
-            ], 404);
-        }
-
-        $request->validate([
-            'user_id' => 'required|exists:users,id',
-        ]);
-
-        $user = User::find($request->user_id);
-
-        // Add user to academy as parent if not already
-        $existingMember = AcademyMember::where('academy_id', $academy->id)
-            ->where('user_id', $user->id)
-            ->first();
-
-        if (! $existingMember) {
-            // Find parent role
-            $parentRole = AcademyRole::where('academy_id', $academy->id)
-                ->where('name', 'parent')
-                ->first();
-
-            AcademyMember::create([
-                'academy_id' => $academy->id,
-                'user_id' => $user->id,
-                'status' => 2, // approved
-                'academy_role_id' => $parentRole?->id,
-            ]);
-        }
-
-        // Update guardian with user_id (need to add column)
-        // For now, we store the link in a different way or add the column
-
         return response()->json([
-            'success' => true,
-            'message' => 'เชื่อมโยงบัญชีผู้ใช้กับผู้ปกครองเรียบร้อยแล้ว',
-        ], 200);
+            'success' => false,
+            'message' => 'ยังไม่เปิดให้ผูกบัญชีผู้ใช้กับผู้ปกครอง (รอเฟสบัญชีผู้ปกครอง)',
+        ], 501);
     }
 
     /**

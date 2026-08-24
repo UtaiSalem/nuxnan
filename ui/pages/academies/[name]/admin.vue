@@ -91,7 +91,7 @@ const menuItems = computed(() => [
         name: 'ผู้ปกครอง',
         icon: 'fluent:people-community-24-regular',
         to: `/academies/${academyName.value}/admin/guardians`,
-        show: can('members.view'),
+        show: can('guardians.view') || can('guardians.manage'),
       },
     ]
   },

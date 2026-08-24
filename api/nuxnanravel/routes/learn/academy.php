@@ -256,7 +256,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // ============================================
     // Guardian Management Routes (ผู้ปกครอง)
     // ============================================
-    Route::prefix('{academy}/guardians')->group(function () {
+    Route::prefix('{academy}/guardians')->middleware('academy.permission:guardians.view')->group(function () {
         Route::get('/', [GuardianController::class, 'getAllGuardians'])->name('api.academy.guardians.index');
         Route::get('statistics', [GuardianController::class, 'getStatistics'])->name('api.academy.guardians.statistics');
     });
@@ -291,14 +291,22 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::delete('{batch}', [StudentImportController::class, 'cancel'])->name('api.academy.student-imports.cancel');
     });
 
-    // Student-specific guardian routes
+    // Student-specific guardian routes.
+    // NOTE: routes/learn/student-profile.php registers the same two URIs later and therefore wins
+    // (route:list resolves both to Student\Master\GuardianController). The guards below are kept so
+    // the entry stays correct if the ordering changes; authorization that actually runs today lives in
+    // StudentMasterProfilePolicy::viewGuardians/manageGuardians.
     Route::prefix('{academy}/students/{student}/guardians')->group(function () {
-        Route::get('/', [GuardianController::class, 'index'])->name('api.academy.students.guardians.index');
-        Route::post('/', [GuardianController::class, 'store'])->name('api.academy.students.guardians.store');
+        Route::get('/', [GuardianController::class, 'index'])
+            ->middleware('academy.permission:guardians.view')
+            ->name('api.academy.students.guardians.index');
+        Route::post('/', [GuardianController::class, 'store'])
+            ->middleware('academy.permission:guardians.manage')
+            ->name('api.academy.students.guardians.store');
     });
 
     // Guardian detail routes
-    Route::prefix('{academy}/guardians/{guardian}')->group(function () {
+    Route::prefix('{academy}/guardians/{guardian}')->middleware('academy.permission:guardians.manage')->group(function () {
         Route::patch('/', [GuardianController::class, 'update'])->name('api.academy.guardians.update');
         Route::delete('/', [GuardianController::class, 'destroy'])->name('api.academy.guardians.destroy');
         Route::post('link-user', [GuardianController::class, 'linkUser'])->name('api.academy.guardians.linkUser');
