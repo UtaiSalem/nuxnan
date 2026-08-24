@@ -486,7 +486,7 @@ Prefix: `/api/academies/{academy}/elections`
 | **E-S9** | **หน้าแอดมิน** — index + [id] 6 แท็บ + เมนูใน `admin.vue` | E-S7 | FE | 🟢 **ปิดแล้ว 2026-08-23** ผ่าน E-S9a → E-S9d2 |
 | **E-S10** | **หน้าสมัครพรรค + หน้าผลคะแนน + turnout realtime** — สเปกเต็มใน §12 · แตกเป็น E-S10a (BE) / E-S10b (apply) / E-S10c (results+index) | E-S9 | BE + FE | 🟢 **ปิดแล้ว 2026-08-24** · P1 แก้ด้วย migration backfill สิทธิ์+role · P2 ตัดสินว่าจัดเฉพาะมัธยม (ดู §12.6) |
 | **E-S11** | **Hardening** — **สเปกเต็มใน §13** · throttle มีอยู่แล้ว 4 เส้นแต่คีย์ผิดหน่วย (§13.1) · 429 เป็นภาษาอังกฤษบนจอหน่วย · กวาด receipt ค้างเป็น `expired` · pint + ชุดเทสต์เต็ม · แตกเป็น E-S11a–d | E-S10 | BE + FE | ⚪ |
-| **E-S12** | **ต่อยอด: ตั้งคณะกรรมการสภานักเรียนจากผลเลือกตั้ง** — สร้าง `AcademyGroup` type ใหม่ (`student_council`) จากพรรคที่ชนะ · **ต้องเพิ่ม type ทั้ง `AcademyGroupTypes.php` และ `ui/constants/academyGroupTypes.ts` (สองไฟล์นี้เป็น mirror กัน)** | E-S7 | BE + FE | ⚪ |
+| **E-S12** | **ต่อยอด: ตั้งคณะกรรมการสภานักเรียนจากผลเลือกตั้ง** — **สเปกเต็มใน §14** · type ใหม่ `student_council` จากพรรคที่ชนะ · **ต้องเพิ่ม type ทั้ง `AcademyGroupTypes.php` และ `ui/constants/academyGroupTypes.ts` (สองไฟล์นี้เป็น mirror กัน)** · แตกเป็น E-S12a (BE) / E-S12b (FE) | E-S7 | BE + FE | ⚪ |
 
 **เส้นทางที่สั้นที่สุดที่จัดเลือกตั้งได้จริง:** E-S1 → E-S2 → E-S3 → E-S4 → E-S5 → E-S6 → E-S7 → E-S8 (หน้าแอดมินยังทำมือผ่าน API ได้ชั่วคราว แต่ **หน้าหน่วยเลือกตั้งข้ามไม่ได้**)
 
@@ -1185,3 +1185,111 @@ agy แก้ด้วย `:class="[selected ? 'bottom-40' : 'bottom-4']"` ซ�
 2. **ต้องเห็น dev server ตอบ 200 อย่างน้อยหนึ่ง route** ก่อนขึ้น 🟢
 3. ระวัง **inline handler หลายคำสั่ง** เป็นพิเศษ — ต้องคั่นด้วย `;` หรือย้ายไปเป็นฟังก์ชันที่ตั้งชื่อ
    · การ "จัดรูปแบบให้อ่านง่าย" คือจังหวะที่บั๊กแบบนี้เกิด (commit ที่ทำพังคือ commit ที่ตั้งใจแค่จัดบรรทัด)
+
+---
+
+## 14. สเปก E-S12 — ตั้งคณะกรรมการสภานักเรียนจากผลเลือกตั้ง (เขียน 2026-08-24)
+
+### 14.0 เป้าหมาย
+
+ปิดปลายทางของทั้งโดเมน — ผลเลือกตั้งที่ประกาศแล้วต้องกลายเป็น **กลุ่มจริงในระบบ** ที่มีสมาชิก
+ไม่ใช่ตัวเลขบนหน้าผลคะแนนที่ไม่ไปไหนต่อ
+
+**นอกขอบเขต:** การแก้ไข/ถอดถอนกรรมการหลังตั้งแล้ว (ใช้หน้าจัดการกลุ่มที่มีอยู่) · วาระการดำรงตำแหน่ง ·
+การผูกสิทธิ์พิเศษให้สภานักเรียน (เป็นเรื่องของโมเดลฝ่ายที่ค้างอยู่ที่เมนู #9)
+
+### 14.1 ข้อตกลงที่ผู้ใช้ตัดสิน 2026-08-24 (ห้ามเปลี่ยนโดยไม่ถาม)
+
+| # | ประเด็น | ข้อตัดสิน |
+|---|---|---|
+| **G1** | ประเภทกลุ่ม | **เพิ่ม type `student_council` ใหม่** ไม่ใช้ `committee` ที่มีอยู่ — สภานักเรียนต้องแยกจากคณะกรรมการอื่นของโรงเรียนด้วยไอคอน/สี/ลำดับของตัวเอง |
+| **G2** | สมาชิก | **เฉพาะทีมของพรรคที่ชนะ** (`election_party_members` ทั้ง 5 บทบาท) |
+| **G3** | คะแนนเท่ากัน | **ปฏิเสธ** พร้อมบอกชื่อพรรคที่เสมอกันและคะแนน → ให้ กกต. ตัดสินนอกระบบก่อน · ระบบไม่เดาแทนคน |
+| **G4** | ตั้งซ้ำ | **ปฏิเสธ** พร้อมบอกว่าตั้งไปแล้วและส่ง id/ชื่อกลุ่มเดิมกลับไปให้หน้าจอทำลิงก์ · ไม่แทนที่ของเดิม |
+
+**G3 สอดคล้องกับแนวเดิมของเมนูนี้** — เทียบ §9.1 ที่ระบบเลือกจะ *รายงานตัวเลขครูที่ไม่มีระดับออกมา*
+แทนที่จะเดาแทน · การตัดครูออกเงียบ ๆ กับใส่เข้าทั้งสองการเลือกตั้งเงียบ ๆ ผิดพอกัน — เรื่องเสมอกันก็เหมือนกัน
+
+### 14.2 ของเดิมในระบบที่ต้องต่อให้ถูก (สแกน 2026-08-24)
+
+| สิ่งที่มีอยู่ | รายละเอียดที่กระทบงานนี้ |
+|---|---|
+| `academy_groups` | `academy_id · parent_id · sort_order · name · description · type · settings` — **`settings` cast เป็น `array` อยู่แล้ว** (`AcademyGroup::$casts`) |
+| `academy_group_members` | `academy_group_id · user_id · role (string, default 'member') · status (tinyint, **2 = approved**) · invited_by` · unique(`academy_group_id`,`user_id`) |
+| `academy_group_admins` | ตารางแยก · `role` default `'leader'` · `appointed_by` |
+| `AcademyGroupTypes::TYPES` | 9 type ปัจจุบัน order 1–9 · มีคอมเมนต์เขียนไว้แล้วว่า *"Mirror this when changing ui/constants/academyGroupTypes.ts"* |
+| `election_party_members` | `role` enum **leader/deputy/secretary/treasurer/member** · `position_label` · `sort_order` |
+| `election_results` | `is_winner` · `rank` · `votes` · `published_at` |
+
+### 14.3 🔴 กับดักสามข้อที่เจอตอนเขียนสเปก
+
+**T1 — `is_winner` เป็น true ได้หลายแถว** `closeAndCount()` ตั้ง `is_winner = ((int) $group->votes === $top)`
+→ เสมอที่หนึ่งกี่พรรคก็ติดธงหมด · **นี่คือเหตุผลที่ G3 ต้องมี** และเป็นเงื่อนไขที่เทสต์ต้องคุมโดยตรง
+
+**T2 — สร้างกลุ่มนอก `AcademyGroupController::store()` จะได้กลุ่มที่ไม่มีสิทธิ์ติดมาเลย**
+`store()` ไม่ได้แค่ `create()` แต่ seed `AcademyGroupPermission` ให้ครบทุก key จาก `AcademyGroupPermissions::PERMISSIONS`
+ตามค่า `default` ของแต่ละตัว → **ถ้า service ของ E-S12 สร้างกลุ่มเองตรง ๆ จะได้กลุ่มที่พังเงียบ ๆ**
+(หน้าจัดการกลุ่มจะไม่มีสิทธิ์ให้ตั้งค่าเลย) → **ต้องดึงตรรกะ seed ออกมาใช้ร่วมกัน ห้าม copy-paste**
+
+**T3 — `position_label` ไปต่อไม่ได้** `academy_group_members` ไม่มีคอลัมน์รองรับ →
+**ยอมรับว่าข้อมูลนี้ไม่ถูกยกไป** และ **ห้ามเพิ่มคอลัมน์เพื่อรองรับในรอบนี้** (แตะตารางที่ทั้งระบบใช้ร่วมกัน
+เพื่อฟีเจอร์เดียวไม่คุ้ม) · ให้ยกเฉพาะ `role` ไปตรง ๆ แล้วบันทึกไว้ว่าเป็นหนี้ที่รู้ตัว
+
+### 14.4 สัญญา API
+
+```
+POST /api/academies/{academy}/elections/{election}/council      middleware: elections.manage
+body: { "name": "…" }   // optional — ไม่ส่งให้ derive จาก election.title
+```
+
+**ลำดับการ์ด (ต้องตรวจตามลำดับนี้ และทุกข้อความเป็นภาษาไทย):**
+
+| ลำดับ | เงื่อนไข | ตอบกลับ |
+|---|---|---|
+| 1 | `election.published_at` ต้องไม่ว่าง | 422 "ยังประกาศผลไม่เสร็จ ตั้งคณะกรรมการไม่ได้" |
+| 2 | นับ `election_results` ที่ `is_winner = true` — **ต้องได้ 1 แถวเท่านั้น** | ถ้า > 1 → 422 พร้อม **รายชื่อพรรคที่เสมอ + คะแนน** (G3) · ถ้า = 0 → 422 |
+| 3 | ต้องยังไม่มี `academy_groups` ที่ `settings->election_id` = election นี้ | 422 พร้อม `group_id` + `group_name` ของเดิม (G4) |
+
+**สิ่งที่สร้างเมื่อผ่านครบ (ใน transaction เดียว):**
+- `AcademyGroup` — `type = 'student_council'` · `settings = {election_id, party_id, published_at}`
+  **`settings` คือจุดผูกความสัมพันธ์ ไม่ต้องเพิ่มคอลัมน์ใหม่** (คอลัมน์นี้ cast เป็น array อยู่แล้ว)
+- `AcademyGroupPermission` ครบทุก key ตาม T2
+- `academy_group_members` หนึ่งแถวต่อสมาชิกพรรค — `role` = ค่าเดิมจาก `election_party_members.role` ตรง ๆ
+  (ห้ามแปลงเป็น 'member' ทั้งหมด ไม่งั้นจะไม่รู้ว่าใครเป็นประธาน) · `status = 2` · `invited_by` = ผู้กด
+- `academy_group_admins` — **`leader` ของพรรคหนึ่งแถว** เพื่อให้ประธานจัดการกลุ่มตัวเองได้
+- audit log — เพิ่ม `MemberActivityLog::ACTION_ELECTION_COUNCIL_CREATE` ตามรูปแบบเดิมของโดเมนนี้
+
+### 14.5 การแบ่ง shard
+
+| shard | ขอบเขต | ไฟล์ | ส่งให้ | สถานะ |
+|---|---|---|---|---|
+| **E-S12a** | backend ทั้งหมด — type ใน `AcademyGroupTypes.php` · service + การ์ด 3 ชั้น · route + controller · แยกตรรกะ seed permission ให้ใช้ร่วมกัน (T2) · audit action · เทสต์ HTTP | `AcademyGroupTypes.php` · `AcademyGroupController.php` · service ใหม่ · `routes/learn/election.php` · `MemberActivityLog.php` · tests | codex | ⚪ |
+| **E-S12b** | frontend — type ใน `academyGroupTypes.ts` (**ต้องตรงกับฝั่ง PHP เป๊ะ**) · ปุ่มใน `ElectionResultsTab.vue` · ฟังก์ชันใน `useElements`/`useElections` · แสดงข้อความปฏิเสธทั้ง 3 แบบ + ลิงก์ไป `/academies/[name]/groups/[groupId]` | `ui/constants/academyGroupTypes.ts` · `ui/components/academy/elections/ElectionResultsTab.vue` · `ui/composables/useElections.ts` | agy | ⚪ |
+
+**ค่าของ type ที่ทั้งสอง shard ต้องเขียนให้ตรงกัน (ล็อกไว้ตรงนี้ ห้ามคิดเอง):**
+
+```
+key: student_council · label: 'สภานักเรียน' · label_en/labelEn: 'Student Council'
+icon: 'heroicons:megaphone' · color: 'pink' · order: 10
+```
+
+**a กับ b ทำขนานกันได้** (ไฟล์ไม่ทับกัน) — b เขียนตามสัญญา §14.4 โดยไม่ต้องรอ a
+
+### 14.6 เกณฑ์ตรวจรับ (claude ตรวจเอง ไม่เชื่อรายงาน)
+
+1. `git diff --stat` + อ่าน diff ทุกไฟล์ ดูเลข deletion
+2. **เทียบ `AcademyGroupTypes.php` กับ `academyGroupTypes.ts` ทีละฟิลด์** — key/label/label_en/icon/color/order
+   ต้องตรงกันทั้ง 10 ตัว (ไม่ใช่แค่ตัวใหม่) · **สองไฟล์นี้เคยหลุดจากกันมาแล้วจนหน้าเว็บขึ้น "ไม่ระบุประเภท"**
+3. **เทสต์ HTTP ยิงผ่าน route จริง** ครบ 3 การ์ด: ยังไม่ประกาศผล · เสมอกันสองพรรค · ตั้งซ้ำ
+   — บทเรียน §7.2 · เทสต์ระดับ service พิสูจน์ไม่ได้ว่าเรียกถึง
+4. **เทสต์ว่ากลุ่มที่สร้างมี `AcademyGroupPermission` ครบ** — ถ้าไม่มีเทสต์ข้อนี้ T2 จะหลุดโดยไม่มีใครรู้
+5. `./vendor/bin/pint --test` + `php artisan test --filter Election` — **ฐาน 147 เทสต์ / 449 assertions ห้ามลดลง**
+6. `route:list --path=elections` — route ใหม่ต้องมี guard `elections.manage`
+7. **กวาด SFC ทั้ง `ui/` + เห็น dev server ตอบ 200** ตามกฎ §13.10
+8. เปิดจริงที่ 375px
+
+### 14.7 สิ่งที่จงใจไม่ทำ (บันทึกกันเสนอซ้ำ)
+
+- **ไม่เพิ่มคอลัมน์ใด ๆ** ทั้ง `academy_groups` และ `academy_group_members` — `settings` รองรับการผูกได้แล้ว (T3)
+- **ไม่ทำการถอดถอน/แก้ไขกรรมการในรอบนี้** — หน้าจัดการกลุ่มเดิมทำได้อยู่แล้ว
+- **ไม่ผูกสิทธิ์พิเศษให้สภานักเรียน** — ต้องรอโมเดลฝ่ายของเมนู #9
