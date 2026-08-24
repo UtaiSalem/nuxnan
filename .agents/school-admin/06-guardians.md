@@ -283,7 +283,7 @@ guardian_contacts                ← remap ให้ชี้ guardians.id (ค�
 | **G-S7** | **Permission guard ระดับฝ่าย** — เพิ่ม key `guardians.*` 5 ตัว, ผูกกับฝ่ายทะเบียน/กิจการนักเรียนตาม §4, ใส่ middleware ทุก route · แตกเป็น a (คีย์+migration) / b (ด่านตรวจ) / c (`/my-role` ส่งสิทธิ์จากฝ่าย) | #9, G-S4 | model + migration + routes + policy + 2 controller + 3 test file | 🟢 **verified 2026-08-25** — ดู §8.1 |
 | **G-S8** | **ฟิลด์อ่อนไหว (D4/Q1)** — ซ่อน `citizen_id`/`monthly_income` ใน response เมื่อไม่มี `guardians.sensitive.view` และ reject การแก้เมื่อไม่มี `.manage` · แตกเป็น a (service + GuardianController 2 ตัว) / b (StudentResource · โปรไฟล์ · ห้องเรียน) | G-S7 | service + 4 controller/resource + 2 test file | 🟢 **verified 2026-08-25** — ดู §8.3 |
 | **G-S9** | **Audit log (Q2)** — ผูก `MemberActivityLog` ทั้ง create/update/delete + event เปิดดูฟิลด์อ่อนไหว (`appoint` เลื่อนไป G-S10 เพราะยังไม่มี endpoint) · แตกเป็น a (จุดเขียน) / b (จุดอ่าน) | G-S7 | model + logger service + 6 controller + 2 test file | 🟢 **verified 2026-08-25** — ดู §8.4 |
-| **G-S10** | **การแต่งตั้ง 3 ทาง (Q3)** — endpoint + สิทธิ์: นักเรียนแต่งตั้งเอง / ครูประจำชั้น (เฉพาะห้องตน) / ฝ่ายทะเบียน พร้อมบันทึกผู้แต่งตั้ง; ไม่บังคับว่าต้องมีผู้ปกครอง; รองรับ "ผู้ปกครองคนเดิมของพี่น้อง" โดยเลือกคนที่มีอยู่แล้วแทนการสร้างซ้ำ (ผลพลอยได้จาก D5) | G-S7, G-S4 | endpoints + tests | ⚪ |
+| **G-S10** | **การแต่งตั้ง 3 ทาง (Q3)** — endpoint + สิทธิ์: นักเรียนแต่งตั้งเอง / ครูประจำชั้น (เฉพาะห้องตน) / ฝ่ายทะเบียน พร้อมบันทึกผู้แต่งตั้ง; ไม่บังคับว่าต้องมีผู้ปกครอง; รองรับ "ผู้ปกครองคนเดิมของพี่น้อง" โดยเลือกคนที่มีอยู่แล้วแทนการสร้างซ้ำ (ผลพลอยได้จาก D5) | G-S7, G-S4 | 4 endpoints + policy + 2 test file | 🟢 **verified 2026-08-25** — ดู §8.5 |
 | **G-S11** | **FE ยกเครื่อง** — เพิ่ม/แก้/ลบ ผู้ปกครอง, จัดการช่องทางติดต่อ, แสดง "ลูกในโรงเรียน" หลายคนต่อผู้ปกครอง 1 คน, การ์ดสถิติครบประเภท, error/empty state, แก้ convention (`useApi`, `definePageMeta`, dark mode) ตามสกิล `hopeui-port` | G-S7…G-S10 | pages + components | ⚪ |
 
 ### เฟส C — อนาคต (เมื่อพร้อมให้ผู้ปกครองมีบัญชี)
@@ -315,6 +315,45 @@ Report back: diff summary + ผลเทสต์ + คำสั่งที่�
 ---
 
 ## 8. Review Log
+
+### 8.5 G-S10 — การแต่งตั้ง 3 ทาง (2026-08-25, agy 3 shard · claude ตรวจเองทุกข้อ)
+
+**ครึ่งหนึ่งของงานมีอยู่แล้ว:** `GuardianWriteService::findPerson()` รวมคนซ้ำอัตโนมัติเมื่อเลขบัตร 13 หลัก +
+ชื่อ-สกุลตรง ⇒ "ผู้ปกครองคนเดิมของพี่น้อง" ทำได้ครึ่งทางตั้งแต่ D5 · ที่ขาดจริงคือเลือกด้วย id ไม่ได้,
+`guardians.appoint` แจกแล้วแต่ไม่มีโค้ดเช็ค, `appointed_by_role` ฮาร์ดโค้ด `'user'`, `verified_*` ไม่มีโค้ดเขียน
+
+- **🔴 กับดักโครงสร้าง** — route `{academy}/guardians/{guardian}` bind กับ `StudentGuardian` (ตารางเก่า)
+  ⇒ ถ้าแต่งตั้งแล้วสร้างแค่แถวใน `student_guardian_links` จะได้แถวที่ **อ่านเห็นแต่แก้/ลบไม่ได้ตลอดกาล**
+  → `appoint()` ต้อง dual-write แถว legacy เสมอ (มีเทสต์ล็อกไว้)
+- **endpoint 4 เส้น** — `GET {academy}/guardians/search` (เจ้าหน้าที่ที่มี `guardians.view` เท่านั้น) ·
+  `POST students/{student}/guardians/match` (**`throttle:10,1`** — มันตอบว่า "เลขบัตรใบนี้เป็นผู้ปกครองที่นี่ไหม"
+  = เครื่องมือกวาดเลขบัตรถ้าไม่จำกัด) · `.../guardians/appoint` · `.../guardians/links/{link}/verify`
+  **ทั้ง 4 เส้นไม่คืน `citizen_id`/`monthly_income` เลย ไม่ว่าผู้เรียกเป็นใคร**
+- **3 ทางใช้บันไดเดียวกัน** — `GuardianAccessService::actorRole()` ไล่ลำดับเดียวกับ `allows()`
+  คืน `student|owner|homeroom|staff|system` ⇒ `appointed_by_role` บอกได้จริงว่ามาทางไหน
+- **นักเรียนยืนยันการแต่งตั้งของตัวเองไม่ได้** — `manageGuardians` ปล่อยนักเรียนเจ้าของโปรไฟล์ผ่าน
+  ถ้าไม่กันตรงนี้ กลไก "รอครูยืนยัน" จะไร้ความหมายทั้งหมด
+
+**ด่าน "รอยืนยันก่อนเห็นฟิลด์อ่อนไหว" ต้องมีเงื่อนไข 3 ข้อ ไม่ใช่ 2** — สเปครอบแรกใช้แค่
+`appointed_by_role='student'` + `verified_at IS NULL` ซึ่ง**กว้างเกินไปและเป็นบั๊ก**: มันเหมารวมผู้ปกครอง
+ที่นักเรียนพิมพ์เองกับมือ ⇒ นักเรียนจะมองไม่เห็นเลขบัตรที่ตัวเองกรอก และการ์ดใน `my-profile` ที่ G-S8
+ปกป้องไว้จะพัง · **ข้อ 3 ที่ขาดคือ ผู้ปกครองคนนั้นต้องถูกผูกกับนักเรียน ≥ 2 คน** (= ไปเกาะของคนอื่นจริง)
+คนที่สร้างใหม่มีลิงก์เดียวเสมอจึงไม่โดน · จุดเสียบด่าน 3 จุด: `Master\GuardianController::show` ·
+`StudentProfileController` (สร้าง array ธรรมดา ⇒ `makeHidden` ใช้ไม่ได้ ต้องใช้ flag รายแถว) · `StudentResource`
+
+**ซ่อมบั๊กค้าง:** `StudentGuardianLink::$fillable` ยังอ้าง `legacy_student_guardian_id` ที่ migration
+`2026_07_29_000005` ลบคอลัมน์ทิ้งแล้ว และไม่มี cast ⇒ `$link->legacy_row_ids` คืนสตริง JSON ไม่ใช่ array
+
+**เทสต์ที่ claude รันเอง:** `Guardian` **82 ผ่าน (214 assertions)** เดิม 64 ·
+`Classroom|StudentProfile|StudentCard|HomeVisit|MyRole|DepartmentActivityLog` **190 ผ่าน (672 assertions)** ·
+`route:list --path=guardians` ครบ 12 เส้น (`search` ไม่ถูก `{guardian}` กลืน) · pint ผ่าน
+· **agy รายงานผิด 1 จุด**: shard B บอก pint ผ่านทั้งที่ตกจริง 2 ไฟล์ → claude รัน `pint` แก้เอง
+· **claude เติมเอง 1 จุด**: `getAvailableActions()` ของเมนู #22 ยังไม่มี `guardian_appoint`/`guardian_verify`
+(G-S9 เว้นไว้ให้ G-S10 แต่สเปคของ claude ล็อก `app/Http/Controllers/**` ไว้จนไม่มี shard ไหนทำ)
+
+**ยังไม่ได้ตรวจกับ API จริงที่รันอยู่** (ต่างจาก G-S7/G-S8/G-S9) เพราะฐานเครื่องนี้
+`guardians`/`student_guardian_links` = 0 แถว ยังไม่ได้รัน `guardians:backfill --force`
+
 
 ### 8.1 G-S7 — ปิดช่องโหว่สิทธิ์ผู้ปกครอง (2026-08-25, agy 3 shard · claude ตรวจเองทุกข้อ)
 

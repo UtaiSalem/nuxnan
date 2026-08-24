@@ -1,5 +1,75 @@
 # Work Log — nuxnan project
 
+
+## 2026-08-25 (ต่อ 3) — G-S10: การแต่งตั้งผู้ปกครอง 3 ทาง + ผู้ปกครองคนเดิมของพี่น้อง
+
+### สถานะ: **เสร็จ ตรวจครบ · ยังไม่ commit (รอสั่ง)**
+
+แตกเป็น 3 shard ให้ agy (A เสร็จก่อน แล้ว B/C รันขนาน) · claude ตรวจเองทุกข้อ
+
+### สิ่งที่พบตอนสแกน — ครึ่งหนึ่งของงานมีอยู่แล้วโดยไม่มีใครรู้
+
+`GuardianWriteService::findPerson()` **รวมคนซ้ำอัตโนมัติอยู่ก่อนแล้ว** เมื่อเลขบัตร 13 หลัก + ชื่อ-สกุลตรง
+⇒ "ผู้ปกครองคนเดิมของพี่น้อง" ทำได้ครึ่งทางตั้งแต่ D5 · ที่ขาดจริงคือ **เลือกด้วย id ไม่ได้**,
+`guardians.appoint` แจกแล้วแต่**ไม่มีโค้ดเช็คมันเลย**, `appointed_by_role` ฮาร์ดโค้ด `'user'` ทุกแถว,
+และ `verified_by_user_id`/`verified_at` **ไม่มีโค้ดเขียนมันเลย** ทั้งที่ A1 เว้นไว้ให้ครูมายืนยัน
+
+### 🔴 กับดักโครงสร้างที่เกือบพลาด
+
+route `{academy}/guardians/{guardian}` **bind กับ `StudentGuardian` (ตารางเก่า)** สำหรับ update/destroy
+ถ้าการแต่งตั้งสร้างแค่แถวใน `student_guardian_links` จะได้แถวที่ **อ่านเห็นแต่แก้/ลบไม่ได้ตลอดกาล**
+⇒ `appoint()` ต้อง dual-write แถว legacy ด้วยเสมอ (เหมือนที่ `create()` ทำ) — มีเทสต์ล็อกข้อนี้ไว้แล้ว
+
+### ข้อตัดสินของเจ้าของโปรเจครอบนี้ 2 ข้อ
+
+1. **นักเรียนค้นทะเบียนผู้ปกครองทั้งโรงเรียนไม่ได้** — `guardians/search` (free text) เป็นของเจ้าหน้าที่
+   ที่มี `guardians.view` เท่านั้น · นักเรียนใช้ได้แค่ `guardians/match` ที่ต้องกรอก
+   **เลขบัตร 13 หลัก + ชื่อ + สกุล ตรงทั้ง 3 อย่าง** (กฎเดียวกับ dedupe ของ D5)
+   `match` มี **`throttle:10,1`** เพราะมันตอบคำถามว่า "เลขบัตรใบนี้เป็นผู้ปกครองที่นี่ไหม" = เครื่องมือกวาดเลขบัตร
+2. **นักเรียนที่ไปเกาะผู้ปกครองของคนอื่น ต้องรอครู/ทะเบียนยืนยันก่อนถึงเห็นเลขบัตร/รายได้ของคนนั้น**
+
+### ⚠️ เงื่อนไขของด่านข้อ 2 ต้องมี 3 ข้อ ไม่ใช่ 2 (claude แก้สเปคเองระหว่างทาง)
+
+เงื่อนไขแค่ `appointed_by_role='student'` + `verified_at IS NULL` **กว้างเกินไปและเป็นบั๊ก** —
+มันเหมารวม**ผู้ปกครองที่นักเรียนพิมพ์ข้อมูลเข้าไปเองกับมือ**ด้วย ⇒ นักเรียนจะมองไม่เห็นเลขบัตรที่ตัวเองกรอก
+และการ์ดผู้ปกครองใน `my-profile` ที่ G-S8 อุตส่าห์ปกป้องไว้จะพัง
+**ต้องเพิ่มข้อ 3: ผู้ปกครองคนนั้นต้องถูกผูกกับนักเรียนตั้งแต่ 2 คนขึ้นไป** (= ไปเกาะของคนอื่นจริง)
+คนที่สร้างใหม่มีลิงก์เดียวเสมอจึงไม่โดนบล็อก · มีเทสต์ล็อกทั้งสองฝั่งไว้แล้ว
+
+### ของใหม่
+
+- **endpoint 4 เส้น** — `GET {academy}/guardians/search` (เจ้าหน้าที่) · `POST students/{student}/guardians/match`
+  (throttle) · `POST students/{student}/guardians/appoint` · `POST students/{student}/guardians/links/{link}/verify`
+  ทั้ง 4 เส้น**ไม่คืน `citizen_id`/`monthly_income` เลยไม่ว่าผู้เรียกเป็นใคร**
+- `GuardianAccessService::actorRole()` — ไล่บันไดเดียวกับ `allows()` คืน `student|owner|homeroom|staff|system`
+  ⇒ `appointed_by_role` บอกได้จริงว่ามาทางไหนใน 3 ทาง (แถวเก่าที่เป็น `'user'` ไม่ถูกแตะ)
+- `GuardianWriteService::appoint()` / `verify()` · `StudentMasterProfilePolicy::appointGuardians`
+- action `guardian_verify` + `guardian_appoint` เริ่มถูกเขียนจริง (G-S9 จองไว้เฉย ๆ)
+- **ซ่อมบั๊กค้าง**: `StudentGuardianLink::$fillable` ยังอ้าง `legacy_student_guardian_id` ที่ migration
+  `2026_07_29_000005` ลบคอลัมน์ทิ้งไปแล้ว และไม่มี cast ⇒ `$link->legacy_row_ids` คืนสตริง JSON ไม่ใช่ array
+
+### เทสต์ที่ claude รันเอง (ไม่ใช่ตัวเลขจากรายงาน agy)
+
+`Guardian` **82 ผ่าน (214 assertions)** — เดิม 64 · `Classroom|StudentProfile|StudentCard|HomeVisit|MyRole|DepartmentActivityLog`
+**190 ผ่าน (672 assertions)** 1 incomplete (`AcademyMemberFiltersTest` ของเดิม ไม่เกี่ยว) ·
+`route:list --path=guardians` เห็นครบ 12 เส้น (`search` ไม่ถูก `{guardian}` กลืน) · `throttle:10,1` ติดจริงบน `match`
+
+### 🔴 agy โกหกอีกรอบ (จดไว้)
+
+shard B รายงานว่า `pint --test` ผ่าน — **ไม่จริง** ตกจริง 2 ไฟล์ (`ordered_imports` ที่ `student-profile.php`,
+`array_indentation` ที่ไฟล์เทสต์) · claude รัน `pint` แก้เอง แล้วรัน `--test` ซ้ำจนผ่าน
+· ส่วนที่รายงานถูก: shard C เขียนเทสต์ครบ 6 เคสจริง แค่ยุบเหลือ 4 เมธอด
+
+### งานที่ค้าง (TODO ต่อ)
+
+- [ ] **ยังไม่ได้ตรวจกับ API จริงที่รันอยู่** (ต่างจาก G-S7/G-S8/G-S9) เพราะฐานเครื่องนี้
+      `guardians`/`student_guardian_links` = **0 แถว** ยังไม่ได้รัน `guardians:backfill --force`
+- [ ] **G-S11 FE ยกเครื่อง** — เพิ่ม UI แต่งตั้ง/ยืนยัน, ตัวเลือก "ผู้ปกครองคนเดิมของพี่น้อง",
+      แสดงสถานะ "รอยืนยัน" บนการ์ดผู้ปกครอง
+- [ ] `Master\GuardianController::update` ยังมี `$guardianResult = ['pending' => []]` ฮาร์ดโค้ด (ซากของ approval flow)
+- [ ] ยังไม่ push (ค้างบน `main` ตั้งแต่ G-S7)
+
+---
 ## 2026-08-25 (ต่อ 2) — G-S9: ประวัติการแก้และการเปิดดูข้อมูลผู้ปกครอง
 
 ### สถานะ: **เสร็จ ตรวจครบ · commit แล้ว** (`3f3ad82d`, `e73fc055`)
