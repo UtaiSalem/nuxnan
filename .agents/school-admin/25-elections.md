@@ -486,7 +486,7 @@ Prefix: `/api/academies/{academy}/elections`
 | **E-S9** | **หน้าแอดมิน** — index + [id] 6 แท็บ + เมนูใน `admin.vue` | E-S7 | FE | 🟢 **ปิดแล้ว 2026-08-23** ผ่าน E-S9a → E-S9d2 |
 | **E-S10** | **หน้าสมัครพรรค + หน้าผลคะแนน + turnout realtime** — สเปกเต็มใน §12 · แตกเป็น E-S10a (BE) / E-S10b (apply) / E-S10c (results+index) | E-S9 | BE + FE | 🟢 **ปิดแล้ว 2026-08-24** · P1 แก้ด้วย migration backfill สิทธิ์+role · P2 ตัดสินว่าจัดเฉพาะมัธยม (ดู §12.6) |
 | **E-S11** | **Hardening** — **สเปกเต็มใน §13** · throttle มีอยู่แล้ว 4 เส้นแต่คีย์ผิดหน่วย (§13.1) · 429 เป็นภาษาอังกฤษบนจอหน่วย · กวาด receipt ค้างเป็น `expired` · pint + ชุดเทสต์เต็ม · แตกเป็น E-S11a–d | E-S10 | BE + FE | ⚪ |
-| **E-S12** | **ต่อยอด: ตั้งคณะกรรมการสภานักเรียนจากผลเลือกตั้ง** — **สเปกเต็มใน §14** · type ใหม่ `student_council` จากพรรคที่ชนะ · **ต้องเพิ่ม type ทั้ง `AcademyGroupTypes.php` และ `ui/constants/academyGroupTypes.ts` (สองไฟล์นี้เป็น mirror กัน)** · แตกเป็น E-S12a (BE) / E-S12b (FE) | E-S7 | BE + FE | ⚪ |
+| **E-S12** | 🟢 **ปิดแล้ว 2026-08-24** · **ต่อยอด: ตั้งคณะกรรมการสภานักเรียนจากผลเลือกตั้ง** — **สเปกเต็มใน §14** · type ใหม่ `student_council` จากพรรคที่ชนะ · **ต้องเพิ่ม type ทั้ง `AcademyGroupTypes.php` และ `ui/constants/academyGroupTypes.ts` (สองไฟล์นี้เป็น mirror กัน)** · แตกเป็น E-S12a (BE) / E-S12b (FE) | E-S7 | BE + FE | ⚪ |
 
 **เส้นทางที่สั้นที่สุดที่จัดเลือกตั้งได้จริง:** E-S1 → E-S2 → E-S3 → E-S4 → E-S5 → E-S6 → E-S7 → E-S8 (หน้าแอดมินยังทำมือผ่าน API ได้ชั่วคราว แต่ **หน้าหน่วยเลือกตั้งข้ามไม่ได้**)
 
@@ -540,6 +540,26 @@ E-S4 เจอบั๊ก **3 รอบติด และทั้ง 3 รอ
 
 ## 10. Review Log
 
+- **2026-08-24 E-S12a + E-S12b (+ E-S12a2 เก็บตก)** — codex + agy ทำ, claude ตรวจ → **ผ่านทั้งคู่ · เมนู #25 ปิดครบทุก step**
+  - **T2 ถูกแก้ตรงจุด** — codex ย้ายลูป seed permission จาก `AcademyGroupController::store()` ไปที่
+    `AcademyGroupPermissionService::seedDefaults()` แล้วให้ทั้งสองทางเรียกจุดเดียวกัน (ไม่ copy-paste)
+  - 🔴 **รอบแรกหลุดสัญญา §14.4 จนหน้าจอใช้จริงไม่ได้ทั้งสองเส้นทาง**
+    (ก) ตอบ `{success, group}` ขณะที่ทั้ง controller นี้ตอบ `data` และหน้าจออ่าน `.data`
+    → ลิงก์กลายเป็น `/groups/undefined` · (ข) เคส "ตั้งซ้ำ" ยัด id/ชื่อลงในข้อความไทย
+    (`"... (group_id: 5, group_name: X)"`) แทนที่จะเป็นฟิลด์ → **ปุ่มลิงก์ไปกลุ่มเดิมไม่ขึ้นเลย
+    ซึ่งเป็นทั้งหมดของข้อตัดสิน G4** · **หน้าจอเขียนถูกตามสัญญา ฝั่งที่หลุดคือ backend** จึงสั่งแก้ฝั่งเดียว
+  - 🔴 **รอบแรกไม่มีเทสต์เลยสักตัวอีกครั้ง** (147/449 เป๊ะเท่าเดิม) — **รูปแบบเดียวกับ E-S11b**
+    จับได้ด้วยวิธีเดิมคือ **นับจำนวนเทสต์เทียบฐานที่จดไว้** ไม่ใช่การอ่านรายงาน
+  - เก็บตกอีก 3 ข้อที่ claude เจอเอง: `academy_group_admins.role` เขียน `'admin'` ทั้งที่ระบบใช้ `'leader'`
+    (ตรวจจาก `AcademyGroupAdminController` เอง) · การ์ดอยู่นอก transaction เป็น check-then-act
+    (แก้เป็นอยู่ในทรานแซกชัน + `lockForUpdate()`) · `$leader` เป็น null แล้ว fatal
+  - **claude เทียบ mirror ทั้ง 10 type ทีละฟิลด์ด้วยสคริปต์** (dump `AcademyGroupTypes::TYPES` เป็น JSON
+    แล้ว eval array ฝั่ง TS มาเทียบ) → **0 mismatch** · สคริปต์เก็บไว้ที่ scratchpad ใช้ซ้ำได้ทุกครั้งที่แตะสองไฟล์นี้
+  - **เทสต์ 155 ผ่าน (471 assertions) · pint ผ่าน · กวาด SFC 753 ไฟล์พัง 0 · dev server ตอบ 200** — claude รันเอง
+  - 🟡 **สิ่งที่ claude ไม่ได้ทำ:** ไม่ได้ยิง endpoint กับฐาน dev จริงเพื่อดู body ด้วยตา เพราะต้องสร้าง
+    election + พรรค + ผล + กลุ่ม ค้างไว้ในฐานที่มีนักเรียนจริง 2,931 คน แล้วตามลบ 6 ตาราง —
+    ความเสี่ยงสูงกว่าประโยชน์ เพราะเทสต์ทั้ง 8 เคสยิงผ่าน route จริงและ **assert คีย์ตรงตัวที่หน้าจออ่าน**
+    (`data.id` · `group_id` เทียบกับ `data.id` ของครั้งแรก · `group_name`) ซึ่งคือการเทียบคีย์ตาม §7.1 อยู่แล้ว
 - **2026-08-24 E-S11a + E-S11b (+ E-S11ab2 เก็บตก)** — codex ทำ, claude ตรวจ → **ผ่านทั้งคู่ · เหลือ E-S11c (จอ) กับ E-S11d**
   - **limiter คีย์ต่อหน่วยจริง** — ยืนยันใน vendor ว่า `ThrottleRequests::handleRequestUsingNamedLimiter()` ทำ
     `md5($limiterName.$limit->key)` → `election-issue` กับ `election-lookup` ที่คีย์ด้วย station id เหมือนกัน **คนละถัง**
@@ -1263,8 +1283,8 @@ body: { "name": "…" }   // optional — ไม่ส่งให้ derive จ
 
 | shard | ขอบเขต | ไฟล์ | ส่งให้ | สถานะ |
 |---|---|---|---|---|
-| **E-S12a** | backend ทั้งหมด — type ใน `AcademyGroupTypes.php` · service + การ์ด 3 ชั้น · route + controller · แยกตรรกะ seed permission ให้ใช้ร่วมกัน (T2) · audit action · เทสต์ HTTP | `AcademyGroupTypes.php` · `AcademyGroupController.php` · service ใหม่ · `routes/learn/election.php` · `MemberActivityLog.php` · tests | codex | ⚪ |
-| **E-S12b** | frontend — type ใน `academyGroupTypes.ts` (**ต้องตรงกับฝั่ง PHP เป๊ะ**) · ปุ่มใน `ElectionResultsTab.vue` · ฟังก์ชันใน `useElements`/`useElections` · แสดงข้อความปฏิเสธทั้ง 3 แบบ + ลิงก์ไป `/academies/[name]/groups/[groupId]` | `ui/constants/academyGroupTypes.ts` · `ui/components/academy/elections/ElectionResultsTab.vue` · `ui/composables/useElections.ts` | agy | ⚪ |
+| **E-S12a** | backend ทั้งหมด — type ใน `AcademyGroupTypes.php` · service + การ์ด 3 ชั้น · route + controller · แยกตรรกะ seed permission ให้ใช้ร่วมกัน (T2) · audit action · เทสต์ HTTP | `AcademyGroupTypes.php` · `AcademyGroupController.php` · service ใหม่ · `routes/learn/election.php` · `MemberActivityLog.php` · tests | codex | 🟢 **verified 2026-08-24** (ผ่าน E-S12a2) |
+| **E-S12b** | frontend — type ใน `academyGroupTypes.ts` (**ต้องตรงกับฝั่ง PHP เป๊ะ**) · ปุ่มใน `ElectionResultsTab.vue` · ฟังก์ชันใน `useElections` · แสดงข้อความปฏิเสธทั้ง 3 แบบ + ลิงก์ไป `/academies/[name]/groups/[groupId]` | `ui/constants/academyGroupTypes.ts` · `ui/components/academy/elections/ElectionResultsTab.vue` · `ui/composables/useElections.ts` | agy | 🟢 **verified 2026-08-24 (ยังไม่เปิดจอจริง — §13.9)** |
 
 **ค่าของ type ที่ทั้งสอง shard ต้องเขียนให้ตรงกัน (ล็อกไว้ตรงนี้ ห้ามคิดเอง):**
 
