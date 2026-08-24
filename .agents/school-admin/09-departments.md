@@ -125,7 +125,7 @@
 | **D-S4** | **allow-list สิทธิ์ที่มอบให้ฝ่ายได้** — **เปลี่ยนรูปจากแผนเดิม** (ดู §5.1) · `AcademyPermission::DEPARTMENT_DELEGABLE_FAMILIES` + บังคับ 3 ชั้น: ปฏิเสธตอนบันทึก (422) · intersect ตอนตรวจสิทธิ์ · กรองตอนส่งรายการ | D-S3 | model + 2 service + controller + 5 tests | 🟢 **verified 2026-07-29** |
 | **D-S5** | **Audit log (D7)** — 8 action ใหม่ (`department_create/update/delete/setup`, `member_add/remove/role_change`, **`permission_update`**) ผูกกับ `DepartmentController` + `AcademyGroupPermissionController` และลงทะเบียนใน `getAvailableActions()` ครบ · log สิทธิ์เก็บ `turned_on`/`turned_off` ให้เลย | D-S1 | model + 3 controller + 5 tests | 🟢 **verified 2026-07-29** |
 | **D-S6** | **นำคนเข้าฝ่าย (D6)** — modal เพิ่มสมาชิกเดิมดึงแค่ 100 คนแรกจาก 3,063 คนแล้วกรองฝั่ง client → **ครู 119 คนอาจไม่โผล่เลย** นี่คือเหตุผลจริงที่สมาชิกฝ่ายมีแค่ 1 คน · แก้เป็นค้นหาฝั่ง server ผ่าน `/members/search` + กรองครู/บุคลากรเป็นค่าเริ่มต้น + เลือกหลายคน + pagination | D-S1 | migration + `departments/index.vue` | 🟢 **verified 2026-07-29** — ค้นหาครูเจอครบ 119/119 |
-| **D-S6b** | **ป้ายบอกว่าอยู่ฝ่ายอื่นแล้ว** — `members/search` ยังไม่ส่งข้อมูลสังกัดฝ่ายมาด้วย ทำให้คนที่กดไม่เห็นว่าครูคนนี้อยู่ฝ่ายอื่นอยู่หรือไม่ก่อนตัดสินใจ · **สเปกเต็มใน [`.agents/tasks/ds6b-department-membership-badge.md`](../tasks/ds6b-department-membership-badge.md)** — opt-in `with_departments=1` เท่านั้น ห้ามแตะ `AcademyMemberResource` · แตกเป็น D-S6b-a (BE) / D-S6b-b (FE) | D-S6 | BE + FE | ⚪ |
+| **D-S6b** | **ป้ายบอกว่าอยู่ฝ่ายอื่นแล้ว** — `members/search` ยังไม่ส่งข้อมูลสังกัดฝ่ายมาด้วย ทำให้คนที่กดไม่เห็นว่าครูคนนี้อยู่ฝ่ายอื่นอยู่หรือไม่ก่อนตัดสินใจ · **สเปกเต็มใน [`.agents/tasks/ds6b-department-membership-badge.md`](../tasks/ds6b-department-membership-badge.md)** — opt-in `with_departments=1` เท่านั้น ห้ามแตะ `AcademyMemberResource` · แตกเป็น D-S6b-a (BE) / D-S6b-b (FE) | D-S6 | BE + FE | 🟢 **verified 2026-08-24** |
 | **D-S7** | **หน้ารายละเอียดฝ่าย (D8)** — ยกเครื่อง `[id].vue` ตามสกิล `hopeui-port` | D-S6 | FE | ⚪ |
 
 **Rule:** ทุก step ต้อง verify (test/build/ตรวจจริง) ก่อนขึ้น 🟢 · ห้ามเปลี่ยนปลายทาง relation เดิม (กฎจาก #6 §6.1)
@@ -153,6 +153,20 @@ Report back: diff summary + ผลเทสต์ + คำสั่งที่�
 ## 8. Review Log
 
 - **2026-07-29 D-S3** — codex ทำ, claude ตรวจ → **พบข้อบกพร่องเรื่องลำดับ**: `if (! $role) return 403` อยู่ก่อนด่านฝ่าย ทำให้คนที่ไม่มี academy role (มี **2,898 คนจาก 3,063**) เข้าไม่ถึงสิทธิ์จากฝ่ายเลย — เทสต์ 6 เคสแรกพลาดเพราะทุกเคสสร้างผู้ใช้ที่มี role อยู่แล้ว → แก้เป็น `if ($role && $role->hasAnyPermission(...))` แล้วปล่อยให้ไหลไปด่านฝ่าย + เพิ่ม 3 เทสต์ · **verified: 17 เทสต์ผ่าน** (Department 13 + Guardian 4) · ยืนยันว่าไม่ได้ใช้ `AcademyGroupPermissionService::hasPermission()` ที่ default `true`
+- **2026-08-24 D-S6b (a: codex · b: agy ขนานกัน)** — claude ตรวจ → **ผ่านทั้งคู่ · เหลือ D-S7 ตัวเดียวในเมนูนี้**
+  - `with_departments=1` เป็น opt-in ล้วน · **ไม่แตะ `AcademyMemberResource`** ตามที่กำกับ
+    → endpoint นี้ที่หน้าอื่นใช้อยู่ยังตอบเหมือนเดิมทุกประการ และมีเทสต์คุมข้อนี้โดยตรง
+  - **query เดียวด้วย `whereIn` + `groupBy`** ไม่มี N+1 · เทสต์วัดจริงผ่าน route เดียวกันเทียบ
+    `per_page=5` กับ `per_page=50` บนฐานที่มีสมาชิก 50 คน แล้ว assert ว่าจำนวน query เท่ากัน
+    (claude อ่านโค้ดเทสต์ยืนยันว่าไม่ได้วัดด้วยธงปิด — ต่างกันแค่ `per_page` จริง)
+  - **นับเฉพาะ `type = 'department'`** · มีเทสต์ที่ใส่คนไว้ในกลุ่ม `club` แล้วต้องได้ `[]`
+    — กันป้ายโกหกว่า "อยู่ฝ่ายอื่นแล้ว" ทั้งที่เขาแค่อยู่ชมรม
+  - ฝั่งจอ: ป้าย **เตือนอย่างเดียว ไม่ห้ามเลือก** (ครูอยู่หลายฝ่ายได้จริง) · `flex-wrap` + `break-words`
+    + `flex-shrink-0` ที่ checkbox/รูป เพราะชื่อฝ่ายภาษาไทยยาวและไม่มีช่องว่าง จะดัน modal ให้เลื่อนแนวนอนที่ 375px
+  - **เทสต์ 26 ผ่าน (55 assertions) · pint ผ่าน · กวาด SFC 753 ไฟล์พัง 0 · dev server ตอบ 200** — claude รันเอง
+    (ฐานก่อนหน้า Department 21/44)
+  - **สภาพฐานที่ตรวจวันนี้:** `academy_groups` 39 · `academy_group_members` **1** · `academy_group_permissions` **0**
+    → ชั้นนี้ยังเป็นโครงเปล่า · D-S6b คือสิ่งที่ทำให้การนำคนเข้าฝ่ายรอบแรกไม่มั่ว **แต่ยังไม่มีใครนำคนเข้าจริง**
 - **2026-07-29 D-S6/D-S2** — codex ทำ, claude ตรวจ → ผ่าน · ต้นเหตุจริงที่สมาชิกฝ่ายมีแค่ 1 คน คือ modal ดึงสมาชิกแค่ 100 คนแรกจาก 3,063 คน ทำให้ครู 119 คนอาจไม่โผล่เลย · หลังแก้ค้นหาเจอครบ 119/119 · ค้าง D-S6b (ป้ายบอกว่าอยู่ฝ่ายอื่นแล้ว — API ยังไม่ส่งข้อมูลสังกัดมา)
 - **2026-07-29 D-S1** — codex ทำ, claude ตรวจ → **ผ่าน** · ยืนยันเอง: `route:list --json` 15/15 route มี guard (อ่าน `groups.view` · เขียน `groups.manage`) ไม่มี route ไหนหลุด · เทสต์ 8 ผ่าน (authz 4 + guardian regression 4) · **ไม่แก้ `AcademyGroupPermissionService::hasPermission()`** ตามที่กำกับ เพราะ default `true` ของมันถูกใช้โดยฟีเจอร์โพสต์ในฟีดกลุ่ม (`AcademyPostController`, `AcademyGroupController`) การเปลี่ยนจะทำให้ทุกคนโพสต์ในกลุ่มไม่ได้ทันที (ตารางว่าง 0 แถว)
 - **2026-07-29 — สแกน + สรุปสเปก** — พบว่าเมนูนี้มีโครงครบแต่ **ชั้นสิทธิ์ทั้งชั้นไม่ทำงาน**: route ไม่มี guard, `checkPermission()` ตรวจธงของฝ่ายแทนสิทธิ์ของผู้ใช้ และ `hasPermission()` คืน `true` เมื่อไม่มีข้อมูล (ตารางว่าง 0 แถว) → ใครก็ลบฝ่ายได้ · เจ้าของโปรเจคยืนยันว่าเป็นช่องโหว่จริง ไม่ได้ตั้งใจ และเลือกต่อยอด `academy_group_permissions` แทนการทำ `academy_role_scopes` ตามแผน S7 เดิม
