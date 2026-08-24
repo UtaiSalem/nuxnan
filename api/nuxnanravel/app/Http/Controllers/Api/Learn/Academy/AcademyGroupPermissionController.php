@@ -67,7 +67,7 @@ class AcademyGroupPermissionController extends Controller
         $newKeys = array_values(array_unique($validated['permission_keys']));
         $this->permissionService->syncPermissions($department, $newKeys);
         try {
-            MemberActivityLog::logActivity(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_DEPARTMENT_PERMISSION_UPDATE, 'description' => 'ปรับปรุงสิทธิ์ฝ่ายงาน: '.$department->name, 'old_values' => ['permission_keys' => $oldKeys], 'new_values' => ['permission_keys' => $newKeys, 'turned_on' => array_values(array_diff($newKeys, $oldKeys)), 'turned_off' => array_values(array_diff($oldKeys, $newKeys))]]);
+            MemberActivityLog::logActivity(['academy_id' => $academy->id, 'action' => MemberActivityLog::ACTION_DEPARTMENT_PERMISSION_UPDATE, 'description' => 'ปรับปรุงสิทธิ์ฝ่ายงาน: '.$department->name, 'old_values' => ['department_id' => $department->id, 'permission_keys' => $oldKeys], 'new_values' => ['department_id' => $department->id, 'permission_keys' => $newKeys, 'turned_on' => array_values(array_diff($newKeys, $oldKeys)), 'turned_off' => array_values(array_diff($oldKeys, $newKeys))]]);
         } catch (\Throwable $e) {
             report($e);
         }

@@ -42,6 +42,18 @@ class MemberActivityLogController extends Controller
             $query->byTargetUser($request->target_user_id);
         }
 
+        // Filter by department (opt-in) — เฉพาะ log ของฝ่ายนั้น
+        if ($request->filled('department_id')) {
+            // Bind as int: MySQL coerces json_unquote(...) = 5 numerically, and SQLite's
+            // json_extract() returns a real integer (a string binding matches nothing there).
+            $departmentId = $request->integer('department_id');
+            $query->where('action', 'like', 'department_%')
+                ->where(function ($q) use ($departmentId) {
+                    $q->where('new_values->department_id', $departmentId)
+                        ->orWhere('old_values->department_id', $departmentId);
+                });
+        }
+
         // Filter by date range
         if ($request->has('from_date') && $request->from_date) {
             $query->where('created_at', '>=', $request->from_date);

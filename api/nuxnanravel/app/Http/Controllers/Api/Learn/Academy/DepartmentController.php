@@ -161,7 +161,7 @@ class DepartmentController extends Controller
     /**
      * Get department details
      */
-    public function show(Academy $academy, AcademyGroup $department): JsonResponse
+    public function show(Request $request, Academy $academy, AcademyGroup $department): JsonResponse
     {
         if ($response = $this->ensureDepartment($academy, $department)) {
             return $response;
@@ -176,17 +176,52 @@ class DepartmentController extends Controller
         $headUserId = $department->settings['head_user_id'] ?? null;
         $headUser = $headUserId ? User::find($headUserId) : null;
 
+        $tree = null;
+        if ($request->boolean('with_tree')) {
+            $children = AcademyGroup::query()
+                ->where('parent_id', $department->id)
+                ->where('academy_id', $academy->id)
+                ->withCount('members')
+                ->orderBy('name')
+                ->get(['id', 'name', 'type', 'parent_id'])
+                ->map(fn ($child) => [
+                    'id' => $child->id,
+                    'name' => $child->name,
+                    'type' => $child->type,
+                    'members_count' => $child->members_count,
+                ])
+                ->values();
+
+            $parent = $department->parent_id
+                ? AcademyGroup::query()
+                    ->where('academy_id', $academy->id)
+                    ->where('id', $department->parent_id)
+                    ->first(['id', 'name', 'type'])
+                : null;
+
+            $tree = [
+                'parent' => $parent ? ['id' => $parent->id, 'name' => $parent->name, 'type' => $parent->type] : null,
+                'children' => $children,
+            ];
+        }
+
+        $payload = [
+            'department' => $department,
+            'head' => $headUser ? [
+                'id' => $headUser->id,
+                'name' => $headUser->name,
+                'email' => $headUser->email,
+                'avatar' => $headUser->avatar,
+            ] : null,
+        ];
+
+        if ($tree !== null) {
+            $payload['tree'] = $tree;
+        }
+
         return response()->json([
             'success' => true,
-            'data' => [
-                'department' => $department,
-                'head' => $headUser ? [
-                    'id' => $headUser->id,
-                    'name' => $headUser->name,
-                    'email' => $headUser->email,
-                    'avatar' => $headUser->avatar,
-                ] : null,
-            ],
+            'data' => $payload,
         ]);
     }
 
