@@ -4,7 +4,7 @@
  * Features: Create/View/Edit posts, Comments, Replies, Like/Dislike, Share, Infinite Scroll
  */
 import { Icon } from '@iconify/vue'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import CourseCreatePostBox from './CourseCreatePostBox.vue'
 import CourseFeedPost from './CourseFeedPost.vue'
 import CourseEditPostModal from './CourseEditPostModal.vue'
@@ -163,31 +163,39 @@ const changeTab = (tabId: string) => {
 
 // Setup IntersectionObserver for infinite scroll
 const setupObserver = () => {
-  if (observer) observer.disconnect()
-  
+  observer?.disconnect()
+  if (!loadMoreTrigger.value) return
+
   observer = new IntersectionObserver(
     (entries) => {
       const target = entries[0]
-      if (target.isIntersecting && hasMore.value && !loadingMore.value && !loading.value) {
+      if (target?.isIntersecting && hasMore.value && !loadingMore.value && !loading.value) {
         loadMore()
       }
     },
     {
       root: null,
       rootMargin: '200px',
-      threshold: 0.1,
+      threshold: 0,
     }
   )
-  
-  if (loadMoreTrigger.value) {
-    observer.observe(loadMoreTrigger.value)
-  }
+
+  observer.observe(loadMoreTrigger.value)
 }
 
-// Init
+// sentinel มี v-if จึง unmount/mount ใหม่ทุกครั้งที่ loading หรือ hasMore เปลี่ยน
+// ต้องผูก observer กับตัว element จริง ไม่ใช่ตั้งครั้งเดียวตอน mount
+watch(loadMoreTrigger, (el) => {
+  if (el) {
+    setupObserver()
+  } else {
+    observer?.disconnect()
+  }
+}, { flush: 'post' })
+
+// Init — observer ผูกผ่าน watch(loadMoreTrigger) ด้านบน ไม่ต้องตั้งที่นี่
 onMounted(() => {
   fetchPosts(true)
-  setupObserver()
 })
 
 onUnmounted(() => {
