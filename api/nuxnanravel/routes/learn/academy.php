@@ -38,6 +38,7 @@ use App\Http\Controllers\Api\Learn\Academy\ExpenseController;
 use App\Http\Controllers\Api\Learn\Academy\FeeStructureController;
 use App\Http\Controllers\Api\Learn\Academy\GamificationController;
 use App\Http\Controllers\Api\Learn\Academy\GradeScaleController;
+use App\Http\Controllers\Api\Learn\Academy\GuardianAppointmentController;
 use App\Http\Controllers\Api\Learn\Academy\GuardianController;
 use App\Http\Controllers\Api\Learn\Academy\HouseAssignmentController;
 use App\Http\Controllers\Api\Learn\Academy\InviteLinkController;
@@ -259,6 +260,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::prefix('{academy}/guardians')->middleware('academy.permission:guardians.view')->group(function () {
         Route::get('/', [GuardianController::class, 'getAllGuardians'])->name('api.academy.guardians.index');
         Route::get('statistics', [GuardianController::class, 'getStatistics'])->name('api.academy.guardians.statistics');
+        Route::get('search', [GuardianAppointmentController::class, 'search'])->name('api.academy.guardians.search');
     });
 
     // Student Intake routes

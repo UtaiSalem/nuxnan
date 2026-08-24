@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Learn\Academy\GuardianAppointmentController;
 use App\Http\Controllers\Api\Learn\Student\Master\AcademicInfoController;
 use App\Http\Controllers\Api\Learn\Student\Master\AddressController;
 use App\Http\Controllers\Api\Learn\Student\Master\ChangeRequestController;
@@ -66,6 +67,11 @@ Route::middleware(['auth:api'])->prefix('/academies/{academy}')->group(function 
         Route::get('/guardians', [GuardianController::class, 'show'])->name('guardians.show');
         Route::post('/guardians', [GuardianController::class, 'store'])->name('guardians.store');
         Route::put('/guardians', [GuardianController::class, 'update'])->name('guardians.update');
+        // G-S10 — three-way appointment. Registered here, not in academy.php, because this file is
+        // loaded later and would otherwise shadow whatever academy.php declares for the same URIs.
+        Route::post('/guardians/match', [GuardianAppointmentController::class, 'match'])->middleware('throttle:10,1')->name('guardians.match');
+        Route::post('/guardians/appoint', [GuardianAppointmentController::class, 'appoint'])->name('guardians.appoint');
+        Route::post('/guardians/links/{link}/verify', [GuardianAppointmentController::class, 'verify'])->name('guardians.verify');
 
         // Health routes
         Route::get('/health', [HealthController::class, 'show'])->name('health.show');
