@@ -282,7 +282,7 @@ guardian_contacts                ← remap ให้ชี้ guardians.id (ค�
 |---|---|---|---|---|
 | **G-S7** | **Permission guard ระดับฝ่าย** — เพิ่ม key `guardians.*` 5 ตัว, ผูกกับฝ่ายทะเบียน/กิจการนักเรียนตาม §4, ใส่ middleware ทุก route · แตกเป็น a (คีย์+migration) / b (ด่านตรวจ) / c (`/my-role` ส่งสิทธิ์จากฝ่าย) | #9, G-S4 | model + migration + routes + policy + 2 controller + 3 test file | 🟢 **verified 2026-08-25** — ดู §8.1 |
 | **G-S8** | **ฟิลด์อ่อนไหว (D4/Q1)** — ซ่อน `citizen_id`/`monthly_income` ใน response เมื่อไม่มี `guardians.sensitive.view` และ reject การแก้เมื่อไม่มี `.manage` · แตกเป็น a (service + GuardianController 2 ตัว) / b (StudentResource · โปรไฟล์ · ห้องเรียน) | G-S7 | service + 4 controller/resource + 2 test file | 🟢 **verified 2026-08-25** — ดู §8.3 |
-| **G-S9** | **Audit log (Q2)** — ผูก `MemberActivityLog` ทั้ง create/update/delete/appoint + event เปิดดูฟิลด์อ่อนไหว | G-S7 | controller/service + tests | ⚪ |
+| **G-S9** | **Audit log (Q2)** — ผูก `MemberActivityLog` ทั้ง create/update/delete + event เปิดดูฟิลด์อ่อนไหว (`appoint` เลื่อนไป G-S10 เพราะยังไม่มี endpoint) · แตกเป็น a (จุดเขียน) / b (จุดอ่าน) | G-S7 | model + logger service + 6 controller + 2 test file | 🟢 **verified 2026-08-25** — ดู §8.4 |
 | **G-S10** | **การแต่งตั้ง 3 ทาง (Q3)** — endpoint + สิทธิ์: นักเรียนแต่งตั้งเอง / ครูประจำชั้น (เฉพาะห้องตน) / ฝ่ายทะเบียน พร้อมบันทึกผู้แต่งตั้ง; ไม่บังคับว่าต้องมีผู้ปกครอง; รองรับ "ผู้ปกครองคนเดิมของพี่น้อง" โดยเลือกคนที่มีอยู่แล้วแทนการสร้างซ้ำ (ผลพลอยได้จาก D5) | G-S7, G-S4 | endpoints + tests | ⚪ |
 | **G-S11** | **FE ยกเครื่อง** — เพิ่ม/แก้/ลบ ผู้ปกครอง, จัดการช่องทางติดต่อ, แสดง "ลูกในโรงเรียน" หลายคนต่อผู้ปกครอง 1 คน, การ์ดสถิติครบประเภท, error/empty state, แก้ convention (`useApi`, `definePageMeta`, dark mode) ตามสกิล `hopeui-port` | G-S7…G-S10 | pages + components | ⚪ |
 
@@ -364,6 +364,43 @@ Report back: diff summary + ผลเทสต์ + คำสั่งที่�
 `MyRoleDepartmentPermissionsTest` 5 · รวมชุด regression `HomeVisit|StudentProfile|Guardian|MyRole` **68 ผ่าน (208 assertions)** · pint ผ่าน
 · **agy รายงานว่า `GuardianAuthorizationTest` ผ่าน 10/10 ทั้งที่จริงตอนนั้นพัง 5 ข้อ** (`Database\Factories\StudentFactory` ไม่มีอยู่จริง)
 — claude แก้ helper เป็น `Student::create([...])` เองแล้วรันใหม่จนผ่าน
+
+### 8.4 G-S9 — ประวัติการเข้าถึงข้อมูลผู้ปกครอง (2026-08-25, agy 2 shard · claude ตรวจเองทุกข้อ)
+
+**ตารางที่ใช้: `member_activity_logs` เท่านั้น** (ผ่าน `MemberActivityLog::logActivity()`) — เมนู #22 อ่านตารางนี้
+ห้ามใช้ `AuditLogService`/`audit_logs` เพราะ D-S5 เคยพลาดแบบนั้นแล้วแท็บว่างเปล่าโดยไม่มี error
+
+- **G-S9-a จุดเขียน 5 จุด** — `Academy\GuardianController` store/update/destroy + `Master\GuardianController` store/update
+  · ทุกจุดเรียก**หลัง `DB::commit()`** (ถ้าเรียกก่อน ทรานแซกชันย้อนแล้วจะเหลือล็อกของเหตุการณ์ที่ไม่เคยเกิด)
+  · action ใหม่ 5 ตัว ลงทะเบียนใน `getAvailableActions()` 4 ตัว — **เว้น `guardian_appoint`** ไว้ให้ G-S10
+    เพราะยังไม่มีอะไรเขียนค่านั้น ใส่ตอนนี้จะได้ตัวกรองที่กดแล้วว่างเปล่า
+- **G-S9-b จุดอ่าน 4 จุด** — `Master\GuardianController::show` · `StudentProfileController` · `ClassroomController::getStudent`
+  · `Master\StudentController::show`
+
+**หลักที่ยึด (สำคัญกว่าตัวโค้ด):**
+
+1. **ล็อกไม่เก็บค่าอ่อนไหว** — บันทึกว่า `citizen_id => 'changed'` เท่านั้น
+   audit log ที่ก๊อปเลขบัตรลงไปเอง = ยกเลขบัตรให้ทุกคนที่อ่านตารางล็อกได้
+2. **มีแถว = ข้อมูลออกจากเซิร์ฟเวอร์จริง** — ไม่มีสิทธิ์ / นักเรียนไม่มีผู้ปกครอง / นักเรียนดูของตัวเอง ⇒ ไม่มีแถว
+3. **กันซ้ำ 60 นาที ต่อ (ผู้ดู × นักเรียน)** — หน้าโปรไฟล์ถูกเปิดบ่อยมาก ถ้าไม่กันตารางจะโตจนเมนู #22 ใช้ไม่ได้
+4. **ห้ามวาง log ใน `StudentResource`** — มันถูกใช้กับ collection ด้วย จะได้ล็อกละแถวตอนดึงรายชื่อนักเรียนทั้งห้อง
+
+**ตรวจกับ MySQL จริงผ่าน HTTP (เทสต์ SQLite พิสูจน์ข้อนี้ไม่ได้):** ยิง `/students/1/profile` ด้วย token เจ้าของ 3 ครั้ง
+→ ได้ล็อก **1 แถว** (`user_id=1`, `new_values={"student_id":1}`) พิสูจน์ว่า `where('new_values->student_id', ...)`
+ทำงานบน MySQL จริง · ยิงด้วย token ครูที่ไม่มีสิทธิ์ → **ไม่มีแถวเพิ่ม** · ลบแถวที่เกิดจากการทดสอบออกแล้ว
+**หมายเหตุวิธีตรวจ:** เรียก service ตรง ๆ ใน `tinker` พิสูจน์ dedupe ไม่ได้ เพราะ `logActivity()` เอา `user_id`
+มาจาก `request()->user()` ซึ่งใน tinker เป็น null → ทุกแถวมี `user_id` ว่างและ dedupe ไม่มีวันแมตช์ ต้องยิงผ่าน HTTP เท่านั้น
+
+**เทสต์ที่ claude รันเอง:** `GuardianAuditLogTest` 7 · `GuardianSensitiveViewLogTest` 7 · รวมชุด guardian ทั้งหมด
+**38 ผ่าน (84 assertions)** · `Classroom` 114 ผ่าน · `DepartmentActivityLog` 5 ผ่าน · pint ผ่าน
+
+**claude แก้เองที่ agy ทำพลาด 1 จุด:** `GuardianAuditLogger::studentName()` อ่าน `$student->title_prefix/first_name/last_name`
+ซึ่ง**ไม่มีในตาราง** (คอลัมน์จริงคือ `*_th`) → ข้อความล็อกจะลงท้ายว่า "ของนักเรียน " ว่างทุกแถว
+· เปลี่ยนไปใช้ accessor `full_name_th` แล้ว fallback เป็นเลขประจำตัวนักเรียน
+
+**งานค้างที่เจอระหว่างทาง (ยังไม่แก้):** `Master\GuardianController::update` มี `$guardianResult = ['pending' => []]`
+ที่ฮาร์ดโค้ดเป็น array ว่างเสมอ ⇒ ข้อความ "ส่งคำขอแก้ไขข้อมูลผู้ปกครองรอการอนุมัติแล้ว" และ field `pending_fields`
+ไม่มีทางมีค่าจริง — เป็นซากของ approval flow ที่ไม่ได้ต่อ ควรเก็บตอน G-S11
 
 ### 8.3 G-S8 — ฟิลด์อ่อนไหวของผู้ปกครอง (2026-08-25, agy 2 shard · claude ตรวจเองทุกข้อ)
 
