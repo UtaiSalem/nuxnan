@@ -240,7 +240,7 @@ guardian_contacts                ← remap ให้ชี้ guardians.id (ค�
 | **G-S2b** | **คิวตรวจสอบการรวมค้าง** — ตาราง `guardian_merge_candidates` + คำสั่ง `scan-merge-candidates` / `merge` / `reject-merge-candidate` · คิวจริง **262 กลุ่ม** (เลขบัตรตรงชื่อต่าง 200/449 · ชื่อตรงเลขบัตรต่าง 62/128) | G-S2 | 1 migration + model + 3 command + 4 test | 🟢 **verified 2026-07-29** |
 | **G-S2c** | **เก็บงานคุณภาพข้อมูล** — ล้างช่องว่างในชื่อ 10 → 0 · ยุบ contact ซ้ำแบบ soft ผ่าน `superseded_by_contact_id` (224 แถว, ไม่ลบข้อมูล, เหลือใช้งาน 4,629) | G-S2 | 1 migration + `guardians:quality-cleanup` | 🟢 **verified 2026-07-29** |
 | **G-S3** | **GuardianService + สลับ read path** — ดู §6.1 (แตกเป็นก้อนย่อย) | G-S2 | service + refactor + tests | 🟡 **3/10 จุด** — `GuardianService` + `Academy/GuardianController` (index/getAllGuardians/getStatistics) + `Master/GuardianController::show` |
-| **G-S4** | **สลับ write path + รวม controller** — เขียนผ่าน service เดียว, **`guardian_type`/`relationship` เป็น optional ตาม D6**, `status` ถูกต้อง (G4), **ปลด `linkUser` ที่ตอบ success ลอย ๆ** (G2) ให้คืน 501 จนกว่าจะถึงเฟส C | G-S3 | refactor + tests | ⚪ |
+| **G-S4** | **สลับ write path + รวม controller** — เขียนผ่าน service เดียว, **`guardian_type`/`relationship` เป็น optional ตาม D6**, `status` ถูกต้อง (G4), **ปลด `linkUser` ที่ตอบ success ลอย ๆ** (G2) ให้คืน 501 จนกว่าจะถึงเฟส C | G-S3 | refactor + tests | 🟢 **verified 2026-07-29** — dual-write 3 ก้อน (`GuardianWriteService` · `StudentIntakeService` · `ChangeRequestController::approve`) · 54 เทสต์คุม |
 | **G-S5** | **ตรวจนักเรียนที่ไม่มีผู้ปกครอง (482 คน)** — ไล่ 9 เส้นทาง (เยี่ยมบ้าน · บัตรนักเรียน · ติดต่อฉุกเฉิน · Parent Dashboard · at-risk · `StudentResource` · `StudentIntakeResource` · `ClassroomController::getStudent` · Student Profile) | — | **รายงาน — ไม่ต้องแก้อะไร** | 🟢 **verified 2026-07-29** |
 | **G-S6** | **เก็บกวาด** — ถอดขาเขียนตารางเก่าออกจาก `GuardianWriteService` · ลบ `guardian_id` เก่าที่ `guardian_contacts` · drop `student_guardians` | **G-S3 ครบทุกจุด (คือหลัง G-S11)** | migration | 🚫 **ทำไม่ได้จนกว่าจุดอ่านจะย้ายครบ** (ดู §6.0) |
 
@@ -280,7 +280,7 @@ guardian_contacts                ← remap ให้ชี้ guardians.id (ค�
 
 | Step | Title | Depends | Deliverable | Status |
 |---|---|---|---|---|
-| **G-S7** | **Permission guard ระดับฝ่าย** — เพิ่ม key `guardians.*` 5 ตัว, ผูกกับฝ่ายทะเบียน/กิจการนักเรียนตาม §4, ใส่ middleware ทุก route | #9, G-S4 | middleware + seeder + tests | ⚪ |
+| **G-S7** | **Permission guard ระดับฝ่าย** — เพิ่ม key `guardians.*` 5 ตัว, ผูกกับฝ่ายทะเบียน/กิจการนักเรียนตาม §4, ใส่ middleware ทุก route · แตกเป็น a (คีย์+migration) / b (ด่านตรวจ) / c (`/my-role` ส่งสิทธิ์จากฝ่าย) | #9, G-S4 | model + migration + routes + policy + 2 controller + 3 test file | 🟢 **verified 2026-08-25** — ดู §8.1 |
 | **G-S8** | **ฟิลด์อ่อนไหว (D4/Q1)** — ซ่อน `citizen_id`/`monthly_income` ใน response เมื่อไม่มี `guardians.sensitive.view` และ reject การแก้เมื่อไม่มี `.manage` | G-S7 | resource/policy + tests | ⚪ |
 | **G-S9** | **Audit log (Q2)** — ผูก `MemberActivityLog` ทั้ง create/update/delete/appoint + event เปิดดูฟิลด์อ่อนไหว | G-S7 | controller/service + tests | ⚪ |
 | **G-S10** | **การแต่งตั้ง 3 ทาง (Q3)** — endpoint + สิทธิ์: นักเรียนแต่งตั้งเอง / ครูประจำชั้น (เฉพาะห้องตน) / ฝ่ายทะเบียน พร้อมบันทึกผู้แต่งตั้ง; ไม่บังคับว่าต้องมีผู้ปกครอง; รองรับ "ผู้ปกครองคนเดิมของพี่น้อง" โดยเลือกคนที่มีอยู่แล้วแทนการสร้างซ้ำ (ผลพลอยได้จาก D5) | G-S7, G-S4 | endpoints + tests | ⚪ |
@@ -315,6 +315,65 @@ Report back: diff summary + ผลเทสต์ + คำสั่งที่�
 ---
 
 ## 8. Review Log
+
+### 8.1 G-S7 — ปิดช่องโหว่สิทธิ์ผู้ปกครอง (2026-08-25, agy 3 shard · claude ตรวจเองทุกข้อ)
+
+**สภาพก่อนแก้ (สแกนเอง ไม่ได้เชื่อสเปกเดิม):** route ผู้ปกครองฝั่งแอดมินมีแค่ `auth:api` ไม่มีด่านสิทธิ์เลย
+⇒ ผู้ใช้ที่ล็อกอินคนไหนก็ได้ (ไม่ต้องเป็นสมาชิกโรงเรียน) อ่านรายชื่อผู้ปกครองทั้งโรงเรียนพร้อมเลขบัตรประชาชน แก้ และลบได้
+— แพตเทิร์นเดียวกับ D1 ของเมนู #9 · **ยืนยันของจริงหลังแก้:** token ของนักเรียนธรรมดายิง `GET /api/academies/1/guardians` ได้ 403
+(เดิมได้ 200 พร้อมข้อมูล) · token ของเจ้าของโรงเรียนได้ 200
+
+- **G-S7-a** คีย์ 5 ตัวใน `AcademyPermission::PERMISSIONS` + `'guardians'` เข้า `DEPARTMENT_DELEGABLE_FAMILIES`
+  + migration `2026_08_25_000002_backfill_guardian_permissions` แจกให้ `director`/`admin`/`registrar`
+  · **ไม่แจกให้ `teacher`** เพราะเมทริกซ์ให้เฉพาะครูประจำชั้นของห้องตน ซึ่งเป็นขอบเขตที่ middleware ทำไม่ได้ → ไปได้สิทธิ์ทาง policy แทน
+  · ตรวจเอง: diff 8+/0− · รันบนฐาน dev จริง director 26→31 · admin 22→27 · registrar 11→16 · `owner` (`*`) และ role อื่นไม่ขยับ
+  · ครบรอบ up → down (26/22/11) → up → รันซ้ำ "Nothing to migrate"
+- **G-S7-b** middleware `academy.permission:guardians.view|manage` ที่ route แอดมิน + 2 ability ใหม่
+  (`viewGuardians`/`manageGuardians`) ใน `StudentMasterProfilePolicy` ที่ไล่ 4 ด่าน: นักเรียนเจ้าของโปรไฟล์ → เจ้าของโรงเรียน
+  → ครูประจำชั้น → สิทธิ์จาก role แล้วค่อยสิทธิ์จากฝ่าย · `Master\GuardianController` เลิก `authorize('update')` มาใช้ ability ใหม่
+- **G-S7-c** `/my-role` รวมสิทธิ์ที่ได้จากฝ่ายเข้า field `permissions` (+ `role_permissions`/`department_permissions` แยกให้ดู)
+  — ดู §8.2 ว่าทำไมถึงต้องมี
+
+**บั๊กที่เจอระหว่างทางและปิดไปด้วย (ไม่ได้อยู่ในสเปกเดิม):**
+
+1. **`linkUser()` ตอบ success ลอย ๆ พร้อมผลข้างเคียงอันตราย** — มันสร้างแถว `academy_members` (status 2 = อนุมัติแล้ว, role `parent`)
+   ให้ user id ที่ส่งมา แล้วตอบว่าเชื่อมโยงสำเร็จทั้งที่ไม่ได้เชื่อมอะไรเลย ⇒ ยัดคนแปลกหน้าเข้าเป็นสมาชิกโรงเรียนได้
+   → คืน **501** ตามที่ G-S4 วางไว้ (รอเฟส C/G-S12) · เทสต์ยืนยันว่าไม่มีแถวสมาชิกใหม่เกิดขึ้น
+2. **`update()` เปิด `DB::beginTransaction()` แล้วไม่เคย commit** (ทั้งไฟล์ไม่มี `DB::commit()`/`rollBack()` สักตัว)
+   ⇒ ทุกการแก้ผู้ปกครองผ่าน route แอดมินถูกโยนทิ้งตอนจบ request · **เทสต์จับไม่ได้** เพราะ `RefreshDatabase` ครอบทรานแซกชันไว้อีกชั้น
+   → พิสูจน์บน MySQL จริงด้วยตารางชั่วคราว: insert แล้วจบโปรเซสโดยไม่ commit = 0 แถว · commit = 1 แถว
+   → หลังแก้ ยิง PATCH จริงผ่าน HTTP แล้วค่าเปลี่ยนจริงในฐาน (ทดสอบกับแถว 190 แล้ว**คืนค่าเดิมครบทุกฟิลด์** เหลือแต่ `updated_at`)
+3. **`store()` พังเมื่อไม่ส่ง `guardian_type`** — ฟิลด์เป็น nullable แต่โค้ดอ่าน `$validated['guardian_type']` ตรง ๆ
+   และส่ง null เข้า `getDefaultRelationship(string $type)` → TypeError หลุด `catch (\Exception)` กลายเป็น 500
+   ทั้งที่ D6 บอกว่าฟิลด์นี้ optional
+
+**กับดักที่ต้องจำ (สำคัญกับ G-S11):**
+
+- **route `api/academies/{academy}/students/{student}/guardians` ถูกลงทะเบียน 2 ที่** — `routes/learn/academy.php`
+  (→ `Academy\GuardianController@index/store`) และ `routes/learn/student-profile.php` (→ `Student\Master\GuardianController@show/store`)
+  **ตัวหลังชนะ** (ยืนยันด้วย `route:list`) ⇒ middleware ที่ใส่ในบล็อกของ academy.php เป็นของตาย และ
+  `Academy\GuardianController::index/store` เข้าไม่ถึงเลย · ใส่คอมเมนต์กำกับไว้แล้วในไฟล์ route
+- **`GuardianListCard.vue` / `GuardianFormModal.vue` เป็นโค้ดตาย** ไม่ถูกใช้จากที่ไหนในเรพ (มีแค่ใน `.nuxt/components.d.ts`)
+  — เส้นทางที่นักเรียน/ครูประจำชั้นใช้จริงคือ `GuardianViewCard.vue` + `useStudentEdit.ts` ซึ่งยิงไป Master controller
+- **หน้า `admin/guardians/index.vue` ยังใช้ `$api` ตรง ๆ และไม่มี `definePageMeta`** — ไว้แก้ตอน G-S11
+- เมนู "ผู้ปกครอง" ใน `ui/pages/academies/[name]/admin.vue` เปลี่ยนจาก `can('members.view')` → `can('guardians.view') || can('guardians.manage')`
+  ให้ตรงกับด่านใหม่ · การ์ดใน `admin/school-management.vue` **ยังไม่มีการ gate เลยทั้งหน้า** (เป็นงานของเมนู #8)
+
+**เทสต์ที่ claude รันเอง (ไม่ใช้ตัวเลขจากรายงาน agy):** `GuardianPermissionKeysTest` 4 · `GuardianAuthorizationTest` 10 ·
+`MyRoleDepartmentPermissionsTest` 5 · รวมชุด regression `HomeVisit|StudentProfile|Guardian|MyRole` **68 ผ่าน (208 assertions)** · pint ผ่าน
+· **agy รายงานว่า `GuardianAuthorizationTest` ผ่าน 10/10 ทั้งที่จริงตอนนั้นพัง 5 ข้อ** (`Database\Factories\StudentFactory` ไม่มีอยู่จริง)
+— claude แก้ helper เป็น `Student::create([...])` เองแล้วรันใหม่จนผ่าน
+
+### 8.2 🔴 สิทธิ์จากฝ่ายเคยมีผลแค่ฝั่ง API — หน้าจอมองไม่เห็น (เจอตอน G-S7, แก้แล้ว)
+
+D-S3 ทำให้ `CheckAcademyPermission` ยอมรับสิทธิ์ที่มอบให้ฝ่ายแล้ว **แต่ `GET /my-role` ส่งกลับแค่ `$role->permissions`**
+ซึ่งเป็นก้อนเดียวที่ `useAcademyRole.ts` → `can()` ใช้ตัดสินว่าจะโชว์เมนู/ปุ่มไหน
+⇒ สมาชิกที่ได้สิทธิ์มาจากฝ่ายจะ **เรียก API ได้แต่ไม่เห็นทางเข้าในหน้าจอ** — กระทบทุกคีย์ที่ delegable ไม่ใช่แค่ `guardians.*`
+(เป็นเหตุผลว่าทำไมการมอบสิทธิ์ให้ฝ่ายที่ทำใน D-S4 ถึงยังไม่เคยเห็นผลจริงสักครั้ง)
+
+แก้ที่ `AcademyGroupPermissionAccessService::permissionKeysFor()` + `AcademyRoleController::myRole()`
+โดย intersect กับ allow-list เดิมเสมอ (แถวเก่าที่ตกค้างจึงขยายสิทธิ์ไม่ได้) และ **ไม่ลบ field เดิมสักตัว**
+
 
 - **2026-07-29 — สรุปสเปก** — เสวนากับเจ้าของโปรเจคจนได้ D1–D4 + Q1–Q3, สแกนโค้ด+DB จริง (5,045 guardians / 2,931 students / 482 คนไม่มีผู้ปกครอง / ผู้ปกครองมีบัญชี 0 คน), พบ G2–G5 เป็นบั๊กจริงที่ไม่เกี่ยวกับสิทธิ์ → **ยังไม่ implement** รอ #9 ยกเว้นเฟส A
 - **2026-07-29 G-S2b/G-S2c** — codex ทำ, claude ตรวจ → **พบบั๊กทำข้อมูลหายใน `guardians:merge`**: กรณีคนที่เก็บไว้ยังไม่มีความสัมพันธ์กับนักเรียนคนนั้น โค้ดหยิบ link มาแถวเดียวแล้วลบที่เหลือ ทำให้ `legacy_row_ids` + ธง primary หาย — กระทบจริง **35 candidate / 35 link** (เพราะกลุ่ม `same_citizen_diff_name` คือเคสที่นักเรียนคนเดียวมีผู้ปกครองคนเดียวกัน 2 ระเบียนอยู่แล้ว) → สั่งแก้ให้ยุบทั้งกลุ่มก่อน insert + เพิ่ม regression test + เพิ่ม invariant check ใน `guardians:verify` → verified: 4 เทสต์ผ่าน, `link_legacy_total=5045 distinct=5045`
