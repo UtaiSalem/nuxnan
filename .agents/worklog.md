@@ -1,5 +1,61 @@
 # Work Log — nuxnan project
 
+## 2026-08-24 — infinite scroll ตายทั้ง 2 ฟีด · สาเหตุคือ observer ถูกตั้งก่อน sentinel เกิด
+
+### สถานะ: **เสร็จ · push ขึ้น `origin/main` แล้ว** (2 commit `d14e8201`, `2c547626`)
+
+ไม่มี migration · ไม่แตะ backend เลย · แก้เฉพาะ `<script setup>` ของ 2 ไฟล์ (template ไม่ถูกแตะแม้บรรทัดเดียว)
+
+| commit | ไฟล์ | diff |
+|---|---|---|
+| `d14e8201` | `ui/components/learn/course/CourseFeedsList.vue` | 19+ / 11- |
+| `2c547626` | `ui/pages/Play/Newsfeed.vue` | 19+ / 13- |
+
+### อาการ
+
+หน้ากระดานของรายวิชา `/Learn/Courses/25/feeds` เลื่อนลงสุดแล้วไม่โหลดโพสต์ชุดถัดไปเลย
+
+### สาเหตุจริง (แพตเทิร์นนี้อยู่ในเรพอีกหลายที่ ระวังไว้)
+
+`onMounted` เรียก `fetchPosts(true)` แบบไม่ await แล้วเรียก `setupObserver()` ทันที
+ตอนนั้น `loading === true` ⇒ template ยังอยู่ที่ branch skeleton (`v-else-if="loading"`)
+ไม่ใช่ `<template v-else>` ที่ sentinel `<div ref="loadMoreTrigger">` อยู่
+⇒ `loadMoreTrigger.value` เป็น `null` ⇒ `observer.observe()` ไม่เคยถูกเรียก และไม่มีใครเรียกซ้ำอีก
+
+**ปัญหาซ้อนชั้นที่สอง:** sentinel มี `v-if` ⇒ มัน unmount/mount เป็น**โน้ดใหม่**ทุกครั้งที่เปลี่ยน tab
+หรือกดรีเฟรชฟีด ⇒ ต่อให้ครั้งแรก observe ติด observer ก็จะเหลือถือโน้ดที่หลุด DOM ไปแล้ว
+
+**บทเรียน:** อย่าผูก IntersectionObserver กับ "จังหวะ mount ของ component" —
+ต้องผูกกับ "ตัว element" ด้วย `watch(triggerRef, ..., { flush: 'post' })`
+เพราะ element ที่มี `v-if` มีอายุสั้นกว่า component เสมอ
+(`Play/Newsfeed.vue` เขียนดีกว่าตรงที่ `await fetchActivities()` ก่อน แต่ก็ยังไม่รอ DOM flush ⇒ ติด ๆ หลุด ๆ)
+
+### สิ่งที่แก้
+
+ทั้ง 2 ไฟล์ใช้แพตช์เดียวกัน 3 จุด: `import watch` · `setupObserver()` guard ด้วย early-return
+แล้วเพิ่ม `watch(loadMoreTrigger, el => el ? setup() : observer?.disconnect(), { flush: 'post' })`
+· ถอด `setupObserver()` ออกจาก `onMounted` · ลด `threshold` จาก `0.1` เป็น `0` (sentinel ตอน idle สูงแค่ 16px)
+
+### Verification
+
+agy เขียนโค้ดตามสเปค (2 shard รัน**เรียงกัน** ไม่ขนาน เพราะเกณฑ์ `git status` ของ shard 2 จะชนงาน shard 1 ที่ยังไม่ commit)
+Claude ตรวจเองทุกข้อ ไม่ใช้ตัวเลขจากรายงาน agy:
+- `git diff` อ่านทุกบรรทัด — ตรงกับ 3 จุดในสเปคพอดี ไม่มีของเดิมหาย ไม่มีไฟล์นอกสเปค
+- `<template>`/`<style>` ไม่ถูกแตะ (สำคัญ: chain `v-if`/`v-else-if` ของบล็อก "คุณได้ดูโพสต์ทั้งหมดแล้ว!" ต่อท้าย sentinel อยู่ ถ้าไปแก้ UI พัง)
+- `setupObserver()` เหลือถูกเรียกที่เดียวคือใน `watch` · ไม่มี `threshold: 0.1` ตกค้าง
+- SFC compile ผ่านทั้ง 2 ไฟล์ (`vue/compiler-sfc` parse + compileScript + compileTemplate)
+
+### ค้างไว้ (ยังไม่ได้ทำ)
+
+- [ ] **ตรวจจริงในเบราว์เซอร์ที่ 375px** — Claude ทำแทนไม่ได้เพราะหน้านี้ต้อง login
+      เกณฑ์: `/Learn/Courses/25/feeds` เลื่อนลงสุดต้องโหลด `page=2` · สลับ tab "พูดคุย" แล้วเลื่อนลงต้องยังโหลดต่อ
+      (เคสที่ observer เดิมถือโน้ดค้าง) · กด "รีเฟรชฟีด" แล้วต้องยังทำงาน · เลื่อนจนหมดต้องขึ้น "ดูโพสต์ทั้งหมดแล้ว" และหยุดยิง request
+- [ ] `npm run build` — ผู้ใช้รันเอง
+- [ ] แพตเทิร์นเดียวกันน่าจะมีอีกใน `ui/components/academy/points/AcademyClaimWidget.vue`
+      และ `ui/components/learn/course/points/CourseClaimWidget.vue` (ยังไม่ได้ตรวจ)
+
+---
+
 ## 2026-08-23 — course-groups: ดึงรายชื่อนักเรียนจากห้องเรียนของโรงเรียนมาสร้างกลุ่ม + ซิงค์
 
 ### สถานะ: **เสร็จ · push ขึ้น `origin/main` แล้ว** (4 commit `86d31fd8`..`ece7c693`)
