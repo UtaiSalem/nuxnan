@@ -5,7 +5,8 @@ const props = defineProps<{
   election: any
   canManage: boolean
 }>()
-const { getTurnout, closeAndCount, publishResults, getResults } = useElections()
+const route = useRoute()
+const { getTurnout, closeAndCount, publishResults, getResults, formCouncil } = useElections()
 const turnout = ref<any>(null)
 const results = ref<any[]>([])
 const publishedError = ref(false)
@@ -34,6 +35,25 @@ const publish = async () => {
     results.value = ((await getResults(props.academyId, props.electionId)) as any)?.data || []
   }
 }
+const councilState = ref<{ status: 'success' | 'error' | null; message?: string; groupId?: number; groupName?: string }>({ status: null })
+const createCouncil = async () => {
+  if (confirm('ยืนยันตั้งสภานักเรียน?')) {
+    councilState.value = { status: null }
+    try {
+      const response = (await formCouncil(props.academyId, props.electionId)) as any
+      const group = response?.data || response
+      councilState.value = { status: 'success', groupId: group.id, groupName: group.name }
+    } catch (e: any) {
+      const errData = e.data || e.response?.data || e.response?._data || e
+      councilState.value = { 
+        status: 'error', 
+        message: errData.message || 'เกิดข้อผิดพลาด', 
+        groupId: errData.group_id,
+        groupName: errData.group_name
+      }
+    }
+  }
+}
 watch(() => props.election.status, load, { immediate: true })
 </script>
 <template>
@@ -60,6 +80,42 @@ watch(() => props.election.status, load, { immediate: true })
     >
       ประกาศผล
     </button>
+    
+    <button
+      v-if="election.status === 'published' && canManage"
+      class="min-h-[44px] rounded-lg bg-primary-600 px-4 text-white"
+      @click="createCouncil"
+    >
+      ตั้งสภานักเรียน
+    </button>
+
+    <div
+      v-if="councilState.status === 'success'"
+      class="flex flex-col gap-3 rounded-lg bg-green-50 p-3 text-green-800 sm:flex-row sm:items-center sm:justify-between sm:p-4"
+    >
+      <div class="min-w-0 flex-1 break-words">ตั้งสภานักเรียนสำเร็จ</div>
+      <NuxtLink
+        :to="`/academies/${route.params.name}/groups/${councilState.groupId}`"
+        class="flex min-h-[44px] flex-shrink-0 items-center justify-center whitespace-nowrap rounded-lg bg-green-600 px-4 text-white"
+      >
+        ไปยังสภานักเรียน
+      </NuxtLink>
+    </div>
+    
+    <div
+      v-else-if="councilState.status === 'error'"
+      class="flex flex-col gap-3 rounded-lg bg-amber-50 p-3 text-amber-800 sm:flex-row sm:items-center sm:justify-between sm:p-4"
+    >
+      <div class="min-w-0 flex-1 break-words">{{ councilState.message }}</div>
+      <NuxtLink
+        v-if="councilState.groupId"
+        :to="`/academies/${route.params.name}/groups/${councilState.groupId}`"
+        class="flex min-h-[44px] flex-shrink-0 items-center justify-center whitespace-nowrap rounded-lg bg-amber-600 px-4 text-white"
+      >
+        ดูสภานักเรียน
+      </NuxtLink>
+    </div>
+
     <p v-if="publishedError" class="rounded-lg bg-amber-50 p-4 text-amber-800">ยังไม่มีผลประกาศ</p>
     <div
       v-if="['closed', 'published'].includes(election.status)"

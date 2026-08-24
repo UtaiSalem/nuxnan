@@ -106,6 +106,8 @@ export const useElections = () => {
   const publishResults = (a: number, e: number) =>
     api.call(`${electionsBase(a)}/${e}/publish`, { method: 'POST' })
   const getResults = (a: number, e: number) => api.call(`${electionsBase(a)}/${e}/results`)
+  const formCouncil = (a: number, e: number, name?: string) =>
+    api.call(`${electionsBase(a)}/${e}/council`, { method: 'POST', body: name ? { name } : {} })
   const getAuditLog = (a: number, e: number, page = 1) =>
     api.call(`${electionsBase(a)}/${e}/audit-log?page=${page}`)
   const getActivityActions = (a: number) => api.call('/api/academies/activity-log/actions')
@@ -155,6 +157,7 @@ export const useElections = () => {
     closeAndCount,
     publishResults,
     getResults,
+    formCouncil,
     getAuditLog,
     getActivityActions,
     setMemberEducationLevel,
