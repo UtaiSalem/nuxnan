@@ -1,5 +1,67 @@
 # Work Log — nuxnan project
 
+## 2026-08-25 — ไล่แพตเทิร์น observer ต่ออีก 2 widget · เจอบั๊กคนละตัวกับที่คิด
+
+### สถานะ: **เสร็จ · push ขึ้น `origin/main` แล้ว** (commit `11866707`)
+
+ต่อจาก entry 2026-08-24 (infinite scroll ตายทั้ง 2 ฟีด) — ไล่ TODO ข้อสุดท้ายที่ค้างไว้
+
+### ผลการไล่: claim widget **ไม่มี**บั๊กตัวเดิม
+
+`AcademyClaimWidget.vue` / `CourseClaimWidget.vue` ต่างจากฟีดตรงที่ sentinel **ไม่มี `v-if`**
+และไม่มีบรรพบุรุษที่มี `v-if` ครอบ + มี `await nextTick()` ก่อน observe
+⇒ element มีจริงตอน observe, observer ติดปกติ · guard กันยิงซ้ำอยู่ในคอมโพสเซเบิลแล้ว
+(`if (!id.value || loading.value || (append && !pagination.value.has_more)) return null`)
+
+กวาด `observe()` ที่เหลือในเรพทั้งหมดด้วย (`LessonPost`, `ClassroomSeatGrid`, `HorizontalScrollBar`,
+landing 4 ตัว, `useIntersectionLoad` + 3 school widget) — ไม่มีเคสเดียวกันซ้ำอีก **ปิดการไล่แพตเทิร์นนี้ได้**
+
+### แต่เจอบั๊กคนละตัวใน widget เดียวกัน (แก้แล้ว)
+
+**sentinel ค้างสถานะ intersecting ⇒ หยุดโหลดที่หน้าเดียว**
+IntersectionObserver ยิงเฉพาะตอน "เปลี่ยนสถานะ" · ตอน mount มันยิงครั้งแรกขณะหน้า 1 ยัง in-flight
+⇒ โดน guard `loading` กลืน · พอหน้า 1 render เสร็จ ถ้า sentinel ยังอยู่ในจอ (จอ 2xl กริด 2 คอลัมน์
+12 รายการ = 6 แถว เห็นครบพร้อม sentinel) สถานะไม่เคยเปลี่ยนอีก ⇒ เงียบถาวร
+และ widget นี้**ไม่มีปุ่ม "โหลดเพิ่ม" สำรอง** ⇒ ผู้ใช้ค้างอยู่ที่ 12 รายการโดยไม่มีทางออก
+
+**วิธีแก้:** `reobserveSentinel()` = `unobserve` + `observe` ซ้ำ (บังคับให้ observer แจ้งสถานะปัจจุบันใหม่)
+เรียกจาก `watch(() => items.value.length, ...)` = รายการยาวขึ้น แปลว่าเพิ่งต่อหน้าใหม่สำเร็จ
+พร้อมเปลี่ยน `fetchClaimable(true)` เป็น `.catch(() => {})` (เดิมเป็น floating promise ที่ throw ได้
+พอมี loop จะกลายเป็น unhandled rejection)
+
+**กันวนไม่รู้จบ 3 ทาง:** `has_more = false` → `return` ก่อน · sentinel หลุดจอ → callback ไม่ยิง ·
+โหลดแล้วไม่ได้รายการเพิ่ม → `items.length` ไม่เปลี่ยน → watch ไม่ยิง
+
+### บทเรียนที่ต่อจาก entry ที่แล้ว
+
+entry 2026-08-24 สรุปว่า "อย่าผูก observer กับจังหวะ mount ให้ผูกกับ element"
+รอบนี้ได้อีกครึ่ง: **sentinel ที่อยู่ใน DOM ตลอดก็ไม่ได้แปลว่าปลอดภัย** —
+observer เป็น edge-triggered ไม่ใช่ level-triggered ถ้าสถานะไม่เปลี่ยนมันจะไม่พูดอีกเลย
+infinite scroll ทุกที่จึงควรมีทางออกอย่างน้อยหนึ่งอย่าง: re-observe หลัง append **หรือ** ปุ่มโหลดเพิ่ม
+
+### Verification (Claude ตรวจเองทุกข้อ ไม่ใช้ตัวเลขจากรายงาน agy)
+
+- `git diff` อ่านทุกบรรทัด — ไฟล์ละ 19+/2− (deletion 2 บรรทัดคือ import กับบรรทัด `fetchClaimable(true)` เดิม)
+- `<template>`/`<style>` ไม่ถูกแตะทั้ง 2 ไฟล์ · แพตช์เหมือนกันบรรทัดต่อบรรทัดทั้งคู่
+- SFC compile ผ่านทั้ง 2 ไฟล์
+
+### หมายเหตุการทำงานร่วมกัน (สำคัญถ้ามี 2 เซสชันพร้อมกัน)
+
+ระหว่างรอบนี้ **มีอีกเซสชันทำงาน D-S7 departments อยู่พร้อมกันในเรพเดียวกัน**
+ตอนสั่ง agy ต้องแปะรายชื่อไฟล์ของอีกเซสชันเป็น blacklist ลงในสเปค + สั่งห้าม
+`git checkout/restore/stash` ไม่งั้นมันอาจ "เคลียร์ให้สะอาด" ทับงานคนอื่น
+และตอน commit ต้อง `git add <path ที่ตั้งใจ>` เท่านั้น ห้าม `git add -A`
+(ระหว่างนั้นอีกเซสชัน commit งานตัวเองไป 3 commit `0486e9d7`..`d06970cb` — push ขึ้นไปพร้อมกัน 4 commit)
+
+### ค้างไว้
+
+- [ ] **ตรวจจริงในเบราว์เซอร์ที่ 375px** — Claude ทำแทนไม่ได้เพราะต้อง login
+      เกณฑ์ claim widget: เปิดหน้าที่มีรายการ > 12 บนจอสูง ต้องโหลดหน้าถัดไปต่อเองจนครบ
+      แล้วหยุดที่ "แสดงรายการครบแล้ว" โดยไม่ยิง request ซ้ำ
+- [ ] `npm run build` — ผู้ใช้รันเอง
+
+---
+
 ## 2026-08-24 — เมนู #9: D-S7 หน้ารายละเอียดฝ่าย (ปิดเมนูนี้ครบทุก step)
 
 ### สถานะ: เสร็จ · ตรวจเองครบ · **ยังไม่ commit** (รอคำสั่ง)
@@ -109,8 +171,9 @@ Claude ตรวจเองทุกข้อ ไม่ใช้ตัวเล
       เกณฑ์: `/Learn/Courses/25/feeds` เลื่อนลงสุดต้องโหลด `page=2` · สลับ tab "พูดคุย" แล้วเลื่อนลงต้องยังโหลดต่อ
       (เคสที่ observer เดิมถือโน้ดค้าง) · กด "รีเฟรชฟีด" แล้วต้องยังทำงาน · เลื่อนจนหมดต้องขึ้น "ดูโพสต์ทั้งหมดแล้ว" และหยุดยิง request
 - [ ] `npm run build` — ผู้ใช้รันเอง
-- [ ] แพตเทิร์นเดียวกันน่าจะมีอีกใน `ui/components/academy/points/AcademyClaimWidget.vue`
-      และ `ui/components/learn/course/points/CourseClaimWidget.vue` (ยังไม่ได้ตรวจ)
+- [x] แพตเทิร์นเดียวกันน่าจะมีอีกใน `ui/components/academy/points/AcademyClaimWidget.vue`
+      และ `ui/components/learn/course/points/CourseClaimWidget.vue`
+      ⇒ ตรวจแล้ว 2026-08-25: **ไม่ใช่บั๊กเดียวกัน** แต่เจอบั๊กคนละตัวและแก้ไปแล้ว ดู entry 2026-08-25
 
 ---
 
