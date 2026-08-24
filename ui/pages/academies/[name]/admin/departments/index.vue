@@ -413,7 +413,8 @@ const fetchAvailableMembers = async (page = 1) => {
       search: memberSearchQuery.value || undefined,
       status: 2,
       page,
-      per_page: 25
+      per_page: 25,
+      with_departments: 1
     }
     if (memberRoleFilter.value === 'staff') query.roles = ['teacher', 'staff']
 
@@ -1092,16 +1093,25 @@ const onSetupSuccess = async () => {
                   type="checkbox"
                   :value="member.user_id"
                   v-model="selectedMemberIds"
-                  class="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  class="flex-shrink-0 w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
                 <img
                   :src="member.user?.profile_photo_url || '/images/default-avatar.png'"
                   :alt="member.user?.name"
-                  class="w-10 h-10 rounded-full object-cover"
+                  class="flex-shrink-0 w-10 h-10 rounded-full object-cover"
                 />
-                <div class="flex-1 min-w-0">
+                <div class="flex-1 min-w-0 break-words">
                   <p class="font-medium text-gray-900 dark:text-white truncate">{{ member.user?.name }}</p>
                   <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ member.user?.email }}</p>
+                  <div v-if="member.department_memberships && member.department_memberships.length > 0" class="mt-1.5 flex flex-wrap gap-1.5">
+                    <span
+                      v-for="dept in member.department_memberships"
+                      :key="dept.id"
+                      class="inline-block px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 break-words max-w-full"
+                    >
+                      {{ dept.name }}
+                    </span>
+                  </div>
                 </div>
               </label>
             </div>
