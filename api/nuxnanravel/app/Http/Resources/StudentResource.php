@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\AcademyMember;
+use App\Services\GuardianAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -77,7 +78,10 @@ class StudentResource extends JsonResource
             'card' => $this->whenLoaded('studentCard'),
             'addresses' => $this->whenLoaded('addresses'),
             'contacts' => $this->whenLoaded('contacts'),
-            'guardians' => $this->whenLoaded('guardians'),
+            'guardians' => $this->whenLoaded('guardians', fn () => app(GuardianAccessService::class)
+                ->canViewSensitive($request->user(), $this->resource)
+                    ? $this->guardians
+                    : app(GuardianAccessService::class)->hideSensitive($this->guardians)),
             'health' => $this->whenLoaded('healthInfo'),
             'documents' => $this->whenLoaded('documents'),
 

@@ -7,6 +7,7 @@ use App\Models\Academy;
 use App\Models\AcademyMember;
 use App\Models\ClassroomMember;
 use App\Models\Student;
+use App\Services\GuardianAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -253,6 +254,10 @@ class StudentProfileController extends Controller
             'class_section' => $student->class_section,
         ];
 
+        // 'parent' is the guardian looking at their own record, so it keeps the fields it always had.
+        $showSensitive = $accessLevel === 'parent'
+            || app(GuardianAccessService::class)->canViewSensitive(Auth::user(), $student);
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -296,7 +301,7 @@ class StudentProfileController extends Controller
                         'is_primary' => $contact->is_primary,
                     ];
                 }),
-                'guardians' => $student->guardians->map(function ($guardian) use ($accessLevel) {
+                'guardians' => $student->guardians->map(function ($guardian) use ($showSensitive) {
                     $data = [
                         'id' => $guardian->id,
                         'guardian_type' => $guardian->guardian_type,
@@ -305,14 +310,14 @@ class StudentProfileController extends Controller
                         'last_name' => $guardian->last_name,
                         'relationship' => $guardian->relationship,
                         'occupation' => $guardian->occupation,
+                        'workplace' => $guardian->workplace,
                         'is_primary_contact' => $guardian->is_primary_contact,
                         'is_emergency_contact' => $guardian->is_emergency_contact,
                         'status' => $guardian->status,
                     ];
-                    if (in_array($accessLevel, ['self', 'parent', 'admin', 'homeroom'])) {
+                    if ($showSensitive) {
                         $data['citizen_id'] = $guardian->citizen_id;
                         $data['monthly_income'] = $guardian->monthly_income;
-                        $data['workplace'] = $guardian->workplace;
                     }
 
                     return $data;

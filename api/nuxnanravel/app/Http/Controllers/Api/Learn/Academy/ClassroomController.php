@@ -12,6 +12,7 @@ use App\Models\ClassroomStudent;
 use App\Models\Student;
 use App\Services\ClassroomRenumberService;
 use App\Services\ClassroomService;
+use App\Services\GuardianAccessService;
 use App\Services\MemberService;
 use App\Services\StudentEnrollmentService;
 use Illuminate\Http\JsonResponse;
@@ -820,6 +821,11 @@ class ClassroomController extends Controller
         $student->setAttribute('gpax', AnnualTranscript::where('student_id', $student->id)
             ->latest('created_at')
             ->value('gpax'));
+
+        $access = app(GuardianAccessService::class);
+        if (! $access->canViewSensitive(auth()->user(), $student)) {
+            $access->hideSensitive($student->guardians);
+        }
 
         return response()->json([
             'success' => true,
