@@ -8,6 +8,7 @@ use App\Models\AcademyMember;
 use App\Models\AcademyPermission;
 use App\Models\AcademyRole;
 use App\Models\MemberActivityLog;
+use App\Services\AcademyGroupPermissionAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -121,10 +122,17 @@ class AcademyRoleController extends Controller
                 ->first();
         }
 
+        $rolePermissions = $role->permissions ?? [];
+        $departmentPermissions = app(AcademyGroupPermissionAccessService::class)
+            ->permissionKeysFor($user, $academy);
+
         return response()->json([
             'success' => true,
             'role' => $role,
-            'permissions' => $role->permissions ?? [],
+            // Department-derived keys are real permissions since D-S3; the UI gates on this list.
+            'permissions' => array_values(array_unique([...$rolePermissions, ...$departmentPermissions])),
+            'role_permissions' => array_values($rolePermissions),
+            'department_permissions' => $departmentPermissions,
             'is_owner' => false,
             'is_admin' => false,
             'is_member' => true,
