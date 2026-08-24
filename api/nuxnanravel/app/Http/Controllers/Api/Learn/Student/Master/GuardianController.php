@@ -84,6 +84,10 @@ class GuardianController extends Controller
             $guardianData['is_primary_contact'] = $guardian->is_primary_contact;
             $guardianData['is_emergency_contact'] = $guardian->is_emergency_contact;
 
+            if (app(GuardianAccessService::class)->canViewSensitive(auth()->user(), $student)) {
+                app(GuardianAuditLogger::class)->sensitiveViewed(auth()->user(), $student);
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => [

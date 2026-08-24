@@ -13,6 +13,7 @@ use App\Models\Student;
 use App\Services\ClassroomRenumberService;
 use App\Services\ClassroomService;
 use App\Services\GuardianAccessService;
+use App\Services\GuardianAuditLogger;
 use App\Services\MemberService;
 use App\Services\StudentEnrollmentService;
 use Illuminate\Http\JsonResponse;
@@ -825,6 +826,8 @@ class ClassroomController extends Controller
         $access = app(GuardianAccessService::class);
         if (! $access->canViewSensitive(auth()->user(), $student)) {
             $access->hideSensitive($student->guardians);
+        } elseif ($student->guardians->isNotEmpty()) {
+            app(GuardianAuditLogger::class)->sensitiveViewed(auth()->user(), $student);
         }
 
         return response()->json([

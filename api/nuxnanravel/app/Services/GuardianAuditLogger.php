@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\MemberActivityLog;
 use App\Models\Student;
 use App\Models\StudentGuardian;
+use App\Models\User;
 
 /**
  * Writes guardian changes to member_activity_logs — the same table the academy
@@ -16,6 +17,51 @@ use App\Models\StudentGuardian;
  */
 class GuardianAuditLogger
 {
+    /** Dedupe window: the same viewer opening the same student again is not a new event. */
+    private const VIEW_DEDUPE_MINUTES = 60;
+
+    /**
+     * Record that someone other than the student read a guardian's citizen id or income.
+     *
+     * Call it only when the response really carried those fields: a log row means the data
+     * left the server, so a row that does not mean that makes the whole table untrustworthy.
+     */
+    public function sensitiveViewed(?User $user, Student $student): void
+    {
+        if ($user === null) {
+            return;
+        }
+
+        // The student reading their own family's data is not an access event.
+        if ($student->user_id !== null && $student->user_id === $user->id) {
+            return;
+        }
+
+        try {
+            $alreadyLogged = MemberActivityLog::query()
+                ->where('academy_id', $student->academy_id)
+                ->where('user_id', $user->id)
+                ->where('action', MemberActivityLog::ACTION_GUARDIAN_SENSITIVE_VIEW)
+                ->where('new_values->student_id', $student->id)
+                ->where('created_at', '>=', now()->subMinutes(self::VIEW_DEDUPE_MINUTES))
+                ->exists();
+
+            if ($alreadyLogged) {
+                return;
+            }
+
+            $this->write(
+                $student,
+                MemberActivityLog::ACTION_GUARDIAN_SENSITIVE_VIEW,
+                'เปิดดูข้อมูลอ่อนไหวของผู้ปกครอง นักเรียน: '.$this->studentName($student),
+                null,
+                ['student_id' => $student->id]
+            );
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
     public function created(Student $student, StudentGuardian $guardian, array $input): void
     {
         $this->write($student, MemberActivityLog::ACTION_GUARDIAN_CREATE,

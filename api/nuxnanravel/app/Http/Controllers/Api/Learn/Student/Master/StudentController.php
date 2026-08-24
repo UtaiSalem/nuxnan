@@ -15,6 +15,8 @@ use App\Models\StudentContact;
 use App\Models\StudentGuardian;
 use App\Models\StudentHealthInfo;
 use App\Models\StudentHomeVisit;
+use App\Services\GuardianAccessService;
+use App\Services\GuardianAuditLogger;
 use App\Traits\HandlesStudentUpdates;
 use Illuminate\Http\Request;
 
@@ -89,6 +91,10 @@ class StudentController extends Controller
             'documents',
             'studentCard',
         ]);
+
+        if ($student->guardians->isNotEmpty() && app(GuardianAccessService::class)->canViewSensitive(auth()->user(), $student)) {
+            app(GuardianAuditLogger::class)->sensitiveViewed(auth()->user(), $student);
+        }
 
         return new StudentResource($student);
     }

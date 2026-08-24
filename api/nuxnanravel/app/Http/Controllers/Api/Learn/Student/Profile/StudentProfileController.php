@@ -8,6 +8,7 @@ use App\Models\AcademyMember;
 use App\Models\ClassroomMember;
 use App\Models\Student;
 use App\Services\GuardianAccessService;
+use App\Services\GuardianAuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -257,6 +258,10 @@ class StudentProfileController extends Controller
         // 'parent' is the guardian looking at their own record, so it keeps the fields it always had.
         $showSensitive = $accessLevel === 'parent'
             || app(GuardianAccessService::class)->canViewSensitive(Auth::user(), $student);
+
+        if ($showSensitive && $student->guardians->isNotEmpty()) {
+            app(GuardianAuditLogger::class)->sensitiveViewed(Auth::user(), $student);
+        }
 
         return response()->json([
             'success' => true,
