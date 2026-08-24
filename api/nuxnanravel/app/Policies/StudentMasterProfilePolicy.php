@@ -75,6 +75,17 @@ class StudentMasterProfilePolicy
         return $this->guardianAccess($user, $student, 'guardians.manage');
     }
 
+    /**
+     * Appoint a guardian for this student — the three routes of Q3.
+     *
+     * All three land here: the student themselves and the homeroom teacher pass on the first
+     * rungs of the ladder, the registrar through the guardians.appoint key.
+     */
+    public function appointGuardians(User $user, Student $student): bool
+    {
+        return $this->guardianAccess($user, $student, 'guardians.appoint');
+    }
+
     private function guardianAccess(User $user, Student $student, string $permission): bool
     {
         return app(GuardianAccessService::class)->allows($user, $student, $permission);

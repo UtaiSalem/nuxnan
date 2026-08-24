@@ -268,6 +268,8 @@ class MemberActivityLogController extends Controller
             ['value' => MemberActivityLog::ACTION_GUARDIAN_CREATE, 'label' => 'เพิ่มผู้ปกครอง', 'icon' => 'mdi:account-child'],
             ['value' => MemberActivityLog::ACTION_GUARDIAN_UPDATE, 'label' => 'แก้ไขข้อมูลผู้ปกครอง', 'icon' => 'mdi:account-edit'],
             ['value' => MemberActivityLog::ACTION_GUARDIAN_DELETE, 'label' => 'ลบผู้ปกครอง', 'icon' => 'mdi:account-remove'],
+            ['value' => MemberActivityLog::ACTION_GUARDIAN_APPOINT, 'label' => 'แต่งตั้งผู้ปกครองให้นักเรียน', 'icon' => 'mdi:account-star'],
+            ['value' => MemberActivityLog::ACTION_GUARDIAN_VERIFY, 'label' => 'ยืนยันการแต่งตั้งผู้ปกครอง', 'icon' => 'mdi:account-check'],
             ['value' => MemberActivityLog::ACTION_GUARDIAN_SENSITIVE_VIEW, 'label' => 'เปิดดูข้อมูลอ่อนไหวของผู้ปกครอง', 'icon' => 'mdi:eye-lock'],
         ];
 

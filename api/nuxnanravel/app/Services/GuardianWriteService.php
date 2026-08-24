@@ -6,6 +6,7 @@ use App\Models\Guardian;
 use App\Models\GuardianContact;
 use App\Models\Student;
 use App\Models\StudentGuardian;
+use App\Models\StudentGuardianLink;
 use App\Support\GuardianNameNormalizer;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -63,6 +64,66 @@ class GuardianWriteService
         });
     }
 
+    /**
+     * Attach an existing guardian person to a student (the "sibling's guardian" case).
+     *
+     * A legacy student_guardians row is written too: the admin edit/delete routes still bind
+     * {guardian} to that model, so a link without one would be readable but impossible to
+     * edit or remove afterwards.
+     */
+    public function appoint(Student $student, Guardian $person, array $linkData, ?string $actorRole = null, ?int $actorUserId = null): StudentGuardian
+    {
+        return DB::transaction(function () use ($student, $person, $linkData, $actorRole, $actorUserId) {
+            $legacy = StudentGuardian::create([
+                'academy_id' => $student->academy_id,
+                'student_id' => $student->id,
+                'student_code' => $student->student_id,
+                'guardian_type' => $linkData['guardian_type'] ?? null,
+                'relationship' => $linkData['relationship'] ?? null,
+                'citizen_id' => $person->citizen_id,
+                'title_prefix' => $person->title_prefix,
+                'first_name' => $person->first_name,
+                'last_name' => $person->last_name,
+                'occupation' => $person->occupation,
+                'workplace' => $person->workplace,
+                'monthly_income' => $person->monthly_income,
+                'nationality' => $person->nationality ?? 'ไทย',
+                'status' => $person->status ?? 'alive',
+                'is_primary_contact' => $linkData['is_primary_contact'] ?? false,
+                'is_emergency_contact' => $linkData['is_emergency_contact'] ?? false,
+            ]);
+
+            DB::table('student_guardian_links')->insert([
+                'student_id' => $student->id,
+                'guardian_id' => $person->id,
+                'guardian_type' => $linkData['guardian_type'] ?? null,
+                'relationship' => $linkData['relationship'] ?? null,
+                'is_primary_contact' => $linkData['is_primary_contact'] ?? false,
+                'is_emergency_contact' => $linkData['is_emergency_contact'] ?? false,
+                'legacy_row_ids' => json_encode([$legacy->id]),
+                'appointed_by_role' => $actorRole ?? app(GuardianAccessService::class)->actorRole(Auth::user(), $student),
+                'appointed_by_user_id' => $actorUserId ?? Auth::id(),
+                'appointed_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return $legacy;
+        });
+    }
+
+    /** Mark an appointment as checked by staff. Returns false when the link is already verified. */
+    public function verify(StudentGuardianLink $link, int $verifierUserId): bool
+    {
+        if ($link->verified_at !== null) {
+            return false;
+        }
+
+        $link->forceFill(['verified_by_user_id' => $verifierUserId, 'verified_at' => now()])->save();
+
+        return true;
+    }
+
     private function legacyData(Student $student, array $data, bool $update = false): array
     {
         $g = $data['guardian'] ?? $data;
@@ -104,7 +165,7 @@ class GuardianWriteService
 
     private function link(Student $student, StudentGuardian $legacy, Guardian $person, array $data, ?string $role, ?int $userId): void
     {
-        DB::table('student_guardian_links')->insert(array_merge(['student_id' => $student->id, 'guardian_id' => $person->id, 'legacy_row_ids' => json_encode([$legacy->id]), 'appointed_by_role' => $role ?? 'user', 'appointed_by_user_id' => $userId ?? Auth::id(), 'appointed_at' => now(), 'created_at' => now(), 'updated_at' => now()], $this->linkData($data)));
+        DB::table('student_guardian_links')->insert(array_merge(['student_id' => $student->id, 'guardian_id' => $person->id, 'legacy_row_ids' => json_encode([$legacy->id]), 'appointed_by_role' => $role ?? app(GuardianAccessService::class)->actorRole(Auth::user(), $student), 'appointed_by_user_id' => $userId ?? Auth::id(), 'appointed_at' => now(), 'created_at' => now(), 'updated_at' => now()], $this->linkData($data)));
     }
 
     private function linkData(array $data): array

@@ -12,9 +12,9 @@ class StudentGuardianLink extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['student_id', 'guardian_id', 'guardian_type', 'relationship', 'is_primary_contact', 'is_emergency_contact', 'appointed_by_user_id', 'appointed_by_role', 'appointed_at', 'verified_by_user_id', 'verified_at', 'legacy_student_guardian_id'];
+    protected $fillable = ['student_id', 'guardian_id', 'guardian_type', 'relationship', 'is_primary_contact', 'is_emergency_contact', 'appointed_by_user_id', 'appointed_by_role', 'appointed_at', 'verified_by_user_id', 'verified_at', 'legacy_row_ids'];
 
-    protected $casts = ['is_primary_contact' => 'boolean', 'is_emergency_contact' => 'boolean', 'appointed_at' => 'datetime', 'verified_at' => 'datetime'];
+    protected $casts = ['is_primary_contact' => 'boolean', 'is_emergency_contact' => 'boolean', 'appointed_at' => 'datetime', 'verified_at' => 'datetime', 'legacy_row_ids' => 'array'];
 
     public function getFullNameAttribute(): ?string
     {

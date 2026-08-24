@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Guardian;
 use App\Models\MemberActivityLog;
 use App\Models\Student;
 use App\Models\StudentGuardian;
@@ -87,6 +88,30 @@ class GuardianAuditLogger
             ['guardian_id' => $guardian->id, 'full_name' => $this->name($guardian)],
             null
         );
+    }
+
+    public function appointed(Student $student, Guardian $person, string $actorRole, array $linkData): void
+    {
+        $this->write($student, MemberActivityLog::ACTION_GUARDIAN_APPOINT,
+            'แต่งตั้งผู้ปกครอง: '.$this->personName($person).' ให้นักเรียน '.$this->studentName($student),
+            null,
+            ['guardian_person_id' => $person->id, 'appointed_by_role' => $actorRole]
+                + $this->trackedFields($linkData)
+        );
+    }
+
+    public function verified(Student $student, Guardian $person): void
+    {
+        $this->write($student, MemberActivityLog::ACTION_GUARDIAN_VERIFY,
+            'ยืนยันการแต่งตั้งผู้ปกครอง: '.$this->personName($person).' ของนักเรียน '.$this->studentName($student),
+            null,
+            ['guardian_person_id' => $person->id]
+        );
+    }
+
+    private function personName(Guardian $person): string
+    {
+        return trim(($person->title_prefix ? $person->title_prefix.' ' : '').$person->first_name.' '.$person->last_name);
     }
 
     /** Only the fields the API actually accepts, so stray keys never reach the log. */

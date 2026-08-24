@@ -5,7 +5,10 @@ namespace App\Services;
 use App\Models\Academy;
 use App\Models\AcademyMember;
 use App\Models\ClassroomMember;
+use App\Models\Guardian;
 use App\Models\Student;
+use App\Models\StudentGuardian;
+use App\Models\StudentGuardianLink;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -62,6 +65,33 @@ class GuardianAccessService
             ->hasAnyPermission($user, $academy, [$permission]);
     }
 
+    /**
+     * Which of the three appointment routes this user is taking for this student.
+     *
+     * The ladder is the same order as allows(), so the label always matches the reason
+     * the user was let through. Stored on student_guardian_links.appointed_by_role.
+     */
+    public function actorRole(?User $user, Student $student): string
+    {
+        if ($user === null) {
+            return 'system';
+        }
+
+        if ($student->user_id !== null && $user->id === $student->user_id) {
+            return 'student';
+        }
+
+        if (Academy::find($student->academy_id)?->isAdmin($user)) {
+            return 'owner';
+        }
+
+        if (ClassroomMember::isHomeroomStaffOf($user->id, $student)) {
+            return 'homeroom';
+        }
+
+        return 'staff';
+    }
+
     public function canViewSensitive(?User $user, Student $student): bool
     {
         return $this->allows($user, $student, 'guardians.sensitive.view');
@@ -100,6 +130,118 @@ class GuardianAccessService
         }
 
         return $models;
+    }
+
+    /**
+     * Guardian rows this student attached to themselves that staff has not confirmed yet.
+     *
+     * Sharing one guardian record between siblings is the point of the person-level model, but it also
+     * means a student who knows someone's citizen id could attach that person and read their income.
+     * So the gate is narrow on purpose: it closes only when the student reached for a person who
+     * already belongs to somebody else, and it opens again the moment a teacher or the registrar
+     * verifies the link. A guardian the student typed in themselves has exactly one link and is
+     * never blocked — hiding the citizen id they just entered would be nonsense.
+     *
+     * @return array{link: list<int>, person: list<int>, legacy: list<int>}
+     */
+    public function unverifiedSelfAppointedIds(Student $student): array
+    {
+        $empty = ['link' => [], 'person' => [], 'legacy' => []];
+
+        $links = StudentGuardianLink::query()
+            ->where('student_id', $student->id)
+            ->where('appointed_by_role', 'student')
+            ->whereNull('verified_at')
+            ->get();
+
+        if ($links->isEmpty()) {
+            return $empty;
+        }
+
+        // Only a person shared with another student is someone else's; a freshly typed one is not.
+        $sharedPersonIds = StudentGuardianLink::query()
+            ->whereIn('guardian_id', $links->pluck('guardian_id')->all())
+            ->select('guardian_id')
+            ->groupBy('guardian_id')
+            ->havingRaw('COUNT(*) > 1')
+            ->pluck('guardian_id')
+            ->all();
+
+        if ($sharedPersonIds === []) {
+            return $empty;
+        }
+
+        $blocked = $links->whereIn('guardian_id', $sharedPersonIds);
+
+        return [
+            'link' => $blocked->pluck('id')->values()->all(),
+            'person' => $blocked->pluck('guardian_id')->unique()->values()->all(),
+            'legacy' => $blocked->flatMap(fn ($l) => $l->legacy_row_ids ?? [])->unique()->values()->all(),
+        ];
+    }
+
+    /**
+     * The same gate as a yes/no question, for the callers that build plain arrays instead of
+     * serializing models. Pass the ids from unverifiedSelfAppointedIds() so the query runs once.
+     *
+     * @param  array{link: list<int>, person: list<int>, legacy: list<int>}  $blockedIds
+     */
+    public function isBlockedGuardianRow(array $blockedIds, mixed $row): bool
+    {
+        if (! $row instanceof Model) {
+            return false;
+        }
+
+        return match (true) {
+            $row instanceof StudentGuardianLink => in_array($row->id, $blockedIds['link'], true),
+            $row instanceof Guardian => in_array($row->id, $blockedIds['person'], true),
+            $row instanceof StudentGuardian => in_array($row->id, $blockedIds['legacy'], true),
+            default => false,
+        };
+    }
+
+    /**
+     * Strip the sensitive fields from any model in $models that is a blocked appointment.
+     * No-op unless the viewer is the student themselves — staff already passed a permission check.
+     *
+     * @param  mixed  $models  StudentGuardianLink / StudentGuardian / Guardian, single or collection
+     */
+    public function maskUnverifiedSelfAppointments(?User $user, Student $student, mixed $models): mixed
+    {
+        if ($models === null || $user === null || $student->user_id === null || $student->user_id !== $user->id) {
+            return $models;
+        }
+
+        $blockedIds = $this->unverifiedSelfAppointedIds($student);
+
+        if ($blockedIds['link'] === []) {
+            return $models;
+        }
+
+        $items = ($models instanceof Collection || is_array($models)) ? $models : [$models];
+
+        foreach ($items as $item) {
+            if (! $this->isBlockedGuardianRow($blockedIds, $item)) {
+                continue;
+            }
+
+            $item->makeHidden(self::SENSITIVE_FIELDS);
+            if ($item->relationLoaded('guardian') && $item->guardian) {
+                $item->guardian->makeHidden(self::SENSITIVE_FIELDS);
+            }
+        }
+
+        return $models;
+    }
+
+    /** True when this viewer must not see the sensitive fields of this one guardian row. */
+    public function blocksSensitiveRow(?User $user, Student $student, mixed $row): bool
+    {
+        if ($user === null || $student->user_id === null || $student->user_id !== $user->id) {
+            return false;
+        }
+
+        return $this->isBlockedGuardianRow($this->unverifiedSelfAppointedIds($student), $row);
     }
 
     /**

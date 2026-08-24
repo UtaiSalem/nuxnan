@@ -143,8 +143,11 @@ class MemberActivityLog extends Model
 
     public const ACTION_GUARDIAN_DELETE = 'guardian_delete';
 
-    /** Reserved for the three-way appointment flow (G-S10); nothing writes it yet. */
+    /** Someone linked an existing guardian person to a student (G-S10). */
     public const ACTION_GUARDIAN_APPOINT = 'guardian_appoint';
+
+    /** Staff confirmed an appointment a student made for themselves (G-S10). */
+    public const ACTION_GUARDIAN_VERIFY = 'guardian_verify';
 
     /** Someone other than the student read a guardian's citizen id / income (G-S9-b). */
     public const ACTION_GUARDIAN_SENSITIVE_VIEW = 'guardian_sensitive_view';
@@ -288,6 +291,7 @@ class MemberActivityLog extends Model
             self::ACTION_GUARDIAN_UPDATE => 'แก้ไขข้อมูลผู้ปกครอง',
             self::ACTION_GUARDIAN_DELETE => 'ลบผู้ปกครอง',
             self::ACTION_GUARDIAN_APPOINT => 'แต่งตั้งผู้ปกครองให้นักเรียน',
+            self::ACTION_GUARDIAN_VERIFY => 'ยืนยันการแต่งตั้งผู้ปกครอง',
             self::ACTION_GUARDIAN_SENSITIVE_VIEW => 'เปิดดูข้อมูลอ่อนไหวของผู้ปกครอง',
         ];
 
@@ -326,6 +330,7 @@ class MemberActivityLog extends Model
             self::ACTION_GUARDIAN_UPDATE => 'mdi:account-edit',
             self::ACTION_GUARDIAN_DELETE => 'mdi:account-remove',
             self::ACTION_GUARDIAN_APPOINT => 'mdi:account-star',
+            self::ACTION_GUARDIAN_VERIFY => 'mdi:account-check',
             self::ACTION_GUARDIAN_SENSITIVE_VIEW => 'mdi:eye-lock',
         ];
 
@@ -364,6 +369,7 @@ class MemberActivityLog extends Model
             self::ACTION_GUARDIAN_UPDATE => 'purple',
             self::ACTION_GUARDIAN_DELETE => 'red',
             self::ACTION_GUARDIAN_APPOINT => 'indigo',
+            self::ACTION_GUARDIAN_VERIFY => 'teal',
             self::ACTION_GUARDIAN_SENSITIVE_VIEW => 'orange',
         ];
 
