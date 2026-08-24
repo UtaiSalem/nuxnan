@@ -21,6 +21,7 @@ class AcademyPermission extends Model
         'students', 'behavior', 'home_visits', 'attendance', 'school_attendance',
         'grades', 'gradebook', 'schedule', 'courses', 'assignments', 'announcements',
         'events', 'reports', 'messages', 'teachers', 'staff', 'children', 'elections', 'sports',
+        'guardians',
     ];
 
     /**
@@ -155,6 +156,13 @@ class AcademyPermission extends Model
             ['name' => 'children.grades.view', 'display_name' => 'ดูผลการเรียนบุตรหลาน'],
             ['name' => 'children.attendance.view', 'display_name' => 'ดูการเข้าเรียนบุตรหลาน'],
             ['name' => 'children.schedule.view', 'display_name' => 'ดูตารางเรียนบุตรหลาน'],
+        ],
+        'guardians' => [
+            ['name' => 'guardians.view', 'display_name' => 'ดูรายชื่อและข้อมูลผู้ปกครอง'],
+            ['name' => 'guardians.manage', 'display_name' => 'จัดการผู้ปกครอง: เพิ่ม/แก้ไข/ลบ และช่องทางติดต่อ'],
+            ['name' => 'guardians.sensitive.view', 'display_name' => 'ดูข้อมูลอ่อนไหวของผู้ปกครอง: เลขบัตรประชาชน/รายได้'],
+            ['name' => 'guardians.sensitive.manage', 'display_name' => 'แก้ไขข้อมูลอ่อนไหวของผู้ปกครอง: เลขบัตรประชาชน/รายได้'],
+            ['name' => 'guardians.appoint', 'display_name' => 'แต่งตั้งผู้ปกครองให้นักเรียน'],
         ],
         'staff' => [
             ['name' => 'staff.view', 'display_name' => 'ดูบุคลากร'],
