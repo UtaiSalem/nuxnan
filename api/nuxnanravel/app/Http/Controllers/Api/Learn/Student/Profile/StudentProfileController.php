@@ -259,6 +259,9 @@ class StudentProfileController extends Controller
         $showSensitive = $accessLevel === 'parent'
             || app(GuardianAccessService::class)->canViewSensitive(Auth::user(), $student);
 
+        // A guardian this student attached from someone else's record stays masked until staff verifies it.
+        $blockedGuardianIds = app(GuardianAccessService::class)->unverifiedSelfAppointedIds($student);
+
         if ($showSensitive && $student->guardians->isNotEmpty()) {
             app(GuardianAuditLogger::class)->sensitiveViewed(Auth::user(), $student);
         }
@@ -306,7 +309,7 @@ class StudentProfileController extends Controller
                         'is_primary' => $contact->is_primary,
                     ];
                 }),
-                'guardians' => $student->guardians->map(function ($guardian) use ($showSensitive) {
+                'guardians' => $student->guardians->map(function ($guardian) use ($showSensitive, $blockedGuardianIds) {
                     $data = [
                         'id' => $guardian->id,
                         'guardian_type' => $guardian->guardian_type,
@@ -320,7 +323,7 @@ class StudentProfileController extends Controller
                         'is_emergency_contact' => $guardian->is_emergency_contact,
                         'status' => $guardian->status,
                     ];
-                    if ($showSensitive) {
+                    if ($showSensitive && ! app(GuardianAccessService::class)->isBlockedGuardianRow($blockedGuardianIds, $guardian)) {
                         $data['citizen_id'] = $guardian->citizen_id;
                         $data['monthly_income'] = $guardian->monthly_income;
                     }

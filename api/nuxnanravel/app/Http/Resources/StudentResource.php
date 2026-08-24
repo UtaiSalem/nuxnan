@@ -79,9 +79,10 @@ class StudentResource extends JsonResource
             'addresses' => $this->whenLoaded('addresses'),
             'contacts' => $this->whenLoaded('contacts'),
             'guardians' => $this->whenLoaded('guardians', fn () => app(GuardianAccessService::class)
-                ->canViewSensitive($request->user(), $this->resource)
-                    ? $this->guardians
-                    : app(GuardianAccessService::class)->hideSensitive($this->guardians)),
+                ->maskUnverifiedSelfAppointments($request->user(), $this->resource,
+                    app(GuardianAccessService::class)->canViewSensitive($request->user(), $this->resource)
+                        ? $this->guardians
+                        : app(GuardianAccessService::class)->hideSensitive($this->guardians))),
             'health' => $this->whenLoaded('healthInfo'),
             'documents' => $this->whenLoaded('documents'),
 

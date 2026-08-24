@@ -63,7 +63,11 @@ class GuardianController extends Controller
                 'guardian_type' => $guardian->guardian_type,
             ];
 
-            if (app(GuardianAccessService::class)->canViewSensitive(auth()->user(), $student)) {
+            $access = app(GuardianAccessService::class);
+            $showSensitive = $access->canViewSensitive(auth()->user(), $student)
+                && ! $access->blocksSensitiveRow(auth()->user(), $student, $guardian);
+
+            if ($showSensitive) {
                 $guardianData['citizen_id'] = $guardian->guardian?->citizen_id;
             }
 
@@ -74,7 +78,7 @@ class GuardianController extends Controller
             $guardianData['occupation'] = $guardian->occupation;
             $guardianData['workplace'] = $guardian->workplace;
 
-            if (app(GuardianAccessService::class)->canViewSensitive(auth()->user(), $student)) {
+            if ($showSensitive) {
                 $guardianData['monthly_income'] = $guardian->monthly_income;
             }
 
@@ -84,7 +88,7 @@ class GuardianController extends Controller
             $guardianData['is_primary_contact'] = $guardian->is_primary_contact;
             $guardianData['is_emergency_contact'] = $guardian->is_emergency_contact;
 
-            if (app(GuardianAccessService::class)->canViewSensitive(auth()->user(), $student)) {
+            if ($showSensitive) {
                 app(GuardianAuditLogger::class)->sensitiveViewed(auth()->user(), $student);
             }
 
