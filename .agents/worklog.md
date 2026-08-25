@@ -1,6 +1,87 @@
 # Work Log — nuxnan project
 
 
+## 2026-08-25 (ต่อ 6) — รัน backfill จริง + ยิง endpoint จริงครบทั้งชุด (ปิดช่องที่ค้างมาตั้งแต่ G-S10)
+
+### สถานะ: **เสร็จ · ฐาน dev มีข้อมูลผู้ปกครองครบแล้ว · commit แล้ว** (`a837bd6a`)
+
+### backfill — ตัวเลขจริงบนฐานเครื่องนี้
+
+`student_guardians` 5,045 แถว → **`guardians` 4,504 คน · `student_guardian_links` 4,999 ลิงก์
+· นักเรียนที่มีผู้ปกครอง 2,449 คน · contacts remap 4,853 แถว**
+· รวมอัตโนมัติ 479 กลุ่ม (1,020 แถว) · **กันไว้รอคนตรวจ 1,032 ใบ** ตามนโยบาย dedupe ที่ล็อกไว้
+· `guardians:verify` ผ่าน: **`link_legacy_total=5045 distinct=5045`** = ทุกแถวเก่าถูกอ้างถึงพอดี 1 ครั้ง
+  ไม่มีข้อมูลหายหรือซ้ำ (invariant ที่เพิ่มหลังบั๊ก G-S2b)
+
+### 🔴 `guardians:backfill --force` พังรอบแรกด้วย `zend_mm_heap corrupted`
+
+`memory_limit=128M` + **Xdebug เปิดอยู่** → PHP crash กลางทรานแซกชัน
+· **ทรานแซกชัน rollback สะอาด** ตรวจแล้ว 0 แถวเขียน ตารางเก่ายังครบ 5,045 ไม่มี state ค้าง
+· **คำสั่งที่ใช้ได้จริง:** `php -d memory_limit=2G -d xdebug.mode=off artisan guardians:backfill --force`
+  (จดไว้ — คำสั่ง guardians:* ทุกตัวควรรันแบบนี้บนเครื่องนี้)
+
+### 🔴 บั๊กที่เจอเพราะยิงของจริงเท่านั้น — `appoint` ตอบ 500
+
+`student_guardians.guardian_type` เป็น **`enum('father','mother','guardian','other')` 4 ค่า**
+แต่ API รับ 8 ค่า และ `student_guardian_links.guardian_type` เป็น `varchar(50)`
+⇒ แต่งตั้งเป็น `uncle` แล้ว MySQL STRICT mode ตอบ *"Data truncated for column 'guardian_type'"*
+ทรานแซกชันตายคาที่ dual-write
+
+- **เป็นบั๊กเก่ากว่างานแต่งตั้ง** — `Academy\GuardianController::store` validate ครบ 8 ค่ามานานแล้ว
+  แต่ไม่เคยมีใครเขียนค่าที่กว้างกว่า enum ลงไปจนกระทั่ง G-S10 เริ่ม dual-write
+- **นี่คือ G3 ในสเปคที่ปิดไปโดยบอกว่า "ค่อยเปลี่ยนเป็น varchar ตอนย้ายโครง" แล้วไม่เคยทำ**
+- **เทสต์จับไม่ได้เพราะ SQLite ไม่บังคับ enum** — 106 เทสต์เขียวบนคอลัมน์ที่ MySQL ปฏิเสธ
+- แก้เป็น migration `2026_08_25_000003_relax_legacy_guardian_type_to_varchar`
+  · guard `DB::getDriverName() !== 'mysql'` (ไม่งั้น syntax `MODIFY` พังบน SQLite ตอนรันเทสต์)
+  · `down()` เคลียร์ค่าที่อยู่นอก enum เดิมก่อน แล้วค่อยแปลงกลับ ไม่ให้ตัดข้อมูลเงียบ ๆ
+  · คืนเป็น **nullable** ไม่ใช่ NOT NULL เดิม เพราะ D6 ให้ประเภทเป็น optional
+  · ตรวจครบรอบ **up → down → up** บน 5,045 แถว ไม่มีแถวหาย · รันซ้ำได้ "Nothing to migrate"
+
+### ผลยิง API จริงทั้งชุด (token JWT ของเจ้าของโรงเรียน + ของนักเรียน)
+
+| # | เส้นทาง | ผล |
+|---|---|---|
+| 1 | `GET /guardians` | 200 · **4,504 แถว = จำนวนคน ไม่ใช่ 4,999 ลิงก์** · ไม่มี `citizen_id`/`monthly_income` · `children[]`/`contacts[]`/`primary_phone` มาครบ |
+| 2 | `GET /guardians/statistics` | 200 · total 4,999 · with_contact 4,847 · **by_type มีจริงแค่ 3 ประเภท** (father 2,377 / mother 2,396 / guardian 226) |
+| 3 | `GET /guardians/search` เจ้าของ | 200 · 20 แถว · ไม่มี `citizen_id` |
+| 4 | `GET /guardians/search` นักเรียน | **403** |
+| 5 | `POST /guardians/match` เลขบัตร+ชื่อตรง | 200 · เจอคน · `already_linked:false` |
+| 5b | match นามสกุลไม่ตรง | 200 · `data: null` |
+| 6 | `POST /guardians/appoint` | **201** · `appointed_by_role: 'owner'` (หลังแก้ enum) |
+| 7 | appoint ซ้ำ | **409** |
+| 7b | `guardian_id` ที่ไม่มีอยู่ | **422** |
+| 8 | `POST .../links/{id}/verify` | **200** · `verified_at` ถูกเซ็ต |
+| 8b | verify ซ้ำ | **409** |
+| 9 | `GET /guardian-people/{id}/contacts` | 200 |
+| 10 | เพิ่ม contact | **201** · เพิ่มซ้ำ **409** · อีเมลผิดรูป **422** · type นอก enum **422** |
+| 11 | `set-primary` เบอร์ที่ 2 | 200 · เบอร์แรกถูกปลด · **อีเมลหลักยังเป็นหลักอยู่** (กฎ primary แยกตามประเภททำงานจริง) |
+| 12 | นักเรียนยิง contacts | **403** |
+| 13 | `GET /students/{id}/profile` | `link_id` / `appointed_by_role` / `is_verified` มาครบทั้ง 3 ผู้ปกครอง |
+
+**หลักฐานว่าเงื่อนไขป้าย "รอครูยืนยัน" ถูกต้อง:** ลิงก์ที่ import มาทั้งหมดเป็น `appointed_by_role='import'`
+และ `verified=false` ⇒ ถ้าใช้เงื่อนไขแค่ `!is_verified` **ผู้ปกครองเกือบ 5,000 รายจะขึ้นป้ายรอยืนยันทั้งหมด**
+
+### ทำความสะอาดหลังทดสอบ (ไม่ทิ้งข้อมูลปลอมไว้)
+
+ลบครบ: ลิงก์ 9999 + แถว legacy 5046 + contact 4854 · คืนธง `is_primary` ของ contact 1/121 ให้เหมือนเดิมเป๊ะ
+· ลบล็อกกิจกรรม 3 แถว (`guardian_appoint` / `guardian_verify` / `guardian_sensitive_view`)
+ซึ่งก่อนลบก็เป็นหลักฐานว่า audit log ของ G-S9/G-S10 เขียนจริงผ่าน HTTP
+· นับซ้ำหลังลบ: guardians 4,504 · links 4,999 · legacy 5,045 · contacts 4,853 = เท่ากับหลัง backfill พอดี
+
+### หมายเหตุข้อมูลที่พบระหว่างทาง (ไม่ใช่บั๊กของโค้ด)
+
+ผู้ปกครองบางคนมี **เบอร์ที่ `is_primary=true` ซ้อนกัน 2 เบอร์** มาจากข้อมูล import เดิม
+· endpoint `set-primary` บังคับให้เหลือหนึ่งเดียวต่อประเภทตั้งแต่นี้ไป แต่ของเก่ายังไม่ถูกล้าง
+
+### งานที่ค้าง (TODO ต่อ)
+
+- [ ] ล้างเบอร์ `is_primary` ซ้อนกันที่มาจาก import (ควรทำเป็น migration ตามกติกาโปรเจค)
+- [ ] `guardians:merge` ยังไม่ได้รันกับ 1,032 ใบที่กันไว้รอคนตรวจ
+- [ ] `Master\GuardianController::update` ยังมี `$guardianResult = ['pending' => []]` ฮาร์ดโค้ด
+- [ ] ยังไม่ push (ค้างบน `main` ตั้งแต่ G-S7)
+
+---
+
 ## 2026-08-25 (ต่อ 5) — G-S11 ส่วนที่เหลือ: ช่องทางติดต่อ + ทะเบียนผู้ปกครองหน้า admin
 
 ### สถานะ: **เสร็จ ตรวจในเบราว์เซอร์แล้ว · commit แล้ว** (`91f2746e`, `9ff9ef77`)

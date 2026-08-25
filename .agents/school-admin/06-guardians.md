@@ -146,7 +146,7 @@ contact_value, is_primary, is_verified, timestamps
 |---|---|---|---|
 | **G1** | ไม่มี permission guard ทั้งชุด (auth:api อย่างเดียว) — *เปิดชั่วคราวโดยเจตนา ไม่ใช่บั๊ก* | 🟡 วางแผน | ✅ ใช่ |
 | **G2** | `linkUser()` ไม่บันทึกอะไรจริง แต่ตอบ success + ไม่มีคอลัมน์ `user_id` | 🔴 | ❌ |
-| ~~**G3**~~ | ~~enum `guardian_type` มี 4 ค่า แต่ระบบใช้ 8~~ → **ยกเลิกตาม D6** ประเภทเป็น optional metadata ไม่ต้องซ่อม enum แค่เปลี่ยนเป็น varchar nullable ตอนย้ายโครง | ⬜ ปิด | — |
+| **G3** | enum `guardian_type` ของตาราง**เก่า** มี 4 ค่า แต่ระบบใช้ 8 — เคยปิดไปตาม D6 ว่า "ค่อยเปลี่ยนเป็น varchar ตอนย้ายโครง" แต่ไม่เคยทำ ⇒ **แต่งตั้งเป็น `uncle` ตอบ 500 จริงบน MySQL** (STRICT mode: Data truncated) · เทสต์จับไม่ได้เพราะ SQLite ไม่บังคับ enum | 🔴 | ✅ **แก้แล้ว 2026-08-25** migration `2026_08_25_000003` → varchar(50) nullable |
 | **G4** | `store()` เขียน `status='active'` ที่ไม่มีใน enum → เพิ่มผู้ปกครองพังทุกครั้ง | 🔴 | ❌ |
 | **G5** | migration `student_guardians` ซ้ำ 2 ไฟล์ คนละ schema | 🔴 | ❌ |
 | **G6** | ไม่มีระบบซ่อน/กันแก้ฟิลด์อ่อนไหว (D4/Q1) | 🔴 | ✅ ใช่ |
