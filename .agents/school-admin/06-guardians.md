@@ -284,7 +284,7 @@ guardian_contacts                ← remap ให้ชี้ guardians.id (ค�
 | **G-S8** | **ฟิลด์อ่อนไหว (D4/Q1)** — ซ่อน `citizen_id`/`monthly_income` ใน response เมื่อไม่มี `guardians.sensitive.view` และ reject การแก้เมื่อไม่มี `.manage` · แตกเป็น a (service + GuardianController 2 ตัว) / b (StudentResource · โปรไฟล์ · ห้องเรียน) | G-S7 | service + 4 controller/resource + 2 test file | 🟢 **verified 2026-08-25** — ดู §8.3 |
 | **G-S9** | **Audit log (Q2)** — ผูก `MemberActivityLog` ทั้ง create/update/delete + event เปิดดูฟิลด์อ่อนไหว (`appoint` เลื่อนไป G-S10 เพราะยังไม่มี endpoint) · แตกเป็น a (จุดเขียน) / b (จุดอ่าน) | G-S7 | model + logger service + 6 controller + 2 test file | 🟢 **verified 2026-08-25** — ดู §8.4 |
 | **G-S10** | **การแต่งตั้ง 3 ทาง (Q3)** — endpoint + สิทธิ์: นักเรียนแต่งตั้งเอง / ครูประจำชั้น (เฉพาะห้องตน) / ฝ่ายทะเบียน พร้อมบันทึกผู้แต่งตั้ง; ไม่บังคับว่าต้องมีผู้ปกครอง; รองรับ "ผู้ปกครองคนเดิมของพี่น้อง" โดยเลือกคนที่มีอยู่แล้วแทนการสร้างซ้ำ (ผลพลอยได้จาก D5) | G-S7, G-S4 | 4 endpoints + policy + 2 test file | 🟢 **verified 2026-08-25** — ดู §8.5 |
-| **G-S11** | **FE ยกเครื่อง** — เพิ่ม/แก้/ลบ ผู้ปกครอง, จัดการช่องทางติดต่อ, แสดง "ลูกในโรงเรียน" หลายคนต่อผู้ปกครอง 1 คน, การ์ดสถิติครบประเภท, error/empty state, แก้ convention (`useApi`, `definePageMeta`, dark mode) ตามสกิล `hopeui-port` | G-S7…G-S10 | pages + components | 🟡 **บางส่วน 2026-08-25** — UI แต่งตั้ง/ยืนยัน + sibling picker + ป้ายรอยืนยัน + dark mode ของการ์ด เสร็จแล้ว (ดู §8.6) · **ยังเหลือ**: CRUD ช่องทางติดต่อ, การ์ดสถิติ, ยกเครื่องหน้า `admin/guardians` |
+| **G-S11** | **FE ยกเครื่อง** — เพิ่ม/แก้/ลบ ผู้ปกครอง, จัดการช่องทางติดต่อ, แสดง "ลูกในโรงเรียน" หลายคนต่อผู้ปกครอง 1 คน, การ์ดสถิติครบประเภท, error/empty state, แก้ convention (`useApi`, `definePageMeta`, dark mode) ตามสกิล `hopeui-port` | G-S7…G-S10 | pages + components | 🟢 **verified 2026-08-25** — UI แต่งตั้ง/ยืนยัน + sibling picker + ป้ายรอยืนยัน (§8.6) · CRUD ช่องทางติดต่อ + ทะเบียน 1 คน 1 แถว + การ์ดสถิติครบประเภท + หน้า admin ยกเครื่อง (§8.7) |
 
 ### เฟส C — อนาคต (เมื่อพร้อมให้ผู้ปกครองมีบัญชี)
 
@@ -315,6 +315,47 @@ Report back: diff summary + ผลเทสต์ + คำสั่งที่�
 ---
 
 ## 8. Review Log
+
+### 8.7 G-S11 ที่เหลือ — ช่องทางติดต่อ + ทะเบียนหน้า admin (2026-08-25, agy 2 shard · claude ตรวจในเบราว์เซอร์เอง)
+
+**ฝั่ง backend**
+
+- **ช่องทางติดต่ออยู่ที่ระดับ "คน"** — route ใช้คำว่า `guardian-people` ไม่ใช่ `guardians` เพราะ
+  `{guardian}` ในกลุ่มข้าง ๆ bind กับ `StudentGuardian` (ตารางเก่า) · คำเดียวกันคนละตาราง
+- **`guardian_contacts.guardian_id` เป็น NOT NULL + FK ชี้ตารางเก่า** ⇒ เขียนแถวใหม่ต้องเติม legacy id
+  จากแถวที่มีอยู่ · **ไม่แก้เป็น nullable ด้วย migration** เพราะต้องรื้อ FK เพื่อตารางที่กำลังจะถูกทิ้ง
+  · คนที่ไม่มีแถว legacy -> 422 พร้อมเหตุผล ไม่ใช่ปล่อยเป็น 500
+- **primary แยกตามประเภท** — คน 1 คนมีเบอร์หลัก **และ** อีเมลหลักพร้อมกันได้
+  ถ้าปลด primary โดยไม่ดูประเภท การตั้งอีเมลหลักจะไปล้างเบอร์หลักทิ้ง (มีเทสต์ล็อกไว้)
+- **`getAllGuardians` เปลี่ยนเป็น 1 คน 1 แถว** พร้อม `children[]` + `contacts[]` — เดิม 1 แถว =
+  1 ความสัมพันธ์ พ่อที่มีลูก 3 คนโผล่ 3 แถว ซึ่งคือความซ้ำที่เฟส A อุตส่าห์ลบไป
+  · ยังไม่ส่ง `citizen_id`/`monthly_income` เหมือนเดิม (เส้นนี้อยู่หลัง `guardians.view` ไม่ใช่ `.sensitive.view`)
+
+**🔴 บั๊กที่ SFC compile จับไม่ได้ แต่เบราว์เซอร์จับได้ — บทเรียนหลักของรอบนี้**
+
+1. **`useApi()` คืน body ตรง ๆ ไม่ใช่ `{ data }` แบบ axios** — agy ยกรูป `res.data.success` มาจาก
+   โค้ดเดิมที่ใช้ `$api` (ซึ่ง**เป็น** axios) ⇒ หน้า admin จะว่างเปล่าเงียบ ๆ ทั้งหน้า ผิด 5 จุด
+   · **ระวังตอนไล่แก้**: `res.data` ใน modal ทั้งสองตัว**ถูกอยู่แล้ว** เพราะนั่นคือคีย์ `data` ของ API เอง
+2. **import path ผิดระดับ** (`../../` แทน `../../../`) ⇒ เปิด modal แล้วหน้าพัง 500
+   · `compileScript` ไม่ resolve import จึงผ่านฉลุย — ต้องเปิดเบราว์เซอร์เท่านั้นถึงเจอ
+3. **re-export ชนกับ Nuxt auto-import** — export ชื่อเดียวกันจาก 2 composable ⇒ Nuxt ขึ้น
+   "Duplicated imports ... has been ignored" แล้วเลือกเองว่าจะใช้อันไหน (สเปคของ claude ผิดเอง)
+4. **`{academy}` bind ด้วย id เท่านั้น** (`Academy` ไม่มี `getRouteKeyName`) — agy ส่ง slug แล้วทำ
+   fallback ตอน 404 ⇒ โหลดหน้าทีละ **5 requests แทน 3** แย่กว่าโค้ดเดิม
+5. **`useAcademyRole()` รับ `Ref<number|null>`** แต่ agy ส่ง slug string แล้วห่อ try/catch ที่
+   `return true` เวลาพัง ⇒ สิทธิ์ไม่เคยถูกเช็คจริง
+
+**กับดักเทสต์**: agy seed contact ด้วย `guardian_id => 999` ปลอม ผ่านเพราะ **SQLite ไม่บังคับ FK**
+แต่คอลัมน์นั้นมี FK จริงบน MySQL → เปลี่ยนไปใช้ legacy id จริงที่ helper คืนมา
+
+**ผลตรวจที่ claude รันเอง:** `Guardian` **106 ผ่าน (280 assertions)** ·
+`Guardian|StudentProfile|Classroom` **219 ผ่าน (682 assertions)** · `route:list --path=guardian-people` ครบ 5 เส้น
+· pint ผ่าน (**agy รายงานว่า pint ผ่านทั้งที่ตกจริง 2 รอบติด**)
+· ที่ 375px: ไม่มีเลื่อนแนวนอน · ปุ่ม/ลิงก์/select/input ทุกตัว >= 44px · ปุ่ม "ดูทั้งหมด" กางได้จริง
+· ชื่อไทยยาวไม่แตกแนวตั้ง · error banner ตอนโหลดช่องทางติดต่อพังขึ้นจริงในกล่อง
+
+**ยังไม่เคยยิง endpoint จริงสำเร็จสักเส้น** — ฐานเครื่องนี้ `guardians` = 0 แถว และหน้าจริงต้องล็อกอิน
+
 
 ### 8.6 G-S11 (บางส่วน) — UI แต่งตั้ง/ยืนยัน (2026-08-25, agy 2 shard · claude ตรวจในเบราว์เซอร์เอง)
 

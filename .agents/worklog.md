@@ -1,6 +1,67 @@
 # Work Log — nuxnan project
 
 
+## 2026-08-25 (ต่อ 5) — G-S11 ส่วนที่เหลือ: ช่องทางติดต่อ + ทะเบียนผู้ปกครองหน้า admin
+
+### สถานะ: **เสร็จ ตรวจในเบราว์เซอร์แล้ว · commit แล้ว** (`91f2746e`, `9ff9ef77`)
+
+### 🔴 บั๊กที่ SFC compile จับไม่ได้ แต่เบราว์เซอร์จับได้ (สำคัญที่สุดของรอบนี้)
+
+1. **`useApi()` คืน body ตรง ๆ ไม่ใช่ `{ data }` แบบ axios** — agy ยกรูป `res.data.success`
+   มาจากโค้ดเดิมที่ใช้ `$api` (ซึ่ง**เป็น** axios) ⇒ หน้า admin จะว่างเปล่าเงียบ ๆ ทั้งหน้า
+   ไม่มี error ไม่มีอะไร · ผิด 5 จุดใน `index.vue`
+   · **ระวัง**: `res.data` ใน `GuardianAppointModal`/`GuardianContactsModal` **ถูกอยู่แล้ว**
+     เพราะนั่นคือคีย์ `data` ของ API เอง ไม่ใช่ของ axios — อย่าไล่แก้เหมารวม
+2. **import path ผิดระดับ** — `GuardianContactsModal.vue` เขียน `'../../composables/...'`
+   ทั้งที่อยู่ลึก 3 ชั้น ⇒ **เปิด modal แล้วหน้าพังทั้งหน้า (500)** · `compileScript` ไม่ resolve import
+   จึงผ่านฉลุย ต้องเปิดเบราว์เซอร์เท่านั้นถึงเจอ
+3. **re-export ชนกับ Nuxt auto-import** — `errorStatus`/`errorMessage` ถูก export จาก
+   `useGuardianAppointment` แล้ว re-export ซ้ำที่ `useGuardianDirectory` ⇒ Nuxt ขึ้น warning
+   "Duplicated imports ... has been ignored" แล้วเลือกเอาเองว่าจะใช้อันไหน (สเปคของ claude ผิดเอง)
+
+### 🔴 อีก 2 จุดที่ agy เขียนแล้วแย่กว่าเดิม
+
+4. **`{academy}` bind ด้วย id เท่านั้น** (`Academy` ไม่มี `getRouteKeyName`) แต่ agy ส่ง slug ไปตรง ๆ
+   แล้วทำ fallback ยิงหา id ตอนได้ 404 ⇒ **ทุกครั้งที่โหลดหน้าจะยิง 5 requests แทน 3**
+   (พลาด 2 + หา id 1 + ยิงซ้ำ 2) → ตัด fallback ทิ้ง หา id ก่อนตามเดิมแต่มี error state จริง
+5. **`useAcademyRole(academyId: Ref<number|null>)` รับ Ref ของตัวเลข** แต่ agy ส่ง slug string
+   แล้วห่อ try/catch ซ้อน try/catch ที่ `return true` เวลาพัง — สิทธิ์เลยไม่เคยถูกเช็คจริง
+
+### กติกาที่ล็อกไว้ฝั่ง backend
+
+- **ช่องทางติดต่ออยู่ที่ระดับ "คน"** — route ใช้คำว่า `guardian-people` ไม่ใช่ `guardians`
+  เพราะ `{guardian}` ในกลุ่มข้าง ๆ bind กับ `StudentGuardian` (ตารางเก่า) คำเดียวกันคนละตาราง
+- **`guardian_contacts.guardian_id` เป็น NOT NULL + FK ชี้ตารางเก่า** ⇒ เขียนแถวใหม่ต้องเติม legacy id
+  จากแถวที่มีอยู่ · **ไม่แก้เป็น nullable ด้วย migration** เพราะต้องรื้อ FK เพื่อตารางที่กำลังจะถูกทิ้ง
+  · คนที่ไม่มีแถว legacy -> 422 พร้อมเหตุผล ไม่ใช่ 500
+- **primary แยกตามประเภท** — คน 1 คนมีเบอร์หลักและอีเมลหลักพร้อมกันได้
+  ถ้าปลด primary โดยไม่ดูประเภท การตั้งอีเมลหลักจะไปล้างเบอร์หลักทิ้ง (มีเทสต์ล็อกไว้)
+- **รายการผู้ปกครองเปลี่ยนเป็น 1 คน 1 แถว** พร้อม `children[]` — เดิม 1 แถว = 1 ความสัมพันธ์
+  พ่อที่มีลูก 3 คนโผล่ 3 แถว ซึ่งคือความซ้ำที่เฟส A อุตส่าห์ลบไป
+
+### กับดักเทสต์ที่เจอซ้ำ (จดไว้ใช้ครั้งหน้า)
+
+agy เขียนเทสต์ seed contact ด้วย `'guardian_id' => 999` ปลอม ๆ **ผ่านเพราะ SQLite ไม่บังคับ FK**
+แต่คอลัมน์นั้นมี FK จริงบน MySQL ⇒ เทสต์จะพังทันทีถ้าเปลี่ยนไปรันบน MySQL
+· เปลี่ยนไปใช้ legacy id จริงจาก `GuardianWriteService::create()` ที่ helper คืนมาแล้ว
+
+### ผลตรวจที่ claude รันเอง
+
+`Guardian` **106 ผ่าน (280 assertions)** · `Guardian|StudentProfile|Classroom` **219 ผ่าน (682 assertions)**
+· `route:list --path=guardian-people` เห็นครบ 5 เส้น · pint ผ่าน (agy รายงานว่าผ่านทั้งที่ตกจริง **2 รอบติด**)
+· ที่ 375px: `scrollWidth = 375` ไม่มีเลื่อนแนวนอนทั้งการ์ดและ modal · ปุ่ม/ลิงก์/select/input ทุกตัว >= 44px
+(เหลือ checkbox 16px ซึ่งเป็นขนาดมาตรฐาน) · ปุ่ม "ดูทั้งหมด (4)" กางในการ์ดได้จริง ·
+ชื่อไทยยาวไม่แตกเป็นริบบิ้นแนวตั้ง · error banner ตอนโหลดช่องทางติดต่อพังขึ้นจริงในกล่อง
+
+### งานที่ค้าง (TODO ต่อ)
+
+- [ ] **ยังไม่เคยยิง endpoint จริงสำเร็จสักเส้น** ทั้ง G-S10 และ G-S11 — ฐานเครื่องนี้ `guardians` = 0 แถว
+      และหน้าจริงต้องล็อกอิน · ต้องรัน `guardians:backfill --force` ก่อน
+- [ ] `Master\GuardianController::update` ยังมี `$guardianResult = ['pending' => []]` ฮาร์ดโค้ด
+- [ ] ยังไม่ push (ค้างบน `main` ตั้งแต่ G-S7)
+
+---
+
 ## 2026-08-25 (ต่อ 4) — G-S11 (บางส่วน): UI แต่งตั้ง/ยืนยันผู้ปกครอง + ตัวเลือกผู้ปกครองพี่น้อง
 
 ### สถานะ: **เสร็จ ตรวจในเบราว์เซอร์จริงแล้ว · commit แล้ว** (`c0d9e5c1`, `983efee5`)
