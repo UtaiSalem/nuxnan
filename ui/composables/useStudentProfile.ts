@@ -96,6 +96,10 @@ export interface StudentGuardian {
   citizen_id?: string | null
   monthly_income?: number | null
   workplace?: string | null
+  link_id?: number | null
+  appointed_by_role?: string | null
+  verified_at?: string | null
+  is_verified?: boolean
 }
 
 export interface StudentHealthInfo {
