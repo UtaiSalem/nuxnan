@@ -6,7 +6,6 @@ use App\Models\Academy;
 use App\Models\Guardian;
 use App\Models\GuardianContact;
 use App\Models\Student;
-use App\Models\StudentGuardian;
 use App\Models\StudentGuardianLink;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -14,11 +13,11 @@ use Tests\TestCase;
 
 /**
  * The master registry (StudentResource) and the student profile now build their guardian
- * payload from student_guardian_links + guardians, not from student_guardians (G-S3-b).
+ * payload from student_guardian_links + guardians (G-S3-b).
  *
  * These lock the parts of that move the older tests could not see: they assert on the whole
  * response body, and they build the backfilled data shape — one link carrying several legacy
- * row ids — which no write path produces on its own.
+ * row ids and several phone numbers — which no write path produces on its own.
  */
 class StudentRegistryGuardianPayloadTest extends TestCase
 {
@@ -60,21 +59,9 @@ class StudentRegistryGuardianPayloadTest extends TestCase
 
         $legacyIds = [];
         foreach (range(1, $legacyRows) as $n) {
-            $legacy = StudentGuardian::create([
-                'academy_id' => $academy->id,
-                'student_id' => $student->id,
-                'student_code' => $student->student_id,
-                'guardian_type' => 'mother',
-                'citizen_id' => $person->citizen_id,
-                'first_name' => $person->first_name,
-                'last_name' => $person->last_name,
-                'status' => 'alive',
-                'nationality' => 'ไทย',
-            ]);
-            $legacyIds[] = $legacy->id;
+            $legacyIds[] = $n;
 
             GuardianContact::create([
-                'guardian_id' => $legacy->id,
                 'guardian_person_id' => $person->id,
                 'contact_type' => 'phone',
                 'contact_value' => '099000000'.$n,
@@ -156,7 +143,9 @@ class StudentRegistryGuardianPayloadTest extends TestCase
         $student = $this->student($academy);
         $this->backfilledGuardian($academy, $student, legacyRows: 2);
 
-        $this->assertSame(2, StudentGuardian::where('student_id', $student->id)->count());
+        $link = StudentGuardianLink::where('student_id', $student->id)->firstOrFail();
+        $this->assertCount(2, $link->legacy_row_ids);
+        $this->assertSame(2, GuardianContact::where('guardian_person_id', $link->guardian_id)->count());
 
         $response = $this->actingAs($owner, 'api')->getJson("/api/student/master/{$student->id}");
 
@@ -203,7 +192,7 @@ class StudentRegistryGuardianPayloadTest extends TestCase
 
     /**
      * The profile used to walk legacy_row_ids to find the link. A link with no legacy row behind
-     * it — what the write path will produce once student_guardians is dropped in G-S6 — was
+     * it — what the write path produces now that the legacy table is dropped in G-S6 — was
      * invisible on that route; it must show up now, appointment status and all.
      */
     public function test_profile_lists_a_link_that_has_no_legacy_row(): void

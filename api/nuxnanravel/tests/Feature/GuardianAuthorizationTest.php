@@ -147,8 +147,8 @@ class GuardianAuthorizationTest extends TestCase
             ])
             ->assertOk();
 
-        $this->assertDatabaseHas('student_guardians', [
-            'id' => $guardian->id,
+        $this->assertDatabaseHas('guardians', [
+            'id' => $guardian->guardian_id,
             'first_name' => 'UpdatedName',
         ]);
     }

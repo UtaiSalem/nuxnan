@@ -11,7 +11,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-class StudentIntakeGuardianDualWriteTest extends TestCase
+/**
+ * Intake writes guardians straight into the person model: one `guardians` row per distinct person,
+ * one `student_guardian_links` row per student, and contacts hanging off the person.
+ */
+class StudentIntakeGuardianWriteTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -32,15 +36,13 @@ class StudentIntakeGuardianDualWriteTest extends TestCase
         $this->classroom = Classroom::create(['academy_id' => $this->academy->id, 'academic_year_id' => $this->year->id, 'grade_level' => 'ม.1', 'section' => '1', 'name' => 'ม.1/1', 'capacity' => 40, 'is_active' => true, 'status' => 'active']);
     }
 
-    public function test_two_guardians_write_all_three_tables_and_correct_legacy_ids(): void
+    public function test_two_guardians_write_one_person_and_one_link_each(): void
     {
         $this->intake('S-1', ['guardians' => [$this->guardian('1111111111111', 'One'), $this->guardian('2222222222222', 'Two')]])->assertCreated();
-        $this->assertDatabaseCount('student_guardians', 2);
         $this->assertDatabaseCount('guardians', 2);
         $this->assertDatabaseCount('student_guardian_links', 2);
         foreach (DB::table('student_guardian_links')->get() as $link) {
-            $this->assertSame([$link->legacy_row_ids ? json_decode($link->legacy_row_ids, true)[0] : null], json_decode($link->legacy_row_ids, true));
-            $this->assertDatabaseHas('student_guardians', ['id' => json_decode($link->legacy_row_ids, true)[0]]);
+            $this->assertNull($link->legacy_row_ids);
         }
     }
 
@@ -59,16 +61,15 @@ class StudentIntakeGuardianDualWriteTest extends TestCase
         $this->assertDatabaseHas('guardians', ['citizen_id' => null, 'first_name' => 'NoId']);
     }
 
-    public function test_intake_contacts_have_both_legacy_and_person_ids(): void
+    public function test_intake_contacts_are_keyed_on_the_person(): void
     {
         $this->intake('S-1', ['guardians' => [$this->guardian('1234567890123', 'Contact', [['contact_type' => 'phone', 'contact_value' => '0812345678']])]])->assertCreated();
         $contact = DB::table('guardian_contacts')->first();
         $this->assertNotNull($contact);
-        $this->assertNotNull($contact->guardian_id);
         $this->assertNotNull($contact->guardian_person_id);
     }
 
-    /** The intake response reads the person model now (G-S3-b), not the legacy row it also wrote. */
+    /** The intake response reads the person model (G-S3-b). */
     public function test_intake_response_lists_the_guardian_from_the_person_model(): void
     {
         $response = $this->intake('S-1', ['guardians' => [$this->guardian('1234567890123', 'Contact', [['contact_type' => 'phone', 'contact_value' => '0812345678']])]]);
@@ -86,7 +87,6 @@ class StudentIntakeGuardianDualWriteTest extends TestCase
     {
         $this->mock(AuditLogService::class)->shouldReceive('logCustom')->andThrow(new \RuntimeException('forced late failure'));
         $this->intake('S-1', ['guardians' => [$this->guardian('1234567890123', 'Rollback')]])->assertStatus(500);
-        $this->assertDatabaseCount('student_guardians', 0);
         $this->assertDatabaseCount('guardians', 0);
         $this->assertDatabaseCount('student_guardian_links', 0);
     }

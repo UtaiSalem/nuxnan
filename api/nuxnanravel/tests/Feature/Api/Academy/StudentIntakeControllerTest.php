@@ -93,8 +93,7 @@ class StudentIntakeControllerTest extends TestCase
             'previous_school_name' => 'Old School',
             'is_current' => true,
         ]);
-        $this->assertDatabaseHas('student_guardians', [
-            'academy_id' => $this->academy->id,
+        $this->assertDatabaseHas('student_guardian_links', [
             'student_id' => $student->id,
             'guardian_type' => 'father',
             'is_primary_contact' => true,

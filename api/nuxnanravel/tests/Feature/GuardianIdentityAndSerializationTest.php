@@ -6,7 +6,6 @@ use App\Models\Academy;
 use App\Models\Guardian;
 use App\Models\GuardianContact;
 use App\Models\Student;
-use App\Models\StudentGuardian;
 use App\Models\StudentGuardianLink;
 use App\Models\User;
 use App\Services\GuardianAccessService;
@@ -16,7 +15,7 @@ use Tests\TestCase;
 
 /**
  * The two pieces G-S3-c introduced: "is this user a guardian of this student", which four call
- * sites used to answer against student_guardians, and the payload builder the home-visit screens
+ * sites used to answer against the legacy per-student table, and the payload builder the home-visit screens
  * use because they serialize the student model whole.
  */
 class GuardianIdentityAndSerializationTest extends TestCase
@@ -49,22 +48,7 @@ class GuardianIdentityAndSerializationTest extends TestCase
             'status' => 'alive',
         ]);
 
-        // guardian_contacts.guardian_id is NOT NULL with an FK to the legacy table, so a contact
-        // still needs a legacy row behind it until G-S6 rebuilds that column.
-        $legacy = StudentGuardian::create([
-            'academy_id' => $academy->id,
-            'student_id' => $student->id,
-            'student_code' => $student->student_id,
-            'guardian_type' => 'father',
-            'citizen_id' => $person->citizen_id,
-            'first_name' => $person->first_name,
-            'last_name' => $person->last_name,
-            'status' => 'alive',
-            'nationality' => 'ไทย',
-        ]);
-
         GuardianContact::create([
-            'guardian_id' => $legacy->id,
             'guardian_person_id' => $person->id,
             'contact_type' => 'phone',
             'contact_value' => '08'.random_int(10000000, 99999999),

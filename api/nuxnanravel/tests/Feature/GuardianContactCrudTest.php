@@ -37,7 +37,7 @@ class GuardianContactCrudTest extends TestCase
         return [$academy, $user];
     }
 
-    /** @return array{0: Student, 1: Guardian, 2: int} student, guardian person, and the legacy row id the contacts FK needs */
+    /** @return array{0: Student, 1: Guardian, 2: int} student, guardian person, and the link id */
     private function createStudentWithGuardian(Academy $academy, ?User $studentUser = null): array
     {
         $student = Student::create([
@@ -59,11 +59,11 @@ class GuardianContactCrudTest extends TestCase
             'status' => 'alive',
         ];
 
-        // This creates legacy StudentGuardian + links, and the new Guardian person record.
-        $legacy = app(GuardianWriteService::class)->create($student, $guardianData);
+        // This creates the Guardian person and the link between them.
+        $link = app(GuardianWriteService::class)->create($student, $guardianData);
         $guardian = Guardian::latest('id')->first();
 
-        return [$student, $guardian, $legacy->id];
+        return [$student, $guardian, $link->id];
     }
 
     public function test_can_add_contact_successfully()
@@ -87,9 +87,6 @@ class GuardianContactCrudTest extends TestCase
             'is_primary' => 1,
             'is_verified' => 0,
         ]);
-
-        $contact = GuardianContact::where('guardian_person_id', $guardian->id)->first();
-        $this->assertNotNull($contact->guardian_id); // Ensure legacy legacy_id is not null
     }
 
     public function test_cannot_add_duplicate_contact()
@@ -193,7 +190,6 @@ class GuardianContactCrudTest extends TestCase
 
         $phone1 = GuardianContact::create([
             'guardian_person_id' => $guardian->id,
-            'guardian_id' => $legacyId,
             'contact_type' => 'phone',
             'contact_value' => '0811111111',
             'is_primary' => true,
@@ -202,7 +198,6 @@ class GuardianContactCrudTest extends TestCase
 
         $email = GuardianContact::create([
             'guardian_person_id' => $guardian->id,
-            'guardian_id' => $legacyId,
             'contact_type' => 'email',
             'contact_value' => 'test@example.com',
             'is_primary' => true,
@@ -211,7 +206,6 @@ class GuardianContactCrudTest extends TestCase
 
         $phone2 = GuardianContact::create([
             'guardian_person_id' => $guardian->id,
-            'guardian_id' => $legacyId,
             'contact_type' => 'phone',
             'contact_value' => '0822222222',
             'is_primary' => false,
@@ -244,7 +238,6 @@ class GuardianContactCrudTest extends TestCase
 
         $contact = GuardianContact::create([
             'guardian_person_id' => $guardian->id,
-            'guardian_id' => $legacyId,
             'contact_type' => 'phone',
             'contact_value' => '0811111111',
             'is_primary' => true,

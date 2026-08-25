@@ -125,7 +125,7 @@ class GuardianAppointmentTest extends TestCase
         ]);
     }
 
-    public function test_student_appointing_guardian_creates_legacy_row(): void
+    public function test_student_appointing_guardian_creates_a_link_with_no_legacy_row(): void
     {
         $academy = Academy::factory()->create();
         $studentUser = User::factory()->create();
@@ -148,16 +148,12 @@ class GuardianAppointmentTest extends TestCase
                 'guardian_id' => $guardian->id, 'guardian_type' => 'father', 'relationship' => 'father',
             ]);
 
-        $this->assertDatabaseHas('student_guardians', [
+        $this->assertDatabaseHas('student_guardian_links', [
             'student_id' => $student->id,
-            'citizen_id' => '1234567890123',
+            'guardian_id' => $guardian->id,
+            'appointed_by_role' => 'student',
+            'legacy_row_ids' => null,
         ]);
-
-        $legacyRow = DB::table('student_guardians')->where('student_id', $student->id)->where('citizen_id', '1234567890123')->first();
-        $link = DB::table('student_guardian_links')->where('student_id', $student->id)->where('guardian_id', $guardian->id)->first();
-
-        $legacyRowIds = json_decode($link->legacy_row_ids, true) ?? [];
-        $this->assertContains($legacyRow->id, $legacyRowIds);
     }
 
     public function test_homeroom_teacher_can_appoint_guardian(): void

@@ -139,8 +139,8 @@ class GuardianSensitiveFieldsTest extends TestCase
         $response->assertForbidden();
         $this->assertStringContainsString('ไม่มีสิทธิ์แก้ไขข้อมูลอ่อนไหว', $response->json('message'));
 
-        $this->assertDatabaseHas('student_guardians', [
-            'id' => $guardian->id,
+        $this->assertDatabaseHas('guardians', [
+            'id' => $guardian->guardian_id,
             'first_name' => 'Somchai', // Not updated
         ]);
     }
@@ -159,8 +159,8 @@ class GuardianSensitiveFieldsTest extends TestCase
 
         $response->assertOk();
 
-        $this->assertDatabaseHas('student_guardians', [
-            'id' => $guardian->id,
+        $this->assertDatabaseHas('guardians', [
+            'id' => $guardian->guardian_id,
             'first_name' => 'Somchai Updated',
         ]);
     }
@@ -179,8 +179,8 @@ class GuardianSensitiveFieldsTest extends TestCase
 
         $response->assertOk();
 
-        $this->assertDatabaseHas('student_guardians', [
-            'id' => $guardian->id,
+        $this->assertDatabaseHas('guardians', [
+            'id' => $guardian->guardian_id,
             'monthly_income' => 60000,
         ]);
     }

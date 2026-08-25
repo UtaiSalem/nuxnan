@@ -17,7 +17,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-class ClassroomStudentGuardianPayloadTest extends TestCase
+class ClassroomStudentguardianPayloadTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -66,7 +66,7 @@ class ClassroomStudentGuardianPayloadTest extends TestCase
             'citizen_id' => '1234567890123',
         ];
 
-        // This creates legacy StudentGuardian + links, and the new Guardian person record.
+        // This creates the Guardian person and the link between them.
         $legacy = app(GuardianWriteService::class)->create($student, $guardianData);
         $guardian = Guardian::latest('id')->first();
 

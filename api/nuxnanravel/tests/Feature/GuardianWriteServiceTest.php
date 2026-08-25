@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Student;
-use App\Models\StudentGuardian;
+use App\Models\StudentGuardianLink;
 use App\Services\GuardianWriteService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
@@ -34,18 +34,6 @@ class GuardianWriteServiceTest extends TestCase
             $t->timestamp('created_at')->nullable();
         });
         Schema::create('students', fn ($t) => [$t->id(), $t->unsignedBigInteger('academy_id')->nullable(), $t->string('student_id')->nullable()]);
-        Schema::create('student_guardians', function ($t) {
-            $t->id();
-            $t->unsignedBigInteger('academy_id')->nullable();
-            $t->unsignedBigInteger('student_id');
-            $t->string('student_code')->nullable();
-            foreach (['guardian_type', 'citizen_id', 'title_prefix', 'first_name', 'last_name', 'occupation', 'workplace', 'relationship', 'status', 'nationality'] as $f) {
-                $t->string($f)->nullable();
-            } $t->decimal('monthly_income', 10, 2)->nullable();
-            $t->boolean('is_primary_contact')->default(false);
-            $t->boolean('is_emergency_contact')->default(false);
-            $t->timestamps();
-        });
         Schema::create('guardians', function ($t) {
             $t->id();
             $t->unsignedBigInteger('academy_id')->nullable();
@@ -66,13 +54,15 @@ class GuardianWriteServiceTest extends TestCase
             $t->boolean('is_emergency_contact')->default(false);
             $t->unsignedBigInteger('appointed_by_user_id')->nullable();
             $t->timestamp('appointed_at')->nullable();
+            $t->unsignedBigInteger('verified_by_user_id')->nullable();
+            $t->timestamp('verified_at')->nullable();
             $t->json('legacy_row_ids')->nullable();
             $t->timestamps();
         });
         Schema::create('guardian_contacts', function ($t) {
             $t->id();
-            $t->unsignedBigInteger('guardian_id');
             $t->unsignedBigInteger('guardian_person_id')->nullable();
+            $t->unsignedBigInteger('superseded_by_contact_id')->nullable();
             $t->string('contact_type');
             $t->string('contact_value');
             $t->boolean('is_primary')->default(false);
@@ -83,7 +73,7 @@ class GuardianWriteServiceTest extends TestCase
 
     protected function tearDown(): void
     {
-        foreach (['guardian_contacts', 'student_guardian_links', 'guardians', 'student_guardians', 'students', 'audit_logs'] as $t) {
+        foreach (['guardian_contacts', 'student_guardian_links', 'guardians', 'students', 'audit_logs'] as $t) {
             Schema::dropIfExists($t);
         } parent::tearDown();
     }
@@ -100,17 +90,17 @@ class GuardianWriteServiceTest extends TestCase
         return array_replace(['first_name' => 'Somchai', 'last_name' => 'Jaidee', 'citizen_id' => '1234567890123', 'guardian_type' => 'father', 'relationship' => 'father', 'status' => 'alive'], $x);
     }
 
-    private function create(array $x = [], ?Student $s = null): StudentGuardian
+    private function create(array $x = [], ?Student $s = null): StudentGuardianLink
     {
         return app(GuardianWriteService::class)->create($s ?: $this->student(), $this->data($x));
     }
 
-    public function test_create_writes_legacy_person_link_and_legacy_id(): void
+    public function test_create_writes_a_person_and_a_link_without_any_legacy_row(): void
     {
         $g = $this->create();
-        $this->assertDatabaseHas('student_guardians', ['id' => $g->id]);
-        $this->assertDatabaseHas('guardians', ['id' => DB::table('student_guardian_links')->value('guardian_id')]);
-        $this->assertContains($g->id, DB::table('student_guardian_links')->value('legacy_row_ids') ? json_decode(DB::table('student_guardian_links')->value('legacy_row_ids'), true) : []);
+        $this->assertDatabaseHas('guardians', ['id' => $g->guardian_id]);
+        $this->assertDatabaseHas('student_guardian_links', ['id' => $g->id]);
+        $this->assertNull(DB::table('student_guardian_links')->where('id', $g->id)->value('legacy_row_ids'));
     }
 
     public function test_matching_citizen_and_name_reuses_person(): void
@@ -129,11 +119,10 @@ class GuardianWriteServiceTest extends TestCase
         $this->assertSame(2, DB::table('guardians')->count());
     }
 
-    public function test_update_writes_both_sides(): void
+    public function test_update_writes_the_person_and_the_link(): void
     {
         $g = $this->create();
         app(GuardianWriteService::class)->update($g, $this->data(['first_name' => 'Updated', 'relationship' => 'mother']));
-        $this->assertDatabaseHas('student_guardians', ['id' => $g->id, 'first_name' => 'Updated']);
         $this->assertDatabaseHas('guardians', ['first_name' => 'Updated']);
         $this->assertDatabaseHas('student_guardian_links', ['relationship' => 'mother']);
     }
@@ -156,17 +145,16 @@ class GuardianWriteServiceTest extends TestCase
         $this->assertDatabaseHas('student_guardian_links', ['guardian_id' => $pid, 'student_id' => 2]);
     }
 
-    public function test_phone_contact_has_both_ids(): void
+    public function test_phone_contact_is_keyed_on_the_person(): void
     {
         $g = $this->create(['phone' => '0812345678']);
-        $this->assertNotNull(DB::table('guardian_contacts')->where('guardian_id', $g->id)->value('guardian_person_id'));
+        $this->assertSame($g->guardian_id, (int) DB::table('guardian_contacts')->value('guardian_person_id'));
     }
 
     public function test_status_is_alive(): void
     {
         $g = $this->create();
         $pid = DB::table('student_guardian_links')->value('guardian_id');
-        $this->assertSame('alive', DB::table('student_guardians')->where('id', $g->id)->value('status'));
         $this->assertSame('alive', DB::table('guardians')->where('id', $pid)->value('status'));
     }
 
