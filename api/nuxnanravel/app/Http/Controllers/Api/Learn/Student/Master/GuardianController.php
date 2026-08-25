@@ -235,29 +235,15 @@ class GuardianController extends Controller
 
             DB::beginTransaction();
 
-            // Route through approval flow
-            $guardianFields = [
-                'guardian_type' => $validatedData['guardian']['guardian_type'],
-                'citizen_id' => $validatedData['guardian']['citizen_id'] ?? null,
-                'title_prefix' => $validatedData['guardian']['title_prefix'] ?? null,
-                'first_name' => $validatedData['guardian']['first_name'],
-                'last_name' => $validatedData['guardian']['last_name'],
-                'occupation' => $validatedData['guardian']['occupation'] ?? null,
-                'workplace' => $validatedData['guardian']['workplace'] ?? null,
-                'monthly_income' => $validatedData['guardian']['monthly_income'] ?? null,
-                'relationship' => $validatedData['guardian']['relationship'] ?? null,
-                'is_primary_contact' => $validatedData['guardian']['is_primary_contact'] ?? false,
-                'is_emergency_contact' => $validatedData['guardian']['is_emergency_contact'] ?? false,
-            ];
-            $guardianResult = ['pending' => []];
+            // Guardian edits are applied directly. Unlike store(), this path never went through
+            // applyUpdate(), so no change request is ever created here and pending_fields below is
+            // always empty — the key stays for parity with the other profile sections.
             $guardian = $this->guardianWriteService->update($guardian, $validatedData);
 
             // Get or create primary contact
             $contact = $guardian->contacts->where('is_primary', true)->first()
                      ?? $guardian->contacts->first();
 
-            // Let's also check approval for contacts if needed, but per-spec contacts update directly or can be updated directly.
-            // As contact is guardian's contact, we can update directly as per current behavior or check.
             if ($contact) {
                 $contact->update([
                     'contact_type' => $validatedData['contact']['contact_type'],
@@ -290,10 +276,8 @@ class GuardianController extends Controller
                     'guardian' => $responseGuardian,
                     'contact' => $contact->fresh(),
                 ],
-                'pending_fields' => $guardianResult['pending'] ?? [],
-                'message' => empty($guardianResult['pending'])
-                    ? 'อัปเดตข้อมูลผู้ปกครองสำเร็จ'
-                    : 'ส่งคำขอแก้ไขข้อมูลผู้ปกครองรอการอนุมัติแล้ว',
+                'pending_fields' => [],
+                'message' => 'อัปเดตข้อมูลผู้ปกครองสำเร็จ',
             ]);
 
         } catch (\Exception $e) {
