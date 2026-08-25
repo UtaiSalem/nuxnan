@@ -68,6 +68,20 @@ class StudentIntakeGuardianDualWriteTest extends TestCase
         $this->assertNotNull($contact->guardian_person_id);
     }
 
+    /** The intake response reads the person model now (G-S3-b), not the legacy row it also wrote. */
+    public function test_intake_response_lists_the_guardian_from_the_person_model(): void
+    {
+        $response = $this->intake('S-1', ['guardians' => [$this->guardian('1234567890123', 'Contact', [['contact_type' => 'phone', 'contact_value' => '0812345678']])]]);
+
+        $response->assertCreated();
+        $response->assertJsonCount(1, 'data.guardians');
+        $response->assertJsonPath('data.guardians.0.first_name', 'Contact');
+        $response->assertJsonPath('data.guardians.0.contacts.0.contact_value', '0812345678');
+        $link = DB::table('student_guardian_links')->first();
+        $response->assertJsonPath('data.guardians.0.id', $link->id);
+        $response->assertJsonPath('data.guardians.0.guardian_id', $link->guardian_id);
+    }
+
     public function test_late_intake_failure_rolls_back_nested_guardian_writes(): void
     {
         $this->mock(AuditLogService::class)->shouldReceive('logCustom')->andThrow(new \RuntimeException('forced late failure'));

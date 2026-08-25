@@ -202,7 +202,7 @@ class StudentProfileController extends Controller
             },
             'addresses',
             'contacts',
-            'guardians',
+            'guardianLinks.guardian',
             'healthInfo',
             'activeClassroom',
             'currentEnrollment',
@@ -262,16 +262,7 @@ class StudentProfileController extends Controller
         // A guardian this student attached from someone else's record stays masked until staff verifies it.
         $blockedGuardianIds = app(GuardianAccessService::class)->unverifiedSelfAppointedIds($student);
 
-        // The card needs the link row, not the legacy row: verifying an appointment addresses
-        // student_guardian_links, while $student->guardians still hands back the legacy ids.
-        $linksByLegacyId = [];
-        foreach ($student->guardianLinks as $link) {
-            foreach ($link->legacy_row_ids ?? [] as $legacyId) {
-                $linksByLegacyId[$legacyId] = $link;
-            }
-        }
-
-        if ($showSensitive && $student->guardians->isNotEmpty()) {
+        if ($showSensitive && $student->guardianLinks->isNotEmpty()) {
             app(GuardianAuditLogger::class)->sensitiveViewed(Auth::user(), $student);
         }
 
@@ -318,34 +309,35 @@ class StudentProfileController extends Controller
                         'is_primary' => $contact->is_primary,
                     ];
                 }),
-                'guardians' => $student->guardians->map(function ($guardian) use ($showSensitive, $blockedGuardianIds, $linksByLegacyId) {
+                'guardians' => $student->guardianLinks->map(function ($link) use ($showSensitive, $blockedGuardianIds) {
                     $data = [
-                        'id' => $guardian->id,
-                        'guardian_type' => $guardian->guardian_type,
-                        'title_prefix' => $guardian->title_prefix,
-                        'first_name' => $guardian->first_name,
-                        'last_name' => $guardian->last_name,
-                        'relationship' => $guardian->relationship,
-                        'occupation' => $guardian->occupation,
-                        'workplace' => $guardian->workplace,
-                        'is_primary_contact' => $guardian->is_primary_contact,
-                        'is_emergency_contact' => $guardian->is_emergency_contact,
-                        'status' => $guardian->status,
+                        // `id` is the link row now. Nothing posts it back — the guardian write routes
+                        // take the student, not a guardian id — so this is a list key only.
+                        'id' => $link->id,
+                        'guardian_id' => $link->guardian_id,
+                        'guardian_type' => $link->guardian_type,
+                        'title_prefix' => $link->title_prefix,
+                        'first_name' => $link->first_name,
+                        'last_name' => $link->last_name,
+                        'relationship' => $link->relationship,
+                        'occupation' => $link->occupation,
+                        'workplace' => $link->workplace,
+                        'is_primary_contact' => $link->is_primary_contact,
+                        'is_emergency_contact' => $link->is_emergency_contact,
+                        'status' => $link->status,
+                        'link_id' => $link->id,
+                        'appointed_by_role' => $link->appointed_by_role,
+                        'verified_at' => $link->verified_at,
+                        'is_verified' => $link->verified_at !== null,
                     ];
 
-                    $link = $linksByLegacyId[$guardian->id] ?? null;
-                    $data['link_id'] = $link?->id;
-                    $data['appointed_by_role'] = $link?->appointed_by_role;
-                    $data['verified_at'] = $link?->verified_at;
-                    $data['is_verified'] = $link !== null && $link->verified_at !== null;
-
-                    if ($showSensitive && ! app(GuardianAccessService::class)->isBlockedGuardianRow($blockedGuardianIds, $guardian)) {
-                        $data['citizen_id'] = $guardian->citizen_id;
-                        $data['monthly_income'] = $guardian->monthly_income;
+                    if ($showSensitive && ! app(GuardianAccessService::class)->isBlockedGuardianRow($blockedGuardianIds, $link)) {
+                        $data['citizen_id'] = $link->citizen_id;
+                        $data['monthly_income'] = $link->monthly_income;
                     }
 
                     return $data;
-                }),
+                })->values(),
                 'health_info' => $student->healthInfo ? [
                     'height_cm' => $student->healthInfo->height_cm,
                     'weight_kg' => $student->healthInfo->weight_kg,

@@ -200,40 +200,6 @@ class GuardianAccessService
         };
     }
 
-    /**
-     * Strip the sensitive fields from any model in $models that is a blocked appointment.
-     * No-op unless the viewer is the student themselves — staff already passed a permission check.
-     *
-     * @param  mixed  $models  StudentGuardianLink / StudentGuardian / Guardian, single or collection
-     */
-    public function maskUnverifiedSelfAppointments(?User $user, Student $student, mixed $models): mixed
-    {
-        if ($models === null || $user === null || $student->user_id === null || $student->user_id !== $user->id) {
-            return $models;
-        }
-
-        $blockedIds = $this->unverifiedSelfAppointedIds($student);
-
-        if ($blockedIds['link'] === []) {
-            return $models;
-        }
-
-        $items = ($models instanceof Collection || is_array($models)) ? $models : [$models];
-
-        foreach ($items as $item) {
-            if (! $this->isBlockedGuardianRow($blockedIds, $item)) {
-                continue;
-            }
-
-            $item->makeHidden(self::SENSITIVE_FIELDS);
-            if ($item->relationLoaded('guardian') && $item->guardian) {
-                $item->guardian->makeHidden(self::SENSITIVE_FIELDS);
-            }
-        }
-
-        return $models;
-    }
-
     /** True when this viewer must not see the sensitive fields of this one guardian row. */
     public function blocksSensitiveRow(?User $user, Student $student, mixed $row): bool
     {

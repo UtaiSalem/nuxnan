@@ -78,11 +78,60 @@ class StudentResource extends JsonResource
             'card' => $this->whenLoaded('studentCard'),
             'addresses' => $this->whenLoaded('addresses'),
             'contacts' => $this->whenLoaded('contacts'),
-            'guardians' => $this->whenLoaded('guardians', fn () => app(GuardianAccessService::class)
-                ->maskUnverifiedSelfAppointments($request->user(), $this->resource,
-                    app(GuardianAccessService::class)->canViewSensitive($request->user(), $this->resource)
-                        ? $this->guardians
-                        : app(GuardianAccessService::class)->hideSensitive($this->guardians))),
+            // Built by hand rather than serialized: on a link row the person's fields are
+            // accessors, and accessors are not in the model's attribute bag, so handing the
+            // model to the serializer would emit neither the names nor the sensitive pair —
+            // and makeHidden() would have nothing to hide.
+            'guardians' => $this->whenLoaded('guardianLinks', function () use ($request) {
+                $access = app(GuardianAccessService::class);
+                $showSensitive = $access->canViewSensitive($request->user(), $this->resource);
+
+                // The unverified-appointment gate closes only for the student reading their own
+                // record; staff who cleared guardians.sensitive.view already passed a permission
+                // check. That was maskUnverifiedSelfAppointments()'s rule and it is kept as-is —
+                // skipping the lookup entirely for every other viewer.
+                $selfView = $request->user() !== null
+                    && $this->resource->user_id !== null
+                    && $this->resource->user_id === $request->user()->id;
+                $blockedGuardianIds = $selfView
+                    ? $access->unverifiedSelfAppointedIds($this->resource)
+                    : ['link' => [], 'person' => [], 'legacy' => []];
+
+                return $this->guardianLinks->map(function ($link) use ($access, $showSensitive, $blockedGuardianIds) {
+                    $data = [
+                        'id' => $link->id,
+                        'guardian_id' => $link->guardian_id,
+                        'guardian_type' => $link->guardian_type,
+                        'title_prefix' => $link->title_prefix,
+                        'first_name' => $link->first_name,
+                        'last_name' => $link->last_name,
+                        'relationship' => $link->relationship,
+                        'occupation' => $link->occupation,
+                        'workplace' => $link->workplace,
+                        'nationality' => $link->nationality,
+                        'status' => $link->status,
+                        'is_primary_contact' => $link->is_primary_contact,
+                        'is_emergency_contact' => $link->is_emergency_contact,
+                        'link_id' => $link->id,
+                        'appointed_by_role' => $link->appointed_by_role,
+                        'verified_at' => $link->verified_at,
+                        'is_verified' => $link->verified_at !== null,
+                        'contacts' => $link->guardian?->contacts->map(fn ($contact): array => [
+                            'id' => $contact->id,
+                            'contact_type' => $contact->contact_type,
+                            'contact_value' => $contact->contact_value,
+                            'is_primary' => $contact->is_primary,
+                        ])->values()->all() ?? [],
+                    ];
+
+                    if ($showSensitive && ! $access->isBlockedGuardianRow($blockedGuardianIds, $link)) {
+                        $data['citizen_id'] = $link->citizen_id;
+                        $data['monthly_income'] = $link->monthly_income;
+                    }
+
+                    return $data;
+                })->values()->all();
+            }),
             'health' => $this->whenLoaded('healthInfo'),
             'documents' => $this->whenLoaded('documents'),
 

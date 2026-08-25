@@ -95,7 +95,7 @@ class StudentIntakeService
                 ], 'students');
 
                 return [
-                    'student' => $student->fresh(['currentAcademicInfo', 'guardians.contacts']),
+                    'student' => $student->fresh(['currentAcademicInfo', 'guardianLinks.guardian.contacts']),
                     'membership' => $membership->fresh('academyRole'),
                     'enrollment' => $enrollment->fresh(['academicYear', 'classroom', 'createdBy', 'student']),
                 ];

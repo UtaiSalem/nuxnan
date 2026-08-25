@@ -86,13 +86,13 @@ class StudentController extends Controller
             'academicInfos' => fn ($q) => $q->orderBy('academic_year', 'desc'),
             'addresses',
             'contacts',
-            'guardians.contacts',
+            'guardianLinks.guardian.contacts',
             'healthInfo',
             'documents',
             'studentCard',
         ]);
 
-        if ($student->guardians->isNotEmpty() && app(GuardianAccessService::class)->canViewSensitive(auth()->user(), $student)) {
+        if ($student->guardianLinks->isNotEmpty() && app(GuardianAccessService::class)->canViewSensitive(auth()->user(), $student)) {
             app(GuardianAuditLogger::class)->sensitiveViewed(auth()->user(), $student);
         }
 
@@ -281,14 +281,14 @@ class StudentController extends Controller
                 'success' => true,
                 'message' => 'ส่งคำขอแก้ไขบางข้อมูลแล้ว รอการอนุมัติ ส่วนข้อมูลที่ไม่ต้องอนุมัติถูกอัปเดตแล้ว',
                 'needs_approval' => true,
-                'student' => new StudentResource($student->fresh()->load(['addresses', 'contacts', 'guardians', 'healthInfo'])),
+                'student' => new StudentResource($student->fresh()->load(['addresses', 'contacts', 'guardianLinks.guardian.contacts', 'healthInfo'])),
             ]);
         }
 
         return response()->json([
             'success' => true,
             'message' => 'อัปเดตข้อมูลสำเร็จแล้ว',
-            'student' => new StudentResource($student->fresh()->load(['addresses', 'contacts', 'guardians', 'healthInfo'])),
+            'student' => new StudentResource($student->fresh()->load(['addresses', 'contacts', 'guardianLinks.guardian.contacts', 'healthInfo'])),
         ]);
     }
 

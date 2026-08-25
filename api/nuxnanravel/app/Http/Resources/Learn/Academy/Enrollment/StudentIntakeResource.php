@@ -31,20 +31,21 @@ class StudentIntakeResource extends JsonResource
                 'study_status' => $student->currentAcademicInfo->study_status,
                 'is_current' => $student->currentAcademicInfo->is_current,
             ] : null,
-            'guardians' => $student->guardians->map(fn ($guardian): array => [
-                'id' => $guardian->id,
-                'guardian_type' => $guardian->guardian_type,
-                'first_name' => $guardian->first_name,
-                'last_name' => $guardian->last_name,
-                'relationship' => $guardian->relationship,
-                'is_primary_contact' => $guardian->is_primary_contact,
-                'is_emergency_contact' => $guardian->is_emergency_contact,
-                'contacts' => $guardian->contacts->map(fn ($contact): array => [
+            'guardians' => $student->guardianLinks->map(fn ($link): array => [
+                'id' => $link->id,
+                'guardian_id' => $link->guardian_id,
+                'guardian_type' => $link->guardian_type,
+                'first_name' => $link->first_name,
+                'last_name' => $link->last_name,
+                'relationship' => $link->relationship,
+                'is_primary_contact' => $link->is_primary_contact,
+                'is_emergency_contact' => $link->is_emergency_contact,
+                'contacts' => $link->guardian?->contacts->map(fn ($contact): array => [
                     'id' => $contact->id,
                     'contact_type' => $contact->contact_type,
                     'contact_value' => $contact->contact_value,
                     'is_primary' => $contact->is_primary,
-                ])->values()->all(),
+                ])->values()->all() ?? [],
             ])->values()->all(),
         ];
     }
