@@ -284,7 +284,7 @@ guardian_contacts                ← remap ให้ชี้ guardians.id (ค�
 | **G-S8** | **ฟิลด์อ่อนไหว (D4/Q1)** — ซ่อน `citizen_id`/`monthly_income` ใน response เมื่อไม่มี `guardians.sensitive.view` และ reject การแก้เมื่อไม่มี `.manage` · แตกเป็น a (service + GuardianController 2 ตัว) / b (StudentResource · โปรไฟล์ · ห้องเรียน) | G-S7 | service + 4 controller/resource + 2 test file | 🟢 **verified 2026-08-25** — ดู §8.3 |
 | **G-S9** | **Audit log (Q2)** — ผูก `MemberActivityLog` ทั้ง create/update/delete + event เปิดดูฟิลด์อ่อนไหว (`appoint` เลื่อนไป G-S10 เพราะยังไม่มี endpoint) · แตกเป็น a (จุดเขียน) / b (จุดอ่าน) | G-S7 | model + logger service + 6 controller + 2 test file | 🟢 **verified 2026-08-25** — ดู §8.4 |
 | **G-S10** | **การแต่งตั้ง 3 ทาง (Q3)** — endpoint + สิทธิ์: นักเรียนแต่งตั้งเอง / ครูประจำชั้น (เฉพาะห้องตน) / ฝ่ายทะเบียน พร้อมบันทึกผู้แต่งตั้ง; ไม่บังคับว่าต้องมีผู้ปกครอง; รองรับ "ผู้ปกครองคนเดิมของพี่น้อง" โดยเลือกคนที่มีอยู่แล้วแทนการสร้างซ้ำ (ผลพลอยได้จาก D5) | G-S7, G-S4 | 4 endpoints + policy + 2 test file | 🟢 **verified 2026-08-25** — ดู §8.5 |
-| **G-S11** | **FE ยกเครื่อง** — เพิ่ม/แก้/ลบ ผู้ปกครอง, จัดการช่องทางติดต่อ, แสดง "ลูกในโรงเรียน" หลายคนต่อผู้ปกครอง 1 คน, การ์ดสถิติครบประเภท, error/empty state, แก้ convention (`useApi`, `definePageMeta`, dark mode) ตามสกิล `hopeui-port` | G-S7…G-S10 | pages + components | ⚪ |
+| **G-S11** | **FE ยกเครื่อง** — เพิ่ม/แก้/ลบ ผู้ปกครอง, จัดการช่องทางติดต่อ, แสดง "ลูกในโรงเรียน" หลายคนต่อผู้ปกครอง 1 คน, การ์ดสถิติครบประเภท, error/empty state, แก้ convention (`useApi`, `definePageMeta`, dark mode) ตามสกิล `hopeui-port` | G-S7…G-S10 | pages + components | 🟡 **บางส่วน 2026-08-25** — UI แต่งตั้ง/ยืนยัน + sibling picker + ป้ายรอยืนยัน + dark mode ของการ์ด เสร็จแล้ว (ดู §8.6) · **ยังเหลือ**: CRUD ช่องทางติดต่อ, การ์ดสถิติ, ยกเครื่องหน้า `admin/guardians` |
 
 ### เฟส C — อนาคต (เมื่อพร้อมให้ผู้ปกครองมีบัญชี)
 
@@ -315,6 +315,38 @@ Report back: diff summary + ผลเทสต์ + คำสั่งที่�
 ---
 
 ## 8. Review Log
+
+### 8.6 G-S11 (บางส่วน) — UI แต่งตั้ง/ยืนยัน (2026-08-25, agy 2 shard · claude ตรวจในเบราว์เซอร์เอง)
+
+**FE ทำไม่ได้ถ้าไม่เพิ่ม payload ก่อน** — `/students/{id}/profile` ส่ง `id` ของตาราง **เก่า**
+`student_guardians` แต่ endpoint ยืนยันต้องการ id ของ `student_guardian_links` ⇒ ปุ่มยืนยันไม่รู้ว่ายิงไปไหน
+· เพิ่ม 4 คีย์: `link_id` · `appointed_by_role` · `verified_at` · `is_verified`
+(เชื่อมผ่าน `legacy_row_ids` ทำดัชนีครั้งเดียวต่อ request) · **4 คีย์นี้อยู่นอกบล็อก `showSensitive`**
+เพราะครูประจำชั้นคือคนที่ต้องเห็นว่ามีอะไรรอยืนยัน และเป็นคนที่อ่านเลขบัตรไม่ได้
+
+- **เงื่อนไขป้าย "รอครูยืนยัน"**: `link_id && !is_verified && appointed_by_role === 'student'`
+  ถ้าใช้แค่ `!is_verified` **ผู้ปกครองที่ import มาทั้งโรงเรียนจะขึ้นป้ายรอยืนยันกันหมด**
+- **ปุ่มยืนยันซ่อนจากนักเรียนเจ้าของโปรไฟล์** — API ตอบ 403 อยู่แล้ว โชว์ปุ่มไปก็สัญญาสิ่งที่กดแล้วไม่เกิด
+- **modal 2 โหมด** — เจ้าหน้าที่ค้นด้วยชื่อ / นักเรียนกรอกเลขบัตร 13 หลัก + ชื่อ + สกุล
+  · validate 13 หลักฝั่ง client ก่อนยิง ไม่งั้นพิมพ์ผิดครั้งเดียวเสีย quota 10 ครั้ง/นาที
+- ต้นแบบ markup: HopeUI `social-app/friend-request.html` (แถวรายชื่อ + ปุ่มยืนยัน) เขียน breakpoint ใหม่แบบ mobile-first
+
+**บั๊กของ agy ที่เจอตอนวัดจริง แล้ว claude แก้เอง 4 จุด**: spinner ไม่มีวันโผล่เพราะ `hasSearched`
+ถูกตั้ง true หลัง `await` · ค้นหาล้มเหลวแล้วเงียบสนิท (มีแค่ toast 3 วิ กล่องผลลัพธ์ไม่ขึ้นเลย) ·
+ปุ่มปิด modal 28px ต่ำกว่าเกณฑ์ 44px · ช่วง debounce แวบขึ้น "ไม่พบผู้ปกครอง" ก่อนเริ่มค้น
+
+**วิธีตรวจ FE เมื่อหน้าจริงต้องล็อกอิน** — สร้างหน้า preview ชั่วคราวใน `ui/pages/` ป้อน props จำลอง
+(ใส่เคส `appointed_by_role: 'import'` ด้วย เพื่อพิสูจน์ว่าป้ายไม่ขึ้น) วัดจาก DOM จริง แล้วลบทิ้ง
+· **Vue อัพเดท DOM แบบ nextTick** — อ่าน `button.disabled` ทันทีหลังยิง event จะได้ค่าเก่า ต้องหน่วง ~60ms
+
+**ผลวัดที่ 375px:** `scrollWidth = 375` ไม่มีเลื่อนแนวนอน · ป้ายขึ้น 1 ป้ายเฉพาะแถว `'student'` ·
+การ์ด self มีปุ่มยืนยัน 0 ปุ่ม · touch target 44px ทั้งปุ่มยืนยันและปุ่มปิด ·
+dark: `gray-800` / `gray-100` / `amber-900` · backend `GuardianAppointmentStatusPayloadTest` 5 ผ่าน ·
+ชุด `Guardian` 87 ผ่าน (238 assertions) · pint ผ่าน
+
+**ยังไม่เคยยิง endpoint จริงสำเร็จสักเส้น** (search/match/appoint/verify) เพราะฐานเครื่องนี้
+`guardians` = 0 แถว และหน้าจริงต้องล็อกอิน
+
 
 ### 8.5 G-S10 — การแต่งตั้ง 3 ทาง (2026-08-25, agy 3 shard · claude ตรวจเองทุกข้อ)
 
