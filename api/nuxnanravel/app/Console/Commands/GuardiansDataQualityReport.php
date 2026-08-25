@@ -4,16 +4,23 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class GuardiansDataQualityReport extends Command
 {
     protected $signature = 'guardians:data-quality-report {--csv : Write detail CSV files} {--academy= : Limit to academy id}';
 
-    protected $description = 'Read-only data quality report for legacy student guardians';
+    protected $description = 'Read-only data quality report for legacy student guardians (one-shot G-S0 tool; no-op once the legacy table is dropped)';
 
     public function handle(): int
     {
+        if (! Schema::hasTable('student_guardians')) {
+            $this->info('Legacy student_guardians table is gone. The report it produced is archived at .agents/school-admin/06-guardians-data-quality.md');
+
+            return self::SUCCESS;
+        }
+
         $academy = $this->option('academy');
         $sg = DB::table('student_guardians as g')->leftJoin('students as s', 's.id', '=', 'g.student_id')
             ->select('g.*', 's.academy_id as student_academy_id', 's.first_name_th as student_first_name', 's.last_name_th as student_last_name')

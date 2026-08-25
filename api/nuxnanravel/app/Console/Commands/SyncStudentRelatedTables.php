@@ -22,7 +22,6 @@ class SyncStudentRelatedTables extends Command
             'student_addresses',
             'student_contacts',
             'student_documents',
-            'student_guardians',
             'student_health_info',
             'student_home_visits',
             'classroom_students',

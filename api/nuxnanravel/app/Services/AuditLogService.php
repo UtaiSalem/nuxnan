@@ -235,7 +235,7 @@ class AuditLogService
 
             // Students
             'Student' => 'students',
-            'StudentGuardian' => 'students',
+            'StudentGuardianLink' => 'students',
             'StudentHealthInfo' => 'students',
             'StudentHomeVisit' => 'students',
 

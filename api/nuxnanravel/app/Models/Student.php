@@ -182,11 +182,6 @@ class Student extends Model
         return $this->hasOne(StudentContact::class)->where('is_primary', true);
     }
 
-    public function guardians(): HasMany
-    {
-        return $this->hasMany(StudentGuardian::class);
-    }
-
     public function guardianLinks(): HasMany
     {
         return $this->hasMany(StudentGuardianLink::class);
@@ -197,26 +192,6 @@ class Student extends Model
         return $this->belongsToMany(Guardian::class, 'student_guardian_links', 'student_id', 'guardian_id')
             ->withPivot(['guardian_type', 'relationship', 'is_primary_contact', 'is_emergency_contact'])
             ->withTimestamps();
-    }
-
-    public function guardiansByCode(): HasMany
-    {
-        return $this->hasMany(StudentGuardian::class, 'student_code', 'student_id');
-    }
-
-    public function father(): HasOne
-    {
-        return $this->hasOne(StudentGuardian::class)->where('guardian_type', 'father');
-    }
-
-    public function mother(): HasOne
-    {
-        return $this->hasOne(StudentGuardian::class)->where('guardian_type', 'mother');
-    }
-
-    public function primaryGuardian(): HasOne
-    {
-        return $this->hasOne(StudentGuardian::class)->where('is_primary_contact', true);
     }
 
     public function healthInfo(): HasOne
@@ -423,13 +398,6 @@ class Student extends Model
             ->first();
 
         return $contact?->contact_value;
-    }
-
-    public function getEmergencyContact(): ?StudentGuardian
-    {
-        return $this->guardians()
-            ->where('is_emergency_contact', true)
-            ->first();
     }
 
     /**

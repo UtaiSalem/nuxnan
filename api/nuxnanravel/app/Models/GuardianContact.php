@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Guardian Contact Model
@@ -14,7 +13,6 @@ class GuardianContact extends Model
     use HasFactory;
 
     protected $fillable = [
-        'guardian_id',
         'guardian_person_id',
         'contact_type',
         'contact_value',
@@ -28,11 +26,6 @@ class GuardianContact extends Model
         'is_verified' => 'boolean',
         'superseded_by_contact_id' => 'integer',
     ];
-
-    public function guardian(): BelongsTo
-    {
-        return $this->belongsTo(StudentGuardian::class, 'guardian_id');
-    }
 
     public function scopePrimary($query)
     {

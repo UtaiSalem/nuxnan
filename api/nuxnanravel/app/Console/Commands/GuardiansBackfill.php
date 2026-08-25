@@ -7,6 +7,7 @@ use App\Support\GuardianNameNormalizer;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class GuardiansBackfill extends Command
@@ -15,12 +16,18 @@ class GuardiansBackfill extends Command
 
     protected $signature = 'guardians:backfill {--force : Apply the backfill; without this option the command is a dry-run} {--dry-run : Explicitly request a dry-run}';
 
-    protected $description = 'Backfill guardians and links from legacy student_guardians';
+    protected $description = 'Backfill guardians and links from legacy student_guardians (one-shot G-S2 tool; no-op once the legacy table is dropped)';
 
     private array $fields = ['title_prefix', 'occupation', 'workplace', 'monthly_income', 'nationality', 'status'];
 
     public function handle(): int
     {
+        if (! Schema::hasTable('student_guardians')) {
+            $this->info('Legacy student_guardians table is gone — this backfill has already been applied.');
+
+            return self::SUCCESS;
+        }
+
         $rows = DB::table('student_guardians')->orderBy('id')->get();
         if ($rows->isEmpty()) {
             $this->info('No legacy student_guardians rows found.');

@@ -7,7 +7,6 @@ use App\Models\AcademyMember;
 use App\Models\ClassroomMember;
 use App\Models\Guardian;
 use App\Models\Student;
-use App\Models\StudentGuardian;
 use App\Models\StudentGuardianLink;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
@@ -146,7 +145,7 @@ class GuardianAccessService
 
     /**
      * Drop the sensitive fields from a model or a collection of models before it is serialized.
-     * Works on both StudentGuardian (legacy) and Guardian (person) rows.
+     * Works on both StudentGuardianLink and Guardian (person) rows.
      */
     public function hideSensitive(mixed $models): mixed
     {
@@ -184,11 +183,11 @@ class GuardianAccessService
      * verifies the link. A guardian the student typed in themselves has exactly one link and is
      * never blocked — hiding the citizen id they just entered would be nonsense.
      *
-     * @return array{link: list<int>, person: list<int>, legacy: list<int>}
+     * @return array{link: list<int>, person: list<int>}
      */
     public function unverifiedSelfAppointedIds(Student $student): array
     {
-        $empty = ['link' => [], 'person' => [], 'legacy' => []];
+        $empty = ['link' => [], 'person' => []];
 
         $links = StudentGuardianLink::query()
             ->where('student_id', $student->id)
@@ -218,7 +217,6 @@ class GuardianAccessService
         return [
             'link' => $blocked->pluck('id')->values()->all(),
             'person' => $blocked->pluck('guardian_id')->unique()->values()->all(),
-            'legacy' => $blocked->flatMap(fn ($l) => $l->legacy_row_ids ?? [])->unique()->values()->all(),
         ];
     }
 
@@ -226,7 +224,7 @@ class GuardianAccessService
      * The same gate as a yes/no question, for the callers that build plain arrays instead of
      * serializing models. Pass the ids from unverifiedSelfAppointedIds() so the query runs once.
      *
-     * @param  array{link: list<int>, person: list<int>, legacy: list<int>}  $blockedIds
+     * @param  array{link: list<int>, person: list<int>}  $blockedIds
      */
     public function isBlockedGuardianRow(array $blockedIds, mixed $row): bool
     {
@@ -237,7 +235,6 @@ class GuardianAccessService
         return match (true) {
             $row instanceof StudentGuardianLink => in_array($row->id, $blockedIds['link'], true),
             $row instanceof Guardian => in_array($row->id, $blockedIds['person'], true),
-            $row instanceof StudentGuardian => in_array($row->id, $blockedIds['legacy'], true),
             default => false,
         };
     }
@@ -284,7 +281,7 @@ class GuardianAccessService
                 continue;
             }
 
-            // Extract current value based on model type (StudentGuardian vs Guardian)
+            // Extract current value based on model type (StudentGuardianLink vs Guardian)
             // Or if $current is an array
             $currentValue = null;
             if ($current instanceof Model) {

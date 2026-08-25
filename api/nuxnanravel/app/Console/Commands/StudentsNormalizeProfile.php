@@ -66,12 +66,6 @@ class StudentsNormalizeProfile extends Command
             // Note: student_cards doesn't have phone column in current schema,
             // but we might find it in notes or other sources in future.
 
-            // 3. Normalize Guardian
-            // Same as above, check for existing guardians first
-            if ($student->guardians()->count() === 0) {
-                // If we had legacy guardian data, we would patch it here
-            }
-
             if (! $this->option('dry-run') && ($addressCount > 0 || $contactCount > 0 || $guardianCount > 0)) {
                 // Log the normalization
                 AuditLog::create([
