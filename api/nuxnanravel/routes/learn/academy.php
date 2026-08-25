@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\Learn\Academy\FeeStructureController;
 use App\Http\Controllers\Api\Learn\Academy\GamificationController;
 use App\Http\Controllers\Api\Learn\Academy\GradeScaleController;
 use App\Http\Controllers\Api\Learn\Academy\GuardianAppointmentController;
+use App\Http\Controllers\Api\Learn\Academy\GuardianContactController;
 use App\Http\Controllers\Api\Learn\Academy\GuardianController;
 use App\Http\Controllers\Api\Learn\Academy\HouseAssignmentController;
 use App\Http\Controllers\Api\Learn\Academy\InviteLinkController;
@@ -312,6 +313,22 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::patch('/', [GuardianController::class, 'update'])->name('api.academy.guardians.update');
         Route::delete('/', [GuardianController::class, 'destroy'])->name('api.academy.guardians.destroy');
         Route::post('link-user', [GuardianController::class, 'linkUser'])->name('api.academy.guardians.linkUser');
+    });
+
+    // Guardian contact routes. The segment is guardian-people, not guardians, because
+    // {guardian} in the group above binds to the legacy StudentGuardian row while contacts
+    // belong to the person — same word, two tables, and that is worth spelling out.
+    Route::prefix('{academy}/guardian-people/{guardian}/contacts')->group(function () {
+        Route::get('/', [GuardianContactController::class, 'index'])
+            ->middleware('academy.permission:guardians.view')->name('api.academy.guardian-contacts.index');
+        Route::post('/', [GuardianContactController::class, 'store'])
+            ->middleware('academy.permission:guardians.manage')->name('api.academy.guardian-contacts.store');
+        Route::patch('{contact}', [GuardianContactController::class, 'update'])
+            ->middleware('academy.permission:guardians.manage')->name('api.academy.guardian-contacts.update');
+        Route::delete('{contact}', [GuardianContactController::class, 'destroy'])
+            ->middleware('academy.permission:guardians.manage')->name('api.academy.guardian-contacts.destroy');
+        Route::patch('{contact}/set-primary', [GuardianContactController::class, 'setPrimary'])
+            ->middleware('academy.permission:guardians.manage')->name('api.academy.guardian-contacts.set-primary');
     });
 
     // ============================================

@@ -288,22 +288,33 @@ class GuardianController extends Controller
 
         return response()->json([
             'success' => true,
-            'guardians' => $guardians->map(function ($g) {
-                return [
-                    'id' => $g->id,
-                    'guardian_id' => $g->guardian_id,
-                    'guardian_type' => $g->guardian_type,
-                    'full_name' => $g->full_name,
-                    'relationship' => $g->relationship,
-                    'is_primary_contact' => $g->is_primary_contact,
-                    'primary_phone' => $g->primary_phone,
-                    'student' => $g->student ? [
-                        'id' => $g->student->id,
-                        'name' => $g->student->first_name_th.' '.$g->student->last_name_th,
-                        'student_id' => $g->student->student_id,
-                    ] : null,
-                ];
-            }),
+            'guardians' => $guardians->map(fn ($g) => [
+                'id' => $g->id,                       // the person id, which the contact endpoints key on
+                'title_prefix' => $g->title_prefix,
+                'first_name' => $g->first_name,
+                'last_name' => $g->last_name,
+                'full_name' => trim(($g->title_prefix ? $g->title_prefix.' ' : '').$g->first_name.' '.$g->last_name),
+                'occupation' => $g->occupation,
+                'status' => $g->status,
+                'children' => $g->students->map(fn ($s) => [
+                    'id' => $s->id,
+                    'name' => trim($s->first_name_th.' '.$s->last_name_th),
+                    'student_id' => $s->student_id,
+                    'guardian_type' => $s->pivot->guardian_type,
+                    'relationship' => $s->pivot->relationship,
+                    'is_primary_contact' => (bool) $s->pivot->is_primary_contact,
+                ])->values(),
+                'children_count' => $g->students->count(),
+                'contacts' => $g->contacts->map(fn ($c) => [
+                    'id' => $c->id,
+                    'contact_type' => $c->contact_type,
+                    'contact_value' => $c->contact_value,
+                    'is_primary' => (bool) $c->is_primary,
+                    'is_verified' => (bool) $c->is_verified,
+                ])->values(),
+                'primary_phone' => $g->contacts->firstWhere(fn ($c) => in_array($c->contact_type, ['phone', 'mobile']) && $c->is_primary)?->contact_value
+                    ?? $g->contacts->firstWhere(fn ($c) => in_array($c->contact_type, ['phone', 'mobile']))?->contact_value,
+            ]),
             'pagination' => [
                 'current_page' => $guardians->currentPage(),
                 'last_page' => $guardians->lastPage(),
