@@ -61,8 +61,8 @@ payload ผู้ปกครองของ `/students/{id}/profile` ส่ง 
       ฟอร์ม/สถานะ/layout/error path เพราะฐานเครื่องนี้ `guardians` = 0 แถว และหน้าจริงต้องล็อกอิน
 - [ ] **G-S11 ส่วนที่เหลือ** — CRUD ช่องทางติดต่อ · การ์ดสถิติครบประเภท ·
       ยกเครื่อง `pages/academies/[name]/admin/guardians/index.vue` (ยัง read-only + ใช้ `$api` + ไม่มี dark mode)
-- [ ] **โค้ดตาย 2 ไฟล์** — `components/academy/student/GuardianListCard.vue` (286 บรรทัด) และ
-      `GuardianFormModal.vue` (297 บรรทัด) ไม่ถูก import จากที่ไหนเลย
+- [x] ~~**โค้ดตาย 2 ไฟล์**~~ — ลบแล้ว `9bd55060` (583 บรรทัด) · ตรวจครบทั้งชื่อ PascalCase, kebab-case,
+      ชื่อ auto-import แบบมี path prefix และ `<component :is>` ก่อนลบ · อ้างถึงกันเองแค่คู่เดียว
 - [ ] `Master\GuardianController::update` ยังมี `$guardianResult = ['pending' => []]` ฮาร์ดโค้ด
 - [ ] ยังไม่ push (ค้างบน `main` ตั้งแต่ G-S7)
 
