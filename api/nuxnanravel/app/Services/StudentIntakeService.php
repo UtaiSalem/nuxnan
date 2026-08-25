@@ -8,7 +8,7 @@ use App\Models\AcademyRole;
 use App\Models\Classroom;
 use App\Models\ClassroomStudent;
 use App\Models\Student;
-use App\Models\StudentGuardian;
+use App\Models\StudentGuardianLink;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -71,7 +71,7 @@ class StudentIntakeService
                     'previous_grade_level' => $data['previous_school']['grade_level'] ?? null,
                 ]);
 
-                $guardians = collect($data['guardians'] ?? [])->map(function (array $guardian) use ($student, $academy, $operator): StudentGuardian {
+                $guardians = collect($data['guardians'] ?? [])->map(function (array $guardian) use ($student, $academy, $operator): StudentGuardianLink {
                     $contacts = $guardian['contacts'] ?? [];
                     unset($guardian['contacts']);
                     $created = $this->guardianWriteService->create($student, array_merge($guardian, [

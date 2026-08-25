@@ -9,7 +9,7 @@ use App\Models\StudentAcademicInfo;
 use App\Models\StudentAddress;
 use App\Models\StudentChangeRequest;
 use App\Models\StudentContact;
-use App\Models\StudentGuardian;
+use App\Models\StudentGuardianLink;
 use App\Models\StudentHealthInfo;
 use App\Services\GuardianWriteService;
 use Illuminate\Http\Request;
@@ -72,7 +72,7 @@ class ChangeRequestController extends Controller
             'Student' => Student::class,
             'StudentAddress' => StudentAddress::class,
             'StudentContact' => StudentContact::class,
-            'StudentGuardian' => StudentGuardian::class,
+            'StudentGuardianLink' => StudentGuardianLink::class,
             'StudentHealthInfo' => StudentHealthInfo::class,
             'StudentAcademicInfo' => StudentAcademicInfo::class,
         ];
@@ -86,7 +86,7 @@ class ChangeRequestController extends Controller
 
         if ($model) {
             $field = str_replace(['address.', 'contact.', 'guardian.', 'health.', 'academic.'], '', $changeRequest->field);
-            if ($model instanceof StudentGuardian) {
+            if ($model instanceof StudentGuardianLink) {
                 app(GuardianWriteService::class)->update($model, [$field => $changeRequest->new_value]);
             } else {
                 $model->update([$field => $changeRequest->new_value]);

@@ -127,7 +127,6 @@ class GuardianAppointmentController extends Controller
         DB::transaction(function () use ($student, $person, $linkData, $actorRole) {
             if (! empty($linkData['is_primary_contact'])) {
                 DB::table('student_guardian_links')->where('student_id', $student->id)->update(['is_primary_contact' => false]);
-                DB::table('student_guardians')->where('student_id', $student->id)->update(['is_primary_contact' => false]);
             }
 
             $this->writeService->appoint($student, $person, $linkData, $actorRole, auth()->id());

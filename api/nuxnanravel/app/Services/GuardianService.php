@@ -60,6 +60,50 @@ class GuardianService
     }
 
     /**
+     * The one shape a single guardian link is serialized to. Callers must go through here
+     * instead of handing the model to the serializer: the person fields on a link row are
+     * accessors, so a serialized model loses the name and every sensitive field silently.
+     *
+     * @param  bool  $withSensitive  include citizen_id and monthly_income
+     */
+    public function linkPayload(StudentGuardianLink $link, bool $withSensitive): array
+    {
+        $data = [
+            'id' => $link->id,
+            'guardian_id' => $link->guardian_id,
+            'student_id' => $link->student_id,
+            'guardian_type' => $link->guardian_type,
+            'relationship' => $link->relationship,
+            'title_prefix' => $link->title_prefix,
+            'first_name' => $link->first_name,
+            'last_name' => $link->last_name,
+            'full_name' => $link->full_name,
+            'occupation' => $link->occupation,
+            'workplace' => $link->workplace,
+            'status' => $link->status,
+            'nationality' => $link->nationality,
+            'is_primary_contact' => $link->is_primary_contact,
+            'is_emergency_contact' => $link->is_emergency_contact,
+            'appointed_by_role' => $link->appointed_by_role,
+            'verified_at' => $link->verified_at,
+            'is_verified' => $link->verified_at !== null,
+            'contacts' => $link->guardian?->contacts->map(fn ($contact): array => [
+                'id' => $contact->id,
+                'contact_type' => $contact->contact_type,
+                'contact_value' => $contact->contact_value,
+                'is_primary' => $contact->is_primary,
+            ])->values()->all() ?? [],
+        ];
+
+        if ($withSensitive) {
+            $data['citizen_id'] = $link->citizen_id;
+            $data['monthly_income'] = $link->monthly_income;
+        }
+
+        return $data;
+    }
+
+    /**
      * Put a plain `guardians` array on a student that is about to be serialized whole, and drop
      * the relation it was built from.
      *
@@ -73,41 +117,9 @@ class GuardianService
     {
         $student->loadMissing('guardianLinks.guardian.contacts');
 
-        $guardians = $student->guardianLinks->map(function (StudentGuardianLink $link) use ($withSensitive): array {
-            $data = [
-                'id' => $link->id,
-                'guardian_id' => $link->guardian_id,
-                'student_id' => $link->student_id,
-                'guardian_type' => $link->guardian_type,
-                'relationship' => $link->relationship,
-                'title_prefix' => $link->title_prefix,
-                'first_name' => $link->first_name,
-                'last_name' => $link->last_name,
-                'full_name' => $link->full_name,
-                'occupation' => $link->occupation,
-                'workplace' => $link->workplace,
-                'status' => $link->status,
-                'nationality' => $link->nationality,
-                'is_primary_contact' => $link->is_primary_contact,
-                'is_emergency_contact' => $link->is_emergency_contact,
-                'appointed_by_role' => $link->appointed_by_role,
-                'verified_at' => $link->verified_at,
-                'is_verified' => $link->verified_at !== null,
-                'contacts' => $link->guardian?->contacts->map(fn ($contact): array => [
-                    'id' => $contact->id,
-                    'contact_type' => $contact->contact_type,
-                    'contact_value' => $contact->contact_value,
-                    'is_primary' => $contact->is_primary,
-                ])->values()->all() ?? [],
-            ];
-
-            if ($withSensitive) {
-                $data['citizen_id'] = $link->citizen_id;
-                $data['monthly_income'] = $link->monthly_income;
-            }
-
-            return $data;
-        })->values()->all();
+        $guardians = $student->guardianLinks
+            ->map(fn (StudentGuardianLink $link): array => $this->linkPayload($link, $withSensitive))
+            ->values()->all();
 
         $student->setAttribute('guardians', $guardians);
         $student->unsetRelation('guardianLinks');

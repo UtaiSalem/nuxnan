@@ -11,22 +11,6 @@ use Illuminate\Support\Facades\DB;
 
 class GuardianContactController extends Controller
 {
-    /**
-     * guardian_contacts.guardian_id is still NOT NULL behind a foreign key to the legacy
-     * student_guardians table. Reads all go through guardian_person_id, so the legacy id is
-     * only there to satisfy the constraint until that table is dropped.
-     */
-    private function legacyIdFor(Guardian $guardian): ?int
-    {
-        $legacyIds = DB::table('student_guardian_links')
-            ->where('guardian_id', $guardian->id)
-            ->pluck('legacy_row_ids')
-            ->flatMap(fn ($json) => json_decode($json ?: '[]', true) ?: [])
-            ->all();
-
-        return DB::table('student_guardians')->whereIn('id', $legacyIds)->value('id');
-    }
-
     public function index(Academy $academy, Guardian $guardian)
     {
         if ($guardian->academy_id !== $academy->id) {
@@ -75,14 +59,6 @@ class GuardianContactController extends Controller
             ], 409);
         }
 
-        $legacyId = $this->legacyIdFor($guardian);
-        if (! $legacyId) {
-            return response()->json([
-                'success' => false,
-                'message' => 'ยังเพิ่มช่องทางติดต่อให้ผู้ปกครองคนนี้ไม่ได้ เพราะยังไม่มีข้อมูลเชื่อมกับนักเรียน',
-            ], 422);
-        }
-
         DB::beginTransaction();
         try {
             if ($request->boolean('is_primary')) {
@@ -93,7 +69,6 @@ class GuardianContactController extends Controller
 
             $contact = GuardianContact::create([
                 'guardian_person_id' => $guardian->id,
-                'guardian_id' => $legacyId,
                 'contact_type' => $validated['contact_type'],
                 'contact_value' => $validated['contact_value'],
                 'is_primary' => $request->boolean('is_primary'),

@@ -316,8 +316,8 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     });
 
     // Guardian contact routes. The segment is guardian-people, not guardians, because
-    // {guardian} in the group above binds to the legacy StudentGuardian row while contacts
-    // belong to the person — same word, two tables, and that is worth spelling out.
+    // {guardian} in the group above binds to one student's link row while contacts belong
+    // to the person behind it — same word, two tables, and that is worth spelling out.
     Route::prefix('{academy}/guardian-people/{guardian}/contacts')->group(function () {
         Route::get('/', [GuardianContactController::class, 'index'])
             ->middleware('academy.permission:guardians.view')->name('api.academy.guardian-contacts.index');

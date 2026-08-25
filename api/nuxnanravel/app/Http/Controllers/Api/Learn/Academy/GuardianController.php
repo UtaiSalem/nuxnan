@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\Student;
-use App\Models\StudentGuardian;
+use App\Models\StudentGuardianLink;
 use App\Services\GuardianAccessService;
 use App\Services\GuardianAuditLogger;
 use App\Services\GuardianService;
@@ -19,8 +19,8 @@ use Illuminate\Support\Facades\DB;
 class GuardianController extends Controller
 {
     /**
-     * Reads use GuardianService. Write methods intentionally remain on student_guardians
-     * until G-S4; newly written legacy data is temporarily invisible to these reads.
+     * Reads and writes both go through the person model: GuardianService for reads,
+     * GuardianWriteService for writes. Nothing here touches the legacy per-student table.
      */
     public function __construct(private GuardianService $guardianService, private GuardianWriteService $guardianWriteService) {}
 
@@ -106,12 +106,9 @@ class GuardianController extends Controller
         try {
             // If setting as primary, unset other primaries
             if ($request->boolean('is_primary_contact')) {
-                StudentGuardian::where('student_id', $student->id)
+                StudentGuardianLink::where('student_id', $student->id)
                     ->where('is_primary_contact', true)
-                    ->get()
-                    ->each(fn (StudentGuardian $otherGuardian) => $this->guardianWriteService->update($otherGuardian, [
-                        'is_primary_contact' => false,
-                    ]));
+                    ->update(['is_primary_contact' => false]);
             }
 
             $guardian = $this->guardianWriteService->create($student, [
@@ -137,10 +134,10 @@ class GuardianController extends Controller
 
             app(GuardianAuditLogger::class)->created($student, $guardian, $validated);
 
-            $responseGuardian = $guardian->load('contacts');
-            if (! $access->canViewSensitive($request->user() ?? auth()->user(), $student)) {
-                $responseGuardian = $access->hideSensitive($responseGuardian);
-            }
+            $responseGuardian = $this->guardianService->linkPayload(
+                $guardian->fresh()->load('guardian.contacts'),
+                $access->canViewSensitive($request->user() ?? auth()->user(), $student),
+            );
 
             return response()->json([
                 'success' => true,
@@ -159,7 +156,7 @@ class GuardianController extends Controller
     /**
      * Update a guardian
      */
-    public function update(Academy $academy, StudentGuardian $guardian, Request $request)
+    public function update(Academy $academy, StudentGuardianLink $guardian, Request $request)
     {
         // Validate guardian's student belongs to academy
         if (! $guardian->student || $guardian->student->academy_id !== $academy->id) {
@@ -199,13 +196,10 @@ class GuardianController extends Controller
         try {
             // If setting as primary, unset other primaries
             if ($request->boolean('is_primary_contact') && ! $guardian->is_primary_contact) {
-                StudentGuardian::where('student_id', $guardian->student_id)
+                StudentGuardianLink::where('student_id', $guardian->student_id)
                     ->where('id', '!=', $guardian->id)
                     ->where('is_primary_contact', true)
-                    ->get()
-                    ->each(fn (StudentGuardian $otherGuardian) => $this->guardianWriteService->update($otherGuardian, [
-                        'is_primary_contact' => false,
-                    ]));
+                    ->update(['is_primary_contact' => false]);
             }
 
             $guardian = $this->guardianWriteService->update($guardian, $validated);
@@ -214,10 +208,10 @@ class GuardianController extends Controller
 
             app(GuardianAuditLogger::class)->updated($guardian->student, $guardian, $validated);
 
-            $responseGuardian = $guardian->fresh(['contacts']);
-            if (! $access->canViewSensitive($request->user() ?? auth()->user(), $guardian->student)) {
-                $responseGuardian = $access->hideSensitive($responseGuardian);
-            }
+            $responseGuardian = $this->guardianService->linkPayload(
+                $guardian->fresh()->load('guardian.contacts'),
+                $access->canViewSensitive($request->user() ?? auth()->user(), $guardian->student),
+            );
 
             return response()->json([
                 'success' => true,
@@ -237,7 +231,7 @@ class GuardianController extends Controller
     /**
      * Delete a guardian
      */
-    public function destroy(Academy $academy, StudentGuardian $guardian)
+    public function destroy(Academy $academy, StudentGuardianLink $guardian)
     {
         if (! $guardian->student || $guardian->student->academy_id !== $academy->id) {
             return response()->json([
@@ -271,7 +265,7 @@ class GuardianController extends Controller
      * The previous body created an approved academy_members row as a side effect and
      * still answered success without linking anything, so it is refused outright.
      */
-    public function linkUser(Academy $academy, StudentGuardian $guardian, Request $request)
+    public function linkUser(Academy $academy, StudentGuardianLink $guardian, Request $request)
     {
         return response()->json([
             'success' => false,

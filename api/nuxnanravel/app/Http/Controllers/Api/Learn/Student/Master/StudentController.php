@@ -12,7 +12,7 @@ use App\Models\StudentAddress;
 use App\Models\StudentCard;
 use App\Models\StudentChangeRequest;
 use App\Models\StudentContact;
-use App\Models\StudentGuardian;
+use App\Models\StudentGuardianLink;
 use App\Models\StudentHealthInfo;
 use App\Models\StudentHomeVisit;
 use App\Services\GuardianAccessService;
@@ -162,7 +162,7 @@ class StudentController extends Controller
             'Student' => Student::class,
             'StudentAddress' => StudentAddress::class,
             'StudentContact' => StudentContact::class,
-            'StudentGuardian' => StudentGuardian::class,
+            'StudentGuardianLink' => StudentGuardianLink::class,
             'StudentHealthInfo' => StudentHealthInfo::class,
             'StudentAcademicInfo' => StudentAcademicInfo::class,
         ];

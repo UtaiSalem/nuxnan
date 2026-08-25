@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\Guardian;
 use App\Models\MemberActivityLog;
 use App\Models\Student;
-use App\Models\StudentGuardian;
+use App\Models\StudentGuardianLink;
 use App\Models\User;
 
 /**
@@ -63,29 +63,29 @@ class GuardianAuditLogger
         }
     }
 
-    public function created(Student $student, StudentGuardian $guardian, array $input): void
+    public function created(Student $student, StudentGuardianLink $link, array $input): void
     {
         $this->write($student, MemberActivityLog::ACTION_GUARDIAN_CREATE,
-            'เพิ่มผู้ปกครอง: '.$this->name($guardian).' ของนักเรียน '.$this->studentName($student),
+            'เพิ่มผู้ปกครอง: '.$this->name($link).' ของนักเรียน '.$this->studentName($student),
             null,
-            $this->redact(['guardian_id' => $guardian->id] + $this->trackedFields($input))
+            $this->redact(['guardian_id' => $link->id] + $this->trackedFields($input))
         );
     }
 
-    public function updated(Student $student, StudentGuardian $guardian, array $changes): void
+    public function updated(Student $student, StudentGuardianLink $link, array $changes): void
     {
         $this->write($student, MemberActivityLog::ACTION_GUARDIAN_UPDATE,
-            'แก้ไขข้อมูลผู้ปกครอง: '.$this->name($guardian).' ของนักเรียน '.$this->studentName($student),
+            'แก้ไขข้อมูลผู้ปกครอง: '.$this->name($link).' ของนักเรียน '.$this->studentName($student),
             null,
-            $this->redact(['guardian_id' => $guardian->id] + $this->trackedFields($changes))
+            $this->redact(['guardian_id' => $link->id] + $this->trackedFields($changes))
         );
     }
 
-    public function deleted(Student $student, StudentGuardian $guardian): void
+    public function deleted(Student $student, StudentGuardianLink $link): void
     {
         $this->write($student, MemberActivityLog::ACTION_GUARDIAN_DELETE,
-            'ลบผู้ปกครอง: '.$this->name($guardian).' ของนักเรียน '.$this->studentName($student),
-            ['guardian_id' => $guardian->id, 'full_name' => $this->name($guardian)],
+            'ลบผู้ปกครอง: '.$this->name($link).' ของนักเรียน '.$this->studentName($student),
+            ['guardian_id' => $link->id, 'full_name' => $this->name($link)],
             null
         );
     }
@@ -138,9 +138,9 @@ class GuardianAuditLogger
         return $values;
     }
 
-    private function name(StudentGuardian $guardian): string
+    private function name(StudentGuardianLink $link): string
     {
-        return trim(($guardian->title_prefix ? $guardian->title_prefix.' ' : '').$guardian->first_name.' '.$guardian->last_name);
+        return trim(($link->title_prefix ? $link->title_prefix.' ' : '').$link->first_name.' '.$link->last_name);
     }
 
     /** Students carry Thai-suffixed name columns, so full_name_th is the only accessor that fills in. */

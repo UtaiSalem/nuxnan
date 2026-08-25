@@ -5,9 +5,8 @@ namespace App\Http\Controllers\Api\Learn\Student\Master;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Student\UpdateGuardianRequest;
 use App\Models\Academy;
-use App\Models\GuardianContact;
 use App\Models\Student;
-use App\Models\StudentGuardian;
+use App\Models\StudentGuardianLink;
 use App\Services\GuardianAccessService;
 use App\Services\GuardianAuditLogger;
 use App\Services\GuardianService;
@@ -18,8 +17,7 @@ use Illuminate\Support\Facades\DB;
 class GuardianController extends Controller
 {
     /**
-     * Reads use GuardianService; store/update/destroy remain on student_guardians until G-S4.
-     * Newly written legacy data is temporarily invisible during this migration window.
+     * Reads and writes both run on the person model (guardians + student_guardian_links).
      */
     use HandlesStudentUpdates;
 
@@ -149,7 +147,7 @@ class GuardianController extends Controller
             DB::beginTransaction();
 
             // Create guardian (always blacklist under normal settings, so owner goes pending)
-            $changeRequest = $this->applyUpdate($student, 'StudentGuardian', null, 'guardian.create', $validatedData);
+            $changeRequest = $this->applyUpdate($student, 'StudentGuardianLink', null, 'guardian.create', $validatedData);
             if ($changeRequest) {
                 DB::commit();
 
@@ -162,17 +160,17 @@ class GuardianController extends Controller
 
             // Create guardian directly
             $guardian = $this->guardianWriteService->create($student, $validatedData);
-            $contact = $guardian->fresh('contacts')->contacts->first();
+            $contact = $guardian->fresh()->contacts()->first();
 
             DB::commit();
 
             app(GuardianAuditLogger::class)->created($student, $guardian, $validatedData['guardian'] ?? []);
 
-            $responseGuardian = $guardian->fresh();
             $access = app(GuardianAccessService::class);
-            if (! $access->canViewSensitive(auth()->user(), $student)) {
-                $responseGuardian = $access->hideSensitive($responseGuardian);
-            }
+            $responseGuardian = $this->guardianService->linkPayload(
+                $guardian->fresh()->load('guardian.contacts'),
+                $access->canViewSensitive(auth()->user(), $student),
+            );
 
             return response()->json([
                 'success' => true,
@@ -209,7 +207,7 @@ class GuardianController extends Controller
 
         try {
             // Load existing guardian
-            $guardian = StudentGuardian::where('student_id', $student->id)->first();
+            $guardian = StudentGuardianLink::where('student_id', $student->id)->orderBy('id')->first();
 
             if (! $guardian) {
                 // If no guardian exists, create new one
@@ -240,41 +238,26 @@ class GuardianController extends Controller
             // always empty — the key stays for parity with the other profile sections.
             $guardian = $this->guardianWriteService->update($guardian, $validatedData);
 
-            // Get or create primary contact
-            $contact = $guardian->contacts->where('is_primary', true)->first()
-                     ?? $guardian->contacts->first();
-
-            if ($contact) {
-                $contact->update([
-                    'contact_type' => $validatedData['contact']['contact_type'],
-                    'contact_value' => $validatedData['contact']['contact_value'],
-                    'is_primary' => $validatedData['contact']['is_primary'] ?? true,
-                ]);
-            } else {
-                $contact = GuardianContact::create([
-                    'guardian_id' => $guardian->id,
-                    'contact_type' => $validatedData['contact']['contact_type'],
-                    'contact_value' => $validatedData['contact']['contact_value'],
-                    'is_primary' => $validatedData['contact']['is_primary'] ?? true,
-                    'is_verified' => false,
-                ]);
-            }
+            // GuardianWriteService::update() already wrote $validatedData['contact'] against the
+            // person. Read it back so the response still carries the primary contact.
+            $contact = $guardian->contacts()->where('is_primary', true)->first()
+                     ?? $guardian->contacts()->first();
 
             DB::commit();
 
             app(GuardianAuditLogger::class)->updated($student, $guardian, $validatedData['guardian'] ?? []);
 
-            $responseGuardian = $guardian->fresh();
             $access = app(GuardianAccessService::class);
-            if (! $access->canViewSensitive(auth()->user(), $student)) {
-                $responseGuardian = $access->hideSensitive($responseGuardian);
-            }
+            $responseGuardian = $this->guardianService->linkPayload(
+                $guardian->fresh()->load('guardian.contacts'),
+                $access->canViewSensitive(auth()->user(), $student),
+            );
 
             return response()->json([
                 'success' => true,
                 'data' => [
                     'guardian' => $responseGuardian,
-                    'contact' => $contact->fresh(),
+                    'contact' => $contact?->fresh(),
                 ],
                 'pending_fields' => [],
                 'message' => 'อัปเดตข้อมูลผู้ปกครองสำเร็จ',
