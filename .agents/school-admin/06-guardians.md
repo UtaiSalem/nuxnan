@@ -239,10 +239,10 @@ guardian_contacts                ← remap ให้ชี้ guardians.id (ค�
 | **G-S2** | **Backfill + dedupe** — ผลจริง: guardians **4,504** · links **4,999** · นักเรียน **2,449** · contacts mapped **4,853** · ยุบความสัมพันธ์ซ้ำ **46 คู่** | G-S1 | `guardians:backfill` + migration 000005 | 🟢 **verified 2026-07-29** |
 | **G-S2b** | **คิวตรวจสอบการรวมค้าง** — ตาราง `guardian_merge_candidates` + คำสั่ง `scan-merge-candidates` / `merge` / `reject-merge-candidate` · คิวจริง **262 กลุ่ม** (เลขบัตรตรงชื่อต่าง 200/449 · ชื่อตรงเลขบัตรต่าง 62/128) | G-S2 | 1 migration + model + 3 command + 4 test | 🟢 **verified 2026-07-29** |
 | **G-S2c** | **เก็บงานคุณภาพข้อมูล** — ล้างช่องว่างในชื่อ 10 → 0 · ยุบ contact ซ้ำแบบ soft ผ่าน `superseded_by_contact_id` (224 แถว, ไม่ลบข้อมูล, เหลือใช้งาน 4,629) | G-S2 | 1 migration + `guardians:quality-cleanup` | 🟢 **verified 2026-07-29** |
-| **G-S3** | **GuardianService + สลับ read path** — ดู §6.1 (แตกเป็นก้อนย่อย) | G-S2 | service + refactor + tests | 🟡 **3/10 จุด** — `GuardianService` + `Academy/GuardianController` (index/getAllGuardians/getStatistics) + `Master/GuardianController::show` |
+| **G-S3** | **GuardianService + สลับ read path** — ดู §6.1 (แตกเป็นก้อนย่อย) | G-S2 | service + refactor + tests | 🟢 **verified 2026-08-26** — ครบทุกจุดอ่าน (a/b/c) |
 | **G-S4** | **สลับ write path + รวม controller** — เขียนผ่าน service เดียว, **`guardian_type`/`relationship` เป็น optional ตาม D6**, `status` ถูกต้อง (G4), **ปลด `linkUser` ที่ตอบ success ลอย ๆ** (G2) ให้คืน 501 จนกว่าจะถึงเฟส C | G-S3 | refactor + tests | 🟢 **verified 2026-07-29** — dual-write 3 ก้อน (`GuardianWriteService` · `StudentIntakeService` · `ChangeRequestController::approve`) · 54 เทสต์คุม |
 | **G-S5** | **ตรวจนักเรียนที่ไม่มีผู้ปกครอง (482 คน)** — ไล่ 9 เส้นทาง (เยี่ยมบ้าน · บัตรนักเรียน · ติดต่อฉุกเฉิน · Parent Dashboard · at-risk · `StudentResource` · `StudentIntakeResource` · `ClassroomController::getStudent` · Student Profile) | — | **รายงาน — ไม่ต้องแก้อะไร** | 🟢 **verified 2026-07-29** |
-| **G-S6** | **เก็บกวาด** — ถอดขาเขียนตารางเก่าออกจาก `GuardianWriteService` · ลบ `guardian_id` เก่าที่ `guardian_contacts` · drop `student_guardians` | **G-S3 ครบทุกจุด (คือหลัง G-S11)** | migration | 🚫 **ทำไม่ได้จนกว่าจุดอ่านจะย้ายครบ** (ดู §6.0) |
+| **G-S6** | **เก็บกวาด** — ถอดขาเขียนตารางเก่าออกจาก `GuardianWriteService` · ลบ `guardian_id` เก่าที่ `guardian_contacts` · drop `student_guardians` | G-S3 ครบทุกจุด | migration | 🟢 **verified 2026-08-26** — ดู §8.8 · dev drop แล้ว · **production ยังไม่ได้รัน** |
 
 ### 6.0 🔴 ทำไม G-S3 ที่เหลือถึงต้องรอ G-S11 (ตัดสิน 2026-07-29)
 
@@ -257,6 +257,8 @@ guardian_contacts                ← remap ให้ชี้ guardians.id (ค�
 - การเปลี่ยนที่ผู้ใช้เห็นควรทำตอนที่มีคนดูหน้าจอจริง
 
 **⚠️ ผลต่อ G-S6:** drop ตารางเก่า **ทำไม่ได้** จนกว่าจุดอ่านเหล่านี้จะย้ายครบ — เป็นข้อจำกัดทางเทคนิค ไม่ใช่แค่ความระมัดระวัง
+
+> **ปิดแล้ว 2026-08-26** — จุดอ่านย้ายครบใน G-S3-a/b/c และ G-S6 drop ตารางเก่าไปเรียบร้อย ย่อหน้าข้างบนเก็บไว้เป็นบันทึกเหตุผลของการตัดสินใจตอนนั้น
 
 ### 6.1 กฎเหล็กของการสลับ read path (เขียนหลังเกิดอุบัติเหตุ 2026-07-29)
 
@@ -315,6 +317,55 @@ Report back: diff summary + ผลเทสต์ + คำสั่งที่�
 ---
 
 ## 8. Review Log
+
+### 8.8 G-S6 — drop `student_guardians` (2026-08-26, agy 4 shard · claude ตรวจเองทุกข้อ)
+
+**ผล:** 32 ไฟล์ **+242 / −589** · เทสต์ชุด guardian **438 passed · 1 incomplete** (= baseline)
+· ชุดเต็มทั้งโปรเจค **1,501 passed · 0 failed** · `pint --test` passed
+· ฐาน dev: ตารางเก่าหาย · `guardian_contacts.guardian_id` หาย · `guardian_person_id` = NOT NULL
+· `guardians` 4,504 / `student_guardian_links` 4,999 / `guardian_contacts` 4,853 **เท่าเดิมทุกตัว**
+
+**ตัดสินใจ 2 ข้อก่อนเริ่ม**
+- ตารางเก่า: **drop + สำรองเป็น JSONL ใน migration** (ไม่ใช่ rename ทิ้งไว้ — กันซ้ำรอย G3 ที่ปิดด้วย "ค่อยทำทีหลัง" แล้วไม่เคยทำ)
+- เส้น `PATCH/DELETE/link-user` ที่ `/{academy}/guardians/{guardian}` (**ไม่มี FE เรียกเลย** ตรวจแล้ว):
+  **ย้าย binding ไป `StudentGuardianLink`** ไม่ลบทิ้ง — `linkUser` ยังตอบ 501 รอ G-S12
+
+**ข้อเท็จจริงที่ตรวจกับ MySQL จริงก่อนลงมือ (ทำให้งานง่ายกว่าที่สเปกเดิมคิด)**
+- **ไม่มี FK ใด ๆ ชี้เข้า/ออก `student_guardians`** — `guardian_contacts_guardian_id_foreign` เป็นแค่ *ชื่อ index* ไม่ใช่ constraint
+- `student_change_requests` ว่างทั้งตาราง ⇒ ไม่มีแถวค้างที่ `model_type=StudentGuardian` ต้องแปลง
+- invariant ผ่าน: legacy 5,045 · ถูกอ้าง 5,045 · missing 0 · dangling 0 · contact ที่ไม่มี person 0
+- relation เก่าบน `Student` ไม่มี caller จริงเลย เหลือ `StudentsNormalizeProfile:71` ซึ่งเป็น `if` ที่บอดี้ว่าง
+
+**บั๊กเก่าที่ปิดไปด้วย:** `Master\GuardianController::update` สาขาที่สร้าง contact ใหม่ ใส่แค่ `guardian_id`
+**ไม่ใส่ `guardian_person_id`** ⇒ ช่องทางติดต่อที่สร้างจากทางนั้นทางอ่านมองไม่เห็นเลย
+
+#### 🔴 กับดัก 3 ข้อที่ต้องจำ
+
+**1. SQLite drop คอลัมน์ที่ยังมี index ชี้อยู่ไม่ได้ · MySQL ลบ index ให้เอง**
+`error in index guardian_contacts_guardian_id_foreign after drop column`
+⇒ **52 เทสต์ล้มพร้อมกันด้วย `QueryException` ตั้งแต่ setUp** (0 assertions) ชุดเทสต์ช้าจาก 152s เป็นเกิน 600s
+ทุก migration ที่ `dropColumn` ต้อง `dropIndex` ก่อน (มี `Schema::hasIndex` guard) และ `down()` ต้องสร้าง index กลับ**ด้วยชื่อเดิม**
+
+**2. migration ที่เขียนไฟล์ = รันเทสต์ทับไฟล์สำรองจริง**
+migration รันใหม่ทุกคลาสที่ใช้ `RefreshDatabase` · ตารางว่าง ⇒ เขียนไฟล์ 0 ไบต์ทับของจริง
+⇒ **ตารางว่าง = ต้องไม่แตะไฟล์เลย** (ตรวจปิดจบแล้ว: รันเทสต์เต็มชุดหลังแก้ ไฟล์สำรองยังครบ 5,045 / 4,853 บรรทัด)
+
+**3. 🔴 รอบแรก migration drop ตารางทั้งที่ไฟล์สำรองไม่ได้ถูกเขียน — หาสาเหตุไม่ได้**
+สมมติฐาน "โฟลเดอร์ปลายทางยังไม่มี" **ทดสอบแล้วผิด** (`append` เข้า dir ที่ไม่มี ทำงานได้ คืน `true`)
+ที่รู้จริง: โค้ดชุดเดียวกันรันแยกเขียนได้ปกติ · `config/filesystems.php` ตั้ง **`throw => false`** บนดิสก์ `local`
+⇒ เขียนพลาดจะคืน `false` เงียบ ๆ ไม่ throw · **กู้ได้เพราะทำ `mysqldump` ไว้เองก่อนรัน**
+
+> **กติกาใหม่: ก่อน drop ตารางที่มีข้อมูลจริง ให้ `mysqldump` นอก migration ไว้เสมอ ไม่ไว้ใจการสำรองใน migration อย่างเดียว**
+
+แก้ให้พลาดเงียบไม่ได้อีก: `dump()` ตรวจค่าที่ `append()` คืนทุกครั้ง แล้วอ่านไฟล์กลับมา
+**นับบรรทัดเทียบจำนวนแถว ไม่ตรง = `throw` ก่อนมี DDL ใด ๆ รัน**
+
+#### ตรวจ down() ของจริง (ไม่ได้เชื่อว่ามันน่าจะได้)
+
+คืนข้อมูลจาก dump → `migrate:rollback --step=1` → `migrate` ใหม่
+- `down()` เตือน `jsonl not found` แล้วไปต่อ ไม่ throw (ถูกต้อง — rollback ไม่ควรถูกบล็อกเพราะไฟล์สำรองหาย)
+- รันใหม่แล้วไฟล์สำรองถูกเขียนจริง **5,045 + 4,853 บรรทัด** ตรงจำนวนแถวเป๊ะ
+- ที่อยู่ไฟล์: `storage/app/private/backups/` (root ของดิสก์ `local` คือ `storage/app/private` **ไม่ใช่** `storage/app`)
 
 ### 8.7 G-S11 ที่เหลือ — ช่องทางติดต่อ + ทะเบียนหน้า admin (2026-08-25, agy 2 shard · claude ตรวจในเบราว์เซอร์เอง)
 

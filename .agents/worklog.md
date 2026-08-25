@@ -1,6 +1,84 @@
 # Work Log — nuxnan project
 
 
+## 2026-08-26 (ต่อ) — G-S6 เสร็จ · `student_guardians` ถูก drop จริงแล้ว
+
+### สถานะ: **โค้ดเสร็จครบ · migrate รันจริงบนฐาน dev แล้ว · ยังไม่ commit**
+
+32 ไฟล์เปลี่ยน **+242 / −589** · ไฟล์ใหม่ 2 ตัว
+(`database/migrations/2026_08_26_000001_drop_legacy_student_guardians_table.php`,
+`tests/Feature/StudentIntakeGuardianWriteTest.php`)
+
+| ตรวจ | ผล |
+|---|---|
+| ชุด `Guardian\|Student\|Classroom\|Intake\|HomeVisit\|Parent` | **438 passed · 1 incomplete** (= baseline เป๊ะ) |
+| ชุดเต็มทั้งโปรเจค | **1,501 passed · 0 failed** · 3 incomplete · 8 skipped |
+| `pint --test` | passed |
+| `grep StudentGuardian` ทั้ง `app/` + `tests/` | 0 บรรทัด |
+| ฐาน dev หลัง migrate | `student_guardians` หาย · `guardian_contacts.guardian_id` หาย · `guardian_person_id` = NOT NULL · guardians 4,504 / links 4,999 / contacts 4,853 **เท่าเดิม** |
+
+### สิ่งที่ทำ (4 shard)
+
+- **a — ทางเขียน:** `GuardianWriteService` ทำงานบน `StudentGuardianLink` ล้วน
+  (`create/update/delete/appoint` คืนลิงก์) · route `{academy}/guardians/{guardian}` bind ลิงก์แทนแถวเก่า
+  (เส้นนี้ **ไม่มี FE เรียกเลย** ตรวจแล้ว — FE ใช้ `PUT /students/{student}/guardians` กับเส้น appoint/contacts)
+- **b — เก็บกวาด:** ลบโมเดล `StudentGuardian` · relation ตายบน `Student` 5 ตัว + `getEmergencyContact()`
+  · `GuardianContact::guardian()` · คีย์ `blockedIds['legacy']` ทั้งสาย
+  · `guardians:backfill` / `guardians:data-quality-report` **เก็บไว้แต่ใส่ `Schema::hasTable` guard** (เผื่อ env ที่ยังไม่ backfill)
+- **c — migration:** ตรวจ invariant → สำรอง JSONL → drop คอลัมน์ → drop ตาราง
+- **d — เทสต์:** 11 ไฟล์ · `StudentIntakeGuardianDualWriteTest` → `StudentIntakeGuardianWriteTest` (ชื่อเดิมหลอกแล้ว)
+
+### 🔴 กับดักที่ต้องจำ — ห้ามพลาดซ้ำ
+
+**1. SQLite drop คอลัมน์ที่ยังมี index ชี้อยู่ไม่ได้ · MySQL ลบ index ให้เอง**
+```
+SQLSTATE[HY000]: error in index guardian_contacts_guardian_id_foreign after drop column
+```
+ทำให้ **52 เทสต์ล้มพร้อมกันด้วย `QueryException` ตั้งแต่ setUp** (0 assertions) และชุดเทสต์ช้าจาก 152s เป็นเกิน 600s
+⇒ ทุก migration ที่ `dropColumn` ต้อง `dropIndex` ก่อนเสมอ (มี `Schema::hasIndex` guard — Laravel 11+ มีให้)
+และตอน `down()` ต้องสร้าง index กลับด้วย **ชื่อเดิม** ไม่ใช่ชื่อ default ของ Laravel
+
+**2. migration ที่เขียนไฟล์ = รันเทสต์ทับไฟล์สำรองจริง**
+migration รันใหม่ทุกคลาสที่ใช้ `RefreshDatabase` · ตารางว่าง ⇒ เขียนไฟล์ 0 ไบต์ทับของจริง
+จับได้เพราะเห็นไฟล์ 0 ไบต์โผล่มาหลังรันเทสต์ ⇒ **ตารางว่าง = ต้องไม่แตะไฟล์เลย**
+ตรวจปิดจบแล้ว: รันเทสต์เต็มชุดหลังแก้ ไฟล์สำรองยังอยู่ครบ 5,045 / 4,853 บรรทัด
+
+**3. 🔴 รอบแรก migration drop ตารางทั้งที่ไฟล์สำรองไม่ได้ถูกเขียน — หาสาเหตุไม่ได้**
+รันครั้งแรกบน MySQL: ตารางหาย 5,045 แถว แต่ `storage/app/private/backups/` **ว่างเปล่า**
+สมมติฐานที่ **ทดสอบแล้วผิด**: โฟลเดอร์ปลายทางยังไม่มี (ทดสอบแล้ว `append` เข้า dir ที่ไม่มี ทำงานได้ คืน `true`)
+สิ่งที่รู้จริง: โค้ดชุดเดียวกันรันแยกเขียนได้ปกติ · `config/filesystems.php` ตั้ง **`'throw' => false`** บนดิสก์ `local`
+⇒ เขียนพลาดจะคืน `false` เงียบ ๆ ไม่ throw
+**กู้ได้เพราะทำ `mysqldump` ไว้เองก่อนรัน** — บทเรียน: **ก่อน drop ตารางที่มีข้อมูลจริง ให้ dump นอก migration ไว้เสมอ**
+
+แก้แล้วให้พลาดเงียบไม่ได้อีก: `dump()` ตรวจค่าที่ `append()` คืนทุกครั้ง แล้วอ่านไฟล์กลับมา
+**นับบรรทัดเทียบจำนวนแถว ไม่ตรง = `throw` ก่อนมี DDL ใด ๆ รัน**
+
+### ตรวจ down() ของจริงแล้ว (ไม่ได้เชื่อว่ามันน่าจะได้)
+
+คืนข้อมูลจาก dump → `migrate:rollback --step=1` → `migrate` ใหม่ด้วยเวอร์ชันที่แก้แล้ว
+- `down()` เตือน `jsonl not found` แล้วไปต่อ ไม่ throw (ถูกต้อง — rollback ไม่ควรถูกบล็อกเพราะไฟล์สำรองหาย)
+- รันใหม่แล้ว **ไฟล์สำรองถูกเขียนจริง 5,045 + 4,853 บรรทัด** ตรงจำนวนแถวเป๊ะ
+- ไฟล์สำรองอยู่ที่ `storage/app/private/backups/` (root ของดิสก์ `local` คือ `storage/app/private` ไม่ใช่ `storage/app`)
+- dump สำรองมือ: `storage/app/backups/pre_gs6_student_guardians_guardian_contacts.sql` (1.4 MB)
+
+### เรื่อง agy รอบนี้ — เชื่อรายงานไม่ได้อีกตามเคย
+
+- **shard 2 / 4a / 4b timeout ทั้ง 3 ตัว** (แก้ไฟล์ครบแล้วแต่ค้างตอนรันเทสต์) ⇒ ต้องตรวจ diff เองทั้งหมด
+- **shard 1 ลบ `GuardianContactController::index()` ทิ้งทั้ง method** ทั้งที่สเปคสั่งให้ลบแค่ `legacyIdFor()` — กู้คืนเอง
+- **shard 1 แก้ `StudentIntakeService.php` แล้วย้อนกลับเอง** (หายจาก `git status`) — แก้เอง
+- ทิ้งไฟล์ขยะใน repo root 6 ไฟล์ (`test_output.txt`, `parse_failures.py`, ...) — ลบเอง
+- agy อ้างว่าเทสต์ 2 คลาสที่ fail นอกลิสต์ "ไม่ต้องสนใจ" — **ไม่จริง** ไล่เองแล้วเป็นอาการของบั๊กจริง
+
+### งานที่ค้างต่อ
+
+- [ ] **ยังไม่ commit** — 32 ไฟล์ + ไฟล์ใหม่ 2 (และ 3 commit เก่ายังไม่ push: `3664e030`, `037052d0`, `2e4f016c`)
+- [ ] production ยังไม่ได้รัน migration นี้ — **ก่อนรันให้ `mysqldump` ตารางเก่าไว้เองก่อนเสมอ**
+- [ ] `student_guardian_links.legacy_row_ids` ยังอยู่เป็นร่องรอยประวัติศาสตร์ (ไม่มีตารางปลายทางแล้ว) — ยังไม่ตัดสินว่าจะลบเมื่อไหร่
+- [ ] แดชบอร์ดผู้ปกครองยังใช้งานไม่ได้จนกว่า G-S12 (เหมือนเดิม)
+- [ ] gate ฟิลด์ sensitive บนเส้นเยี่ยมบ้าน (เหมือนเดิม)
+
+---
+
 ## 2026-08-26 — G-S3 ปิดครบทุกจุดอ่าน (G-S3-b + G-S3-c) · ทางอ่านพ้น `student_guardians` แล้ว
 
 ### สถานะ: **เสร็จ · commit แล้ว 2 ก้อน** (`3664e030`, `037052d0`) · **ยังไม่ push**
