@@ -809,7 +809,7 @@ class ClassroomController extends Controller
 
         $student = Student::where('academy_id', $academyId)
             ->where('id', $studentId)
-            ->with(['user', 'studentCard', 'currentEnrollment.classroom', 'guardians', 'healthInfo', 'addresses', 'contacts'])
+            ->with(['user', 'studentCard', 'currentEnrollment.classroom', 'guardianLinks.guardian.contacts', 'healthInfo', 'addresses', 'contacts'])
             ->firstOrFail();
 
         // The Student model has no `classroom` relation. Surface the active enrollment's
@@ -824,9 +824,48 @@ class ClassroomController extends Controller
             ->value('gpax'));
 
         $access = app(GuardianAccessService::class);
-        if (! $access->canViewSensitive(auth()->user(), $student)) {
-            $access->hideSensitive($student->guardians);
-        } elseif ($student->guardians->isNotEmpty()) {
+        $canViewSensitive = $access->canViewSensitive(auth()->user(), $student);
+
+        $guardians = $student->guardianLinks->map(function ($link) use ($canViewSensitive) {
+            $person = $link->guardian;
+            $primaryPhone = $person?->contacts->first(fn ($c) => in_array($c->contact_type, ['phone', 'mobile']) && $c->is_primary)
+                ?? $person?->contacts->first(fn ($c) => in_array($c->contact_type, ['phone', 'mobile']));
+
+            $guardianData = [
+                'id' => $link->id,
+                'guardian_id' => $link->guardian_id,
+                'guardian_type' => $link->guardian_type,
+                'relationship' => $link->relationship,
+                'title_prefix' => $person?->title_prefix,
+                'first_name' => $person?->first_name,
+                'last_name' => $person?->last_name,
+                // The classroom screen has always asked for these two and always got nothing back.
+                'guardian_name' => trim(($person?->title_prefix ? $person->title_prefix.' ' : '').$person?->first_name.' '.$person?->last_name),
+                'phone' => $primaryPhone?->contact_value,
+                'occupation' => $person?->occupation,
+                'workplace' => $person?->workplace,
+                'status' => $person?->status,
+                'nationality' => $person?->nationality,
+                'is_primary_contact' => (bool) $link->is_primary_contact,
+                'is_emergency_contact' => (bool) $link->is_emergency_contact,
+            ];
+
+            if ($canViewSensitive) {
+                $guardianData['citizen_id'] = $person?->citizen_id;
+                $guardianData['monthly_income'] = $person?->monthly_income;
+            }
+
+            return $guardianData;
+        })->values()->all();
+
+        $student->setAttribute('guardians', $guardians);
+
+        // Drop the relation the payload was built from. Left loaded it serializes alongside as
+        // guardian_links[].guardian — the whole person row, citizen_id and monthly_income
+        // included — which walks straight past the gate applied to $guardians above.
+        $student->unsetRelation('guardianLinks');
+
+        if ($canViewSensitive && count($guardians) > 0) {
             app(GuardianAuditLogger::class)->sensitiveViewed(auth()->user(), $student);
         }
 

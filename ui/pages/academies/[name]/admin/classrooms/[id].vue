@@ -2313,7 +2313,7 @@ onMounted(async () => {
                     
                     <div v-else class="space-y-3">
                       <div v-for="g in selectedStudentForProfile.guardians" :key="g.id" class="border-b last:border-b-0 pb-2 last:pb-0 dark:border-slate-700">
-                        <p class="text-xs text-slate-400">{{ g.relationship === 'father' ? 'บิดา' : g.relationship === 'mother' ? 'มารดา' : 'ผู้ปกครองหลัก' }}</p>
+                        <p class="text-xs text-slate-400">{{ { 'father': 'บิดา', 'mother': 'มารดา', 'grandfather': 'ปู่/ตา', 'grandmother': 'ย่า/ยาย', 'uncle': 'ลุง/อา', 'aunt': 'ป้า/น้า', 'sibling': 'พี่/น้อง', 'other': 'อื่นๆ' }[g.guardian_type] || 'ผู้ปกครอง' }}</p>
                         <p class="font-bold text-slate-800 dark:text-slate-100 mt-0.5 text-sm">{{ g.guardian_name }}</p>
                         <p class="text-xs text-slate-500 font-mono mt-0.5">โทร: {{ g.phone || '-' }}</p>
                       </div>
