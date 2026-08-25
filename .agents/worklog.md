@@ -1,6 +1,99 @@
 # Work Log — nuxnan project
 
 
+## 2026-08-26 — G-S3 ปิดครบทุกจุดอ่าน (G-S3-b + G-S3-c) · ทางอ่านพ้น `student_guardians` แล้ว
+
+### สถานะ: **เสร็จ · commit แล้ว 2 ก้อน** (`3664e030`, `037052d0`) · **ยังไม่ push**
+
+**G-S3 จบแล้ว** — `grep` ทั้ง `app/` ตอนนี้ทุกจุดที่เหลือซึ่งอ้าง `student_guardians`
+เป็น **ทางเขียน** (GuardianWriteService, GuardianController store/update/destroy,
+dual-write ของ appoint, การเติม legacy id ให้ `guardian_contacts`) หรือ **นิยาม relation ในโมเดล**
+⇒ **G-S6 (drop ตาราง) ไม่ติดเรื่องทางอ่านอีกแล้ว**
+
+### 🔴 เรื่องใหญ่สุดของรอบนี้ — จุดตรวจ "เป็นผู้ปกครองไหม" **ตายมาตลอด ทั้ง 4 จุด**
+
+ทั้ง 4 จุดถามหาแอตทริบิวต์ที่ **ไม่มีอยู่บนตาราง `users`**:
+
+| จุด | เงื่อนไขเดิม | ผลจริง |
+|---|---|---|
+| `ParentDashboardController` ×3 | `citizen_id` → ไม่มีคอลัมน์ · `phone` → คอลัมน์จริงชื่อ `phone_number` · เหลือ match อีเมล | อีเมลใน `guardian_contacts` มี **0 แถวทั้งฐาน** ⇒ `/parent/children` ตอบ `[]` เสมอ |
+| `StudentProfileController::determineAccessLevel` | `where('citizen_id', $user->citizen_id ?? '__none__')` | `'__none__'` ตลอด ⇒ **ไม่เคยคืน `'parent'`** |
+| `Master/HomeVisitController::accessLevel` | เหมือนกัน | เหมือนกัน |
+
+- ยืนยันแล้วด้วย tinker: `$user->citizen_id === null`, `$user->phone === null`, `$user->phone_number !== null`
+- **แดชบอร์ดผู้ปกครองทั้ง 7 endpoint ใช้งานไม่ได้เลยมาตลอด** และไม่มีเทสต์คุมสักตัว
+- แทนด้วย `GuardianAccessService::isGuardianOf()` / `guardianStudentIds()` ที่อ่านจาก
+  **`guardians.user_id`** — **ไม่ได้เปิดสิทธิ์เพิ่ม** เพราะ `linkUser()` ยังตอบ 501 รอเฟสบัญชีผู้ปกครอง (G-S12)
+  ⇒ ตอนนี้ยังไม่มีใครถูกปล่อยผ่าน เหมือนเดิมเป๊ะ แต่เป็นคอลัมน์ที่ G-S12 จะเติมจริง
+- **ตัดสินใจไว้:** ไม่เอา phone/email มา match ต่อ — เป็นตัวระบุตัวตนที่อ่อน (สมัครอีเมลตรงกับที่โรงเรียนบันทึกก็เข้าดูข้อมูลลูกคนอื่นได้)
+  ถ้าจะให้ผู้ปกครองล็อกอินได้ก่อน G-S12 ต้องตัดสินใจเรื่องนี้ก่อน
+
+### สิ่งที่ payload เปลี่ยนไปเพราะ "ข้อมูล" ไม่ใช่ "โค้ด"
+
+- **นักเรียน 46 คน** มีผู้ปกครองคนเดียวกันถูกบันทึกซ้ำ 2 แถว (เลขบัตร+ชื่อตรงกัน บางคู่พิมพ์สลับสระ)
+  backfill ยุบเป็นลิงก์เดียว ⇒ **ตอนนี้ขึ้นชื่อเดียว ไม่ใช่สองชื่อ** และ **ได้เบอร์ครบทั้งสองเบอร์**
+  (เดิมแถวละเบอร์ แยกกันอยู่คนละแถว) — ตรวจตัวอย่างแล้ว student 1849 / 1874 / 2064
+- ตรวจก่อนย้าย: legacy 5,045 แถว **ถูกอ้างโดยลิงก์ครบ 5,045 · orphan 0 · ลิงก์ที่ไม่มี person 0**
+  ⇒ ไม่มีนักเรียนคนไหนผู้ปกครองหาย
+
+### G-S3-b — profile / registry / intake
+
+- `StudentProfileController` เลิกเดิน `legacy_row_ids` เพื่อหา link แล้ว (iterate link ตรง ๆ)
+  ⇒ **ลิงก์ที่ไม่มีแถว legacy จะไม่หายไปเงียบ ๆ อีก** (คือรูปที่ทางเขียนจะสร้างหลัง G-S6)
+- `StudentResource` **ต้องประกอบ array เอง ห้ามโยนโมเดลให้ serializer**
+  เพราะฟิลด์ของ person บน link row เป็น **accessor** ซึ่งไม่อยู่ใน attribute bag
+  ⇒ serialize แล้วจะไม่ได้ทั้งชื่อและคู่ sensitive และ `makeHidden()` ก็ไม่มีอะไรให้ซ่อน
+- ลบ `maskUnverifiedSelfAppointments()` ทิ้ง (ไม่มีใครเรียกแล้ว) แต่ **กฎของมันยังอยู่**:
+  ประตูปิดเฉพาะตอน**นักเรียนดูของตัวเอง** ไม่ปิดกับเจ้าหน้าที่ที่มีคีย์ `guardians.sensitive.view`
+  — เกือบเผลอทำให้แคบลง จับได้ตอนอ่าน docblock เดิม · ตอนนี้มีเทสต์ล็อกแล้ว
+  (ของเดิมชื่อเทสต์ว่า `..._in_student_resource` แต่ไปยิง ClassroomController คนละเส้น)
+
+### G-S3-c — ผู้ปกครอง / เยี่ยมบ้าน
+
+- `GuardianService::attachGuardiansTo($student, withSensitive:)` — สำหรับหน้าที่ **serialize โมเดลทั้งก้อน**
+  ต้อง `unsetRelation('guardianLinks')` ทุกครั้ง ไม่งั้นมันไหลออกไปเป็น `guardian_links[].guardian`
+  (แถว person ทั้งแถว) ข้างก้อนที่ gate ไว้ — เป็นรูปรั่วแบบเดียวกับที่เจอใน G-S3-a
+- **หน้าเยี่ยมบ้านยังโชว์ `citizen_id`/`monthly_income` เหมือนเดิม (ตั้งใจ)**
+  เพราะเข้าผ่าน session login ของระบบเยี่ยมบ้าน ไม่ใช่ role ในโรงเรียน ⇒ ไม่มีสิทธิ์ให้เทียบ
+  และแบบฟอร์มเยี่ยมบ้านต้องใช้ฟิลด์พวกนี้ · **ยังไม่ได้ gate — เป็นงานของโมเดล auth ฝั่งเยี่ยมบ้าน ไม่ใช่ของ G-S3**
+
+### เทสต์
+
+`GuardianIdentityAndSerializationTest` (6) + `StudentRegistryGuardianPayloadTest` (6) + 1 ใน dual-write test
+· ชุดที่กรอง `Guardian|Student|Classroom|Intake|HomeVisit|Parent` = **438 ผ่าน**
+· ตรวจแล้วว่า 3 ใน 6 ของไฟล์ใหม่ **fail จริงบนโค้ดเก่า** (เอาไฟล์เก่ากลับมาแล้วรัน ไม่ได้ใช้ git stash)
+
+⚠️ **อย่าใช้ `git stash push -- <path>` จากใน `api/nuxnanravel`** — pathspec โดนเติม prefix ซ้ำ คำสั่งล้มเหลว
+แล้ว `git stash pop` ไปดึง **stash เก่าที่ไม่เกี่ยว** (`codex-safe-pull-2026-06-22`) ลงมาชนกับ working tree
+(`.agents/latest-analysis.md` กลายเป็น UU) · กู้ด้วย `git checkout -f HEAD -- ':/.agents/latest-analysis.md'`
+· stash เดิมยังอยู่ครบใน list ไม่ได้หาย · **วิธีที่ปลอดภัยกว่า: copy ไฟล์ไปที่อื่นแล้ว `git checkout HEAD -- <files>`**
+
+### ตรวจของจริงบน MySQL (ไม่ใช่แค่ SQLite)
+
+| จุด | ผล |
+|---|---|
+| `GET /api/student/master/1849` เจ้าของ | 200 · 1 คน · ชื่อ+เบอร์ 2 เบอร์ · `citizen_id`/`monthly_income` มา |
+| เดิม ครูไม่มีคีย์ | 200 · ชื่อยังเห็น · **ไม่มี `citizen_id`/`monthly_income`** |
+| `GET /academies/1/students/{1,1849}/profile` | 200 · 2 คน / 1 คน · ไม่มี `guardian_links` ในบอดี้ |
+| `attachGuardiansTo()` บนข้อมูลจริง | ชื่อ/เบอร์ครบ · ไม่รั่ว relation · `withSensitive:false` ซ่อนได้จริง |
+| `GET /academies/1/parent/children` | 200 · `[]` (เท่าเดิม — เจ้าของไม่ใช่ผู้ปกครอง) |
+
+เส้นเยี่ยมบ้านยิงตรงไม่ได้ (302 เข้าหน้า login ของ session เยี่ยมบ้าน) จึงตรวจ `attachGuardiansTo()`
+กับข้อมูลจริงผ่าน tinker แทน
+
+### งานที่ค้างต่อ
+
+- [ ] **ยังไม่ push** — 2 commit (`3664e030`, `037052d0`)
+- [ ] **G-S6 drop `student_guardians`** — ทางอ่านพ้นแล้ว เหลือรื้อทางเขียน + relation ที่ไม่มีใครเรียกแล้ว
+      (`Student::guardians()/guardiansByCode()/father()/mother()/primaryGuardian()/getEmergencyContact()`
+      ตรวจแล้ว **ไม่มี caller ที่ไหนเลย**) + `GuardianContact::guardian()` + `guardian_contacts.guardian_id`
+      ที่ยัง NOT NULL + FK ชี้ตารางเก่า
+- [ ] **แดชบอร์ดผู้ปกครองใช้งานไม่ได้จนกว่า G-S12** — ต้องตัดสินใจว่าจะให้ผู้ปกครองยืนยันตัวตนยังไง
+- [ ] gate ฟิลด์ sensitive บนเส้นเยี่ยมบ้าน (ต้องแก้ที่โมเดล auth ของระบบเยี่ยมบ้านก่อน)
+- [ ] 4 รายที่ status ขัดกันจริง (alive vs deceased) — ยังรอคนตรวจ ดู `storage/app/reports/backfill_conflicts.csv`
+
+---
+
 ## 2026-08-25 (ต่อ 6) — รัน backfill จริง + ยิง endpoint จริงครบทั้งชุด (ปิดช่องที่ค้างมาตั้งแต่ G-S10)
 
 ### สถานะ: **เสร็จ · ฐาน dev มีข้อมูลผู้ปกครองครบแล้ว · commit แล้ว** (`a837bd6a`)
