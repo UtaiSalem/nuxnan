@@ -9,6 +9,7 @@ use App\Models\HomeVisitZone;
 use App\Models\Student;
 use App\Models\StudentCard;
 use App\Models\StudentHomeVisit;
+use App\Services\GuardianService;
 use App\Services\StudentEnrollmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -306,8 +307,14 @@ class AdminController extends Controller
     public function showStudent(Academy $academy, $id)
     {
         $student = Student::where('academy_id', $academy->id)
-            ->with(['academicInfo', 'addresses', 'contacts', 'guardians.contacts', 'healthInfo'])
+            ->with(['academicInfo', 'addresses', 'contacts', 'healthInfo'])
             ->findOrFail($id);
+
+        // This screen is reached through the home-visit session login, not through an academy
+        // role, so there is no permission to test the sensitive pair against. It is kept
+        // visible because the legacy rows it used to serialize carried it and the visit form
+        // asks for it — gating it belongs with the home-visit auth model, not with this move.
+        app(GuardianService::class)->attachGuardiansTo($student, withSensitive: true);
 
         $visits = StudentHomeVisit::where('academy_id', $academy->id)
             ->where('student_id', $id)

@@ -9,6 +9,7 @@ use App\Models\AcademyMember;
 use App\Models\ClassroomMember;
 use App\Models\Student;
 use App\Models\StudentHomeVisit;
+use App\Services\GuardianAccessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -144,13 +145,7 @@ class HomeVisitController extends Controller
             return $this->isHomeroom($student, $user->id) ? 'homeroom' : 'teacher';
         }
 
-        // อ่านจากตารางเดิมจนกว่า G-S4 (write path) จะเสร็จ — ถ้าเปลี่ยนก่อน ผู้ปกครองที่เพิ่มใหม่จะถูกล็อกไม่ให้เข้า
-        $isGuardian = $student->guardians()
-            ->whereNotNull('citizen_id')
-            ->where('citizen_id', $user->citizen_id ?? '__none__')
-            ->exists();
-
-        return $isGuardian ? 'parent' : null;
+        return app(GuardianAccessService::class)->isGuardianOf($user, $student) ? 'parent' : null;
     }
 
     private function isStaff(Academy $academy): bool

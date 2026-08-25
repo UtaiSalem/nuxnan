@@ -10,8 +10,8 @@ use App\Models\SchoolEvent;
 use App\Models\Student;
 use App\Models\StudentAttendance;
 use App\Models\StudentFee;
-use App\Models\StudentGuardian;
 use App\Models\User;
+use App\Services\GuardianAccessService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -27,31 +27,7 @@ class ParentDashboardController extends Controller
     {
         $user = $request->user();
 
-        // Find students linked to this parent
-        // Method 1: Via AcademyMember with parent role
-        // Method 2: Via StudentGuardian with linked user_id
-
-        // Get students where this user is a guardian
-        $studentIds = StudentGuardian::whereHas('student', function ($q) use ($academy) {
-            $q->where('academy_id', $academy->id);
-        })
-            ->where(function ($q) use ($user) {
-                // Match by citizen_id if available
-                if ($user->citizen_id) {
-                    $q->where('citizen_id', $user->citizen_id);
-                }
-                // Or match by phone
-                $q->orWhereHas('contacts', function ($cq) use ($user) {
-                    $cq->where('contact_type', 'phone')
-                        ->where('contact_value', $user->phone);
-                });
-                // Or match by email
-                $q->orWhereHas('contacts', function ($cq) use ($user) {
-                    $cq->where('contact_type', 'email')
-                        ->where('contact_value', $user->email);
-                });
-            })
-            ->pluck('student_id');
+        $studentIds = app(GuardianAccessService::class)->guardianStudentIds($user, $academy);
 
         $students = Student::whereIn('id', $studentIds)
             ->with(['currentClassroom.classroom'])
@@ -98,7 +74,7 @@ class ParentDashboardController extends Controller
 
         $student->load([
             'currentClassroom.classroom',
-            'guardians.primaryContact',
+            'guardianLinks.guardian.contacts',
         ]);
 
         return response()->json([
@@ -121,16 +97,17 @@ class ParentDashboardController extends Controller
                     'grade_level' => $student->currentClassroom->classroom->grade_level,
                     'student_number' => $student->currentClassroom->student_number,
                 ] : null,
-                'guardians' => $student->guardians->map(function ($g) {
+                'guardians' => $student->guardianLinks->map(function ($link) {
                     return [
-                        'id' => $g->id,
-                        'type' => $g->guardian_type,
-                        'full_name' => $g->full_name,
-                        'relationship' => $g->relationship,
-                        'is_primary' => $g->is_primary_contact,
-                        'phone' => $g->primaryContact?->contact_value,
+                        'id' => $link->id,
+                        'guardian_id' => $link->guardian_id,
+                        'type' => $link->guardian_type,
+                        'full_name' => $link->full_name,
+                        'relationship' => $link->relationship,
+                        'is_primary' => $link->is_primary_contact,
+                        'phone' => $link->primary_phone,
                     ];
-                }),
+                })->values(),
             ],
         ], 200);
     }
@@ -321,20 +298,7 @@ class ParentDashboardController extends Controller
      */
     private function canAccessStudent(User $user, Student $student): bool
     {
-        // Check if user is guardian of this student
-        $isGuardian = StudentGuardian::where('student_id', $student->id)
-            ->where(function ($q) use ($user) {
-                if ($user->citizen_id) {
-                    $q->where('citizen_id', $user->citizen_id);
-                }
-                $q->orWhereHas('contacts', function ($cq) use ($user) {
-                    $cq->where('contact_value', $user->phone)
-                        ->orWhere('contact_value', $user->email);
-                });
-            })
-            ->exists();
-
-        return $isGuardian;
+        return app(GuardianAccessService::class)->isGuardianOf($user, $student);
     }
 
     /**
@@ -342,19 +306,6 @@ class ParentDashboardController extends Controller
      */
     private function getStudentIdsForParent(User $user, Academy $academy): array
     {
-        return StudentGuardian::whereHas('student', function ($q) use ($academy) {
-            $q->where('academy_id', $academy->id);
-        })
-            ->where(function ($q) use ($user) {
-                if ($user->citizen_id) {
-                    $q->where('citizen_id', $user->citizen_id);
-                }
-                $q->orWhereHas('contacts', function ($cq) use ($user) {
-                    $cq->where('contact_value', $user->phone)
-                        ->orWhere('contact_value', $user->email);
-                });
-            })
-            ->pluck('student_id')
-            ->toArray();
+        return app(GuardianAccessService::class)->guardianStudentIds($user, $academy);
     }
 }

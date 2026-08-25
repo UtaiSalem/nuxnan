@@ -19,7 +19,7 @@ class StudentProfileController extends Controller
      *
      * Access control:
      * - Student themselves (via user_id match)
-     * - Parent/Guardian (via student_guardians with user_id)
+     * - Parent/Guardian (via the account link on the guardian person)
      * - Homeroom teacher (via classroom_members)
      * - School teachers (via academy_members with teacher role)
      * - School admin (via academy_members with admin role)
@@ -406,13 +406,7 @@ class StudentProfileController extends Controller
         }
 
         // 6. Parent - check if user is linked as guardian
-        $isParent = $student->guardians()
-            ->where(function ($q) use ($user) {
-                $q->where('citizen_id', $user->citizen_id ?? '__none__');
-            })
-            ->exists();
-
-        if ($isParent) {
+        if (app(GuardianAccessService::class)->isGuardianOf($user, $student)) {
             return 'parent';
         }
 

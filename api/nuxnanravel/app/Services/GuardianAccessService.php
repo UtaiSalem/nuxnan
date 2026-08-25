@@ -92,6 +92,48 @@ class GuardianAccessService
         return 'staff';
     }
 
+    /**
+     * Is this user a guardian of this student?
+     *
+     * Answered by the account link on the guardian person. The four call sites this replaced each
+     * matched on $user->citizen_id or $user->phone, and neither is a column on users — the phone
+     * column is phone_number and there is no citizen id at all — so all four evaluated to false
+     * for every user who ever called them. Nothing is lost by dropping that, and nothing is
+     * widened: guardians.user_id is what the parent-account flow (G-S12) will populate, and
+     * until it ships there are no parent accounts to let in.
+     */
+    public function isGuardianOf(?User $user, Student $student): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        return StudentGuardianLink::query()
+            ->where('student_id', $student->id)
+            ->whereIn('guardian_id', Guardian::query()->select('id')->where('user_id', $user->id))
+            ->exists();
+    }
+
+    /**
+     * The students in one academy this user is a guardian of.
+     *
+     * @return list<int>
+     */
+    public function guardianStudentIds(?User $user, Academy $academy): array
+    {
+        if ($user === null) {
+            return [];
+        }
+
+        return StudentGuardianLink::query()
+            ->whereIn('guardian_id', Guardian::query()->select('id')->where('user_id', $user->id))
+            ->whereIn('student_id', Student::query()->select('id')->where('academy_id', $academy->id))
+            ->pluck('student_id')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
     public function canViewSensitive(?User $user, Student $student): bool
     {
         return $this->allows($user, $student, 'guardians.sensitive.view');

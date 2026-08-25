@@ -8,6 +8,7 @@ use App\Models\HomeVisitParticipant;
 use App\Models\HomeVisitZone;
 use App\Models\Student;
 use App\Models\StudentHomeVisit;
+use App\Services\GuardianService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -63,7 +64,6 @@ class TeacherController extends Controller
             'academicInfo',
             'addresses',
             'contacts',
-            'guardians.contacts',
             'healthInfo',
             'documents',
             'homeVisits' => function ($q) {
@@ -87,6 +87,11 @@ class TeacherController extends Controller
             ->orderBy('last_name_th')
             ->paginate(15)
             ->withQueryString();
+
+        // One eager load for the page, then a plain array per student — see attachGuardiansTo()
+        // for why the relation must not be left on the model that gets serialized.
+        $students->getCollection()->load('guardianLinks.guardian.contacts');
+        $students->getCollection()->each(fn (Student $student) => app(GuardianService::class)->attachGuardiansTo($student, withSensitive: true));
 
         // Get unique classrooms for filter
         $classrooms = Student::join('student_academic_info', 'students.id', '=', 'student_academic_info.student_id')
@@ -127,8 +132,12 @@ class TeacherController extends Controller
             return redirect()->route('homevisit.login');
         }
 
-        $student = Student::with(['academicInfo', 'addresses', 'contacts', 'guardians.contacts', 'healthInfo'])
+        $student = Student::with(['academicInfo', 'addresses', 'contacts', 'healthInfo'])
             ->findOrFail($studentId);
+
+        // Same reasoning as the roster above: no academy role behind this session, so the pair
+        // stays visible exactly as the legacy rows served it.
+        app(GuardianService::class)->attachGuardiansTo($student, withSensitive: true);
 
         // Get student's home visit records
         $homeVisits = StudentHomeVisit::where('student_id', $studentId)
