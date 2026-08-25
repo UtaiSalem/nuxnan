@@ -79,7 +79,7 @@
 - [ ] **4 รายที่ status ขัดกันจริง (alive vs deceased)** — backfill เลือกโดย "newest updated_at, then highest id" ควรให้คนตรวจ: เลขบัตร 3930600184737, 2930600001707 (เลือก alive) · 3900300406769, 1900300098154 (เลือก deceased) · ดู `storage/app/reports/backfill_conflicts.csv`
 - [ ] `guardians:merge` รับ `--candidate` + `--keep` ทีละใบ (เครื่องมือให้คนตัดสินรายกรณี) และ `guardian_merge_candidates` = **0 แถว** ⇒ ยังไม่มีอะไรให้รวม ต้องมีขั้นตอนสร้าง candidate ก่อน
 - [x] ~~`$guardianResult = ['pending' => []]` ฮาร์ดโค้ด~~ — ลบซากทิ้งแล้ว (`5073c563`) พร้อม `$guardianFields` ที่ไม่มีใครอ่าน
-- [ ] ยังไม่ push (ค้างบน `main` ตั้งแต่ G-S7)
+- [x] ~~ยังไม่ push~~ — push แล้ว 2026-08-25 (`9929e717..cd6a2f40`, 17 commit ตั้งแต่ G-S7 ถึง G-S11) · `main` ตรงกับ origin
 
 ---
 
@@ -140,7 +140,7 @@ agy เขียนเทสต์ seed contact ด้วย `'guardian_id' => 9
 - [ ] **ยังไม่เคยยิง endpoint จริงสำเร็จสักเส้น** ทั้ง G-S10 และ G-S11 — ฐานเครื่องนี้ `guardians` = 0 แถว
       และหน้าจริงต้องล็อกอิน · ต้องรัน `guardians:backfill --force` ก่อน
 - [ ] `Master\GuardianController::update` ยังมี `$guardianResult = ['pending' => []]` ฮาร์ดโค้ด
-- [ ] ยังไม่ push (ค้างบน `main` ตั้งแต่ G-S7)
+- [x] ~~ยังไม่ push~~ — push แล้ว 2026-08-25 (`9929e717..cd6a2f40`, 17 commit ตั้งแต่ G-S7 ถึง G-S11) · `main` ตรงกับ origin
 
 ---
 
@@ -207,7 +207,7 @@ payload ผู้ปกครองของ `/students/{id}/profile` ส่ง 
 - [x] ~~**โค้ดตาย 2 ไฟล์**~~ — ลบแล้ว `9bd55060` (583 บรรทัด) · ตรวจครบทั้งชื่อ PascalCase, kebab-case,
       ชื่อ auto-import แบบมี path prefix และ `<component :is>` ก่อนลบ · อ้างถึงกันเองแค่คู่เดียว
 - [ ] `Master\GuardianController::update` ยังมี `$guardianResult = ['pending' => []]` ฮาร์ดโค้ด
-- [ ] ยังไม่ push (ค้างบน `main` ตั้งแต่ G-S7)
+- [x] ~~ยังไม่ push~~ — push แล้ว 2026-08-25 (`9929e717..cd6a2f40`, 17 commit ตั้งแต่ G-S7 ถึง G-S11) · `main` ตรงกับ origin
 
 ---
 
@@ -277,7 +277,7 @@ shard B รายงานว่า `pint --test` ผ่าน — **ไม่�
 - [ ] **G-S11 FE ยกเครื่อง** — เพิ่ม UI แต่งตั้ง/ยืนยัน, ตัวเลือก "ผู้ปกครองคนเดิมของพี่น้อง",
       แสดงสถานะ "รอยืนยัน" บนการ์ดผู้ปกครอง
 - [ ] `Master\GuardianController::update` ยังมี `$guardianResult = ['pending' => []]` ฮาร์ดโค้ด (ซากของ approval flow)
-- [ ] ยังไม่ push (ค้างบน `main` ตั้งแต่ G-S7)
+- [x] ~~ยังไม่ push~~ — push แล้ว 2026-08-25 (`9929e717..cd6a2f40`, 17 commit ตั้งแต่ G-S7 ถึง G-S11) · `main` ตรงกับ origin
 
 ---
 ## 2026-08-25 (ต่อ 2) — G-S9: ประวัติการแก้และการเปิดดูข้อมูลผู้ปกครอง
