@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatThaiDateTime } from '~/constants/electionLabels'
 const props = defineProps<{ academyId: number; electionId: number }>()
 const { getAuditLog, getActivityActions } = useElections()
 const rows = ref<any[]>([])
@@ -35,7 +36,7 @@ watch(page, load)
     <div class="space-y-3">
       <article v-for="row in rows" :key="row.id" class="rounded-xl border p-4">
         <p class="font-semibold">{{ labels[row.action] || row.action }}</p>
-        <p class="text-sm text-gray-500">{{ row.user?.name || '-' }} · {{ row.created_at }}</p>
+        <p class="text-sm text-gray-500">{{ row.user?.name || '-' }} · {{ formatThaiDateTime(row.created_at) }}</p>
         <p v-if="row.action === 'election_ballot_issue'" class="mt-2 text-sm text-gray-600">
           มีการออกบัตรเลือกตั้ง
         </p>

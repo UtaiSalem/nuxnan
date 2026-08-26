@@ -6,6 +6,7 @@ import ElectionStationsTab from '~/components/academy/elections/ElectionStations
 import ElectionResultsTab from '~/components/academy/elections/ElectionResultsTab.vue'
 import ElectionAuditTab from '~/components/academy/elections/ElectionAuditTab.vue'
 import ElectionFormModal from '~/components/academy/elections/ElectionFormModal.vue'
+import { electionStatusLabel } from '~/constants/electionLabels'
 
 definePageMeta({ layout: 'main' })
 
@@ -90,7 +91,7 @@ watch(
             {{ election.title }}
           </h1>
           <p class="text-sm text-gray-500">
-            ปีการศึกษา {{ election.academic_year?.name || '-' }} · {{ election.status }}
+            ปีการศึกษา {{ election.academic_year?.name || '-' }} · {{ electionStatusLabel(election.status) }}
           </p>
         </div>
       </div>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { partyRoleLabel, partyStatusLabel, formatThaiDateTime } from '~/constants/electionLabels'
 const props = defineProps<{
   academyId: number
   electionId: number
@@ -70,14 +71,11 @@ watch(
             <td class="p-3">
               {{
                 party.members
-                  ?.map((member: any) => `${member.user?.name || '-'} (${member.role})`)
+                  ?.map((member: any) => `${member.user?.name || '-'} (${partyRoleLabel(member.role)})`)
                   .join(', ') || '-'
               }}
             </td>
-            <td class="p-3">{{ party.status }}</td>
-            <td v-if="party.status === 'rejected'" class="p-3 text-sm text-red-700">
-              <p>{{ party.review_note || '-' }}</p><p>{{ party.reviewed_at || '-' }}</p>
-            </td>
+            <td class="p-3">{{ partyStatusLabel(party.status) }}</td>
             <td class="space-y-2 p-3">
               <div class="flex gap-2">
                 <button
@@ -116,7 +114,7 @@ watch(
                 placeholder="เหตุผลปฏิเสธ (บังคับ)"
               />
               <p v-if="errors[party.id]" class="text-sm text-red-600">{{ errors[party.id] }}</p>
-              <p v-if="party.status === 'rejected'" class="text-sm text-red-700">เหตุผล: {{ party.review_note || '-' }} · {{ party.reviewed_at || '-' }}</p>
+              <p v-if="party.status === 'rejected'" class="text-sm text-red-700">เหตุผล: {{ party.review_note || '-' }} · {{ formatThaiDateTime(party.reviewed_at) }}</p>
             </td>
           </tr>
         </tbody>

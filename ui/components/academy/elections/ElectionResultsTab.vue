@@ -9,6 +9,11 @@ const route = useRoute()
 const { getTurnout, closeAndCount, publishResults, getResults, formCouncil } = useElections()
 const turnout = ref<any>(null)
 const results = ref<any[]>([])
+const turnoutCards = [
+  { key: 'voted', label: 'ผู้มาใช้สิทธิ์', suffix: '' },
+  { key: 'total', label: 'ผู้มีสิทธิ์ทั้งหมด', suffix: '' },
+  { key: 'percentage', label: 'คิดเป็น', suffix: '%' },
+]
 const publishedError = ref(false)
 const published = ref(false)
 const load = async () => {
@@ -59,10 +64,14 @@ watch(() => props.election.status, load, { immediate: true })
 <template>
   <div class="space-y-4">
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-      <div v-for="key in ['voted', 'total', 'percentage']" :key="key" class="rounded-xl border p-4">
-        <p class="text-xs text-gray-500">{{ key }}</p>
+      <div
+        v-for="card in turnoutCards"
+        :key="card.key"
+        class="rounded-xl border p-4"
+      >
+        <p class="text-xs text-gray-500">{{ card.label }}</p>
         <p class="text-2xl font-bold">
-          {{ turnout?.[key] ?? '-' }}{{ key === 'percentage' ? '%' : '' }}
+          {{ turnout?.[card.key] ?? '-' }}{{ card.suffix }}
         </p>
       </div>
     </div>
