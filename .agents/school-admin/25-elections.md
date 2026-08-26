@@ -1376,3 +1376,121 @@ icon: 'heroicons:megaphone' · color: 'pink' · order: 10
 - **ไม่เพิ่มคอลัมน์ใด ๆ** ทั้ง `academy_groups` และ `academy_group_members` — `settings` รองรับการผูกได้แล้ว (T3)
 - **ไม่ทำการถอดถอน/แก้ไขกรรมการในรอบนี้** — หน้าจัดการกลุ่มเดิมทำได้อยู่แล้ว
 - **ไม่ผูกสิทธิ์พิเศษให้สภานักเรียน** — ต้องรอโมเดลฝ่ายของเมนู #9
+
+---
+
+## 15. ผลตรวจ E-S13 — เปิดอีก 5 หน้าที่เหลือบนเบราว์เซอร์จริง (2026-08-27)
+
+> ต่อจาก §13.9 ที่ปิดหนี้ให้ `station.vue` ไปหน้าเดียว — รอบนี้เปิด **ที่เหลือทั้งหมด** ที่ 375px
+> ทุกบรรทัดในหัวข้อนี้วัดจาก DOM จริง (`getBoundingClientRect` / นับ element) ไม่ได้สรุปจาก `body.innerText`
+
+### 15.1 สรุปผล
+
+| หน้า | ผล |
+|---|---|
+| `admin/elections/index.vue` | ✅ ขึ้นครบ — 3 การเลือกตั้ง · ป้ายสถานะไทย · ตัวเลข `ผู้มีสิทธิ์ 2193 / พรรคอนุมัติ 2 / ลงคะแนนแล้ว 14` ตรงฐาน · ไม่เลื่อนแนวนอน · **ไม่มีปุ่มไหนสูงต่ำกว่า 40px เลยสักตัว** · 🔴 แต่ปุ่ม "สร้างการเลือกตั้ง" เปิดฟอร์มไม่ได้ (ดู F1) |
+| `admin/elections/[id].vue` | 🔴 **ขึ้นแค่หัวเรื่องกับแถบแท็บ — เนื้อในทั้ง 6 แท็บว่างเปล่าทุกแท็บ** (F1) |
+| `elections/index.vue` (ฝั่งสมาชิก) | ✅ ขึ้นครบ — นักเรียนเห็น 2 รายการ **ร่างถูกซ่อนจริง** (A5 ใช้ได้) · ป้ายไทย · ปุ่ม "สมัครพรรค" / "ดูผลคะแนน" |
+| `elections/[id]/apply.vue` | 🔴 **คนที่ยังไม่เคยสมัคร เห็นหน้าว่างเปล่า** (F2) · ✅ คนที่มีใบสมัครค้างอยู่แล้วเห็นฟอร์มครบ |
+| `elections/[id]/results.vue` | ✅ ขึ้นครบ — การ์ดผู้ชนะ · ตารางอันดับ #1/#2 · แถวไม่ประสงค์ลงคะแนนแยกออกมา · turnout `14 / 2193 (0.64%)` |
+| ปุ่มตั้งสภานักเรียน (E-S12b) | 🔴 **กดไม่ถึงเลย** — มันอยู่ใน `ElectionResultsTab` ซึ่งไม่เรนเดอร์ (F1) |
+
+### 15.2 🔴 F1 — ชื่อคอมโพเนนต์ในหน้าแอดมินไม่ตรงชื่อ auto-import ⇒ ไม่เรนเดอร์เลย ทั้งเงียบ ๆ
+
+ไฟล์อยู่ที่ `components/academy/elections/*.vue` ⇒ ชื่อที่ Nuxt ลงทะเบียนคือ
+**`AcademyElectionsElectionOverviewTab`** (ยืนยันจาก `.nuxt/components.d.ts:71`)
+แต่หน้าเรียกด้วยชื่อสั้น `<ElectionOverviewTab>` ⇒ **Vue หาไม่เจอ เรนเดอร์เป็น custom element เปล่า ๆ**
+
+หลักฐานจากเบราว์เซอร์ (ไม่ได้เดาจากโค้ด):
+```
+document.querySelectorAll('electionresultstab')[0].children.length === 0   // สูง 0px
+document.querySelectorAll('electionformmodal')[0].children.length === 0
+```
+· **ไม่มี warning ขึ้น console เลย** — จึงเงียบสนิทมาตลอด E-S9 → E-S12
+
+จุดที่โดน **9 จุดใน 2 ไฟล์**:
+- `admin/elections/[id].vue` — ทั้ง 7 ตัว (`ElectionOverviewTab` `ElectionPartiesTab` `ElectionVoterRollTab` `ElectionStationsTab` `ElectionResultsTab` `ElectionAuditTab` `ElectionFormModal`)
+- `admin/elections/index.vue` — `ElectionFormModal` ⇒ **กด "สร้างการเลือกตั้ง" แล้วไม่มีอะไรขึ้น** และแก้ไขก็ไม่ได้
+
+⇒ **หน้าแอดมินการเลือกตั้งใช้งานจริงไม่ได้เลยตั้งแต่ E-S9** ทั้งที่ผ่านเกณฑ์ตรวจทุกข้อมาตลอด
+เพราะไม่มีเกณฑ์ข้อไหน **เปิดหน้านั้นจริง** — เป็นบทเรียนซ้ำรอย §13.10 เป๊ะ
+
+**ทางแก้ที่แนะนำ:** `import` ตรง ๆ ใน `<script setup>` ของสองไฟล์นั้น
+(`import ElectionOverviewTab from '~/components/academy/elections/ElectionOverviewTab.vue'` ฯลฯ)
+ชัดกว่าการเปลี่ยนไปใช้ชื่อยาว และไม่ไปแตะ `components:` ใน `nuxt.config.ts` ซึ่งกระทบทั้งแอป
+
+### 15.3 🔴 F2 — `unwrap()` ของ `apply.vue` แปลง `data: null` เป็น "มีใบสมัครแล้ว"
+
+`GET /parties/mine` ตอบตามสเปก §12.1 A3 คือ `{"success":true,"data":null}` เมื่อยังไม่เคยสมัคร (ยิงยืนยันแล้ว)
+แต่ `apply.vue:27`:
+
+```js
+const unwrap = (r) => r?.data?.data ?? r?.data ?? r
+```
+
+`r.data` เป็น `null` ⇒ `??` ข้ามไปตัวถัดไป ⇒ **คืนก้อน response ทั้งก้อน** ซึ่ง truthy และไม่มี `.status`
+ผลคือทุกสาขาใน template เป็นเท็จหมด:
+`myParty?.status === 'rejected'` / `'withdrawn'` / `'approved'` เท็จ · และฟอร์มที่ `v-if="!myParty || status==='pending' || status==='approved'"` ก็เท็จ
+⇒ **นักเรียนที่ยังไม่เคยสมัคร เปิดหน้ามาเจอหน้าว่าง ไม่มีทางยื่นใบสมัครได้เลย**
+
+อาการหลอกตามาก: **SSR เรนเดอร์ฟอร์มออกมาก่อน** (ตอนนั้น `myParty` ยังเป็น `null` จริง)
+แล้วพอ fetch เสร็จฟอร์ม **หายไปทั้งอัน** — ดูเผิน ๆ เหมือนหน้าโหลดช้าแล้วพัง
+
+**ทางแก้:** แยกเคส `data === null` ออกมาก่อน เช่น
+`const unwrap = (r) => ('data' in (r ?? {}) ? (r.data?.data ?? r.data) : r)`
+หรือให้ `getMyParty` คืน `response?.data ?? null` ตรง ๆ ไปเลย
+· `results.vue:25` ใช้ `unwrap` สูตรเดียวกัน แต่ **ไม่โดน** เพราะไม่เคยได้ `data: null` — ยังควรแก้ให้เหมือนกันกันพลาดภายหลัง
+
+### 15.4 🟡 เรื่องรอง (ไม่บล็อกการใช้งาน)
+
+- `admin/elections/[id].vue:85` โชว์สถานะดิบ `· published` เป็นภาษาอังกฤษ ทั้งที่หน้า index แปลเป็น "ประกาศผลแล้ว" แล้ว
+- `RejectElectionPartyRequest` ไม่มี `messages()` ⇒ ปฏิเสธพรรคแล้วไม่กรอกเหตุผล ได้ข้อความอังกฤษ `The review note field is required.` (FormRequest ตัวอื่นของโดเมนนี้มีไทยครบ)
+- **นอกโดเมนนี้:** `/api/notifications/recent` ตอบ **500 ทุกหน้า** และถูกยิงซ้ำ 7–8 ครั้งต่อการโหลด — เป็นของ layout ไม่ใช่ของเมนู #25
+
+### 15.5 กวาดทั้งแอป — F1 ไม่ได้เกิดที่เมนู #25 ที่เดียว
+
+สคริปต์เทียบ "ชื่อแท็กที่ใช้" กับ "ชื่อที่ Nuxt ลงทะเบียน" ทั้ง `pages/` + `components/` + `layouts/`
+(หัก `defineAsyncComponent` / `import` ตรง / self-reference / PrimeVue ออกแล้ว) เหลือ **25 จุด**
+ยืนยันด้วยเบราว์เซอร์แล้ว 9 จุด (ของเมนู #25) · ที่เหลือ **ยังไม่ได้เปิดจอ อย่าเพิ่งเชื่อ**:
+
+- `admin/gradebook/rollover/index.vue` — 7 จุด (`Rollover*`) · ไม่มี import ในไฟล์ ⇒ น่าจะอาการเดียวกัน
+- `admin/revenue.vue` — 3 จุด (`Academy*`)
+- `pages/badges|members|overview|quests|Play/Streams` — `<BaseCard>` (auto-import คือ `AtomsBaseCard`)
+- `pages/favourite.vue` — `<CourseCard>` · `components/landing/ModernTestimonialsSection.vue` — `<TestimonialCard>`
+
+### 15.6 ข้อมูลทดสอบที่ยังคาไว้ในฐาน dev (ยังไม่ลบ — ต้องใช้ตรวจซ้ำหลังแก้ F1/F2)
+
+| ของ | ค่า |
+|---|---|
+| election | **18** `เลือกตั้งสภานักเรียน 2569 (มัธยม)` สถานะ `published` · **19** `เลือกตั้งประธานชมรม 2569` สถานะ `nomination` · **20** ร่าง |
+| พรรค | 7 `พรรครวมใจพัฒนา` (เบอร์ 1 ชนะ 8 คะแนน) · 8 `พรรคก้าวหน้า` (เบอร์ 2, 4 คะแนน) · 9 pending · 10 rejected |
+| หน่วย | 11 (เปิดอยู่) · 12 |
+| ผู้มีสิทธิ์ | 2,193 แถว (`lock` ของจริง) · บัตรที่ลงแล้ว 14 ใบ (ไม่ประสงค์ลงคะแนน 2) |
+
+ล้างทิ้งเมื่อไม่ใช้แล้ว:
+```
+DELETE FROM election_ballots WHERE election_id IN (18,19,20);
+DELETE FROM election_voter_receipts WHERE election_id IN (18,19,20);
+DELETE FROM election_results WHERE election_id IN (18,19,20);
+DELETE FROM election_voters WHERE election_id IN (18,19,20);
+DELETE FROM election_party_members WHERE party_id IN (7,8,9,10);
+DELETE FROM election_parties WHERE election_id IN (18,19,20);
+DELETE FROM election_stations WHERE election_id IN (18,19,20);
+DELETE FROM elections WHERE id IN (18,19,20);
+```
+
+### 15.7 สิ่งที่ตรวจแล้วว่า backend ถูกจริง (ยิง HTTP เอง ไม่ได้อ่านโค้ดเอา)
+
+- **D1 ปิดจริง** — `publish` แล้ว `GET /results` ตอบ **200** (เดิม 404 ตลอด)
+- **A4 ปิดจริง** — turnout คืน `{"voted":14,"total":2193,"receipts_total":14,"percentage":0.64}` · ตัวหารเป็นผู้มีสิทธิ์แล้ว
+- **A5 ปิดจริง** — เจ้าของเห็น 3 · นักเรียนเห็น 2 (ร่างหาย)
+- **กฎ 1 คน 1 พรรค ใช้ได้** — ยื่นซ้ำได้ 422 `บุคคลนี้อยู่ในพรรค พรรครวมใจพัฒนา แล้ว`
+- **สเตทแมชชีนกันถอยหลังจริง** — `voting → nomination` ได้ 422
+
+### 15.8 กฎที่เพิ่มจากรอบนี้
+
+1. **`document.body.innerText` เชื่อไม่ได้บนแอปนี้** — เคยคืนค่าว่างทั้งที่ DOM มีเนื้อครบ
+   ⇒ ตัดสิน "หน้าว่าง" ด้วยการนับ element + `getBoundingClientRect()` เท่านั้น
+2. **คอมโพเนนต์ที่ auto-import ไม่เจอ ไม่มี warning ให้เห็น** — เกณฑ์ "กวาด SFC ทั้ง `ui/`" ของ §13.10 จับไม่ได้
+   ⇒ เพิ่มเกณฑ์: **เทียบชื่อแท็กกับ `.nuxt/components.d.ts`** ทุกครั้งที่หน้าใหม่เรียกคอมโพเนนต์ในโฟลเดอร์ย่อย
+3. **หน้าที่ยิง API สำเร็จ ไม่ได้แปลว่าหน้ามีเนื้อ** — F1 กับ F2 ยิง 200 ครบทุกเส้นทั้งคู่
