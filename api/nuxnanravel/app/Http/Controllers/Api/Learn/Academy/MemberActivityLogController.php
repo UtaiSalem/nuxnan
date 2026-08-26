@@ -265,6 +265,7 @@ class MemberActivityLogController extends Controller
             ['value' => MemberActivityLog::ACTION_ELECTION_BALLOT_VOID, 'label' => 'ยกเลิกบัตรเลือกตั้ง', 'icon' => 'mdi:ticket-remove'],
             ['value' => MemberActivityLog::ACTION_ELECTION_CLOSE_COUNT, 'label' => 'ปิดหีบและนับคะแนน', 'icon' => 'mdi:counter'],
             ['value' => MemberActivityLog::ACTION_ELECTION_PUBLISH, 'label' => 'ประกาศผลการเลือกตั้ง', 'icon' => 'mdi:bullhorn'],
+            ['value' => MemberActivityLog::ACTION_ELECTION_COUNCIL_CREATE, 'label' => 'ตั้งคณะกรรมการสภานักเรียน', 'icon' => 'mdi:account-group'],
             ['value' => MemberActivityLog::ACTION_GUARDIAN_CREATE, 'label' => 'เพิ่มผู้ปกครอง', 'icon' => 'mdi:account-child'],
             ['value' => MemberActivityLog::ACTION_GUARDIAN_UPDATE, 'label' => 'แก้ไขข้อมูลผู้ปกครอง', 'icon' => 'mdi:account-edit'],
             ['value' => MemberActivityLog::ACTION_GUARDIAN_DELETE, 'label' => 'ลบผู้ปกครอง', 'icon' => 'mdi:account-remove'],
