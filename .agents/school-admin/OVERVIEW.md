@@ -70,7 +70,7 @@ Legend: 🟢 พร้อมใช้งาน (ผ่านการตรว�
 | 22 | ประวัติกิจกรรม | `admin/activity-log/` | `reports.view` | 22-activity-log.md | ⚪ |
 | 23 | รายได้ | `admin/revenue.vue` | `finance.view` / `finance.manage` | 23-revenue.md | 🟡 Phase 1 done |
 | **24** | **แดชบอร์ด** | `admin/index.vue` | `academy.view` | 24-dashboard.md | ⚪ (ทำหลังสุด — รวม signal) |
-| **25** | **การเลือกตั้งสภานักเรียน** | `admin/elections/` + `elections/[id]/station.vue` | `elections.view` / `elections.manage` / `elections.station` | [25-elections.md](25-elections.md) | 🔴 **กำลังทำ** — E-S1–E-S10 ✅ (หน่วยเลือกตั้ง + หน้าแอดมิน 6 แท็บ + หน้าสมัครพรรค/ผลสาธารณะ · นักเรียนเข้าถึงได้จริงแล้ว) · **ถัดไป E-S11 hardening — สเปกเต็มใน [25-elections.md](25-elections.md) §13** · เหลือ E-S12 ตั้งคณะกรรมการสภาฯ · **ยังไม่ได้ซ้อมตาม §9 เลย** |
+| **25** | **การเลือกตั้งสภานักเรียน** | `admin/elections/` + `elections/[id]/station.vue` | `elections.view` / `elections.manage` / `elections.station` | [25-elections.md](25-elections.md) | 🟢 **E-S1–E-S12 ปิดครบ · หนี้ตรวจบนจอจริงปิดแล้ว 2026-08-27** (§13.9 — 429 ขึ้นจอที่ 374px · limiter คีย์ต่อหน่วยพิสูจน์แล้ว · แบนเนอร์ไม่ทับแผงยืนยัน gap 14px) · **เหลืองานที่ไม่ใช่โค้ด: ยังไม่ได้ซ้อมตาม §9 เลย** |
 | **26** | **เช็คชื่อเข้าร่วมกิจกรรม** | `admin/events/` + หน้า session check-in (ยังไม่มี) | `events.view` / `events.manage` | [26-activity-attendance.md](26-activity-attendance.md) | 🟢 **ปิดครบ A-S0–A-S6** (2026-08-01) |
 | **27** | **กีฬาสี** | ยังไม่มี | `sports.*` (เสนอใหม่) | [27-sports-day.md](27-sports-day.md) | 🟢 **ปิดครบ S-S1–S-S7** (2026-08-20) |
 
