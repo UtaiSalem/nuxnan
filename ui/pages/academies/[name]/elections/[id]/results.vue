@@ -22,7 +22,14 @@ const loading = ref(true)
 
 let timer: ReturnType<typeof setInterval> | undefined
 
-const unwrap = (response: any) => response?.data?.data ?? response?.data ?? response
+const unwrap = (response: any) => {
+  if (!response || typeof response !== 'object' || !('data' in response)) return response
+  const payload = (response as any).data
+  if (payload && typeof payload === 'object' && !Array.isArray(payload) && 'data' in payload) {
+    return (payload as any).data
+  }
+  return payload
+}
 const imageUrl = (path: string | null) => {
   if (!path) return null
   if (path.startsWith('http')) return path

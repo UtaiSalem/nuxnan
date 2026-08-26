@@ -24,7 +24,14 @@ const {
   withdrawParty,
 } = useElections()
 
-const unwrap = (r: any) => r?.data?.data ?? r?.data ?? r
+const unwrap = (response: any) => {
+  if (!response || typeof response !== 'object' || !('data' in response)) return response
+  const payload = (response as any).data
+  if (payload && typeof payload === 'object' && !Array.isArray(payload) && 'data' in payload) {
+    return (payload as any).data
+  }
+  return payload
+}
 const imageUrl = (path: string | null) => {
   if (!path) return null
   if (path.startsWith('http')) return path
