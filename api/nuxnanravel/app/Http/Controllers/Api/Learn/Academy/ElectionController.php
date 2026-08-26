@@ -145,6 +145,6 @@ class ElectionController extends Controller
 
         return response()->json(['success' => true, 'data' => MemberActivityLog::where('academy_id', $academy->id)->whereIn('action', MemberActivityLog::electionActions())->where(function ($q) use ($e) {
             $q->where('new_values->election_id', $e->id)->orWhere('old_values->election_id', $e->id);
-        })->latest()->paginate(15)]);
+        })->with(['user:id,name'])->latest()->paginate(15)]);
     }
 }

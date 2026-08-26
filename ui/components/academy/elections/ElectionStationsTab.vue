@@ -81,13 +81,14 @@ watch(() => [props.academyId, props.electionId], load, { immediate: true })
     </form>
     <p v-if="message" class="rounded-lg bg-blue-50 p-3 text-sm text-blue-800">{{ message }}</p>
     <div class="overflow-x-auto rounded-xl border">
-      <table class="min-w-[760px] w-full text-left text-sm">
+      <table class="min-w-[880px] w-full text-left text-sm">
         <thead class="bg-gray-50">
           <tr>
             <th class="p-3">หน่วย</th>
             <th class="p-3">สถานที่</th>
             <th class="p-3">สถานะ</th>
-            <th class="p-3">ออกบัตร</th>
+            <th class="p-3 whitespace-nowrap">ออกบัตรทั้งหมด</th>
+            <th class="p-3 whitespace-nowrap">บัตรค้าง</th>
             <th class="p-3">ใช้สิทธิ์</th>
             <th class="p-3">จัดการ</th>
           </tr>
@@ -97,8 +98,9 @@ watch(() => [props.academyId, props.electionId], load, { immediate: true })
             <td class="p-3">{{ station.name }}</td>
             <td class="p-3">{{ station.location || '-' }}</td>
             <td class="p-3">{{ station.is_open ? 'เปิด' : 'ปิด' }}</td>
-            <td class="p-3">{{ station.issued_count }}</td>
-            <td class="p-3">{{ station.cast_count }}</td>
+            <td class="p-3">{{ station.issued_total ?? 0 }}</td>
+            <td class="p-3">{{ station.issued_count ?? 0 }}</td>
+            <td class="p-3">{{ station.cast_count ?? 0 }}</td>
             <td class="p-3">
               <div class="flex flex-wrap gap-2">
                 <button
