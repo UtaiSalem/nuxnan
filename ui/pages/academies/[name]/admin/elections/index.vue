@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import ElectionFormModal from '~/components/academy/elections/ElectionFormModal.vue'
 definePageMeta({ layout: 'main' })
 const route = useRoute()
 const api = useApi()

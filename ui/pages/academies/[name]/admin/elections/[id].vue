@@ -1,4 +1,12 @@
 <script setup lang="ts">
+import ElectionOverviewTab from '~/components/academy/elections/ElectionOverviewTab.vue'
+import ElectionPartiesTab from '~/components/academy/elections/ElectionPartiesTab.vue'
+import ElectionVoterRollTab from '~/components/academy/elections/ElectionVoterRollTab.vue'
+import ElectionStationsTab from '~/components/academy/elections/ElectionStationsTab.vue'
+import ElectionResultsTab from '~/components/academy/elections/ElectionResultsTab.vue'
+import ElectionAuditTab from '~/components/academy/elections/ElectionAuditTab.vue'
+import ElectionFormModal from '~/components/academy/elections/ElectionFormModal.vue'
+
 definePageMeta({ layout: 'main' })
 
 const route = useRoute()
