@@ -180,11 +180,13 @@
             v-model="newComment"
             type="text"
             placeholder="Write a comment..."
-            class="flex-1 px-4 py-2 border border-secondary-300 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+            class="min-w-0 flex-1 px-3 sm:px-4 py-2 border border-secondary-300 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
           />
           <button
             type="submit"
-            class="p-2 bg-primary-500 text-white rounded-full hover:bg-primary-600 transition-colors duration-200"
+            title="ส่งความคิดเห็น"
+            aria-label="ส่งความคิดเห็น"
+            class="flex-shrink-0 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 inline-flex items-center justify-center p-2.5 sm:p-2 bg-primary-500 text-white rounded-full hover:bg-primary-600 transition-colors duration-200"
           >
             <i class="pi pi-send text-lg"></i>
           </button>

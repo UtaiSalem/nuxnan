@@ -3044,27 +3044,31 @@ const handlePollUpdate = (updatedPoll) => {
                   decoding="async"
                   @error="(e) => e.target.src = '/images/default-avatar.png'"
                 />
-                <div class="flex-1 flex gap-2">
+                <div class="min-w-0 flex-1 flex gap-2">
                   <input
                     :id="`reply-input-${comment.id}`"
                     v-model="replyContent"
                     type="text"
                     :placeholder="`ตอบกลับ ${comment.user?.username || comment.author?.username}...`"
-                    class="flex-1 px-3 py-2 text-sm rounded-full bg-gray-100 dark:bg-vikinger-dark-300 border-none focus:ring-2 focus:ring-vikinger-purple/50 placeholder-gray-400 dark:text-white"
+                    class="min-w-0 flex-1 px-3 py-2 text-sm rounded-full bg-gray-100 dark:bg-vikinger-dark-300 border-none focus:ring-2 focus:ring-vikinger-purple/50 placeholder-gray-400 dark:text-white"
                     @keydown.enter="submitReply(comment)"
                     @keydown.escape="cancelReply"
                   />
-                  <button 
+                  <button
                     @click="submitReply(comment)"
                     :disabled="isSubmittingReply || !replyContent.trim()"
-                    class="p-2 rounded-full bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="ส่งการตอบกลับ"
+                    aria-label="ส่งการตอบกลับ"
+                    class="flex-shrink-0 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 inline-flex items-center justify-center p-2.5 sm:p-2 rounded-full bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Icon v-if="!isSubmittingReply" icon="fluent:send-20-filled" class="w-4 h-4" />
                     <Icon v-else icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
                   </button>
-                  <button 
+                  <button
                     @click="cancelReply"
-                    class="p-2 text-gray-500 hover:text-red-500 transition-colors"
+                    title="ยกเลิก"
+                    aria-label="ยกเลิก"
+                    class="flex-shrink-0 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 inline-flex items-center justify-center p-2.5 sm:p-2 text-gray-500 hover:text-red-500 transition-colors"
                   >
                     <Icon icon="fluent:dismiss-20-regular" class="w-4 h-4" />
                   </button>

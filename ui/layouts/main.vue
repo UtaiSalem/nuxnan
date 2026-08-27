@@ -1798,10 +1798,11 @@ const onQRActionComplete = (result) => {
     >
       <button
         @click="layoutWidgets.isLeftPanelOpen = true"
-        class="lg:hidden bg-gradient-vikinger text-white p-3 rounded-r-2xl shadow-vikinger hover:scale-110 active:scale-95 transition-transform"
+        class="lg:hidden min-h-[44px] flex items-center bg-gradient-vikinger text-white px-1.5 py-3 sm:px-2 sm:py-3.5 rounded-r-xl shadow-vikinger opacity-60 hover:opacity-100 focus-visible:opacity-100 hover:scale-105 active:scale-95 active:opacity-100 transition-all"
         title="เปิดแถบเครื่องมือด้านซ้าย"
+        aria-label="เปิดแถบเครื่องมือด้านซ้าย"
       >
-        <Icon icon="fluent:panel-left-24-filled" class="w-5 h-5" />
+        <Icon icon="fluent:panel-left-24-filled" class="w-4 h-4 sm:w-5 sm:h-5" />
       </button>
     </div>
 
@@ -1812,10 +1813,11 @@ const onQRActionComplete = (result) => {
     >
       <button
         @click="layoutWidgets.isRightPanelOpen = true"
-        class="xl:hidden bg-gradient-vikinger text-white p-3 rounded-l-2xl shadow-vikinger hover:scale-110 active:scale-95 transition-transform"
+        class="xl:hidden min-h-[44px] flex items-center bg-gradient-vikinger text-white px-1.5 py-3 sm:px-2 sm:py-3.5 rounded-l-xl shadow-vikinger opacity-60 hover:opacity-100 focus-visible:opacity-100 hover:scale-105 active:scale-95 active:opacity-100 transition-all"
         title="เปิดแถบเครื่องมือด้านขวา"
+        aria-label="เปิดแถบเครื่องมือด้านขวา"
       >
-        <Icon icon="fluent:panel-right-24-filled" class="w-5 h-5" />
+        <Icon icon="fluent:panel-right-24-filled" class="w-4 h-4 sm:w-5 sm:h-5" />
       </button>
     </div>
 

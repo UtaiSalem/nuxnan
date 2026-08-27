@@ -859,21 +859,21 @@ const handlePollDelete = () => {
           <img
             :src="currentUserAvatar"
             :alt="user?.name"
-            class="w-8 h-8 rounded-full"
+            class="w-8 h-8 flex-shrink-0 rounded-full"
           />
-          <div class="flex-1 flex gap-2">
+          <div class="min-w-0 flex-1 flex gap-2">
             <input
               v-model="newComment"
               type="text"
               placeholder="เขียนความคิดเห็น..."
-              class="flex-1 px-4 py-2 bg-gray-100 dark:bg-vikinger-dark-100 rounded-full text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="min-w-0 flex-1 px-3 sm:px-4 py-2 bg-gray-100 dark:bg-vikinger-dark-100 rounded-full text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
               @keyup.enter="addComment"
               :disabled="isCommenting"
             />
             <button
               @click="addComment"
               :disabled="!newComment.trim() || isCommenting"
-              class="px-4 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="flex-shrink-0 min-h-[44px] sm:min-h-0 inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-full text-sm font-medium whitespace-nowrap hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Icon v-if="isCommenting" icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
               <span v-else>ส่ง</span>
@@ -951,28 +951,28 @@ const handlePollDelete = () => {
                   <img
                     :src="currentUserAvatar"
                     :alt="user?.name"
-                    class="w-6 h-6 rounded-full"
+                    class="w-6 h-6 flex-shrink-0 rounded-full"
                   />
-                  <div class="flex-1 flex gap-2">
+                  <div class="min-w-0 flex-1 flex gap-2">
                     <input
                       v-model="replyContent"
                       type="text"
                       :placeholder="`ตอบกลับ ${(comment.user || comment.author)?.name}...`"
-                      class="flex-1 px-3 py-1.5 bg-gray-100 dark:bg-vikinger-dark-100 rounded-full text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      class="min-w-0 flex-1 px-3 py-1.5 bg-gray-100 dark:bg-vikinger-dark-100 rounded-full text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       @keyup.enter="submitReply"
                       :disabled="isSubmittingReply"
                     />
                     <button
                       @click="submitReply"
                       :disabled="!replyContent.trim() || isSubmittingReply"
-                      class="px-3 py-1.5 bg-blue-600 text-white rounded-full text-xs font-medium hover:bg-blue-700 disabled:opacity-50"
+                      class="flex-shrink-0 min-h-[44px] sm:min-h-0 inline-flex items-center justify-center px-3 py-1.5 bg-blue-600 text-white rounded-full text-xs font-medium whitespace-nowrap hover:bg-blue-700 disabled:opacity-50"
                     >
                       <Icon v-if="isSubmittingReply" icon="fluent:spinner-ios-20-regular" class="w-3 h-3 animate-spin" />
                       <span v-else>ส่ง</span>
                     </button>
                     <button
                       @click="cancelReply"
-                      class="px-3 py-1.5 text-gray-500 hover:text-gray-700 text-xs"
+                      class="flex-shrink-0 min-h-[44px] sm:min-h-0 inline-flex items-center justify-center px-3 py-1.5 text-gray-500 hover:text-gray-700 text-xs whitespace-nowrap"
                     >
                       ยกเลิก
                     </button>
