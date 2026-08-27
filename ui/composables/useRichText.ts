@@ -53,8 +53,25 @@ export const useRichText = () => {
     })
   }
 
+  /**
+   * ห่อ <table> ทุกตัวด้วยกล่อง .rtv-table-scroll
+   * ตารางกว้างเกินจอจะเลื่อนแนวนอนในกล่องตัวเอง แทนที่จะดันทั้งหน้าให้เลื่อน
+   * หรือถูกบีบจนหัวคอลัมน์ภาษาไทยแตกเป็นหลายบรรทัด
+   * (ใช้ string replace ไม่ใช่ DOM เพราะต้องทำงานตอน SSR ด้วย — ตารางซ้อนกันไม่ได้อยู่แล้ว)
+   */
+  const wrapTablesForScroll = (html: string | null | undefined): string => {
+    if (!html) return ''
+    if (!/<table[\s>]/i.test(html)) return html
+    if (html.includes('rtv-table-scroll')) return html
+
+    return html
+      .replace(/<table(\s|>)/gi, '<div class="rtv-table-scroll"><table$1')
+      .replace(/<\/table\s*>/gi, '</table></div>')
+  }
+
   return {
     convertPlainTextToHtml,
-    sanitizeHtml
+    sanitizeHtml,
+    wrapTablesForScroll
   }
 }

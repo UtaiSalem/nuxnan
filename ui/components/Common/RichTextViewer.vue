@@ -17,7 +17,7 @@ const props = withDefaults(defineProps<Props>(), {
   initialExpanded: false
 })
 
-const { convertPlainTextToHtml, sanitizeHtml } = useRichText()
+const { convertPlainTextToHtml, sanitizeHtml, wrapTablesForScroll } = useRichText()
 
 const isExpanded = ref(props.initialExpanded)
 const contentRef = ref<HTMLElement | null>(null)
@@ -29,7 +29,10 @@ const sanitizedContent = computed(() => {
   
   // Add sandbox to iframes that don't already have it (avoids duplicate attribute)
   const sandboxValue = 'allow-forms allow-scripts allow-popups allow-popups-to-escape-sandbox allow-presentation'
-  return sanitized.replace(/<iframe(?![^>]*\ssandbox)/gi, `<iframe sandbox="${sandboxValue}"`)
+  const withSandbox = sanitized.replace(/<iframe(?![^>]*\ssandbox)/gi, `<iframe sandbox="${sandboxValue}"`)
+
+  // ตารางกว้างต้องเลื่อนในกล่องตัวเอง ไม่ใช่ดันทั้งหน้า
+  return wrapTablesForScroll(withSandbox)
 })
 
 const checkHeight = () => {
@@ -58,7 +61,7 @@ const toggleExpand = () => {
     <div 
       ref="contentRef"
       class="text-gray-600 dark:text-gray-400 leading-relaxed prose dark:prose-invert max-w-none break-words [overflow-wrap:anywhere] overflow-hidden transition-all duration-300
-        [&_table]:block [&_table]:w-full [&_table]:overflow-x-auto [&_table]:border-collapse [&_table]:mb-4
+        [&_table]:border-collapse [&_table]:m-0
         [&_thead]:bg-gray-50 [&_thead]:dark:bg-gray-800/50
         [&_th]:px-4 [&_th]:py-2 [&_th]:border [&_th]:border-gray-200 [&_th]:dark:border-gray-700 [&_th]:text-left
         [&_td]:px-4 [&_td]:py-2 [&_td]:border [&_td]:border-gray-200 [&_td]:dark:border-gray-700
@@ -99,6 +102,20 @@ const toggleExpand = () => {
 </template>
 
 <style scoped>
+/* ตารางกว้างเกินจอ: เลื่อนแนวนอนในกล่องของตัวเอง และคงความกว้างตามเนื้อหาจริง
+   (ถ้าปล่อยให้ table โดนบีบ หัวคอลัมน์ภาษาไทยจะแตกเป็นหลายบรรทัด)
+   ใช้ :deep() เพราะ v-html สร้าง node ที่ไม่มี scope attribute */
+:deep(.rtv-table-scroll) {
+  @apply mb-4 max-w-full overflow-x-auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+:deep(.rtv-table-scroll > table) {
+  width: max-content;
+  min-width: 100%;
+  overflow-wrap: normal;
+}
+
 /* TipTap Specific Styles that might not be in standard prose */
 :deep(ul[data-type="taskList"]) {
   list-style: none;
