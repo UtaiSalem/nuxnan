@@ -354,10 +354,10 @@ const respondToInvitation = async (accept: boolean) => {
         </p>
 
         <div class="flex gap-3">
-          <button @click="respondToInvitation(true)" class="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+          <button @click="respondToInvitation(true)" class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
             ตอบรับคำเชิญ
           </button>
-          <button @click="respondToInvitation(false)" class="px-6 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+          <button @click="respondToInvitation(false)" class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
             ปฏิเสธ
           </button>
         </div>
@@ -375,7 +375,7 @@ const respondToInvitation = async (accept: boolean) => {
         <button
           v-if="isCourseAdmin && !isEditingDescription"
           @click="startEditDescription"
-          class="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+          class="min-h-[44px] sm:min-h-0 flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
         >
           <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
           แก้ไข
@@ -400,14 +400,14 @@ const respondToInvitation = async (accept: boolean) => {
           <button
             @click="cancelEditDescription"
             :disabled="isSavingDescription"
-            class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
           >
             ยกเลิก
           </button>
           <button
             @click="saveDescription"
             :disabled="isSavingDescription"
-            class="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
+            class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
           >
             <Icon v-if="isSavingDescription" icon="svg-spinners:ring-resize" class="w-4 h-4" />
             <Icon v-else icon="fluent:save-24-regular" class="w-4 h-4" />

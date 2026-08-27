@@ -205,7 +205,7 @@ onUnmounted(clearReceiveTimers)
       <!-- Split breakdown toggle -->
       <button
         type="button"
-        class="mt-3 flex w-full items-center justify-between rounded-lg border border-gray-100 px-3 py-2 text-[11px] transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/50"
+        class="min-h-[44px] sm:min-h-0 mt-3 flex w-full items-center justify-between rounded-lg border border-gray-100 px-3 py-2 text-[11px] transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/50"
         @click="showSplit = !showSplit"
       >
         <span class="flex items-center gap-1.5 font-medium text-gray-600 dark:text-gray-300">

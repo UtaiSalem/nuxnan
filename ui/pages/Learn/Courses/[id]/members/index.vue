@@ -574,7 +574,7 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                 <div v-if="!isMobile" class="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
                     <button 
                         @click="viewMode = 'card'"
-                        class="p-2 rounded-md transition-all"
+                        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-md transition-all"
                         :class="viewMode === 'card' ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
                         title="มุมมองการ์ด"
                     >
@@ -582,7 +582,7 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                     </button>
                     <button 
                         @click="viewMode = 'table'"
-                        class="p-2 rounded-md transition-all"
+                        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-md transition-all"
                         :class="viewMode === 'table' ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
                         title="มุมมองตาราง"
                     >
@@ -590,7 +590,7 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                     </button>
                     <button 
                         @click="viewMode = 'list'"
-                        class="p-2 rounded-md transition-all"
+                        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-md transition-all"
                         :class="viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
                         title="มุมมองรายการ"
                     >
@@ -602,14 +602,14 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                 <div v-if="activeGroupTab !== -2" class="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
                     <button 
                         @click="sortBy = 'number'"
-                        class="px-3 py-1.5 text-sm font-medium rounded-md transition-all"
+                        class="min-h-[44px] sm:min-h-0 px-3 py-1.5 text-sm font-medium rounded-md transition-all"
                         :class="sortBy === 'number' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
                     >
                         เลขที่
                     </button>
                     <button 
                         @click="sortBy = 'score'"
-                        class="px-3 py-1.5 text-sm font-medium rounded-md transition-all"
+                        class="min-h-[44px] sm:min-h-0 px-3 py-1.5 text-sm font-medium rounded-md transition-all"
                         :class="sortBy === 'score' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
                     >
                         คะแนน
@@ -644,7 +644,7 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                     <div class="flex flex-wrap items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                         <button 
                             @click="setActiveGroupTab(0)"
-                            class="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200"
+                            class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200"
                             :class="activeGroupTab === 0
                                 ? 'bg-blue-500 text-white shadow-md'
                                 : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
@@ -657,7 +657,7 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                             v-for="(group, index) in courseGroupStore.groups" 
                             :key="group.id"
                             @click="setActiveGroupTab(index + 1)"
-                            class="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200"
+                            class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200"
                             :class="activeGroupTab === index + 1
                                 ? 'bg-blue-500 text-white shadow-md'
                                 : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
@@ -668,7 +668,7 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                         <!-- ไม่มีกลุ่ม tab -->
                         <button 
                             @click="setActiveGroupTab(-1)"
-                            class="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200"
+                            class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200"
                             :class="activeGroupTab === -1
                                 ? 'bg-amber-500 text-white shadow-md'
                                 : (ungroupedCount > 0
@@ -682,7 +682,7 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                         <!-- รออนุมัติ tab -->
                         <button 
                             @click="setActiveGroupTab(-2)"
-                            class="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ml-auto"
+                            class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ml-auto"
                             :class="activeGroupTab === -2
                                 ? 'bg-emerald-600 text-white shadow-md'
                                 : (pendingCount > 0
@@ -739,7 +739,7 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                     <div v-if="isCourseAdmin && activeGroupTab > 0" class="flex justify-end mb-3">
                         <button
                             @click="handleBulkUnlockGroup"
-                            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
                         >
                             <Icon icon="heroicons:lock-open" class="w-4 h-4" />
                             ปลดล็อคทั้งกลุ่ม (เฉพาะหมดสิทธิ์)
@@ -849,14 +849,14 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                     <div class="flex gap-3">
                         <button
                             @click="showUnlockModal = false"
-                            class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
+                            class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
                         >
                             ยกเลิก
                         </button>
                         <button
                             @click="submitUnlock"
                             :disabled="!unlockReason.trim() || isUnlocking"
-                            class="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                            class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
                         >
                             <Icon v-if="isUnlocking" icon="heroicons:arrow-path" class="w-4 h-4 mr-2 animate-spin inline" />
                             ปลดล็อค
@@ -897,14 +897,14 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                     <div class="flex gap-3">
                         <button
                             @click="showBulkUnlockConfirm = false"
-                            class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
+                            class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
                         >
                             ยกเลิก
                         </button>
                         <button
                             @click="submitBulkUnlockGroup"
                             :disabled="!bulkUnlockGroupReason.trim() || isBulkUnlocking"
-                            class="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                            class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
                         >
                             <Icon v-if="isBulkUnlocking" icon="heroicons:arrow-path" class="w-4 h-4 mr-2 animate-spin inline" />
                             ยืนยันปลดล็อค

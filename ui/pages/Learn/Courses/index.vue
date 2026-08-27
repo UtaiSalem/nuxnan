@@ -449,7 +449,7 @@ watch(() => authStore.user?.id, (id) => {
       <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl shadow-sm border border-gray-100 dark:border-vikinger-dark-100 p-1 flex gap-1 mb-5">
         <button
           @click="activeTab = 'enrolled'"
-          class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap"
+          class="min-h-[44px] sm:min-h-0 flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap"
           :class="activeTab === 'enrolled' ? 'bg-vikinger-purple/10 text-vikinger-purple dark:text-vikinger-cyan' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 dark:text-gray-400'"
         >
           <Icon icon="fluent:hat-graduation-24-regular" class="w-4 h-4" />
@@ -457,7 +457,7 @@ watch(() => authStore.user?.id, (id) => {
         </button>
         <button
           @click="activeTab = 'my'"
-          class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap"
+          class="min-h-[44px] sm:min-h-0 flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap"
           :class="activeTab === 'my' ? 'bg-vikinger-purple/10 text-vikinger-purple dark:text-vikinger-cyan' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 dark:text-gray-400'"
         >
           <Icon icon="fluent:crown-24-regular" class="w-4 h-4" />
@@ -465,7 +465,7 @@ watch(() => authStore.user?.id, (id) => {
         </button>
         <button
           @click="activeTab = 'all'"
-          class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap"
+          class="min-h-[44px] sm:min-h-0 flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap"
           :class="activeTab === 'all' ? 'bg-vikinger-purple/10 text-vikinger-purple dark:text-vikinger-cyan' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 dark:text-gray-400'"
         >
           <Icon icon="fluent:globe-24-regular" class="w-4 h-4" />
@@ -483,7 +483,7 @@ watch(() => authStore.user?.id, (id) => {
             <!-- Mobile Filter Button -->
             <button 
               @click="isFilterDrawerOpen = true"
-              class="lg:hidden flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-vikinger-dark-200 text-gray-700 dark:text-white rounded-lg text-xs font-bold border border-gray-100 dark:border-vikinger-dark-100 shadow-sm"
+              class="min-h-[44px] sm:min-h-0 lg:hidden flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-vikinger-dark-200 text-gray-700 dark:text-white rounded-lg text-xs font-bold border border-gray-100 dark:border-vikinger-dark-100 shadow-sm"
             >
               <Icon icon="fluent:filter-24-regular" class="w-4 h-4 text-blue-500" />
               ตัวกรอง
@@ -566,7 +566,7 @@ watch(() => authStore.user?.id, (id) => {
         <Icon icon="fluent:error-circle-24-regular" class="w-16 h-16 text-red-500 mx-auto mb-4" />
         <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-2">เกิดข้อผิดพลาด</h3>
         <p class="text-sm text-gray-500 mb-6">{{ activeError }}</p>
-        <button @click="activeTab === 'all' ? fetchCourses(1) : activeTab === 'my' ? fetchMyCourses() : fetchEnrolledCourses()" class="px-8 py-2.5 bg-gradient-vikinger text-white rounded-xl font-bold shadow-vikinger transition-all hover:scale-105">
+        <button @click="activeTab === 'all' ? fetchCourses(1) : activeTab === 'my' ? fetchMyCourses() : fetchEnrolledCourses()" class="min-h-[44px] sm:min-h-0 px-8 py-2.5 bg-gradient-vikinger text-white rounded-xl font-bold shadow-vikinger transition-all hover:scale-105">
           ลองใหม่อีกครั้ง
         </button>
       </div>
@@ -585,7 +585,7 @@ watch(() => authStore.user?.id, (id) => {
           สร้างรายวิชา
         </NuxtLink>
         <template v-else-if="activeTab === 'my'">
-          <button disabled class="inline-flex items-center gap-2 mt-4 px-6 py-2.5 bg-gradient-vikinger text-white rounded-xl font-bold shadow-vikinger opacity-50 cursor-not-allowed">
+          <button disabled class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 mt-4 px-6 py-2.5 bg-gradient-vikinger text-white rounded-xl font-bold shadow-vikinger opacity-50 cursor-not-allowed">
             <Icon icon="mdi:lock" class="w-4 h-4" />
             สร้างรายวิชา
           </button>
@@ -593,7 +593,7 @@ watch(() => authStore.user?.id, (id) => {
             ต้องมีคะแนนสะสม {{ formatNumber(createCourseThreshold) }} แต้ม จึงจะสร้างรายวิชาได้
           </p>
         </template>
-        <button v-else-if="activeTab === 'enrolled'" @click="activeTab = 'all'" class="inline-flex items-center gap-2 mt-4 px-6 py-2.5 bg-gradient-vikinger text-white rounded-xl font-bold shadow-vikinger transition-all hover:scale-105">
+        <button v-else-if="activeTab === 'enrolled'" @click="activeTab = 'all'" class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 mt-4 px-6 py-2.5 bg-gradient-vikinger text-white rounded-xl font-bold shadow-vikinger transition-all hover:scale-105">
           <Icon icon="fluent:globe-24-regular" class="w-4 h-4" />
           ดูรายวิชาทั้งหมด
         </button>
@@ -650,7 +650,7 @@ watch(() => authStore.user?.id, (id) => {
         <div class="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 flex justify-end">
           <button 
             @click="isFilterDrawerOpen = false"
-            class="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition-all"
+            class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition-all"
           >
             ตกลง
           </button>

@@ -365,14 +365,14 @@ watch(() => props.viewMode, (val) => {
           <div v-if="isPendingView && isCourseAdmin" class="flex items-center gap-2 mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
             <button
               @click="emit('approve-request', member)"
-              class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-lg transition-colors text-sm shadow-md shadow-emerald-500/20 active:scale-95"
+              class="min-h-[44px] sm:min-h-0 flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-lg transition-colors text-sm shadow-md shadow-emerald-500/20 active:scale-95"
             >
               <Icon icon="heroicons:check-circle" class="w-4 h-4" />
               <span>อนุมัติ</span>
             </button>
             <button
               @click="emit('reject-request', member)"
-              class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 border border-red-200 dark:border-red-800 font-bold rounded-lg transition-colors text-sm active:scale-95"
+              class="min-h-[44px] sm:min-h-0 flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 border border-red-200 dark:border-red-800 font-bold rounded-lg transition-colors text-sm active:scale-95"
             >
               <Icon icon="heroicons:x-circle" class="w-4 h-4" />
               <span>ปฏิเสธ</span>
@@ -634,14 +634,14 @@ watch(() => props.viewMode, (val) => {
                 <div v-if="isPendingView" class="flex items-center justify-end gap-2">
                   <button
                     @click="emit('approve-request', member)"
-                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition-colors active:scale-95"
+                    class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition-colors active:scale-95"
                   >
                     <Icon icon="heroicons:check-circle" class="w-4 h-4" />
                     อนุมัติ
                   </button>
                   <button
                     @click="emit('reject-request', member)"
-                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 border border-red-200 dark:border-red-800 text-xs font-bold rounded-lg transition-colors active:scale-95"
+                    class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 border border-red-200 dark:border-red-800 text-xs font-bold rounded-lg transition-colors active:scale-95"
                   >
                     <Icon icon="heroicons:x-circle" class="w-4 h-4" />
                     ปฏิเสธ
@@ -661,21 +661,21 @@ watch(() => props.viewMode, (val) => {
                   </span>
                   <button
                     @click="emit('view-member', member)"
-                    class="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors"
                     title="ดูรายละเอียด"
                   >
                     <Icon icon="fluent:eye-24-regular" class="w-4 h-4" />
                   </button>
                   <button
                     @click="emit('edit-member', member)"
-                    class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                     title="แก้ไข"
                   >
                     <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
                   </button>
                   <button
                     @click="emit('request-unmember', { memberId: member.id, memberName: getMemberName(member) })"
-                    class="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                     title="ลบสมาชิก"
                   >
                     <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />

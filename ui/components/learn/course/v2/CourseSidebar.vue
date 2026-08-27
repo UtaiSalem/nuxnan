@@ -31,7 +31,7 @@ const courseId = computed(() => props.course?.id)
       <p class="text-xs font-bold text-gray-500 dark:text-gray-400">
         หากมีข้อสงสัยเกี่ยวกับเนื้อหาหรือการบ้าน สามารถสอบถามผู้สอนได้โดยตรง
       </p>
-      <button class="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 py-2.5 text-xs font-bold text-white hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200 transition-colors">
+      <button class="min-h-[44px] sm:min-h-0 mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 py-2.5 text-xs font-bold text-white hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200 transition-colors">
         <Icon icon="fluent:question-circle-24-filled" class="w-4 h-4" />
         <span>ศูนย์ช่วยเหลือ</span>
       </button>

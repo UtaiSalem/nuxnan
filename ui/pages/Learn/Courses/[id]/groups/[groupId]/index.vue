@@ -375,7 +375,7 @@ onMounted(() => {
                 </NuxtLink>
                 <button
                   @click="deleteGroup"
-                  class="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                   title="ลบ"
                 >
                   <Icon icon="fluent:delete-24-filled" class="w-5 h-5" />
@@ -388,7 +388,7 @@ onMounted(() => {
                   v-if="!isMember"
                   @click="joinGroup"
                   :disabled="isJoining"
-                  class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-semibold rounded-lg transition-colors disabled:opacity-50"
+                  class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-semibold rounded-lg transition-colors disabled:opacity-50"
                 >
                   <Icon v-if="isJoining" icon="svg-spinners:ring-resize" class="w-5 h-5" />
                   <Icon v-else icon="heroicons:user-plus" class="w-5 h-5" />
@@ -398,7 +398,7 @@ onMounted(() => {
                   v-else
                   @click="leaveGroup"
                   :disabled="isLeaving"
-                  class="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors disabled:opacity-50"
+                  class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-colors disabled:opacity-50"
                 >
                   <Icon v-if="isLeaving" icon="svg-spinners:ring-resize" class="w-5 h-5" />
                   <Icon v-else icon="heroicons:arrow-left-on-rectangle" class="w-5 h-5" />
@@ -551,14 +551,14 @@ onMounted(() => {
               <div class="flex items-center gap-2">
                 <button 
                   @click="approveMember(req.id)"
-                  class="px-3 py-1.5 text-sm font-medium text-white bg-green-500 hover:bg-green-600 rounded-lg transition-colors flex items-center gap-1"
+                  class="min-h-[44px] sm:min-h-0 px-3 py-1.5 text-sm font-medium text-white bg-green-500 hover:bg-green-600 rounded-lg transition-colors flex items-center gap-1"
                 >
                   <Icon icon="fluent:checkmark-24-filled" class="w-4 h-4" />
                   <span class="hidden sm:inline">อนุมัติ</span>
                 </button>
                 <button 
                   @click="rejectMember(req.id)"
-                  class="px-3 py-1.5 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors flex items-center gap-1"
+                  class="min-h-[44px] sm:min-h-0 px-3 py-1.5 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors flex items-center gap-1"
                 >
                   <Icon icon="fluent:dismiss-24-filled" class="w-4 h-4" />
                   <span class="hidden sm:inline">ปฏิเสธ</span>
@@ -751,7 +751,7 @@ onMounted(() => {
                       v-if="isCourseAdmin"
                       @click.stop="removeFromGroup(member)"
                       :disabled="isRemovingFromGroup === member.user_id"
-                      class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex-shrink-0"
+                      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex-shrink-0"
                       title="นำออกจากกลุ่ม"
                     >
                       <Icon v-if="isRemovingFromGroup === member.user_id" icon="svg-spinners:ring-resize" class="w-4 h-4" />

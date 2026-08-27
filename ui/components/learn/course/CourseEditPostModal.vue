@@ -172,7 +172,7 @@ const updatePost = async () => {
                 <Icon icon="fluent:edit-24-regular" class="w-5 h-5 text-blue-500" />
                 <h2 class="text-xl font-bold text-gray-800 dark:text-white">แก้ไขโพสต์</h2>
               </div>
-              <button @click="closeModal" class="p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-full">
+              <button @click="closeModal" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-full">
                 <Icon icon="fluent:dismiss-24-regular" class="w-6 h-6 text-gray-500" />
               </button>
             </div>
@@ -270,7 +270,7 @@ const updatePost = async () => {
               <div v-if="imagePreviews.length === 0" class="mb-4">
                 <button 
                   @click="triggerImageInput" 
-                  class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all"
+                  class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all"
                   :disabled="totalImageCount >= 10"
                 >
                   <Icon icon="fluent:image-24-regular" class="w-5 h-5 text-green-500" />

@@ -144,14 +144,14 @@ const handleGradedEditSubmit = () => {
        <div v-if="isCourseAdmin" class="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           <button 
             @click.stop="emit('edit', assignment)"
-            class="p-2 bg-white/90 dark:bg-gray-800/90 rounded-lg hover:bg-white dark:hover:bg-gray-800 text-blue-600 shadow-lg backdrop-blur hover:scale-105 transition-all"
+            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 bg-white/90 dark:bg-gray-800/90 rounded-lg hover:bg-white dark:hover:bg-gray-800 text-blue-600 shadow-lg backdrop-blur hover:scale-105 transition-all"
             title="แก้ไข"
           >
             <Icon icon="fluent:edit-24-regular" class="w-5 h-5" />
           </button>
           <button 
             @click.stop="emit('delete', assignment)"
-            class="p-2 bg-white/90 dark:bg-gray-800/90 rounded-lg hover:bg-white dark:hover:bg-gray-800 text-red-600 shadow-lg backdrop-blur hover:scale-105 transition-all"
+            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 bg-white/90 dark:bg-gray-800/90 rounded-lg hover:bg-white dark:hover:bg-gray-800 text-red-600 shadow-lg backdrop-blur hover:scale-105 transition-all"
             title="ลบ"
           >
             <Icon icon="fluent:delete-24-regular" class="w-5 h-5" />
@@ -199,7 +199,7 @@ const handleGradedEditSubmit = () => {
                <!-- Edit Button for Graded Answer -->
                <button 
                   @click="isEditingGraded = !isEditingGraded"
-                  class="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-emerald-100 transition-colors"
+                  class="min-h-[44px] sm:min-h-0 text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-emerald-100 transition-colors"
                >
                   <Icon :icon="isEditingGraded ? 'fluent:dismiss-16-regular' : 'fluent:edit-16-regular'" class="w-4 h-4" />
                   {{ isEditingGraded ? 'ยกเลิก' : 'แก้ไข' }}

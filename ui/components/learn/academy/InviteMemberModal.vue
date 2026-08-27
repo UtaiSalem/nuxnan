@@ -134,7 +134,7 @@ const close = () => {
             </div>
             <button
               @click="close"
-              class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
@@ -207,7 +207,7 @@ const close = () => {
                 <button
                   @click="inviteUser(user)"
                   :disabled="isInviting && invitingUserId === user.id"
-                  class="px-4 py-2 bg-vikinger-purple text-white rounded-lg text-sm font-medium hover:bg-vikinger-purple/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-vikinger-purple text-white rounded-lg text-sm font-medium hover:bg-vikinger-purple/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
                 >
                   <Icon 
                     v-if="isInviting && invitingUserId === user.id" 

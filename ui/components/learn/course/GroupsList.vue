@@ -116,7 +116,7 @@ defineExpose({
         <button
           v-if="isCourseAdmin"
           @click="emit('create')"
-          class="flex items-center gap-2 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors"
+          class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors"
         >
           <Icon icon="fluent:add-24-regular" class="w-4 h-4" />
           <span class="hidden sm:inline">เพิ่มกลุ่ม</span>
@@ -173,7 +173,7 @@ defineExpose({
       <button
         v-if="isCourseAdmin"
         @click="emit('create')"
-        class="inline-flex items-center gap-2 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors"
+        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors"
       >
         <Icon icon="fluent:add-24-regular" class="w-4 h-4" />
         สร้างกลุ่มแรก

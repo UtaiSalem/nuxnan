@@ -520,7 +520,7 @@ const deleteQuestion = async (qId: number) => {
     <div class="flex items-center gap-4 mb-6">
       <button 
         @click="navigateTo(`/courses/${courseId}/quizzes/${quizId}`)"
-        class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors"
+        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors"
       >
         <Icon icon="fluent:arrow-left-24-regular" class="w-6 h-6" />
       </button>
@@ -635,14 +635,14 @@ const deleteQuestion = async (qId: number) => {
             <div class="flex justify-end gap-3 pt-4">
                 <button 
                   @click="$router.back()"
-                  class="px-6 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  class="min-h-[44px] sm:min-h-0 px-6 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   :disabled="isSaving"
                 >
                   ยกเลิก
                 </button>
                 <button
                   @click="handleUpdate"
-                  class="px-6 py-2 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-700 disabled:opacity-50 transition-colors"
+                  class="min-h-[44px] sm:min-h-0 px-6 py-2 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-700 disabled:opacity-50 transition-colors"
                   :disabled="isSaving"
                 >
                   <span v-if="isSaving">กำลังบันทึก...</span>
@@ -851,7 +851,7 @@ const deleteQuestion = async (qId: number) => {
                                     v-if="questionForm.options.length > 2"
                                     @click="removeOption(i)" 
                                     type="button"
-                                    class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors mt-1"
+                                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors mt-1"
                                     title="ลบตัวเลือกนี้"
                                 >
                                     <Icon icon="fluent:delete-20-regular" class="w-5 h-5" />
@@ -867,8 +867,8 @@ const deleteQuestion = async (qId: number) => {
             </div>
 
             <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 flex justify-end gap-3">
-                <button @click="questionModal = false" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" :disabled="isSavingQuestion">ยกเลิก</button>
-                <button @click="saveQuestion" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium disabled:opacity-50 flex items-center gap-2" :disabled="isSavingQuestion">
+                <button @click="questionModal = false" class="min-h-[44px] sm:min-h-0 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg" :disabled="isSavingQuestion">ยกเลิก</button>
+                <button @click="saveQuestion" class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium disabled:opacity-50 flex items-center gap-2" :disabled="isSavingQuestion">
                     <Icon v-if="isSavingQuestion" icon="svg-spinners:ring-resize" class="w-5 h-5" />
                     <span>{{ isSavingQuestion ? 'กำลังบันทึก...' : 'บันทึก' }}</span>
                 </button>

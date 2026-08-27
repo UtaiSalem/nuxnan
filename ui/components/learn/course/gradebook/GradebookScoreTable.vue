@@ -214,7 +214,7 @@ watch(() => props.members, () => nextTick(measureTable), { deep: false })
         </select>
         <button
           @click="emit('sort', sortBy as SortField)"
-          class="p-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
+          class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
         >
           <Icon :icon="sortOrder === 'asc' ? 'heroicons:arrow-up' : 'heroicons:arrow-down'" class="w-4 h-4 text-gray-600 dark:text-gray-300" />
         </button>
@@ -248,7 +248,7 @@ watch(() => props.members, () => nextTick(measureTable), { deep: false })
         <button
           v-if="hasMissing(item)"
           @click="openMissingModal(item.breakdown.missing_sources)"
-          class="text-amber-600 hover:text-amber-700 underline flex items-center gap-1 px-2 py-1 rounded bg-amber-50 dark:bg-amber-900/20"
+          class="min-h-[44px] sm:min-h-0 text-amber-600 hover:text-amber-700 underline flex items-center gap-1 px-2 py-1 rounded bg-amber-50 dark:bg-amber-900/20"
         >
           <Icon icon="heroicons:exclamation-triangle" class="w-4 h-4" />
           <span class="font-medium hidden sm:inline">ยังไม่ครบ</span>
@@ -260,7 +260,7 @@ watch(() => props.members, () => nextTick(measureTable), { deep: false })
       </div>
 
       <button
-        class="mt-3 w-full text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex items-center justify-center gap-1 py-1.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 transition-colors"
+        class="min-h-[44px] sm:min-h-0 mt-3 w-full text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex items-center justify-center gap-1 py-1.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 transition-colors"
         @click="toggleExpand(item.member_id)"
       >
         {{ expandedMember === item.member_id ? 'ซ่อน breakdown' : 'ดู breakdown' }}

@@ -62,7 +62,7 @@
               <td class="p-3 text-center">
                 <button 
                   @click="$emit('view', member)" 
-                  class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1 rounded-lg text-sm transition-colors font-medium"
+                  class="min-h-[44px] sm:min-h-0 bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1 rounded-lg text-sm transition-colors font-medium"
                 >
                   รายละเอียด
                 </button>

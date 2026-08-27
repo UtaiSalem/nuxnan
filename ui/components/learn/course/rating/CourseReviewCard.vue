@@ -78,14 +78,14 @@ const handleDelete = async () => {
       <div v-if="review.is_own" class="flex items-center gap-1">
         <button
           @click="handleEdit"
-          class="p-2 text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+          class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
           title="แก้ไข"
         >
           <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
         </button>
         <button
           @click="confirmDelete"
-          class="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+          class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
           title="ลบ"
         >
           <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
@@ -132,14 +132,14 @@ const handleDelete = async () => {
             <button
               @click="cancelDelete"
               :disabled="isDeleting"
-              class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+              class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
             >
               ยกเลิก
             </button>
             <button
               @click="handleDelete"
               :disabled="isDeleting"
-              class="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Icon v-if="isDeleting" icon="svg-spinners:ring-resize" class="w-4 h-4" />
               ลบรีวิว

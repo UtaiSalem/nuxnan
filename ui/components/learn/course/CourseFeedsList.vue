@@ -220,7 +220,7 @@ onUnmounted(() => {
         v-for="tab in tabs"
         :key="tab.id"
         @click="changeTab(tab.id)"
-        class="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300"
+        class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300"
         :class="
           activeTab === tab.id
             ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg'
@@ -238,7 +238,7 @@ onUnmounted(() => {
       <p class="text-red-600 dark:text-red-400 mb-4">{{ error }}</p>
       <button 
         @click="refreshFeed" 
-        class="px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
+        class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
       >
         <Icon icon="fluent:arrow-sync-24-regular" class="w-4 h-4 inline mr-2" />
         ลองใหม่อีกครั้ง
@@ -272,7 +272,7 @@ onUnmounted(() => {
       <div class="flex justify-center">
         <button 
           @click="refreshFeed" 
-          class="flex items-center gap-2 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-colors"
+          class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-colors"
         >
           <Icon icon="fluent:arrow-sync-24-regular" class="w-4 h-4" />
           รีเฟรชฟีด

@@ -117,14 +117,14 @@
               <div class="mt-6 flex justify-end gap-3">
                 <button
                   type="button"
-                  class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
                   @click="closeModal"
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="button"
-                  class="px-4 py-2 text-sm font-medium text-white rounded-lg disabled:opacity-50"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2 text-sm font-medium text-white rounded-lg disabled:opacity-50"
                   :class="mode === 'add' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-red-600 hover:bg-red-700'"
                   :disabled="selectedTagIds.length === 0 || loading"
                   @click="handleSubmit"

@@ -62,11 +62,11 @@ const save = async () => {
       </div>
       <div class="flex gap-2">
         <button @click="cancel"
-          class="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+          class="min-h-[44px] sm:min-h-0 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
           ยกเลิก
         </button>
         <button @click="save" :disabled="isSaving"
-          class="px-4 py-1.5 text-xs bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50 transition-all shadow-md flex items-center gap-2">
+          class="min-h-[44px] sm:min-h-0 px-4 py-1.5 text-xs bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50 transition-all shadow-md flex items-center gap-2">
           <Icon :icon="isSaving ? 'svg-spinners:180-ring-with-bg' : 'fluent:save-24-filled'" class="w-4 h-4" />
           {{ isSaving ? 'กำลังบันทึก...' : 'บันทึกลำดับ' }}
         </button>

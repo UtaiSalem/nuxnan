@@ -159,7 +159,7 @@ const commit = async () => {
             <DialogPanel class="w-full max-w-lg sm:max-w-3xl transform overflow-y-auto max-h-[90vh] rounded-2xl bg-white dark:bg-gray-800 p-3 sm:p-6 text-left align-middle shadow-xl transition-all">
               <DialogTitle as="h3" class="text-base sm:text-lg font-bold leading-6 text-gray-900 dark:text-white mb-4 flex items-center justify-between gap-2">
                 <span class="min-w-0">บันทึกคะแนนจากไฟล์</span>
-                <button @click="emit('close')" class="text-gray-400 hover:text-gray-500 p-2 -mr-2 flex-shrink-0">
+                <button @click="emit('close')" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center text-gray-400 hover:text-gray-500 p-2 -mr-2 flex-shrink-0">
                   <Icon icon="fluent:dismiss-24-regular" class="w-6 h-6" />
                 </button>
               </DialogTitle>

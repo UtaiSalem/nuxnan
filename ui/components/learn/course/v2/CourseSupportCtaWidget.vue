@@ -23,7 +23,7 @@ const showDonationModal = ref(false)
     <div class="mt-4 flex flex-col gap-2">
       <button
         type="button"
-        class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-violet-700"
+        class="min-h-[44px] sm:min-h-0 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-violet-700"
         @click="showDonationModal = true"
       >
         <Icon icon="fluent:heart-24-filled" class="h-4 w-4" />

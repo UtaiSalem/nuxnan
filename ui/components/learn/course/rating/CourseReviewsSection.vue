@@ -270,7 +270,7 @@ watch(() => props.courseId, () => {
           <button
             @click="loadMore"
             :disabled="isLoadingMore"
-            class="px-6 py-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors flex items-center gap-2 mx-auto"
+            class="min-h-[44px] sm:min-h-0 px-6 py-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors flex items-center gap-2 mx-auto"
           >
             <Icon v-if="isLoadingMore" icon="svg-spinners:ring-resize" class="w-4 h-4" />
             <span>โหลดเพิ่มเติม</span>

@@ -272,7 +272,7 @@ const unlockMember = async () => {
             <button
               @click="refreshEligibility"
               :disabled="isRefreshing"
-              class="inline-flex items-center px-3 sm:px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+              class="min-h-[44px] sm:min-h-0 inline-flex items-center px-3 sm:px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
             >
               <Icon
                 :icon="isRefreshing ? 'heroicons:arrow-path' : 'heroicons:arrow-path'"
@@ -380,7 +380,7 @@ const unlockMember = async () => {
             ]"
             :key="f.value"
             @click="statusFilter = f.value"
-            class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium border transition-colors"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium border transition-colors"
             :class="statusFilter === f.value
               ? {
                   gray: 'bg-gray-700 text-white border-gray-700 dark:bg-gray-200 dark:text-gray-900 dark:border-gray-200',
@@ -414,7 +414,7 @@ const unlockMember = async () => {
           <button
             @click="bulkUnlockIneligible"
             :disabled="isBulkUnlocking"
-            class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
           >
             <Icon
               :icon="isBulkUnlocking ? 'heroicons:arrow-path' : 'heroicons:lock-open'"
@@ -558,7 +558,7 @@ const unlockMember = async () => {
                     <button
                       v-if="member.stats?.eligibility_status === 'ineligible'"
                       @click="openUnlockModal(member)"
-                      class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40"
+                      class="min-h-[44px] sm:min-h-0 inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40"
                     >
                       <Icon icon="heroicons:lock-open" class="w-4 h-4 mr-1" />
                       ปลดล็อค
@@ -631,7 +631,7 @@ const unlockMember = async () => {
               <div v-if="member.stats?.eligibility_status === 'ineligible'" class="mt-3">
                 <button
                   @click="openUnlockModal(member)"
-                  class="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100"
+                  class="min-h-[44px] sm:min-h-0 w-full inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100"
                 >
                   <Icon icon="heroicons:lock-open" class="w-4 h-4 mr-2" />
                   ปลดล็อคสิทธิ์สอบ
@@ -656,7 +656,7 @@ const unlockMember = async () => {
                 <button
                   @click="currentPage--"
                   :disabled="currentPage === 1"
-                  class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+                  class="min-h-[44px] sm:min-h-0 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   ก่อนหน้า
                 </button>
@@ -666,7 +666,7 @@ const unlockMember = async () => {
                 <button
                   @click="currentPage++"
                   :disabled="currentPage === totalPages"
-                  class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+                  class="min-h-[44px] sm:min-h-0 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   ถัดไป
                 </button>
@@ -719,14 +719,14 @@ const unlockMember = async () => {
             <div class="flex gap-3">
               <button
                 @click="showUnlockModal = false"
-                class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
               >
                 ยกเลิก
               </button>
               <button
                 @click="unlockMember"
                 :disabled="isUnlocking"
-                class="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
                 <Icon v-if="isUnlocking" icon="heroicons:arrow-path" class="w-4 h-4 mr-2 animate-spin inline" />
                 ปลดล็อค

@@ -51,7 +51,7 @@ const handlePostCreated = (post) => {
       />
       <button
         @click="openModal"
-        class="flex-1 text-left px-4 py-2.5 bg-gray-100 dark:bg-vikinger-dark-200/50 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-vikinger-dark-200 transition-colors text-sm"
+        class="min-h-[44px] sm:min-h-0 flex-1 text-left px-4 py-2.5 bg-gray-100 dark:bg-vikinger-dark-200/50 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-vikinger-dark-200 transition-colors text-sm"
       >
         โพสต์อะไรในรายวิชานี้...
       </button>
@@ -60,21 +60,21 @@ const handlePostCreated = (post) => {
     <div class="flex items-center justify-around pt-2 border-t border-gray-100 dark:border-vikinger-dark-50/20">
       <button 
         @click="openModal" 
-        class="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-vikinger-dark-200/50 rounded-lg transition-colors"
+        class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-vikinger-dark-200/50 rounded-lg transition-colors"
       >
         <Icon icon="fluent:image-24-regular" class="w-5 h-5 text-green-500" />
         <span class="text-xs font-medium text-gray-600 dark:text-gray-400">รูปภาพ</span>
       </button>
       <button 
         @click="openModal" 
-        class="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-vikinger-dark-200/50 rounded-lg transition-colors"
+        class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-vikinger-dark-200/50 rounded-lg transition-colors"
       >
         <Icon icon="fluent:attach-24-regular" class="w-5 h-5 text-blue-500" />
         <span class="text-xs font-medium text-gray-600 dark:text-gray-400">ไฟล์แนบ</span>
       </button>
       <button 
         @click="openModal" 
-        class="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-vikinger-dark-200/50 rounded-lg transition-colors"
+        class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-vikinger-dark-200/50 rounded-lg transition-colors"
       >
         <Icon icon="fluent:poll-24-regular" class="w-5 h-5 text-amber-500" />
         <span class="text-xs font-medium text-gray-600 dark:text-gray-400">โพล</span>

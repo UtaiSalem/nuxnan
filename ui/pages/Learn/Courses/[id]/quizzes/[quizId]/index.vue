@@ -169,21 +169,21 @@ const getStatusBadge = computed(() => {
         <div v-if="isCourseAdmin" class="flex items-center gap-2 flex-wrap">
           <button 
             @click="openDuplicateModal"
-            class="px-4 py-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400 dark:hover:bg-purple-900/30 transition-colors flex items-center gap-2"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 dark:bg-purple-900/20 dark:text-purple-400 dark:hover:bg-purple-900/30 transition-colors flex items-center gap-2"
           >
             <Icon icon="fluent:copy-24-regular" class="w-5 h-5" />
             <span class="hidden sm:inline">คัดลอก</span>
           </button>
           <button 
             @click="editQuiz"
-            class="px-4 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors flex items-center gap-2"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors flex items-center gap-2"
           >
             <Icon icon="fluent:edit-24-regular" class="w-5 h-5" />
             <span class="hidden sm:inline">แก้ไข</span>
           </button>
           <button 
             @click="deleteQuiz"
-            class="px-4 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors flex items-center gap-2"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors flex items-center gap-2"
           >
             <Icon icon="fluent:delete-24-regular" class="w-5 h-5" />
             <span class="hidden sm:inline">ลบ</span>
@@ -392,7 +392,7 @@ const getStatusBadge = computed(() => {
                 กรองตามกลุ่ม
               </label>
               <div class="flex flex-wrap gap-2">
-                <button
+                <button class="min-h-[44px] sm:min-h-0"
                   @click="selectedGroupId = null"
                   :class="[
                     'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border',
@@ -404,7 +404,7 @@ const getStatusBadge = computed(() => {
                   ทั้งหมด
                   <span class="ml-1 text-xs opacity-70">({{ quiz.student_results?.length || 0 }})</span>
                 </button>
-                <button
+                <button class="min-h-[44px] sm:min-h-0"
                   v-for="group in groups"
                   :key="group.id"
                   @click="selectedGroupId = group.id"
@@ -480,14 +480,14 @@ const getStatusBadge = computed(() => {
             <div class="mt-4 flex justify-end gap-2">
                  <button 
                   @click="recalculateScores"
-                  class="px-4 py-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 dark:bg-orange-900/20 dark:text-orange-400 dark:hover:bg-orange-900/30 transition-colors flex items-center gap-2"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 dark:bg-orange-900/20 dark:text-orange-400 dark:hover:bg-orange-900/30 transition-colors flex items-center gap-2"
                 >
                   <Icon icon="fluent:arrow-sync-24-filled" class="w-5 h-5" />
                   คำนวณคะแนนใหม่
                 </button>
                  <button 
                   @click="editQuiz"
-                  class="px-4 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors flex items-center gap-2"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors flex items-center gap-2"
                 >
                   <Icon icon="fluent:edit-24-regular" class="w-5 h-5" />
                   แก้ไขแบบทดสอบ

@@ -43,7 +43,7 @@ const props = withDefaults(defineProps<Props>(), {
 
         <!-- CTA Button -->
         <button
-          class="px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300 hover:scale-105"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300 hover:scale-105"
           :class="[
             bestScore !== undefined
               ? 'bg-blue-500 text-white hover:bg-blue-600'

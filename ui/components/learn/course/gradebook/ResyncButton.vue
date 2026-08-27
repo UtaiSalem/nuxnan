@@ -35,7 +35,7 @@ const handleResync = async () => {
   <button
     @click="handleResync"
     :disabled="isLoading"
-    class="flex w-full sm:w-auto items-center justify-center gap-2 whitespace-nowrap px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white rounded-lg transition-colors text-sm font-medium shadow-sm"
+    class="min-h-[44px] sm:min-h-0 flex w-full sm:w-auto items-center justify-center gap-2 whitespace-nowrap px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white rounded-lg transition-colors text-sm font-medium shadow-sm"
   >
     <Icon
       icon="heroicons:arrow-path"

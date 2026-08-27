@@ -131,7 +131,7 @@ const typeIcon = computed(() => {
       <!-- Join / View Button -->
       <button
         @click.stop="emit('click', group)"
-        class="w-full py-2.5 bg-gradient-to-r from-purple-500 via-blue-500 to-purple-600 hover:from-purple-600 hover:via-blue-600 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 group/btn"
+        class="min-h-[44px] sm:min-h-0 w-full py-2.5 bg-gradient-to-r from-purple-500 via-blue-500 to-purple-600 hover:from-purple-600 hover:via-blue-600 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 group/btn"
       >
         <Icon icon="heroicons:eye-solid" class="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
         <span>ดูรายละเอียด</span>

@@ -535,7 +535,7 @@ watch(() => course?.value?.id, id => { if (id && isCourseAdmin?.value) fetchElig
           v-if="isAnySectionDirty"
           @click="saveSettings"
           :disabled="isSaving"
-          class="hidden md:flex items-center gap-2 px-6 py-2.5 bg-white text-blue-600 font-bold rounded-xl shadow-lg hover:bg-blue-50 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="min-h-[44px] sm:min-h-0 hidden md:flex items-center gap-2 px-6 py-2.5 bg-white text-blue-600 font-bold rounded-xl shadow-lg hover:bg-blue-50 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Icon v-if="isSaving" icon="svg-spinners:ring-resize" class="w-5 h-5" />
           <Icon v-else icon="fluent:save-24-filled" class="w-5 h-5" />
@@ -634,7 +634,7 @@ watch(() => course?.value?.id, id => { if (id && isCourseAdmin?.value) fetchElig
               type="button"
               @click="saveSettingsSection('general', sectionFields.general)"
               :disabled="isSavingSection('general')"
-              class="flex items-center gap-2 px-4 py-2 bg-cyan-600 text-white font-bold rounded-xl shadow-lg hover:bg-cyan-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 bg-cyan-600 text-white font-bold rounded-xl shadow-lg hover:bg-cyan-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
             >
               <Icon v-if="isSavingSection('general')" icon="svg-spinners:ring-resize" class="w-4 h-4" />
               <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
@@ -698,7 +698,7 @@ watch(() => course?.value?.id, id => { if (id && isCourseAdmin?.value) fetchElig
                 type="button"
                 @click="saveSettingsSection('publishing', sectionFields.publishing)"
                 :disabled="isSavingSection('publishing')"
-                class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-bold rounded-xl shadow-lg hover:bg-green-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-bold rounded-xl shadow-lg hover:bg-green-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
                 <Icon v-if="isSavingSection('publishing')" icon="svg-spinners:ring-resize" class="w-4 h-4" />
                 <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
@@ -769,7 +769,7 @@ watch(() => course?.value?.id, id => { if (id && isCourseAdmin?.value) fetchElig
                 type="button"
                 @click="saveSettingsSection('management', sectionFields.management)"
                 :disabled="isSavingSection('management')"
-                class="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white font-bold rounded-xl shadow-lg hover:bg-orange-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 bg-orange-600 text-white font-bold rounded-xl shadow-lg hover:bg-orange-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
                 <Icon v-if="isSavingSection('management')" icon="svg-spinners:ring-resize" class="w-4 h-4" />
                 <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
@@ -821,7 +821,7 @@ watch(() => course?.value?.id, id => { if (id && isCourseAdmin?.value) fetchElig
           </div>
           <template #footer v-if="isSectionDirty('academic')">
             <div class="flex justify-end">
-              <button type="button" @click="saveSettingsSection('academic', sectionFields.academic)" :disabled="isSavingSection('academic')" class="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white font-bold rounded-xl shadow-lg hover:bg-purple-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+              <button type="button" @click="saveSettingsSection('academic', sectionFields.academic)" :disabled="isSavingSection('academic')" class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 bg-purple-600 text-white font-bold rounded-xl shadow-lg hover:bg-purple-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
                 <Icon v-if="isSavingSection('academic')" icon="svg-spinners:ring-resize" class="w-4 h-4" />
                 <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
                 บันทึกข้อมูลเชิงวิชาการ
@@ -890,7 +890,7 @@ watch(() => course?.value?.id, id => { if (id && isCourseAdmin?.value) fetchElig
                 type="button"
                 @click="saveSettingsSection('marketplace', sectionFields.marketplace)"
                 :disabled="isSavingSection('marketplace')"
-                class="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white font-bold rounded-xl shadow-lg hover:bg-amber-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 bg-amber-600 text-white font-bold rounded-xl shadow-lg hover:bg-amber-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
                 <Icon v-if="isSavingSection('marketplace')" icon="svg-spinners:ring-resize" class="w-4 h-4" />
                 <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
@@ -1061,7 +1061,7 @@ watch(() => course?.value?.id, id => { if (id && isCourseAdmin?.value) fetchElig
           </div>
           <template #footer v-if="isSectionDirty('eligibility')">
             <div class="flex justify-end">
-              <button type="button" @click="saveSettingsSection('eligibility', sectionFields.eligibility)" :disabled="isSavingSection('eligibility')" class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+              <button type="button" @click="saveSettingsSection('eligibility', sectionFields.eligibility)" :disabled="isSavingSection('eligibility')" class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
                 <Icon v-if="isSavingSection('eligibility')" icon="svg-spinners:ring-resize" class="w-4 h-4" />
                 <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
                 บันทึกเกณฑ์สิทธิ์สอบ

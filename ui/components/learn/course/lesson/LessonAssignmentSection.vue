@@ -301,7 +301,7 @@ const formatDate = (date: string) => {
       </h3>
       <button
         @click="emit('close')"
-        class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
       >
         <Icon icon="fluent:chevron-up-24-regular" class="w-5 h-5" />
       </button>
@@ -313,7 +313,7 @@ const formatDate = (date: string) => {
         v-for="(assignment, index) in assignments"
         :key="assignment.id"
         @click="selectAssignment(assignment.id)"
-        class="flex-shrink-0 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200"
+        class="min-h-[44px] sm:min-h-0 flex-shrink-0 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200"
         :class="[
           activeAssignmentId === assignment.id
             ? 'bg-green-500 text-white shadow-lg'
@@ -356,7 +356,7 @@ const formatDate = (date: string) => {
               
               <button
                 @click="emit('view-submissions', activeAssignment)"
-                class="flex items-center gap-1 px-2 py-1 text-xs font-bold text-amber-600 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/30 rounded-md transition-colors"
+                class="min-h-[44px] sm:min-h-0 flex items-center gap-1 px-2 py-1 text-xs font-bold text-amber-600 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/30 rounded-md transition-colors"
               >
                 <Icon icon="fluent:clipboard-task-list-20-regular" class="w-4 h-4" />
                 <span>ตรวจละเอียด</span>
@@ -484,7 +484,7 @@ const formatDate = (date: string) => {
                         <button 
                             @click="updateGrade(answer)"
                             :disabled="answer.isUpdating || answer.points === answer.originalPoints"
-                            class="p-1 px-3 text-xs font-bold text-white bg-green-500 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex flex-shrink-0 items-center gap-1 whitespace-nowrap"
+                            class="min-h-[44px] sm:min-h-0 p-1 px-3 text-xs font-bold text-white bg-green-500 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex flex-shrink-0 items-center gap-1 whitespace-nowrap"
                             title="บันทึกคะแนน"
                         >
                             <Icon v-if="answer.isUpdating" icon="eos-icons:loading" class="w-4 h-4 animate-spin" />
@@ -497,7 +497,7 @@ const formatDate = (date: string) => {
                             v-if="answer.points !== answer.originalPoints"
                             @click="cancelGrade(answer)"
                             :disabled="answer.isUpdating"
-                            class="p-1 px-3 text-xs font-bold text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 flex items-center gap-1"
+                            class="min-h-[44px] sm:min-h-0 p-1 px-3 text-xs font-bold text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 flex items-center gap-1"
                             title="ยกเลิก"
                         >
                             <Icon icon="fluent:dismiss-24-regular" class="w-4 h-4" />

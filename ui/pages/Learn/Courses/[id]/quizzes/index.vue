@@ -146,7 +146,7 @@ onUnmounted(() => {
         <p class="text-red-600 dark:text-red-400 mb-4">{{ error }}</p>
         <button
           @click="fetchQuizzes"
-          class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           ลองใหม่
         </button>

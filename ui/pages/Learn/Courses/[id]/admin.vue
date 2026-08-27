@@ -146,7 +146,7 @@ import BaseAvatar from '~/components/atoms/BaseAvatar.vue'
                 <p class="text-gray-500 text-sm mt-1">เพิ่มหรือลบผู้ดูแลและผู้ช่วยสอน</p>
             </div>
             <button @click="showInviteModal = true" 
-                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 shadow transition-all w-full sm:w-auto">
+                class="min-h-[44px] sm:min-h-0 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 shadow transition-all w-full sm:w-auto">
                 <Icon icon="mdi:plus" /> เพิ่มผู้ดูแล
             </button>
         </div>
@@ -175,7 +175,7 @@ import BaseAvatar from '~/components/atoms/BaseAvatar.vue'
                     <h3 class="font-semibold text-gray-900 dark:text-gray-100 truncate">{{ admin.user?.name || 'Unknown' }}</h3>
                     <p class="text-sm text-gray-500 truncate">{{ admin.user?.email }}</p>
                     <div class="flex items-center gap-2 mt-2">
-                        <button @click="removeAdmin(admin)" class="text-red-500 hover:text-red-700 text-xs flex items-center gap-1 bg-red-50 px-2 py-1 rounded-md transition-colors">
+                        <button @click="removeAdmin(admin)" class="min-h-[44px] sm:min-h-0 text-red-500 hover:text-red-700 text-xs flex items-center gap-1 bg-red-50 px-2 py-1 rounded-md transition-colors">
                             <Icon icon="mdi:trash-can-outline" /> ลบ/ยกเลิก
                         </button>
                     </div>
@@ -233,7 +233,7 @@ import BaseAvatar from '~/components/atoms/BaseAvatar.vue'
                                         <p class="text-xs text-gray-500">{{ user.email }}</p>
                                     </div>
                                 </div>
-                                <button @click="inviteUser(user)" class="text-blue-600 hover:text-blue-800 text-sm font-medium px-3 py-1 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                                <button @click="inviteUser(user)" class="min-h-[44px] sm:min-h-0 text-blue-600 hover:text-blue-800 text-sm font-medium px-3 py-1 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
                                     เชิญ
                                 </button>
                             </div>

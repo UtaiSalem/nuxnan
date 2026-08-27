@@ -298,7 +298,7 @@ const finishAttempt = async () => {
                         <button 
                            @click="finishAttempt"
                            :disabled="isSubmitting"
-                           class="shrink-0 px-3 sm:px-6 py-1.5 sm:py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 font-bold shadow-lg shadow-red-200 dark:shadow-none transition-all active:scale-95 flex items-center justify-center gap-2 border-b-4 border-red-800 hover:border-b-2 hover:translate-y-[2px]"
+                           class="min-h-[44px] sm:min-h-0 shrink-0 px-3 sm:px-6 py-1.5 sm:py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 font-bold shadow-lg shadow-red-200 dark:shadow-none transition-all active:scale-95 flex items-center justify-center gap-2 border-b-4 border-red-800 hover:border-b-2 hover:translate-y-[2px]"
                         >
                             <span class="text-sm sm:text-base hidden sm:inline">สิ้นสุดการสอบ</span>
                             <Icon icon="fluent:stop-24-filled" class="w-5 h-5" />

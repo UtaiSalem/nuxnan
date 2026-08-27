@@ -183,7 +183,7 @@ const submitAnswer = async () => {
                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                  <button 
                    @click="removeFile(i)" 
-                   class="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                   class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
                  >
                    <Icon icon="fluent:delete-16-filled" class="w-5 h-5" />
                  </button>
@@ -208,7 +208,7 @@ const submitAnswer = async () => {
                  <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                    <button 
                      @click="removeExistingImage(img.id)" 
-                     class="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                     class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
                    >
                      <Icon icon="fluent:delete-16-filled" class="w-5 h-5" />
                    </button>
@@ -232,14 +232,14 @@ const submitAnswer = async () => {
           <button 
              v-if="isEditing && showCancel !== false" 
              @click="emit('cancel')"
-             class="px-6 py-2.5 rounded-xl font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+             class="min-h-[44px] sm:min-h-0 px-6 py-2.5 rounded-xl font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
           >
              ยกเลิก
           </button>
           <button 
              @click="submitAnswer"
              :disabled="isSubmitting"
-             class="px-8 py-2.5 rounded-xl font-bold text-white bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 shadow-lg hover:shadow-orange-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+             class="min-h-[44px] sm:min-h-0 px-8 py-2.5 rounded-xl font-bold text-white bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 shadow-lg hover:shadow-orange-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
           >
              <Icon v-if="isSubmitting" icon="eos-icons:loading" class="w-5 h-5" />
              {{ isSubmitting ? 'กำลังส่ง...' : (isEditing ? 'บันทึกการแก้ไข' : 'ส่งงาน') }}

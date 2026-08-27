@@ -131,7 +131,7 @@ const cancel = () => {
         type="button"
         @click="cancel"
         :disabled="isSubmitting"
-        class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+        class="min-h-[44px] sm:min-h-0 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
       >
         ยกเลิก
       </button>
@@ -139,7 +139,7 @@ const cancel = () => {
         type="button"
         @click="submitReview"
         :disabled="!canSubmit || isSubmitting"
-        class="px-6 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
       >
         <Icon v-if="isSubmitting" icon="svg-spinners:ring-resize" class="w-4 h-4" />
         <Icon v-else icon="fluent:send-24-regular" class="w-4 h-4" />

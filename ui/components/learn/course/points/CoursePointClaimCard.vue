@@ -20,7 +20,7 @@ const emit = defineEmits<{ claim: [id: number] }>()
     <div class="mt-4 flex items-center justify-between gap-3">
       <span v-if="campaign.remaining !== null" class="text-xs text-gray-500 dark:text-gray-400">เหลือ {{ campaign.remaining }} สิทธิ์</span>
       <span v-else class="text-xs text-gray-500 dark:text-gray-400">ไม่จำกัดสิทธิ์</span>
-      <button :disabled="!campaign.can_claim || isClaiming" class="rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60" :class="campaign.claimed_by_auth ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : campaign.can_claim ? 'bg-vikinger-purple text-white hover:opacity-90' : 'bg-gray-100 text-gray-500 dark:bg-gray-700'" @click="emit('claim', campaign.id)">
+      <button :disabled="!campaign.can_claim || isClaiming" class="min-h-[44px] sm:min-h-0 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60" :class="campaign.claimed_by_auth ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : campaign.can_claim ? 'bg-vikinger-purple text-white hover:opacity-90' : 'bg-gray-100 text-gray-500 dark:bg-gray-700'" @click="emit('claim', campaign.id)">
         <Icon v-if="isClaiming" icon="svg-spinners:ring-resize" class="mr-1 inline h-4 w-4" />
         {{ isClaiming ? 'กำลังรับ...' : campaign.claimed_by_auth ? 'รับแล้ว' : campaign.remaining === 0 ? 'โควตาเต็ม' : 'รับแต้ม' }}
       </button>

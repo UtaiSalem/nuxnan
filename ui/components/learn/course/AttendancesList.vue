@@ -759,7 +759,7 @@ onUnmounted(() => {
           <button
             @click="manualRefresh"
             :disabled="isAutoRefreshing"
-            class="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 rounded-lg border border-blue-300 dark:border-gray-600 hover:bg-blue-50 dark:hover:bg-gray-600 transition-all disabled:opacity-50"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 rounded-lg border border-blue-300 dark:border-gray-600 hover:bg-blue-50 dark:hover:bg-gray-600 transition-all disabled:opacity-50"
           >
             <Icon icon="fluent:arrow-clockwise-24-regular" class="w-5 h-5" :class="{ 'animate-spin': isAutoRefreshing }" />
             <span class="hidden sm:inline">รีเฟรช</span>
@@ -801,7 +801,7 @@ onUnmounted(() => {
       <div class="flex items-center gap-2 mb-2">
         <button
           @click="closeSimulator"
-          class="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
         >
           <Icon icon="heroicons:arrow-left-20-solid" class="w-4 h-4" />
           <span>กลับไปตารางเช็คชื่อ</span>
@@ -977,13 +977,13 @@ onUnmounted(() => {
       <template #footer>
         <button
           @click="showCreateModal = false"
-          class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
         >
           ยกเลิก
         </button>
         <button
           @click="createAttendance"
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           สร้าง
         </button>
@@ -1063,13 +1063,13 @@ onUnmounted(() => {
       <template #footer>
         <button
           @click="showEditModal = false"
-          class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
         >
           ยกเลิก
         </button>
         <button
           @click="updateAttendance"
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           <Icon icon="fluent:save-24-regular" class="inline-block w-4 h-4 mr-1" />
           บันทึกการเปลี่ยนแปลง
@@ -1096,7 +1096,7 @@ onUnmounted(() => {
           <!-- Close button -->
           <button
             @click="showDetailsModal = false"
-            class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
             title="ปิด"
           >
             <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500 dark:text-gray-400" />
@@ -1172,7 +1172,7 @@ onUnmounted(() => {
         <div class="flex items-center justify-between w-full">
           <button
             @click="showDetailsModal = false"
-            class="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-5 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
           >
             <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
             <span>ปิด</span>
@@ -1181,7 +1181,7 @@ onUnmounted(() => {
           <div v-if="isCourseAdmin" class="flex items-center gap-3">
             <button
               @click="confirmDeleteAttendance"
-              class="inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium shadow-lg hover:shadow-xl"
+              class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium shadow-lg hover:shadow-xl"
             >
               <Icon icon="fluent:delete-24-regular" class="w-5 h-5" />
               <span>ลบการเช็คชื่อ</span>
@@ -1189,7 +1189,7 @@ onUnmounted(() => {
             
             <button
               @click="saveAttendanceChanges"
-              class="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all font-medium shadow-lg hover:shadow-xl"
+              class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all font-medium shadow-lg hover:shadow-xl"
             >
               <Icon icon="fluent:save-24-filled" class="w-5 h-5" />
               <span>บันทึกการเปลี่ยนแปลง</span>

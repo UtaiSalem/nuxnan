@@ -686,19 +686,19 @@ watch(members, () => {
         <ul class="flex flex-wrap items-center border-b bg-gray-50 dark:bg-gray-800 rounded-t-lg">
              <!-- All -->
              <li class="mr-1">
-                <button @click="activeTab = 'all'" :class="['px-4 py-2 text-sm font-medium rounded-t-lg', activeTab === 'all' ? 'bg-white dark:bg-gray-900 text-blue-600 border-t border-l border-r border-gray-200 dark:border-gray-700' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400']">
+                <button class="min-h-[44px] sm:min-h-0" @click="activeTab = 'all'" :class="['px-4 py-2 text-sm font-medium rounded-t-lg', activeTab === 'all' ? 'bg-white dark:bg-gray-900 text-blue-600 border-t border-l border-r border-gray-200 dark:border-gray-700' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400']">
                     ทั้งหมด ({{ members.length }})
                 </button>
              </li>
              <!-- Groups -->
              <li v-for="group in groups" :key="group.id" class="mr-1">
-                <button @click="activeTab = group.id" :class="['px-4 py-2 text-sm font-medium rounded-t-lg', activeTab === group.id ? 'bg-white dark:bg-gray-900 text-blue-600 border-t border-l border-r border-gray-200 dark:border-gray-700' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400']">
+                <button class="min-h-[44px] sm:min-h-0" @click="activeTab = group.id" :class="['px-4 py-2 text-sm font-medium rounded-t-lg', activeTab === group.id ? 'bg-white dark:bg-gray-900 text-blue-600 border-t border-l border-r border-gray-200 dark:border-gray-700' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400']">
                     {{ group.name }}
                 </button>
              </li>
              <!-- No Group -->
              <li v-if="members.some(m => !m.group_id)" class="mr-1">
-                <button @click="activeTab = 'ungrouped'" :class="['px-4 py-2 text-sm font-medium rounded-t-lg', activeTab === 'ungrouped' ? 'bg-white dark:bg-gray-900 text-blue-600 border-t border-l border-r border-gray-200 dark:border-gray-700' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400']">
+                <button class="min-h-[44px] sm:min-h-0" @click="activeTab = 'ungrouped'" :class="['px-4 py-2 text-sm font-medium rounded-t-lg', activeTab === 'ungrouped' ? 'bg-white dark:bg-gray-900 text-blue-600 border-t border-l border-r border-gray-200 dark:border-gray-700' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400']">
                     ไม่มีกลุ่ม
                 </button>
              </li>
@@ -732,7 +732,7 @@ watch(members, () => {
             </button>
         </div>
 
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           @click="toggleSort('order_number')"
           :class="[
             'px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors',
@@ -749,7 +749,7 @@ watch(members, () => {
           />
         </button>
 
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           @click="toggleSort('name')"
           :class="[
             'px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors',
@@ -766,7 +766,7 @@ watch(members, () => {
           />
         </button>
         
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           @click="toggleSort('progress')"
           :class="[
             'px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors',
@@ -783,7 +783,7 @@ watch(members, () => {
           />
         </button>
         
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           @click="toggleSort('last_activity')"
           :class="[
             'px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors',
@@ -804,7 +804,7 @@ watch(members, () => {
         <button
           v-if="isCourseAdmin"
           @click="exportProgress"
-          class="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
         >
           <Icon icon="fluent:arrow-download-24-regular" class="w-4 h-4" />
           <span>ส่งออก Excel</span>
@@ -1019,13 +1019,13 @@ watch(members, () => {
             <button 
                 @click="changePage(pagination.current_page - 1)" 
                 :disabled="pagination.current_page === 1"
-                class="px-3 py-1 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-600 dark:hover:bg-gray-700"
+                class="min-h-[44px] sm:min-h-0 px-3 py-1 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-600 dark:hover:bg-gray-700"
             >
                 ก่อนหน้า
             </button>
             <div class="flex items-center gap-1">
                 <template v-for="page in pagination.last_page" :key="page">
-                    <button 
+                    <button class="min-h-[44px] sm:min-h-0" 
                         v-if="Math.abs(page - pagination.current_page) <= 2 || page === 1 || page === pagination.last_page"
                         @click="changePage(page)"
                         :class="['px-3 py-1 text-sm border rounded-lg', page === pagination.current_page ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700']"
@@ -1038,7 +1038,7 @@ watch(members, () => {
             <button 
                 @click="changePage(pagination.current_page + 1)" 
                 :disabled="pagination.current_page === pagination.last_page"
-                class="px-3 py-1 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-600 dark:hover:bg-gray-700"
+                class="min-h-[44px] sm:min-h-0 px-3 py-1 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-600 dark:hover:bg-gray-700"
             >
                 ถัดไป
             </button>
@@ -1145,7 +1145,7 @@ watch(members, () => {
                   <button
                     @click="saveAllMemberDetails(selectedMember)"
                     :disabled="savingMemberDetails"
-                    class="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium"
+                    class="min-h-[44px] sm:min-h-0 w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium"
                   >
                     <svg v-if="savingMemberDetails" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -1502,7 +1502,7 @@ watch(members, () => {
       <template #footer>
         <button
           @click="showDetailsModal = false"
-          class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
         >
           ปิด
         </button>

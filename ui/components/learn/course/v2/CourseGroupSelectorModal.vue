@@ -43,7 +43,7 @@ function confirm() {
               </div>
               <button
                 @click="$emit('close')"
-                class="p-2 rounded-xl text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-200 transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-xl text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-200 transition-colors"
               >
                 <Icon icon="heroicons:x-mark" class="w-6 h-6" />
               </button>

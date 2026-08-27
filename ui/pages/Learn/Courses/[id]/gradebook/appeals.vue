@@ -379,7 +379,7 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
                   <td class="px-6 py-4 text-right">
                     <button
                       @click="openDetail(appeal)"
-                      class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-primary-600 bg-primary-50 dark:bg-primary-900/20 rounded-lg hover:bg-primary-100"
+                      class="min-h-[44px] sm:min-h-0 inline-flex items-center px-3 py-1.5 text-xs font-medium text-primary-600 bg-primary-50 dark:bg-primary-900/20 rounded-lg hover:bg-primary-100"
                     >
                       <Icon icon="heroicons:eye" class="w-4 h-4 mr-1" />
                       ดูรายละเอียด
@@ -423,7 +423,7 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
 
               <button
                 @click="openDetail(appeal)"
-                class="mt-3 w-full py-2 text-sm font-medium text-primary-600 bg-primary-50 rounded-lg"
+                class="min-h-[44px] sm:min-h-0 mt-3 w-full py-2 text-sm font-medium text-primary-600 bg-primary-50 rounded-lg"
               >
                 ดูรายละเอียด
               </button>
@@ -550,14 +550,14 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
               <div class="mt-6 flex gap-3">
                 <button
                   @click="showDetailModal = false"
-                  class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                  class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
                 >
                   ยกเลิก
                 </button>
                 <button
                   @click="submitReview"
                   :disabled="!canSubmitReview || isProcessing"
-                  class="flex-1 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                  class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
                 >
                   ยืนยัน
                 </button>
@@ -576,7 +576,7 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
               </div>
               <button
                 @click="showDetailModal = false"
-                class="mt-4 w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                class="min-h-[44px] sm:min-h-0 mt-4 w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
               >
                 ปิด
               </button>

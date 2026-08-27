@@ -100,7 +100,7 @@ onMounted(() => {
       <p class="text-red-600 dark:text-red-400 mb-4">{{ error }}</p>
       <button 
         @click="handleReload"
-        class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+        class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
       >
         ลองใหม่
       </button>

@@ -39,7 +39,7 @@ const ownerPath = computed(() => `/profile/${props.owner?.reference_code || prop
         <Icon icon="fluent:person-24-filled" class="w-4 h-4" />
         <span>โปรไฟล์</span>
       </NuxtLink>
-      <button class="flex items-center justify-center rounded-xl bg-vikinger-purple/10 p-2.5 text-vikinger-purple hover:bg-vikinger-purple/20 dark:text-vikinger-cyan dark:hover:bg-vikinger-cyan/10 transition-colors">
+      <button class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 flex items-center justify-center rounded-xl bg-vikinger-purple/10 p-2.5 text-vikinger-purple hover:bg-vikinger-purple/20 dark:text-vikinger-cyan dark:hover:bg-vikinger-cyan/10 transition-colors">
         <Icon icon="fluent:chat-24-filled" class="w-5 h-5" />
       </button>
     </div>

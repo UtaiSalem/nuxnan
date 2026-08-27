@@ -163,13 +163,13 @@ onMounted(() => {
 
     <!-- Group Tabs -->
     <div v-if="groups.length > 0 || ungroupedCount > 0" class="flex flex-wrap gap-2">
-      <button
+      <button class="min-h-[44px] sm:min-h-0"
         @click="activeGroup = 'all'"
         :class="['px-3 py-1.5 text-sm rounded-lg border', activeGroup === 'all' ? 'bg-primary-500 text-white border-primary-500' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700']"
       >
         ทั้งหมด ({{ stats.total_members }})
       </button>
-      <button
+      <button class="min-h-[44px] sm:min-h-0"
         v-for="g in groups"
         :key="g.id"
         @click="activeGroup = g.id"
@@ -177,7 +177,7 @@ onMounted(() => {
       >
         {{ g.name }}
       </button>
-      <button
+      <button class="min-h-[44px] sm:min-h-0"
         v-if="ungroupedCount > 0"
         @click="activeGroup = 'ungrouped'"
         :class="['px-3 py-1.5 text-sm rounded-lg border', activeGroup === 'ungrouped' ? 'bg-primary-500 text-white border-primary-500' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700']"
@@ -243,13 +243,13 @@ onMounted(() => {
         <button
           @click="changePage(pagination.current_page - 1)"
           :disabled="pagination.current_page === 1"
-          class="px-3 py-1 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-600 dark:hover:bg-gray-700"
+          class="min-h-[44px] sm:min-h-0 px-3 py-1 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-600 dark:hover:bg-gray-700"
         >
           ก่อนหน้า
         </button>
         <div class="flex items-center gap-1">
           <template v-for="page in pagination.last_page" :key="page">
-            <button
+            <button class="min-h-[44px] sm:min-h-0"
               v-if="Math.abs(page - pagination.current_page) <= 2 || page === 1 || page === pagination.last_page"
               @click="changePage(page)"
               :class="['px-3 py-1 text-sm border rounded-lg', page === pagination.current_page ? 'bg-primary-500 text-white border-primary-500' : 'hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700']"
@@ -262,7 +262,7 @@ onMounted(() => {
         <button
           @click="changePage(pagination.current_page + 1)"
           :disabled="pagination.current_page === pagination.last_page"
-          class="px-3 py-1 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-600 dark:hover:bg-gray-700"
+          class="min-h-[44px] sm:min-h-0 px-3 py-1 text-sm border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-600 dark:hover:bg-gray-700"
         >
           ถัดไป
         </button>

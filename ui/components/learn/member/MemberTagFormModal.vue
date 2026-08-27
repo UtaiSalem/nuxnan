@@ -104,14 +104,14 @@
                 <div class="mt-6 flex justify-end gap-3">
                   <button
                     type="button"
-                    class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
+                    class="min-h-[44px] sm:min-h-0 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
                     @click="closeModal"
                   >
                     ยกเลิก
                   </button>
                   <button
                     type="submit"
-                    class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                    class="min-h-[44px] sm:min-h-0 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
                     :disabled="!form.name || loading"
                   >
                     <Icon v-if="loading" icon="mdi:loading" class="w-4 h-4 animate-spin inline mr-1" />

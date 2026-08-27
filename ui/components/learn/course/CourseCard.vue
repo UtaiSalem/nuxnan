@@ -196,7 +196,7 @@ const goToCourse = () => {
       <!-- Non-Member CTA -->
       <button 
         v-else
-        class="mt-3 w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2 group-hover:bg-blue-700"
+        class="min-h-[44px] sm:min-h-0 mt-3 w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2 group-hover:bg-blue-700"
       >
         View Details
         <Icon icon="fluent:arrow-right-16-regular" class="w-4 h-4" />

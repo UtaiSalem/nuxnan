@@ -64,11 +64,11 @@ const save = async () => {
       <div class="flex items-center gap-2">
         <div v-if="isDirty" class="flex gap-2" @click.stop>
           <button @click="cancel"
-            class="px-3 py-1 text-xs text-white/60 hover:text-white border border-white/20 rounded-lg transition-colors">
+            class="min-h-[44px] sm:min-h-0 px-3 py-1 text-xs text-white/60 hover:text-white border border-white/20 rounded-lg transition-colors">
             ยกเลิก
           </button>
           <button @click="save" :disabled="isSaving"
-            class="px-3 py-1 text-xs bg-yellow-400 text-yellow-900 font-bold rounded-lg hover:bg-yellow-300 disabled:opacity-50 transition-colors flex items-center gap-1">
+            class="min-h-[44px] sm:min-h-0 px-3 py-1 text-xs bg-yellow-400 text-yellow-900 font-bold rounded-lg hover:bg-yellow-300 disabled:opacity-50 transition-colors flex items-center gap-1">
             <Icon :icon="isSaving ? 'svg-spinners:180-ring-with-bg' : 'fluent:save-24-filled'" class="w-3 h-3" />
             บันทึก
           </button>

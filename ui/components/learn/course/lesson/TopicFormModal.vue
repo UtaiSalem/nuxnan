@@ -300,7 +300,7 @@ const handleDeleteAttachment = async (attachment: any) => {
         <button 
           @click="closeModal" 
           type="button"
-          class="px-5 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 font-medium transition-colors"
+          class="min-h-[44px] sm:min-h-0 px-5 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 font-medium transition-colors"
           :disabled="isSubmitting"
         >
           ยกเลิก
@@ -308,7 +308,7 @@ const handleDeleteAttachment = async (attachment: any) => {
         <button 
           @click="handleSubmit" 
           type="button"
-          class="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-bold shadow-lg shadow-blue-500/30 flex items-center gap-2 transition-all"
+          class="min-h-[44px] sm:min-h-0 px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-bold shadow-lg shadow-blue-500/30 flex items-center gap-2 transition-all"
           :class="{ 'opacity-75 cursor-not-allowed': isSubmitting }"
           :disabled="isSubmitting"
         >

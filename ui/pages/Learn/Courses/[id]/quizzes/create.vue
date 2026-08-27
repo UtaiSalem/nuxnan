@@ -244,7 +244,7 @@ const handleSubmit = async () => {
     <div class="flex items-center gap-4 mb-6">
       <button 
         @click="$router.back()"
-        class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors"
+        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors"
       >
         <Icon icon="fluent:arrow-left-24-regular" class="w-6 h-6" />
       </button>
@@ -340,7 +340,7 @@ const handleSubmit = async () => {
                       <button
                         type="button"
                         @mousedown.prevent="duplicateQuiz(quiz)"
-                        class="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
                         title="คัดลอกแบบทดสอบ (พร้อมคำถาม)"
                       >
                         <Icon icon="fluent:copy-24-regular" class="w-4 h-4" />
@@ -349,7 +349,7 @@ const handleSubmit = async () => {
                       <button
                         type="button"
                         @mousedown.prevent="removeFromSuggestions(index)"
-                        class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                         title="ซ่อน"
                       >
                         <Icon icon="fluent:dismiss-16-regular" class="w-4 h-4" />
@@ -494,14 +494,14 @@ const handleSubmit = async () => {
       <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
         <button 
           @click="$router.back()"
-          class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           :disabled="isLoading"
         >
           ยกเลิก
         </button>
         <button 
           @click="handleSubmit"
-          class="px-6 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+          class="min-h-[44px] sm:min-h-0 px-6 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
           :disabled="!isFormValid || isLoading"
         >
           <Icon v-if="isLoading" icon="svg-spinners:ring-resize" class="w-5 h-5" />

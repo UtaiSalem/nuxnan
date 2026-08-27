@@ -742,7 +742,7 @@ const publicationStatusColor = computed(() => {
           >
             <button
               @click="toggleContent"
-              class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium shadow-lg"
+              class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium shadow-lg"
             >
               อ่านต่อ
               <Icon icon="fluent:chevron-down-24-regular" class="w-4 h-4 inline ml-1" />
@@ -753,7 +753,7 @@ const publicationStatusColor = computed(() => {
           <button
             v-if="isContentOverflowing && showFullContent"
             @click="toggleContent"
-            class="mt-4 w-full px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
+            class="min-h-[44px] sm:min-h-0 mt-4 w-full px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
           >
             ย่อเนื้อหา
             <Icon icon="fluent:chevron-up-24-regular" class="w-4 h-4 inline ml-1" />

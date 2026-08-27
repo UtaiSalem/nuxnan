@@ -186,7 +186,7 @@ const clearFilters = () => {
           <!-- Sort Order -->
           <button
             @click="sortOrder = sortOrder === 'asc' ? 'desc' : 'asc'"
-            class="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
           >
             <Icon 
               :icon="sortOrder === 'asc' ? 'fluent:arrow-sort-up-24-regular' : 'fluent:arrow-sort-down-24-regular'" 
@@ -199,7 +199,7 @@ const clearFilters = () => {
           <button
             v-if="searchQuery || selectedStatus !== 'all'"
             @click="clearFilters"
-            class="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-sm"
+            class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-sm"
           >
             <Icon icon="fluent:dismiss-circle-24-regular" class="w-4 h-4" />
             <span>ล้างตัวกรอง</span>

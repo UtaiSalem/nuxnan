@@ -246,7 +246,7 @@ const handleCancel = async () => {
           type="button"
           @click="handleSave"
           :disabled="isSaving || isBalanceInsufficient"
-          class="flex-1 bg-gradient-vikinger text-white text-sm font-semibold
+          class="min-h-[44px] sm:min-h-0 flex-1 bg-gradient-vikinger text-white text-sm font-semibold
                  py-2 rounded-lg shadow-vikinger hover:shadow-vikinger-lg
                  transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
@@ -259,7 +259,7 @@ const handleCancel = async () => {
           type="button"
           @click="handleCancel"
           :disabled="isCancelling"
-          class="px-4 py-2 rounded-lg text-sm font-semibold
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg text-sm font-semibold
                  bg-red-50 text-red-600 hover:bg-red-100
                  dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40
                  transition-colors disabled:opacity-50"

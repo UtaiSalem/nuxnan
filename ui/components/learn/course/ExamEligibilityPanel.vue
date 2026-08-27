@@ -209,7 +209,7 @@ const getMethodColor = (method: string) => {
         <button 
           v-if="eligibility.pending_override.method === 'reading'"
           @click="goToLessons"
-          class="mt-3 px-4 py-1.5 bg-orange-600 text-white text-sm font-bold rounded-lg hover:bg-orange-700 transition-colors"
+          class="min-h-[44px] sm:min-h-0 mt-3 px-4 py-1.5 bg-orange-600 text-white text-sm font-bold rounded-lg hover:bg-orange-700 transition-colors"
         >
           ไปที่หน้าบทเรียน
         </button>

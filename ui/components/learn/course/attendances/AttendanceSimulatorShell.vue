@@ -366,7 +366,7 @@ onUnmounted(() => {
       <button
         @click="fetchSimulator(false)"
         :disabled="loading"
-        class="p-2 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
         title="รีเฟรช"
         aria-label="รีเฟรชข้อมูล"
       >
@@ -392,7 +392,7 @@ onUnmounted(() => {
       <p class="text-red-700 dark:text-red-300 font-medium">{{ error }}</p>
       <button
         @click="fetchSimulator()"
-        class="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+        class="min-h-[44px] sm:min-h-0 mt-3 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
       >
         ลองอีกครั้ง
       </button>
@@ -514,7 +514,7 @@ onUnmounted(() => {
             v-for="option in statusOptions"
             :key="option.value"
             :disabled="savingStatus"
-            class="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
+            class="min-h-[44px] sm:min-h-0 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
             :class="editingSeat.status === option.value ? option.activeClass : option.idleClass"
             @click="applyStatus(option.value)"
           >

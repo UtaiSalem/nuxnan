@@ -58,10 +58,10 @@
         </div>
         
         <div class="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
-             <button @click="$emit('cancel')" type="button" class="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600">
+             <button @click="$emit('cancel')" type="button" class="min-h-[44px] sm:min-h-0 px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600">
                 ยกเลิก
             </button>
-            <button @click="submit" :disabled="isLoading" type="button" class="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none disabled:opacity-50">
+            <button @click="submit" :disabled="isLoading" type="button" class="min-h-[44px] sm:min-h-0 px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none disabled:opacity-50">
                 <span v-if="isLoading">กำลังบันทึก...</span>
                 <span v-else>บันทึก</span>
             </button>

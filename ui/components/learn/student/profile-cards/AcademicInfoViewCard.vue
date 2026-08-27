@@ -151,7 +151,7 @@ const canEdit = computed(() => {
         <h3 class="ml-3 text-lg font-semibold text-white">ประวัติการศึกษา</h3>
       </div>
       <button v-if="canEdit && !isAdding && !editingRecordId" @click="startAdd"
-              class="px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-semibold backdrop-blur-sm transition-colors flex items-center gap-1">
+              class="min-h-[44px] sm:min-h-0 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-semibold backdrop-blur-sm transition-colors flex items-center gap-1">
         + เพิ่มประวัติการศึกษา
       </button>
     </div>
@@ -219,11 +219,11 @@ const canEdit = computed(() => {
 
       <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
         <button @click="cancelForm" :disabled="isSubmitting"
-                class="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50">
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50">
           ยกเลิก
         </button>
         <button @click="save" :disabled="isSubmitting"
-                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-1.5">
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-1.5">
           <svg v-if="isSubmitting" class="w-4 h-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>

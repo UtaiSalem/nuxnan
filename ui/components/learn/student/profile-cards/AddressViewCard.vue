@@ -214,7 +214,7 @@ const markCurrent = async (addr: StudentAddress) => {
         <h3 class="ml-3 text-lg font-semibold text-white">ที่อยู่</h3>
       </div>
       <button v-if="canEdit && !isAdding && !editingAddressId" @click="startAdd"
-              class="px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-semibold backdrop-blur-sm transition-colors flex items-center gap-1">
+              class="min-h-[44px] sm:min-h-0 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-semibold backdrop-blur-sm transition-colors flex items-center gap-1">
         + เพิ่มที่อยู่
       </button>
     </div>
@@ -289,11 +289,11 @@ const markCurrent = async (addr: StudentAddress) => {
 
       <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
         <button @click="cancelForm" :disabled="isSubmitting"
-                class="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50">
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50">
           ยกเลิก
         </button>
         <button @click="save" :disabled="isSubmitting"
-                class="px-4 py-2 bg-amber-600 hover:bg-amber-755 text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-1.5">
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-amber-600 hover:bg-amber-755 text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-1.5">
           <svg v-if="isSubmitting" class="w-4 h-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
@@ -318,7 +318,7 @@ const markCurrent = async (addr: StudentAddress) => {
           <div v-if="canEdit" class="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white pl-2">
             <button v-if="!addr.is_current" @click="markCurrent(addr)"
                     title="ตั้งเป็นปัจจุบัน"
-                    class="p-1 hover:bg-green-50 text-green-600 rounded transition-colors">
+                    class="min-h-[44px] sm:min-h-0 p-1 hover:bg-green-50 text-green-600 rounded transition-colors">
               ✓
             </button>
             <button @click="startEdit(addr)"

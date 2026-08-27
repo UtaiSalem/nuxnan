@@ -4,7 +4,7 @@
       <form class="space-y-4">
           <input type="text" placeholder="Course Name" class="w-full border rounded p-2" />
           <textarea placeholder="Description" class="w-full border rounded p-2"></textarea>
-          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Create</button>
+          <button type="submit" class="min-h-[44px] sm:min-h-0 bg-blue-600 text-white px-4 py-2 rounded">Create</button>
       </form>
   </div>
 </template>

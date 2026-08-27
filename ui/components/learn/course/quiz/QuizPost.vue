@@ -60,7 +60,7 @@
         <button
           type="button"
           @click.stop="handleDuplicate"
-          class="p-2.5 bg-white text-gray-700 rounded-xl hover:bg-purple-50 hover:text-purple-600 transition-colors shadow-lg"
+          class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2.5 bg-white text-gray-700 rounded-xl hover:bg-purple-50 hover:text-purple-600 transition-colors shadow-lg"
           title="คัดลอก"
         >
           <Icon icon="fluent:copy-24-filled" class="w-5 h-5" />
@@ -68,7 +68,7 @@
         <button
           type="button"
           @click.stop="handleEdit"
-          class="p-2.5 bg-white text-gray-700 rounded-xl hover:bg-gray-50 hover:text-blue-600 transition-colors shadow-lg"
+          class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2.5 bg-white text-gray-700 rounded-xl hover:bg-gray-50 hover:text-blue-600 transition-colors shadow-lg"
           title="แก้ไข"
         >
           <Icon icon="fluent:edit-24-filled" class="w-5 h-5" />
@@ -76,7 +76,7 @@
         <button
           type="button"
           @click.stop="handleDelete"
-          class="p-2.5 bg-white text-gray-700 rounded-xl hover:bg-red-50 hover:text-red-600 transition-colors shadow-lg"
+          class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2.5 bg-white text-gray-700 rounded-xl hover:bg-red-50 hover:text-red-600 transition-colors shadow-lg"
           title="ลบ"
         >
           <Icon icon="fluent:delete-24-filled" class="w-5 h-5" />

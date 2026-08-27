@@ -96,7 +96,7 @@
                             <button 
                                 v-if="isAnswered(q.id) && !isEditing(q.id) && hasEnoughPpForEdit(q.pp_fine)"
                                 @click="requestEditing(q)"
-                                class="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg transition-colors"
+                                class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg transition-colors"
                             >
                                 <Icon icon="heroicons:pencil-square" />
                                 แก้ไขคำตอบ
@@ -117,7 +117,7 @@
                                 v-else-if="hasUnconfirmedChanges(q.id) || isEditing(q.id)"
                                 @click.stop="confirmAnswer(q)"
                                 :disabled="store.isQuestionSubmitting(quizId, q.id)"
-                                class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <Icon v-if="store.isQuestionSubmitting(quizId, q.id)" icon="eos-icons:loading" class="animate-spin" />
                                 <Icon v-else icon="heroicons:check-circle" />
@@ -128,7 +128,7 @@
                              <button 
                                 v-if="isEditing(q.id)"
                                 @click="cancelEditing(q.id)"
-                                class="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors"
+                                class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors"
                             >
                                 ยกเลิก
                             </button>

@@ -22,7 +22,7 @@
 
         <!-- Add Course Button -->
         <div v-if="isAcademyAdmin" class="flex justify-end">
-            <button @click="openAddModal" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+            <button @click="openAddModal" class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
                 <span class="text-xl">+</span> เพิ่มรายวิชา
             </button>
         </div>
@@ -125,8 +125,8 @@
                     </div>
 
                     <div class="mt-6 flex justify-end gap-3">
-                        <button @click="showAddModal = false" class="px-4 py-2 border rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">ยกเลิก</button>
-                        <button @click="submitAddCourse" :disabled="!addForm.course_id || isAdding" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                        <button @click="showAddModal = false" class="min-h-[44px] sm:min-h-0 px-4 py-2 border rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">ยกเลิก</button>
+                        <button @click="submitAddCourse" :disabled="!addForm.course_id || isAdding" class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
                             {{ isAdding ? 'กำลังบันทึก...' : 'บันทึก' }}
                         </button>
                     </div>

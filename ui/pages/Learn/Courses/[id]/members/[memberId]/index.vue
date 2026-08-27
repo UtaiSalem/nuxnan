@@ -176,7 +176,7 @@ onMounted(() => {
           <button 
             v-if="isCourseAdmin"
             @click="goEdit"
-            class="absolute top-4 right-4 flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-lg transition-colors text-sm font-medium"
+            class="min-h-[44px] sm:min-h-0 absolute top-4 right-4 flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-lg transition-colors text-sm font-medium"
           >
             <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
             แก้ไขข้อมูล
@@ -352,14 +352,14 @@ onMounted(() => {
       <div v-if="isCourseAdmin" class="flex flex-wrap items-center gap-3">
         <button
           @click="goEdit"
-          class="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+          class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
         >
           <Icon icon="fluent:edit-24-regular" class="w-5 h-5" />
           แก้ไขข้อมูลสมาชิก
         </button>
         <button
           @click="goBack"
-          class="flex items-center gap-2 px-5 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium text-sm"
+          class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-5 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium text-sm"
         >
           กลับไปรายชื่อสมาชิก
         </button>

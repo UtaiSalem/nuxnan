@@ -301,7 +301,7 @@ const selectAll = () => {
           <div class="flex gap-2">
             <button
               @click="showSettingsModal = true"
-              class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600"
+              class="min-h-[44px] sm:min-h-0 inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600"
             >
               <Icon icon="heroicons:cog-6-tooth" class="w-4 h-4 mr-2" />
               ตั้งค่า
@@ -310,14 +310,14 @@ const selectAll = () => {
               v-if="eligibleStudents.length > 0"
               @click="issueAllEligible"
               :disabled="isProcessing"
-              class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50"
+              class="min-h-[44px] sm:min-h-0 inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50"
             >
               <Icon icon="heroicons:check-circle" class="w-4 h-4 mr-2" />
               ออกทั้งหมด ({{ eligibleStudents.length }})
             </button>
             <button
               @click="showIssueModal = true"
-              class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700"
+              class="min-h-[44px] sm:min-h-0 inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700"
             >
               <Icon icon="heroicons:document-plus" class="w-4 h-4 mr-2" />
               ออกใบประกาศ
@@ -465,7 +465,7 @@ const selectAll = () => {
                     <div class="flex items-center justify-end gap-2">
                       <button
                         @click="downloadCertificate(cert)"
-                        class="p-2 text-gray-400 hover:text-primary-600"
+                        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-400 hover:text-primary-600"
                         title="ดาวน์โหลด"
                       >
                         <Icon icon="heroicons:arrow-down-tray" class="w-5 h-5" />
@@ -473,7 +473,7 @@ const selectAll = () => {
                       <button
                         v-if="cert.status === 'issued'"
                         @click="revokeCertificate(cert)"
-                        class="p-2 text-gray-400 hover:text-red-600"
+                        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-400 hover:text-red-600"
                         title="เพิกถอน"
                       >
                         <Icon icon="heroicons:x-mark" class="w-5 h-5" />
@@ -512,14 +512,14 @@ const selectAll = () => {
                 <div class="flex gap-2">
                   <button
                     @click="downloadCertificate(cert)"
-                    class="p-2 text-primary-600"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-primary-600"
                   >
                     <Icon icon="heroicons:arrow-down-tray" class="w-5 h-5" />
                   </button>
                   <button
                     v-if="cert.status === 'issued'"
                     @click="revokeCertificate(cert)"
-                    class="p-2 text-red-600"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-red-600"
                   >
                     <Icon icon="heroicons:x-mark" class="w-5 h-5" />
                   </button>
@@ -575,13 +575,13 @@ const selectAll = () => {
               </div>
 
               <div class="mt-6 flex gap-3">
-                <button @click="showIssueModal = false" class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+                <button @click="showIssueModal = false" class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
                   ยกเลิก
                 </button>
                 <button
                   @click="issueCertificates"
                   :disabled="selectedStudents.length === 0 || isProcessing"
-                  class="flex-1 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                  class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
                 >
                   ออกใบประกาศ ({{ selectedStudents.length }})
                 </button>
@@ -590,7 +590,7 @@ const selectAll = () => {
             <div v-else class="py-8 text-center">
               <Icon icon="heroicons:check-circle" class="w-16 h-16 mx-auto text-green-400" />
               <p class="mt-4 text-gray-600 dark:text-gray-300">ออกใบประกาศนียบัตรครบทุกคนแล้ว!</p>
-              <button @click="showIssueModal = false" class="mt-4 px-6 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg">
+              <button @click="showIssueModal = false" class="min-h-[44px] sm:min-h-0 mt-4 px-6 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg">
                 ปิด
               </button>
             </div>
@@ -708,14 +708,14 @@ const selectAll = () => {
             <div class="mt-6 flex gap-3">
               <button
                 @click="showSettingsModal = false"
-                class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
               >
                 ยกเลิก
               </button>
               <button
                 @click="saveSettings"
                 :disabled="isSavingSettings"
-                class="flex-1 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
               >
                 <Icon v-if="isSavingSettings" icon="heroicons:arrow-path" class="w-4 h-4 mr-1 inline animate-spin" />
                 บันทึก

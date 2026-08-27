@@ -100,14 +100,14 @@ const isAvailable = computed(() => {
           <div v-if="isCourseAdmin" class="flex items-center gap-1">
             <button 
               @click="emit('edit', quiz)"
-              class="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
               title="แก้ไข"
             >
               <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
             </button>
             <button 
               @click="emit('delete', quiz.id)"
-              class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
               title="ลบ"
             >
               <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
@@ -118,7 +118,7 @@ const isAvailable = computed(() => {
           <button
             v-if="isAvailable && !isCourseAdmin"
             @click="emit('start', quiz)"
-            class="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors text-sm"
+            class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors text-sm"
           >
             <Icon icon="fluent:play-24-filled" class="w-4 h-4" />
             เริ่มทำ
@@ -126,7 +126,7 @@ const isAvailable = computed(() => {
           <button
             v-else-if="!isAvailable && !isCourseAdmin"
             disabled
-            class="flex items-center gap-2 px-4 py-2 bg-gray-300 text-gray-500 rounded-lg text-sm cursor-not-allowed"
+            class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 bg-gray-300 text-gray-500 rounded-lg text-sm cursor-not-allowed"
           >
             <Icon icon="fluent:lock-closed-24-regular" class="w-4 h-4" />
             ยังไม่เปิดให้ทำ

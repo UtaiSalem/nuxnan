@@ -959,7 +959,7 @@ const submitReply = async (parentComment: any) => {
               <!-- Comment Actions -->
               <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500 dark:text-gray-400 px-2">
                 <span>{{ comment.create_at || comment.created_at_for_humans || 'เมื่อสักครู่' }}</span>
-                <button 
+                <button class="min-h-[44px] sm:min-h-0" 
                   @click="handleCommentLike(comment)"
                   :disabled="comment.isLiking || authStore.user?.id === comment.user?.id"
                   :class="[
@@ -971,7 +971,7 @@ const submitReply = async (parentComment: any) => {
                   <Icon :icon="comment.isLikedByAuth ? 'fluent:thumb-like-20-filled' : 'fluent:thumb-like-20-regular'" class="w-3.5 h-3.5" />
                   <span>{{ comment.isLikedByAuth ? 'ถูกใจแล้ว' : 'ถูกใจ' }}</span>
                 </button>
-                <button 
+                <button class="min-h-[44px] sm:min-h-0" 
                   @click="handleCommentDislike(comment)"
                   :disabled="comment.isDisliking || authStore.user?.id === comment.user?.id"
                   :class="[
@@ -983,7 +983,7 @@ const submitReply = async (parentComment: any) => {
                   <Icon :icon="comment.isDislikedByAuth ? 'fluent:thumb-dislike-20-filled' : 'fluent:thumb-dislike-20-regular'" class="w-3.5 h-3.5" />
                   <span>{{ comment.isDislikedByAuth ? 'ไม่ถูกใจ' : 'ไม่ถูกใจ' }}</span>
                 </button>
-                <button 
+                <button class="min-h-[44px] sm:min-h-0" 
                   @click="toggleReplySection(comment.id)"
                   :class="[
                     'flex items-center gap-1 font-medium px-1.5 py-0.5 rounded-md transition-colors',
@@ -1002,7 +1002,7 @@ const submitReply = async (parentComment: any) => {
                 <button 
                   v-if="canDeleteComment(comment)"
                   @click="deleteComment(comment, localComments.indexOf(comment))"
-                  class="flex items-center gap-1 font-medium px-1.5 py-0.5 rounded-md transition-colors text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  class="min-h-[44px] sm:min-h-0 flex items-center gap-1 font-medium px-1.5 py-0.5 rounded-md transition-colors text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
                 >
                   <Icon icon="fluent:delete-20-regular" class="w-3.5 h-3.5" />
                   <span>ลบ</span>
@@ -1118,7 +1118,7 @@ const submitReply = async (parentComment: any) => {
           <button 
             @click="loadMoreComments"
             :disabled="isLoadingMore"
-            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors disabled:opacity-50"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors disabled:opacity-50"
           >
             <Icon v-if="isLoadingMore" icon="eos-icons:bubble-loading" class="w-4 h-4" />
             <Icon v-else icon="fluent:chevron-down-20-regular" class="w-4 h-4" />
@@ -1139,7 +1139,7 @@ const submitReply = async (parentComment: any) => {
         <div v-if="isCreator" class="mb-4 flex justify-end">
           <button
             @click="openAddAssignment"
-            class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
           >
             <Icon icon="fluent:add-24-filled" class="w-4 h-4" />
             เพิ่มแบบฝึกหัด
@@ -1154,7 +1154,7 @@ const submitReply = async (parentComment: any) => {
           <button 
             @click="toggleProgress"
             :disabled="isTogglingProgress"
-            class="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
+            class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
           >
             <Icon v-if="isTogglingProgress" icon="eos-icons:bubble-loading" class="w-4 h-4 inline mr-1" />
             ทำเครื่องหมายว่าอ่านแล้ว
@@ -1203,7 +1203,7 @@ const submitReply = async (parentComment: any) => {
           <button 
             @click="toggleProgress"
             :disabled="isTogglingProgress"
-            class="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
+            class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
           >
             <Icon v-if="isTogglingProgress" icon="eos-icons:bubble-loading" class="w-4 h-4 inline mr-1" />
             ทำเครื่องหมายว่าอ่านแล้ว

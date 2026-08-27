@@ -185,7 +185,7 @@ const gaugeDashOffset = computed(() => gaugeCircumference * (1 - gaugeFillPct.va
         <p class="flex-1 text-sm text-red-700 dark:text-red-300">ไม่สามารถโหลดรายการกดรับได้</p>
         <button
           type="button"
-          class="shrink-0 rounded-lg bg-red-100 px-3 py-1 text-xs font-medium text-red-700 transition hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
+          class="min-h-[44px] sm:min-h-0 shrink-0 rounded-lg bg-red-100 px-3 py-1 text-xs font-medium text-red-700 transition hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
           @click="fetchClaimable"
         >
           ลองใหม่

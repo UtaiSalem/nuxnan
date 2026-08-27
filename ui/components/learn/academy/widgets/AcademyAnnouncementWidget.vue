@@ -68,7 +68,7 @@ onMounted(() => {
                 <p class="text-xs text-white/60">ไม่มีข่าวสารในขณะนี้</p>
             </div>
             
-            <button class="w-full mt-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold transition-all text-center">
+            <button class="min-h-[44px] sm:min-h-0 w-full mt-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-xs font-bold transition-all text-center">
                 ดูประกาศทั้งหมด
             </button>
         </div>

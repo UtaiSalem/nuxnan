@@ -181,7 +181,7 @@ const formatDate = (date: string) => {
             <h3 class="font-bold text-lg text-gray-900 dark:text-white">
               {{ assignment?.title }}
             </h3>
-            <button @click="emit('close')" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+            <button @click="emit('close')" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
               <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
             </button>
           </div>
@@ -269,7 +269,7 @@ const formatDate = (date: string) => {
               <button
                 @click="submitGrade"
                 :disabled="isGrading"
-                class="mt-5 px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all text-sm flex items-center gap-2"
+                class="min-h-[44px] sm:min-h-0 mt-5 px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl active:scale-95 transition-all text-sm flex items-center gap-2"
               >
                 <Icon v-if="isGrading" icon="eos-icons:loading" class="w-5 h-5" />
                 <span v-else>บันทึกคะแนน</span>

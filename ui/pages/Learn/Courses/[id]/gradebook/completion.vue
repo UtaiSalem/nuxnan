@@ -291,7 +291,7 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
               <button
                 @click="startGrading"
                 :disabled="isProcessing"
-                class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                class="min-h-[44px] sm:min-h-0 inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
               >
                 <Icon :icon="isProcessing ? 'heroicons:arrow-path' : 'heroicons:calculator'" :class="['w-4 h-4 mr-2', isProcessing && 'animate-spin']" />
                 {{ isProcessing ? 'กำลังเริ่ม...' : 'เริ่มออกเกรด' }}
@@ -302,7 +302,7 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
               <button
                 @click="showPublishModal = true"
                 :disabled="isProcessing"
-                class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                class="min-h-[44px] sm:min-h-0 inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
                 <Icon icon="heroicons:megaphone" class="w-4 h-4 mr-2" />
                 ประกาศเกรด
@@ -313,7 +313,7 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
               <button
                 @click="showFinalizeModal = true"
                 :disabled="isProcessing || summary?.pending_appeals > 0"
-                class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                class="min-h-[44px] sm:min-h-0 inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50"
               >
                 <Icon icon="heroicons:lock-closed" class="w-4 h-4 mr-2" />
                 ปิดเกรด
@@ -490,13 +490,13 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-6 space-y-3">
           <!-- Group tabs -->
           <div v-if="groups.length > 0 || ungroupedCount > 0" class="flex flex-wrap gap-2">
-            <button
+            <button class="min-h-[44px] sm:min-h-0"
               @click="activeGroup = 'all'"
               :class="['px-3 py-1.5 text-sm rounded-lg border', activeGroup === 'all' ? 'bg-primary-500 text-white border-primary-500' : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200']"
             >
               ทั้งหมด ({{ grades.length }})
             </button>
-            <button
+            <button class="min-h-[44px] sm:min-h-0"
               v-for="g in groups"
               :key="g.id"
               @click="activeGroup = g.id"
@@ -504,7 +504,7 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
             >
               {{ g.name }} ({{ groupCount(g.id) }})
             </button>
-            <button
+            <button class="min-h-[44px] sm:min-h-0"
               v-if="ungroupedCount > 0"
               @click="activeGroup = 'ungrouped'"
               :class="['px-3 py-1.5 text-sm rounded-lg border', activeGroup === 'ungrouped' ? 'bg-primary-500 text-white border-primary-500' : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200']"
@@ -615,7 +615,7 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
                     <button
                       v-if="summary?.finalization_status !== 'finalized'"
                       @click="openEditGrade(student)"
-                      class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200"
+                      class="min-h-[44px] sm:min-h-0 inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200"
                     >
                       <Icon icon="heroicons:pencil" class="w-4 h-4 mr-1" />
                       แก้ไข
@@ -660,7 +660,7 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
               <button
                 v-if="summary?.finalization_status !== 'finalized'"
                 @click="openEditGrade(student)"
-                class="mt-3 w-full py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg"
+                class="min-h-[44px] sm:min-h-0 mt-3 w-full py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg"
               >
                 <Icon icon="heroicons:pencil" class="w-4 h-4 mr-1 inline" />
                 แก้ไขเกรด
@@ -693,14 +693,14 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
             <div class="mt-6 flex gap-3">
               <button
                 @click="showPublishModal = false"
-                class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
               >
                 ยกเลิก
               </button>
               <button
                 @click="publishGrades"
                 :disabled="isProcessing"
-                class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                class="min-h-[44px] sm:min-h-0 flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
                 <Icon v-if="isProcessing" icon="heroicons:arrow-path" class="w-4 h-4 animate-spin" />
                 {{ isProcessing ? 'กำลังประกาศ...' : 'ประกาศ' }}
@@ -727,14 +727,14 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
             <div class="mt-6 flex gap-3">
               <button
                 @click="showFinalizeModal = false"
-                class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
               >
                 ยกเลิก
               </button>
               <button
                 @click="finalizeGrades"
                 :disabled="isProcessing"
-                class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                class="min-h-[44px] sm:min-h-0 flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50"
               >
                 <Icon v-if="isProcessing" icon="heroicons:arrow-path" class="w-4 h-4 animate-spin" />
                 {{ isProcessing ? 'กำลังปิดเกรด...' : 'ปิดเกรด' }}
@@ -795,14 +795,14 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
             <div class="mt-6 flex gap-3">
               <button
                 @click="showEditGradeModal = false"
-                class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg"
               >
                 ยกเลิก
               </button>
               <button
                 @click="saveGradeEdit"
                 :disabled="!editGradeForm.reason || isProcessing"
-                class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                class="min-h-[44px] sm:min-h-0 flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50"
               >
                 <Icon v-if="isProcessing" icon="heroicons:arrow-path" class="w-4 h-4 animate-spin" />
                 {{ isProcessing ? 'กำลังบันทึก...' : 'บันทึก' }}

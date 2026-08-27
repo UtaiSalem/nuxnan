@@ -74,7 +74,7 @@ const handleJoinRequest = async () => {
             <!-- Join Button Area -->
             <div class="pt-2 border-t border-gray-100 dark:border-gray-700">
                 <div v-if="memberStatus == 1">
-                    <button disabled class="w-full py-2 px-4 bg-yellow-100 text-yellow-700 rounded-lg flex items-center justify-center gap-2 cursor-not-allowed font-medium">
+                    <button disabled class="min-h-[44px] sm:min-h-0 w-full py-2 px-4 bg-yellow-100 text-yellow-700 rounded-lg flex items-center justify-center gap-2 cursor-not-allowed font-medium">
                         <Icon icon="heroicons:clock" class="w-5 h-5" />
                         รอการอนุมัติ
                     </button>
@@ -89,7 +89,7 @@ const handleJoinRequest = async () => {
                     <button 
                         @click="handleJoinRequest" 
                         :disabled="isLoading"
-                        class="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm font-medium"
+                        class="min-h-[44px] sm:min-h-0 w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm font-medium"
                     >
                         <Icon v-if="isLoading" icon="svg-spinners:180-ring-with-bg" class="w-5 h-5" />
                         <Icon v-else icon="heroicons:user-plus" class="w-5 h-5" />

@@ -525,7 +525,7 @@ const showGradeAcceptance = computed(() => {
                      <button 
                         @click="saveProfile" 
                         :disabled="isSaving"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
+                        class="min-h-[44px] sm:min-h-0 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
                         <Icon v-if="isSaving" icon="eos-icons:loading" class="mr-2 animate-spin" />
                         {{ isSaving ? 'กำลังบันทึก...' : 'บันทึกการเปลี่ยนแปลง' }}
                      </button>
@@ -700,7 +700,7 @@ const showGradeAcceptance = computed(() => {
                                  <div v-if="option.method === 'appeal'" class="mt-4">
                                      <button 
                                         @click="showAppealForm = !showAppealForm"
-                                        class="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                        class="min-h-[44px] sm:min-h-0 w-full flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                                      >
                                          <Icon :icon="showAppealForm ? 'heroicons:chevron-up' : 'heroicons:chevron-down'" class="w-4 h-4" />
                                          อุทธรณ์สิทธิ์สอบ (สำหรับกรณีจำเป็น)
@@ -717,7 +717,7 @@ const showGradeAcceptance = computed(() => {
                                          <button
                                              @click="submitAppeal"
                                              :disabled="!appealReason.trim() || isSubmittingAppeal"
-                                             class="mt-2 w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm"
+                                             class="min-h-[44px] sm:min-h-0 mt-2 w-full inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm"
                                          >
                                              <Icon v-if="isSubmittingAppeal" icon="heroicons:arrow-path" class="w-3.5 h-3.5 animate-spin" />
                                              ส่งคำอุทธรณ์
@@ -768,7 +768,7 @@ const showGradeAcceptance = computed(() => {
                     v-for="tab in tabs" 
                     :key="tab.id"
                     @click="activeTab = tab.id"
-                    class="relative flex-1 min-w-0 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer select-none"
+                    class="min-h-[44px] sm:min-h-0 relative flex-1 min-w-0 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer select-none"
                     :class="activeTab === tab.id 
                         ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-md ring-1 ring-black/5 dark:ring-white/10' 
                         : 'text-gray-500 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-gray-700/50 hover:text-gray-700 dark:hover:text-gray-200 active:scale-[0.97]'"
@@ -913,7 +913,7 @@ const showGradeAcceptance = computed(() => {
                                               <button 
                                                   v-if="!isCourseAdmin && !assign.submitted"
                                                   @click="toggleAssignment(assign)"
-                                                  class="text-xs px-3 py-1.5 rounded-lg transition-colors bg-blue-600 text-white hover:bg-blue-700"
+                                                  class="min-h-[44px] sm:min-h-0 text-xs px-3 py-1.5 rounded-lg transition-colors bg-blue-600 text-white hover:bg-blue-700"
                                               >
                                                   {{ expandedAssignmentId === assign.id ? 'ปิด' : 'ส่งงาน' }}
                                               </button>
@@ -922,7 +922,7 @@ const showGradeAcceptance = computed(() => {
                                               <button 
                                                   v-if="isCourseAdmin && (assign.submitted || assign.graded)"
                                                   @click="toggleAssignment(assign)"
-                                                  class="text-xs px-3 py-1.5 rounded-lg transition-colors border"
+                                                  class="min-h-[44px] sm:min-h-0 text-xs px-3 py-1.5 rounded-lg transition-colors border"
                                                   :class="expandedAssignmentId === assign.id ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
                                               >
                                                   {{ expandedAssignmentId === assign.id ? 'ปิดการตรวจ' : (assign.graded ? 'แก้ไขคะแนน' : 'ตรวจให้คะแนน') }}
@@ -937,7 +937,7 @@ const showGradeAcceptance = computed(() => {
                                               <button 
                                                   v-if="!isCourseAdmin && !assign.submitted"
                                                   @click="toggleAssignment(assign)"
-                                                  class="text-xs px-3 py-1.5 rounded-lg transition-colors bg-blue-600 text-white hover:bg-blue-700"
+                                                  class="min-h-[44px] sm:min-h-0 text-xs px-3 py-1.5 rounded-lg transition-colors bg-blue-600 text-white hover:bg-blue-700"
                                               >
                                                   {{ expandedAssignmentId === assign.id ? 'ปิด' : 'ส่งงาน' }}
                                               </button>
@@ -1005,7 +1005,7 @@ const showGradeAcceptance = computed(() => {
                                                   <span class="text-sm text-gray-500">/ {{ assign.max_score }}</span>
                                                   <button 
                                                       @click="saveGrade(assign.id)"
-                                                      class="ml-auto px-4 py-1.5 bg-orange-500 text-white rounded-lg text-sm font-bold hover:bg-orange-600 shadow-sm"
+                                                      class="min-h-[44px] sm:min-h-0 ml-auto px-4 py-1.5 bg-orange-500 text-white rounded-lg text-sm font-bold hover:bg-orange-600 shadow-sm"
                                                   >
                                                       บันทึก
                                                   </button>

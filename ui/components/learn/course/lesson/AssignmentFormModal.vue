@@ -196,7 +196,7 @@ watch(() => props.show, (val) => {
             <Icon icon="fluent:clipboard-task-edit-24-filled" class="text-green-600" />
             {{ assignment ? 'แก้ไขแบบฝึกหัด' : 'สร้างแบบฝึกหัดใหม่' }}
           </h3>
-          <button @click="emit('close')" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
+          <button @click="emit('close')" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
             <Icon icon="fluent:dismiss-24-regular" class="w-6 h-6 text-gray-500" />
           </button>
         </div>
@@ -316,14 +316,14 @@ watch(() => props.show, (val) => {
         <div class="p-6 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3 bg-gray-50 dark:bg-gray-800/50 rounded-b-2xl">
           <button
             @click="emit('close')"
-            class="px-5 py-2.5 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors"
+            class="min-h-[44px] sm:min-h-0 px-5 py-2.5 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors"
           >
             ยกเลิก
           </button>
           <button
             @click="handleSubmit"
             :disabled="isSubmitting"
-            class="px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-medium rounded-xl shadow-lg shadow-green-500/30 hover:shadow-green-500/40 hover:from-green-600 hover:to-emerald-700 active:scale-[0.98] transition-all flex items-center gap-2"
+            class="min-h-[44px] sm:min-h-0 px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-medium rounded-xl shadow-lg shadow-green-500/30 hover:shadow-green-500/40 hover:from-green-600 hover:to-emerald-700 active:scale-[0.98] transition-all flex items-center gap-2"
           >
             <Icon v-if="isSubmitting" icon="eos-icons:loading" class="w-5 h-5" />
             <span v-else>{{ assignment ? 'บันทึกการแก้ไข' : 'สร้างแบบฝึกหัด' }}</span>

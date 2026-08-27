@@ -116,7 +116,7 @@ const close = () => {
           <div class="relative bg-gradient-to-r from-emerald-500 to-teal-600 p-6 text-white">
             <button
               @click="close"
-              class="absolute top-4 right-4 p-1 rounded-full hover:bg-white/20 transition-colors"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-4 right-4 p-1 rounded-full hover:bg-white/20 transition-colors"
             >
               <Icon icon="fluent:dismiss-24-regular" class="w-6 h-6" />
             </button>
@@ -145,7 +145,7 @@ const close = () => {
               <p class="text-red-500">{{ error }}</p>
               <button
                 @click="fetchPurchaseInfo"
-                class="mt-4 px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                class="min-h-[44px] sm:min-h-0 mt-4 px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
               >
                 ลองใหม่
               </button>

@@ -488,7 +488,7 @@ onUnmounted(() => {
           v-if="hasModifiedCells"
           @click="handleSaveAll"
           :disabled="saving"
-          class="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors text-sm font-medium shadow-sm animate-pulse"
+          class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors text-sm font-medium shadow-sm animate-pulse"
         >
           <Icon v-if="saving" icon="mdi:loading" class="w-5 h-5 animate-spin" />
           <Icon v-else icon="mdi:content-save-outline" class="w-5 h-5" />
@@ -621,7 +621,7 @@ onUnmounted(() => {
               >
                 <button
                   @click.stop="openColumnMenu(col, $event)"
-                  class="flex flex-col justify-center items-center mx-auto text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl px-3 py-2 transition-all duration-300 transform hover:scale-105 shadow-sm hover:shadow-md w-full"
+                  class="min-h-[44px] sm:min-h-0 flex flex-col justify-center items-center mx-auto text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl px-3 py-2 transition-all duration-300 transform hover:scale-105 shadow-sm hover:shadow-md w-full"
                 >
                   <span class="text-xs text-gray-500 dark:text-gray-400">#{{ index + 1 }}</span>
                   <span class="mt-1 truncate max-w-full text-xs">{{ col.title }}</span>
@@ -757,7 +757,7 @@ onUnmounted(() => {
         <button
           @click="handleSaveAll"
           :disabled="saving"
-          class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors text-sm font-medium"
+          class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors text-sm font-medium"
         >
           <Icon v-if="saving" icon="mdi:loading" class="w-4 h-4 animate-spin" />
           <Icon v-else icon="mdi:content-save-outline" class="w-4 h-4" />
@@ -805,17 +805,17 @@ onUnmounted(() => {
           <!-- Actions -->
           <div class="p-2 space-y-1">
             <button @click="setFullScoreColumn(activeColumn.id, activeColumn.max_score)"
-              class="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors">
+              class="min-h-[44px] sm:min-h-0 w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors">
               <Icon icon="mdi:check-all" class="w-5 h-5 text-green-500" />
               ให้คะแนนเต็มทั้งหมด
             </button>
             <button @click="clearColumnScores(activeColumn.id)"
-              class="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              class="min-h-[44px] sm:min-h-0 w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
               <Icon icon="mdi:eraser" class="w-5 h-5 text-gray-400" />
               ล้างคะแนนทั้งหมด
             </button>
             <button @click="handleSaveColumn(activeColumn.id)"
-              class="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">
+              class="min-h-[44px] sm:min-h-0 w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">
               <Icon icon="mdi:content-save-outline" class="w-5 h-5 text-blue-500" />
               บันทึกคะแนนหัวข้อนี้
             </button>
@@ -831,12 +831,12 @@ onUnmounted(() => {
             </button>
             <hr class="my-1 border-gray-200 dark:border-gray-700" />
             <button @click="openEdit(activeColumn)"
-              class="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors">
+              class="min-h-[44px] sm:min-h-0 w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors">
               <Icon icon="mdi:pencil-outline" class="w-5 h-5 text-indigo-500" />
               แก้ไขหัวข้อ
             </button>
             <button @click="handleDelete(activeColumn)"
-              class="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+              class="min-h-[44px] sm:min-h-0 w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
               <Icon icon="mdi:trash-can-outline" class="w-5 h-5" />
               ลบหัวข้อ
             </button>
@@ -903,11 +903,11 @@ onUnmounted(() => {
             </div>
 
             <div class="flex justify-end gap-2 pt-2">
-              <button @click="showCreateForm = false" class="px-4 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm font-medium">
+              <button @click="showCreateForm = false" class="min-h-[44px] sm:min-h-0 px-4 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm font-medium">
                 ยกเลิก
               </button>
               <button @click="handleCreate" :disabled="creatingScore || !createForm.title.trim()"
-                class="px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center gap-2">
+                class="min-h-[44px] sm:min-h-0 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center gap-2">
                 <Icon v-if="creatingScore" icon="mdi:loading" class="w-4 h-4 animate-spin" />
                 สร้างหัวข้อ
               </button>
@@ -962,11 +962,11 @@ onUnmounted(() => {
             </div>
 
             <div class="flex justify-end gap-2 pt-2">
-              <button @click="showEditForm = false" class="px-4 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm font-medium">
+              <button @click="showEditForm = false" class="min-h-[44px] sm:min-h-0 px-4 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm font-medium">
                 ยกเลิก
               </button>
               <button @click="handleEdit" :disabled="creatingScore || !editForm.title.trim()"
-                class="px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center gap-2">
+                class="min-h-[44px] sm:min-h-0 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center gap-2">
                 <Icon v-if="creatingScore" icon="mdi:loading" class="w-4 h-4 animate-spin" />
                 บันทึก
               </button>

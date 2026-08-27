@@ -187,7 +187,7 @@ const hasMetadata = computed(() => !!(semesterLabel.value || academicYearLabel.v
         <button
           @click="browseCover"
           :disabled="isUpdatingCover"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/50 backdrop-blur-md text-white border border-white/20 hover:bg-black/70 transition-all text-xs font-bold"
+          class="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/50 backdrop-blur-md text-white border border-white/20 hover:bg-black/70 transition-all text-xs font-bold"
         >
           <Icon v-if="isUpdatingCover" icon="svg-spinners:ring-resize" class="w-3.5 h-3.5" />
           <Icon v-else icon="fluent:camera-24-filled" class="w-3.5 h-3.5" />

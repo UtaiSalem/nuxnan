@@ -326,7 +326,7 @@ const scrollToTop = () => {
         <div v-if="groups && groups.length > 0" class="flex flex-wrap gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-3">
             <button 
                 @click="selectedGroup = null"
-                class="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg text-sm font-medium transition-all"
                 :class="selectedGroup === null 
                     ? 'bg-indigo-600 text-white shadow-md' 
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'"
@@ -337,7 +337,7 @@ const scrollToTop = () => {
                 v-for="group in groups" 
                 :key="group.id"
                 @click="selectedGroup = group.id"
-                class="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg text-sm font-medium transition-all"
                 :class="selectedGroup === group.id 
                     ? 'bg-indigo-600 text-white shadow-md' 
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'"
@@ -350,7 +350,7 @@ const scrollToTop = () => {
         <div class="flex flex-wrap gap-2 mb-4">
             <button 
                 @click="statusFilter = 'all'"
-                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
+                class="min-h-[44px] sm:min-h-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
                 :class="statusFilter === 'all' 
                     ? 'bg-gray-700 text-white shadow-md' 
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'"
@@ -361,7 +361,7 @@ const scrollToTop = () => {
             </button>
             <button 
                 @click="statusFilter = 'ungraded'"
-                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
+                class="min-h-[44px] sm:min-h-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
                 :class="statusFilter === 'ungraded' 
                     ? 'bg-gray-500 text-white shadow-md' 
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'"
@@ -372,7 +372,7 @@ const scrollToTop = () => {
             </button>
             <button 
                 @click="statusFilter = 'graded'"
-                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
+                class="min-h-[44px] sm:min-h-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
                 :class="statusFilter === 'graded' 
                     ? 'bg-green-600 text-white shadow-md' 
                     : 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40'"
@@ -383,7 +383,7 @@ const scrollToTop = () => {
             </button>
             <button 
                 @click="statusFilter = 'failed'"
-                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
+                class="min-h-[44px] sm:min-h-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
                 :class="statusFilter === 'failed' 
                     ? 'bg-red-600 text-white shadow-md' 
                     : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40'"
@@ -488,7 +488,7 @@ const scrollToTop = () => {
                               <button 
                                   @click="updateGrade(answer)"
                                   :disabled="answer.isUpdating || (answer.points === null && answer.originalPoints === null) || answer.points === answer.originalPoints"
-                                  class="flex-shrink-0 whitespace-nowrap px-3 py-1 text-xs font-bold text-white bg-orange-500 rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                  class="min-h-[44px] sm:min-h-0 flex-shrink-0 whitespace-nowrap px-3 py-1 text-xs font-bold text-white bg-orange-500 rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                               >
                                   {{ answer.isUpdating ? '...' : 'บันทึก' }}
                               </button>
@@ -503,7 +503,7 @@ const scrollToTop = () => {
                  <button 
                      @click="fetchAllAnswers(currentPage + 1)" 
                      :disabled="isFetchingAnswers"
-                     class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-300 font-medium disabled:opacity-50 flex items-center gap-2"
+                     class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-sm text-gray-700 dark:text-gray-300 font-medium disabled:opacity-50 flex items-center gap-2"
                  >
                      {{ isFetchingAnswers ? 'กำลังโหลด...' : 'โหลดเพิ่ม' }}
                  </button>

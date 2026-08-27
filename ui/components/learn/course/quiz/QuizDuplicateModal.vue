@@ -197,7 +197,7 @@ const closeModal = () => {
                 <button
                   @click="closeModal"
                   :disabled="isLoading"
-                  class="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
                 >
                   <Icon icon="fluent:dismiss-24-regular" class="w-6 h-6" />
                 </button>
@@ -376,7 +376,7 @@ const closeModal = () => {
                 type="button"
                 @click="closeModal"
                 :disabled="isLoading"
-                class="px-6 py-2.5 rounded-xl font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+                class="min-h-[44px] sm:min-h-0 px-6 py-2.5 rounded-xl font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
               >
                 ยกเลิก
               </button>
@@ -384,7 +384,7 @@ const closeModal = () => {
                 type="button"
                 @click="handleDuplicate"
                 :disabled="isLoading || !form.title.trim() || (form.copyMode === 'select_course' && !form.targetCourseId)"
-                class="px-6 py-2.5 rounded-xl font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                class="min-h-[44px] sm:min-h-0 px-6 py-2.5 rounded-xl font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
               >
                 <Icon
                   :icon="isLoading ? 'svg-spinners:ring-resize' : 'fluent:copy-24-filled'"

@@ -224,7 +224,7 @@ const getGradeColor = (score: any, maxScore: number) => {
 
       <button
         @click="showCreateModal = true"
-        class="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+        class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
       >
         <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
         เพิ่มการประเมิน
@@ -339,14 +339,14 @@ const getGradeColor = (score: any, maxScore: number) => {
             <div class="flex items-center gap-2">
               <button
                 @click="openScoreModal(assessment)"
-                class="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
               >
                 <Icon icon="fluent:edit-24-filled" class="w-4 h-4" />
                 ให้คะแนน
               </button>
               <button
                 @click="deleteAssessment(assessment)"
-                class="p-2 text-gray-500 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-500 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 <Icon icon="fluent:delete-24-regular" class="w-5 h-5" />
               </button>
@@ -504,14 +504,14 @@ const getGradeColor = (score: any, maxScore: number) => {
             <button
               type="button"
               @click="showCreateModal = false"
-              class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               ยกเลิก
             </button>
             <button
               type="submit"
               :disabled="isSaving"
-              class="flex-1 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
             >
               <Icon v-if="isSaving" icon="fluent:spinner-ios-20-filled" class="w-5 h-5 animate-spin" />
               สร้างการประเมิน
@@ -588,14 +588,14 @@ const getGradeColor = (score: any, maxScore: number) => {
         <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex items-center gap-3">
           <button
             @click="showScoreModal = false"
-            class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             ยกเลิก
           </button>
           <button
             @click="saveScores"
             :disabled="isSaving"
-            class="flex-1 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+            class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
           >
             <Icon v-if="isSaving" icon="fluent:spinner-ios-20-filled" class="w-5 h-5 animate-spin" />
             บันทึกคะแนน

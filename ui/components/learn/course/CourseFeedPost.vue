@@ -667,7 +667,7 @@ const handlePollDelete = () => {
             <button
               v-if="isAuthor || isCourseAdmin"
               @click.stop="emit('edit', post); showMenu = false"
-              class="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 flex items-center gap-2"
+              class="min-h-[44px] sm:min-h-0 w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 flex items-center gap-2"
             >
               <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
               แก้ไข
@@ -675,7 +675,7 @@ const handlePollDelete = () => {
             <button
               :disabled="isDeleting"
               @click.stop="deletePost(); showMenu = false"
-              class="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="min-h-[44px] sm:min-h-0 w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
               ลบ
@@ -797,7 +797,7 @@ const handlePollDelete = () => {
     <!-- Actions -->
     <div class="px-4 py-2 border-t border-gray-100 dark:border-vikinger-dark-50/30 flex items-center">
       <!-- Like -->
-      <button
+      <button class="min-h-[44px] sm:min-h-0"
         @click="handleLike"
         :disabled="isLiking"
         :class="[
@@ -815,7 +815,7 @@ const handlePollDelete = () => {
       </button>
       
       <!-- Dislike -->
-      <button
+      <button class="min-h-[44px] sm:min-h-0"
         @click="handleDislike"
         :disabled="isDisliking"
         :class="[
@@ -835,7 +835,7 @@ const handlePollDelete = () => {
       <!-- Comment -->
       <button
         @click="showComments = !showComments"
-        class="flex-1 flex items-center justify-center gap-2 py-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-vikinger-dark-100 rounded-lg transition-colors"
+        class="min-h-[44px] sm:min-h-0 flex-1 flex items-center justify-center gap-2 py-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-vikinger-dark-100 rounded-lg transition-colors"
       >
         <Icon icon="fluent:chat-24-regular" class="w-5 h-5" />
         <span>ความคิดเห็น</span>
@@ -844,7 +844,7 @@ const handlePollDelete = () => {
       <!-- Share -->
       <button
         @click="openShareModal"
-        class="flex-1 flex items-center justify-center gap-2 py-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-vikinger-dark-100 rounded-lg transition-colors"
+        class="min-h-[44px] sm:min-h-0 flex-1 flex items-center justify-center gap-2 py-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-vikinger-dark-100 rounded-lg transition-colors"
       >
         <Icon icon="fluent:share-24-regular" class="w-5 h-5" />
         <span>แชร์</span>
@@ -1057,7 +1057,7 @@ const handlePollDelete = () => {
             v-if="hasMoreComments && localCommentsCount > displayedComments.length"
             @click="loadMoreComments"
             :disabled="isLoadingComments"
-            class="w-full py-2 text-sm text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg"
+            class="min-h-[44px] sm:min-h-0 w-full py-2 text-sm text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg"
           >
             <Icon v-if="isLoadingComments" icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin inline mr-2" />
             ดูความคิดเห็นเพิ่มเติม ({{ localCommentsCount - displayedComments.length }})
