@@ -359,7 +359,7 @@ guardian_account_requests        ← ใหม่ · 1 แถว = คำขอ�
 |---|---|---|---|---|
 | **G-S12a** ✅ | **โครงข้อมูล** — migration `guardian_account_requests` (มี guard `hasTable` แบบไฟล์เดิม) + migration unique `(academy_id, user_id)` บน `guardians` (ตรวจซ้ำก่อน ALTER · ตอนนี้ว่างทั้ง 4,504 แถว) + model `GuardianAccountRequest` + relation `Guardian::account()` / `User::guardianProfiles()` | — | 2 migration + 1 model + 2 relation + test | 🟢 **verified 2026-08-28** — ดู §8.9 (migrate บน dev แล้ว · production ยังไม่ได้รัน) |
 | **G-S12b** ✅ | **บริการผูกบัญชี** — `GuardianAccountLinkService`: `createRequest()` (กันคำขอ pending ซ้ำต่อ (student,user) ด้วย `lockForUpdate`), `accept()` ตามผล 5 ข้อใน §6.3, `decline()`, `cancel()`, `unlink()` (A7) · ทุกทางเขียน audit + notification | G-S12a | 1 service + unit test ครบ 4 ทิศ | 🟢 **verified 2026-08-28** — ดู §8.10 |
-| **G-S12c** | **Endpoints + สิทธิ์** — ค้นบัญชีตรงตัว, สร้างคำขอ 4 ทาง, รายการคำขอของฉัน (เข้า/ออก), accept/decline/cancel, unlink · เปลี่ยน `GuardianController::linkUser` จาก 501 → **สร้างคำขอ** (staff ผูกตรงไม่ได้ ต้องให้กดรับ ตาม D8) | G-S12b | ~8 route + policy + feature test (403/409/422 ครบ) | ⚪ |
+| **G-S12c** ✅ | **Endpoints + สิทธิ์** — ค้นบัญชีตรงตัว, สร้างคำขอ 4 ทาง, รายการคำขอของฉัน (เข้า/ออก), accept/decline/cancel, unlink · เปลี่ยน `GuardianController::linkUser` จาก 501 → **สร้างคำขอ** (staff ผูกตรงไม่ได้ ต้องให้กดรับ ตาม D8) | G-S12b | ~8 route + policy + feature test (403/409/422 ครบ) | 🟢 **verified 2026-08-28** — ดู §8.11 |
 | **G-S12d** | **FE ฝั่งนักเรียน + ผู้ปกครอง** — ปุ่ม "ผูกบัญชี" ในการ์ดผู้ปกครองของโปรไฟล์นักเรียน (ต่อยอด `GuardianAppointModal.vue`) + หน้ารวมคำขอ `academies/[name]/parent/requests.vue` (กดรับ/ปฏิเสธ) + ป้ายสถานะบนการ์ดเดิม | G-S12c | 1 page + 2 component + composable | ⚪ |
 | **G-S12e** | **FE ฝั่งครู/แอดมิน** — ส่งคำขอผูกบัญชีจาก `admin/guardians/index.vue` และหน้าโปรไฟล์นักเรียนฝั่งครู + คอลัมน์สถานะบัญชี (ยังไม่ผูก / รอกดรับ / ผูกแล้ว) + ยกเลิกคำขอ + ปลดการผูก + การ์ดสถิติ 2 ตัว | G-S12c | 2 page + 1 component | ⚪ |
 | **G-S13** | เปิด Parent Dashboard ที่มี endpoint พร้อมอยู่แล้ว (`ParentDashboardController` 7 ตัว + `parent/index.vue`, `parent/meetings.vue`, `dashboard/parent.vue`) | G-S12 | FE + guard | ⚪ |
@@ -391,6 +391,45 @@ Report back: diff summary + ผลเทสต์ + คำสั่งที่�
 ---
 
 ## 8. Review Log
+
+### 8.11 G-S12c — endpoints + ด่านสิทธิ์ (2026-08-28, agy 1 shard · claude ตรวจเองทุกข้อ + แก้เอง 1 จุด)
+
+**ไฟล์:** `GuardianAccountController` (ใหม่ 282 บรรทัด) · `GuardianAccountEndpointsTest` (ใหม่ 14 เคส) ·
+`routes/learn/academy.php` +25 · `GuardianController::linkUser` เขียนใหม่ · `GuardianAuthorizationTest` แก้ 1 เคส + เพิ่ม 1 เคส
+
+**8 endpoint ที่เปิด** (ไม่มีตัวไหนใช้ `academy.permission:` middleware — ด่านอยู่ใน controller เพราะนักเรียนและผู้ปกครองต้องเรียกได้)
+
+```
+GET    {academy}/guardian-accounts/search                       throttle:10,1
+GET    {academy}/guardian-accounts/student-search               throttle:5,1
+POST   {academy}/students/{student}/guardian-accounts
+GET    {academy}/guardian-account-requests            (?scope=academy ต้องมี guardians.view)
+POST   {academy}/guardian-account-requests/{accountRequest}/accept|decline|cancel
+DELETE {academy}/guardian-people/{guardian}/account
+```
+
+**ที่ claude รันเอง:** `pint --test` passed · `route:list --path=guardian` เห็นครบ 8 ตัว **ไม่มี URI ซ้ำ**
+(กับดัก `student-profile.php` โหลดทีหลังแล้วบัง URI ของ `academy.php` ไม่เกิดขึ้น เพราะ prefix ใหม่ไม่ชนของเดิม) ·
+**guardian suite ทั้ง 14 ไฟล์เขียว รวม 113 tests**
+
+**🔴 บั๊กที่ claude เจอเองจากการอ่านโค้ด (เทสต์ของ agy ไม่ครอบ) และแก้เอง:**
+`GuardianController::linkUser()` เรียก `createRequest()` **โดยไม่มี try/catch** → คำขอซ้ำที่ service ตั้งใจให้เป็น 409
+หลุดออกไปเป็น **500** · แก้โดยเติม catch `GuardianAccountLinkException` แบบเดียวกับ `GuardianAccountController`
+และเพิ่มเทสต์ `test_link_user_twice_returns_409_not_500` ล็อกไว้ (ยิงซ้ำ 2 ครั้ง ต้องได้ 201 แล้ว 409 และมีคำขอแค่ใบเดียว)
+
+**พฤติกรรมที่เปลี่ยนของเดิม:** `linkUser` จาก 501 → 201 สร้างคำขอ · เทสต์เดิม
+`test_link_user_returns_501_and_creates_no_member` เปลี่ยนชื่อเป็น `..._creates_pending_request_and_no_member`
+แต่ **ยังคง assert ว่าไม่มีแถว `academy_members` เกิดขึ้น** — staff ยัดสมาชิกภาพให้ผู้ปกครองเองไม่ได้ ต้องรอกดรับ (D8)
+
+**agy ละเมิดข้อห้าม 1 ข้อ:** สั่งห้าม `git add` แต่มันรัน `git add` กับไฟล์ใหม่ (ไม่ได้ commit) — ไม่กระทบผล แค่ทำให้
+`git diff` เปล่า ๆ ไม่เห็นไฟล์ ต้องใช้ `git diff HEAD` ตอนตรวจ
+
+**หนี้ที่เหลือของ G-S12c:**
+- `search` คืน `already_linked` มาให้ FE แล้ว แต่ยังไม่มีฝั่งใช้จนกว่าจะถึง G-S12d/e
+- `index` ยังไม่แบ่งหน้า (pagination) — ตอนนี้คำขอมี 0 ใบ ค่อยเติมเมื่อของจริงเริ่มโต
+
+---
+
 
 ### 8.10 G-S12b — บริการผูกบัญชี (2026-08-28, agy 1 shard · claude ตรวจเองทุกข้อ)
 
