@@ -8,6 +8,7 @@ use App\Models\AcademyGroupMember;
 use App\Models\AcademyGroupPermission;
 use App\Models\AcademyMember;
 use App\Models\AcademyRole;
+use App\Models\GuardianAccountRequest;
 use App\Models\Student;
 use App\Models\User;
 use App\Services\GuardianWriteService;
@@ -153,7 +154,7 @@ class GuardianAuthorizationTest extends TestCase
         ]);
     }
 
-    public function test_link_user_returns_501_and_creates_no_member(): void
+    public function test_link_user_creates_pending_request_and_no_member(): void
     {
         [$academy, $user] = $this->academyWithMember(['guardians.manage']);
         [$student, $guardian] = $this->createStudentWithGuardian($academy);
@@ -166,13 +167,37 @@ class GuardianAuthorizationTest extends TestCase
             ->postJson("/api/academies/{$academy->id}/guardians/{$guardian->id}/link-user", [
                 'user_id' => $parentUser->id,
             ])
-            ->assertStatus(501);
+            ->assertStatus(201);
 
         $this->assertEquals($initialMemberCount, AcademyMember::count());
         $this->assertDatabaseMissing('academy_members', [
             'user_id' => $parentUser->id,
             'academy_id' => $academy->id,
         ]);
+
+        $this->assertDatabaseHas('guardian_account_requests', [
+            'academy_id' => $academy->id,
+            'student_id' => $student->id,
+            'user_id' => $parentUser->id,
+            'status' => GuardianAccountRequest::STATUS_PENDING,
+        ]);
+    }
+
+    public function test_link_user_twice_returns_409_not_500(): void
+    {
+        [$academy, $user] = $this->academyWithMember(['guardians.manage']);
+        [$student, $guardian] = $this->createStudentWithGuardian($academy);
+
+        $parentUser = User::factory()->create();
+        $url = "/api/academies/{$academy->id}/guardians/{$guardian->id}/link-user";
+
+        $this->actingAs($user, 'api')->postJson($url, ['user_id' => $parentUser->id])->assertStatus(201);
+
+        // The second call hits the pending-request guard inside the service. Without the
+        // exception mapping in linkUser() this surfaced as a 500.
+        $this->actingAs($user, 'api')->postJson($url, ['user_id' => $parentUser->id])->assertStatus(409);
+
+        $this->assertEquals(1, GuardianAccountRequest::where('student_id', $student->id)->count());
     }
 
     public function test_student_can_view_own_guardians(): void

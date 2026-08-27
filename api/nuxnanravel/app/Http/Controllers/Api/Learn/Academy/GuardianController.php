@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Api\Learn\Academy;
 
+use App\Exceptions\GuardianAccountLinkException;
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\Student;
 use App\Models\StudentGuardianLink;
+use App\Models\User;
 use App\Services\GuardianAccessService;
+use App\Services\GuardianAccountLinkService;
 use App\Services\GuardianAuditLogger;
 use App\Services\GuardianService;
 use App\Services\GuardianWriteService;
@@ -261,16 +264,40 @@ class GuardianController extends Controller
     /**
      * Link guardian to a user account (for parent login).
      *
-     * Parent accounts do not exist yet: the linking flow ships in phase C (G-S12).
-     * The previous body created an approved academy_members row as a side effect and
-     * still answered success without linking anything, so it is refused outright.
+     * สร้างคำขอผูกบัญชีแทนการผูกตรง เพื่อให้ผู้ปกครองเป็นผู้กดยอมรับเอง (D8)
      */
     public function linkUser(Academy $academy, StudentGuardianLink $guardian, Request $request)
     {
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $student = $guardian->student;
+        $person = $guardian->guardian;
+        $targetUser = User::findOrFail($validated['user_id']);
+
+        try {
+            $accountRequest = app(GuardianAccountLinkService::class)->createRequest(
+                $academy,
+                $student,
+                $targetUser,
+                $request->user() ?? auth()->user(),
+                $person
+            );
+        } catch (GuardianAccountLinkException $e) {
+            // Same mapping the account controller uses: a duplicate or already-linked
+            // account is a 409, not a 500.
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], $e->httpStatus());
+        }
+
         return response()->json([
-            'success' => false,
-            'message' => 'ยังไม่เปิดให้ผูกบัญชีผู้ใช้กับผู้ปกครอง (รอเฟสบัญชีผู้ปกครอง)',
-        ], 501);
+            'success' => true,
+            'message' => 'สร้างคำขอผูกบัญชีผู้ปกครองเรียบร้อยแล้ว',
+            'data' => $accountRequest,
+        ], 201);
     }
 
     /**

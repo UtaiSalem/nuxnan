@@ -38,6 +38,7 @@ use App\Http\Controllers\Api\Learn\Academy\ExpenseController;
 use App\Http\Controllers\Api\Learn\Academy\FeeStructureController;
 use App\Http\Controllers\Api\Learn\Academy\GamificationController;
 use App\Http\Controllers\Api\Learn\Academy\GradeScaleController;
+use App\Http\Controllers\Api\Learn\Academy\GuardianAccountController;
 use App\Http\Controllers\Api\Learn\Academy\GuardianAppointmentController;
 use App\Http\Controllers\Api\Learn\Academy\GuardianContactController;
 use App\Http\Controllers\Api\Learn\Academy\GuardianController;
@@ -329,6 +330,30 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
             ->middleware('academy.permission:guardians.manage')->name('api.academy.guardian-contacts.destroy');
         Route::patch('{contact}/set-primary', [GuardianContactController::class, 'setPrimary'])
             ->middleware('academy.permission:guardians.manage')->name('api.academy.guardian-contacts.set-primary');
+    });
+
+    // ============================================
+    // Guardian Account endpoints (G-S12c)
+    // ============================================
+    Route::prefix('{academy}')->group(function () {
+        Route::get('guardian-accounts/search', [GuardianAccountController::class, 'search'])
+            ->middleware('throttle:10,1')->name('api.academy.guardian-accounts.search');
+        Route::get('guardian-accounts/student-search', [GuardianAccountController::class, 'studentSearch'])
+            ->middleware('throttle:5,1')->name('api.academy.guardian-accounts.student-search');
+        Route::post('students/{student}/guardian-accounts', [GuardianAccountController::class, 'store'])
+            ->name('api.academy.students.guardian-accounts.store');
+
+        Route::get('guardian-account-requests', [GuardianAccountController::class, 'index'])
+            ->name('api.academy.guardian-account-requests.index');
+        Route::post('guardian-account-requests/{accountRequest}/accept', [GuardianAccountController::class, 'accept'])
+            ->name('api.academy.guardian-account-requests.accept');
+        Route::post('guardian-account-requests/{accountRequest}/decline', [GuardianAccountController::class, 'decline'])
+            ->name('api.academy.guardian-account-requests.decline');
+        Route::post('guardian-account-requests/{accountRequest}/cancel', [GuardianAccountController::class, 'cancel'])
+            ->name('api.academy.guardian-account-requests.cancel');
+
+        Route::delete('guardian-people/{guardian}/account', [GuardianAccountController::class, 'destroy'])
+            ->name('api.academy.guardian-people.account.destroy');
     });
 
     // ============================================
