@@ -158,7 +158,7 @@ watch(() => [props.academy?.name, props.student.id], () => loadVisits(), { immed
         <button
           v-if="canCreate"
           type="button"
-          class="rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-blue-700"
+          class="min-h-[44px] sm:min-h-0 rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-blue-700"
           @click="openCreate"
         >
           + บันทึกใหม่
@@ -208,8 +208,8 @@ watch(() => [props.academy?.name, props.student.id], () => loadVisits(), { immed
 
         <p v-if="formError" class="text-xs text-red-600">{{ formError }}</p>
         <div class="flex justify-end gap-2">
-          <button type="button" class="rounded-lg bg-gray-100 px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-200" @click="closeForm">ยกเลิก</button>
-          <button type="submit" :disabled="isSubmitting" class="rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
+          <button type="button" class="min-h-[44px] sm:min-h-0 rounded-lg bg-gray-100 px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-200" @click="closeForm">ยกเลิก</button>
+          <button type="submit" :disabled="isSubmitting" class="min-h-[44px] sm:min-h-0 rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
             {{ isSubmitting ? 'กำลังบันทึก...' : 'บันทึก' }}
           </button>
         </div>
@@ -247,9 +247,9 @@ watch(() => [props.academy?.name, props.student.id], () => loadVisits(), { immed
       </ul>
 
       <div v-if="lastPage > 1" class="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
-        <button type="button" :disabled="currentPage <= 1" class="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-40" @click="loadVisits(currentPage - 1)">ก่อนหน้า</button>
+        <button type="button" :disabled="currentPage <= 1" class="min-h-[44px] sm:min-h-0 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-40" @click="loadVisits(currentPage - 1)">ก่อนหน้า</button>
         <span class="text-xs text-gray-500">หน้า {{ currentPage }} / {{ lastPage }}</span>
-        <button type="button" :disabled="currentPage >= lastPage" class="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-40" @click="loadVisits(currentPage + 1)">ถัดไป</button>
+        <button type="button" :disabled="currentPage >= lastPage" class="min-h-[44px] sm:min-h-0 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-40" @click="loadVisits(currentPage + 1)">ถัดไป</button>
       </div>
     </div>
   </div>

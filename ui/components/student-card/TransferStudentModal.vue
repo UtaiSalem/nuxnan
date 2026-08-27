@@ -85,11 +85,11 @@ const handleConfirm = () => {
 
                 <div class="flex justify-end gap-2 pt-5">
                     <button @click="emit('close')"
-                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                        class="min-h-[44px] sm:min-h-0 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
                         ยกเลิก
                     </button>
                     <button @click="handleConfirm" :disabled="!canSubmit"
-                        class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50">
+                        class="min-h-[44px] sm:min-h-0 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50">
                         {{ isSubmitting ? 'กำลังย้าย...' : 'ยืนยันย้ายห้อง' }}
                     </button>
                 </div>

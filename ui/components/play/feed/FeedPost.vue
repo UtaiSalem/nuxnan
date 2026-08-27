@@ -2124,7 +2124,7 @@ const handlePollUpdate = (updatedPoll) => {
         <div class="relative flex-shrink-0">
           <button 
             @click.stop="showOptionsMenu = !showOptionsMenu"
-            class="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-lg transition-colors sm:opacity-0 sm:group-hover:opacity-100"
+            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-lg transition-colors sm:opacity-0 sm:group-hover:opacity-100"
           >
             <Icon icon="fluent:more-horizontal-20-regular" class="w-5 h-5 text-gray-500 dark:text-gray-400" />
           </button>
@@ -2141,7 +2141,7 @@ const handlePollUpdate = (updatedPoll) => {
                 v-if="isOwnShare"
                 @click="deleteShare"
                 :disabled="isDeletingShare"
-                class="w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left text-red-500"
+                class="min-h-[44px] sm:min-h-0 w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left text-red-500"
               >
                 <Icon 
                   v-if="!isDeletingShare"
@@ -2158,7 +2158,7 @@ const handlePollUpdate = (updatedPoll) => {
               
               <!-- Other options can be added here -->
               <button
-                class="w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-gray-50 dark:hover:bg-vikinger-dark-200 transition-colors text-left"
+                class="min-h-[44px] sm:min-h-0 w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-gray-50 dark:hover:bg-vikinger-dark-200 transition-colors text-left"
               >
                 <Icon icon="fluent:flag-20-regular" class="w-5 h-5 text-gray-500" />
                 <span class="text-sm text-gray-700 dark:text-gray-300">รายงาน</span>
@@ -2211,7 +2211,7 @@ const handlePollUpdate = (updatedPoll) => {
             <button 
               @click="handleShareLike" 
               :disabled="isShareLiking"
-              class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all duration-200"
+              class="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all duration-200"
               :class="localShareIsLiked 
                 ? 'bg-vikinger-purple/15 text-vikinger-purple' 
                 : 'hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 text-gray-500 dark:text-gray-400'"
@@ -2222,7 +2222,7 @@ const handlePollUpdate = (updatedPoll) => {
             <button 
               @click="handleShareDislike" 
               :disabled="isShareDisliking"
-              class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all duration-200"
+              class="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all duration-200"
               :class="localShareIsDisliked 
                 ? 'bg-red-500/15 text-red-500' 
                 : 'hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 text-gray-500 dark:text-gray-400'"
@@ -2232,7 +2232,7 @@ const handlePollUpdate = (updatedPoll) => {
             </button>
             <button 
               @click="toggleShareComments" 
-              class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 text-gray-500 dark:text-gray-400 transition-all duration-200"
+              class="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 text-gray-500 dark:text-gray-400 transition-all duration-200"
             >
               <Icon icon="fluent:comment-20-regular" class="w-[18px] h-[18px]" />
               <span class="text-xs font-medium hidden sm:inline">ตอบ</span>
@@ -2365,7 +2365,7 @@ const handlePollUpdate = (updatedPoll) => {
           <button
             v-if="hasMoreComments && !isLoadingComments"
             @click="loadMoreComments"
-            class="w-full py-2 text-sm text-vikinger-purple hover:bg-vikinger-purple/10 rounded-lg transition-colors flex items-center justify-center gap-2"
+            class="min-h-[44px] sm:min-h-0 w-full py-2 text-sm text-vikinger-purple hover:bg-vikinger-purple/10 rounded-lg transition-colors flex items-center justify-center gap-2"
           >
             <Icon icon="fluent:arrow-down-24-regular" class="w-4 h-4" />
             ดูความคิดเห็นก่อนหน้า ({{ remainingCommentsCount }} รายการ)
@@ -2502,7 +2502,7 @@ const handlePollUpdate = (updatedPoll) => {
         <div v-if="!isNested" class="relative flex-shrink-0">
           <button 
             @click.stop="showPostOptionsMenu = !showPostOptionsMenu"
-            class="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-lg transition-colors sm:opacity-0 sm:group-hover:opacity-100"
+            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-lg transition-colors sm:opacity-0 sm:group-hover:opacity-100"
           >
             <Icon icon="fluent:more-horizontal-20-regular" class="w-5 h-5 text-gray-500 dark:text-gray-400" />
           </button>
@@ -2518,7 +2518,7 @@ const handlePollUpdate = (updatedPoll) => {
               <template v-if="hasPoll && isPollOwner">
                 <!-- Edit Poll -->
                 <button
-                  class="w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left text-blue-600"
+                  class="min-h-[44px] sm:min-h-0 w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left text-blue-600"
                 >
                   <Icon icon="fluent:edit-20-regular" class="w-5 h-5" />
                   <span class="text-sm font-medium">แก้ไขโพล</span>
@@ -2526,7 +2526,7 @@ const handlePollUpdate = (updatedPoll) => {
                 
                 <!-- Close Poll -->
                 <button
-                  class="w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors text-left text-yellow-600"
+                  class="min-h-[44px] sm:min-h-0 w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors text-left text-yellow-600"
                 >
                   <Icon icon="fluent:checkmark-circle-20-regular" class="w-5 h-5" />
                   <span class="text-sm font-medium">ปิดโพล</span>
@@ -2745,7 +2745,7 @@ const handlePollUpdate = (updatedPoll) => {
               v-if="eventData.requires_register"
               type="button"
               :disabled="isRegisteringEvent"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-vikinger-purple to-purple-600 text-white text-xs font-semibold hover:from-vikinger-purple/90 hover:to-purple-600/90 shadow-sm transition-all duration-300 disabled:opacity-50"
+              class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-vikinger-purple to-purple-600 text-white text-xs font-semibold hover:from-vikinger-purple/90 hover:to-purple-600/90 shadow-sm transition-all duration-300 disabled:opacity-50"
               @click="onRegisterEvent"
             >
               <Icon v-if="!isRegisteringEvent" icon="heroicons:pencil-square" class="w-3.5 h-3.5" />
@@ -2817,7 +2817,7 @@ const handlePollUpdate = (updatedPoll) => {
           <button 
             @click="handleLike"
             :disabled="isLiking || isOwnPost"
-            class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200"
+            class="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200"
             :class="localIsLiked 
               ? 'bg-vikinger-purple/15 text-vikinger-purple' 
               : isOwnPost 
@@ -2837,7 +2837,7 @@ const handlePollUpdate = (updatedPoll) => {
           <button 
             @click="handleDislike"
             :disabled="isDisliking || isOwnPost"
-            class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200"
+            class="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200"
             :class="localIsDisliked 
               ? 'bg-red-500/15 text-red-500' 
               : isOwnPost
@@ -2856,7 +2856,7 @@ const handlePollUpdate = (updatedPoll) => {
           <!-- Comment -->
           <button 
             @click="toggleComments" 
-            class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 transition-all duration-200 text-gray-600 dark:text-gray-300"
+            class="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 transition-all duration-200 text-gray-600 dark:text-gray-300"
           >
             <Icon icon="fluent:comment-20-regular" class="w-[18px] h-[18px] sm:w-5 sm:h-5" />
             <span class="text-xs sm:text-sm font-medium hidden sm:inline">ตอบ</span>
@@ -2867,7 +2867,7 @@ const handlePollUpdate = (updatedPoll) => {
             <button 
               @click="showShareMenu = !showShareMenu"
               :disabled="isSharing || isOwnPost"
-              class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200"
+              class="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200"
               :class="isOwnPost 
                 ? 'opacity-40 cursor-not-allowed text-gray-400'
                 : 'hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 text-gray-600 dark:text-gray-300'"
@@ -2937,7 +2937,7 @@ const handlePollUpdate = (updatedPoll) => {
             <button 
               @click="addComment" 
               :disabled="isCommenting || !newComment.trim()"
-              class="flex-shrink-0 p-2 rounded-full bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center flex-shrink-0 p-2 rounded-full bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Icon v-if="!isCommenting" icon="fluent:send-20-filled" class="w-4 h-4 sm:w-5 sm:h-5" />
               <Icon v-else icon="fluent:spinner-ios-16-regular" class="w-4 h-4 animate-spin" />
@@ -2976,7 +2976,7 @@ const handlePollUpdate = (updatedPoll) => {
               <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 text-xs text-gray-500 dark:text-gray-400 px-2">
                 <span class="text-[11px]">{{ comment.create_at || comment.diff_humans_created_at || comment.createdAt || 'เมื่อสักครู่' }}</span>
                 <span class="text-gray-300 dark:text-gray-600">•</span>
-                <button 
+                <button class="min-h-[44px] sm:min-h-0" 
                   @click="handleCommentLike(comment)"
                   :disabled="comment.isLiking || authStore.user?.id === (comment.user?.id || comment.author?.id)"
                   :class="[
@@ -2988,7 +2988,7 @@ const handlePollUpdate = (updatedPoll) => {
                   <Icon :icon="comment.isLikedByAuth ? 'fluent:thumb-like-20-filled' : 'fluent:thumb-like-20-regular'" class="w-3.5 h-3.5" />
                   <span class="hidden sm:inline">{{ comment.isLikedByAuth ? 'ถูกใจแล้ว' : 'ถูกใจ' }}</span>
                 </button>
-                <button 
+                <button class="min-h-[44px] sm:min-h-0" 
                   @click="handleCommentDislike(comment)"
                   :disabled="comment.isDisliking || authStore.user?.id === (comment.user?.id || comment.author?.id)"
                   :class="[
@@ -3002,7 +3002,7 @@ const handlePollUpdate = (updatedPoll) => {
                 </button>
                 <button 
                   @click="startReply(comment)"
-                  class="flex items-center gap-1 font-medium transition-colors px-1.5 py-0.5 rounded-md hover:bg-gray-100 dark:hover:bg-vikinger-dark-300 hover:text-vikinger-purple"
+                  class="min-h-[44px] sm:min-h-0 flex items-center gap-1 font-medium transition-colors px-1.5 py-0.5 rounded-md hover:bg-gray-100 dark:hover:bg-vikinger-dark-300 hover:text-vikinger-purple"
                 >
                   <Icon icon="fluent:arrow-reply-20-regular" class="w-3.5 h-3.5" />
                   <span class="hidden sm:inline">ตอบกลับ</span>
@@ -3010,7 +3010,7 @@ const handlePollUpdate = (updatedPoll) => {
                 <button 
                   v-if="isOwnPost || authStore.user?.id === (comment.user?.id || comment.author?.id)"
                   @click="deleteComment(comment.id)"
-                  class="flex items-center gap-1 font-medium transition-colors px-1.5 py-0.5 rounded-md hover:bg-gray-100 dark:hover:bg-vikinger-dark-300 hover:text-red-500"
+                  class="min-h-[44px] sm:min-h-0 flex items-center gap-1 font-medium transition-colors px-1.5 py-0.5 rounded-md hover:bg-gray-100 dark:hover:bg-vikinger-dark-300 hover:text-red-500"
                 >
                   <Icon icon="fluent:delete-20-regular" class="w-3.5 h-3.5" />
                   <span class="hidden sm:inline">ลบ</span>
@@ -3019,7 +3019,7 @@ const handlePollUpdate = (updatedPoll) => {
                 <button 
                   v-if="comment.replies_count > 0"
                   @click="toggleReplies(comment)"
-                  class="flex items-center gap-1 font-medium transition-colors px-1.5 py-0.5 rounded-md hover:bg-vikinger-cyan/10 text-vikinger-cyan"
+                  class="min-h-[44px] sm:min-h-0 flex items-center gap-1 font-medium transition-colors px-1.5 py-0.5 rounded-md hover:bg-vikinger-cyan/10 text-vikinger-cyan"
                 >
                   <Icon 
                     :icon="expandedReplies[comment.id] ? 'fluent:chevron-up-20-regular' : 'fluent:chevron-down-20-regular'" 
@@ -3123,7 +3123,7 @@ const handlePollUpdate = (updatedPoll) => {
                       <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-[10px] text-gray-500 px-2">
                         <span>{{ reply.create_at || 'เมื่อสักครู่' }}</span>
                         <span class="text-gray-300 dark:text-gray-600">•</span>
-                        <button 
+                        <button class="min-h-[44px] sm:min-h-0" 
                           @click="handleReplyLike(reply)"
                           :disabled="reply.isLiking || authStore.user?.id === reply.user?.id"
                           :class="[
@@ -3134,7 +3134,7 @@ const handlePollUpdate = (updatedPoll) => {
                           <Icon :icon="reply.isLikedByAuth ? 'fluent:thumb-like-16-filled' : 'fluent:thumb-like-16-regular'" class="w-3 h-3" />
                           <span class="hidden sm:inline">{{ reply.isLikedByAuth ? 'ถูกใจแล้ว' : 'ถูกใจ' }}</span>
                         </button>
-                        <button 
+                        <button class="min-h-[44px] sm:min-h-0" 
                           @click="handleReplyDislike(reply)"
                           :disabled="reply.isDisliking || authStore.user?.id === reply.user?.id"
                           :class="[
@@ -3173,7 +3173,7 @@ const handlePollUpdate = (updatedPoll) => {
         <button 
           v-if="hasMoreComments && !isLoadingComments"
           @click="loadMoreComments"
-          class="w-full py-2 text-sm text-vikinger-purple hover:text-vikinger-cyan font-medium transition-colors flex items-center justify-center gap-2"
+          class="min-h-[44px] sm:min-h-0 w-full py-2 text-sm text-vikinger-purple hover:text-vikinger-cyan font-medium transition-colors flex items-center justify-center gap-2"
         >
           <Icon icon="fluent:arrow-down-24-regular" class="w-4 h-4" />
           ดูความคิดเห็นก่อนหน้า ({{ remainingCommentsCount }} รายการ)

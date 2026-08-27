@@ -338,7 +338,7 @@ watch(selectedType, () => {
                   type="button"
                   aria-label="ดูรายละเอียดธุรกรรม"
                   @click="openTransaction(tx)"
-                  class="p-2 text-slate-500 hover:text-hopeui-primary-600 hover:bg-hopeui-primary-100 dark:hover:bg-hopeui-primary-900/30 rounded-lg transition-colors"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-slate-500 hover:text-hopeui-primary-600 hover:bg-hopeui-primary-100 dark:hover:bg-hopeui-primary-900/30 rounded-lg transition-colors"
                 >
                   <Icon icon="fluent:eye-24-regular" class="w-5 h-5" />
                 </button>
@@ -406,7 +406,7 @@ watch(selectedType, () => {
               type="button"
               :disabled="isDownloadingProof"
               @click="downloadProof(selectedTransaction.id)"
-              class="px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 disabled:bg-slate-300 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 disabled:bg-slate-300 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
             >
               <Icon v-if="isDownloadingProof" icon="svg-spinners:ring-resize" class="w-4 h-4 animate-spin" />
               <Icon v-else icon="fluent:document-pdf-24-regular" class="w-4 h-4" />

@@ -23,13 +23,13 @@ defineEmits<{ commit: []; cancel: [] }>()
                 <p class="text-sm text-gray-500 mt-1">สรุปการเปลี่ยนแปลงที่จะเกิดขึ้นกับฐานข้อมูลบัตรนักเรียน</p>
             </div>
             <div class="flex gap-2">
-                <button @click="$emit('cancel')" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors">
+                <button @click="$emit('cancel')" class="min-h-[44px] sm:min-h-0 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors">
                     ยกเลิก
                 </button>
                 <button
                     :disabled="confirmation !== 'SYNC' || props.preview.counts.duplicate > 0"
                     @click="$emit('commit')"
-                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 font-medium transition-colors flex items-center gap-2 shadow-sm"
+                    class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 font-medium transition-colors flex items-center gap-2 shadow-sm"
                 >
                     <Icon icon="heroicons:check-circle" class="w-5 h-5" />
                     ยืนยันการซิงค์ข้อมูล

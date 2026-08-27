@@ -107,9 +107,9 @@
           <p class="text-yellow-400 font-bold text-sm truncate">{{ score }} <span class="text-yellow-500/80 text-xs">แต้ม</span></p>
         </div>
         <div class="col-span-3 grid grid-cols-2 gap-2 sm:ml-auto sm:flex sm:shrink-0 sm:gap-1">
-          <button @click="fetchLeaderboard" class="min-w-0 py-2 px-3 bg-indigo-700/80 text-white rounded-xl border border-indigo-600 shadow text-sm font-semibold whitespace-nowrap">🏆 อันดับ</button>
-          <button @click="openStageList" class="min-w-0 py-2 px-3 bg-slate-700/90 text-white rounded-xl border border-slate-600 shadow text-sm font-semibold whitespace-nowrap">รายการด่าน</button>
-          <button @click="showQuitConfirm = true" class="min-w-0 py-2 px-3 bg-red-700/80 text-white rounded-xl border border-red-600 shadow text-sm font-semibold whitespace-nowrap">✕ ออก</button>
+          <button @click="fetchLeaderboard" class="min-h-[44px] sm:min-h-0 min-w-0 py-2 px-3 bg-indigo-700/80 text-white rounded-xl border border-indigo-600 shadow text-sm font-semibold whitespace-nowrap">🏆 อันดับ</button>
+          <button @click="openStageList" class="min-h-[44px] sm:min-h-0 min-w-0 py-2 px-3 bg-slate-700/90 text-white rounded-xl border border-slate-600 shadow text-sm font-semibold whitespace-nowrap">รายการด่าน</button>
+          <button @click="showQuitConfirm = true" class="min-h-[44px] sm:min-h-0 min-w-0 py-2 px-3 bg-red-700/80 text-white rounded-xl border border-red-600 shadow text-sm font-semibold whitespace-nowrap">✕ ออก</button>
         </div>
       </div>
 
@@ -194,8 +194,8 @@
           <h3 class="text-white font-bold text-lg mb-1">ยกเลิกการเล่น?</h3>
           <p class="text-slate-400 text-sm mb-5">ความคืบหน้าในด่านนี้จะหายไป</p>
           <div class="flex gap-3">
-            <button @click="showQuitConfirm = false" class="flex-1 py-2 bg-slate-600 text-white rounded-xl font-semibold hover:bg-slate-500 transition-all">เล่นต่อ</button>
-            <button @click="quitGame" class="flex-1 py-2 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-500 transition-all">ออกเกม</button>
+            <button @click="showQuitConfirm = false" class="min-h-[44px] sm:min-h-0 flex-1 py-2 bg-slate-600 text-white rounded-xl font-semibold hover:bg-slate-500 transition-all">เล่นต่อ</button>
+            <button @click="quitGame" class="min-h-[44px] sm:min-h-0 flex-1 py-2 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-500 transition-all">ออกเกม</button>
           </div>
         </div>
       </div>

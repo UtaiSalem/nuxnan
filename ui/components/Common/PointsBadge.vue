@@ -54,7 +54,7 @@ onBeforeUnmount(() => {
 <template>
   <button
     type="button"
-    class="relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-500 px-4 py-2 text-sm text-white shadow-md transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+    class="min-h-[44px] sm:min-h-0 relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-500 px-4 py-2 text-sm text-white shadow-md transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
   >
     <span class="pointer-events-none absolute inset-0 overflow-hidden">
       <span class="absolute bottom-0 top-0 w-1/3 -skew-x-12 bg-white/25 blur-sm animate-shine" />

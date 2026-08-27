@@ -130,7 +130,7 @@ const statusLabel = (status: string) => {
     </div>
     <button
       @click="goCreate"
-      class="shrink-0 bg-gradient-vikinger text-white px-4 py-2 rounded-lg shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 transition-all text-sm font-semibold whitespace-nowrap"
+      class="min-h-[44px] sm:min-h-0 shrink-0 bg-gradient-vikinger text-white px-4 py-2 rounded-lg shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 transition-all text-sm font-semibold whitespace-nowrap"
     >
       + สร้างการเช็คชื่อ
     </button>
@@ -156,7 +156,7 @@ const statusLabel = (status: string) => {
     </div>
     <button
       @click="goManage"
-      class="shrink-0 bg-gradient-vikinger text-white px-4 py-2 rounded-lg shadow-vikinger hover:shadow-vikinger-lg transition-all text-sm font-semibold whitespace-nowrap"
+      class="min-h-[44px] sm:min-h-0 shrink-0 bg-gradient-vikinger text-white px-4 py-2 rounded-lg shadow-vikinger hover:shadow-vikinger-lg transition-all text-sm font-semibold whitespace-nowrap"
     >
       จัดการ →
     </button>

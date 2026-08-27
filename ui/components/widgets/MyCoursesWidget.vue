@@ -183,8 +183,8 @@ const formatPoints = (num: number) => {
                     เชิญเป็น: {{ invitation.role_name }}
                   </p>
                   <div class="flex gap-2 mt-2">
-                    <button @click="respondToInvitation(invitation, true)" class="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">ตอบรับ</button>
-                    <button @click="respondToInvitation(invitation, false)" class="text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 py-1 rounded">ปฏิเสธ</button>
+                    <button @click="respondToInvitation(invitation, true)" class="min-h-[44px] sm:min-h-0 text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">ตอบรับ</button>
+                    <button @click="respondToInvitation(invitation, false)" class="min-h-[44px] sm:min-h-0 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 py-1 rounded">ปฏิเสธ</button>
                   </div>
                 </div>
             </div>
@@ -245,7 +245,7 @@ const formatPoints = (num: number) => {
             v-if="page < lastPage" 
             @click="loadMore" 
             :disabled="isLoadingMore"
-            class="w-full py-2 text-xs font-medium text-vikinger-purple bg-vikinger-purple/10 hover:bg-vikinger-purple/20 rounded-lg transition-colors flex items-center justify-center gap-2"
+            class="min-h-[44px] sm:min-h-0 w-full py-2 text-xs font-medium text-vikinger-purple bg-vikinger-purple/10 hover:bg-vikinger-purple/20 rounded-lg transition-colors flex items-center justify-center gap-2"
         >
             <Icon v-if="isLoadingMore" icon="svg-spinners:ring-resize" class="w-4 h-4" />
             <span v-else>โหลดเพิ่ม</span>
@@ -262,7 +262,7 @@ const formatPoints = (num: number) => {
             </NuxtLink>
         </div>
         <div v-else class="group relative">
-            <button disabled class="w-full py-2 text-xs font-medium text-gray-400 bg-gray-100 dark:bg-gray-700 dark:text-gray-500 rounded-lg cursor-not-allowed flex items-center justify-center gap-2">
+            <button disabled class="min-h-[44px] sm:min-h-0 w-full py-2 text-xs font-medium text-gray-400 bg-gray-100 dark:bg-gray-700 dark:text-gray-500 rounded-lg cursor-not-allowed flex items-center justify-center gap-2">
                 <Icon icon="mdi:lock" class="w-4 h-4" />
                 สร้างคอร์สใหม่
             </button>

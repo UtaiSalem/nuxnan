@@ -5,7 +5,7 @@
       <h2 class="text-xl font-semibold text-gray-900 dark:text-white">การจัดการทรัพย์สินและพัสดุ</h2>
       <button
         @click="showAssetModal = true"
-        class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
       >
         <Icon icon="heroicons:plus" class="h-5 w-5" />
         <span>เพิ่มทรัพย์สิน</span>

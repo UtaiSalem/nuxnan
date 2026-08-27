@@ -184,7 +184,7 @@ onMounted(() => {
 
       <!-- Filter Tabs -->
       <div class="flex gap-2 border-b border-gray-700 pb-3">
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           v-for="filter in [
             { key: 'started', label: 'กระทู้ที่ตั้ง', icon: 'fluent:edit-24-regular' },
             { key: 'replied', label: 'ที่ตอบกลับ', icon: 'fluent:chat-24-regular' },

@@ -90,7 +90,7 @@ const getStatusLabel = (status: string) => {
             {{ period.label }}
           </option>
         </select>
-        <button class="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+        <button class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
           <Icon icon="fluent:arrow-download-24-regular" class="w-5 h-5" />
           ดาวน์โหลด
         </button>

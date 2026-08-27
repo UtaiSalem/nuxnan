@@ -88,7 +88,7 @@ const previewImage = computed(() => {
           <!-- Header -->
           <div class="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-gray-200 dark:border-vikinger-dark-50/30 bg-white dark:bg-vikinger-dark-100">
             <h3 class="text-xl font-bold text-gray-800 dark:text-white">แชร์โพสต์</h3>
-            <button @click="closeModal" class="p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-lg transition-colors">
+            <button @click="closeModal" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-lg transition-colors">
               <Icon icon="fluent:dismiss-24-regular" class="w-6 h-6 text-gray-600 dark:text-gray-300" />
             </button>
           </div>

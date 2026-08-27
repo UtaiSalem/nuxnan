@@ -583,7 +583,7 @@ onMounted(() => {
         <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">ไม่สามารถโหลดข้อมูลได้</h3>
         <button
           @click="fetchDashboard"
-          class="mt-4 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
+          class="min-h-[44px] sm:min-h-0 mt-4 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
         >
           ลองอีกครั้ง
         </button>

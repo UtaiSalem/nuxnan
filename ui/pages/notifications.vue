@@ -196,13 +196,13 @@ onMounted(() => {
           <div class="flex items-center gap-2 flex-wrap">
             <button
               @click="markAllAsRead"
-              class="px-3 py-2 text-xs sm:text-sm font-medium bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+              class="min-h-[44px] sm:min-h-0 px-3 py-2 text-xs sm:text-sm font-medium bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
             >
               อ่านทั้งหมด
             </button>
             <button
               @click="deleteAllRead"
-              class="px-3 py-2 text-xs sm:text-sm font-medium bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+              class="min-h-[44px] sm:min-h-0 px-3 py-2 text-xs sm:text-sm font-medium bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
             >
               ลบที่อ่านแล้ว
             </button>
@@ -304,7 +304,7 @@ onMounted(() => {
           v-if="pagination && pagination.last_page > 1"
           class="flex justify-center gap-2 p-4 border-t border-gray-200 dark:border-gray-700"
         >
-          <button
+          <button class="min-h-[44px] sm:min-h-0"
             v-for="page in pagination.last_page"
             :key="page"
             @click="fetchNotifications(page)"

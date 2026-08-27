@@ -175,7 +175,7 @@ watch(user, (newUser) => {
     <div v-if="hasMore && academies.length > 0" class="p-3 border-t border-gray-100 dark:border-gray-700">
       <button 
         @click="loadMore"
-        class="w-full py-2 text-sm text-vikinger-purple hover:bg-vikinger-purple/10 rounded-lg transition-colors"
+        class="min-h-[44px] sm:min-h-0 w-full py-2 text-sm text-vikinger-purple hover:bg-vikinger-purple/10 rounded-lg transition-colors"
       >
         โหลดเพิ่มเติม
       </button>

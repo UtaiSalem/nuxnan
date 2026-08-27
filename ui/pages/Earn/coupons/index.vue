@@ -423,7 +423,7 @@ const downloadPDF = async () => {
       <div class="flex flex-wrap gap-2 md:gap-3">
         <button
           @click="showRedeemModal = true"
-          class="p-2.5 md:px-4 md:py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-white rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all flex items-center gap-2 font-bold"
+          class="min-h-[44px] sm:min-h-0 p-2.5 md:px-4 md:py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-white rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all flex items-center gap-2 font-bold"
         >
           <Icon icon="fluent:qr-code-24-regular" class="w-5 h-5" />
           <span class="hidden md:inline">แลกคูปอง</span>
@@ -500,7 +500,7 @@ const downloadPDF = async () => {
         <div>
           <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-2 font-semibold uppercase tracking-wider">สถานะ</p>
           <div class="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
-            <button
+            <button class="min-h-[44px] sm:min-h-0"
               v-for="status in [
                 { key: 'all', label: 'ทั้งหมด', icon: 'fluent:apps-24-regular' },
                 { key: 'active', label: 'ใช้งานได้', icon: 'fluent:checkmark-circle-24-regular' },
@@ -529,7 +529,7 @@ const downloadPDF = async () => {
           <div class="flex-1 min-w-[120px]">
             <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-2 font-semibold uppercase tracking-wider">ประเภท</p>
             <div class="flex gap-1.5 sm:gap-2">
-              <button
+              <button class="min-h-[44px] sm:min-h-0"
                 v-for="type in [
                   { key: 'all', label: 'ทั้งหมด' },
                   { key: 'points', label: '🎯 แต้ม' },
@@ -757,7 +757,7 @@ const downloadPDF = async () => {
                 class="min-w-0 flex-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-vikinger-purple focus:border-transparent transition-all"
                 @keyup.enter="redeemCoupon"
               />
-              <button
+              <button class="min-h-[44px] sm:min-h-0"
                 @click="redeemCoupon"
                 :disabled="isRedeeming || !redeemCode.trim()"
                 :class="[

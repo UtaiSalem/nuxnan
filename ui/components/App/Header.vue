@@ -4,7 +4,7 @@
       <!-- Back Button -->
       <button
         @click="goBack"
-        class="p-2 hover:bg-gray-100 rounded-full transition-colors"
+        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 rounded-full transition-colors"
         title="Back"
       >
         <Icon icon="mdi:chevron-double-left" class="w-6 h-6 text-secondary-700" />
@@ -13,7 +13,7 @@
       <!-- Search Button -->
       <button
         @click="openSearch"
-        class="p-2 hover:bg-gray-100 rounded-full transition-colors"
+        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 rounded-full transition-colors"
         title="Search"
       >
         <Icon icon="mdi:magnify" class="w-6 h-6 text-secondary-700" />
@@ -30,7 +30,7 @@
       <!-- Settings Button -->
       <button
         @click="openSettings"
-        class="p-2 hover:bg-gray-100 rounded-full transition-colors"
+        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 rounded-full transition-colors"
         title="Settings"
       >
         <Icon icon="mdi:dots-vertical" class="w-6 h-6 text-secondary-700" />
@@ -39,7 +39,7 @@
       <!-- New Post Button -->
       <button
         @click="openNewPost"
-        class="p-2 hover:bg-primary-100 rounded-full transition-colors"
+        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-primary-100 rounded-full transition-colors"
         title="Create New Post"
       >
         <Icon icon="mdi:plus" class="w-6 h-6 text-primary-600" />

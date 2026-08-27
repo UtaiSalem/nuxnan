@@ -211,7 +211,7 @@ watch(
           <div class="flex items-center gap-4">
             <button
               @click="toggleSidebar"
-              class="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
             >
               <Icon icon="fluent:navigation-24-regular" class="w-6 h-6" />
             </button>
@@ -223,7 +223,7 @@ watch(
           <!-- Right side -->
           <div class="flex items-center gap-3">
             <!-- Notifications -->
-            <button class="relative p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+            <button class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center relative p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
               <Icon icon="fluent:alert-24-regular" class="w-6 h-6" />
               <span class="absolute top-1 right-1 w-2 h-2 bg-hopeui-danger rounded-full"></span>
             </button>
@@ -276,7 +276,7 @@ watch(
                   <hr class="my-1 border-slate-100 dark:border-slate-700" />
                   <button
                     @click="handleLogout"
-                    class="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    class="min-h-[44px] sm:min-h-0 flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                   >
                     <Icon icon="fluent:sign-out-24-regular" class="w-4 h-4" />
                     ออกจากระบบ

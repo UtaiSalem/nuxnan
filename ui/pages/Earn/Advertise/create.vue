@@ -548,7 +548,7 @@ watch(() => authStore.user?.id, async (id) => {
                 </div>
 
                 <div v-else class="relative rounded-2xl overflow-hidden shadow-md group">
-                  <button @click.stop="deleteMediaImage" class="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white p-2.5 rounded-full shadow-lg z-20 transition-all hover:scale-110">
+                  <button @click.stop="deleteMediaImage" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white p-2.5 rounded-full shadow-lg z-20 transition-all hover:scale-110">
                     <Icon icon="mdi:trash-can" class="w-5 h-5" />
                   </button>
                   <div v-if="mediaImage.type?.startsWith('video/')" class="aspect-video bg-black flex items-center justify-center">
@@ -582,7 +582,7 @@ watch(() => authStore.user?.id, async (id) => {
                       :key="opt" 
                       @click="totalViews = opt" 
                       :class="totalViews === opt ? 'bg-amber-100 border-amber-300 text-amber-700 dark:bg-amber-950 dark:border-amber-750 dark:text-amber-300' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400'"
-                      class="text-xs px-2.5 py-1.5 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      class="min-h-[44px] sm:min-h-0 text-xs px-2.5 py-1.5 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
                       {{ opt.toLocaleString() }}
                     </button>
@@ -835,7 +835,7 @@ watch(() => authStore.user?.id, async (id) => {
                 </button>
                 <button 
                   @click="router.back()" 
-                  class="w-full text-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white text-sm font-semibold py-2 transition-colors"
+                  class="min-h-[44px] sm:min-h-0 w-full text-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white text-sm font-semibold py-2 transition-colors"
                 >
                   ยกเลิก
                 </button>

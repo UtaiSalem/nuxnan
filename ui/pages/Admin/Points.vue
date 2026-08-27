@@ -178,7 +178,7 @@ onMounted(loadData)
         </div>
         <div class="flex gap-3">
           <button
-            class="px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors flex items-center gap-2"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors flex items-center gap-2"
             @click="showAdjustModal = true"
           >
             <Icon icon="mdi:account-edit" class="w-5 h-5" />
@@ -248,7 +248,7 @@ onMounted(loadData)
             { key: 'analytics', label: 'วิเคราะห์', icon: 'mdi:chart-bar' },
           ]"
           :key="tab.key"
-          class="px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap flex items-center gap-2"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap flex items-center gap-2"
           :class="activeTab === tab.key 
             ? 'bg-primary-500 text-white shadow' 
             : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'"
@@ -336,7 +336,7 @@ onMounted(loadData)
         <div v-if="activeTab === 'rules'">
           <div class="flex justify-end mb-4">
             <button
-              class="px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors flex items-center gap-2"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors flex items-center gap-2"
               @click="openRuleModal()"
             >
               <Icon icon="mdi:plus" class="w-5 h-5" />
@@ -388,13 +388,13 @@ onMounted(loadData)
                     </td>
                     <td class="py-3 px-4 text-right">
                       <button 
-                        class="p-2 text-gray-500 hover:text-primary-500"
+                        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-500 hover:text-primary-500"
                         @click="openRuleModal(rule)"
                       >
                         <Icon icon="mdi:pencil" class="w-5 h-5" />
                       </button>
                       <button 
-                        class="p-2 text-gray-500 hover:text-red-500"
+                        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-500 hover:text-red-500"
                         @click="handleDeleteRule(rule.id)"
                       >
                         <Icon icon="mdi:delete" class="w-5 h-5" />
@@ -430,7 +430,7 @@ onMounted(loadData)
                     <p class="font-bold text-amber-500">{{ formatNumber(user.points) }} แต้ม</p>
                   </div>
                   <button 
-                    class="px-3 py-1 bg-primary-100 text-primary-600 rounded-lg text-sm hover:bg-primary-200"
+                    class="min-h-[44px] sm:min-h-0 px-3 py-1 bg-primary-100 text-primary-600 rounded-lg text-sm hover:bg-primary-200"
                     @click="adjustForm.user_id = user.id.toString(); showAdjustModal = true"
                   >
                     ปรับแต้ม
@@ -523,13 +523,13 @@ onMounted(loadData)
             
             <div class="flex gap-3 mt-6">
               <button 
-                class="flex-1 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl"
+                class="min-h-[44px] sm:min-h-0 flex-1 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl"
                 @click="showRuleModal = false"
               >
                 ยกเลิก
               </button>
               <button 
-                class="flex-1 py-2 bg-primary-500 text-white rounded-xl"
+                class="min-h-[44px] sm:min-h-0 flex-1 py-2 bg-primary-500 text-white rounded-xl"
                 @click="saveRule"
               >
                 บันทึก
@@ -562,7 +562,7 @@ onMounted(loadData)
                   <button 
                     v-for="t in [{ value: 'add', label: 'เพิ่ม', color: 'green' }, { value: 'deduct', label: 'หัก', color: 'red' }, { value: 'set', label: 'ตั้งค่า', color: 'blue' }]"
                     :key="t.value"
-                    class="flex-1 py-2 rounded-xl font-medium transition-colors"
+                    class="min-h-[44px] sm:min-h-0 flex-1 py-2 rounded-xl font-medium transition-colors"
                     :class="adjustForm.type === t.value 
                       ? `bg-${t.color}-500 text-white` 
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
@@ -596,13 +596,13 @@ onMounted(loadData)
             
             <div class="flex gap-3 mt-6">
               <button 
-                class="flex-1 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl"
+                class="min-h-[44px] sm:min-h-0 flex-1 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl"
                 @click="showAdjustModal = false"
               >
                 ยกเลิก
               </button>
               <button 
-                class="flex-1 py-2 bg-primary-500 text-white rounded-xl"
+                class="min-h-[44px] sm:min-h-0 flex-1 py-2 bg-primary-500 text-white rounded-xl"
                 @click="handleAdjustPoints"
               >
                 บันทึก

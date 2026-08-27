@@ -118,7 +118,7 @@ const confirmForce = () => {
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">ตั้งค่าโครงสร้างฝ่ายงานมาตรฐาน</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">โครงสร้าง 5 ฝ่ายตามแนวทาง สพฐ. ({{ totalCount }} รายการ)</p>
           </div>
-          <button @click="emit('close')" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+          <button @click="emit('close')" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
             <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
           </button>
         </div>
@@ -139,14 +139,14 @@ const confirmForce = () => {
             <div class="flex items-center justify-center gap-3">
               <button
                 @click="hasExisting = false"
-                class="px-4 py-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 ยกเลิก
               </button>
               <button
                 @click="confirmForce"
                 :disabled="isSubmitting"
-                class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 <div v-if="isSubmitting" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                 <span>สร้างเพิ่มเติม</span>
@@ -207,14 +207,14 @@ const confirmForce = () => {
         <div v-if="!isLoading && !hasExisting" class="p-5 border-t border-gray-200 dark:border-gray-700 flex items-center gap-3 bg-gray-50 dark:bg-gray-800/50">
           <button
             @click="emit('close')"
-            class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
             ยกเลิก
           </button>
           <button
             @click="setupDepartments"
             :disabled="isSubmitting || template.length === 0"
-            class="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-primary-500/20"
+            class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-primary-500/20"
           >
             <div v-if="isSubmitting" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
             <Icon v-else icon="fluent:building-24-filled" class="w-5 h-5" />

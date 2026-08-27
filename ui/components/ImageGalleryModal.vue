@@ -67,7 +67,7 @@
                 <div class="absolute top-4 right-4 flex gap-2 z-20">
                     <button
                       @click.stop="toggleZoom"
-                      class="bg-black/50 hover:bg-black/70 text-white p-2 rounded-lg backdrop-blur-sm transition-all hover:scale-105"
+                      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center bg-black/50 hover:bg-black/70 text-white p-2 rounded-lg backdrop-blur-sm transition-all hover:scale-105"
                       :title="isZoomed ? 'ย่อรูป' : 'ขยายรูป'"
                     >
                       <Icon :icon="isZoomed ? 'heroicons:magnifying-glass-minus-20-solid' : 'heroicons:magnifying-glass-plus-20-solid'" class="w-5 h-5" />

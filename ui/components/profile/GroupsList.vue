@@ -147,7 +147,7 @@ onMounted(() => {
 
       <!-- Filter Tabs -->
       <div class="flex gap-2 border-b border-gray-700 pb-3">
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           v-for="filter in [
             { key: 'all', label: 'ทั้งหมด' },
             { key: 'owned', label: 'ที่เป็นแอดมิน' },

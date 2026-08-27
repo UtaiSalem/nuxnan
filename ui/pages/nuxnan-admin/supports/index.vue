@@ -263,7 +263,7 @@ onMounted(() => {
     <!-- Toolbar: Filters & Bulk Actions -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl p-3 rounded-[2rem] border border-white dark:border-slate-700 shadow-hopeui-lg">
       <div class="flex flex-wrap gap-2">
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           v-for="filter in statusFilters"
           :key="filter.value"
           @click="status = filter.value"
@@ -284,9 +284,9 @@ onMounted(() => {
       <!-- Bulk Actions -->
       <div v-if="selectedIds.length > 0" class="flex items-center gap-2 px-4 py-2 bg-hopeui-primary-100 dark:bg-hopeui-primary-900/20 rounded-2xl border border-hopeui-primary-100 dark:border-hopeui-primary-900">
         <span class="text-sm font-bold text-hopeui-primary-600 dark:text-hopeui-primary-400 mr-2">เลือกแล้ว {{ selectedIds.length }} รายการ:</span>
-        <button @click="handleBulkAction('approve')" class="px-4 py-2 bg-green-500 text-white rounded-xl text-xs font-bold hover:bg-green-600 transition-colors">อนุมัติทั้งหมด</button>
-        <button @click="handleBulkAction('reject')" class="px-4 py-2 bg-red-500 text-white rounded-xl text-xs font-bold hover:bg-red-600 transition-colors">ปฏิเสธทั้งหมด</button>
-        <button @click="selectedIds = []" class="p-2 text-slate-400 hover:text-slate-600"><Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" /></button>
+        <button @click="handleBulkAction('approve')" class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-green-500 text-white rounded-xl text-xs font-bold hover:bg-green-600 transition-colors">อนุมัติทั้งหมด</button>
+        <button @click="handleBulkAction('reject')" class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-red-500 text-white rounded-xl text-xs font-bold hover:bg-red-600 transition-colors">ปฏิเสธทั้งหมด</button>
+        <button @click="selectedIds = []" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-slate-400 hover:text-slate-600"><Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" /></button>
       </div>
     </div>
 
@@ -375,7 +375,7 @@ onMounted(() => {
                       <button
                         @click="handleApprove(donate.id)"
                         :disabled="processingId === donate.id"
-                        class="p-2.5 bg-green-100 text-green-600 rounded-xl hover:bg-green-500 hover:text-white disabled:opacity-50 transition-all shadow-hopeui-sm"
+                        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2.5 bg-green-100 text-green-600 rounded-xl hover:bg-green-500 hover:text-white disabled:opacity-50 transition-all shadow-hopeui-sm"
                         title="อนุมัติ"
                       >
                         <Icon v-if="processingId === donate.id" icon="fluent:spinner-24-regular" class="w-5 h-5 animate-spin" />
@@ -384,17 +384,17 @@ onMounted(() => {
                       <button
                         @click="handleReject(donate.id)"
                         :disabled="processingId === donate.id"
-                        class="p-2.5 bg-red-100 text-red-600 rounded-xl hover:bg-red-500 hover:text-white disabled:opacity-50 transition-all shadow-hopeui-sm"
+                        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2.5 bg-red-100 text-red-600 rounded-xl hover:bg-red-500 hover:text-white disabled:opacity-50 transition-all shadow-hopeui-sm"
                         title="ปฏิเสธ"
                       >
                         <Icon v-if="processingId === donate.id" icon="fluent:spinner-24-regular" class="w-5 h-5 animate-spin" />
                         <Icon v-else icon="fluent:dismiss-24-regular" class="w-5 h-5" />
                       </button>
                     </template>
-                    <button @click="openEditModal(donate)" class="p-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-hopeui-primary-500 hover:text-white transition-all shadow-hopeui-sm" title="แก้ไข">
+                    <button @click="openEditModal(donate)" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-hopeui-primary-500 hover:text-white transition-all shadow-hopeui-sm" title="แก้ไข">
                       <Icon icon="fluent:edit-24-regular" class="w-5 h-5" />
                     </button>
-                    <button @click="handleDelete(donate.id)" class="p-2.5 bg-slate-100 text-slate-400 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-hopeui-sm opacity-0 group-hover:opacity-100" title="ลบ">
+                    <button @click="handleDelete(donate.id)" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2.5 bg-slate-100 text-slate-400 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-hopeui-sm opacity-0 group-hover:opacity-100" title="ลบ">
                       <Icon icon="fluent:delete-24-regular" class="w-5 h-5" />
                     </button>
                   </div>
@@ -447,7 +447,7 @@ onMounted(() => {
             <div class="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden border border-white/20">
                 <div class="p-8 pb-4 flex justify-between items-center border-b border-slate-100 dark:border-slate-700">
                     <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">แก้ไขข้อมูล #{{ selectedDonation.id }}</h2>
-                    <button @click="showEditModal = false" class="p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"><Icon icon="fluent:dismiss-24-regular" class="w-6 h-6" /></button>
+                    <button @click="showEditModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"><Icon icon="fluent:dismiss-24-regular" class="w-6 h-6" /></button>
                 </div>
                 <div class="p-8 space-y-5">
                     <div class="space-y-2">

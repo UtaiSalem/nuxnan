@@ -158,7 +158,7 @@ function start() {
                 v-for="diff in difficulties"
                 :key="diff.id"
                 @click="store.selectedDifficulty = diff.id as Difficulty"
-                class="py-2.5 px-1.5 rounded-xl border-2 font-bold transition-all flex flex-col items-center justify-center text-center min-h-[58px]"
+                class="min-h-[44px] sm:min-h-0 py-2.5 px-1.5 rounded-xl border-2 font-bold transition-all flex flex-col items-center justify-center text-center min-h-[58px]"
                 :class="store.selectedDifficulty === diff.id
                   ? 'border-primary-500 bg-primary-500 text-white shadow-lg shadow-primary-500/30'
                   : 'border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400'"

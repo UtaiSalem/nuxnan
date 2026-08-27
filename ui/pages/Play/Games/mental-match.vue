@@ -126,21 +126,21 @@ onMounted(() => {
               <button
                 @click="changeDifficulty('easy')"
                 :class="gameDifficulty === 'easy' ? 'bg-green-500 text-white shadow-md' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
-                class="px-4 py-2 rounded-lg text-sm font-medium transition-all transform active:scale-95"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg text-sm font-medium transition-all transform active:scale-95"
               >
                 Easy
               </button>
               <button
                 @click="changeDifficulty('medium')"
                 :class="gameDifficulty === 'medium' ? 'bg-yellow-500 text-white shadow-md' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
-                class="px-4 py-2 rounded-lg text-sm font-medium transition-all transform active:scale-95"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg text-sm font-medium transition-all transform active:scale-95"
               >
                 Medium
               </button>
               <button
                 @click="changeDifficulty('hard')"
                 :class="gameDifficulty === 'hard' ? 'bg-red-500 text-white shadow-md' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
-                class="px-4 py-2 rounded-lg text-sm font-medium transition-all transform active:scale-95"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg text-sm font-medium transition-all transform active:scale-95"
               >
                 Hard
               </button>

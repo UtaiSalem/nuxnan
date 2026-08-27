@@ -340,7 +340,7 @@ onUnmounted(() => {
     <!-- 2. CHALLENGE SETUP (Level Selection) -->
     <div v-else-if="gameState === 'challengeSetup'" class="bg-white border-4 border-black p-8 shadow-[8px_8px_0_0_rgba(0,0,0,1)] rounded-none">
       <div class="flex items-center gap-4 mb-8">
-        <button @click="gameState = 'selectMode'" class="p-2 border-4 border-black bg-gray-200 hover:bg-gray-300">
+        <button @click="gameState = 'selectMode'" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 border-4 border-black bg-gray-200 hover:bg-gray-300">
           <Icon icon="fluent:arrow-left-24-filled" class="w-6 h-6" />
         </button>
         <h2 class="text-3xl font-black uppercase italic">Select Level</h2>
@@ -446,7 +446,7 @@ onUnmounted(() => {
 
       <!-- Footer Controls -->
       <div class="flex justify-between">
-        <button @click="quitGame" class="px-6 py-2 bg-red-500 text-white font-black border-4 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:translate-y-1 hover:shadow-none transition-all uppercase italic">
+        <button @click="quitGame" class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-red-500 text-white font-black border-4 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:translate-y-1 hover:shadow-none transition-all uppercase italic">
           Quit
         </button>
         <div class="flex gap-4">

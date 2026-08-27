@@ -305,7 +305,7 @@ onMounted(() => {
                 </td>
                 <!-- Action / Slip image link -->
                 <td class="p-4 text-center">
-                  <button v-if="c.slip" @click="viewSlip(c.id)" class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full transition-colors" title="ดูสลิปโอนเงิน">
+                  <button v-if="c.slip" @click="viewSlip(c.id)" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full transition-colors" title="ดูสลิปโอนเงิน">
                     <Icon icon="solar:document-bold" class="w-5 h-5" />
                   </button>
                   <span v-else class="text-xs text-gray-400">Wallet</span>
@@ -322,7 +322,7 @@ onMounted(() => {
     <!-- Slip Image Modal -->
     <div v-if="showSlipModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" @click.self="showSlipModal = false">
       <div class="bg-white dark:bg-gray-800 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl relative">
-        <button @click="showSlipModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-white p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+        <button @click="showSlipModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-white p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
           <Icon icon="solar:close-circle-bold" class="w-6 h-6" />
         </button>
         <div class="p-6">

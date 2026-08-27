@@ -4,7 +4,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <h2 class="text-xl font-semibold text-gray-900 dark:text-white">ระบบแต้มรางวัล & Leaderboard</h2>
       <div class="flex gap-2">
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           v-for="section in sections"
           :key="section.id"
           @click="activeSection = section.id"
@@ -26,7 +26,7 @@
         <h3 class="text-lg font-medium text-gray-900 dark:text-white">นโยบายการมอบแต้ม</h3>
         <button
           @click="showRuleModal = true; ruleForm = { rule_type: 'attendance', points: 10, name: '', is_active: true, requires_approval: false }"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
         >
           <Icon icon="heroicons:plus" class="h-5 w-5" />
           <span>เพิ่มกฎ</span>

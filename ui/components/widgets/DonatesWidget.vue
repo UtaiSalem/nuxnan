@@ -181,7 +181,7 @@ onMounted(() => {
             เหลือ {{ typeof donate.remaining_points === 'string' ? donate.remaining_points : donate.remaining_points?.toLocaleString() || 0 }} แต้ม
           </p>
         </div>
-        <button 
+        <button class="min-h-[44px] sm:min-h-0" 
           @click="getDonate(donate.id)"
           :disabled="processingId === donate.id || donate.remaining_points < 270 || donate.status === 0"
           :class="[

@@ -301,14 +301,14 @@ onMounted(() => {
         </span>
         <button
           @click="discardChanges"
-          class="px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
         >
           ยกเลิก
         </button>
         <button
           @click="saveChanges"
           :disabled="isSaving"
-          class="px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 text-white rounded-xl transition-colors disabled:opacity-50"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 text-white rounded-xl transition-colors disabled:opacity-50"
         >
           <Icon v-if="isSaving" icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin inline mr-1" />
           {{ isSaving ? 'กำลังบันทึก...' : 'บันทึกการเปลี่ยนแปลง' }}

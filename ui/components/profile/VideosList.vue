@@ -206,7 +206,7 @@ onMounted(() => {
         <button
           v-if="isOwnProfile"
           @click="showUploadModal = true"
-          class="px-4 py-2 bg-vikinger-purple text-white rounded-lg hover:bg-vikinger-purple/80 transition-colors flex items-center gap-2"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-vikinger-purple text-white rounded-lg hover:bg-vikinger-purple/80 transition-colors flex items-center gap-2"
         >
           <Icon icon="fluent:arrow-upload-24-regular" class="w-5 h-5" />
           อัปโหลดวิดีโอ
@@ -217,7 +217,7 @@ onMounted(() => {
       <div class="flex items-center gap-4">
         <span class="text-sm text-gray-400">เรียงตาม:</span>
         <div class="flex gap-2">
-          <button
+          <button class="min-h-[44px] sm:min-h-0"
             v-for="sort in [
               { key: 'recent', label: 'ล่าสุด' },
               { key: 'popular', label: 'ยอดนิยม' },
@@ -309,7 +309,7 @@ onMounted(() => {
           <!-- Actions (Own Profile) -->
           <div v-if="isOwnProfile" class="flex items-center gap-2 mt-3 pt-3 border-t border-gray-700">
             <button
-              class="flex-1 px-3 py-1.5 bg-gray-700 text-gray-300 text-sm rounded-lg hover:bg-gray-600 transition-colors flex items-center justify-center gap-1"
+              class="min-h-[44px] sm:min-h-0 flex-1 px-3 py-1.5 bg-gray-700 text-gray-300 text-sm rounded-lg hover:bg-gray-600 transition-colors flex items-center justify-center gap-1"
             >
               <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
               แก้ไข
@@ -335,7 +335,7 @@ onMounted(() => {
       <button 
         v-if="isOwnProfile" 
         @click="showUploadModal = true"
-        class="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-vikinger-purple text-white rounded-lg hover:bg-vikinger-purple/80 transition-colors"
+        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 mt-4 px-4 py-2 bg-vikinger-purple text-white rounded-lg hover:bg-vikinger-purple/80 transition-colors"
       >
         <Icon icon="fluent:arrow-upload-24-regular" class="w-5 h-5" />
         อัปโหลดวิดีโอแรก
@@ -424,12 +424,12 @@ onMounted(() => {
           <div class="flex justify-end gap-3 mt-6">
             <button
               @click="showUploadModal = false"
-              class="px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
             >
               ยกเลิก
             </button>
             <button
-              class="px-4 py-2 bg-vikinger-purple text-white rounded-lg hover:bg-vikinger-purple/80 transition-colors"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-vikinger-purple text-white rounded-lg hover:bg-vikinger-purple/80 transition-colors"
               disabled
             >
               อัปโหลด

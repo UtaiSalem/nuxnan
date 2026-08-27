@@ -92,14 +92,14 @@ const handleReject = () => {
           >
             <button 
               @click="emit('edit', donate); showMenu = false"
-              class="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              class="min-h-[44px] sm:min-h-0 w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
               แก้ไข
             </button>
             <button 
               @click="emit('delete', donate.id); showMenu = false"
-              class="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-red-500 transition-colors"
+              class="min-h-[44px] sm:min-h-0 w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-red-500 transition-colors"
             >
               <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
               ลบรายการ

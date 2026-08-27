@@ -285,7 +285,7 @@ onMounted(() => {
                         </div>
                     </div>
                     <button @click="showAddModal = true"
-                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition duration-200 flex items-center gap-2 text-sm font-medium">
+                        class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition duration-200 flex items-center gap-2 text-sm font-medium">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.5v15m7.5-7.5h-15" />
                         </svg>
@@ -309,20 +309,20 @@ onMounted(() => {
                     <div class="flex flex-wrap items-center gap-2">
                         <template v-if="selectMode">
                             <button @click="selectAllEligible"
-                                class="px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition">
+                                class="min-h-[44px] sm:min-h-0 px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition">
                                 เลือกทั้งหมด ({{ eligibleStudents.length }})
                             </button>
                             <button @click="clearSelection" :disabled="!selectedIds.size"
-                                class="px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-40">
+                                class="min-h-[44px] sm:min-h-0 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-40">
                                 ล้างที่เลือก
                             </button>
                             <button @click="toggleSelectMode"
-                                class="px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                                class="min-h-[44px] sm:min-h-0 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
                                 ยกเลิก
                             </button>
                         </template>
                         <button v-else @click="toggleSelectMode"
-                            class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
+                            class="min-h-[44px] sm:min-h-0 px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
                             <Icon icon="heroicons:user-group" class="w-5 h-5" />
                             ส่งคำร้องหลายคน
                         </button>
@@ -371,7 +371,7 @@ onMounted(() => {
                         <div ref="railRef" class="relative max-h-[calc(100vh-11rem)] overflow-y-auto py-1">
                             <button v-for="(student, index) in sortedStudents" :key="student.uid"
                                 :id="`row-${student.uid}`" type="button" @click="scrollToIndex(index)"
-                                class="grid w-full grid-cols-[2.5rem_3.5rem_1fr] items-center gap-2 px-3 py-1.5 text-left text-xs transition"
+                                class="min-h-[44px] sm:min-h-0 grid w-full grid-cols-[2.5rem_3.5rem_1fr] items-center gap-2 px-3 py-1.5 text-left text-xs transition"
                                 :class="index === currentIndex
                                     ? 'bg-blue-50 font-semibold text-blue-700'
                                     : 'text-gray-600 hover:bg-gray-50'">
@@ -486,7 +486,7 @@ onMounted(() => {
                         เลือกแล้ว <span class="font-bold text-blue-300">{{ selectedIds.size }}</span> คน
                     </div>
                     <button @click="showBulkRequestModal = true" :disabled="!selectedIds.size"
-                        class="px-4 py-2 text-sm font-semibold bg-blue-600 rounded-xl hover:bg-blue-500 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5">
+                        class="min-h-[44px] sm:min-h-0 px-4 py-2 text-sm font-semibold bg-blue-600 rounded-xl hover:bg-blue-500 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5">
                         <Icon icon="heroicons:paper-airplane" class="w-4 h-4" />
                         ส่งคำร้อง
                     </button>

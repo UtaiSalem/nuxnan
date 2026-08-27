@@ -580,7 +580,7 @@ onUnmounted(() => {
           :key="template.name"
           type="button"
           @click="insertTemplate(template)"
-          class="w-full px-3 py-2.5 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+          class="min-h-[44px] sm:min-h-0 w-full px-3 py-2.5 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0"
         >
           <Icon :icon="template.icon" class="w-5 h-5 text-blue-500 flex-shrink-0" />
           <span class="text-sm text-gray-700 dark:text-gray-300">{{ template.name }}</span>

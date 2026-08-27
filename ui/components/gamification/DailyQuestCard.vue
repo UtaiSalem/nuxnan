@@ -74,7 +74,7 @@ const handleClaim = () => {
       <button
         v-if="quest.is_completed && !quest.reward_claimed"
         @click="handleClaim"
-        class="w-full mt-2 py-2 px-4 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2"
+        class="min-h-[44px] sm:min-h-0 w-full mt-2 py-2 px-4 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2"
       >
         <i class="pi pi-gift"></i>
         รับรางวัล

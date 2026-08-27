@@ -175,7 +175,7 @@ onMounted(loadCampaigns)
     <div v-else-if="campaigns.length === 0" class="rounded-xl border border-dashed border-indigo-200 bg-indigo-50/40 px-4 py-6 text-center dark:border-indigo-900/50 dark:bg-indigo-950/20">
       <Icon icon="fluent:megaphone-off-24-regular" class="mx-auto mb-2 h-8 w-8 text-indigo-400 opacity-70" />
       <p class="text-sm text-gray-600 dark:text-gray-300">{{ emptyText }}</p>
-      <button v-if="canCreateInline" type="button" class="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700" @click="showCreateModal = true">
+      <button v-if="canCreateInline" type="button" class="min-h-[44px] sm:min-h-0 mt-3 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700" @click="showCreateModal = true">
         <Icon icon="heroicons:plus" class="h-4 w-4" />
         สร้างแคมเปญแรก
       </button>
@@ -216,8 +216,8 @@ onMounted(loadCampaigns)
           <p v-if="selected.campaign_type === 'advertisement'" class="text-sm text-emerald-600">รับรางวัล +{{ (selected.reward_per_view || 0).toFixed(2) }} บาท เมื่อดูครบเวลา</p>
           <p v-if="isWatching" class="text-center text-sm text-gray-500">กำลังนับเวลาเหลือ {{ secondsLeft }} วินาที</p>
           <div class="flex gap-2">
-            <button type="button" class="flex-1 rounded-xl border px-4 py-2 text-sm" @click="selected = null">ปิด</button>
-            <button v-if="!isWatching" type="button" class="flex-1 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" :disabled="isSubmitting" @click="startWatching">
+            <button type="button" class="min-h-[44px] sm:min-h-0 flex-1 rounded-xl border px-4 py-2 text-sm" @click="selected = null">ปิด</button>
+            <button v-if="!isWatching" type="button" class="min-h-[44px] sm:min-h-0 flex-1 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" :disabled="isSubmitting" @click="startWatching">
               {{ authStore.isAuthenticated ? 'เริ่มรับชม' : 'เข้าสู่ระบบเพื่อรับชม' }}
             </button>
             <span v-else class="flex flex-1 items-center justify-center rounded-xl bg-gray-100 px-4 py-2 text-sm dark:bg-gray-700">กำลังรับชม...</span>

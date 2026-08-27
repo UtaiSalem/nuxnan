@@ -36,19 +36,19 @@
             class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-secondary-200 py-2 z-10"
           >
             <button
-              class="flex items-center space-x-2 px-4 py-2 hover:bg-secondary-50 w-full text-left text-sm"
+              class="min-h-[44px] sm:min-h-0 flex items-center space-x-2 px-4 py-2 hover:bg-secondary-50 w-full text-left text-sm"
             >
               <i class="pi pi-trash text-secondary-600"></i>
               <span>Delete Post</span>
             </button>
             <button
-              class="flex items-center space-x-2 px-4 py-2 hover:bg-secondary-50 w-full text-left text-sm"
+              class="min-h-[44px] sm:min-h-0 flex items-center space-x-2 px-4 py-2 hover:bg-secondary-50 w-full text-left text-sm"
             >
               <i class="pi pi-times text-secondary-600"></i>
               <span>Hide Post</span>
             </button>
             <button
-              class="flex items-center space-x-2 px-4 py-2 hover:bg-secondary-50 w-full text-left text-sm"
+              class="min-h-[44px] sm:min-h-0 flex items-center space-x-2 px-4 py-2 hover:bg-secondary-50 w-full text-left text-sm"
             >
               <i class="pi pi-pencil text-secondary-600"></i>
               <span>Edit Post</span>
@@ -130,7 +130,7 @@
       <div class="relative group">
         <button
           @click="toggleLike"
-          class="flex items-center space-x-2 px-4 py-2 hover:bg-secondary-50 rounded-lg transition-colors duration-200"
+          class="min-h-[44px] sm:min-h-0 flex items-center space-x-2 px-4 py-2 hover:bg-secondary-50 rounded-lg transition-colors duration-200"
           :class="{ 'text-primary-600': isLiked }"
         >
           <i class="pi pi-heart text-lg"></i>
@@ -156,7 +156,7 @@
       <!-- Comment Button -->
       <button
         @click="toggleComments"
-        class="flex items-center space-x-2 px-4 py-2 hover:bg-secondary-50 rounded-lg transition-colors duration-200"
+        class="min-h-[44px] sm:min-h-0 flex items-center space-x-2 px-4 py-2 hover:bg-secondary-50 rounded-lg transition-colors duration-200"
       >
         <i class="pi pi-comment text-lg"></i>
         <span class="font-medium text-sm">Comment</span>
@@ -165,7 +165,7 @@
       <!-- Share Button -->
       <button
         @click="$emit('share', post)"
-        class="flex items-center space-x-2 px-4 py-2 hover:bg-secondary-50 rounded-lg transition-colors duration-200"
+        class="min-h-[44px] sm:min-h-0 flex items-center space-x-2 px-4 py-2 hover:bg-secondary-50 rounded-lg transition-colors duration-200"
       >
         <i class="pi pi-share-alt text-lg"></i>
         <span class="font-medium text-sm">Share</span>

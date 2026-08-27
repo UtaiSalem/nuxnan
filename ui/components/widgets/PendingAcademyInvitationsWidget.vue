@@ -118,14 +118,14 @@ onMounted(() => {
           <button
             :disabled="processingId === invitation.id"
             @click="accept(invitation)"
-            class="flex-1 py-2 text-sm font-medium text-white bg-gradient-to-r from-vikinger-purple to-vikinger-cyan rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+            class="min-h-[44px] sm:min-h-0 flex-1 py-2 text-sm font-medium text-white bg-gradient-to-r from-vikinger-purple to-vikinger-cyan rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             ยอมรับ
           </button>
           <button
             :disabled="processingId === invitation.id"
             @click="decline(invitation)"
-            class="flex-1 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-vikinger-dark-200 rounded-lg hover:bg-gray-300 dark:hover:bg-vikinger-dark-50 transition-colors disabled:opacity-50"
+            class="min-h-[44px] sm:min-h-0 flex-1 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-vikinger-dark-200 rounded-lg hover:bg-gray-300 dark:hover:bg-vikinger-dark-50 transition-colors disabled:opacity-50"
           >
             ปฏิเสธ
           </button>

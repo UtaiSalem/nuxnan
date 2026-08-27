@@ -29,7 +29,7 @@ const emit = defineEmits<{ retry: [] }>()
     <p :class="variant === 'block' ? 'text-sm text-red-700 dark:text-red-300 mb-3' : 'inline'">
       {{ message }}
     </p>
-    <button
+    <button class="min-h-[44px] sm:min-h-0"
       type="button"
       :class="[
         'inline-flex items-center gap-1 font-semibold focus:outline-none focus:ring-2 focus:ring-red-500 rounded',

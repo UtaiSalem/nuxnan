@@ -186,7 +186,7 @@ function setNotifValue(key: string, val: boolean) {
         <!-- Toggle All -->
         <button 
           @click="toggleGroup(group, !isGroupAllEnabled(group))"
-          class="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+          class="min-h-[44px] sm:min-h-0 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
           :class="isGroupAllEnabled(group) 
             ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 hover:bg-blue-100' 
             : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200'"

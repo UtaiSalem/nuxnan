@@ -212,7 +212,7 @@ onMounted(loadData)
       <!-- Tab Navigation -->
       <div class="flex gap-4 mb-6">
         <button
-          class="px-6 py-2 rounded-xl font-medium transition-all flex items-center gap-2"
+          class="min-h-[44px] sm:min-h-0 px-6 py-2 rounded-xl font-medium transition-all flex items-center gap-2"
           :class="activeTab === 'achievements' 
             ? 'bg-primary-500 text-white shadow-md' 
             : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
@@ -222,7 +222,7 @@ onMounted(loadData)
           ความสำเร็จ
         </button>
         <button
-          class="px-6 py-2 rounded-xl font-medium transition-all flex items-center gap-2"
+          class="min-h-[44px] sm:min-h-0 px-6 py-2 rounded-xl font-medium transition-all flex items-center gap-2"
           :class="activeTab === 'leaderboard' 
             ? 'bg-primary-500 text-white shadow-md' 
             : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
@@ -232,7 +232,7 @@ onMounted(loadData)
           อันดับ
         </button>
         <button
-          class="px-6 py-2 rounded-xl font-medium transition-all flex items-center gap-2"
+          class="min-h-[44px] sm:min-h-0 px-6 py-2 rounded-xl font-medium transition-all flex items-center gap-2"
           :class="activeTab === 'streak' 
             ? 'bg-primary-500 text-white shadow-md' 
             : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"

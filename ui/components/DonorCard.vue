@@ -182,7 +182,7 @@ const shouldShowAddFriend = () => {
               v-if="shouldShowAddFriend() && !requestSent"
               @click.stop="sendFriendRequest"
               :disabled="isSendingRequest"
-              class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg hover:from-blue-600 hover:to-indigo-700 transform hover:scale-105 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1 px-3 py-1.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg hover:from-blue-600 hover:to-indigo-700 transform hover:scale-105 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Icon v-if="isSendingRequest" icon="mdi:loading" class="w-4 h-4 animate-spin" />
               <Icon v-else icon="mdi:account-plus" class="w-4 h-4" />

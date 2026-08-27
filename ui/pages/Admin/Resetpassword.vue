@@ -437,7 +437,7 @@ function highlightMatch(text, query) {
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-4">
             <!-- Search Type Tabs -->
             <div class="flex flex-wrap gap-2">
-                <button
+                <button class="min-h-[44px] sm:min-h-0"
                     v-for="type in searchTypes"
                     :key="type.value"
                     @click="changeSearchType(type.value)"
@@ -571,7 +571,7 @@ function highlightMatch(text, query) {
                                     </div>
                                     <button
                                         @click="handleResetPassword(user)"
-                                        class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors font-medium"
+                                        class="min-h-[44px] sm:min-h-0 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors font-medium"
                                     >
                                         <Icon icon="mdi:lock-reset" class="w-5 h-5" />
                                         รีเซ็ตรหัสผ่าน (-{{ REQUIRED_POINTS.toLocaleString() }} แต้ม)
@@ -585,7 +585,7 @@ function highlightMatch(text, query) {
                                     </div>
                                     <button
                                         @click="handleResetPassword(user)"
-                                        class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors font-medium"
+                                        class="min-h-[44px] sm:min-h-0 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors font-medium"
                                     >
                                         <Icon icon="mdi:wallet" class="w-5 h-5" />
                                         รีเซ็ตรหัสผ่าน (-{{ getPointsToDeduct(user).toLocaleString() }} แต้ม, -฿{{ getWalletToDeduct(user).toLocaleString() }})
@@ -601,7 +601,7 @@ function highlightMatch(text, query) {
                                 </div>
                                 <button
                                     @click="handleTopUpPoints(user)"
-                                    class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors font-medium"
+                                    class="min-h-[44px] sm:min-h-0 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors font-medium"
                                 >
                                     <Icon icon="mdi:plus-circle" class="w-5 h-5" />
                                     เติมแต้มให้สมาชิก

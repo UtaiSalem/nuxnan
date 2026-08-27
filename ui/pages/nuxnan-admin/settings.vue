@@ -91,7 +91,7 @@ const saveSettings = async () => {
       <button
         @click="saveSettings"
         :disabled="isSaving"
-        class="inline-flex items-center gap-2 px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white transition-colors disabled:opacity-50"
+        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white transition-colors disabled:opacity-50"
       >
         <Icon v-if="isSaving" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
         <Icon v-else icon="fluent:save-24-regular" class="w-5 h-5" />
@@ -104,7 +104,7 @@ const saveSettings = async () => {
       <div class="lg:w-64 flex-shrink-0">
         <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-hopeui border border-slate-100 dark:border-slate-700">
           <nav class="space-y-1">
-            <button
+            <button class="min-h-[44px] sm:min-h-0"
               v-for="section in sections"
               :key="section.id"
               @click="activeSection = section.id"

@@ -65,7 +65,7 @@
           <button 
             @click="loadMore" 
             :disabled="isLoadingMore"
-            class="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition-colors"
+            class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition-colors"
           >
               <Icon v-if="isLoadingMore" icon="svg-spinners:3-dots-fade" class="w-5 h-5 mr-2" />
               <span v-else>โหลดเพิ่มเติม</span>

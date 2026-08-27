@@ -188,7 +188,7 @@ const selectTab = (tabId: string) => {
           v-for="tab in settingsTabs"
           :key="tab.id"
           @click="selectTab(tab.id)"
-          class="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap"
+          class="min-h-[44px] sm:min-h-0 flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap"
           :class="activeTab === tab.id
             ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
             : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'"

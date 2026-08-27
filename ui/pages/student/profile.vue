@@ -172,7 +172,7 @@ const student = computed(() => studentStore.currentStudent)
           <div v-if="activeTab === 'general'">
             <div class="flex justify-between items-center mb-6">
               <h3 class="text-lg font-medium text-gray-900 dark:text-white">ข้อมูลพื้นฐานส่วนตัว</h3>
-              <button v-if="!isEditMode" @click="isEditMode = true" class="text-sm px-3 py-1.5 border border-primary-500 text-primary-600 rounded-md hover:bg-primary-50 transition">
+              <button v-if="!isEditMode" @click="isEditMode = true" class="min-h-[44px] sm:min-h-0 text-sm px-3 py-1.5 border border-primary-500 text-primary-600 rounded-md hover:bg-primary-50 transition">
                 <i class="fas fa-edit mr-1"></i> ขอแก้ไขข้อมูล
               </button>
             </div>
@@ -272,10 +272,10 @@ const student = computed(() => studentStore.currentStudent)
               </div>
 
               <div class="flex justify-end space-x-3 mt-6">
-                <button type="button" @click="isEditMode = false; initForm()" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none">
+                <button type="button" @click="isEditMode = false; initForm()" class="min-h-[44px] sm:min-h-0 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none">
                   ยกเลิก
                 </button>
-                <button type="submit" :disabled="studentStore.isLoading" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none flex items-center">
+                <button type="submit" :disabled="studentStore.isLoading" class="min-h-[44px] sm:min-h-0 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none flex items-center">
                   <span v-if="studentStore.isLoading" class="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
                   บันทึกการแก้ไข
                 </button>

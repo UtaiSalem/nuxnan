@@ -219,7 +219,7 @@ onUnmounted(() => {
           v-if="isOwnProfile"
           @click="fileInput?.click()"
           :disabled="isUploading"
-          class="px-4 py-2 bg-vikinger-purple text-white rounded-lg hover:bg-vikinger-purple/80 transition-colors flex items-center gap-2 disabled:opacity-50"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-vikinger-purple text-white rounded-lg hover:bg-vikinger-purple/80 transition-colors flex items-center gap-2 disabled:opacity-50"
         >
           <Icon 
             :icon="isUploading ? 'fluent:spinner-ios-20-regular' : 'fluent:arrow-upload-24-regular'" 
@@ -354,7 +354,7 @@ onUnmounted(() => {
               </div>
               
               <div class="flex items-center gap-4">
-                <button
+                <button class="min-h-[44px] sm:min-h-0"
                   @click.stop="toggleLike(selectedPhoto)"
                   :class="[
                     'flex items-center gap-2 px-4 py-2 rounded-lg transition-colors',
@@ -370,7 +370,7 @@ onUnmounted(() => {
                 <button
                   v-if="isOwnProfile"
                   @click.stop="deletePhoto(selectedPhoto.id)"
-                  class="flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+                  class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
                 >
                   <Icon icon="fluent:delete-24-regular" class="w-5 h-5" />
                   ลบ

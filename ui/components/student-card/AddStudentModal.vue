@@ -116,7 +116,7 @@ const handleAdd = async (student: AvailableStudent) => {
                             <input type="number" min="1" v-model="studentNumbers[student.id]" placeholder="เลขที่"
                                 class="w-16 px-2 py-1.5 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-green-500" />
                             <button @click="handleAdd(student)" :disabled="addingId === student.id"
-                                class="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50">
+                                class="min-h-[44px] sm:min-h-0 px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50">
                                 {{ addingId === student.id ? 'กำลังเพิ่ม...' : 'เพิ่ม' }}
                             </button>
                         </div>
@@ -125,7 +125,7 @@ const handleAdd = async (student: AvailableStudent) => {
 
                 <div class="flex justify-end pt-4">
                     <button @click="emit('close')"
-                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                        class="min-h-[44px] sm:min-h-0 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
                         ปิด
                     </button>
                 </div>

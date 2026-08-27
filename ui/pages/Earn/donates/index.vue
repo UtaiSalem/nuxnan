@@ -516,7 +516,7 @@ onBeforeUnmount(() => {
           <p class="text-gray-500 dark:text-gray-400 mb-4">{{ error }}</p>
           <button
             @click="fetchDonates(1)"
-            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             ลองใหม่อีกครั้ง
           </button>
@@ -531,7 +531,7 @@ onBeforeUnmount(() => {
           <p class="text-gray-500 dark:text-gray-400 mb-4">ยังไม่มีผู้สนับสนุนในขณะนี้ เป็นคนแรกที่ให้การสนับสนุน!</p>
           <button
             @click="goToCreateDonate"
-            class="px-6 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 mx-auto"
+            class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 mx-auto"
           >
             <Icon icon="mdi:gift-outline" class="w-5 h-5" />
             ให้การสนับสนุน
@@ -547,7 +547,7 @@ onBeforeUnmount(() => {
           </h2>
           <button
             @click="goToCreateDonate"
-            class="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 text-sm"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 text-sm"
           >
             <Icon icon="mdi:plus" class="w-4 h-4" />
             ให้การสนับสนุน

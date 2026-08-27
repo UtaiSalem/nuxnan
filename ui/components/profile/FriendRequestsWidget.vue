@@ -95,7 +95,7 @@ onMounted(async () => {
 
     <!-- Tabs - Compact -->
     <div class="flex border-b border-gray-200 dark:border-gray-700/50">
-      <button
+      <button class="min-h-[44px] sm:min-h-0"
         @click="activeTab = 'requests'"
         :class="[
           'flex-1 py-2 text-xs font-bold transition-all relative flex items-center justify-center gap-1.5',
@@ -116,7 +116,7 @@ onMounted(async () => {
           class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-vikinger-purple to-vikinger-cyan"
         />
       </button>
-      <button
+      <button class="min-h-[44px] sm:min-h-0"
         @click="activeTab = 'suggestions'"
         :class="[
           'flex-1 py-2 text-xs font-bold transition-all relative',
@@ -187,7 +187,7 @@ onMounted(async () => {
               <button
                 @click="handleAccept(request.sender.id)"
                 :disabled="processingIds.has(request.sender.id)"
-                class="flex-1 py-1.5 bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white rounded-lg text-[10px] font-bold disabled:opacity-50 flex items-center justify-center gap-1 hover:opacity-90 transition-all"
+                class="min-h-[44px] sm:min-h-0 flex-1 py-1.5 bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white rounded-lg text-[10px] font-bold disabled:opacity-50 flex items-center justify-center gap-1 hover:opacity-90 transition-all"
               >
                 <Icon 
                   v-if="processingIds.has(request.sender.id)" 
@@ -200,7 +200,7 @@ onMounted(async () => {
               <button
                 @click="handleDeny(request.sender.id)"
                 :disabled="processingIds.has(request.sender.id)"
-                class="flex-1 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-lg text-[10px] font-bold disabled:opacity-50 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+                class="min-h-[44px] sm:min-h-0 flex-1 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-lg text-[10px] font-bold disabled:opacity-50 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
               >
                 ปฏิเสธ
               </button>

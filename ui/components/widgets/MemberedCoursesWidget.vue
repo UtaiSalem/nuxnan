@@ -157,7 +157,7 @@ watch(user, (newUser) => {
             <button 
               @click="loadMore"
               :disabled="isLoadingMore"
-              class="text-xs text-blue-500 hover:underline py-2"
+              class="min-h-[44px] sm:min-h-0 text-xs text-blue-500 hover:underline py-2"
             >
               โหลดเพิ่มเติม
             </button>

@@ -177,17 +177,17 @@ const downloadCard = async (index, studentNumber) => {
                         <div class="flex gap-2 flex-wrap">
                             <button @click="requestFilter = 'with_request'"
                                 :class="requestFilter === 'with_request' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'"
-                                class="px-3 py-2 border rounded-lg text-sm font-medium transition">
+                                class="min-h-[44px] sm:min-h-0 px-3 py-2 border rounded-lg text-sm font-medium transition">
                                 มีคำร้อง ({{ withRequestStudents.length }})
                             </button>
                             <button @click="requestFilter = 'without_request'"
                                 :class="requestFilter === 'without_request' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'"
-                                class="px-3 py-2 border rounded-lg text-sm font-medium transition">
+                                class="min-h-[44px] sm:min-h-0 px-3 py-2 border rounded-lg text-sm font-medium transition">
                                 ไม่มีคำร้อง ({{ withoutRequestStudents.length }})
                             </button>
                             <button @click="requestFilter = 'all'"
                                 :class="requestFilter === 'all' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'"
-                                class="px-3 py-2 border rounded-lg text-sm font-medium transition">
+                                class="min-h-[44px] sm:min-h-0 px-3 py-2 border rounded-lg text-sm font-medium transition">
                                 ทั้งหมด ({{ students.length }})
                             </button>
                         </div>
@@ -240,11 +240,11 @@ const downloadCard = async (index, studentNumber) => {
                         </span>
                         <span class="text-sm text-gray-500">{{ student.active_card_request.request_type }}</span>
                         <template v-if="student.active_card_request.status === 'pending'">
-                            <button @click="reviewRequest(student, 'approve')" class="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">อนุมัติ</button>
-                            <button @click="reviewRequest(student, 'reject')" class="px-3 py-1 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700">ปฏิเสธ</button>
+                            <button @click="reviewRequest(student, 'approve')" class="min-h-[44px] sm:min-h-0 px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">อนุมัติ</button>
+                            <button @click="reviewRequest(student, 'reject')" class="min-h-[44px] sm:min-h-0 px-3 py-1 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700">ปฏิเสธ</button>
                         </template>
-                        <button v-else-if="student.active_card_request.status === 'approved'" @click="reviewRequest(student, 'start')" class="px-3 py-1 bg-violet-600 text-white rounded-lg text-sm hover:bg-violet-700">เริ่มจัดทำบัตร</button>
-                        <button v-else-if="student.active_card_request.status === 'in_progress'" @click="reviewRequest(student, 'complete')" class="px-3 py-1 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700">ทำเสร็จ/ส่งมอบแล้ว</button>
+                        <button v-else-if="student.active_card_request.status === 'approved'" @click="reviewRequest(student, 'start')" class="min-h-[44px] sm:min-h-0 px-3 py-1 bg-violet-600 text-white rounded-lg text-sm hover:bg-violet-700">เริ่มจัดทำบัตร</button>
+                        <button v-else-if="student.active_card_request.status === 'in_progress'" @click="reviewRequest(student, 'complete')" class="min-h-[44px] sm:min-h-0 px-3 py-1 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700">ทำเสร็จ/ส่งมอบแล้ว</button>
                     </div>
                     <div class="flex justify-center items-center">
                         <div :id="`card-${index}`" :style="cardBgStyle"
@@ -389,7 +389,7 @@ const downloadCard = async (index, studentNumber) => {
                     <div class="flex justify-center w-full mt-2">
                         <div class="w-full text-end">
                             <button @click="downloadCard(index, student.student_number)"
-                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                                class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
                                 ดาวน์โหลดบัตรนักเรียน
                             </button>
                         </div>

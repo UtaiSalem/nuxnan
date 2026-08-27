@@ -690,7 +690,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
           <button 
             v-if="isOwnProfile"
             @click="openCoverModal"
-            class="absolute top-4 right-4 px-4 py-2 bg-black/40 backdrop-blur-sm text-white rounded-xl hover:bg-black/60 transition-all flex items-center gap-2 border border-white/10"
+            class="min-h-[44px] sm:min-h-0 absolute top-4 right-4 px-4 py-2 bg-black/40 backdrop-blur-sm text-white rounded-xl hover:bg-black/60 transition-all flex items-center gap-2 border border-white/10"
           >
             <Icon icon="fluent:camera-24-regular" class="w-5 h-5" />
             <span class="hidden sm:inline text-sm font-medium">Edit Cover</span>
@@ -721,7 +721,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
               <button 
                 v-if="isOwnProfile"
                 @click="openAvatarModal"
-                class="absolute top-0 right-0 p-2 bg-vikinger-purple text-white rounded-full shadow-lg hover:bg-vikinger-purple/80 transition-all hover:scale-110 border-2 border-white/30"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-0 right-0 p-2 bg-vikinger-purple text-white rounded-full shadow-lg hover:bg-vikinger-purple/80 transition-all hover:scale-110 border-2 border-white/30"
               >
                 <Icon icon="fluent:camera-24-filled" class="w-4 h-4" />
               </button>
@@ -745,7 +745,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
               <!-- Action Buttons -->
               <div class="flex gap-3 flex-shrink-0">
                 <template v-if="!isOwnProfile">
-                  <button 
+                  <button class="min-h-[44px] sm:min-h-0" 
                     @click="handleFriendAction"
                     :disabled="isProcessingFriend"
                     :class="[
@@ -766,7 +766,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                   
                   <button 
                     @click="handleMessage"
-                    class="px-5 py-2.5 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-white rounded-xl hover:bg-gray-300 dark:hover:bg-gray-700 transition-all flex items-center gap-2 font-bold"
+                    class="min-h-[44px] sm:min-h-0 px-5 py-2.5 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-white rounded-xl hover:bg-gray-300 dark:hover:bg-gray-700 transition-all flex items-center gap-2 font-bold"
                   >
                     <Icon icon="fluent:chat-24-regular" class="w-5 h-5" />
                     <span class="hidden sm:inline">ส่งข้อความ</span>
@@ -776,7 +776,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                 <template v-else>
                   <button 
                     @click="goToEditProfile"
-                    class="px-5 py-2.5 bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white rounded-xl hover:opacity-90 transition-all flex items-center gap-2 font-bold shadow-lg hover:scale-105"
+                    class="min-h-[44px] sm:min-h-0 px-5 py-2.5 bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white rounded-xl hover:opacity-90 transition-all flex items-center gap-2 font-bold shadow-lg hover:scale-105"
                   >
                     <Icon icon="fluent:edit-24-regular" class="w-5 h-5" />
                     <span>แก้ไขโปรไฟล์</span>
@@ -989,11 +989,11 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
 
               <!-- Quick Actions - Compact -->
               <div class="flex gap-2 pt-1">
-                <button class="flex-1 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all">
+                <button class="min-h-[44px] sm:min-h-0 flex-1 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all">
                   <Icon icon="fluent:arrow-upload-24-regular" class="w-3.5 h-3.5 text-amber-500" />
                   เติมเงิน
                 </button>
-                <button class="flex-1 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all">
+                <button class="min-h-[44px] sm:min-h-0 flex-1 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all">
                   <Icon icon="fluent:history-24-regular" class="w-3.5 h-3.5 text-emerald-500" />
                   ประวัติ
                 </button>
@@ -1143,7 +1143,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                   </div>
                   About Me
                 </h3>
-                <button class="p-2 hover:bg-gray-700/50 rounded-lg transition-colors">
+                <button class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-700/50 rounded-lg transition-colors">
                   <Icon icon="fluent:more-horizontal-24-regular" class="w-5 h-5 text-gray-400 hover:text-white" />
                 </button>
               </div>
@@ -1236,7 +1236,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                   Badges
                   <span class="ml-1 px-2 py-0.5 bg-vikinger-cyan/20 text-vikinger-cyan text-xs font-bold rounded-full">{{ profile.badges_unlocked || 0 }}</span>
                 </h3>
-                <button class="p-2 hover:bg-gray-700/50 rounded-lg transition-colors">
+                <button class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-700/50 rounded-lg transition-colors">
                   <Icon icon="fluent:more-horizontal-24-regular" class="w-5 h-5 text-gray-400 hover:text-white" />
                 </button>
               </div>
@@ -1274,7 +1274,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
               </div>
               
               <!-- View All Button -->
-              <button class="w-full py-2.5 px-4 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all">
+              <button class="min-h-[44px] sm:min-h-0 w-full py-2.5 px-4 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all">
                 <span>View All Badges</span>
                 <Icon icon="fluent:chevron-right-24-regular" class="w-4 h-4" />
               </button>
@@ -1298,7 +1298,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                   Friends
                   <span class="ml-1 px-2 py-0.5 bg-vikinger-cyan/20 text-vikinger-cyan text-xs font-bold rounded-full">{{ profile.friends_count || 0 }}</span>
                 </h3>
-                <button class="p-2 hover:bg-gray-700/50 rounded-lg transition-colors">
+                <button class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-700/50 rounded-lg transition-colors">
                   <Icon icon="fluent:more-horizontal-24-regular" class="w-5 h-5 text-gray-400 hover:text-white" />
                 </button>
               </div>
@@ -1350,7 +1350,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
               <!-- View All Button -->
               <button 
                 @click="activeTab = 'friends'"
-                class="w-full py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
+                class="min-h-[44px] sm:min-h-0 w-full py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
               >
                 <span>View All Friends</span>
                 <Icon icon="fluent:chevron-right-24-regular" class="w-4 h-4" />
@@ -1739,7 +1739,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                 </div>
                 
                 <!-- Go Live Button for Own Profile -->
-                <button v-if="isOwnProfile" class="absolute bottom-4 left-1/2 -translate-x-1/2 px-6 py-2.5 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-xl font-bold text-sm hover:from-red-600 hover:to-pink-700 transition-all flex items-center gap-2 shadow-lg">
+                <button v-if="isOwnProfile" class="min-h-[44px] sm:min-h-0 absolute bottom-4 left-1/2 -translate-x-1/2 px-6 py-2.5 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-xl font-bold text-sm hover:from-red-600 hover:to-pink-700 transition-all flex items-center gap-2 shadow-lg">
                   <Icon icon="fluent:video-24-filled" class="w-4 h-4" />
                   Go Live
                 </button>
@@ -1759,7 +1759,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                   Photos
                   <span class="ml-1 px-2 py-0.5 bg-vikinger-cyan/20 text-vikinger-cyan text-xs font-bold rounded-full">{{ profile.photos_count || 0 }}</span>
                 </h3>
-                <button class="p-2 hover:bg-gray-700/50 rounded-lg transition-colors">
+                <button class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-700/50 rounded-lg transition-colors">
                   <Icon icon="fluent:more-horizontal-24-regular" class="w-5 h-5 text-gray-400 hover:text-white" />
                 </button>
               </div>
@@ -1784,7 +1784,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
               <!-- View All Button -->
               <button 
                 @click="activeTab = 'photos'"
-                class="w-full mt-4 py-2.5 px-4 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
+                class="min-h-[44px] sm:min-h-0 w-full mt-4 py-2.5 px-4 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
               >
                 <Icon icon="fluent:image-multiple-24-regular" class="w-4 h-4 text-vikinger-cyan" />
                 <span>ดูรูปภาพทั้งหมด</span>
@@ -1804,7 +1804,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                   Groups
                   <span class="ml-1 px-2 py-0.5 bg-vikinger-cyan/20 text-vikinger-cyan text-xs font-bold rounded-full">{{ profile.groups_count || 0 }}</span>
                 </h3>
-                <button class="p-2 hover:bg-gray-700/50 rounded-lg transition-colors">
+                <button class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-700/50 rounded-lg transition-colors">
                   <Icon icon="fluent:more-horizontal-24-regular" class="w-5 h-5 text-gray-400 hover:text-white" />
                 </button>
               </div>
@@ -1821,7 +1821,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                 <p class="text-gray-500 text-xs mt-1">No groups joined yet</p>
                 
                 <!-- Explore Groups Button -->
-                <button class="mt-4 px-6 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium text-sm hover:from-green-600 hover:to-emerald-700 transition-all flex items-center gap-2 mx-auto">
+                <button class="min-h-[44px] sm:min-h-0 mt-4 px-6 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium text-sm hover:from-green-600 hover:to-emerald-700 transition-all flex items-center gap-2 mx-auto">
                   <Icon icon="fluent:search-24-regular" class="w-4 h-4" />
                   สำรวจกลุ่ม
                 </button>
@@ -1866,7 +1866,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
               </h3>
               <button 
                 @click="closeCoverModal"
-                class="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
               >
                 <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
               </button>
@@ -1918,11 +1918,11 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
             <div class="flex items-center justify-end gap-3 p-4 border-t border-gray-700">
               <button
                 @click="closeCoverModal"
-                class="px-5 py-2.5 text-gray-400 hover:text-white transition-colors"
+                class="min-h-[44px] sm:min-h-0 px-5 py-2.5 text-gray-400 hover:text-white transition-colors"
               >
                 Cancel
               </button>
-              <button
+              <button class="min-h-[44px] sm:min-h-0"
                 @click="uploadCover"
                 :disabled="!coverPreview || isUploadingCover"
                 :class="[
@@ -1969,7 +1969,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
               </h3>
               <button 
                 @click="closeAvatarModal"
-                class="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
               >
                 <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
               </button>
@@ -2022,11 +2022,11 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
             <div class="flex items-center justify-end gap-3 p-4 border-t border-gray-700">
               <button
                 @click="closeAvatarModal"
-                class="px-5 py-2.5 text-gray-400 hover:text-white transition-colors"
+                class="min-h-[44px] sm:min-h-0 px-5 py-2.5 text-gray-400 hover:text-white transition-colors"
               >
                 Cancel
               </button>
-              <button
+              <button class="min-h-[44px] sm:min-h-0"
                 @click="uploadAvatar"
                 :disabled="!avatarPreview || isUploadingAvatar"
                 :class="[

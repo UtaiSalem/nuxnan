@@ -65,7 +65,7 @@ onMounted(() => {
         <NuxtLink to="/admin/students/requests" class="px-4 py-2 bg-yellow-500 text-white rounded-md shadow hover:bg-yellow-600 transition flex items-center">
           <i class="fas fa-bell mr-2"></i> คำขอแก้ไขข้อมูล
         </NuxtLink>
-        <button class="px-4 py-2 bg-primary-600 text-white rounded-md shadow hover:bg-primary-700 transition flex items-center">
+        <button class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-600 text-white rounded-md shadow hover:bg-primary-700 transition flex items-center">
           <i class="fas fa-plus mr-2"></i> เพิ่มนักเรียนใหม่
         </button>
       </div>
@@ -116,7 +116,7 @@ onMounted(() => {
       <div v-else-if="studentStore.error" class="p-8 text-center text-red-500">
         <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
         <p>{{ studentStore.error }}</p>
-        <button @click="fetchStudents" class="mt-4 px-4 py-2 border border-red-500 rounded text-red-500 hover:bg-red-50">ลองใหม่</button>
+        <button @click="fetchStudents" class="min-h-[44px] sm:min-h-0 mt-4 px-4 py-2 border border-red-500 rounded text-red-500 hover:bg-red-50">ลองใหม่</button>
       </div>
 
       <div v-else-if="studentStore.students.length === 0" class="p-8 text-center text-gray-500">
@@ -192,12 +192,12 @@ onMounted(() => {
               <button 
                 @click="changePage(currentPage - 1)" 
                 :disabled="currentPage === 1"
-                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
+                class="min-h-[44px] sm:min-h-0 relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
                 <span class="sr-only">Previous</span>
                 <i class="fas fa-chevron-left"></i>
               </button>
               
-              <button 
+              <button class="min-h-[44px] sm:min-h-0" 
                 v-for="page in studentStore.studentsPagination.last_page" 
                 :key="page"
                 @click="changePage(page)"
@@ -211,7 +211,7 @@ onMounted(() => {
               <button 
                 @click="changePage(currentPage + 1)" 
                 :disabled="currentPage === studentStore.studentsPagination.last_page"
-                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
+                class="min-h-[44px] sm:min-h-0 relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
                 <span class="sr-only">Next</span>
                 <i class="fas fa-chevron-right"></i>
               </button>

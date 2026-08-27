@@ -1337,7 +1337,7 @@ const onQRActionComplete = (result) => {
             >
               <!-- Close button for mobile -->
               <div class="lg:hidden flex justify-end mb-4">
-                <button @click="layoutWidgets.isLeftPanelOpen = false" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-vikinger-dark-200">
+                <button @click="layoutWidgets.isLeftPanelOpen = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-full hover:bg-gray-100 dark:hover:bg-vikinger-dark-200">
                   <Icon icon="mdi:close" class="w-6 h-6 text-gray-500" />
                 </button>
               </div>
@@ -1367,7 +1367,7 @@ const onQRActionComplete = (result) => {
             >
               <!-- Close button for mobile/tablet -->
               <div class="xl:hidden flex justify-end mb-4">
-                <button @click="layoutWidgets.isRightPanelOpen = false" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-vikinger-dark-200">
+                <button @click="layoutWidgets.isRightPanelOpen = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-full hover:bg-gray-100 dark:hover:bg-vikinger-dark-200">
                   <Icon icon="mdi:close" class="w-6 h-6 text-gray-500" />
                 </button>
               </div>
@@ -1514,7 +1514,7 @@ const onQRActionComplete = (result) => {
           <!-- Close Button -->
           <button
             @click="toggleMobileSidebar"
-            class="absolute top-4 right-4 p-2 rounded-full transition-colors"
+            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-4 right-4 p-2 rounded-full transition-colors"
             :class="isDarkMode ? 'hover:bg-vikinger-purple/10' : 'hover:bg-gray-100'"
           >
             <Icon icon="mdi:close" class="w-6 h-6" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'" />

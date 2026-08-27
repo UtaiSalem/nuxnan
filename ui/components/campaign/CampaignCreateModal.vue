@@ -305,13 +305,13 @@ const scopeLabel = computed(() => (props.scopeType === 'academy' ? 'โรงเ
             ตัวเลือกเพิ่มเติม / ชำระด้วยสลิป
           </NuxtLink>
           <div class="flex-1" />
-          <button type="button" class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300" @click="emit('update:visible', false)">
+          <button type="button" class="min-h-[44px] sm:min-h-0 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300" @click="emit('update:visible', false)">
             ยกเลิก
           </button>
           <button
             type="button"
             :disabled="isLoading"
-            class="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-50"
+            class="min-h-[44px] sm:min-h-0 flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-50"
             @click="submit"
           >
             <Icon v-if="isLoading" icon="svg-spinners:ring-resize" class="h-4 w-4" />

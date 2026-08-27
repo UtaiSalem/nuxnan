@@ -94,14 +94,14 @@ const getSeverityIcon = (severity: string) => {
       <div v-if="!alert.is_acknowledged" class="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
         <button 
           @click="acknowledge(alert.id, 'safe')"
-          class="flex-1 sm:flex-none px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold backdrop-blur-sm transition-colors whitespace-nowrap"
+          class="min-h-[44px] sm:min-h-0 flex-1 sm:flex-none px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold backdrop-blur-sm transition-colors whitespace-nowrap"
         >
           <Icon icon="fluent:checkmark-circle-24-regular" class="w-4 h-4 inline mr-1" />
           ปลอดภัยแล้ว
         </button>
         <button 
           @click="acknowledge(alert.id, 'need_help')"
-          class="flex-1 sm:flex-none px-4 py-2 bg-red-900/40 hover:bg-red-900/60 rounded-lg text-sm font-semibold backdrop-blur-sm transition-colors whitespace-nowrap"
+          class="min-h-[44px] sm:min-h-0 flex-1 sm:flex-none px-4 py-2 bg-red-900/40 hover:bg-red-900/60 rounded-lg text-sm font-semibold backdrop-blur-sm transition-colors whitespace-nowrap"
         >
           <Icon icon="fluent:person-support-24-regular" class="w-4 h-4 inline mr-1" />
           ต้องการความช่วยเหลือ

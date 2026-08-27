@@ -74,8 +74,8 @@ const submit = () => {
       </div>
 
       <div class="mt-6 flex justify-end gap-2">
-        <button class="rounded-lg border px-4 py-2 dark:text-gray-200" @click="emit('close')">ยกเลิก</button>
-        <button class="rounded-lg bg-primary-600 px-4 py-2 text-white disabled:opacity-50" :disabled="!students.length || (detailRequired && !reasonDetail.trim())" @click="submit">ส่งคำร้อง {{ students.length }} คน</button>
+        <button class="min-h-[44px] sm:min-h-0 rounded-lg border px-4 py-2 dark:text-gray-200" @click="emit('close')">ยกเลิก</button>
+        <button class="min-h-[44px] sm:min-h-0 rounded-lg bg-primary-600 px-4 py-2 text-white disabled:opacity-50" :disabled="!students.length || (detailRequired && !reasonDetail.trim())" @click="submit">ส่งคำร้อง {{ students.length }} คน</button>
       </div>
     </div>
   </div></Teleport>

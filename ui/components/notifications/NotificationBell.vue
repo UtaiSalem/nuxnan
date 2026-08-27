@@ -128,7 +128,7 @@ watch(isOpen, (open) => {
       @click="isOpen = !isOpen"
       aria-haspopup="listbox"
       :aria-expanded="isOpen"
-      class="relative p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+      class="min-h-[44px] sm:min-h-0 relative p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
     >
       <Icon icon="heroicons:bell" class="w-6 h-6" />
       

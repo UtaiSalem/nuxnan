@@ -898,14 +898,14 @@ onMounted(async () => {
             
             <div class="flex gap-3">
               <button
-                class="px-4 py-2 bg-white text-teal-600 font-semibold rounded-xl hover:bg-teal-50 transition-colors flex items-center gap-2 shadow"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-white text-teal-600 font-semibold rounded-xl hover:bg-teal-50 transition-colors flex items-center gap-2 shadow"
                 @click="activeTab = 'deposit'"
               >
                 <Icon icon="mdi:plus" class="w-5 h-5" />
                 เติมเงิน
               </button>
               <button
-                class="px-4 py-2 bg-white/20 text-white font-semibold rounded-xl hover:bg-white/30 transition-colors flex items-center gap-2 backdrop-blur"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-white/20 text-white font-semibold rounded-xl hover:bg-white/30 transition-colors flex items-center gap-2 backdrop-blur"
                 :disabled="walletBalance < 25"
                 @click="activeTab = 'withdraw'"
               >
@@ -950,7 +950,7 @@ onMounted(async () => {
             { key: 'history', label: 'ประวัติ', icon: 'mdi:history' },
           ]"
           :key="tab.key"
-          class="px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap flex items-center gap-2"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap flex items-center gap-2"
           :class="activeTab === tab.key
             ? 'bg-primary-500 text-white shadow'
             : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'"
@@ -1125,7 +1125,7 @@ onMounted(async () => {
                   v-for="amount in quickDepositAmounts"
                   :key="amount"
                   type="button"
-                  class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                   :class="depositForm.amount === amount 
                     ? 'bg-primary-500 text-white' 
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'"
@@ -1191,7 +1191,7 @@ onMounted(async () => {
                 >
                 <button 
                   type="button"
-                  class="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                   @click="clearSlip"
                 >
                   <Icon icon="mdi:close" class="w-4 h-4" />
@@ -1277,7 +1277,7 @@ onMounted(async () => {
               <div v-if="req.status === 'pending'" class="text-right">
                 <button 
                   type="button"
-                  class="px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                   :disabled="isProcessing"
                   @click="handleCancelRequest(req.id)"
                 >
@@ -1293,7 +1293,7 @@ onMounted(async () => {
             <p>ยังไม่มีคำขอเติมเงิน</p>
             <button 
               type="button"
-              class="mt-4 px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+              class="min-h-[44px] sm:min-h-0 mt-4 px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
               @click="activeTab = 'deposit'"
             >
               เติมเงินเลย
@@ -1309,7 +1309,7 @@ onMounted(async () => {
             <h3 class="text-xl font-bold text-gray-900 dark:text-white">คำขอถอนเงินของฉัน</h3>
             <button
               type="button"
-              class="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-1"
+              class="min-h-[44px] sm:min-h-0 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center gap-1"
               :disabled="myWithdrawalsLoading"
               @click="loadMyWithdrawals"
             >
@@ -1378,7 +1378,7 @@ onMounted(async () => {
                 <button
                   v-if="w.status === 'paid' && w.has_payout_proof"
                   type="button"
-                  class="px-4 py-2 text-sm text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2 text-sm text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
                   @click="handleViewWithdrawalProof(w.id)"
                 >
                   <Icon icon="mdi:receipt-text-check" class="w-4 h-4 inline mr-1" />
@@ -1387,7 +1387,7 @@ onMounted(async () => {
                 <button
                   v-if="w.status === 'pending' || w.status === 'under_review'"
                   type="button"
-                  class="px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                   :disabled="isProcessing"
                   @click="handleCancelWithdrawal(w)"
                 >
@@ -1452,7 +1452,7 @@ onMounted(async () => {
                 <button 
                   v-for="amount in quickWithdrawAmounts"
                   :key="amount"
-                  class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                   :class="withdrawForm.amount === amount 
                     ? 'bg-primary-500 text-white' 
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'"
@@ -1470,7 +1470,7 @@ onMounted(async () => {
               <div class="grid grid-cols-2 gap-2 p-1 bg-gray-100 dark:bg-gray-700 rounded-xl">
                 <button
                   type="button"
-                  class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                  class="min-h-[44px] sm:min-h-0 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
                   :class="withdrawForm.method === 'bank_transfer'
                     ? 'bg-white dark:bg-gray-800 text-primary-600 shadow'
                     : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-gray-600/50'"
@@ -1481,7 +1481,7 @@ onMounted(async () => {
                 </button>
                 <button
                   type="button"
-                  class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                  class="min-h-[44px] sm:min-h-0 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
                   :class="withdrawForm.method === 'promptpay'
                     ? 'bg-white dark:bg-gray-800 text-primary-600 shadow'
                     : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-gray-600/50'"
@@ -1620,7 +1620,7 @@ onMounted(async () => {
                   </div>
                   <button 
                     type="button"
-                    class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
                     @click="clearRecipient"
                   >
                     <Icon icon="mdi:close" class="w-5 h-5" />
@@ -1829,7 +1829,7 @@ onMounted(async () => {
                 <button
                   v-for="amount in [10, 50, 100, 500, 1000]"
                   :key="amount"
-                  class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                   :class="convertToPointsForm.amount === amount
                     ? 'bg-primary-500 text-white'
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'"

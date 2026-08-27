@@ -112,13 +112,13 @@ onMounted(() => {
         <div class="flex gap-2">
           <button 
             @click="acceptRequest(request.sender?.id)"
-            class="flex-1 py-2 text-sm font-medium text-white bg-gradient-to-r from-vikinger-purple to-vikinger-cyan rounded-lg hover:opacity-90 transition-opacity"
+            class="min-h-[44px] sm:min-h-0 flex-1 py-2 text-sm font-medium text-white bg-gradient-to-r from-vikinger-purple to-vikinger-cyan rounded-lg hover:opacity-90 transition-opacity"
           >
             ยอมรับ
           </button>
           <button 
             @click="denyRequest(request.sender?.id)"
-            class="flex-1 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-vikinger-dark-200 rounded-lg hover:bg-gray-300 dark:hover:bg-vikinger-dark-50 transition-colors"
+            class="min-h-[44px] sm:min-h-0 flex-1 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-vikinger-dark-200 rounded-lg hover:bg-gray-300 dark:hover:bg-vikinger-dark-50 transition-colors"
           >
             ปฏิเสธ
           </button>

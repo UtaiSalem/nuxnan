@@ -54,7 +54,7 @@ function formatDate(d: string): string {
 
     <div v-else-if="error" class="flex flex-col items-center justify-center min-h-64 gap-4 text-slate-400">
       <p>{{ error }}</p>
-      <button @click="fetchTournaments()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors font-bold">
+      <button @click="fetchTournaments()" class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors font-bold">
         ลองใหม่
       </button>
     </div>

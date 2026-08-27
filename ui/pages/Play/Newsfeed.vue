@@ -277,7 +277,7 @@ onUnmounted(() => {
         <p class="text-red-600 dark:text-red-400 mb-4">{{ error }}</p>
         <button 
           @click="refreshFeed" 
-          class="px-6 py-2 bg-vikinger-purple text-white rounded-full hover:bg-vikinger-purple/90 transition-colors"
+          class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-vikinger-purple text-white rounded-full hover:bg-vikinger-purple/90 transition-colors"
         >
           <Icon icon="fluent:arrow-sync-24-regular" class="w-4 h-4 inline mr-2" />
           ลองใหม่อีกครั้ง
@@ -311,7 +311,7 @@ onUnmounted(() => {
         <div class="flex justify-center">
           <button 
             @click="refreshFeed" 
-            class="flex items-center gap-2 px-4 py-2 text-sm text-vikinger-purple hover:bg-vikinger-purple/10 rounded-full transition-colors"
+            class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 text-sm text-vikinger-purple hover:bg-vikinger-purple/10 rounded-full transition-colors"
           >
             <Icon icon="fluent:arrow-sync-24-regular" class="w-4 h-4" />
             รีเฟรชฟีด

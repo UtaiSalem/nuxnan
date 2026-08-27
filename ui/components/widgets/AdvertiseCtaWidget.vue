@@ -31,7 +31,7 @@ function open(type: 'advertisement' | 'support') {
         <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">โปรโมตสินค้าหรือบริการให้ผู้เรียน{{ targetName ? `ใน ${targetName}` : '' }}เห็น จ่ายตามจำนวนวิว</p>
         <button
           type="button"
-          class="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700"
+          class="min-h-[44px] sm:min-h-0 mt-3 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700"
           @click="open('advertisement')"
         >
           <Icon icon="mdi:plus" class="h-4 w-4" />
@@ -47,7 +47,7 @@ function open(type: 'advertisement' | 'support') {
         <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">ให้ทุนสนับสนุนการเรียนรู้โดยตรง ไม่ต้องมีสื่อโฆษณา</p>
         <button
           type="button"
-          class="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
+          class="min-h-[44px] sm:min-h-0 mt-3 inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
           @click="open('support')"
         >
           <Icon icon="solar:hand-heart-bold-duotone" class="h-4 w-4" />

@@ -196,14 +196,14 @@ onMounted(() => {
 
         <button
           @click="handleSearch"
-          class="px-6 py-2.5 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white font-medium transition-colors"
+          class="min-h-[44px] sm:min-h-0 px-6 py-2.5 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white font-medium transition-colors"
         >
           ค้นหา
         </button>
 
         <!-- View toggle -->
         <div class="inline-flex rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 p-1">
-          <button
+          <button class="min-h-[44px] sm:min-h-0"
             @click="setViewMode('table')"
             :class="[
               'px-3 py-1.5 rounded-lg text-sm font-medium inline-flex items-center gap-1.5 transition-colors',
@@ -216,7 +216,7 @@ onMounted(() => {
             <Icon icon="fluent:table-24-regular" class="w-4 h-4" />
             <span class="hidden sm:inline">ตาราง</span>
           </button>
-          <button
+          <button class="min-h-[44px] sm:min-h-0"
             @click="setViewMode('grid')"
             :class="[
               'px-3 py-1.5 rounded-lg text-sm font-medium inline-flex items-center gap-1.5 transition-colors',
@@ -342,7 +342,7 @@ onMounted(() => {
                     <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
                   </NuxtLink>
                   <button
-                    class="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                     title="ลบ"
                   >
                     <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
@@ -430,7 +430,7 @@ onMounted(() => {
               <span>แก้ไข</span>
             </NuxtLink>
             <button
-              class="inline-flex items-center justify-center p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
               title="ลบคอร์ส"
             >
               <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
@@ -446,7 +446,7 @@ onMounted(() => {
         v-if="hasMorePages"
         @click="loadMore"
         :disabled="isLoadingMore"
-        class="px-6 py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-medium transition-colors flex items-center gap-2 disabled:opacity-50 shadow-sm"
+        class="min-h-[44px] sm:min-h-0 px-6 py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-medium transition-colors flex items-center gap-2 disabled:opacity-50 shadow-sm"
       >
         <Icon v-if="isLoadingMore" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
         <Icon v-else icon="fluent:arrow-download-24-regular" class="w-5 h-5" />

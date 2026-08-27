@@ -388,7 +388,7 @@ const formatTime = (dateString) => {
       >
         <!-- Close Button -->
         <button 
-          class="absolute top-4 right-4 z-10 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white/80 hover:text-white transition-all"
+          class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-4 right-4 z-10 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white/80 hover:text-white transition-all"
           @click="closeModal"
         >
           <Icon icon="fluent:dismiss-24-regular" class="w-6 h-6" />
@@ -442,7 +442,7 @@ const formatTime = (dateString) => {
                 <!-- Actions -->
                 <div class="flex items-center gap-2">
                   <!-- Like -->
-                  <button 
+                  <button class="min-h-[44px] sm:min-h-0" 
                     @click.stop="toggleLike"
                     :disabled="isLiking"
                     :class="[
@@ -457,7 +457,7 @@ const formatTime = (dateString) => {
                   </button>
                   
                   <!-- Dislike -->
-                  <button 
+                  <button class="min-h-[44px] sm:min-h-0" 
                     @click.stop="toggleDislike"
                     :disabled="isDisliking"
                     :class="[
@@ -472,7 +472,7 @@ const formatTime = (dateString) => {
                   </button>
                   
                   <!-- Comment Toggle -->
-                  <button 
+                  <button class="min-h-[44px] sm:min-h-0" 
                     @click.stop="toggleComments"
                     :class="[
                       'flex items-center gap-2 px-4 py-2 rounded-full transition-all',
@@ -561,7 +561,7 @@ const formatTime = (dateString) => {
                   <button 
                     v-if="hasMoreComments && !isLoadingComments"
                     @click="loadMoreComments"
-                    class="w-full py-2 text-sm text-vikinger-purple hover:text-vikinger-purple/80 transition-colors"
+                    class="min-h-[44px] sm:min-h-0 w-full py-2 text-sm text-vikinger-purple hover:text-vikinger-purple/80 transition-colors"
                   >
                     โหลดเพิ่มเติม...
                   </button>

@@ -162,7 +162,7 @@ onMounted(loadData)
         </div>
         <div class="flex gap-3">
           <button
-            class="px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors flex items-center gap-2"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors flex items-center gap-2"
             @click="showAdjustModal = true"
           >
             <Icon icon="mdi:wallet-plus" class="w-5 h-5" />
@@ -231,7 +231,7 @@ onMounted(loadData)
             { key: 'analytics', label: 'วิเคราะห์', icon: 'mdi:chart-bar' },
           ]"
           :key="tab.key"
-          class="px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap flex items-center gap-2 relative"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap flex items-center gap-2 relative"
           :class="activeTab === tab.key 
             ? 'bg-primary-500 text-white shadow' 
             : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'"
@@ -374,13 +374,13 @@ onMounted(loadData)
                     <td class="py-3 px-4 text-right">
                       <div v-if="withdrawal.status === 'pending'" class="flex gap-2 justify-end">
                         <button 
-                          class="px-3 py-1 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600"
+                          class="min-h-[44px] sm:min-h-0 px-3 py-1 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600"
                           @click="handleApprove(withdrawal.id)"
                         >
                           อนุมัติ
                         </button>
                         <button 
-                          class="px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600"
+                          class="min-h-[44px] sm:min-h-0 px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600"
                           @click="openRejectModal(withdrawal.id)"
                         >
                           ปฏิเสธ
@@ -432,21 +432,21 @@ onMounted(loadData)
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ประเภท</label>
                 <div class="flex gap-2">
                   <button 
-                    class="flex-1 py-2 rounded-xl font-medium transition-colors"
+                    class="min-h-[44px] sm:min-h-0 flex-1 py-2 rounded-xl font-medium transition-colors"
                     :class="adjustForm.type === 'add' ? 'bg-green-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
                     @click="adjustForm.type = 'add'"
                   >
                     เพิ่ม
                   </button>
                   <button 
-                    class="flex-1 py-2 rounded-xl font-medium transition-colors"
+                    class="min-h-[44px] sm:min-h-0 flex-1 py-2 rounded-xl font-medium transition-colors"
                     :class="adjustForm.type === 'deduct' ? 'bg-red-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
                     @click="adjustForm.type = 'deduct'"
                   >
                     หัก
                   </button>
                   <button 
-                    class="flex-1 py-2 rounded-xl font-medium transition-colors"
+                    class="min-h-[44px] sm:min-h-0 flex-1 py-2 rounded-xl font-medium transition-colors"
                     :class="adjustForm.type === 'set' ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
                     @click="adjustForm.type = 'set'"
                   >
@@ -479,13 +479,13 @@ onMounted(loadData)
             
             <div class="flex gap-3 mt-6">
               <button 
-                class="flex-1 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl"
+                class="min-h-[44px] sm:min-h-0 flex-1 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl"
                 @click="showAdjustModal = false"
               >
                 ยกเลิก
               </button>
               <button 
-                class="flex-1 py-2 bg-primary-500 text-white rounded-xl"
+                class="min-h-[44px] sm:min-h-0 flex-1 py-2 bg-primary-500 text-white rounded-xl"
                 @click="handleAdjustWallet"
               >
                 บันทึก
@@ -513,13 +513,13 @@ onMounted(loadData)
             
             <div class="flex gap-3 mt-6">
               <button 
-                class="flex-1 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl"
+                class="min-h-[44px] sm:min-h-0 flex-1 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl"
                 @click="showRejectModal = false"
               >
                 ยกเลิก
               </button>
               <button 
-                class="flex-1 py-2 bg-red-500 text-white rounded-xl"
+                class="min-h-[44px] sm:min-h-0 flex-1 py-2 bg-red-500 text-white rounded-xl"
                 @click="handleReject"
               >
                 ปฏิเสธ

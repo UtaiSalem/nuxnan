@@ -185,7 +185,7 @@ onUnmounted(() => {
             <ScoreBoard :score="score" :level="level" />
             <button
                 @click="restartGame"
-                class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition duration-300"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition duration-300"
             >
                 Restart Game
             </button>

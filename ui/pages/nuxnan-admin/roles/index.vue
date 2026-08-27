@@ -302,7 +302,7 @@ onMounted(() => {
       </div>
       <button
         @click="openCreateModal"
-        class="inline-flex items-center gap-2 px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white transition-colors"
+        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white transition-colors"
       >
         <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
         เพิ่มบทบาทใหม่
@@ -324,7 +324,7 @@ onMounted(() => {
         </div>
         <button
           @click="handleSearch"
-          class="px-4 py-2.5 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white transition-colors"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2.5 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white transition-colors"
         >
           ค้นหา
         </button>
@@ -394,7 +394,7 @@ onMounted(() => {
                 <div class="flex items-center justify-end gap-2">
                   <button
                     @click="openEditModal(role)"
-                    class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                     title="แก้ไข"
                   >
                     <Icon icon="fluent:edit-24-regular" class="w-5 h-5" />
@@ -402,7 +402,7 @@ onMounted(() => {
                   <button
                     v-if="!isSystemRole(role.name)"
                     @click="openDeleteModal(role)"
-                    class="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                     title="ลบ"
                   >
                     <Icon icon="fluent:delete-24-regular" class="w-5 h-5" />
@@ -410,7 +410,7 @@ onMounted(() => {
                   <button
                     v-else
                     disabled
-                    class="p-2 text-slate-400 cursor-not-allowed rounded-lg"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-slate-400 cursor-not-allowed rounded-lg"
                     title="ไม่สามารถลบบทบาทระบบได้"
                   >
                     <Icon icon="fluent:lock-closed-24-regular" class="w-5 h-5" />
@@ -438,11 +438,11 @@ onMounted(() => {
           <button
             @click="goToPage(currentPage - 1)"
             :disabled="currentPage === 1"
-            class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Icon icon="fluent:chevron-left-24-regular" class="w-5 h-5" />
           </button>
-          <button
+          <button class="min-h-[44px] sm:min-h-0"
             v-for="page in paginationPages"
             :key="page"
             @click="goToPage(page)"
@@ -458,7 +458,7 @@ onMounted(() => {
           <button
             @click="goToPage(currentPage + 1)"
             :disabled="currentPage === totalPages"
-            class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Icon icon="fluent:chevron-right-24-regular" class="w-5 h-5" />
           </button>
@@ -544,14 +544,14 @@ onMounted(() => {
             <button
               type="button"
               @click="showCreateModal = false"
-              class="px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
             >
               ยกเลิก
             </button>
             <button
               @click="submitCreate"
               :disabled="isSubmitting"
-              class="px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 text-white rounded-xl transition-colors disabled:opacity-50"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 text-white rounded-xl transition-colors disabled:opacity-50"
             >
               {{ isSubmitting ? 'กำลังบันทึก...' : 'บันทึก' }}
             </button>
@@ -642,14 +642,14 @@ onMounted(() => {
             <button
               type="button"
               @click="showEditModal = false"
-              class="px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
             >
               ยกเลิก
             </button>
             <button
               @click="submitEdit"
               :disabled="isSubmitting"
-              class="px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 text-white rounded-xl transition-colors disabled:opacity-50"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 text-white rounded-xl transition-colors disabled:opacity-50"
             >
               {{ isSubmitting ? 'กำลังบันทึก...' : 'บันทึก' }}
             </button>
@@ -675,13 +675,13 @@ onMounted(() => {
             <div class="flex justify-center gap-3">
               <button
                 @click="showDeleteModal = false"
-                class="px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
               >
                 ยกเลิก
               </button>
               <button
                 @click="confirmDelete"
-                class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors"
               >
                 ลบบทบาท
               </button>

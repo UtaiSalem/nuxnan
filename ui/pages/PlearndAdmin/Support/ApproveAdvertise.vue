@@ -252,7 +252,7 @@ onMounted(() => {
         <button 
           @click="handleTabChange('pending')"
           :class="activeTab === 'pending' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-800 dark:hover:text-white'"
-          class="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
+          class="min-h-[44px] sm:min-h-0 flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
         >
           <Icon icon="solar:bell-bing-bold" class="w-4 h-4" />
           รอตรวจสอบ
@@ -263,7 +263,7 @@ onMounted(() => {
         <button 
           @click="handleTabChange('refund')"
           :class="activeTab === 'refund' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-800 dark:hover:text-white'"
-          class="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
+          class="min-h-[44px] sm:min-h-0 flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
         >
           <Icon icon="solar:card-recive-bold" class="w-4 h-4" />
           ประวัติการคืนเงิน
@@ -271,7 +271,7 @@ onMounted(() => {
         <button 
           @click="handleTabChange('audit')"
           :class="activeTab === 'audit' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-800 dark:hover:text-white'"
-          class="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
+          class="min-h-[44px] sm:min-h-0 flex-1 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
         >
           <Icon icon="solar:history-bold" class="w-4 h-4" />
           Audit Log
@@ -339,15 +339,15 @@ onMounted(() => {
                 </div>
 
                 <div class="flex gap-2">
-                  <button v-if="c.slip" @click="viewSlip(c.id)" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5">
+                  <button v-if="c.slip" @click="viewSlip(c.id)" class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5">
                     <Icon icon="solar:document-bold" />
                     ดูสลิป
                   </button>
-                  <button @click="rejectCampaign(c.id)" class="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5">
+                  <button @click="rejectCampaign(c.id)" class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5">
                     <Icon icon="solar:close-circle-bold" />
                     ปฏิเสธ
                   </button>
-                  <button @click="approveCampaign(c.id)" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5">
+                  <button @click="approveCampaign(c.id)" class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5">
                     <Icon icon="solar:check-circle-bold" />
                     อนุมัติ
                   </button>
@@ -418,7 +418,7 @@ onMounted(() => {
                     <button 
                       v-if="c.slip && c.payment_status !== 'refunded'" 
                       @click="markAsRefunded(c.id)"
-                      class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition-all"
+                      class="min-h-[44px] sm:min-h-0 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition-all"
                     >
                       ยืนยันโอนคืนแล้ว
                     </button>
@@ -487,7 +487,7 @@ onMounted(() => {
             <button 
               @click="loadAuditLogs(logPage - 1)" 
               :disabled="logPage <= 1"
-              class="px-3 py-1.5 bg-white dark:bg-gray-800 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 text-xs font-bold"
+              class="min-h-[44px] sm:min-h-0 px-3 py-1.5 bg-white dark:bg-gray-800 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 text-xs font-bold"
             >
               ย้อนกลับ
             </button>
@@ -495,7 +495,7 @@ onMounted(() => {
             <button 
               @click="loadAuditLogs(logPage + 1)" 
               :disabled="logPage >= logLastPage"
-              class="px-3 py-1.5 bg-white dark:bg-gray-800 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 text-xs font-bold"
+              class="min-h-[44px] sm:min-h-0 px-3 py-1.5 bg-white dark:bg-gray-800 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 text-xs font-bold"
             >
               หน้าถัดไป
             </button>
@@ -507,7 +507,7 @@ onMounted(() => {
           <button 
             @click="loadCampaigns(currentPage - 1)" 
             :disabled="currentPage <= 1"
-            class="px-3 py-1.5 bg-white dark:bg-gray-800 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 text-xs font-bold"
+            class="min-h-[44px] sm:min-h-0 px-3 py-1.5 bg-white dark:bg-gray-800 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 text-xs font-bold"
           >
             ย้อนกลับ
           </button>
@@ -515,7 +515,7 @@ onMounted(() => {
           <button 
             @click="loadCampaigns(currentPage + 1)" 
             :disabled="currentPage >= lastPage"
-            class="px-3 py-1.5 bg-white dark:bg-gray-800 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 text-xs font-bold"
+            class="min-h-[44px] sm:min-h-0 px-3 py-1.5 bg-white dark:bg-gray-800 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 text-xs font-bold"
           >
             หน้าถัดไป
           </button>
@@ -528,7 +528,7 @@ onMounted(() => {
     <!-- Slip Modal -->
     <div v-if="showSlipModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" @click.self="showSlipModal = false">
       <div class="bg-white dark:bg-gray-800 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl relative">
-        <button @click="showSlipModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-white p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+        <button @click="showSlipModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-white p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
           <Icon icon="solar:close-circle-bold" class="w-6 h-6" />
         </button>
         <div class="p-6">

@@ -49,7 +49,7 @@ const emit = defineEmits<{ action: [] }>()
     <button
       v-if="ctaLabel"
       type="button"
-      class="mt-4 px-4 py-2 bg-vikinger-purple text-white rounded-lg font-medium hover:bg-vikinger-purple/90 inline-flex items-center gap-2"
+      class="min-h-[44px] sm:min-h-0 mt-4 px-4 py-2 bg-vikinger-purple text-white rounded-lg font-medium hover:bg-vikinger-purple/90 inline-flex items-center gap-2"
       @click="emit('action')"
     >
       <Icon v-if="ctaIcon" :icon="ctaIcon" class="w-4 h-4" />

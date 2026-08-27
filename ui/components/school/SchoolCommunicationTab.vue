@@ -4,7 +4,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <h2 class="text-xl font-semibold text-gray-900 dark:text-white">ระบบสื่อสาร</h2>
       <div class="flex flex-wrap gap-2">
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           v-for="section in sections"
           :key="section.id"
           @click="activeSection = section.id"
@@ -26,7 +26,7 @@
         <h3 class="text-lg font-medium text-gray-900 dark:text-white">ประกาศ</h3>
         <button
           @click="showAnnouncementModal = true"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
         >
           <Icon icon="heroicons:plus" class="h-5 w-5" />
           <span class="hidden sm:inline">เพิ่มประกาศ</span>
@@ -84,7 +84,7 @@
         <h3 class="text-lg font-medium text-gray-900 dark:text-white">กิจกรรม</h3>
         <button
           @click="showEventModal = true"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
         >
           <Icon icon="heroicons:plus" class="h-5 w-5" />
           <span class="hidden sm:inline">เพิ่มกิจกรรม</span>
@@ -152,7 +152,7 @@
           />
           <button
             @click="showMeetingModal = true"
-            class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
           >
             <Icon icon="heroicons:plus" class="h-5 w-5" />
             <span class="hidden sm:inline">เพิ่มช่วงเวลา</span>
@@ -246,10 +246,10 @@
           <label for="is_pinned" class="text-sm text-gray-700 dark:text-gray-300">ปักหมุดประกาศ</label>
         </div>
         <div class="flex justify-end gap-3 pt-4">
-          <button type="button" @click="showAnnouncementModal = false" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+          <button type="button" @click="showAnnouncementModal = false" class="min-h-[44px] sm:min-h-0 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
             ยกเลิก
           </button>
-          <button type="submit" :disabled="savingAnnouncement" class="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
+          <button type="submit" :disabled="savingAnnouncement" class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
             {{ savingAnnouncement ? 'กำลังบันทึก...' : 'บันทึก' }}
           </button>
         </div>
@@ -295,10 +295,10 @@
           </div>
         </div>
         <div class="flex justify-end gap-3 pt-4">
-          <button type="button" @click="showEventModal = false" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+          <button type="button" @click="showEventModal = false" class="min-h-[44px] sm:min-h-0 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
             ยกเลิก
           </button>
-          <button type="submit" :disabled="savingEvent" class="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
+          <button type="submit" :disabled="savingEvent" class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
             {{ savingEvent ? 'กำลังบันทึก...' : 'บันทึก' }}
           </button>
         </div>
@@ -337,10 +337,10 @@
           </select>
         </div>
         <div class="flex justify-end gap-3 pt-4">
-          <button type="button" @click="showMeetingModal = false" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+          <button type="button" @click="showMeetingModal = false" class="min-h-[44px] sm:min-h-0 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
             ยกเลิก
           </button>
-          <button type="submit" :disabled="savingMeeting" class="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
+          <button type="submit" :disabled="savingMeeting" class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
             {{ savingMeeting ? 'กำลังสร้าง...' : 'สร้าง' }}
           </button>
         </div>

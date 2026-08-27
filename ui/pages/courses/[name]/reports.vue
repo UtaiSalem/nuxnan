@@ -310,7 +310,7 @@ onMounted(() => {
                   v-if="report.formats.includes('excel')"
                   @click.stop="quickExport(report.key, 'excel')"
                   :disabled="isExporting"
-                  class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 text-xs font-medium text-green-700 bg-green-100 rounded-lg hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50 disabled:opacity-50"
+                  class="min-h-[44px] sm:min-h-0 flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 text-xs font-medium text-green-700 bg-green-100 rounded-lg hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50 disabled:opacity-50"
                 >
                   <Icon icon="tabler:download" class="w-4 h-4" />
                   Excel
@@ -319,7 +319,7 @@ onMounted(() => {
                   v-if="report.formats.includes('pdf')"
                   @click.stop="quickExport(report.key, 'pdf')"
                   :disabled="isExporting"
-                  class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 text-xs font-medium text-red-700 bg-red-100 rounded-lg hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 disabled:opacity-50"
+                  class="min-h-[44px] sm:min-h-0 flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 text-xs font-medium text-red-700 bg-red-100 rounded-lg hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 disabled:opacity-50"
                 >
                   <Icon icon="tabler:download" class="w-4 h-4" />
                   PDF
@@ -445,7 +445,7 @@ onMounted(() => {
               
               <button
                 @click="resetFilters"
-                class="w-full flex items-center justify-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                class="min-h-[44px] sm:min-h-0 w-full flex items-center justify-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
               >
                 <Icon icon="tabler:refresh" class="w-4 h-4" />
                 <span class="text-sm">รีเซ็ตตัวกรอง</span>

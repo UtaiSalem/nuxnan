@@ -145,7 +145,7 @@ const handleEditClick = () => {
         <button 
           v-if="showActions"
           @click="handleEditClick"
-          class="mt-3 w-full py-2.5 px-4 bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white text-sm font-bold rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-[1.02]"
+          class="min-h-[44px] sm:min-h-0 mt-3 w-full py-2.5 px-4 bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white text-sm font-bold rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-[1.02]"
         >
           <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
           Complete Profile
@@ -170,7 +170,7 @@ const handleEditClick = () => {
 
       <!-- Tabs: Status, Mentions, Friends, Groups, Blog Posts -->
       <div class="flex gap-2 justify-center flex-wrap">
-        <button 
+        <button class="min-h-[44px] sm:min-h-0" 
           v-for="tab in tabs" 
           :key="tab"
           @click="activeTab = tab.toLowerCase()"

@@ -155,7 +155,7 @@ onMounted(loadData)
         <!-- View Tabs -->
         <div class="flex gap-4 mb-6">
           <button
-            class="px-6 py-2 rounded-xl font-medium transition-all"
+            class="min-h-[44px] sm:min-h-0 px-6 py-2 rounded-xl font-medium transition-all"
             :class="activeView === 'rewards' 
               ? 'bg-primary-500 text-white shadow-md' 
               : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
@@ -165,7 +165,7 @@ onMounted(loadData)
             แลกรางวัล
           </button>
           <button
-            class="px-6 py-2 rounded-xl font-medium transition-all relative"
+            class="min-h-[44px] sm:min-h-0 px-6 py-2 rounded-xl font-medium transition-all relative"
             :class="activeView === 'my-rewards' 
               ? 'bg-primary-500 text-white shadow-md' 
               : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
@@ -253,7 +253,7 @@ onMounted(loadData)
                 <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">ยังไม่มีรางวัล</h3>
                 <p class="mt-2 text-gray-500 dark:text-gray-400">คุณยังไม่ได้แลกรางวัลใดๆ</p>
                 <button
-                  class="mt-4 px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:shadow-md transition-all"
+                  class="min-h-[44px] sm:min-h-0 mt-4 px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:shadow-md transition-all"
                   @click="activeView = 'rewards'"
                 >
                   <Icon icon="mdi:gift" class="w-5 h-5 inline mr-2" />

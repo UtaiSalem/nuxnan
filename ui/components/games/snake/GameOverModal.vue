@@ -6,11 +6,11 @@
             <p class="mb-6 text-gray-600 dark:text-gray-400">Your final score: <span class="font-bold text-gray-900 dark:text-white">{{ score }}</span></p>
             <div class="flex justify-center space-x-3">
                 <button @click="$emit('restart')"
-                    class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-lg hover:shadow-blue-500/30 transition-all">
+                    class="min-h-[44px] sm:min-h-0 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-lg hover:shadow-blue-500/30 transition-all">
                     Restart
                 </button>
                 <button @click="$emit('quit')"
-                    class="px-6 py-2.5 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium shadow-lg hover:shadow-gray-500/30 transition-all">
+                    class="min-h-[44px] sm:min-h-0 px-6 py-2.5 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium shadow-lg hover:shadow-gray-500/30 transition-all">
                     Quit
                 </button>
             </div>

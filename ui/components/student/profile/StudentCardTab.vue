@@ -298,12 +298,12 @@ const saveCardDetails = async () => {
             <div v-if="canAdmin" class="pt-4 border-t border-gray-100 space-y-3">
               <div class="flex gap-2">
                 <button @click="isEditing = true"
-                        class="flex-1 px-4 py-2 border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1">
+                        class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1">
                   <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
                   แก้ไขวันที่และเลขบัตร
                 </button>
                 <button v-if="cardDetail?.profile_image" @click="handleDeletePhoto"
-                        class="px-3 py-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1">
+                        class="min-h-[44px] sm:min-h-0 px-3 py-2 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1">
                   <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
                   ลบรูป
                 </button>
@@ -353,11 +353,11 @@ const saveCardDetails = async () => {
 
             <div class="flex items-center justify-end gap-2 pt-3 border-t border-gray-50">
               <button @click="isEditing = false" :disabled="isSubmitting"
-                      class="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-50 transition-colors">
+                      class="min-h-[44px] sm:min-h-0 px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-50 transition-colors">
                 ยกเลิก
               </button>
               <button @click="saveCardDetails" :disabled="isSubmitting"
-                      class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center gap-1">
+                      class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center gap-1">
                 <svg v-if="isSubmitting" class="w-3.5 h-3.5 animate-spin text-white" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>

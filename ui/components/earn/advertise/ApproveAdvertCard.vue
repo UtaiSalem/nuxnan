@@ -3,8 +3,8 @@
       <h4 class="font-bold">Advert Approval</h4>
       <p>Title: {{ advert.title }}</p>
       <div class="mt-2 text-sm text-gray-500">
-          <button class="bg-green-500 text-white px-2 py-1 rounded mr-2">Approve</button>
-          <button class="bg-red-500 text-white px-2 py-1 rounded">Reject</button>
+          <button class="min-h-[44px] sm:min-h-0 bg-green-500 text-white px-2 py-1 rounded mr-2">Approve</button>
+          <button class="min-h-[44px] sm:min-h-0 bg-red-500 text-white px-2 py-1 rounded">Reject</button>
       </div>
   </div>
 </template>

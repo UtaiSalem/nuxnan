@@ -29,7 +29,7 @@
       <!-- คัดลอกรหัส -->
       <button
         @click="copyCode"
-        class="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
+        class="min-h-[44px] sm:min-h-0 flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
         :class="copied
           ? (isDarkMode ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-600')
           : (isDarkMode ? 'bg-vikinger-purple/20 text-vikinger-purple hover:bg-vikinger-purple/30' : 'bg-purple-100 text-vikinger-purple hover:bg-purple-200')"
@@ -41,7 +41,7 @@
       <!-- คัดลอกลิงก์ -->
       <button
         @click="copyLink"
-        class="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
+        class="min-h-[44px] sm:min-h-0 flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
         :class="copiedLink
           ? (isDarkMode ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-600')
           : (isDarkMode ? 'bg-vikinger-cyan/10 text-vikinger-cyan hover:bg-vikinger-cyan/20' : 'bg-cyan-50 text-cyan-600 hover:bg-cyan-100')"

@@ -85,7 +85,7 @@ const handleDislike = async () => {
 <template>
   <div class="flex items-center gap-4 py-2 border-t border-b border-gray-100 dark:border-gray-700 my-3">
     <button
-      class="flex items-center gap-2 px-3 py-1 rounded-md transition-colors disabled:opacity-50"
+      class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-3 py-1 rounded-md transition-colors disabled:opacity-50"
       :class="localIsLiked ? 'text-red-500' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'"
       :disabled="isProcessing"
       @click="handleLike"
@@ -95,7 +95,7 @@ const handleDislike = async () => {
     </button>
     
     <button
-      class="flex items-center gap-2 px-3 py-1 rounded-md transition-colors disabled:opacity-50"
+      class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-3 py-1 rounded-md transition-colors disabled:opacity-50"
       :class="localIsDisliked ? 'text-blue-500' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'"
       :disabled="isProcessing"
       @click="handleDislike"
@@ -105,7 +105,7 @@ const handleDislike = async () => {
     </button>
     
     <button
-      class="flex items-center gap-2 px-3 py-1 rounded-md text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors"
+      class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-3 py-1 rounded-md text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors"
       @click="$emit('comment')"
     >
       <i class="pi pi-comment"></i>
@@ -113,7 +113,7 @@ const handleDislike = async () => {
     </button>
     
     <button
-      class="flex items-center gap-2 px-3 py-1 rounded-md text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors ml-auto"
+      class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-3 py-1 rounded-md text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors ml-auto"
       @click="$emit('share')"
     >
       <i class="pi pi-share-alt"></i>

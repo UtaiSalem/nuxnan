@@ -462,7 +462,7 @@ onMounted(async () => {
                 สะสมแต้มเพิ่ม
               </NuxtLink>
               <button
-                class="px-4 py-2 bg-white/20 text-white font-semibold rounded-xl hover:bg-white/30 transition-colors flex items-center gap-2 backdrop-blur"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-white/20 text-white font-semibold rounded-xl hover:bg-white/30 transition-colors flex items-center gap-2 backdrop-blur"
                 :disabled="pointsBalance < 100"
                 @click="activeTab = 'transfer'"
               >
@@ -499,7 +499,7 @@ onMounted(async () => {
             { key: 'history', label: 'ประวัติ', icon: 'mdi:history' },
           ]"
           :key="tab.key"
-          class="px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap flex items-center gap-2"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap flex items-center gap-2"
           :class="activeTab === tab.key
             ? 'bg-amber-500 text-white shadow'
             : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'"
@@ -883,7 +883,7 @@ onMounted(async () => {
                   v-for="amount in quickTransferAmounts"
                   :key="amount"
                   type="button"
-                  class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                   :class="transferForm.amount === amount 
                     ? 'bg-amber-500 text-white' 
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'"
@@ -942,7 +942,7 @@ onMounted(async () => {
                   v-for="amount in quickConvertAmounts"
                   :key="amount"
                   type="button"
-                  class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                   :class="convertForm.points === amount 
                     ? 'bg-amber-500 text-white' 
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'"
@@ -1047,7 +1047,7 @@ onMounted(async () => {
             
             <button 
               type="button"
-              class="px-4 py-2 text-amber-600 dark:text-amber-400 text-sm hover:underline"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 text-amber-600 dark:text-amber-400 text-sm hover:underline"
               @click="transactionFilters = { type: '', date_from: '', date_to: '', page: 1, per_page: 20 }"
             >
               ล้างตัวกรอง
@@ -1195,7 +1195,7 @@ onMounted(async () => {
             <div v-if="transactionsPagination.total_pages > 1" class="flex justify-center gap-2 mt-6">
               <button 
                 type="button"
-                class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                 :class="transactionFilters.page === 1 
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
@@ -1211,7 +1211,7 @@ onMounted(async () => {
               
               <button 
                 type="button"
-                class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                 :class="transactionFilters.page === transactionsPagination.total_pages 
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"

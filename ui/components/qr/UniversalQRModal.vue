@@ -282,7 +282,7 @@ onUnmounted(() => {
               <div class="p-5 pt-0">
                 <button 
                   @click="sessionChoiceData = null"
-                  class="w-full py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all text-sm"
+                  class="min-h-[44px] sm:min-h-0 w-full py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all text-sm"
                 >
                   ยกเลิก
                 </button>
@@ -425,14 +425,14 @@ onUnmounted(() => {
             <div class="p-5 flex gap-2">
               <button 
                 @click="tryAgain"
-                class="flex-1 py-2.5 bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white rounded-xl font-bold hover:opacity-90 transition-all flex items-center justify-center gap-2 text-sm"
+                class="min-h-[44px] sm:min-h-0 flex-1 py-2.5 bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white rounded-xl font-bold hover:opacity-90 transition-all flex items-center justify-center gap-2 text-sm"
               >
                 <Icon icon="fluent:qr-code-24-regular" class="w-4 h-4" />
                 สแกนอีก
               </button>
               <button 
                 @click="close"
-                class="flex-1 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all text-sm"
+                class="min-h-[44px] sm:min-h-0 flex-1 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all text-sm"
               >
                 ปิด
               </button>
@@ -541,7 +541,7 @@ onUnmounted(() => {
                   </div>
                 </div>
                 
-                <button 
+                <button class="min-h-[44px] sm:min-h-0" 
                   @click="toggleScanning"
                   :disabled="isProcessing"
                   :class="[
@@ -588,7 +588,7 @@ onUnmounted(() => {
                   <button 
                     @click="pasteCode"
                     type="button"
-                    class="flex-shrink-0 px-3 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center flex-shrink-0 px-3 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
                     title="วางจากคลิปบอร์ด"
                   >
                     <Icon icon="fluent:clipboard-paste-24-regular" class="w-5 h-5" />

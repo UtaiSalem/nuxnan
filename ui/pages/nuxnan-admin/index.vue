@@ -187,11 +187,11 @@ const quickActions = [
         </p>
       </div>
       <div class="flex gap-3">
-        <button class="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+        <button class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
           <Icon icon="fluent:arrow-download-24-regular" class="w-5 h-5" />
           ดาวน์โหลดรายงาน
         </button>
-        <button class="inline-flex items-center gap-2 px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white transition-colors">
+        <button class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white transition-colors">
           <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
           สร้างใหม่
         </button>

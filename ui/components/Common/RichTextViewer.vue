@@ -86,7 +86,7 @@ const toggleExpand = () => {
     <div v-if="shouldShowReadMore" class="mt-4 flex justify-center">
       <button 
         @click="toggleExpand"
-        class="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-colors border border-blue-200 dark:border-blue-800 shadow-sm"
+        class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-colors border border-blue-200 dark:border-blue-800 shadow-sm"
       >
         <template v-if="isExpanded">
           <Icon icon="fluent:chevron-up-24-regular" class="w-4 h-4" />

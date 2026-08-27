@@ -112,7 +112,7 @@ onMounted(() => {
         </div>
         <button 
           @click="sendFriendRequest(user.id)"
-          class="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-vikinger-purple to-vikinger-cyan rounded-full hover:opacity-90 transition-opacity"
+          class="min-h-[44px] sm:min-h-0 flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-vikinger-purple to-vikinger-cyan rounded-full hover:opacity-90 transition-opacity"
         >
           <Icon icon="fluent:person-add-24-regular" class="w-4 h-4" />
           <span class="hidden sm:inline">เพิ่มเพื่อน</span>

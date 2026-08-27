@@ -19,7 +19,7 @@
           v-for="filter in filters"
           :key="filter"
           @click="activeFilter = filter"
-          class="px-4 py-2 rounded-full font-medium whitespace-nowrap transition-colors"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-full font-medium whitespace-nowrap transition-colors"
           :class="
             activeFilter === filter
               ? 'bg-primary-600 text-white'

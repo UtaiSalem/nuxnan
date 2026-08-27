@@ -418,7 +418,7 @@ async function submit() {
                   v-for="p in pointPresets"
                   :key="p"
                   type="button"
-                  class="rounded-xl border px-3 py-1.5 text-xs font-bold transition"
+                  class="min-h-[44px] sm:min-h-0 rounded-xl border px-3 py-1.5 text-xs font-bold transition"
                   :class="[
                     points === p
                       ? 'border-amber-400 bg-amber-500/20 text-amber-300'
@@ -430,7 +430,7 @@ async function submit() {
                 </button>
                 <button
                   type="button"
-                  class="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-bold text-amber-400 hover:bg-amber-500/20 transition"
+                  class="min-h-[44px] sm:min-h-0 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-bold text-amber-400 hover:bg-amber-500/20 transition"
                   @click="points = userBalance"
                 >
                   แต้มทั้งหมด
@@ -463,7 +463,7 @@ async function submit() {
                 v-for="c in cashPresets"
                 :key="c"
                 type="button"
-                class="rounded-xl border px-3 py-1.5 text-xs font-bold transition"
+                class="min-h-[44px] sm:min-h-0 rounded-xl border px-3 py-1.5 text-xs font-bold transition"
                 :class="[
                   cash === c
                     ? 'border-emerald-400 bg-emerald-500/20 text-emerald-300'
@@ -597,7 +597,7 @@ async function submit() {
               v-for="msg in messagePresets"
               :key="msg"
               type="button"
-              class="rounded-xl border border-slate-800 bg-slate-800/60 px-3 py-1.5 text-xs font-medium text-slate-300 hover:border-indigo-500/50 hover:bg-slate-800 hover:text-white transition text-left"
+              class="min-h-[44px] sm:min-h-0 rounded-xl border border-slate-800 bg-slate-800/60 px-3 py-1.5 text-xs font-medium text-slate-300 hover:border-indigo-500/50 hover:bg-slate-800 hover:text-white transition text-left"
               @click="purpose = msg"
             >
               {{ msg }}

@@ -155,7 +155,7 @@ onMounted(() => {
 
       <!-- Filter Tabs -->
       <div class="flex gap-2 border-b border-gray-700 pb-3">
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           v-for="filter in [
             { key: 'selling', label: 'กำลังขาย', icon: 'fluent:tag-24-regular' },
             { key: 'sold', label: 'ขายแล้ว', icon: 'fluent:checkmark-circle-24-regular' },

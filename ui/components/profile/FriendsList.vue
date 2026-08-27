@@ -243,7 +243,7 @@ watch(searchQuery, () => {
 
       <!-- Filter Tabs -->
       <div class="flex gap-2 border-b border-gray-700 pb-3">
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           v-for="filter in [
             { key: 'all', label: 'ทั้งหมด', icon: 'fluent:people-24-regular' },
             { key: 'online', label: 'ออนไลน์', icon: 'fluent:presence-available-24-filled' },
@@ -442,13 +442,13 @@ watch(searchQuery, () => {
               <div class="flex gap-3 justify-center">
                 <button
                   @click="showConfirmModal = false"
-                  class="px-6 py-2.5 text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                  class="min-h-[44px] sm:min-h-0 px-6 py-2.5 text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
                 >
                   ยกเลิก
                 </button>
                 <button
                   @click="handleUnfriend"
-                  class="px-6 py-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                  class="min-h-[44px] sm:min-h-0 px-6 py-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                 >
                   เลิกเป็นเพื่อน
                 </button>

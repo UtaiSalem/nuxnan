@@ -547,7 +547,7 @@ onMounted(fetchUsers)
         <!-- Search Button -->
         <button
           @click="handleSearch"
-          class="px-4 py-2.5 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white transition-colors"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2.5 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white transition-colors"
         >
           ค้นหา
         </button>
@@ -565,14 +565,14 @@ onMounted(fetchUsers)
       <div class="flex items-center gap-2">
         <button 
           @click="bulkVerify" 
-          class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-xl transition-colors flex items-center gap-2"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-xl transition-colors flex items-center gap-2"
         >
           <Icon icon="fluent:checkmark-circle-24-regular" class="w-4 h-4" />
           ยืนยันบัญชีที่เลือก
         </button>
         <button 
           @click="selectedUserIds = []" 
-          class="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
         >
           ยกเลิก
         </button>
@@ -673,7 +673,7 @@ onMounted(fetchUsers)
                   <button
                     v-if="!user.is_verified && !user.deleted_at"
                     @click="openVerifyModal(user)"
-                    class="p-2 text-slate-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-slate-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
                     title="ยืนยันบัญชี"
                   >
                     <Icon icon="fluent:checkmark-circle-24-regular" class="w-5 h-5" />
@@ -681,7 +681,7 @@ onMounted(fetchUsers)
                   <button
                     v-if="user.is_verified && !user.deleted_at"
                     @click="openUnverifyModal(user)"
-                    class="p-2 text-slate-500 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/30 rounded-lg transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-slate-500 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/30 rounded-lg transition-colors"
                     title="ถอนการยืนยัน"
                   >
                     <Icon icon="fluent:dismiss-circle-24-regular" class="w-5 h-5" />
@@ -698,14 +698,14 @@ onMounted(fetchUsers)
                   </NuxtLink>
                   <button
                     @click="openEditModal(user)"
-                    class="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                     title="แก้ไข"
                   >
                     <Icon icon="fluent:edit-24-regular" class="w-5 h-5" />
                   </button>
                   <button
                     @click="openDeleteModal(user)"
-                    class="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                     title="ลบ"
                   >
                     <Icon icon="fluent:delete-24-regular" class="w-5 h-5" />
@@ -713,7 +713,7 @@ onMounted(fetchUsers)
                   <button
                     v-if="user.deleted_at"
                     @click="restoreUser(user)"
-                    class="p-2 text-slate-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-slate-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
                     title="กู้คืนบัญชี"
                   >
                     <Icon icon="fluent:arrow-undo-24-regular" class="w-5 h-5" />
@@ -740,7 +740,7 @@ onMounted(fetchUsers)
           <button
             :disabled="currentPage === 1"
             @click="goToPage(currentPage - 1)"
-            class="p-2 rounded-lg border border-slate-200 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-lg border border-slate-200 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             <Icon icon="fluent:chevron-left-24-regular" class="w-5 h-5" />
           </button>
@@ -750,7 +750,7 @@ onMounted(fetchUsers)
           <button
             :disabled="currentPage === totalPages"
             @click="goToPage(currentPage + 1)"
-            class="p-2 rounded-lg border border-slate-200 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-lg border border-slate-200 dark:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             <Icon icon="fluent:chevron-right-24-regular" class="w-5 h-5" />
           </button>
@@ -796,7 +796,7 @@ onMounted(fetchUsers)
               </div>
               <button
                 type="button"
-                class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                 :disabled="isSavingEdit"
                 @click="closeEditModal"
               >
@@ -948,14 +948,14 @@ onMounted(fetchUsers)
                 type="button"
                 @click="closeEditModal"
                 :disabled="isSavingEdit"
-                class="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
               >
                 ยกเลิก
               </button>
               <button
                 type="submit"
                 :disabled="isLoadingEdit || isSavingEdit"
-                class="flex-1 px-4 py-2.5 bg-hopeui-primary-600 text-white rounded-xl hover:bg-hopeui-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-hopeui-primary-600 text-white rounded-xl hover:bg-hopeui-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <Icon v-if="isSavingEdit" icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
                 <span>{{ isSavingEdit ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข' }}</span>
@@ -1018,14 +1018,14 @@ onMounted(fetchUsers)
               <button
                 @click="showVerifyModal = false"
                 :disabled="isVerifying"
-                class="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
               >
                 ยกเลิก
               </button>
               <button
                 @click="confirmVerify"
                 :disabled="isVerifying"
-                class="flex-1 px-4 py-2.5 text-white rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 text-white rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 :class="verifyAction === 'verify' ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-600 hover:bg-yellow-700'"
               >
                 <Icon v-if="isVerifying" icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
@@ -1171,7 +1171,7 @@ onMounted(fetchUsers)
               <button
                 @click="closeDeleteModal"
                 :disabled="isDeleting"
-                class="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
               >
                 ยกเลิก
               </button>
@@ -1179,7 +1179,7 @@ onMounted(fetchUsers)
                 v-if="deleteImpact && !hasBlockers"
                 @click="confirmDelete"
                 :disabled="!canConfirmDelete || isDeleting"
-                class="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <Icon v-if="isDeleting" icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
                 <span>{{ isDeleting ? 'กำลังดำเนินการ...' : 'ยืนยันปิดใช้งาน' }}</span>

@@ -180,7 +180,7 @@ onMounted(() => {
         <p class="text-slate-500 mt-2">{{ error }}</p>
         <button
           @click="fetchUser"
-          class="mt-4 px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white transition-colors"
+          class="min-h-[44px] sm:min-h-0 mt-4 px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white transition-colors"
         >
           ลองใหม่อีกครั้ง
         </button>
@@ -276,7 +276,7 @@ onMounted(() => {
                   v-if="!user.email_verified_at"
                   @click="verifyEmail"
                   :disabled="isVerifying"
-                  class="inline-flex items-center gap-1 px-3 py-1 text-sm bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-lg transition-colors"
+                  class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1 px-3 py-1 text-sm bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-lg transition-colors"
                 >
                   <Icon v-if="isVerifying" icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
                   <Icon v-else icon="fluent:checkmark-circle-24-regular" class="w-4 h-4" />
@@ -286,7 +286,7 @@ onMounted(() => {
                   v-else
                   @click="unverifyEmail"
                   :disabled="isVerifying"
-                  class="inline-flex items-center gap-1 px-3 py-1 text-sm bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded-lg transition-colors"
+                  class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1 px-3 py-1 text-sm bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded-lg transition-colors"
                 >
                   <Icon v-if="isVerifying" icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
                   <Icon v-else icon="fluent:dismiss-circle-24-regular" class="w-4 h-4" />

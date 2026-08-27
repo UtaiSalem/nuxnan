@@ -181,11 +181,11 @@ onMounted(loadWords)
             <td class="px-4 py-4 text-right">
               <div class="flex items-center justify-end gap-2">
                 <button @click="openEdit(word)"
-                  class="p-2 text-slate-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-xl transition-colors">
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-slate-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-xl transition-colors">
                   <Icon icon="heroicons:pencil" class="w-4 h-4" />
                 </button>
                 <button @click="deleteWord(word)"
-                  class="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors">
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors">
                   <Icon icon="heroicons:trash" class="w-4 h-4" />
                 </button>
               </div>

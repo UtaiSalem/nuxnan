@@ -4,7 +4,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <h2 class="text-xl font-semibold text-gray-900 dark:text-white">ระบบการเงิน</h2>
       <div class="flex flex-wrap gap-2">
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           v-for="section in sections"
           :key="section.id"
           @click="activeSection = section.id"
@@ -75,14 +75,14 @@
         <div class="flex gap-2">
           <button
             @click="openBulkModal()"
-            class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Icon icon="heroicons:document-duplicate" class="h-5 w-5" />
             <span class="hidden sm:inline">ออกใบแจ้งหนี้รายกลุ่ม</span>
           </button>
           <button
             @click="showFeeModal = true"
-            class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
           >
             <Icon icon="heroicons:plus" class="h-5 w-5" />
             <span class="hidden sm:inline">เพิ่มโครงสร้าง</span>
@@ -189,10 +189,10 @@
         </div>
 
         <div class="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
-          <button type="button" @click="showBulkModal = false" class="px-6 py-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl font-bold">
+          <button type="button" @click="showBulkModal = false" class="min-h-[44px] sm:min-h-0 px-6 py-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl font-bold">
             ยกเลิก
           </button>
-          <button type="submit" :disabled="generatingInvoices" class="px-8 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
+          <button type="submit" :disabled="generatingInvoices" class="min-h-[44px] sm:min-h-0 px-8 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
             <Icon v-if="generatingInvoices" icon="svg-spinners:180-ring-with-bg" class="h-5 w-5" />
             {{ generatingInvoices ? 'กำลังดำเนินการ...' : 'ยืนยันการสร้างใบแจ้งหนี้' }}
           </button>
@@ -213,7 +213,7 @@
           </select>
           <button
             @click="showExpenseModal = true"
-            class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
           >
             <Icon icon="heroicons:plus" class="h-5 w-5" />
             <span class="hidden sm:inline">เพิ่มรายจ่าย</span>
@@ -279,7 +279,7 @@
         <h3 class="text-lg font-medium text-gray-900 dark:text-white">งบประมาณ</h3>
         <button
           @click="showBudgetModal = true"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
         >
           <Icon icon="heroicons:plus" class="h-5 w-5" />
           <span class="hidden sm:inline">เพิ่มงบประมาณ</span>
@@ -365,10 +365,10 @@
           </select>
         </div>
         <div class="flex justify-end gap-3 pt-4">
-          <button type="button" @click="showExpenseModal = false" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+          <button type="button" @click="showExpenseModal = false" class="min-h-[44px] sm:min-h-0 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
             ยกเลิก
           </button>
-          <button type="submit" :disabled="savingExpense" class="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
+          <button type="submit" :disabled="savingExpense" class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
             {{ savingExpense ? 'กำลังบันทึก...' : 'บันทึก' }}
           </button>
         </div>

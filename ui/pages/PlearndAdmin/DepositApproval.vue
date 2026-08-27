@@ -382,14 +382,14 @@ onMounted(async () => {
                 <td class="px-4 py-4 text-right">
                   <div v-if="req.status === 'pending'" class="flex justify-end gap-2">
                     <button 
-                      class="px-3 py-1.5 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition-colors"
+                      class="min-h-[44px] sm:min-h-0 px-3 py-1.5 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition-colors"
                       @click="openApproveModal(req)"
                     >
                       <Icon icon="mdi:check" class="w-4 h-4 inline mr-1" />
                       อนุมัติ
                     </button>
                     <button 
-                      class="px-3 py-1.5 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors"
+                      class="min-h-[44px] sm:min-h-0 px-3 py-1.5 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors"
                       @click="openRejectModal(req)"
                     >
                       <Icon icon="mdi:close" class="w-4 h-4 inline mr-1" />

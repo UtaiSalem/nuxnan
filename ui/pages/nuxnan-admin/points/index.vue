@@ -81,7 +81,7 @@ onMounted(() => {
         <h1 class="text-2xl font-bold text-slate-800 dark:text-white">จัดการ Points</h1>
         <p class="text-slate-500 dark:text-slate-400 mt-1">จัดการระบบคะแนนและธุรกรรม Points</p>
       </div>
-      <button class="inline-flex items-center gap-2 px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white transition-colors">
+      <button class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white transition-colors">
         <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
         มอบ Points
       </button>

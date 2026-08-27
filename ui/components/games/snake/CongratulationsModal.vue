@@ -9,13 +9,13 @@
           <button
             v-if="level < 5"
             @click="$emit('next-level')"
-            class="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium shadow-lg hover:shadow-green-500/30 transition-all"
+            class="min-h-[44px] sm:min-h-0 px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium shadow-lg hover:shadow-green-500/30 transition-all"
           >
             Next Level
           </button>
           <button
             @click="$emit('quit-game')"
-            class="px-6 py-2.5 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium shadow-lg hover:shadow-gray-500/30 transition-all"
+            class="min-h-[44px] sm:min-h-0 px-6 py-2.5 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium shadow-lg hover:shadow-gray-500/30 transition-all"
           >
             Quit Game
           </button>

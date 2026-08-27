@@ -64,7 +64,7 @@ const formatNumber = (num: number) => new Intl.NumberFormat().format(num || 0)
       <p class="text-slate-500 mb-6">{{ error }}</p>
       <button 
         @click="fetchAnalytics"
-        class="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition-colors flex items-center gap-2"
+        class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition-colors flex items-center gap-2"
       >
         <Icon icon="fluent:arrow-counterclockwise-24-filled" />
         ลองใหม่อีกครั้ง

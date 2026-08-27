@@ -338,7 +338,7 @@ async function saveProfile() {
         <button
           @click="saveProfile"
           :disabled="isLoading"
-          class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-lg hover:shadow-blue-500/30 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+          class="min-h-[44px] sm:min-h-0 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-lg hover:shadow-blue-500/30 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
         >
           <Icon v-if="isLoading" icon="svg-spinners:ring-resize" />
           <Icon v-else icon="fluent:save-24-regular" class="w-4 h-4" />

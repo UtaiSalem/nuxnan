@@ -693,7 +693,7 @@ watch(() => authStore.user, (user) => {
               <button
                 @click="handleEmptyDonor"
                 type="button"
-                class="absolute top-2 right-2 p-2 bg-white dark:bg-gray-700 rounded-full shadow hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-2 right-2 p-2 bg-white dark:bg-gray-700 rounded-full shadow hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                 title="เปลี่ยนสมาชิก"
               >
                 <Icon icon="mdi:close" class="w-4 h-4 text-red-500" />
@@ -722,7 +722,7 @@ watch(() => authStore.user, (user) => {
               
               <!-- Quick Select Chips -->
               <div class="flex flex-wrap gap-2">
-                <button
+                <button class="min-h-[44px] sm:min-h-0"
                   v-for="amount in quickSelectOptions"
                   :key="amount"
                   type="button"
@@ -739,7 +739,7 @@ watch(() => authStore.user, (user) => {
                  <button
                    v-if="!quickSelectOptions.includes(totalMoneySupport)"
                    type="button"
-                   class="px-3 py-1.5 rounded-lg text-sm font-medium border bg-purple-500 border-purple-500 text-white shadow-md"
+                   class="min-h-[44px] sm:min-h-0 px-3 py-1.5 rounded-lg text-sm font-medium border bg-purple-500 border-purple-500 text-white shadow-md"
                 >
                    {{ totalMoneySupport.toLocaleString() }}
                 </button>
@@ -874,7 +874,7 @@ watch(() => authStore.user, (user) => {
                 <button
                   @click="deleteImage"
                   type="button"
-                  class="absolute top-2 right-2 p-2 bg-white/90 dark:bg-gray-800/90 hover:bg-red-500 hover:text-white text-gray-700 rounded-full shadow-lg transition-all backdrop-blur-sm"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-2 right-2 p-2 bg-white/90 dark:bg-gray-800/90 hover:bg-red-500 hover:text-white text-gray-700 rounded-full shadow-lg transition-all backdrop-blur-sm"
                 >
                   <Icon icon="mdi:delete" class="w-5 h-5" />
                 </button>

@@ -4,7 +4,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <h2 class="text-xl font-semibold text-gray-900 dark:text-white">รายงานและวิเคราะห์</h2>
       <div class="flex flex-wrap gap-2">
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           v-for="section in sections"
           :key="section.id"
           @click="activeSection = section.id"
@@ -150,7 +150,7 @@
         <h3 class="text-lg font-medium text-gray-900 dark:text-white">รายงาน</h3>
         <button
           @click="showReportModal = true"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
         >
           <Icon icon="heroicons:plus" class="h-5 w-5" />
           <span class="hidden sm:inline">สร้างรายงาน</span>
@@ -182,13 +182,13 @@
             <div class="flex items-center gap-2">
               <button 
                 @click.stop="downloadReport(report, 'pdf')"
-                class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
+                class="min-h-[44px] sm:min-h-0 text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
               >
                 PDF
               </button>
               <button 
                 @click.stop="downloadReport(report, 'excel')"
-                class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200"
+                class="min-h-[44px] sm:min-h-0 text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200"
               >
                 Excel
               </button>
@@ -241,7 +241,7 @@
         </div>
         <button
           @click="loadAnalytics"
-          class="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
         >
           วิเคราะห์
         </button>
@@ -330,7 +330,7 @@
         <h3 class="text-lg font-medium text-gray-900 dark:text-white">ตัวชี้วัด (KPIs)</h3>
         <button
           @click="showKpiModal = true"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
         >
           <Icon icon="heroicons:plus" class="h-5 w-5" />
           <span class="hidden sm:inline">เพิ่ม KPI</span>

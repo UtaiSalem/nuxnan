@@ -158,7 +158,7 @@ onMounted(async () => {
         <button
           v-if="primaryAction.id === 'join-academy'"
           type="button"
-          class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-vikinger-purple px-4 py-2.5 text-sm font-semibold text-white hover:bg-vikinger-purple/90"
+          class="min-h-[44px] sm:min-h-0 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-vikinger-purple px-4 py-2.5 text-sm font-semibold text-white hover:bg-vikinger-purple/90"
           @click="emit('join')"
         >
           <Icon :icon="primaryAction.icon" class="h-4 w-4" />
@@ -168,7 +168,7 @@ onMounted(async () => {
         <button
           v-else-if="primaryAction.localTab"
           type="button"
-          class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-vikinger-purple px-4 py-2.5 text-sm font-semibold text-white hover:bg-vikinger-purple/90"
+          class="min-h-[44px] sm:min-h-0 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-vikinger-purple px-4 py-2.5 text-sm font-semibold text-white hover:bg-vikinger-purple/90"
           @click="activateItem(primaryAction.localTab)"
         >
           <Icon :icon="primaryAction.icon" class="h-4 w-4" />

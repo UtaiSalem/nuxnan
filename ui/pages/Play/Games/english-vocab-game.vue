@@ -317,7 +317,7 @@ onMounted(() => {
               Level
             </p>
             <div class="flex justify-center gap-2 flex-wrap">
-              <button
+              <button class="min-h-[44px] sm:min-h-0"
                 v-for="cfg in LEVEL_CONFIGS"
                 :key="cfg.level"
                 :disabled="isLevelLocked(cfg.level)"

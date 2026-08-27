@@ -179,7 +179,7 @@ onMounted(() => {
 
       <!-- Filter Tabs -->
       <div class="flex gap-2 border-b border-gray-700 pb-3">
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           v-for="filter in [
             { key: 'latest', label: 'ล่าสุด', icon: 'fluent:clock-24-regular' },
             { key: 'popular', label: 'ยอดนิยม', icon: 'fluent:arrow-trending-24-regular' },

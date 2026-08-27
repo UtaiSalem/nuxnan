@@ -295,7 +295,7 @@ onMounted(() => {
       
       <!-- Category Tabs -->
       <div class="p-4 flex gap-2 overflow-x-auto scrollbar-hide">
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           v-for="category in categories"
           :key="category.key"
           @click="selectedCategory = category.key"
@@ -500,7 +500,7 @@ onMounted(() => {
               <!-- Close Button -->
               <button
                 @click="closeBadgeModal"
-                class="absolute top-4 right-4 p-2 bg-black/30 rounded-full text-white hover:bg-black/50 transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-4 right-4 p-2 bg-black/30 rounded-full text-white hover:bg-black/50 transition-colors"
               >
                 <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
               </button>

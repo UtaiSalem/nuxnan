@@ -79,7 +79,7 @@ onBeforeUnmount(() => {
           <span class="font-bold text-gray-900 dark:text-white">{{ title }}</span>
           <button
             type="button"
-            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-vikinger-purple"
+            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-vikinger-purple"
             aria-label="ปิด"
             @click="close"
           >

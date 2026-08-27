@@ -163,11 +163,11 @@ const handleSubmit = async () => {
 
                 <div class="flex justify-end gap-3 pt-6 mt-4 border-t border-gray-100">
                     <button @click="emit('close')" :disabled="isSubmitting"
-                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-all disabled:opacity-50">
+                        class="min-h-[44px] sm:min-h-0 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-all disabled:opacity-50">
                         ยกเลิก
                     </button>
                     <button @click="handleSubmit" :disabled="isSubmitting"
-                        class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center gap-1.5">
+                        class="min-h-[44px] sm:min-h-0 px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center gap-1.5">
                         <Icon v-if="isSubmitting" icon="eos-icons:bubble-loading" class="w-4 h-4" />
                         <span>{{ isSubmitting ? 'กำลังส่ง...' : `ส่งคำร้อง ${students.length} คน` }}</span>
                     </button>

@@ -20,7 +20,7 @@
         <button 
           v-for="tab in tabs" 
           :key="tab.value"
-          class="tab-btn px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap"
+          class="min-h-[44px] sm:min-h-0 tab-btn px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap"
           :class="activeTab === tab.value 
             ? 'bg-primary-500 text-white shadow-md' 
             : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'"
@@ -107,7 +107,7 @@
           
           <!-- Redeem Button -->
           <button 
-            class="redeem-btn w-full py-2 rounded-xl font-medium transition-all"
+            class="min-h-[44px] sm:min-h-0 redeem-btn w-full py-2 rounded-xl font-medium transition-all"
             :class="canRedeem(reward)
               ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white hover:shadow-md'
               : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'"
@@ -226,13 +226,13 @@
             
             <div class="flex gap-3">
               <button 
-                class="flex-1 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                class="min-h-[44px] sm:min-h-0 flex-1 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                 @click="showConfirmModal = false"
               >
                 ยกเลิก
               </button>
               <button 
-                class="flex-1 py-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl font-medium hover:shadow-md transition-all"
+                class="min-h-[44px] sm:min-h-0 flex-1 py-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl font-medium hover:shadow-md transition-all"
                 :disabled="isRedeeming"
                 @click="confirmRedeem"
               >

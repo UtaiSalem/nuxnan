@@ -307,7 +307,7 @@ const formatNumber = (num: number): string => {
           
           <!-- Quick Amounts -->
           <div class="flex flex-wrap gap-2 mt-3">
-            <button
+            <button class="min-h-[44px] sm:min-h-0"
               v-for="quickAmount in quickAmounts"
               :key="quickAmount"
               @click="amount = quickAmount"
@@ -351,7 +351,7 @@ const formatNumber = (num: number): string => {
           
           <!-- Quick Quantities -->
           <div class="flex flex-wrap gap-2 mt-3">
-            <button
+            <button class="min-h-[44px] sm:min-h-0"
               v-for="q in [1, 5, 10, 20, 50]"
               :key="q"
               @click="quantity = q"
@@ -407,7 +407,7 @@ const formatNumber = (num: number): string => {
             วันหมดอายุ (วัน) - ไม่บังคับ
           </label>
           <div class="flex gap-2">
-            <button
+            <button class="min-h-[44px] sm:min-h-0"
               v-for="days in [null, 7, 30, 90, 365]"
               :key="days ?? 'none'"
               @click="expiresInDays = days"

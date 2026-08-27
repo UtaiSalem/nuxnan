@@ -42,7 +42,7 @@
       <div class="flex gap-2 bg-white/10 backdrop-blur-md rounded-xl p-2 border border-white/20 shadow-xl">
         <button
           @click="setTab('login')"
-          class="flex-1 px-6 sm:px-10 py-2.5 rounded-lg font-bold transition-all duration-300 text-sm"
+          class="min-h-[44px] sm:min-h-0 flex-1 px-6 sm:px-10 py-2.5 rounded-lg font-bold transition-all duration-300 text-sm"
           :class="
             activeTab === 'login'
               ? 'bg-gradient-to-r from-vikinger-purple to-vikinger-blue text-white shadow-lg scale-100'
@@ -53,7 +53,7 @@
         </button>
         <button
           @click="setTab('register')"
-          class="flex-1 px-6 sm:px-10 py-2.5 rounded-lg font-bold transition-all duration-300 text-sm"
+          class="min-h-[44px] sm:min-h-0 flex-1 px-6 sm:px-10 py-2.5 rounded-lg font-bold transition-all duration-300 text-sm"
           :class="
             activeTab === 'register'
               ? 'bg-gradient-to-r from-vikinger-cyan to-vikinger-purple text-white shadow-lg scale-100'

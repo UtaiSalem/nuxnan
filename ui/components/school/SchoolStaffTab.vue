@@ -4,7 +4,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <h2 class="text-xl font-semibold text-gray-900 dark:text-white">ระบบบุคลากร</h2>
       <div class="flex flex-wrap gap-2">
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           v-for="section in sections"
           :key="section.id"
           @click="activeSection = section.id"
@@ -26,7 +26,7 @@
         <h3 class="text-lg font-medium text-gray-900 dark:text-white">รายชื่อบุคลากร</h3>
         <button
           @click="showStaffModal = true"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
         >
           <Icon icon="heroicons:plus" class="h-5 w-5" />
           <span class="hidden sm:inline">เพิ่มบุคลากร</span>
@@ -90,7 +90,7 @@
           />
           <button
             @click="recordCheckIn"
-            class="inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
           >
             <Icon icon="heroicons:clock" class="h-5 w-5" />
             <span class="hidden sm:inline">ลงเวลาเข้างาน</span>
@@ -155,7 +155,7 @@
           </select>
           <button
             @click="showLeaveModal = true"
-            class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
           >
             <Icon icon="heroicons:plus" class="h-5 w-5" />
             <span class="hidden sm:inline">ยื่นคำขอลา</span>
@@ -200,10 +200,10 @@
           <p v-if="leave.reason" class="mt-2 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{{ leave.reason }}</p>
           
           <div v-if="leave.status === 'pending'" class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 flex gap-2">
-            <button @click="approveLeaveItem(leave)" class="flex-1 px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm">
+            <button @click="approveLeaveItem(leave)" class="min-h-[44px] sm:min-h-0 flex-1 px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm">
               อนุมัติ
             </button>
-            <button @click="rejectLeaveItem(leave)" class="flex-1 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm">
+            <button @click="rejectLeaveItem(leave)" class="min-h-[44px] sm:min-h-0 flex-1 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm">
               ปฏิเสธ
             </button>
           </div>
@@ -226,7 +226,7 @@
           </select>
           <button
             @click="processPayroll"
-            class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
           >
             <Icon icon="heroicons:banknotes" class="h-5 w-5" />
             <span class="hidden sm:inline">ประมวลผล</span>
@@ -321,10 +321,10 @@
           </div>
         </div>
         <div class="flex justify-end gap-3 pt-4">
-          <button type="button" @click="showStaffModal = false" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+          <button type="button" @click="showStaffModal = false" class="min-h-[44px] sm:min-h-0 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
             ยกเลิก
           </button>
-          <button type="submit" :disabled="savingStaff" class="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
+          <button type="submit" :disabled="savingStaff" class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
             {{ savingStaff ? 'กำลังบันทึก...' : 'บันทึก' }}
           </button>
         </div>
@@ -355,10 +355,10 @@
           <textarea v-model="leaveForm.reason" rows="3" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"></textarea>
         </div>
         <div class="flex justify-end gap-3 pt-4">
-          <button type="button" @click="showLeaveModal = false" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+          <button type="button" @click="showLeaveModal = false" class="min-h-[44px] sm:min-h-0 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
             ยกเลิก
           </button>
-          <button type="submit" :disabled="submittingLeave" class="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
+          <button type="submit" :disabled="submittingLeave" class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
             {{ submittingLeave ? 'กำลังส่ง...' : 'ยื่นคำขอ' }}
           </button>
         </div>

@@ -59,7 +59,7 @@ const submit = () => {
           <textarea v-model="reasonDetail" rows="3" :placeholder="detailRequired ? 'โปรดระบุเหตุผล...' : 'เว้นว่างได้ ถ้าไม่มีรายละเอียดเพิ่มเติม'" class="mt-1 w-full rounded-lg border p-2.5 dark:bg-gray-900" />
         </label>
       </div>
-      <div class="mt-6 flex justify-end gap-2"><button class="rounded-lg border px-4 py-2 dark:text-gray-200" @click="emit('close')">ยกเลิก</button><button class="rounded-lg bg-primary-600 px-4 py-2 text-white disabled:opacity-50" :disabled="detailRequired && !reasonDetail.trim()" @click="submit">ยืนยันส่งคำร้อง</button></div>
+      <div class="mt-6 flex justify-end gap-2"><button class="min-h-[44px] sm:min-h-0 rounded-lg border px-4 py-2 dark:text-gray-200" @click="emit('close')">ยกเลิก</button><button class="min-h-[44px] sm:min-h-0 rounded-lg bg-primary-600 px-4 py-2 text-white disabled:opacity-50" :disabled="detailRequired && !reasonDetail.trim()" @click="submit">ยืนยันส่งคำร้อง</button></div>
     </div>
   </div></Teleport>
 </template>

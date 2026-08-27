@@ -4,7 +4,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <h2 class="text-xl font-semibold text-gray-900 dark:text-white">ระบบวิชาการ</h2>
       <div class="flex flex-wrap gap-2">
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           v-for="section in sections"
           :key="section.id"
           @click="activeSection = section.id"
@@ -26,7 +26,7 @@
         <h3 class="text-lg font-medium text-gray-900 dark:text-white">ห้องเรียน</h3>
         <button
           @click="showClassroomModal = true"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
         >
           <Icon icon="heroicons:plus" class="h-5 w-5" />
           <span class="hidden sm:inline">เพิ่มห้องเรียน</span>
@@ -65,10 +65,10 @@
             </p>
           </div>
           <div class="mt-4 flex gap-2">
-            <button @click="editClassroom(classroom)" class="flex-1 py-1.5 text-sm text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors">
+            <button @click="editClassroom(classroom)" class="min-h-[44px] sm:min-h-0 flex-1 py-1.5 text-sm text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors">
               แก้ไข
             </button>
-            <button @click="confirmDeleteClassroom(classroom)" class="flex-1 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+            <button @click="confirmDeleteClassroom(classroom)" class="min-h-[44px] sm:min-h-0 flex-1 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
               ลบ
             </button>
           </div>
@@ -88,7 +88,7 @@
         <h3 class="text-lg font-medium text-gray-900 dark:text-white">รายวิชา</h3>
         <button
           @click="showSubjectModal = true"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
         >
           <Icon icon="heroicons:plus" class="h-5 w-5" />
           <span class="hidden sm:inline">เพิ่มรายวิชา</span>
@@ -149,7 +149,7 @@
         <h3 class="text-lg font-medium text-gray-900 dark:text-white">ตารางเรียน</h3>
         <button
           @click="showScheduleModal = true"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
         >
           <Icon icon="heroicons:plus" class="h-5 w-5" />
           <span class="hidden sm:inline">เพิ่มตารางเรียน</span>
@@ -210,10 +210,10 @@
           <input v-model.number="classroomForm.capacity" type="number" min="1" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" />
         </div>
         <div class="flex justify-end gap-3 pt-4">
-          <button type="button" @click="showClassroomModal = false" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+          <button type="button" @click="showClassroomModal = false" class="min-h-[44px] sm:min-h-0 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
             ยกเลิก
           </button>
-          <button type="submit" :disabled="savingClassroom" class="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
+          <button type="submit" :disabled="savingClassroom" class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
             {{ savingClassroom ? 'กำลังบันทึก...' : 'บันทึก' }}
           </button>
         </div>
@@ -246,10 +246,10 @@
           </div>
         </div>
         <div class="flex justify-end gap-3 pt-4">
-          <button type="button" @click="showSubjectModal = false" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+          <button type="button" @click="showSubjectModal = false" class="min-h-[44px] sm:min-h-0 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
             ยกเลิก
           </button>
-          <button type="submit" :disabled="savingSubject" class="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
+          <button type="submit" :disabled="savingSubject" class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
             {{ savingSubject ? 'กำลังบันทึก...' : 'บันทึก' }}
           </button>
         </div>

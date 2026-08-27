@@ -296,17 +296,17 @@ const studentPrefixName = (prefix) => {
                     <div v-if="isActionMenuOpen"
                         class="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
                         <button v-if="canManage" @click="isActionMenuOpen = false; emit('transfer', studentInfo)"
-                            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 text-left">
+                            class="min-h-[44px] sm:min-h-0 w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 text-left">
                             <Icon icon="heroicons:arrow-right-circle" class="w-4 h-4 text-blue-600" />
                             ย้ายห้อง
                         </button>
                         <button v-if="canManage" @click="isActionMenuOpen = false; emit('remove', studentInfo)"
-                            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 text-left">
+                            class="min-h-[44px] sm:min-h-0 w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 text-left">
                             <Icon icon="heroicons:user-minus" class="w-4 h-4" />
                             นำออกจากห้อง
                         </button>
                         <button v-if="canRequest && !activeRequest" @click="isActionMenuOpen = false; emit('request', studentInfo)"
-                            class="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 text-left">
+                            class="min-h-[44px] sm:min-h-0 w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 text-left">
                             <Icon icon="heroicons:credit-card" class="w-4.5 h-4.5 text-blue-600" />
                             ขอทำบัตรใหม่
                         </button>
@@ -559,17 +559,17 @@ const studentPrefixName = (prefix) => {
 
                 <template v-else>
                     <button v-if="canManage" @click="emit('transfer', studentInfo)"
-                        class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-blue-700 bg-white border border-blue-200 rounded-lg hover:bg-blue-50 transition shadow-sm">
+                        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-blue-700 bg-white border border-blue-200 rounded-lg hover:bg-blue-50 transition shadow-sm">
                         <Icon icon="heroicons:arrow-right-circle" class="w-4 h-4" />
                         ย้ายห้อง
                     </button>
                     <button v-if="canManage" @click="emit('remove', studentInfo)"
-                        class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition shadow-sm">
+                        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition shadow-sm">
                         <Icon icon="heroicons:user-minus" class="w-4 h-4" />
                         นำออกจากห้อง
                     </button>
                     <button v-if="canRequest && !activeRequest" @click="emit('request', studentInfo)"
-                        class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition shadow-sm">
+                        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition shadow-sm">
                         <Icon icon="heroicons:credit-card" class="w-4 h-4" />
                         ขอทำบัตรใหม่
                     </button>

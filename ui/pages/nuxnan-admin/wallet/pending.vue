@@ -562,7 +562,7 @@ onMounted(() => {
 
       <button
         @click="fetchPendingRequests"
-        class="px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-300 transition-colors inline-flex items-center gap-2"
+        class="min-h-[44px] sm:min-h-0 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-300 transition-colors inline-flex items-center gap-2"
       >
         <Icon icon="fluent:arrow-sync-24-regular" class="w-5 h-5" />
         รีเฟรช
@@ -572,7 +572,7 @@ onMounted(() => {
     <!-- Tabs -->
     <div class="bg-white dark:bg-slate-800 rounded-2xl p-1 shadow-hopeui border border-slate-100 dark:border-slate-700">
       <div class="flex flex-wrap md:flex-nowrap gap-1">
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           @click="activeTab = 'withdrawals'"
           :class="[
             'flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors whitespace-nowrap',
@@ -583,7 +583,7 @@ onMounted(() => {
         >
           ถอนเงิน: รอดำเนินการ ({{ totalPendingWithdrawals }})
         </button>
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           @click="activeTab = 'awaiting_payout'"
           :class="[
             'flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors whitespace-nowrap',
@@ -594,7 +594,7 @@ onMounted(() => {
         >
           ถอนเงิน: รอโอน/แนบสลิป ({{ totalAwaitingPayout }})
         </button>
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           @click="activeTab = 'deposits'"
           :class="[
             'flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors whitespace-nowrap',
@@ -755,14 +755,14 @@ onMounted(() => {
             <div v-if="activeTab === 'deposits'" class="flex gap-2 w-full lg:w-auto mt-2 lg:mt-0 justify-end">
               <button
                 @click.stop="openApproveModal(request)"
-                class="flex-1 lg:flex-initial px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors inline-flex items-center justify-center gap-2 text-sm font-medium"
+                class="min-h-[44px] sm:min-h-0 flex-1 lg:flex-initial px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors inline-flex items-center justify-center gap-2 text-sm font-medium"
               >
                 <Icon icon="fluent:checkmark-24-regular" class="w-4 h-4" />
                 <span>อนุมัติ</span>
               </button>
               <button
                 @click.stop="openRejectModal(request)"
-                class="flex-1 lg:flex-initial px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors inline-flex items-center justify-center gap-2 text-sm font-medium"
+                class="min-h-[44px] sm:min-h-0 flex-1 lg:flex-initial px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors inline-flex items-center justify-center gap-2 text-sm font-medium"
               >
                 <Icon icon="fluent:dismiss-24-regular" class="w-4 h-4" />
                 <span>ปฏิเสธ</span>
@@ -771,7 +771,7 @@ onMounted(() => {
 
             <div v-else class="flex gap-2 w-full lg:w-auto justify-end">
               <button
-                class="flex-1 lg:flex-initial px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-xl transition-colors inline-flex items-center justify-center gap-2 text-sm font-medium"
+                class="min-h-[44px] sm:min-h-0 flex-1 lg:flex-initial px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-xl transition-colors inline-flex items-center justify-center gap-2 text-sm font-medium"
               >
                 <Icon icon="fluent:eye-24-regular" class="w-4 h-4" />
                 <span>ดูรายละเอียด</span>
@@ -808,7 +808,7 @@ onMounted(() => {
               <h3 class="text-lg font-bold text-slate-800 dark:text-white">รายละเอียดคำขอถอนเงิน</h3>
               <p class="text-xs text-slate-500 mt-0.5">รายการ ID: #{{ selectedRequest?.id }}</p>
             </div>
-            <button @click="showDetailsModal = false" class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+            <button @click="showDetailsModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
               <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
             </button>
           </div>
@@ -995,14 +995,14 @@ onMounted(() => {
               <button
                 @click="openPaidModal(selectedRequestDetails)"
                 :disabled="!canCurrentAdminApprove"
-                class="px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 shadow-sm"
+                class="min-h-[44px] sm:min-h-0 px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 shadow-sm"
               >
                 <Icon icon="fluent:receipt-play-24-regular" class="w-4 h-4" />
                 อนุมัติและบันทึกการโอน
               </button>
               <button
                 @click="openRejectModal(selectedRequestDetails)"
-                class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 shadow-sm"
+                class="min-h-[44px] sm:min-h-0 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 shadow-sm"
               >
                 <Icon icon="fluent:dismiss-24-regular" class="w-4 h-4" />
                 ปฏิเสธคำขอ
@@ -1015,14 +1015,14 @@ onMounted(() => {
               <button
                 @click="openPaidModal(selectedRequestDetails)"
                 :disabled="isMakerCheckerRequired && isCurrentAdminReviewer"
-                class="px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 shadow-sm"
+                class="min-h-[44px] sm:min-h-0 px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 shadow-sm"
               >
                 <Icon icon="fluent:receipt-play-24-regular" class="w-4 h-4" />
                 โอนเงินเสร็จสิ้น & แนบสลิป
               </button>
               <button
                 @click="openFailedModal(selectedRequestDetails)"
-                class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 shadow-sm"
+                class="min-h-[44px] sm:min-h-0 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 shadow-sm"
               >
                 <Icon icon="fluent:error-circle-24-regular" class="w-4 h-4" />
                 ทำรายการโอนล้มเหลว
@@ -1031,7 +1031,7 @@ onMounted(() => {
 
             <button
               @click="showDetailsModal = false"
-              class="px-5 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-xl transition-colors font-medium text-sm"
+              class="min-h-[44px] sm:min-h-0 px-5 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-xl transition-colors font-medium text-sm"
             >
               ปิดหน้าต่าง
             </button>
@@ -1086,7 +1086,7 @@ onMounted(() => {
             <button
               @click="approveRequest"
               :disabled="isProcessing"
-              class="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-xl transition-colors font-medium"
+              class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-xl transition-colors font-medium"
             >
               <span v-if="isProcessing" class="flex items-center justify-center gap-2">
                  <Icon icon="svg-spinners:ring-resize" class="w-5 h-5" /> กำลังบันทึก...
@@ -1095,7 +1095,7 @@ onMounted(() => {
             </button>
             <button
               @click="showApproveModal = false"
-              class="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-xl transition-colors font-medium"
+              class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-xl transition-colors font-medium"
             >
               ยกเลิก
             </button>
@@ -1147,7 +1147,7 @@ onMounted(() => {
             <button
               @click="rejectRequest"
               :disabled="isProcessing || !rejectReason.trim()"
-              class="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-slate-300 text-white rounded-xl transition-colors font-medium"
+              class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-slate-300 text-white rounded-xl transition-colors font-medium"
             >
               <span v-if="isProcessing" class="flex items-center justify-center gap-2">
                  <Icon icon="svg-spinners:ring-resize" class="w-5 h-5" /> กำลังดำเนินการ...
@@ -1156,7 +1156,7 @@ onMounted(() => {
             </button>
             <button
               @click="showRejectModal = false"
-              class="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-xl transition-colors font-medium"
+              class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-xl transition-colors font-medium"
             >
               ยกเลิก
             </button>
@@ -1253,7 +1253,7 @@ onMounted(() => {
             <button
               @click="submitPaid"
               :disabled="isPaidProcessing || !proofFile"
-              class="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 disabled:text-slate-500 text-white rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 shadow-sm"
+              class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 disabled:text-slate-500 text-white rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2 shadow-sm"
             >
               <span v-if="isPaidProcessing" class="flex items-center justify-center gap-2">
                  <Icon icon="svg-spinners:ring-resize" class="w-5 h-5" /> กำลังส่งข้อมูล...
@@ -1262,7 +1262,7 @@ onMounted(() => {
             </button>
             <button
               @click="showPaidModal = false"
-              class="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-xl transition-colors font-medium text-sm"
+              class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-xl transition-colors font-medium text-sm"
             >
               ยกเลิก
             </button>
@@ -1306,7 +1306,7 @@ onMounted(() => {
             <button
               @click="submitFailed"
               :disabled="isProcessing || !failedReason.trim()"
-              class="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-slate-300 text-white rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2"
+              class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-slate-300 text-white rounded-xl transition-colors font-medium text-sm flex items-center justify-center gap-2"
             >
               <span v-if="isProcessing" class="flex items-center justify-center gap-2">
                  <Icon icon="svg-spinners:ring-resize" class="w-5 h-5" /> กำลังบันทึก...
@@ -1315,7 +1315,7 @@ onMounted(() => {
             </button>
             <button
               @click="showFailedModal = false"
-              class="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-xl transition-colors font-medium text-sm"
+              class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-xl transition-colors font-medium text-sm"
             >
               ยกเลิก
             </button>
@@ -1331,7 +1331,7 @@ onMounted(() => {
         <div class="relative w-full max-w-3xl max-h-[90vh] flex flex-col items-center justify-center">
            <button
               @click="showSlipModal = false"
-              class="absolute -top-12 right-0 p-2 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors backdrop-blur-sm"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute -top-12 right-0 p-2 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors backdrop-blur-sm"
            >
               <Icon icon="fluent:dismiss-24-filled" class="w-6 h-6" />
            </button>

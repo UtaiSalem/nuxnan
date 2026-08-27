@@ -4,7 +4,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <h2 class="text-xl font-semibold text-gray-900 dark:text-white">ระบบห้องสมุดดิจิทัล</h2>
       <div class="flex gap-2">
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           v-for="section in sections"
           :key="section.id"
           @click="activeSection = section.id"
@@ -35,7 +35,7 @@
         </div>
         <button
           @click="showBookModal = true"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
         >
           <Icon icon="heroicons:plus" class="h-5 w-5" />
           <span>เพิ่มหนังสือ</span>
@@ -126,7 +126,7 @@
                 <button 
                   v-if="item.status === 'borrowed' || item.status === 'overdue'"
                   @click="processReturn(item)"
-                  class="px-3 py-1 bg-green-500 text-white text-[10px] font-black rounded-lg hover:bg-green-600 transition-colors uppercase"
+                  class="min-h-[44px] sm:min-h-0 px-3 py-1 bg-green-500 text-white text-[10px] font-black rounded-lg hover:bg-green-600 transition-colors uppercase"
                 >
                   คืนหนังสือ
                 </button>
