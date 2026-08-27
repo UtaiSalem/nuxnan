@@ -1,5 +1,82 @@
 # Work Log — nuxnan project
 
+## 2026-08-28 — RichTextViewer: ตารางล้นจอ + XSS · ปิด 2 TODO ของเมื่อวาน (push แล้ว)
+
+### สถานะ: **ปิดครบทั้ง 2 เรื่อง · push แล้ว** — `55212b36..2fbaf4ce`
+
+ต่อจาก TODO ที่ค้างไว้ในรายการ 2026-08-27 ปรากฏว่าทั้งสองเรื่องซ่อนปัญหาที่ลึกกว่าที่เขียนไว้
+
+### 🔴 F1 — หน้าบทเรียนใช้ RichTextViewer คนละตัวกับที่มีโค้ดจัดการตาราง
+
+มี 2 ไฟล์ชื่อเดียวกัน: `components/Common/RichTextViewer.vue` (มีโค้ดตาราง) กับ
+`components/RichTextViewer.vue` (ไม่มีเลย) — `LessonPost` / `TopicAccordion` / `AssignmentCard` /
+`LessonAssignmentSection` / `AssignmentGradingModal` **import ตัวหลัง**
+⇒ ตารางในบทเรียนดันทั้งหน้าให้เลื่อนแนวนอนจริง วัดที่ 375px: `table 544px ในกล่อง 309px → page scrollWidth 577 vs clientWidth 375`
+
+**ซ้อนอีกชั้น: `<style scoped>` ของไฟล์นั้นเป็นโค้ดตายทั้งบล็อก (~90 บรรทัด)**
+`:deep(.prose table)` คอมไพล์เป็น `[data-v-x] .prose table` ⇒ ต้องการ `.prose` ที่เป็น**ลูก**ของ root
+แต่ root เองคือ `.prose` ⇒ ไม่แมตช์อะไรเลย (ที่หน้าตาโอเคทุกวันนี้มาจาก plugin typography ล้วน ๆ)
+ยืนยันด้วย `compileStyle()` จาก @vue/compiler-sfc ไม่ใช่เดา
+
+**⚠️ วิธีที่ดูเหมือนถูกแต่ผิด:** `table { display:block; width:100%; overflow-x:auto }`
+(วิธีที่ `Common/RichTextViewer` ใช้อยู่เดิม) — ตารางถูกบีบเท่ากล่อง หัวคอลัมน์ไทยแตก 3–4 บรรทัด
+วัดได้ `th` สูง **110px** ⇒ กลายเป็นบั๊กเดียวกับที่เพิ่งแก้ไปเมื่อวาน
+
+**วิธีที่ใช้จริง:** ห่อ `<table>` ด้วย `.rtv-table-scroll` แล้วให้ตารางกว้างตามเนื้อหา
+(`width:max-content; min-width:100%`) ⇒ `th` เหลือ 41px (1 บรรทัด) · กล่องเลื่อนเอง · ทั้งหน้าไม่เลื่อน
+ตารางแคบ 2 คอลัมน์ยังยืดเต็มกล่องเหมือนเดิม ไม่มีสกอลล์
+
+### 🔴 F2 — DOMPurify ตอนไม่มี DOM คืนค่าเดิมทั้งก้อน
+
+`components/RichTextViewer.vue` ยัดเนื้อหาด้วย `v-html` โดยไม่ sanitize เลย (คอมเมนต์ในไฟล์เขียนเองว่า
+"in production, use a library like DOMPurify") — แต่พอจะแก้ด้วยการเรียก `sanitizeHtml` เฉย ๆ กลับเจอว่า
+
+```
+// dompurify/dist/purify.cjs.js
+if (!DOMPurify.isSupported) { return dirty; }
+```
+
+⇒ ตอน SSR/Nitro (ไม่มี window) มัน **คืน HTML อันตรายกลับมาทั้งก้อน**
+⇒ `Common/RichTextViewer` ที่เรียก `sanitizeHtml` อยู่แล้วก็มีช่องนี้มาตลอดเหมือนกัน
+
+**แก้:** เพิ่ม `stripDangerousMarkup()` ใน `useRichText` เป็นด่านสำรองเมื่อ `!DOMPurify.isSupported`
++ เพิ่ม `FORBID_TAGS: ['form','style']` เพราะเทสต์เจอว่า DOMPurify ตัด `action="javascript:"` ให้
+แต่ **ปล่อย `<form>` ค้างไว้** (ทำฟอร์มล็อกอินปลอมซ้อนในบทเรียนได้)
+
+⚠️ **ห้ามใส่ `input` / `label` ลง FORBID_TAGS** — TipTap task list ใช้ `<input type="checkbox">` จริง จะพัง
+
+### commits (push แล้วทั้งคู่)
+
+- `f3cd0d2d` fix(ui): ตารางกว้างเลื่อนในกล่องตัวเอง — `useRichText.ts` (+`wrapTablesForScroll`), `RichTextViewer.vue`, `Common/RichTextViewer.vue`
+- `2fbaf4ce` fix(security): sanitize `RichTextViewer` + ปิดช่อง SSR — `useRichText.ts`, `RichTextViewer.vue`
+
+### วิธีตรวจที่ใช้ (ทำซ้ำได้ ไม่ต้อง login)
+
+1. **CSS/layout:** harness HTML เสิร์ฟผ่าน WAMP (`C:\wamp64\www\_claude_scratch\` สร้าง–ลบทุกครั้ง)
+   วัดด้วย `getBoundingClientRect()` + `documentElement.scrollWidth === clientWidth`
+2. **ด่านสำรอง SSR:** รันใน Node โดย **ดึงตัวฟังก์ชันออกมาจากไฟล์จริง** ด้วย regex + `new Function`
+   (ไม่ก๊อปโค้ดมาเทสต์ซ้ำ จะได้ไม่หลอกตัวเอง) — 10/10 PASS และเนื้อหาปกติไม่ถูกแตะ
+3. **pipeline ฝั่งเบราว์เซอร์:** ก๊อป `node_modules/dompurify/dist/purify.min.js` ไปเสิร์ฟคู่กับ harness
+   ยิง payload 11 แบบเข้า DOM จริงแล้วนับว่ามีอันไหนทำงานไหม — 18/18 PASS ไม่มีตัวไหนทำงาน
+   และของที่ต้องรอด (ตาราง, YouTube iframe + sandbox, TipTap task list, `target=_blank`, รูป, ไทย) รอดครบ
+4. **selector ตาย/ไม่ตาย:** `compileStyle()` จาก @vue/compiler-sfc พิมพ์ selector ที่คอมไพล์จริงออกมาดู
+
+### งานที่ค้าง (TODO ต่อ)
+
+- [ ] **เปิดหน้าจริงบนมือถือยืนยัน** — งานสองวันนี้ตรวจผ่าน harness ล้วน ๆ (เข้าคอร์สจริงไม่ได้เพราะต้อง login)
+- [ ] ปุ่มเล็กที่ยังต่ำกว่า 44px: `StepGuardian.vue` ปุ่มลบช่องทางติดต่อ (`p-1` = 24px), `CreatePollModal.vue` / `EditPollModal.vue` ปุ่มลบตัวเลือก — รอบที่แล้วแตะแค่ `flex-shrink-0` ไม่ได้ขยายขนาด
+- [ ] `components/RichTextViewer.vue` มี `<style scoped>` ~90 บรรทัดที่เป็นโค้ดตาย (`:deep(.prose ...)`) — จะลบทิ้งหรือแก้ให้ทำงานก็ได้ แต่ **ถ้าแก้ให้ทำงานหน้าตาจะเปลี่ยน** (h1/h2/table จะโดน override จาก typography)
+- [ ] ถ้าอยากได้ sanitize ระดับเดียวกันบนเซิร์ฟเวอร์จริง ต้องเพิ่ม dependency `isomorphic-dompurify` (ลาก jsdom มาด้วย) — ยังไม่ทำเพราะเป็นการตัดสินใจเรื่อง dependency
+- [ ] `npm run build` ผู้ใช้รันเอง — ยังไม่ได้รันตลอดสองวันนี้ (ตรวจแค่ SFC compile + `tsc --noEmit` บน composable)
+
+### Branch / Git State
+
+- Branch: `main`
+- Uncommitted: ไม่มี (ยกเว้น worklog นี้)
+- Push: **pushed** — `origin/main` = `2fbaf4ce`
+
+---
+
 ## 2026-08-27 (ต่อ) — งานเร่งด่วน: หน้า `/Learn/Courses/16/lessons` บนจอเล็ก · แก้ 31 ไฟล์ 3 commits (push แล้ว)
 
 ### สถานะ: **ปิดครบทุกข้อที่ผู้ใช้ชี้ · push ขึ้น origin/main แล้ว** — `ceeeacea..467441d7`
