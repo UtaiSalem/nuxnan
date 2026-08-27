@@ -1,5 +1,60 @@
 # Work Log — nuxnan project
 
+## 2026-08-27 (ต่อ) — งานเร่งด่วน: หน้า `/Learn/Courses/16/lessons` บนจอเล็ก · แก้ 31 ไฟล์ 3 commits (push แล้ว)
+
+### สถานะ: **ปิดครบทุกข้อที่ผู้ใช้ชี้ · push ขึ้น origin/main แล้ว** — `ceeeacea..467441d7`
+
+ผู้ใช้ส่งภาพหน้าจอมาทีละจุด 4 รอบ ทุกจุดแก้แล้วและวัดผลจริงในเบราว์เซอร์ทุกครั้ง
+
+| อาการที่ผู้ใช้ชี้ | สาเหตุจริง | สถานะ |
+|---|---|---|
+| แท็บ "แบบทดสอบ" แตกเป็นตัวอักษรแนวตั้ง | 3 แท็บ + ปุ่ม 5 อันเรียง `flex-1` แถวเดียวโดยไม่มี `whitespace-nowrap`/`min-w-0` — ไทยไม่มีช่องว่างจึงถูกบีบแตก | ✅ |
+| ทำไมไม่โชว์แค่ไอคอน | (ผู้ใช้เสนอเอง) เดิมผมเลี่ยงเพราะกติกา "ห้าม `hidden` ซ่อนข้อมูลบนมือถือ" → ตกลงว่าไอคอนไลก์/แชร์สื่อความหมายเองได้ | ✅ ใส่ `hidden sm:inline` + `title`/`aria-label` |
+| ปุ่มขยายไซด์เมนูใหญ่บังเนื้อหา | `layouts/main.vue` handle ซ้าย/ขวา `p-3` = 44×44 ทึบ 100% กลางจอพอดี | ✅ เหลือ 28×44 opacity-60 |
+| ปุ่มส่งความคิดเห็นล้นออกนอกกล่อง | **`<input>` มี intrinsic width จาก `size=20` (~204px) + flex item มี `min-width:auto`** ⇒ `flex-1` ย่อไม่ได้ ดันปุ่มทะลุขอบ (วัดได้ล้น 31px) | ✅ `min-w-0` ที่ input + `flex-shrink-0` ที่ปุ่ม |
+
+### 3 commits ที่ push แล้ว
+
+- `9ad64062` fix(learn): lessons page ที่ 375px — `LessonInteractionTabs.vue`, `LessonPost.vue`, `TopicAccordion.vue`, `pages/Learn/Courses/[id]/lessons.vue`
+- `0b85d518` fix(ui): sidebar handle + ฟอร์มคอมเมนต์ฟีด — `layouts/main.vue`, `CourseFeedPost.vue`, `play/feed/FeedPost.vue`, `play/post/PostCard.vue`
+- `467441d7` fix(ui): กวาด `min-w-0` ทั้งแอป — 23 ไฟล์ (26 จุด)
+
+### Context สำคัญ
+
+1. **รูทเคสของบั๊ก "ปุ่มล้น" ใช้ซ้ำได้ทั้งแอป:** `flex-1` บน `<input>` **ไม่พอ** ต้องมี `min-w-0` ด้วยเสมอ
+   เพราะ flex item ตั้งต้นที่ `min-width:auto` และ input มีความกว้างในตัวจาก attribute `size`
+   ⇒ เขียนฟอร์มใหม่ทุกครั้งให้ใส่คู่กัน: input = `min-w-0 flex-1`, ปุ่มข้าง ๆ = `flex-shrink-0`
+2. **commit `467441d7` เป็นการกันไว้ก่อน ไม่ใช่บั๊กที่เห็นวันนี้** — วัดแล้ว 26 จุดนั้นที่ 375px เต็มจอ *ยังไม่ล้น*
+   (พื้นที่พอดีกับ ~204px ของ input) แต่พอบีบ container เหลือ 260px ของเดิมล้นจริง (QR 34px, invite link 26px)
+   ⇒ ถ้าเจอ regression แปลก ๆ ในฟอร์มไหน ให้รู้ว่า commit นี้แตะแค่ 2 token คือ `min-w-0` / `flex-shrink-0`
+3. **`TopicAccordion` เลิกซ่อน badge เวลาอ่านบนมือถือแล้ว** (เดิม `hidden md:flex`) — ตอนนี้ต้องพึ่ง `min-w-0 flex-1`
+   ที่ `<h4>` ชื่อหัวข้อเพื่อไม่ให้แถวล้น **อย่าถอด `min-w-0` ออกจาก h4 นั้น**
+4. **agy ทำงาน 2 shard ขนานผ่าน ทั้งคู่ตรงสเปค** (95 insert / 95 delete พอดี ไม่มี deletion เกิน) แต่ **ทำตก 1 ข้อ**
+   คือ class ของ `<h4>` ใน `TopicAccordion` (ข้อ 2.3) — ยืนยันอีกครั้งว่าต้องอ่าน diff เองทุกข้อ ไม่เชื่อรายงาน
+
+### วิธีตรวจที่ใช้รอบนี้ (ทำซ้ำได้ ไม่ต้อง login)
+
+หน้าจริงต้อง login เข้าคอร์ส เลยตรวจด้วย **harness**: ก๊อป class string สุดท้ายจากไฟล์จริงมาวางใน HTML เปล่า
+เสิร์ฟผ่าน WAMP ที่ `C:\wamp64\www\_claude_scratch\` (สร้าง–ลบทิ้งทุกครั้ง) แล้ววัดด้วย `getBoundingClientRect()`
+เทียบ `button.right` กับขอบในของกล่อง + เช็ก `documentElement.scrollWidth === clientWidth`
+
+⚠️ **กับดักที่เจอ:** ถ้า Browser pane ไม่ได้ถูกแสดงอยู่ `clientWidth` จะเป็น **0** และตัวเลขที่วัดได้จะมั่วทั้งชุด
+(รอบแรกได้ "ล้น 236px" ทั้งที่ไม่จริง) ⇒ ต้อง `tabs_select` ให้ pane โผล่ก่อน แล้วค่อยวัด
+
+### งานที่ค้าง (TODO ต่อ)
+
+- [ ] **ยังไม่ได้เปิดหน้าจริงบนมือถือ** — ตรวจผ่าน harness ล้วน ๆ ควรเปิด `/Learn/Courses/16/lessons` ด้วยบัญชีจริงที่ 375px ยืนยันอีกรอบ
+- [ ] เนื้อหา RichText ในบทเรียน (`RichTextViewer` ใน `LessonPost.vue`) **ยังไม่ได้แตะ** — ถ้าเนื้อหามีตาราง/โค้ดกว้าง ๆ ยังมีสิทธิ์ดันทั้งหน้าให้เลื่อนแนวนอน ต้องหุ้ม `overflow-x-auto` ให้ตาราง
+- [ ] ปุ่มลบ/ปุ่มเล็กในแถวหนาแน่นบางจุดยังต่ำกว่า 44px (เช่น `StepGuardian.vue` ปุ่มลบช่องทางติดต่อ `p-1` = 24px, `CreatePollModal`/`EditPollModal` ปุ่มลบตัวเลือก) — รอบนี้แตะแค่ `flex-shrink-0` ไม่ได้ขยายขนาด
+- [ ] `npm run build` ผู้ใช้รันเอง — ยังไม่ได้รัน (ตรวจแค่ `@vue/compiler-sfc` parse+compileTemplate ผ่าน 31/31 ไฟล์)
+
+### Branch / Git State
+
+- Branch: `main` (commit ตรงบน main ตามที่เรพนี้ทำกันมา)
+- Uncommitted: ไม่มี (ยกเว้น worklog นี้)
+- Push: **pushed** — `origin/main` = `467441d7`
+
+---
 
 ## 2026-08-27 (ต่อ) — #25 เลือกตั้ง: เปิดอีก 5 หน้าที่เหลือบนจอจริง · เจอ 2 บั๊กที่ทำให้หน้าแอดมินใช้ไม่ได้เลย
 
