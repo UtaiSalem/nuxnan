@@ -11,19 +11,28 @@ const props = withDefaults(defineProps<Props>(), {
   class: ''
 })
 
-const { wrapTablesForScroll } = useRichText()
+const { sanitizeHtml, wrapTablesForScroll } = useRichText()
+
+/** ให้สคริปต์ในเอมเบดเข้าถึงหน้าหลักไม่ได้ (ค่าเดียวกับ Common/RichTextViewer) */
+const IFRAME_SANDBOX = 'allow-forms allow-scripts allow-popups allow-popups-to-escape-sandbox allow-presentation'
 
 // Sanitize and format HTML content
 const sanitizedContent = computed(() => {
   if (!props.content) return ''
-  
-  // Basic sanitization - in production, use a library like DOMPurify
+
   let clean = props.content
-  
+
   // Convert newlines to <br> if plain text
   if (!clean.includes('<p>') && !clean.includes('<div>')) {
     clean = clean.replace(/\n/g, '<br>')
   }
+
+  // เนื้อหานี้ถูกยัดลงหน้าด้วย v-html ⇒ ต้องผ่าน DOMPurify ก่อนเสมอ
+  // (ตัวเดียวกับที่ Common/RichTextViewer ใช้ — มีด่านสำรองตอน SSR ในตัวแล้ว)
+  clean = sanitizeHtml(clean)
+
+  // iframe ที่ยังไม่มี sandbox ให้ใส่ให้ (เลี่ยงแอตทริบิวต์ซ้ำ)
+  clean = clean.replace(/<iframe(?![^>]*\ssandbox)/gi, `<iframe sandbox="${IFRAME_SANDBOX}"`)
 
   // ตารางกว้างต้องเลื่อนในกล่องตัวเอง ไม่ใช่ดันทั้งหน้า
   return wrapTablesForScroll(clean)
