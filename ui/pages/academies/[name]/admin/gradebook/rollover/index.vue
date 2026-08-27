@@ -1,4 +1,11 @@
 <script setup lang="ts">
+import RolloverClassroomChecklist from '~/components/academy/rollover/RolloverClassroomChecklist.vue'
+import RolloverCommitPanel from '~/components/academy/rollover/RolloverCommitPanel.vue'
+import RolloverPreviewSummary from '~/components/academy/rollover/RolloverPreviewSummary.vue'
+import RolloverStepIndicator from '~/components/academy/rollover/RolloverStepIndicator.vue'
+import RolloverStudentBucket from '~/components/academy/rollover/RolloverStudentBucket.vue'
+import RolloverUndoBanner from '~/components/academy/rollover/RolloverUndoBanner.vue'
+import RolloverYearPicker from '~/components/academy/rollover/RolloverYearPicker.vue'
 import { Icon } from '@iconify/vue'
 import type {
   AcademicYearDTO,

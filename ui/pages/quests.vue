@@ -29,6 +29,7 @@
 </template>
 
 <script setup lang="ts">
+import BaseCard from '~/components/atoms/BaseCard.vue'
 import { Icon } from '@iconify/vue'
 
 definePageMeta({
