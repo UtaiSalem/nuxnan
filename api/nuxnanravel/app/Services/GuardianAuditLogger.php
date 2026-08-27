@@ -109,6 +109,33 @@ class GuardianAuditLogger
         );
     }
 
+    public function accountRequested(Student $student, User $target, string $direction, string $actorRole): void
+    {
+        $this->write($student, MemberActivityLog::ACTION_GUARDIAN_ACCOUNT_REQUEST,
+            'ขอผูกบัญชีผู้ปกครอง: '.$target->name.' ให้นักเรียน '.$this->studentName($student),
+            null,
+            ['account_user_id' => $target->id, 'direction' => $direction, 'actor_role' => $actorRole]
+        );
+    }
+
+    public function accountLinked(Student $student, Guardian $person, User $account): void
+    {
+        $this->write($student, MemberActivityLog::ACTION_GUARDIAN_ACCOUNT_LINKED,
+            'ผูกบัญชีผู้ปกครองสำเร็จ: '.$this->personName($person).' กับบัญชี '.$account->name.' ให้นักเรียน '.$this->studentName($student),
+            null,
+            ['guardian_person_id' => $person->id, 'account_user_id' => $account->id]
+        );
+    }
+
+    public function accountUnlinked(Student $student, Guardian $person, User $account): void
+    {
+        $this->write($student, MemberActivityLog::ACTION_GUARDIAN_ACCOUNT_UNLINKED,
+            'ปลดการผูกบัญชีผู้ปกครอง: '.$this->personName($person).' ออกจากบัญชี '.$account->name.' ของนักเรียน '.$this->studentName($student),
+            null,
+            ['guardian_person_id' => $person->id, 'account_user_id' => $account->id]
+        );
+    }
+
     private function personName(Guardian $person): string
     {
         return trim(($person->title_prefix ? $person->title_prefix.' ' : '').$person->first_name.' '.$person->last_name);

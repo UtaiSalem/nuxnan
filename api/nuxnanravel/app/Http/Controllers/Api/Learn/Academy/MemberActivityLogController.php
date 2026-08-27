@@ -272,6 +272,9 @@ class MemberActivityLogController extends Controller
             ['value' => MemberActivityLog::ACTION_GUARDIAN_APPOINT, 'label' => 'แต่งตั้งผู้ปกครองให้นักเรียน', 'icon' => 'mdi:account-star'],
             ['value' => MemberActivityLog::ACTION_GUARDIAN_VERIFY, 'label' => 'ยืนยันการแต่งตั้งผู้ปกครอง', 'icon' => 'mdi:account-check'],
             ['value' => MemberActivityLog::ACTION_GUARDIAN_SENSITIVE_VIEW, 'label' => 'เปิดดูข้อมูลอ่อนไหวของผู้ปกครอง', 'icon' => 'mdi:eye-lock'],
+            ['value' => MemberActivityLog::ACTION_GUARDIAN_ACCOUNT_REQUEST, 'label' => 'ขอผูกบัญชีผู้ปกครอง', 'icon' => 'mdi:account-question'],
+            ['value' => MemberActivityLog::ACTION_GUARDIAN_ACCOUNT_LINKED, 'label' => 'ผูกบัญชีผู้ปกครองสำเร็จ', 'icon' => 'mdi:account-check'],
+            ['value' => MemberActivityLog::ACTION_GUARDIAN_ACCOUNT_UNLINKED, 'label' => 'ปลดการผูกบัญชีผู้ปกครอง', 'icon' => 'mdi:account-remove'],
         ];
 
         return response()->json([

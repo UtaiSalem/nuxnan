@@ -152,6 +152,12 @@ class MemberActivityLog extends Model
     /** Someone other than the student read a guardian's citizen id / income (G-S9-b). */
     public const ACTION_GUARDIAN_SENSITIVE_VIEW = 'guardian_sensitive_view';
 
+    public const ACTION_GUARDIAN_ACCOUNT_REQUEST = 'guardian_account_request';
+
+    public const ACTION_GUARDIAN_ACCOUNT_LINKED = 'guardian_account_linked';
+
+    public const ACTION_GUARDIAN_ACCOUNT_UNLINKED = 'guardian_account_unlinked';
+
     public static function electionActions(): array
     {
         return [
@@ -293,6 +299,9 @@ class MemberActivityLog extends Model
             self::ACTION_GUARDIAN_APPOINT => 'แต่งตั้งผู้ปกครองให้นักเรียน',
             self::ACTION_GUARDIAN_VERIFY => 'ยืนยันการแต่งตั้งผู้ปกครอง',
             self::ACTION_GUARDIAN_SENSITIVE_VIEW => 'เปิดดูข้อมูลอ่อนไหวของผู้ปกครอง',
+            self::ACTION_GUARDIAN_ACCOUNT_REQUEST => 'ขอผูกบัญชีผู้ปกครอง',
+            self::ACTION_GUARDIAN_ACCOUNT_LINKED => 'ผูกบัญชีผู้ปกครองสำเร็จ',
+            self::ACTION_GUARDIAN_ACCOUNT_UNLINKED => 'ปลดการผูกบัญชีผู้ปกครอง',
         ];
 
         return $descriptions[$action] ?? $action;
@@ -332,6 +341,9 @@ class MemberActivityLog extends Model
             self::ACTION_GUARDIAN_APPOINT => 'mdi:account-star',
             self::ACTION_GUARDIAN_VERIFY => 'mdi:account-check',
             self::ACTION_GUARDIAN_SENSITIVE_VIEW => 'mdi:eye-lock',
+            self::ACTION_GUARDIAN_ACCOUNT_REQUEST => 'mdi:account-question',
+            self::ACTION_GUARDIAN_ACCOUNT_LINKED => 'mdi:account-check',
+            self::ACTION_GUARDIAN_ACCOUNT_UNLINKED => 'mdi:account-remove',
         ];
 
         return $icons[$this->action] ?? 'mdi:circle';
@@ -371,6 +383,9 @@ class MemberActivityLog extends Model
             self::ACTION_GUARDIAN_APPOINT => 'indigo',
             self::ACTION_GUARDIAN_VERIFY => 'teal',
             self::ACTION_GUARDIAN_SENSITIVE_VIEW => 'orange',
+            self::ACTION_GUARDIAN_ACCOUNT_REQUEST => 'indigo',
+            self::ACTION_GUARDIAN_ACCOUNT_LINKED => 'green',
+            self::ACTION_GUARDIAN_ACCOUNT_UNLINKED => 'red',
         ];
 
         return $colors[$this->action] ?? 'gray';
