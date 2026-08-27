@@ -102,9 +102,9 @@ const handleImageError = (event: Event) => {
     <!-- Header -->
     <button
       @click="toggleExpand"
-      class="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+      class="w-full flex items-center justify-between gap-2 p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
     >
-      <div class="flex items-center gap-3 flex-1">
+      <div class="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
         <!-- Checkbox -->
         <div
           @click="handleCheckboxClick"
@@ -131,7 +131,7 @@ const handleImageError = (event: Event) => {
 
         <!-- Title -->
         <h4 
-          class="text-left font-medium transition-colors line-clamp-1"
+          class="min-w-0 flex-1 text-left text-sm sm:text-base font-medium transition-colors line-clamp-1 break-words"
           :class="[
             isCompleted 
               ? 'text-green-900 dark:text-green-100 line-through' 
@@ -142,7 +142,7 @@ const handleImageError = (event: Event) => {
         </h4>
 
         <!-- Requirement / Status Badge -->
-        <div v-if="!isAdmin && topic.min_read > 0" class="hidden md:flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap"
+        <div v-if="!isAdmin && topic.min_read > 0" class="flex flex-shrink-0 items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap"
           :class="[
             isCompleted 
               ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
@@ -184,7 +184,7 @@ const handleImageError = (event: Event) => {
       v-show="isExpanded"
       class="border-t border-gray-200 dark:border-gray-700"
     >
-      <div class="p-4 space-y-4">
+      <div class="p-3 sm:p-4 space-y-4">
         <!-- Topic Content -->
         <div v-if="topic.content" class="prose prose-sm dark:prose-invert max-w-none">
           <RichTextViewer :content="topic.content" />
@@ -215,7 +215,7 @@ const handleImageError = (event: Event) => {
         </div>
 
         <!-- Invalid YouTube URL Fallback -->
-        <div v-else-if="isInvalidYoutubeUrl" class="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg flex items-center justify-between gap-3 max-w-2xl mx-auto">
+        <div v-else-if="isInvalidYoutubeUrl" class="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 max-w-2xl mx-auto">
           <div class="flex items-center gap-2 text-yellow-800 dark:text-yellow-200 text-sm">
             <Icon icon="fluent:alert-24-regular" class="w-5 h-5 flex-shrink-0" />
             <span>รูปแบบลิงก์วิดีโอไม่ถูกต้อง</span>
@@ -238,7 +238,7 @@ const handleImageError = (event: Event) => {
             :key="image.id"
             :src="image.full_url"
             :alt="topic.title"
-            class="rounded-lg object-cover w-full h-48 border border-gray-200 dark:border-gray-700 hover:scale-105 transition-transform cursor-pointer"
+            class="rounded-lg object-cover w-full h-32 sm:h-48 border border-gray-200 dark:border-gray-700 hover:scale-105 transition-transform cursor-pointer"
             @click="openTopicImage(index)"
             @error="handleImageError"
           />

@@ -190,25 +190,25 @@ watch(isRoot, async (newVal) => {
         <!-- Header with Create Button (Admin Only) -->
         <div
           v-if="isCourseAdmin"
-          class="bg-gradient-to-r from-blue-600 via-cyan-600 to-purple-600 dark:from-blue-800 dark:via-cyan-800 dark:to-purple-800 rounded-2xl p-6 shadow-xl mb-6"
+          class="bg-gradient-to-r from-blue-600 via-cyan-600 to-purple-600 dark:from-blue-800 dark:via-cyan-800 dark:to-purple-800 rounded-2xl p-4 sm:p-6 shadow-xl mb-6"
         >
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-4">
+          <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex min-w-0 items-center gap-3 sm:gap-4">
               <div
-                class="w-14 h-14 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg"
+                class="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg"
               >
-                <Icon icon="fluent:book-24-filled" class="w-7 h-7 text-white" />
+                <Icon icon="fluent:book-24-filled" class="w-6 h-6 sm:w-7 sm:h-7 text-white" />
               </div>
-              <div>
-                <h2 class="text-2xl font-bold text-white mb-1">บทเรียนทั้งหมด</h2>
+              <div class="min-w-0">
+                <h2 class="text-xl sm:text-2xl font-bold text-white mb-1 break-words">บทเรียนทั้งหมด</h2>
                 <p class="text-white/80 text-sm">{{ lessons.length }} บทเรียน</p>
               </div>
             </div>
             <button
               @click="handleCreateLesson"
-              class="flex items-center gap-2 px-5 py-3 bg-white text-blue-600 rounded-xl hover:bg-blue-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 font-bold"
+              class="w-full sm:w-auto min-h-[44px] flex flex-shrink-0 items-center justify-center gap-2 px-4 sm:px-5 py-3 bg-white text-blue-600 rounded-xl hover:bg-blue-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 font-bold whitespace-nowrap"
             >
-              <Icon icon="fluent:add-circle-24-filled" class="w-5 h-5" />
+              <Icon icon="fluent:add-circle-24-filled" class="w-5 h-5 flex-shrink-0" />
               <span>เพิ่มบทเรียน</span>
             </button>
           </div>
@@ -226,11 +226,11 @@ watch(isRoot, async (newVal) => {
         <!-- Empty State -->
         <div
           v-if="!lessons.length"
-          class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-12 text-center"
+          class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-12 text-center"
         >
           <Icon
             icon="fluent:book-24-regular"
-            class="w-24 h-24 text-gray-300 dark:text-gray-600 mx-auto mb-4"
+            class="w-16 h-16 sm:w-24 sm:h-24 text-gray-300 dark:text-gray-600 mx-auto mb-4"
           />
           <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">
             ยังไม่มีบทเรียนในรายวิชานี้
@@ -276,7 +276,7 @@ watch(isRoot, async (newVal) => {
       <button 
         v-if="showScrollButton"
         @click="scrollToTop"
-        class="fixed bottom-8 right-8 z-[999] p-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-full shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:-translate-y-1 transition-all"
+        class="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-[999] p-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-full shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:-translate-y-1 transition-all"
         title="เลื่อนขึ้นด้านบน"
       >
         <Icon icon="fluent:arrow-up-24-filled" class="w-6 h-6" />

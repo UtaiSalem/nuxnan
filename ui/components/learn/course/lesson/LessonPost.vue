@@ -501,7 +501,7 @@ const publicationStatusColor = computed(() => {
     <div class="relative">
       <!-- Cover with gradient and icon -->
       <div
-        class="relative h-40 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-blue-900/20 dark:via-purple-900/20 dark:to-pink-900/20 overflow-hidden rounded-t-2xl"
+        class="relative h-32 sm:h-40 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-blue-900/20 dark:via-purple-900/20 dark:to-pink-900/20 overflow-hidden rounded-t-2xl"
       >
         <!-- Default gradient with animated icon -->
         <div
@@ -520,42 +520,42 @@ const publicationStatusColor = computed(() => {
       </div>
 
       <!-- Unified overlay bar: badges left, access + admin right — no overlap possible -->
-      <div class="absolute top-4 left-4 right-4 flex items-start justify-between gap-3">
+      <div class="absolute top-2 left-2 right-2 sm:top-4 sm:left-4 sm:right-4 flex items-start justify-between gap-2 sm:gap-3">
 
         <!-- Left group: publication status, order, reading time, position -->
-        <div class="flex flex-wrap gap-2">
+        <div class="flex flex-wrap gap-1.5 sm:gap-2 min-w-0">
           <!-- Publication Status Badge (admin only, or non-published) -->
           <span
             v-if="isAdmin || lesson.publication_status !== 'published'"
             :class="publicationStatusColor"
-            class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold shadow-lg backdrop-blur-md ring-1 ring-white/20 transition-transform hover:scale-105"
+            class="inline-flex items-center gap-1 sm:gap-2 px-2.5 py-1 sm:px-4 sm:py-2 rounded-full whitespace-nowrap text-[11px] sm:text-sm font-bold shadow-lg backdrop-blur-md ring-1 ring-white/20 transition-transform hover:scale-105"
           >
-            <Icon :icon="publicationStatusIcon" class="w-4 h-4" />
+            <Icon :icon="publicationStatusIcon" class="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
             {{ publicationStatusText }}
           </span>
 
           <!-- Order Badge -->
           <span
-            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/90 backdrop-blur-md text-white text-sm font-bold shadow-lg ring-1 ring-white/20 transition-transform hover:scale-105"
+            class="inline-flex items-center gap-1 sm:gap-2 px-2.5 py-1 sm:px-4 sm:py-2 rounded-full whitespace-nowrap bg-blue-500/90 backdrop-blur-md text-white text-[11px] sm:text-sm font-bold shadow-lg ring-1 ring-white/20 transition-transform hover:scale-105"
           >
-            <Icon icon="fluent:number-symbol-24-filled" class="w-4 h-4" />
+            <Icon icon="fluent:number-symbol-24-filled" class="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
             บทที่ {{ displayOrder }}
           </span>
 
           <!-- Reading Time Badge -->
           <span
-            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/90 backdrop-blur-md text-white text-sm font-bold shadow-lg ring-1 ring-white/20 transition-transform hover:scale-105"
+            class="inline-flex items-center gap-1 sm:gap-2 px-2.5 py-1 sm:px-4 sm:py-2 rounded-full whitespace-nowrap bg-purple-500/90 backdrop-blur-md text-white text-[11px] sm:text-sm font-bold shadow-lg ring-1 ring-white/20 transition-transform hover:scale-105"
           >
-            <Icon icon="fluent:clock-24-filled" class="w-4 h-4" />
+            <Icon icon="fluent:clock-24-filled" class="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
             {{ lesson.min_read }} นาที
           </span>
 
           <!-- Lesson Position Badge (if navigation enabled) -->
           <span
             v-if="lessonPosition"
-            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/90 backdrop-blur-md text-white text-sm font-bold shadow-lg ring-1 ring-white/20 transition-transform hover:scale-105"
+            class="inline-flex items-center gap-1 sm:gap-2 px-2.5 py-1 sm:px-4 sm:py-2 rounded-full whitespace-nowrap bg-cyan-500/90 backdrop-blur-md text-white text-[11px] sm:text-sm font-bold shadow-lg ring-1 ring-white/20 transition-transform hover:scale-105"
           >
-            <Icon icon="fluent:list-24-filled" class="w-4 h-4" />
+            <Icon icon="fluent:list-24-filled" class="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
             {{ lessonPosition }}
           </span>
         </div>
@@ -565,23 +565,23 @@ const publicationStatusColor = computed(() => {
           <!-- Access Badge -->
           <span
             v-if="lesson.access_type === 'points'"
-            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/90 backdrop-blur-md text-white text-sm font-bold shadow-lg ring-1 ring-white/20 transition-transform hover:scale-105"
+            class="inline-flex items-center gap-1 sm:gap-2 px-2.5 py-1 sm:px-4 sm:py-2 rounded-full whitespace-nowrap bg-amber-500/90 backdrop-blur-md text-white text-[11px] sm:text-sm font-bold shadow-lg ring-1 ring-white/20 transition-transform hover:scale-105"
           >
-            <Icon icon="fluent:star-24-filled" class="w-4 h-4" />
+            <Icon icon="fluent:star-24-filled" class="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
             {{ lesson.price_label || `${lesson.point_tuition_fee} พอยต์` }}
           </span>
           <span
             v-else-if="lesson.access_type === 'money'"
-            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/90 backdrop-blur-md text-white text-sm font-bold shadow-lg ring-1 ring-white/20 transition-transform hover:scale-105"
+            class="inline-flex items-center gap-1 sm:gap-2 px-2.5 py-1 sm:px-4 sm:py-2 rounded-full whitespace-nowrap bg-green-500/90 backdrop-blur-md text-white text-[11px] sm:text-sm font-bold shadow-lg ring-1 ring-white/20 transition-transform hover:scale-105"
           >
-            <Icon icon="fluent:wallet-24-filled" class="w-4 h-4" />
+            <Icon icon="fluent:wallet-24-filled" class="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
             {{ lesson.price_label || `฿${lesson.money_tuition_fee}` }}
           </span>
           <span
             v-else
-            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/90 backdrop-blur-md text-white text-sm font-bold shadow-lg ring-1 ring-white/20 transition-transform hover:scale-105"
+            class="inline-flex items-center gap-1 sm:gap-2 px-2.5 py-1 sm:px-4 sm:py-2 rounded-full whitespace-nowrap bg-blue-500/90 backdrop-blur-md text-white text-[11px] sm:text-sm font-bold shadow-lg ring-1 ring-white/20 transition-transform hover:scale-105"
           >
-            <Icon icon="fluent:lock-open-24-filled" class="w-4 h-4" />
+            <Icon icon="fluent:lock-open-24-filled" class="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
             ฟรี
           </span>
 
@@ -608,10 +608,10 @@ const publicationStatusColor = computed(() => {
     </div>
 
     <!-- Content Section -->
-    <div class="p-6 space-y-6">
+    <div class="p-4 sm:p-6 space-y-4 sm:space-y-6">
       <!-- Title & Meta -->
       <div>
-        <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4 leading-tight flex items-center gap-3">
+        <h2 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 leading-tight flex flex-wrap items-center gap-2 sm:gap-3">
           <NuxtLink
             v-if="!isOnLessonPage"
             :to="lessonLink"
@@ -628,16 +628,16 @@ const publicationStatusColor = computed(() => {
         </h2>
 
         <!-- Creator & Stats -->
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div class="flex items-center gap-3 min-w-0">
             <img
               :src="lesson.creater?.avatar || '/images/default-avatar.png'"
               :alt="lesson.creater?.name"
-              class="w-10 h-10 rounded-full ring-2 ring-blue-500 object-cover"
+              class="w-10 h-10 flex-shrink-0 rounded-full ring-2 ring-blue-500 object-cover"
               @error="(e) => (e.target as HTMLImageElement).src = '/images/default-avatar.png'"
             />
-            <div>
-              <p class="font-medium text-gray-900 dark:text-white">
+            <div class="min-w-0">
+              <p class="font-medium text-gray-900 dark:text-white break-words">
                 {{ lesson.creater?.name }}
               </p>
               <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -647,7 +647,7 @@ const publicationStatusColor = computed(() => {
           </div>
 
           <!-- Quick Stats -->
-          <div class="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+          <div class="flex flex-shrink-0 items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
             <div class="flex items-center gap-1">
               <Icon icon="fluent:clock-24-regular" class="w-4 h-4" />
               <span>{{ lesson.min_read }} นาที</span>
@@ -680,7 +680,7 @@ const publicationStatusColor = computed(() => {
       <!-- Description -->
       <!-- Description -->
       <div v-if="lesson.description" class="mb-8">
-        <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-3">
+        <h3 class="flex flex-wrap items-center gap-2 text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3">
           <Icon icon="fluent:text-description-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
           คำอธิบาย
         </h3>
@@ -693,9 +693,9 @@ const publicationStatusColor = computed(() => {
 
       <!-- Locked Overlay -->
       <div v-if="isLocked"
-        class="my-6 rounded-2xl border-2 border-dashed border-yellow-400/50 bg-yellow-500/10 p-8 text-center transition-all animate-in fade-in zoom-in duration-300">
+        class="my-6 rounded-2xl border-2 border-dashed border-yellow-400/50 bg-yellow-500/10 p-5 sm:p-8 text-center transition-all animate-in fade-in zoom-in duration-300">
         <Icon icon="fluent:lock-closed-24-filled" class="mx-auto mb-3 h-16 w-16 text-yellow-400" />
-        <h3 class="mb-1 text-2xl font-bold text-yellow-500">บทเรียนนี้ถูกล็อกอยู่</h3>
+        <h3 class="mb-1 text-xl sm:text-2xl font-bold text-yellow-500">บทเรียนนี้ถูกล็อกอยู่</h3>
         <p class="mb-6 text-gray-600 dark:text-gray-400">
           <template v-if="accessType === 'points'">
             ต้องใช้ <span class="font-bold text-yellow-600 dark:text-yellow-400 text-lg">{{ priceLabel }}</span> เพื่อปลดล็อกเนื้อหาทั้งหมด
@@ -707,7 +707,7 @@ const publicationStatusColor = computed(() => {
         <button
           @click="handleUnlock"
           :disabled="isUnlocking"
-          class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 px-8 py-4 text-lg font-bold text-white shadow-lg hover:from-yellow-600 hover:to-orange-600 hover:shadow-xl transition-all disabled:opacity-50 transform hover:scale-105 active:scale-95"
+          class="inline-flex max-w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 px-5 py-3 text-base sm:px-8 sm:py-4 sm:text-lg font-bold text-white shadow-lg hover:from-yellow-600 hover:to-orange-600 hover:shadow-xl transition-all disabled:opacity-50 transform hover:scale-105 active:scale-95"
         >
           <Icon v-if="isUnlocking" icon="fluent:spinner-ios-20-regular" class="h-6 w-6 animate-spin" />
           <template v-else>
@@ -721,7 +721,7 @@ const publicationStatusColor = computed(() => {
       <template v-if="!isLocked">
         <!-- Main Content -->
         <div class="relative">
-          <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <h3 class="flex flex-wrap items-center gap-2 text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">
             <Icon icon="fluent:document-text-24-filled" class="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
             เนื้อหาบทเรียน
           </h3>
@@ -762,7 +762,7 @@ const publicationStatusColor = computed(() => {
 
         <!-- Image Gallery Section -->
         <div v-if="hasImages" class="mt-6">
-          <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <h3 class="flex flex-wrap items-center gap-2 text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">
             <Icon
               icon="fluent:image-multiple-24-filled"
               class="w-6 h-6 text-indigo-600 dark:text-indigo-400"
@@ -799,7 +799,7 @@ const publicationStatusColor = computed(() => {
 
         <!-- Video Section - Show YouTube video thumbnail below content -->
         <div v-if="hasYoutubeVideo" class="mt-6">
-          <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <h3 class="flex flex-wrap items-center gap-2 text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">
             <Icon
               icon="fluent:video-24-filled"
               class="w-6 h-6 text-red-600 dark:text-red-400"
@@ -848,8 +848,8 @@ const publicationStatusColor = computed(() => {
 
         <!-- Topics Section -->
         <div v-if="hasTopics || isAdmin" class="mt-8">
-          <div class="flex items-center justify-between mb-4">
-              <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <h3 class="flex min-w-0 flex-wrap items-center gap-2 text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
                   <Icon icon="fluent:book-open-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
                   หัวข้อย่อย
                   <span v-if="hasTopics" class="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">
@@ -860,7 +860,7 @@ const publicationStatusColor = computed(() => {
                <button 
                   v-if="isAdmin"
                   @click="openCreateTopicModal"
-                  class="px-3 py-1.5 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 flex items-center gap-2 shadow-md transition-all hover:scale-105"
+                  class="min-h-[44px] sm:min-h-0 px-3 py-1.5 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 flex flex-shrink-0 items-center gap-2 whitespace-nowrap shadow-md transition-all hover:scale-105"
               >
                   <Icon icon="fluent:add-24-filled" class="w-4 h-4" />
                   เพิ่มหัวข้อ
@@ -922,7 +922,7 @@ const publicationStatusColor = computed(() => {
 
         <!-- Attachments Section -->
         <div v-if="lesson.attachments && lesson.attachments.length > 0" class="mt-8">
-          <h3 class="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <h3 class="flex flex-wrap items-center gap-2 text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">
             <Icon icon="fluent:folder-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
             เอกสารประกอบการเรียน
           </h3>
@@ -970,18 +970,18 @@ const publicationStatusColor = computed(() => {
       <!-- Navigation Bar -->
       <div 
         v-if="hasNavigation" 
-        class="flex items-center justify-between gap-4 px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 rounded-b-2xl"
+        class="flex items-stretch justify-between gap-2 sm:gap-4 px-3 sm:px-6 py-3 sm:py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 rounded-b-2xl"
       >
         <!-- Previous Lesson -->
         <NuxtLink
           v-if="prevLesson"
           :to="`/Learn/Courses/${lesson.course_id}/lessons/${prevLesson.id}`"
-          class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white dark:bg-gray-700 shadow-md hover:shadow-lg transition-all group hover:-translate-x-1"
+          class="flex min-w-0 flex-1 sm:flex-initial items-center gap-2 sm:gap-3 px-2.5 sm:px-4 py-2.5 sm:py-3 rounded-xl bg-white dark:bg-gray-700 shadow-md hover:shadow-lg transition-all group hover:-translate-x-1"
         >
-          <Icon icon="fluent:chevron-left-24-filled" class="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
-          <div class="text-left">
+          <Icon icon="fluent:chevron-left-24-filled" class="w-5 h-5 flex-shrink-0 text-gray-400 group-hover:text-blue-500 transition-colors" />
+          <div class="min-w-0 text-left">
             <p class="text-xs text-gray-400 uppercase tracking-wide">บทก่อนหน้า</p>
-            <p class="text-sm font-semibold text-gray-700 dark:text-gray-200 line-clamp-1 max-w-[150px] md:max-w-[200px]">
+            <p class="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200 line-clamp-1 max-w-[110px] sm:max-w-[150px] md:max-w-[200px]">
               {{ prevLesson.title }}
             </p>
           </div>
@@ -1001,15 +1001,15 @@ const publicationStatusColor = computed(() => {
         <NuxtLink
           v-if="nextLesson"
           :to="`/Learn/Courses/${lesson.course_id}/lessons/${nextLesson.id}`"
-          class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white dark:bg-gray-700 shadow-md hover:shadow-lg transition-all group hover:translate-x-1"
+          class="flex min-w-0 flex-1 sm:flex-initial items-center justify-end gap-2 sm:gap-3 px-2.5 sm:px-4 py-2.5 sm:py-3 rounded-xl bg-white dark:bg-gray-700 shadow-md hover:shadow-lg transition-all group hover:translate-x-1"
         >
-          <div class="text-right">
+          <div class="min-w-0 text-right">
             <p class="text-xs text-gray-400 uppercase tracking-wide">บทถัดไป</p>
-            <p class="text-sm font-semibold text-gray-700 dark:text-gray-200 line-clamp-1 max-w-[150px] md:max-w-[200px]">
+            <p class="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200 line-clamp-1 max-w-[110px] sm:max-w-[150px] md:max-w-[200px]">
               {{ nextLesson.title }}
             </p>
           </div>
-          <Icon icon="fluent:chevron-right-24-filled" class="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
+          <Icon icon="fluent:chevron-right-24-filled" class="w-5 h-5 flex-shrink-0 text-gray-400 group-hover:text-blue-500 transition-colors" />
         </NuxtLink>
         <div v-else class="flex-1"></div>
       </div>

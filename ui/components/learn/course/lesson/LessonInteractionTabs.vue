@@ -709,7 +709,7 @@ const submitReply = async (parentComment: any) => {
       <button
         @click="toggleProgress"
         :disabled="isTogglingProgress"
-        class="w-full flex items-center justify-center gap-3 py-3 px-6 rounded-xl font-semibold transition-all duration-300 transform hover:scale-[1.02]"
+        class="w-full min-h-[44px] flex items-center justify-center gap-2 sm:gap-3 py-3 px-4 sm:px-6 rounded-xl font-semibold text-sm sm:text-base transition-all duration-300 transform hover:scale-[1.02]"
         :class="isCompleted
           ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30'
           : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 hover:from-blue-600 hover:to-blue-700'"
@@ -717,25 +717,25 @@ const submitReply = async (parentComment: any) => {
         <Icon
           v-if="isTogglingProgress"
           icon="eos-icons:bubble-loading"
-          class="w-6 h-6"
+          class="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0"
         />
         <template v-else>
           <Icon
             :icon="isCompleted ? 'fluent:checkmark-circle-24-filled' : 'fluent:checkbox-unchecked-24-regular'"
-            class="w-6 h-6"
+            class="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0"
           />
-          <span>{{ isCompleted ? '✓ อ่านแล้ว' : 'ทำเครื่องหมายว่าอ่านแล้ว' }}</span>
+          <span class="whitespace-nowrap">{{ isCompleted ? '✓ อ่านแล้ว' : 'ทำเครื่องหมายว่าอ่านแล้ว' }}</span>
         </template>
       </button>
     </div>
 
     <!-- Tab Navigation -->
-    <div class="flex items-center gap-1 mb-4 bg-gray-100 dark:bg-gray-700/50 p-1 rounded-xl">
+    <div class="flex items-stretch gap-1 mb-4 bg-gray-100 dark:bg-gray-700/50 p-1 rounded-xl">
       <button
         v-for="tab in tabs"
         :key="tab.id"
         @click="selectTab(tab.id)"
-        class="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-sm transition-all duration-200"
+        class="relative flex-1 min-w-0 min-h-[44px] flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 py-2 sm:py-3 px-1 sm:px-4 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200"
         :class="[
           activeTab === tab.id
             ? `bg-white dark:bg-gray-800 text-${tab.color}-600 dark:text-${tab.color}-400 shadow-md`
@@ -744,12 +744,12 @@ const submitReply = async (parentComment: any) => {
       >
         <Icon
           :icon="activeTab === tab.id ? tab.activeIcon : tab.icon"
-          class="w-5 h-5"
+          class="w-5 h-5 flex-shrink-0"
         />
-        <span>{{ tab.label }}</span>
+        <span class="whitespace-nowrap">{{ tab.label }}</span>
         <span
           v-if="tab.count > 0"
-          class="px-2 py-0.5 text-xs font-bold rounded-full"
+          class="absolute top-0.5 right-0.5 sm:static px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs font-bold leading-none rounded-full"
           :class="[
             activeTab === tab.id
               ? `bg-${tab.color}-100 dark:bg-${tab.color}-900/30 text-${tab.color}-600 dark:text-${tab.color}-400`
@@ -766,7 +766,7 @@ const submitReply = async (parentComment: any) => {
       <!-- Reaction Tab -->
       <div v-show="activeTab === 'reaction'" class="space-y-4">
         <!-- Stats Row - matching FeedPost style -->
-        <div class="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400">
+        <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3 border-b border-gray-200 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400">
           <div class="flex items-center gap-4">
             <span 
               v-if="likeCount > 0 || dislikeCount > 0" 
@@ -810,74 +810,84 @@ const submitReply = async (parentComment: any) => {
         </div>
 
         <!-- Action Buttons - matching FeedPost style (flex layout) -->
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1 sm:gap-2">
           <!-- Like Button -->
           <button
             @click="handleLike"
-            class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg transition-all duration-300"
+            :title="isLiked ? 'ถูกใจแล้ว' : 'ถูกใจ'"
+            :aria-label="isLiked ? 'ถูกใจแล้ว' : 'ถูกใจ'"
+            class="flex-1 min-h-[44px] flex items-center justify-center gap-1.5 sm:gap-2 px-1 py-2.5 rounded-lg transition-all duration-300"
             :class="isLiked 
               ? 'bg-vikinger-purple/10 text-vikinger-purple' 
               : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300'"
           >
             <Icon
               :icon="isLiked ? 'fluent:thumb-like-24-filled' : 'fluent:thumb-like-24-regular'"
-              class="w-5 h-5 transition-transform hover:scale-110"
+              class="w-5 h-5 flex-shrink-0 transition-transform hover:scale-110"
             />
-            <span class="text-sm font-medium">{{ isLiked ? 'ถูกใจแล้ว' : 'ถูกใจ' }}</span>
+            <span class="hidden sm:inline text-sm font-medium whitespace-nowrap">{{ isLiked ? 'ถูกใจแล้ว' : 'ถูกใจ' }}</span>
           </button>
 
           <!-- Dislike Button -->
           <button
             @click="handleDislike"
-            class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg transition-all duration-300"
+            :title="isDisliked ? 'ไม่ถูกใจแล้ว' : 'ไม่ถูกใจ'"
+            :aria-label="isDisliked ? 'ไม่ถูกใจแล้ว' : 'ไม่ถูกใจ'"
+            class="flex-1 min-h-[44px] flex items-center justify-center gap-1.5 sm:gap-2 px-1 py-2.5 rounded-lg transition-all duration-300"
             :class="isDisliked 
               ? 'bg-red-500/10 text-red-500' 
               : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300'"
           >
             <Icon
               :icon="isDisliked ? 'fluent:thumb-dislike-24-filled' : 'fluent:thumb-dislike-24-regular'"
-              class="w-5 h-5 transition-transform hover:scale-110"
+              class="w-5 h-5 flex-shrink-0 transition-transform hover:scale-110"
             />
-            <span class="text-sm font-medium">{{ isDisliked ? 'ไม่ถูกใจแล้ว' : 'ไม่ถูกใจ' }}</span>
+            <span class="hidden sm:inline text-sm font-medium whitespace-nowrap">{{ isDisliked ? 'ไม่ถูกใจแล้ว' : 'ไม่ถูกใจ' }}</span>
           </button>
 
           <!-- Comment Button -->
           <button
             @click="handleComment"
-            class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group"
+            title="ความคิดเห็น"
+            aria-label="ความคิดเห็น"
+            class="flex-1 min-h-[44px] flex items-center justify-center gap-1.5 sm:gap-2 px-1 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group"
           >
             <Icon
               icon="fluent:comment-24-regular"
-              class="w-5 h-5 text-gray-600 dark:text-gray-300 group-hover:text-vikinger-cyan transition-colors"
+              class="w-5 h-5 flex-shrink-0 text-gray-600 dark:text-gray-300 group-hover:text-vikinger-cyan transition-colors"
             />
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">ความคิดเห็น</span>
+            <span class="hidden sm:inline text-sm font-medium whitespace-nowrap text-gray-700 dark:text-gray-300">ความคิดเห็น</span>
           </button>
 
           <!-- Share Button -->
           <button
             @click="handleShare"
-            class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group"
+            title="แชร์"
+            aria-label="แชร์"
+            class="flex-1 min-h-[44px] flex items-center justify-center gap-1.5 sm:gap-2 px-1 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group"
           >
             <Icon
               icon="fluent:share-24-regular"
-              class="w-5 h-5 text-gray-600 dark:text-gray-300 group-hover:text-vikinger-green transition-colors"
+              class="w-5 h-5 flex-shrink-0 text-gray-600 dark:text-gray-300 group-hover:text-vikinger-green transition-colors"
             />
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">แชร์</span>
+            <span class="hidden sm:inline text-sm font-medium whitespace-nowrap text-gray-700 dark:text-gray-300">แชร์</span>
           </button>
 
           <!-- Bookmark Button -->
           <button
             @click="handleBookmark"
-            class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg transition-all duration-300"
+            :title="isBookmarked ? 'บันทึกแล้ว' : 'บันทึก'"
+            :aria-label="isBookmarked ? 'บันทึกแล้ว' : 'บันทึก'"
+            class="flex-1 min-h-[44px] flex items-center justify-center gap-1.5 sm:gap-2 px-1 py-2.5 rounded-lg transition-all duration-300"
             :class="isBookmarked 
               ? 'bg-amber-500/10 text-amber-500' 
               : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300'"
           >
             <Icon
               :icon="isBookmarked ? 'fluent:bookmark-24-filled' : 'fluent:bookmark-24-regular'"
-              class="w-5 h-5 transition-transform hover:scale-110"
+              class="w-5 h-5 flex-shrink-0 transition-transform hover:scale-110"
             />
-            <span class="text-sm font-medium">{{ isBookmarked ? 'บันทึกแล้ว' : 'บันทึก' }}</span>
+            <span class="hidden sm:inline text-sm font-medium whitespace-nowrap">{{ isBookmarked ? 'บันทึกแล้ว' : 'บันทึก' }}</span>
           </button>
         </div>
 
@@ -889,19 +899,21 @@ const submitReply = async (parentComment: any) => {
               class="w-10 h-10 flex-shrink-0 rounded-full object-cover ring-2 ring-vikinger-purple/20" 
               alt="Your avatar" 
             />
-            <div class="flex-1 flex gap-2">
-              <input 
+            <div class="min-w-0 flex-1 flex gap-2">
+              <input
                 v-model="newComment"
-                type="text" 
-                placeholder="เขียนความคิดเห็นเกี่ยวกับบทเรียนนี้..." 
-                class="flex-1 px-4 py-2.5 rounded-full bg-gray-100 dark:bg-gray-700 border-none outline-none text-gray-800 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-vikinger-purple/30 transition-all"
+                type="text"
+                placeholder="เขียนความคิดเห็นเกี่ยวกับบทเรียนนี้..."
+                class="min-w-0 flex-1 px-3 sm:px-4 py-2.5 rounded-full bg-gray-100 dark:bg-gray-700 border-none outline-none text-sm sm:text-base text-gray-800 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-vikinger-purple/30 transition-all"
                 :disabled="isCommenting"
                 @keydown.enter.prevent="submitComment"
               />
-              <button 
-                @click="submitComment" 
+              <button
+                @click="submitComment"
                 :disabled="isCommenting || !newComment.trim()"
-                class="p-2.5 rounded-full bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="ส่งความคิดเห็น"
+                aria-label="ส่งความคิดเห็น"
+                class="flex-shrink-0 p-3 sm:p-2.5 rounded-full bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Icon v-if="!isCommenting" icon="fluent:send-24-filled" class="w-5 h-5" />
                 <Icon v-else icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
@@ -922,12 +934,12 @@ const submitReply = async (parentComment: any) => {
               class="w-10 h-10 flex-shrink-0 aspect-square rounded-full object-cover" 
               :alt="comment.user?.username || comment.author?.username"
             />
-            <div class="flex-1">
+            <div class="min-w-0 flex-1">
               <div class="bg-gray-100 dark:bg-gray-700 rounded-2xl p-3">
                 <h6 class="font-semibold text-sm text-gray-800 dark:text-white">
                   {{ comment.user?.username || comment.author?.username || 'ผู้ใช้' }}
                 </h6>
-                <p class="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap">
+                <p class="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap break-words">
                   {{ comment.content }}
                 </p>
               </div>
@@ -945,7 +957,7 @@ const submitReply = async (parentComment: any) => {
               </div>
               
               <!-- Comment Actions -->
-              <div class="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400 px-2">
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500 dark:text-gray-400 px-2">
                 <span>{{ comment.create_at || comment.created_at_for_humans || 'เมื่อสักครู่' }}</span>
                 <button 
                   @click="handleCommentLike(comment)"
@@ -1005,26 +1017,30 @@ const submitReply = async (parentComment: any) => {
                     class="w-8 h-8 flex-shrink-0 rounded-full object-cover" 
                     alt="Your avatar" 
                   />
-                  <div class="flex-1 flex gap-2">
-                    <input 
+                  <div class="min-w-0 flex-1 flex gap-2">
+                    <input
                       v-model="replyContent"
-                      type="text" 
-                      :placeholder="`ตอบกลับ ${comment.user?.username || 'ผู้ใช้'}...`" 
-                      class="flex-1 px-3 py-2 rounded-full bg-gray-100 dark:bg-gray-700 border-none outline-none text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-vikinger-purple/30 transition-all"
+                      type="text"
+                      :placeholder="`ตอบกลับ ${comment.user?.username || 'ผู้ใช้'}...`"
+                      class="min-w-0 flex-1 px-3 py-2 rounded-full bg-gray-100 dark:bg-gray-700 border-none outline-none text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-vikinger-purple/30 transition-all"
                       :disabled="isSubmittingReply"
                       @keydown.enter.prevent="submitReply(comment)"
                     />
-                    <button 
-                      @click="submitReply(comment)" 
+                    <button
+                      @click="submitReply(comment)"
                       :disabled="isSubmittingReply || !replyContent.trim()"
-                      class="p-2 rounded-full bg-vikinger-purple text-white hover:bg-vikinger-purple/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      title="ส่งการตอบกลับ"
+                      aria-label="ส่งการตอบกลับ"
+                      class="flex-shrink-0 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 inline-flex items-center justify-center p-2.5 sm:p-2 rounded-full bg-vikinger-purple text-white hover:bg-vikinger-purple/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <Icon v-if="!isSubmittingReply" icon="fluent:send-24-filled" class="w-4 h-4" />
                       <Icon v-else icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
                     </button>
-                    <button 
+                    <button
                       @click="cancelReply"
-                      class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 transition-colors"
+                      title="ยกเลิก"
+                      aria-label="ยกเลิก"
+                      class="flex-shrink-0 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 inline-flex items-center justify-center p-2.5 sm:p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-500 transition-colors"
                     >
                       <Icon icon="fluent:dismiss-24-regular" class="w-4 h-4" />
                     </button>
@@ -1044,17 +1060,17 @@ const submitReply = async (parentComment: any) => {
                     class="w-8 h-8 flex-shrink-0 aspect-square rounded-full object-cover" 
                     :alt="reply.user?.username"
                   />
-                  <div class="flex-1">
+                  <div class="min-w-0 flex-1">
                     <div class="bg-gray-50 dark:bg-gray-600 rounded-xl p-2.5">
                       <h6 class="font-semibold text-xs text-gray-800 dark:text-white">
                         {{ reply.user?.username || 'ผู้ใช้' }}
                       </h6>
-                      <p class="text-xs text-gray-700 dark:text-gray-300 mt-0.5 whitespace-pre-wrap">
+                      <p class="text-xs text-gray-700 dark:text-gray-300 mt-0.5 whitespace-pre-wrap break-words">
                         {{ reply.content }}
                       </p>
                     </div>
                     <!-- Reply Actions -->
-                    <div class="flex items-center gap-2 mt-1 text-[10px] text-gray-500 dark:text-gray-400 px-1">
+                    <div class="flex flex-wrap items-center gap-2 mt-1 text-[10px] text-gray-500 dark:text-gray-400 px-1">
                       <span>{{ reply.create_at || 'เมื่อสักครู่' }}</span>
                       <button 
                         @click="handleCommentLike(reply)"
