@@ -166,7 +166,7 @@ const getGPAColor = (gpa: number) => {
                   </div>
                   <button
                     @click="downloadPDF(selectedTranscript)"
-                    class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-medium transition-colors flex items-center gap-2"
+                    class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-medium transition-colors flex items-center gap-2"
                   >
                     <Icon icon="fluent:arrow-download-24-filled" class="w-5 h-5" />
                     ดาวน์โหลด PDF

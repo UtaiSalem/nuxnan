@@ -338,21 +338,21 @@ const getStatusBadge = (status: string) => {
                     <button
                       v-if="student.student_card"
                       @click="goToStudentCard(student)"
-                      class="p-2 text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
+                      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
                       title="ดูบัตรนักเรียน"
                     >
                       <Icon icon="fluent:card-ui-24-regular" class="w-5 h-5" />
                     </button>
                     <button
                       @click="goToTranscript(student)"
-                      class="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                       title="ดูผลการเรียน"
                     >
                       <Icon icon="fluent:document-text-24-regular" class="w-5 h-5" />
                     </button>
                     <button
                       @click="openStudentDetail(student)"
-                      class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                       title="รายละเอียด"
                     >
                       <Icon icon="fluent:eye-24-regular" class="w-5 h-5" />
@@ -376,7 +376,7 @@ const getStatusBadge = (status: string) => {
           <button
             @click="currentPage--; fetchStudents()"
             :disabled="currentPage === 1"
-            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ก่อนหน้า
           </button>
@@ -386,7 +386,7 @@ const getStatusBadge = (status: string) => {
           <button
             @click="currentPage++; fetchStudents()"
             :disabled="currentPage === totalPages"
-            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ถัดไป
           </button>
@@ -421,7 +421,7 @@ const getStatusBadge = (status: string) => {
               </div>
               <button
                 @click="showStudentModal = false"
-                class="absolute top-4 right-4 p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-4 right-4 p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg"
               >
                 <Icon icon="fluent:dismiss-24-filled" class="w-6 h-6" />
               </button>

@@ -420,7 +420,7 @@ const goBack = () => {
                 <h4 class="font-medium text-gray-900 dark:text-white">เปลี่ยนบทบาท</h4>
                 <p class="text-sm text-gray-500">กำหนดบทบาทใหม่ให้สมาชิก</p>
               </div>
-              <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+              <button class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
                 เปลี่ยนบทบาท
               </button>
             </div>
@@ -430,7 +430,7 @@ const goBack = () => {
                 <h4 class="font-medium text-orange-700 dark:text-orange-400">ระงับสมาชิก</h4>
                 <p class="text-sm text-orange-600 dark:text-orange-500">ระงับการเข้าใช้งานของสมาชิกชั่วคราว</p>
               </div>
-              <button class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+              <button class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
                 ระงับ
               </button>
             </div>
@@ -440,7 +440,7 @@ const goBack = () => {
                 <h4 class="font-medium text-red-700 dark:text-red-400">ลบสมาชิก</h4>
                 <p class="text-sm text-red-600 dark:text-red-500">ลบสมาชิกออกจากโรงเรียนอย่างถาวร</p>
               </div>
-              <button class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+              <button class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
                 ลบ
               </button>
             </div>
@@ -456,7 +456,7 @@ const goBack = () => {
       <p class="text-gray-500 mb-4">สมาชิกที่คุณกำลังค้นหาอาจถูกลบหรือไม่มีอยู่ในระบบ</p>
       <button 
         @click="goBack"
-        class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+        class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
       >
         กลับไปรายการสมาชิก
       </button>

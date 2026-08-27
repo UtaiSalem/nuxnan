@@ -325,7 +325,7 @@ const getProfileImage = (student: any) => {
       <div v-else-if="stats.totalStudents > 0" class="space-y-6">
         <!-- View Mode Toggle -->
         <div class="flex gap-2">
-          <button
+          <button class="min-h-[44px] sm:min-h-0"
             @click="switchToRooms"
             :class="[
               'px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2',
@@ -337,7 +337,7 @@ const getProfileImage = (student: any) => {
             <Icon icon="fluent:grid-24-regular" class="w-5 h-5" />
             <span>ดูตามห้อง</span>
           </button>
-          <button
+          <button class="min-h-[44px] sm:min-h-0"
             @click="switchToList"
             :class="[
               'px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2',
@@ -442,7 +442,7 @@ const getProfileImage = (student: any) => {
                 
                 <button
                   @click="handleSearch"
-                  class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
                 >
                   ค้นหา
                 </button>
@@ -460,7 +460,7 @@ const getProfileImage = (student: any) => {
           <div v-else-if="listError" class="p-12 text-center text-red-500 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-red-100 dark:border-red-955 flex flex-col items-center justify-center gap-2">
             <Icon icon="fluent:error-circle-24-regular" class="w-8 h-8 text-red-500" />
             <span class="text-sm">{{ listError }}</span>
-            <button @click="fetchStudents" class="mt-2 text-xs font-semibold px-3 py-1.5 bg-red-100 hover:bg-red-200 dark:bg-red-900/50 dark:hover:bg-red-900 rounded-lg transition text-red-700 dark:text-red-400">
+            <button @click="fetchStudents" class="min-h-[44px] sm:min-h-0 mt-2 text-xs font-semibold px-3 py-1.5 bg-red-100 hover:bg-red-200 dark:bg-red-900/50 dark:hover:bg-red-900 rounded-lg transition text-red-700 dark:text-red-400">
               ลองใหม่อีกครั้ง
             </button>
           </div>
@@ -510,7 +510,7 @@ const getProfileImage = (student: any) => {
                       <div class="flex justify-center gap-2">
                         <button
                           @click="viewStudentCard(student)"
-                          class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/50 rounded-lg transition"
+                          class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/50 rounded-lg transition"
                           title="ดูบัตร"
                         >
                           <Icon icon="fluent:eye-24-regular" class="w-5 h-5" />
@@ -518,7 +518,7 @@ const getProfileImage = (student: any) => {
                         <button
                           v-if="isAdmin || can('students.manage')"
                           @click="editStudentCard(student)"
-                          class="p-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+                          class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
                           title="แก้ไข"
                         >
                           <Icon icon="fluent:edit-24-regular" class="w-5 h-5" />
@@ -546,14 +546,14 @@ const getProfileImage = (student: any) => {
                 <button
                   @click="currentPage--; fetchStudents()"
                   :disabled="currentPage <= 1"
-                  class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm disabled:opacity-50 transition"
+                  class="min-h-[44px] sm:min-h-0 px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm disabled:opacity-50 transition"
                 >
                   ก่อนหน้า
                 </button>
                 <button
                   @click="currentPage++; fetchStudents()"
                   :disabled="currentPage >= totalPages"
-                  class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm disabled:opacity-50 transition"
+                  class="min-h-[44px] sm:min-h-0 px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm disabled:opacity-50 transition"
                 >
                   ถัดไป
                 </button>

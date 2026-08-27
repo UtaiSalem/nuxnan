@@ -113,7 +113,7 @@ const activeTab = ref((route.query.tab as string) || 'overview')
         <p class="text-sm text-gray-500 mb-6 text-center max-w-sm">{{ error }}</p>
         <div class="flex gap-3">
           <button @click="fetchProfile"
-                  class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                  class="min-h-[44px] sm:min-h-0 inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
             <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -121,7 +121,7 @@ const activeTab = ref((route.query.tab as string) || 'overview')
             ลองอีกครั้ง
           </button>
           <button @click="router.back()"
-                  class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors">
+                  class="min-h-[44px] sm:min-h-0 inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors">
             ย้อนกลับ
           </button>
         </div>
@@ -232,7 +232,7 @@ const activeTab = ref((route.query.tab as string) || 'overview')
               <p class="text-xs text-gray-500 mt-0.5">จัดการข้อมูลเพิ่มเติม</p>
             </div>
             <button onclick="window.print()"
-                    class="inline-flex items-center px-3 py-2 bg-gray-100 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-200 transition-colors">
+                    class="min-h-[44px] sm:min-h-0 inline-flex items-center px-3 py-2 bg-gray-100 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-200 transition-colors">
               <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />

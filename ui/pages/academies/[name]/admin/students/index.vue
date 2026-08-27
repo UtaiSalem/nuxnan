@@ -102,14 +102,14 @@ watch(academyId, (id) => {
         </NuxtLink>
         <button
           @click="exportStudents"
-          class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg transition-colors"
+          class="min-h-[44px] sm:min-h-0 flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg transition-colors"
         >
           <Icon icon="fluent:arrow-download-24-regular" class="w-5 h-5" />
           <span class="hidden sm:inline">ส่งออกรายชื่อ</span>
         </button>
         <button
           @click="handleExportInvitations"
-          class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40 text-purple-700 dark:text-purple-400 font-medium rounded-lg transition-colors border border-purple-200 dark:border-purple-800"
+          class="min-h-[44px] sm:min-h-0 flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40 text-purple-700 dark:text-purple-400 font-medium rounded-lg transition-colors border border-purple-200 dark:border-purple-800"
         >
           <Icon icon="fluent:mail-arrow-down-24-regular" class="w-5 h-5" />
           <span class="hidden sm:inline">ลิงก์เปิดบัญชี</span>

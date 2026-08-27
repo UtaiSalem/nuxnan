@@ -33,7 +33,7 @@ onMounted(() => { if (props.canClaim) loadHistory() })
         </span>
         <h2 class="text-lg font-bold text-gray-900 dark:text-white">สนับสนุน &amp; รับแต้ม</h2>
       </div>
-      <button v-if="donationEnabled" type="button" class="rounded-xl bg-vikinger-purple px-4 py-2 text-sm font-semibold text-white" @click="emit('donate')">บริจาคแต้ม</button>
+      <button v-if="donationEnabled" type="button" class="min-h-[44px] sm:min-h-0 rounded-xl bg-vikinger-purple px-4 py-2 text-sm font-semibold text-white" @click="emit('donate')">บริจาคแต้ม</button>
     </header>
 
     <div class="mt-5 grid grid-cols-3 gap-3 border-y border-gray-100 py-4 dark:border-gray-700">
@@ -100,7 +100,7 @@ onMounted(() => { if (props.canClaim) loadHistory() })
           v-if="claimsPagination.has_more"
           type="button"
           :disabled="claimsLoading"
-          class="mt-3 rounded-xl bg-gray-100 px-4 py-2 text-sm text-gray-700 transition disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700/60 dark:text-gray-200"
+          class="min-h-[44px] sm:min-h-0 mt-3 rounded-xl bg-gray-100 px-4 py-2 text-sm text-gray-700 transition disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700/60 dark:text-gray-200"
           @click="fetchClaims(true)"
         >
           {{ claimsLoading ? 'กำลังโหลด...' : 'โหลดเพิ่ม' }}

@@ -249,7 +249,7 @@ const commonGradeLevels = [
 
         <button
           @click="openCreateModal"
-          class="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
         >
           <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
           เพิ่มห้องเรียน
@@ -325,13 +325,13 @@ const commonGradeLevels = [
             <div class="flex items-center gap-1">
               <button
                 @click="openEditModal(classroom)"
-                class="p-2 text-gray-500 hover:text-primary-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-500 hover:text-primary-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 <Icon icon="fluent:edit-24-regular" class="w-5 h-5" />
               </button>
               <button
                 @click="deleteClassroom(classroom)"
-                class="p-2 text-gray-500 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-500 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 <Icon icon="fluent:delete-24-regular" class="w-5 h-5" />
               </button>
@@ -475,14 +475,14 @@ const commonGradeLevels = [
               <button
                 type="button"
                 @click="showModal = false"
-                class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 ยกเลิก
               </button>
               <button
                 type="submit"
                 :disabled="isSaving"
-                class="flex-1 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
               >
                 <Icon v-if="isSaving" icon="fluent:spinner-ios-20-filled" class="w-5 h-5 animate-spin" />
                 {{ isSaving ? 'กำลังบันทึก...' : (editingClassroom ? 'บันทึก' : 'สร้างห้องเรียน') }}

@@ -141,7 +141,7 @@ const toggleActive = async (category: any) => {
           <p class="text-gray-600 dark:text-gray-400">{{ categories.length }} หมวดหมู่</p>
         </div>
         <button @click="openCreateForm"
-          class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors inline-flex items-center gap-2">
+          class="min-h-[44px] sm:min-h-0 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors inline-flex items-center gap-2">
           <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
           เพิ่มหมวดหมู่
         </button>
@@ -177,13 +177,13 @@ const toggleActive = async (category: any) => {
             <div class="flex items-center gap-2">
               <button @click="toggleActive(category)"
                 :class="category.is_active ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'"
-                class="p-2 rounded-lg transition-colors" :title="category.is_active ? 'ปิดหมวดหมู่' : 'เปิดหมวดหมู่'">
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-lg transition-colors" :title="category.is_active ? 'ปิดหมวดหมู่' : 'เปิดหมวดหมู่'">
                 <Icon :icon="category.is_active ? 'fluent:eye-24-regular' : 'fluent:eye-off-24-regular'" class="w-4 h-4" />
               </button>
-              <button @click="openEditForm(category)" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <button @click="openEditForm(category)" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                 <Icon icon="fluent:edit-24-regular" class="w-4 h-4 text-gray-500" />
               </button>
-              <button @click="handleDelete(category)" class="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+              <button @click="handleDelete(category)" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
                 <Icon icon="fluent:delete-24-regular" class="w-4 h-4 text-red-500" />
               </button>
             </div>
@@ -240,7 +240,7 @@ const toggleActive = async (category: any) => {
                   type="button"
                   @click="form.icon = icon"
                   :class="form.icon === icon ? 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'bg-gray-50 dark:bg-gray-700'"
-                  class="p-2.5 rounded-lg transition-all hover:bg-gray-100 dark:hover:bg-gray-600"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2.5 rounded-lg transition-all hover:bg-gray-100 dark:hover:bg-gray-600"
                 >
                   <Icon :icon="icon" class="w-5 h-5 text-gray-700 dark:text-gray-300 mx-auto" />
                 </button>
@@ -255,11 +255,11 @@ const toggleActive = async (category: any) => {
 
             <div class="flex gap-3 pt-2">
               <button type="button" @click="showForm = false"
-                class="flex-1 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                class="min-h-[44px] sm:min-h-0 flex-1 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                 ยกเลิก
               </button>
               <button type="submit" :disabled="isSubmitting || !form.name"
-                class="flex-1 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-xl font-medium transition-colors">
+                class="min-h-[44px] sm:min-h-0 flex-1 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-xl font-medium transition-colors">
                 {{ isSubmitting ? 'กำลังบันทึก...' : (editingCategory ? 'อัพเดท' : 'สร้าง') }}
               </button>
             </div>

@@ -402,7 +402,7 @@ watch(() => props.academyId, (id) => {
         v-if="hasActiveFilters"
         type="button"
         @click="resetFilters"
-        class="px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        class="min-h-[44px] sm:min-h-0 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
       >
         ล้างตัวกรอง
       </button>
@@ -445,7 +445,7 @@ watch(() => props.academyId, (id) => {
                   <button
                     type="button"
                     @click="resetFilters"
-                    class="mt-3 inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    class="min-h-[44px] sm:min-h-0 mt-3 inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
                     ล้างตัวกรองทั้งหมด
                   </button>
@@ -548,14 +548,14 @@ watch(() => props.academyId, (id) => {
           <button
             :disabled="lazyParams.page <= 1"
             @click="onPage({ first: (lazyParams.page - 2) * lazyParams.rows, rows: lazyParams.rows, page: lazyParams.page - 2 })"
-            class="px-3 py-1.5 rounded-md text-sm border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            class="min-h-[44px] sm:min-h-0 px-3 py-1.5 rounded-md text-sm border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
             ก่อนหน้า
           </button>
           <button
             :disabled="lazyParams.page >= Math.ceil(totalRecords / lazyParams.rows)"
             @click="onPage({ first: lazyParams.page * lazyParams.rows, rows: lazyParams.rows, page: lazyParams.page })"
-            class="px-3 py-1.5 rounded-md text-sm border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            class="min-h-[44px] sm:min-h-0 px-3 py-1.5 rounded-md text-sm border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
             ถัดไป
           </button>

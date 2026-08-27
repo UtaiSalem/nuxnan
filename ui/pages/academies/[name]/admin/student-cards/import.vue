@@ -316,7 +316,7 @@ const levels = ['1', '2', '3', '4', '5', '6']
             <button
               @click="uploadFile"
               :disabled="!selectedFile || isUploading"
-              class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <Icon v-if="isUploading" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
               <Icon v-else icon="fluent:arrow-upload-24-regular" class="w-5 h-5" />

@@ -307,7 +307,7 @@ const formatDate = (date: string) => {
                 <button
                   v-if="product.stock_quantity > 0"
                   @click="addToCart(product)"
-                  class="w-full py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded-lg font-medium transition-colors flex items-center justify-center gap-1"
+                  class="min-h-[44px] sm:min-h-0 w-full py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded-lg font-medium transition-colors flex items-center justify-center gap-1"
                 >
                   <Icon icon="fluent:cart-24-regular" class="w-4 h-4" />
                   เพิ่มลงตะกร้า
@@ -320,10 +320,10 @@ const formatDate = (date: string) => {
           <!-- Pagination -->
           <div v-if="meta.last_page > 1" class="flex items-center justify-center gap-2 pt-4">
             <button @click="currentPage > 1 && (currentPage--, fetchProducts())" :disabled="currentPage <= 1"
-              class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-50">ก่อนหน้า</button>
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-50">ก่อนหน้า</button>
             <span class="text-sm text-gray-600 dark:text-gray-400">{{ currentPage }} / {{ meta.last_page }}</span>
             <button @click="currentPage < meta.last_page && (currentPage++, fetchProducts())" :disabled="currentPage >= meta.last_page"
-              class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-50">ถัดไป</button>
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-50">ถัดไป</button>
           </div>
         </div>
 

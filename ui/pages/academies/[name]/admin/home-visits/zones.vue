@@ -162,7 +162,7 @@ const colors = [
         
         <button
           @click="openCreateModal"
-          class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2"
         >
           <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
           <span>เพิ่มโซน</span>
@@ -179,7 +179,7 @@ const colors = [
         <p class="text-gray-500 dark:text-gray-400 mb-4">ยังไม่มีโซนเยี่ยมบ้าน</p>
         <button
           @click="openCreateModal"
-          class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
         >
           เพิ่มโซนแรก
         </button>
@@ -212,13 +212,13 @@ const colors = [
               <div class="flex gap-1">
                 <button
                   @click="openEditModal(zone)"
-                  class="p-2 text-gray-400 hover:text-primary-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-400 hover:text-primary-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                 >
                   <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
                 </button>
                 <button
                   @click="confirmDelete(zone)"
-                  class="p-2 text-gray-400 hover:text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-400 hover:text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                 >
                   <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
                 </button>
@@ -290,14 +290,14 @@ const colors = [
           <div class="p-6 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
             <button
               @click="showModal = false"
-              class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300"
             >
               ยกเลิก
             </button>
             <button
               @click="saveZone"
               :disabled="!form.name.trim() || isSaving"
-              class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 flex items-center gap-2"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 flex items-center gap-2"
             >
               <Icon v-if="isSaving" icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
               <span>{{ isSaving ? 'กำลังบันทึก...' : 'บันทึก' }}</span>
@@ -318,13 +318,13 @@ const colors = [
           <div class="flex justify-end gap-3">
             <button
               @click="showDeleteModal = false"
-              class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300"
             >
               ยกเลิก
             </button>
             <button
               @click="deleteZone"
-              class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
             >
               ลบ
             </button>

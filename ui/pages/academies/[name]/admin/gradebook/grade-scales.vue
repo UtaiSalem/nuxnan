@@ -295,7 +295,7 @@ const getGradeColor = (grade: string) => {
 
       <!-- Tabs -->
       <div class="flex gap-2">
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           @click="activeTab = 'scales'"
           :class="[
             'px-4 py-2 rounded-lg font-medium transition-colors',
@@ -307,7 +307,7 @@ const getGradeColor = (grade: string) => {
           <Icon icon="fluent:data-bar-vertical-24-regular" class="w-5 h-5 inline mr-2" />
           เกณฑ์การให้เกรด
         </button>
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           @click="activeTab = 'categories'"
           :class="[
             'px-4 py-2 rounded-lg font-medium transition-colors',
@@ -326,7 +326,7 @@ const getGradeColor = (grade: string) => {
         <div class="flex justify-end">
           <button
             @click="openCreateScaleModal"
-            class="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
           >
             <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
             สร้างเกณฑ์ใหม่
@@ -363,20 +363,20 @@ const getGradeColor = (grade: string) => {
                 <button
                   v-if="!scale.is_default"
                   @click="setDefaultScale(scale)"
-                  class="px-3 py-1.5 text-sm text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors"
+                  class="min-h-[44px] sm:min-h-0 px-3 py-1.5 text-sm text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors"
                 >
                   ตั้งเป็นค่าเริ่มต้น
                 </button>
                 <button
                   @click="openEditScaleModal(scale)"
-                  class="p-2 text-gray-500 hover:text-primary-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-500 hover:text-primary-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
                   <Icon icon="fluent:edit-24-regular" class="w-5 h-5" />
                 </button>
                 <button
                   v-if="!scale.is_default"
                   @click="deleteGradeScale(scale)"
-                  class="p-2 text-gray-500 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-500 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
                   <Icon icon="fluent:delete-24-regular" class="w-5 h-5" />
                 </button>
@@ -414,14 +414,14 @@ const getGradeColor = (grade: string) => {
             <button
               v-if="assessmentCategories.length === 0"
               @click="createDefaultCategories"
-              class="px-4 py-2 border border-primary-500 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg font-medium transition-colors flex items-center gap-2"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 border border-primary-500 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg font-medium transition-colors flex items-center gap-2"
             >
               <Icon icon="fluent:flash-24-filled" class="w-5 h-5" />
               สร้างหมวดหมู่พื้นฐาน
             </button>
             <button
               @click="openCreateCategoryModal"
-              class="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
             >
               <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
               เพิ่มหมวดหมู่
@@ -600,14 +600,14 @@ const getGradeColor = (grade: string) => {
               <button
                 type="button"
                 @click="showScaleModal = false"
-                class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 ยกเลิก
               </button>
               <button
                 type="submit"
                 :disabled="isSaving"
-                class="flex-1 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
               >
                 <Icon v-if="isSaving" icon="fluent:spinner-ios-20-filled" class="w-5 h-5 animate-spin" />
                 {{ isSaving ? 'กำลังบันทึก...' : 'บันทึก' }}
@@ -667,14 +667,14 @@ const getGradeColor = (grade: string) => {
               <button
                 type="button"
                 @click="showCategoryModal = false"
-                class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 ยกเลิก
               </button>
               <button
                 type="submit"
                 :disabled="isSaving"
-                class="flex-1 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
               >
                 <Icon v-if="isSaving" icon="fluent:spinner-ios-20-filled" class="w-5 h-5 animate-spin" />
                 {{ isSaving ? 'กำลังบันทึก...' : 'บันทึก' }}

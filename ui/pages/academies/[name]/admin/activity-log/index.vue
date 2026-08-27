@@ -93,7 +93,7 @@
         <button
           v-if="filterAction || filterFromDate || filterToDate"
           @click="resetFilters"
-          class="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
         >
           <Icon icon="mdi:filter-remove" class="w-5 h-5 mr-1 inline" />
           ล้างตัวกรอง
@@ -201,14 +201,14 @@
           <button
             @click="changePage(pagination.current_page - 1)"
             :disabled="pagination.current_page === 1"
-            class="px-3 py-1 border rounded-lg text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="min-h-[44px] sm:min-h-0 px-3 py-1 border rounded-lg text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ก่อนหน้า
           </button>
           <button
             @click="changePage(pagination.current_page + 1)"
             :disabled="pagination.current_page === pagination.last_page"
-            class="px-3 py-1 border rounded-lg text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="min-h-[44px] sm:min-h-0 px-3 py-1 border rounded-lg text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ถัดไป
           </button>

@@ -96,7 +96,7 @@ const handleDeleted = (groupId: number) => {
 
           <button
             type="button"
-            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
             @click="close"
           >
             <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
@@ -105,7 +105,7 @@ const handleDeleted = (groupId: number) => {
 
         <div class="px-4 sm:px-6 pt-4 border-b border-gray-100 dark:border-gray-700 overflow-x-auto">
           <div class="flex gap-2 min-w-max pb-4">
-            <button
+            <button class="min-h-[44px] sm:min-h-0"
               v-for="tab in tabs"
               :key="tab.key"
               type="button"

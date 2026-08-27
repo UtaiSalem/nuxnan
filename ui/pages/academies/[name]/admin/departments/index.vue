@@ -514,14 +514,14 @@ const onSetupSuccess = async () => {
         <div class="flex items-center gap-2">
           <button
             @click="showSetupModal = true"
-            class="inline-flex items-center gap-2 px-4 py-2.5 border border-primary-300 dark:border-primary-700 text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-xl font-medium transition-colors"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2.5 border border-primary-300 dark:border-primary-700 text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-xl font-medium transition-colors"
           >
             <Icon icon="heroicons:building-office" class="w-5 h-5" />
             <span>โครงสร้างมาตรฐาน</span>
           </button>
           <button
             @click="openCreateModal"
-            class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
           >
             <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
             <span>สร้างแผนก</span>
@@ -606,14 +606,14 @@ const onSetupSuccess = async () => {
         <div class="flex items-center justify-center gap-3">
           <button
             @click="showSetupModal = true"
-            class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors shadow-lg shadow-primary-500/20"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors shadow-lg shadow-primary-500/20"
           >
             <Icon icon="heroicons:building-office" class="w-5 h-5" />
             <span>ตั้งค่าโครงสร้างมาตรฐาน</span>
           </button>
           <button
             @click="openCreateModal"
-            class="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
             <span>สร้างแผนกเอง</span>
@@ -645,34 +645,34 @@ const onSetupSuccess = async () => {
                 </div>
               </div>
               <div class="relative group">
-                <button class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <button class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                   <Icon icon="fluent:more-vertical-24-regular" class="w-5 h-5 text-gray-400" />
                 </button>
                 <div class="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
                   <button
                     @click="openMembersModal(department)"
-                    class="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 first:rounded-t-xl"
+                    class="min-h-[44px] sm:min-h-0 w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 first:rounded-t-xl"
                   >
                     <Icon icon="fluent:people-24-regular" class="w-4 h-4" />
                     จัดการสมาชิก
                   </button>
                   <button
                     @click="openPermissionsModal(department)"
-                    class="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                    class="min-h-[44px] sm:min-h-0 w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
                   >
                     <Icon icon="fluent:shield-lock-24-regular" class="w-4 h-4" />
                     สิทธิ์การใช้งาน
                   </button>
                   <button
                     @click="openEditModal(department)"
-                    class="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                    class="min-h-[44px] sm:min-h-0 w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
                   >
                     <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
                     แก้ไข
                   </button>
                   <button
                     @click="deleteDepartment(department)"
-                    class="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2 last:rounded-b-xl"
+                    class="min-h-[44px] sm:min-h-0 w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2 last:rounded-b-xl"
                   >
                     <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
                     ลบ
@@ -730,7 +730,7 @@ const onSetupSuccess = async () => {
         <button
           @click="pagination.current_page--; fetchDepartments()"
           :disabled="pagination.current_page === 1"
-          class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
         >
           ก่อนหน้า
         </button>
@@ -740,7 +740,7 @@ const onSetupSuccess = async () => {
         <button
           @click="pagination.current_page++; fetchDepartments()"
           :disabled="pagination.current_page === pagination.last_page"
-          class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
         >
           ถัดไป
         </button>
@@ -754,7 +754,7 @@ const onSetupSuccess = async () => {
         <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md">
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">สร้างแผนกใหม่</h3>
-            <button @click="showCreateModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+            <button @click="showCreateModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
@@ -786,14 +786,14 @@ const onSetupSuccess = async () => {
               <button
                 type="button"
                 @click="showCreateModal = false"
-                class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 ยกเลิก
               </button>
               <button
                 type="submit"
                 :disabled="isSubmitting"
-                class="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <div v-if="isSubmitting" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                 <span>{{ isSubmitting ? 'กำลังสร้าง...' : 'สร้างแผนก' }}</span>
@@ -811,7 +811,7 @@ const onSetupSuccess = async () => {
         <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md">
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">แก้ไขแผนก</h3>
-            <button @click="showEditModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+            <button @click="showEditModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
@@ -841,14 +841,14 @@ const onSetupSuccess = async () => {
               <button
                 type="button"
                 @click="showEditModal = false"
-                class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 ยกเลิก
               </button>
               <button
                 type="submit"
                 :disabled="isSubmitting"
-                class="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <div v-if="isSubmitting" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                 <span>{{ isSubmitting ? 'กำลังบันทึก...' : 'บันทึก' }}</span>
@@ -872,12 +872,12 @@ const onSetupSuccess = async () => {
             <div class="flex items-center gap-2">
               <button
                 @click="openAddMemberModal"
-                class="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded-lg font-medium transition-colors flex items-center gap-1"
+                class="min-h-[44px] sm:min-h-0 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded-lg font-medium transition-colors flex items-center gap-1"
               >
                 <Icon icon="fluent:add-24-regular" class="w-4 h-4" />
                 เพิ่มสมาชิก
               </button>
-              <button @click="showMembersModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+              <button @click="showMembersModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
               </button>
             </div>
@@ -918,7 +918,7 @@ const onSetupSuccess = async () => {
                   </select>
                   <button
                     @click="removeMember(member.id)"
-                    class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                   >
                     <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
                   </button>
@@ -959,7 +959,7 @@ const onSetupSuccess = async () => {
               <h3 class="text-lg font-semibold text-gray-900 dark:text-white">ตั้งค่าสิทธิ์การใช้งาน</h3>
               <p class="text-sm text-gray-500 dark:text-gray-400">{{ selectedDepartment?.name }}</p>
             </div>
-            <button @click="showPermissionsModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+            <button @click="showPermissionsModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
               <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
@@ -995,14 +995,14 @@ const onSetupSuccess = async () => {
           <div class="p-5 border-t border-gray-200 dark:border-gray-700 flex items-center gap-3 bg-gray-50 dark:bg-gray-800/50">
             <button
               @click="showPermissionsModal = false"
-              class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               ยกเลิก
             </button>
             <button
               @click="saveDepartmentPermissions"
               :disabled="isSubmitting"
-              class="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors shadow-lg shadow-primary-500/20"
+              class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors shadow-lg shadow-primary-500/20"
             >
               <div v-if="isSubmitting" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
               <span>บันทึกตั้งค่า</span>

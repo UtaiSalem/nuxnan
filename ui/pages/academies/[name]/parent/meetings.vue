@@ -290,7 +290,7 @@ const getStatusLabel = (status: string) => {
                     </div>
                     <button 
                       @click="openBookingModal(slot)"
-                      class="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-200 dark:shadow-none hover:bg-blue-700 active:scale-95 transition-all"
+                      class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-200 dark:shadow-none hover:bg-blue-700 active:scale-95 transition-all"
                     >
                       จองเวลานี้
                     </button>
@@ -326,7 +326,7 @@ const getStatusLabel = (status: string) => {
                   <button 
                     v-if="['pending', 'confirmed'].includes(booking.status)"
                     @click="cancelBooking(booking.id)"
-                    class="p-1.5 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded-full transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded-full transition-colors"
                   >
                     <Icon icon="fluent:delete-24-regular" class="w-5 h-5" />
                   </button>
@@ -372,7 +372,7 @@ const getStatusLabel = (status: string) => {
         <div class="p-8">
           <div class="flex items-center justify-between mb-8">
             <h3 class="text-2xl font-black text-gray-900 dark:text-white tracking-tight">ยืนยันการนัดพบ</h3>
-            <button @click="showBookingModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
+            <button @click="showBookingModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
               <Icon icon="fluent:dismiss-24-regular" class="w-6 h-6 text-gray-400" />
             </button>
           </div>

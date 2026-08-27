@@ -57,7 +57,7 @@ function selectStep(idx: number) {
   >
     <ol class="hidden items-center gap-2 md:flex">
       <li v-for="(step, idx) in resolvedSteps" :key="`${idx}-${step.label}`" class="flex min-w-0 flex-1 items-center">
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           type="button"
           :disabled="stateOf(idx) === 'locked'"
           :aria-current="stateOf(idx) === 'current' ? 'step' : undefined"
@@ -112,7 +112,7 @@ function selectStep(idx: number) {
       <li v-for="(step, idx) in resolvedSteps" :key="`mobile-${idx}-${step.label}`">
         <button
           type="button"
-          class="flex w-full items-center gap-3 rounded-xl px-1 py-1 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30"
+          class="min-h-[44px] sm:min-h-0 flex w-full items-center gap-3 rounded-xl px-1 py-1 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30"
           :disabled="stateOf(idx) === 'locked'"
           :aria-current="stateOf(idx) === 'current' ? 'step' : undefined"
           :aria-disabled="stateOf(idx) === 'locked' ? 'true' : 'false'"

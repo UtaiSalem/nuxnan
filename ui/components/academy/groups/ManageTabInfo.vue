@@ -142,7 +142,7 @@ const submit = async () => {
       <button
         type="submit"
         :disabled="!isDirty || !isNameValid || isSaving"
-        class="px-4 py-2 bg-vikinger-purple text-white rounded-lg font-medium hover:bg-vikinger-purple/90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+        class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-vikinger-purple text-white rounded-lg font-medium hover:bg-vikinger-purple/90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
       >
         <Icon v-if="isSaving" icon="svg-spinners:ring-resize" class="w-4 h-4" />
         <Icon v-else icon="fluent:save-24-regular" class="w-4 h-4" />

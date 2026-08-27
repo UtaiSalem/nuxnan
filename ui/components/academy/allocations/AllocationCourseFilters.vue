@@ -144,7 +144,7 @@ const showAllTerms = () => {
       <button
         v-if="selectGroups.length"
         type="button"
-        class="relative inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2.5 text-sm font-semibold transition"
+        class="min-h-[44px] sm:min-h-0 relative inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2.5 text-sm font-semibold transition"
         :class="isPanelOpen || activeChips.length
           ? 'border-indigo-500 bg-indigo-50 text-indigo-600 dark:border-indigo-500 dark:bg-indigo-950/40 dark:text-indigo-300'
           : 'border-gray-200 bg-white text-gray-600 hover:border-indigo-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300'"
@@ -186,7 +186,7 @@ const showAllTerms = () => {
       <div class="mt-3 flex flex-wrap gap-2 border-t border-gray-200 pt-3 dark:border-gray-700">
         <button
           type="button"
-          class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 transition hover:border-indigo-300 hover:text-indigo-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 transition hover:border-indigo-300 hover:text-indigo-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
           @click="showAllTerms"
         >
           <Icon icon="fluent:apps-list-24-regular" class="h-4 w-4" />
@@ -195,7 +195,7 @@ const showAllTerms = () => {
         <button
           v-if="isDirty"
           type="button"
-          class="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:border-rose-300 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-300"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:border-rose-300 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-300"
           @click="resetToDefaults"
         >
           <Icon icon="fluent:arrow-reset-24-regular" class="h-4 w-4" />

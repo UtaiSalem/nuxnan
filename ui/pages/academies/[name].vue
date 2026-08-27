@@ -1279,7 +1279,7 @@ watch(() => academy.value?.id, (id) => {
 
               <button
                 type="button"
-                class="px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-vikinger-dark-100 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-vikinger-dark-300 transition-colors"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-vikinger-dark-100 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-vikinger-dark-300 transition-colors"
                 @click="shareAcademy"
               >
                 <Icon icon="heroicons:share" class="w-4 h-4" />
@@ -1291,7 +1291,7 @@ watch(() => academy.value?.id, (id) => {
                 v-if="canJoin"
                 @click="requestMembership"
                 :disabled="isMemberActionLoading"
-                class="px-5 py-2.5 bg-vikinger-purple text-white rounded-lg font-medium hover:bg-vikinger-purple/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                class="min-h-[44px] sm:min-h-0 px-5 py-2.5 bg-vikinger-purple text-white rounded-lg font-medium hover:bg-vikinger-purple/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 <Icon v-if="isMemberActionLoading" icon="svg-spinners:ring-resize" class="w-4 h-4" />
                 <Icon v-else icon="fluent:person-add-24-regular" class="w-4 h-4" />
@@ -1448,7 +1448,7 @@ watch(() => academy.value?.id, (id) => {
               <button
                 @click="loadMoreActivities"
                 :disabled="isLoadingMoreActivities"
-                class="px-6 py-2.5 bg-white dark:bg-vikinger-dark-200 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors shadow-sm border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
+                class="min-h-[44px] sm:min-h-0 px-6 py-2.5 bg-white dark:bg-vikinger-dark-200 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors shadow-sm border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
               >
                 <Icon v-if="isLoadingMoreActivities" icon="svg-spinners:ring-resize" class="w-4 h-4" />
                 <Icon v-else icon="fluent:arrow-download-24-regular" class="w-4 h-4" />
@@ -1476,7 +1476,7 @@ watch(() => academy.value?.id, (id) => {
 
               <!-- Scope Tabs -->
               <div v-if="courseScopeInitialized" class="flex flex-wrap items-center gap-2 px-3 pt-3 md:px-4">
-                <button
+                <button class="min-h-[44px] sm:min-h-0"
                   v-if="courseAvailableFilters?.suggested_scope === 'learning' || (courseAvailableFilters?.scope_counts?.learning ?? 0) > 0"
                   type="button"
                   :class="['px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-1.5', courseFilters.scope === 'learning' ? 'bg-vikinger-purple text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-vikinger-dark-100 dark:text-slate-300 dark:hover:bg-vikinger-dark-300']"
@@ -1486,7 +1486,7 @@ watch(() => academy.value?.id, (id) => {
                   กำลังเรียน ({{ courseAvailableFilters?.scope_counts?.learning ?? 0 }})
                 </button>
 
-                <button
+                <button class="min-h-[44px] sm:min-h-0"
                   v-if="courseAvailableFilters?.suggested_scope === 'owned' || (courseAvailableFilters?.scope_counts?.owned ?? 0) > 0"
                   type="button"
                   :class="['px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-1.5', courseFilters.scope === 'owned' ? 'bg-vikinger-purple text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-vikinger-dark-100 dark:text-slate-300 dark:hover:bg-vikinger-dark-300']"
@@ -1496,7 +1496,7 @@ watch(() => academy.value?.id, (id) => {
                   ที่ฉันสอน ({{ courseAvailableFilters?.scope_counts?.owned ?? 0 }})
                 </button>
 
-                <button
+                <button class="min-h-[44px] sm:min-h-0"
                   type="button"
                   :class="['px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-1.5', courseFilters.scope === 'all' ? 'bg-vikinger-purple text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-vikinger-dark-100 dark:text-slate-300 dark:hover:bg-vikinger-dark-300']"
                   @click="setScope('all')"
@@ -1681,7 +1681,7 @@ watch(() => academy.value?.id, (id) => {
               </div>
               <button
                 @click="showInviteMemberModal = true"
-                class="px-4 py-2 bg-vikinger-purple text-white rounded-lg font-medium text-sm hover:bg-vikinger-purple/90 transition-colors flex items-center gap-2"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-vikinger-purple text-white rounded-lg font-medium text-sm hover:bg-vikinger-purple/90 transition-colors flex items-center gap-2"
               >
                 <Icon icon="fluent:person-add-24-regular" class="w-5 h-5" />
                 เชิญสมาชิก
@@ -1718,14 +1718,14 @@ watch(() => academy.value?.id, (id) => {
                   <div class="flex items-center gap-2">
                     <button
                       @click="acceptMemberRequest(request)"
-                      class="px-3 py-1.5 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors flex items-center gap-1"
+                      class="min-h-[44px] sm:min-h-0 px-3 py-1.5 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors flex items-center gap-1"
                     >
                       <Icon icon="fluent:checkmark-24-regular" class="w-4 h-4" />
                       อนุมัติ
                     </button>
                     <button
                       @click="rejectMemberRequest(request)"
-                      class="px-3 py-1.5 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors flex items-center gap-1"
+                      class="min-h-[44px] sm:min-h-0 px-3 py-1.5 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors flex items-center gap-1"
                     >
                       <Icon icon="fluent:dismiss-24-regular" class="w-4 h-4" />
                       ปฏิเสธ
@@ -1808,7 +1808,7 @@ watch(() => academy.value?.id, (id) => {
                       </NuxtLink>
                       <button
                         v-if="academy.authIsAcademyAdmin && member.role !== 'admin'"
-                        class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500 hover:text-vikinger-purple"
+                        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500 hover:text-vikinger-purple"
                         title="จัดการสมาชิก"
                       >
                         <Icon icon="fluent:settings-24-regular" class="w-5 h-5" />
@@ -2251,7 +2251,7 @@ watch(() => academy.value?.id, (id) => {
             <div v-if="academy.authIsAcademyAdmin" class="flex justify-end">
               <button
                 @click="showCreateEventModal = true"
-                class="px-4 py-2 bg-vikinger-purple text-white rounded-lg font-medium text-sm hover:bg-vikinger-purple/90 transition-colors flex items-center gap-2"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-vikinger-purple text-white rounded-lg font-medium text-sm hover:bg-vikinger-purple/90 transition-colors flex items-center gap-2"
               >
                 <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
                 สร้างกิจกรรมใหม่
@@ -2326,7 +2326,7 @@ watch(() => academy.value?.id, (id) => {
                       <button
                         v-if="event.requires_registration && !event.registration_status && !academy.authIsAcademyAdmin"
                         @click="registerForEvent(event)"
-                        class="px-3 py-1.5 bg-vikinger-purple text-white rounded-lg text-sm font-medium hover:bg-vikinger-purple/90 transition-colors flex items-center gap-1"
+                        class="min-h-[44px] sm:min-h-0 px-3 py-1.5 bg-vikinger-purple text-white rounded-lg text-sm font-medium hover:bg-vikinger-purple/90 transition-colors flex items-center gap-1"
                       >
                         <Icon icon="fluent:person-add-24-regular" class="w-4 h-4" />
                         ลงทะเบียน
@@ -2334,7 +2334,7 @@ watch(() => academy.value?.id, (id) => {
                       <button
                         v-if="event.registration_status && event.registration_status !== 'cancelled'"
                         @click="cancelEventRegistration(event)"
-                        class="px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center gap-1"
+                        class="min-h-[44px] sm:min-h-0 px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center gap-1"
                       >
                         <Icon icon="fluent:dismiss-24-regular" class="w-4 h-4" />
                         ยกเลิกลงทะเบียน
@@ -2350,7 +2350,7 @@ watch(() => academy.value?.id, (id) => {
               <button
                 @click="loadMoreEvents"
                 :disabled="isLoadingMoreEvents"
-                class="px-6 py-2.5 bg-white dark:bg-vikinger-dark-200 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors shadow-sm border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
+                class="min-h-[44px] sm:min-h-0 px-6 py-2.5 bg-white dark:bg-vikinger-dark-200 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors shadow-sm border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
               >
                 <Icon v-if="isLoadingMoreEvents" icon="svg-spinners:ring-resize" class="w-4 h-4" />
                 <Icon v-else icon="fluent:arrow-download-24-regular" class="w-4 h-4" />
@@ -2365,7 +2365,7 @@ watch(() => academy.value?.id, (id) => {
             <div v-if="academy.authIsAcademyAdmin" class="flex justify-end">
               <button
                 @click="showCreateGroupModal = true"
-                class="px-4 py-2 bg-vikinger-purple text-white rounded-lg font-medium text-sm hover:bg-vikinger-purple/90 transition-colors flex items-center gap-2"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-vikinger-purple text-white rounded-lg font-medium text-sm hover:bg-vikinger-purple/90 transition-colors flex items-center gap-2"
               >
                 <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
                 สร้างกลุ่มใหม่

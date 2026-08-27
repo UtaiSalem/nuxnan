@@ -158,7 +158,7 @@ const totalRows = computed(() => {
       <button
         type="button"
         :disabled="busy"
-        class="inline-flex items-center gap-1 rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1 rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
         @click="emit('view', batch)"
       >
         <Icon icon="mdi:eye" class="h-4 w-4" />
@@ -169,7 +169,7 @@ const totalRows = computed(() => {
         v-if="batch.is_undoable"
         type="button"
         :disabled="busy"
-        class="inline-flex items-center gap-1 rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1 rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
         @click="emit('closeUndo', batch)"
       >
         <Icon icon="mdi:lock-clock" class="h-4 w-4" />
@@ -180,7 +180,7 @@ const totalRows = computed(() => {
         v-if="batch.is_undoable"
         type="button"
         :disabled="busy"
-        class="inline-flex items-center gap-1 rounded-md bg-rose-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50"
+        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1 rounded-md bg-rose-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50"
         @click="emit('undo', batch)"
       >
         <Icon icon="mdi:undo" class="h-4 w-4" />

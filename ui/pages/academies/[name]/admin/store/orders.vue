@@ -252,7 +252,7 @@ const formatDate = (date: string) => {
                   <button
                     @click="getNextAction(order)?.action()"
                     :class="[getNextAction(order)?.color]"
-                    class="px-3 py-1.5 text-sm font-medium border border-current rounded-lg hover:opacity-80 transition-opacity inline-flex items-center gap-1"
+                    class="min-h-[44px] sm:min-h-0 px-3 py-1.5 text-sm font-medium border border-current rounded-lg hover:opacity-80 transition-opacity inline-flex items-center gap-1"
                   >
                     <Icon :icon="getNextAction(order)?.icon || ''" class="w-4 h-4" />
                     {{ getNextAction(order)?.label }}
@@ -261,7 +261,7 @@ const formatDate = (date: string) => {
                 <button
                   v-if="order.status === 'pending' || order.status === 'confirmed'"
                   @click="openCancelModal(order)"
-                  class="px-3 py-1.5 text-sm text-red-600 border border-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  class="min-h-[44px] sm:min-h-0 px-3 py-1.5 text-sm text-red-600 border border-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                 >
                   ยกเลิก
                 </button>
@@ -274,12 +274,12 @@ const formatDate = (date: string) => {
       <!-- Pagination -->
       <div v-if="meta.last_page > 1" class="flex items-center justify-center gap-2">
         <button @click="currentPage > 1 && (currentPage--, fetchOrders())" :disabled="currentPage <= 1"
-          class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700">
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700">
           ก่อนหน้า
         </button>
         <span class="text-sm text-gray-600 dark:text-gray-400">{{ currentPage }} / {{ meta.last_page }}</span>
         <button @click="currentPage < meta.last_page && (currentPage++, fetchOrders())" :disabled="currentPage >= meta.last_page"
-          class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700">
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700">
           ถัดไป
         </button>
       </div>
@@ -300,11 +300,11 @@ const formatDate = (date: string) => {
           </div>
           <div class="flex gap-3">
             <button @click="showCancelModal = false"
-              class="flex-1 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700">
+              class="min-h-[44px] sm:min-h-0 flex-1 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700">
               ปิด
             </button>
             <button @click="handleCancel" :disabled="!cancelReason"
-              class="flex-1 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl font-medium transition-colors">
+              class="min-h-[44px] sm:min-h-0 flex-1 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl font-medium transition-colors">
               ยืนยันยกเลิก
             </button>
           </div>

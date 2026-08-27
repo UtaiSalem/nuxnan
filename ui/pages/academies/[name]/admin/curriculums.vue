@@ -532,7 +532,7 @@ const getStatusBadge = (status: string) => {
         </div>
         <button
           @click="openCreateModal"
-          class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
         >
           <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
           <span>สร้างหลักสูตร</span>
@@ -635,7 +635,7 @@ const getStatusBadge = (status: string) => {
         <p class="text-gray-500 dark:text-gray-400 mb-4">เริ่มต้นสร้างหลักสูตรแรกของโรงเรียน</p>
         <button
           @click="openCreateModal"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
         >
           <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
           <span>สร้างหลักสูตร</span>
@@ -669,34 +669,34 @@ const getStatusBadge = (status: string) => {
                   {{ curriculum.is_active ? 'เปิดใช้งาน' : 'ปิดใช้งาน' }}
                 </span>
                 <div class="relative group">
-                  <button class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                  <button class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                     <Icon icon="fluent:more-vertical-24-regular" class="w-5 h-5 text-gray-400" />
                   </button>
                   <div class="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
                     <button
                       @click="openCoursesModal(curriculum)"
-                      class="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 first:rounded-t-xl"
+                      class="min-h-[44px] sm:min-h-0 w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 first:rounded-t-xl"
                     >
                       <Icon icon="fluent:book-24-regular" class="w-4 h-4" />
                       จัดการรายวิชา
                     </button>
                     <button
                       @click="openStudentsModal(curriculum)"
-                      class="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                      class="min-h-[44px] sm:min-h-0 w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
                     >
                       <Icon icon="fluent:people-24-regular" class="w-4 h-4" />
                       ดูนักเรียน
                     </button>
                     <button
                       @click="openEditModal(curriculum)"
-                      class="w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                      class="min-h-[44px] sm:min-h-0 w-full px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
                     >
                       <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
                       แก้ไข
                     </button>
                     <button
                       @click="deleteCurriculum(curriculum)"
-                      class="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2 last:rounded-b-xl"
+                      class="min-h-[44px] sm:min-h-0 w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2 last:rounded-b-xl"
                     >
                       <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
                       ลบ
@@ -752,7 +752,7 @@ const getStatusBadge = (status: string) => {
         <button
           @click="pagination.current_page--; fetchCurriculums()"
           :disabled="pagination.current_page === 1"
-          class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
         >
           ก่อนหน้า
         </button>
@@ -762,7 +762,7 @@ const getStatusBadge = (status: string) => {
         <button
           @click="pagination.current_page++; fetchCurriculums()"
           :disabled="pagination.current_page === pagination.last_page"
-          class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
         >
           ถัดไป
         </button>
@@ -778,7 +778,7 @@ const getStatusBadge = (status: string) => {
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
               {{ showCreateModal ? 'สร้างหลักสูตรใหม่' : 'แก้ไขหลักสูตร' }}
             </h3>
-            <button @click="showCreateModal = false; showEditModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+            <button @click="showCreateModal = false; showEditModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
@@ -894,14 +894,14 @@ const getStatusBadge = (status: string) => {
               <button
                 type="button"
                 @click="showCreateModal = false; showEditModal = false"
-                class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 ยกเลิก
               </button>
               <button
                 type="submit"
                 :disabled="isSubmitting"
-                class="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <div v-if="isSubmitting" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                 <span>{{ isSubmitting ? 'กำลังบันทึก...' : (showCreateModal ? 'สร้างหลักสูตร' : 'บันทึก') }}</span>
@@ -925,12 +925,12 @@ const getStatusBadge = (status: string) => {
             <div class="flex items-center gap-2">
               <button
                 @click="openAddCoursesModal"
-                class="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded-lg font-medium transition-colors flex items-center gap-1"
+                class="min-h-[44px] sm:min-h-0 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded-lg font-medium transition-colors flex items-center gap-1"
               >
                 <Icon icon="fluent:add-24-regular" class="w-4 h-4" />
                 เพิ่มรายวิชา
               </button>
-              <button @click="showCoursesModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+              <button @click="showCoursesModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
               </button>
             </div>
@@ -973,7 +973,7 @@ const getStatusBadge = (status: string) => {
                 </div>
                 <button
                   @click="removeCourse(cc.id)"
-                  class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                 >
                   <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
                 </button>
@@ -991,7 +991,7 @@ const getStatusBadge = (status: string) => {
         <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">เพิ่มรายวิชา</h3>
-            <button @click="showAddCoursesModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+            <button @click="showAddCoursesModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
@@ -1066,14 +1066,14 @@ const getStatusBadge = (status: string) => {
             <div class="flex items-center gap-3">
               <button
                 @click="showAddCoursesModal = false"
-                class="px-4 py-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 ยกเลิก
               </button>
               <button
                 @click="addCoursesToCurriculum"
                 :disabled="selectedCourseIds.length === 0 || isSubmitting"
-                class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 <div v-if="isSubmitting" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                 <span>เพิ่มรายวิชา</span>
@@ -1094,7 +1094,7 @@ const getStatusBadge = (status: string) => {
               <h3 class="text-lg font-semibold text-gray-900 dark:text-white">นักเรียนในหลักสูตร</h3>
               <p class="text-sm text-gray-500 dark:text-gray-400">{{ selectedCurriculum?.name }}</p>
             </div>
-            <button @click="showStudentsModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+            <button @click="showStudentsModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>

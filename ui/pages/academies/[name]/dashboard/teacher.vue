@@ -394,7 +394,7 @@ const quickActions = computed(() => [
                   <p class="font-medium text-gray-900 dark:text-white">{{ assignment.title }}</p>
                   <p class="text-sm text-gray-500">{{ assignment.course }} • {{ assignment.pending }} งานรอตรวจ</p>
                 </div>
-                <button class="px-3 py-1 bg-primary-500 text-white rounded-lg text-sm hover:bg-primary-600">
+                <button class="min-h-[44px] sm:min-h-0 px-3 py-1 bg-primary-500 text-white rounded-lg text-sm hover:bg-primary-600">
                   ตรวจงาน
                 </button>
               </div>

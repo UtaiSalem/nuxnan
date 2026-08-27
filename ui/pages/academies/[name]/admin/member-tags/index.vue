@@ -23,7 +23,7 @@
           <button
             v-if="canManage"
             @click="openCreateModal"
-            class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
           >
             <Icon icon="mdi:plus" class="w-5 h-5" />
             สร้างแท็กใหม่
@@ -50,7 +50,7 @@
         <button
           v-if="canManage"
           @click="openCreateModal"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
         >
           <Icon icon="mdi:plus" class="w-5 h-5" />
           สร้างแท็กแรก

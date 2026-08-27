@@ -147,7 +147,7 @@ const roleLabel: Record<string, string> = { admin: 'หัวหน้า', memb
     </div>
 
     <!-- Selectable trigger -->
-    <button
+    <button class="min-h-[44px] sm:min-h-0"
       v-else
       type="button"
       aria-haspopup="listbox"
@@ -189,7 +189,7 @@ const roleLabel: Record<string, string> = { admin: 'หัวหน้า', memb
         type="button"
         role="option"
         :aria-selected="activeIndex === 0"
-        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 dark:hover:bg-vikinger-dark-200 text-left"
+        class="min-h-[44px] sm:min-h-0 w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 dark:hover:bg-vikinger-dark-200 text-left"
         :class="[
           modelValue === null && 'bg-vikinger-purple/5',
           activeIndex === 0 && 'bg-gray-100 dark:bg-vikinger-dark-200'
@@ -226,7 +226,7 @@ const roleLabel: Record<string, string> = { admin: 'หัวหน้า', memb
         type="button"
         role="option"
         :aria-selected="activeIndex === index + 1"
-        class="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 dark:hover:bg-vikinger-dark-200 text-left"
+        class="min-h-[44px] sm:min-h-0 w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 dark:hover:bg-vikinger-dark-200 text-left"
         :class="[
           modelValue === g.id && 'bg-vikinger-purple/5',
           activeIndex === index + 1 && 'bg-gray-100 dark:bg-vikinger-dark-200'

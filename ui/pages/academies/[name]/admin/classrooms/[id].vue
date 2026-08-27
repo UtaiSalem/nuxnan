@@ -993,14 +993,14 @@ onMounted(async () => {
               </div>
               <div class="mt-4 flex items-center justify-end gap-2">
                 <button
-                  class="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-bold text-primary-600 transition-colors hover:bg-primary-50 dark:border-slate-700 dark:hover:bg-slate-700"
+                  class="min-h-[44px] sm:min-h-0 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-bold text-primary-600 transition-colors hover:bg-primary-50 dark:border-slate-700 dark:hover:bg-slate-700"
                   @click="showAssignHomeroomModal = true"
                 >
                   {{ homeroomTeacher ? 'เปลี่ยน' : 'แต่งตั้ง' }}
                 </button>
                 <button
                   v-if="homeroomTeacher"
-                  class="rounded-lg border border-red-200 px-2.5 py-1 text-xs font-bold text-red-600 transition-colors hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
+                  class="min-h-[44px] sm:min-h-0 rounded-lg border border-red-200 px-2.5 py-1 text-xs font-bold text-red-600 transition-colors hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
                   @click="clearHomeroomTeacher"
                 >
                   เอาออก
@@ -1202,7 +1202,7 @@ onMounted(async () => {
               <button
                 @click="openRenumberPreview"
                 :disabled="students.length === 0 || isLoadingRenumberPreview"
-                class="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 active:scale-95 transition-all disabled:opacity-50"
+                class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 active:scale-95 transition-all disabled:opacity-50"
                 title="เรียงเลขที่ใหม่ตามลำดับเลขประจำตัวนักเรียน"
               >
                 <Icon v-if="isLoadingRenumberPreview" icon="fluent:spinner-ios-20-filled" class="h-4 w-4 animate-spin" />
@@ -1211,7 +1211,7 @@ onMounted(async () => {
               </button>
               <button
                 @click="openAddStudentModal"
-                class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary-600 to-sky-500 px-4 py-2 text-sm font-bold text-white hover:opacity-95 shadow-md active:scale-95 transition-all"
+                class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary-600 to-sky-500 px-4 py-2 text-sm font-bold text-white hover:opacity-95 shadow-md active:scale-95 transition-all"
               >
                 <Icon icon="fluent:person-add-24-filled" class="h-4 w-4" />
                 เพิ่มนักเรียน
@@ -1394,7 +1394,7 @@ onMounted(async () => {
             </div>
             <button
               @click="openAddMemberModal"
-              class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary-600 to-sky-500 px-4 py-2 text-sm font-bold text-white hover:opacity-95 shadow-md active:scale-95 transition-all"
+              class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary-600 to-sky-500 px-4 py-2 text-sm font-bold text-white hover:opacity-95 shadow-md active:scale-95 transition-all"
             >
               <Icon icon="fluent:add-24-filled" class="h-4 w-4" />
               เพิ่มครู/สมาชิก
@@ -1490,7 +1490,7 @@ onMounted(async () => {
             <div class="flex flex-wrap gap-2" v-if="activeSession">
               <button
                 @click="exportAttendanceReport"
-                class="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-colors"
+                class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-colors"
               >
                 <Icon icon="fluent:document-arrow-down-24-regular" class="h-4.5 w-4.5" />
                 ส่งออก CSV
@@ -1499,7 +1499,7 @@ onMounted(async () => {
               <button
                 v-if="activeSession.status === 'open'"
                 @click="handleCloseAttendanceSession"
-                class="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700 transition-colors"
+                class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700 transition-colors"
               >
                 <Icon icon="fluent:lock-closed-24-filled" class="h-4.5 w-4.5" />
                 ปิดการเช็คชื่อ
@@ -1542,7 +1542,7 @@ onMounted(async () => {
                       v-for="(label, statusKey) in { present: 'มา', late: 'สาย', leave: 'ลา', absent: 'ขาด' }"
                       :key="statusKey"
                       @click="attendanceStatuses[student.id || student.user_id].status = statusKey"
-                      class="px-3 py-1 rounded-lg text-xs font-semibold transition-all border"
+                      class="min-h-[44px] sm:min-h-0 px-3 py-1 rounded-lg text-xs font-semibold transition-all border"
                       :class="
                         attendanceStatuses[student.id || student.user_id]?.status === statusKey
                           ? statusKey === 'present' ? 'bg-green-500 border-green-500 text-white shadow-sm' :
@@ -1570,7 +1570,7 @@ onMounted(async () => {
                 <button
                   @click="saveAttendanceRecords"
                   :disabled="isSavingAttendance"
-                  class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary-600 to-sky-500 px-6 py-2.5 text-sm font-bold text-white shadow-md active:scale-95 transition-all disabled:opacity-50"
+                  class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary-600 to-sky-500 px-6 py-2.5 text-sm font-bold text-white shadow-md active:scale-95 transition-all disabled:opacity-50"
                 >
                   <Icon v-if="isSavingAttendance" icon="fluent:spinner-ios-20-regular" class="h-4 w-4 animate-spin" />
                   <Icon v-else icon="fluent:save-24-filled" class="h-4 w-4" />
@@ -1734,7 +1734,7 @@ onMounted(async () => {
             
             <button
               @click="showAddAnnouncementModal = true"
-              class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary-600 to-sky-500 px-4 py-2 text-sm font-bold text-white shadow-md active:scale-95 transition-all"
+              class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary-600 to-sky-500 px-4 py-2 text-sm font-bold text-white shadow-md active:scale-95 transition-all"
             >
               <Icon icon="fluent:add-24-filled" class="h-4.5 w-4.5" />
               สร้างประกาศใหม่
@@ -1821,7 +1821,7 @@ onMounted(async () => {
               </div>
               <button
                 @click="exportRosterReport"
-                class="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-primary-700 transition-colors shadow-sm"
+                class="min-h-[44px] sm:min-h-0 mt-6 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-primary-700 transition-colors shadow-sm"
               >
                 <Icon icon="fluent:document-arrow-down-24-filled" class="h-4.5 w-4.5" />
                 ดาวน์โหลด Excel
@@ -1841,7 +1841,7 @@ onMounted(async () => {
               </div>
               <button
                 @click="exportAttendanceReport"
-                class="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 transition-colors shadow-sm"
+                class="min-h-[44px] sm:min-h-0 mt-6 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 transition-colors shadow-sm"
               >
                 <Icon icon="fluent:document-arrow-down-24-filled" class="h-4.5 w-4.5" />
                 ดาวน์โหลด Excel
@@ -1861,7 +1861,7 @@ onMounted(async () => {
               </div>
               <button
                 @click="exportAcademicReport"
-                class="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-amber-700 transition-colors shadow-sm"
+                class="min-h-[44px] sm:min-h-0 mt-6 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-amber-700 transition-colors shadow-sm"
               >
                 <Icon icon="fluent:document-arrow-down-24-filled" class="h-4.5 w-4.5" />
                 ดาวน์โหลด Excel
@@ -1907,7 +1907,7 @@ onMounted(async () => {
                 <p class="text-xs text-rose-600 dark:text-rose-400 mt-1">{{ availableStudentsError }}</p>
                 <button
                   @click="fetchAvailableStudents()"
-                  class="mt-3 rounded-lg border border-rose-300 dark:border-rose-800 px-3 py-1.5 text-xs font-bold text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors"
+                  class="min-h-[44px] sm:min-h-0 mt-3 rounded-lg border border-rose-300 dark:border-rose-800 px-3 py-1.5 text-xs font-bold text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors"
                 >
                   ลองใหม่
                 </button>
@@ -1938,7 +1938,7 @@ onMounted(async () => {
                   
                   <button
                     @click="handleAddStudent(student)"
-                    class="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-primary-700 transition-colors"
+                    class="min-h-[44px] sm:min-h-0 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-primary-700 transition-colors"
                   >
                     เพิ่มเข้าห้อง
                   </button>
@@ -1950,7 +1950,7 @@ onMounted(async () => {
             <div class="px-6 py-4 bg-slate-50 dark:bg-slate-900/20 border-t dark:border-slate-700 flex justify-end gap-2">
               <button
                 @click="showAddStudentModal = false"
-                class="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+                class="min-h-[44px] sm:min-h-0 rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
               >
                 ปิดหน้าต่าง
               </button>
@@ -2005,7 +2005,7 @@ onMounted(async () => {
             <div class="px-6 py-4 bg-slate-50 dark:bg-slate-900/20 border-t dark:border-slate-700 flex justify-end gap-2">
               <button
                 @click="showTransferStudentModal = false"
-                class="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+                class="min-h-[44px] sm:min-h-0 rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
               >
                 ยกเลิก
               </button>
@@ -2013,7 +2013,7 @@ onMounted(async () => {
               <button
                 @click="handleTransferStudentSubmit"
                 :disabled="!transferToClassroomId"
-                class="rounded-xl bg-gradient-to-r from-primary-600 to-sky-500 px-5 py-2 text-sm font-bold text-white shadow-md active:scale-95 transition-all disabled:opacity-50"
+                class="min-h-[44px] sm:min-h-0 rounded-xl bg-gradient-to-r from-primary-600 to-sky-500 px-5 py-2 text-sm font-bold text-white shadow-md active:scale-95 transition-all disabled:opacity-50"
               >
                 ยืนยันการย้ายห้อง
               </button>
@@ -2077,7 +2077,7 @@ onMounted(async () => {
                   
                   <button
                     @click="handleAddMember(user)"
-                    class="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-primary-700 transition-colors shrink-0"
+                    class="min-h-[44px] sm:min-h-0 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-primary-700 transition-colors shrink-0"
                   >
                     แต่งตั้ง
                   </button>
@@ -2088,7 +2088,7 @@ onMounted(async () => {
             <div class="px-6 py-4 bg-slate-50 dark:bg-slate-900/20 border-t dark:border-slate-700 flex justify-end gap-2">
               <button
                 @click="showAddMemberModal = false"
-                class="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+                class="min-h-[44px] sm:min-h-0 rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
               >
                 ปิด
               </button>
@@ -2133,7 +2133,7 @@ onMounted(async () => {
             <div class="px-6 py-4 bg-slate-50 dark:bg-slate-900/20 border-t dark:border-slate-700 flex justify-end gap-2">
               <button
                 @click="showAddAnnouncementModal = false"
-                class="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+                class="min-h-[44px] sm:min-h-0 rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
               >
                 ยกเลิก
               </button>
@@ -2141,7 +2141,7 @@ onMounted(async () => {
               <button
                 @click="handleAddAnnouncement"
                 :disabled="!newAnnouncementTitle.trim() || !newAnnouncementContent.trim()"
-                class="rounded-xl bg-gradient-to-r from-primary-600 to-sky-500 px-5 py-2 text-sm font-bold text-white shadow-md active:scale-95 transition-all disabled:opacity-50"
+                class="min-h-[44px] sm:min-h-0 rounded-xl bg-gradient-to-r from-primary-600 to-sky-500 px-5 py-2 text-sm font-bold text-white shadow-md active:scale-95 transition-all disabled:opacity-50"
               >
                 ลงประกาศ
               </button>
@@ -2203,7 +2203,7 @@ onMounted(async () => {
             <div class="px-6 py-4 bg-slate-50 dark:bg-slate-900/20 border-t dark:border-slate-700 flex justify-end gap-2 shrink-0">
               <button
                 @click="showRenumberModal = false"
-                class="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+                class="min-h-[44px] sm:min-h-0 rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
               >
                 ยกเลิก
               </button>
@@ -2211,7 +2211,7 @@ onMounted(async () => {
               <button
                 @click="applyRenumber"
                 :disabled="isApplyingRenumber"
-                class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary-600 to-sky-500 px-5 py-2 text-sm font-bold text-white shadow-md active:scale-95 transition-all disabled:opacity-50"
+                class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary-600 to-sky-500 px-5 py-2 text-sm font-bold text-white shadow-md active:scale-95 transition-all disabled:opacity-50"
               >
                 <Icon v-if="isApplyingRenumber" icon="fluent:spinner-ios-20-filled" class="h-4 w-4 animate-spin" />
                 ยืนยันจัดเรียงใหม่
@@ -2326,7 +2326,7 @@ onMounted(async () => {
               <div class="px-6 py-4 bg-slate-50 dark:bg-slate-900/20 border-t dark:border-slate-700 flex justify-end gap-2">
                 <button
                   @click="showProfileDrawer = false"
-                  class="rounded-xl border border-slate-300 dark:border-slate-700 px-5 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+                  class="min-h-[44px] sm:min-h-0 rounded-xl border border-slate-300 dark:border-slate-700 px-5 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
                 >
                   ปิดหน้าต่าง
                 </button>

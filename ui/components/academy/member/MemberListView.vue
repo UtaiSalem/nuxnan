@@ -264,7 +264,7 @@ const isAllSelected = computed(() =>
           <!-- Role & Status -->
           <div class="flex items-center gap-2 mt-4 flex-wrap">
             <!-- Role Badge -->
-            <button 
+            <button class="min-h-[44px] sm:min-h-0" 
               @click="emit('edit-role', member)"
               :class="['inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all hover:opacity-80', getRoleColorClass(getRoleBadge(member).color)]"
             >
@@ -311,14 +311,14 @@ const isAllSelected = computed(() =>
           <div v-if="member.status === 1 && isAdmin" class="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
             <button
               @click="emit('accept-member', member)"
-              class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-colors"
+              class="min-h-[44px] sm:min-h-0 flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-colors"
             >
               <Icon icon="fluent:checkmark-24-filled" class="w-4 h-4" />
               อนุมัติ
             </button>
             <button
               @click="emit('reject-member', member)"
-              class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors"
+              class="min-h-[44px] sm:min-h-0 flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors"
             >
               <Icon icon="fluent:dismiss-24-filled" class="w-4 h-4" />
               ปฏิเสธ
@@ -442,7 +442,7 @@ const isAllSelected = computed(() =>
 
               <!-- Role -->
               <td class="px-4 py-3">
-                <button 
+                <button class="min-h-[44px] sm:min-h-0" 
                   @click="emit('edit-role', member)"
                   :class="['inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all hover:opacity-80 whitespace-nowrap', getRoleColorClass(getRoleBadge(member).color)]"
                 >
@@ -480,14 +480,14 @@ const isAllSelected = computed(() =>
                   <template v-if="member.status === 1">
                     <button
                       @click="emit('accept-member', member)"
-                      class="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
+                      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
                       title="อนุมัติ"
                     >
                       <Icon icon="fluent:checkmark-24-filled" class="w-5 h-5" />
                     </button>
                     <button
                       @click="emit('reject-member', member)"
-                      class="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                       title="ปฏิเสธ"
                     >
                       <Icon icon="fluent:dismiss-24-filled" class="w-5 h-5" />
@@ -497,21 +497,21 @@ const isAllSelected = computed(() =>
                   <!-- Regular actions -->
                   <button
                     @click="emit('edit-role', member)"
-                    class="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors"
                     title="กำหนดบทบาท"
                   >
                     <Icon icon="fluent:shield-person-24-regular" class="w-4 h-4" />
                   </button>
                   <button
                     @click="emit('manage-member', member)"
-                    class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                     title="จัดการสมาชิก"
                   >
                     <Icon icon="fluent:settings-24-regular" class="w-4 h-4" />
                   </button>
                   <button
                     @click="emit('remove-member', member)"
-                    class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                     title="ลบสมาชิก"
                   >
                     <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />

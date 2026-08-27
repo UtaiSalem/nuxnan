@@ -73,7 +73,7 @@ const handleDelete = async () => {
     <div class="flex justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
       <button
         type="button"
-        class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300"
+        class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300"
         @click="emit('cancel')"
       >
         ยกเลิก
@@ -81,7 +81,7 @@ const handleDelete = async () => {
       <button
         type="button"
         :disabled="!canDelete || isDeleting"
-        class="px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+        class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
         @click="handleDelete"
       >
         <Icon v-if="isDeleting" icon="svg-spinners:ring-resize" class="w-4 h-4" />

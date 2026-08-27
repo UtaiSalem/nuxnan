@@ -162,7 +162,7 @@ function updateForm<K extends keyof YearForm>(key: K, value: YearForm[K]) {
           <button
             type="button"
             :disabled="isCreatingYear || !newYearForm.name || !newYearForm.start_date || !newYearForm.end_date"
-            class="inline-flex items-center gap-2 rounded-xl bg-primary-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:bg-gray-400"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 rounded-xl bg-primary-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:bg-gray-400"
             @click="emit('createYear')"
           >
             {{ isCreatingYear ? 'กำลังสร้างปีใหม่...' : 'สร้างปีใหม่แล้วใช้เป็นปลายทาง' }}

@@ -196,7 +196,7 @@ function formatDateTime(value: string | null | undefined): string {
 
     <template v-else>
       <nav class="-mb-px flex gap-1 border-b border-zinc-200 dark:border-zinc-700">
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           v-for="opt in [
             { key: 'all',       label: `ทั้งหมด (${counts.all})` },
             { key: 'committed', label: `บันทึกแล้ว (${counts.committed})` },
@@ -236,7 +236,7 @@ function formatDateTime(value: string | null | undefined): string {
       <div v-if="meta.last_page && meta.last_page > 1" class="flex items-center justify-center gap-2 pt-4">
         <button
           :disabled="page <= 1"
-          class="rounded-md border border-zinc-300 px-3 py-1 text-sm disabled:opacity-50 dark:border-zinc-700"
+          class="min-h-[44px] sm:min-h-0 rounded-md border border-zinc-300 px-3 py-1 text-sm disabled:opacity-50 dark:border-zinc-700"
           @click="changePage(page - 1)"
         >
           ← ก่อนหน้า
@@ -246,7 +246,7 @@ function formatDateTime(value: string | null | undefined): string {
         </span>
         <button
           :disabled="page >= meta.last_page"
-          class="rounded-md border border-zinc-300 px-3 py-1 text-sm disabled:opacity-50 dark:border-zinc-700"
+          class="min-h-[44px] sm:min-h-0 rounded-md border border-zinc-300 px-3 py-1 text-sm disabled:opacity-50 dark:border-zinc-700"
           @click="changePage(page + 1)"
         >
           ถัดไป →

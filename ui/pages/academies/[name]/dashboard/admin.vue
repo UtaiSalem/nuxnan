@@ -330,10 +330,10 @@ const quickActions = computed(() => [
                   </div>
                 </div>
                 <div class="flex gap-2">
-                  <button class="px-3 py-1 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600">
+                  <button class="min-h-[44px] sm:min-h-0 px-3 py-1 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600">
                     อนุมัติ
                   </button>
-                  <button class="px-3 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm hover:bg-gray-300">
+                  <button class="min-h-[44px] sm:min-h-0 px-3 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm hover:bg-gray-300">
                     ปฏิเสธ
                   </button>
                 </div>

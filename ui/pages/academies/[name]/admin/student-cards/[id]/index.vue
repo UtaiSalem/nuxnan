@@ -156,7 +156,7 @@ const formatDate = (dateStr?: string) => {
         <div class="flex flex-wrap gap-2">
           <button
             @click="showBack = !showBack"
-            class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
           >
             <Icon icon="fluent:flip-horizontal-24-regular" class="w-5 h-5" />
             <span>{{ showBack ? 'ด้านหน้า' : 'ด้านหลัง' }}</span>
@@ -164,7 +164,7 @@ const formatDate = (dateStr?: string) => {
           
           <button
             @click="printCard"
-            class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
           >
             <Icon icon="fluent:print-24-regular" class="w-5 h-5" />
             <span>พิมพ์</span>
@@ -213,7 +213,7 @@ const formatDate = (dateStr?: string) => {
           <button
             @click="triggerPhotoUpload"
             :disabled="isUploading"
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
           >
             <Icon :icon="isUploading ? 'eos-icons:loading' : 'fluent:arrow-upload-24-regular'" class="w-5 h-5" />
             <span>{{ isUploading ? 'กำลังอัพโหลด...' : 'อัพโหลดรูปภาพ' }}</span>
@@ -221,7 +221,7 @@ const formatDate = (dateStr?: string) => {
           <button
             v-if="student.profile_image"
             @click="deletePhoto"
-            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
           >
             <Icon icon="fluent:delete-24-regular" class="w-5 h-5" />
             <span>ลบรูปภาพ</span>

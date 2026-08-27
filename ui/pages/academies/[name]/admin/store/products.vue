@@ -194,7 +194,7 @@ const getStockBadge = (product: any) => {
         </div>
         <button
           @click="openCreateForm"
-          class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors inline-flex items-center gap-2"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors inline-flex items-center gap-2"
         >
           <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
           เพิ่มสินค้า
@@ -311,14 +311,14 @@ const getStockBadge = (product: any) => {
                   <div class="flex items-center justify-end gap-1">
                     <button
                       @click="openEditForm(product)"
-                      class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                       title="แก้ไข"
                     >
                       <Icon icon="fluent:edit-24-regular" class="w-4 h-4 text-gray-500" />
                     </button>
                     <button
                       @click="handleDelete(product)"
-                      class="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                       title="ลบ"
                     >
                       <Icon icon="fluent:delete-24-regular" class="w-4 h-4 text-red-500" />
@@ -371,7 +371,7 @@ const getStockBadge = (product: any) => {
           <button
             @click="currentPage > 1 && (currentPage--, fetchProducts())"
             :disabled="currentPage <= 1"
-            class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
+            class="min-h-[44px] sm:min-h-0 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             ก่อนหน้า
           </button>
@@ -379,7 +379,7 @@ const getStockBadge = (product: any) => {
           <button
             @click="currentPage < meta.last_page && (currentPage++, fetchProducts())"
             :disabled="currentPage >= meta.last_page"
-            class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
+            class="min-h-[44px] sm:min-h-0 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             ถัดไป
           </button>
@@ -485,11 +485,11 @@ const getStockBadge = (product: any) => {
 
             <div class="flex gap-3 pt-2">
               <button type="button" @click="showForm = false"
-                class="flex-1 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                class="min-h-[44px] sm:min-h-0 flex-1 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                 ยกเลิก
               </button>
               <button type="submit" :disabled="isSubmitting || !form.name"
-                class="flex-1 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-xl font-medium transition-colors">
+                class="min-h-[44px] sm:min-h-0 flex-1 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-xl font-medium transition-colors">
                 {{ isSubmitting ? 'กำลังบันทึก...' : (editingProduct ? 'อัพเดท' : 'สร้างสินค้า') }}
               </button>
             </div>

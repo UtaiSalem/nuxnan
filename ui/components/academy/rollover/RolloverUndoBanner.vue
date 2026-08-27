@@ -140,7 +140,7 @@ onBeforeUnmount(() => {
         <button
           type="button"
           :disabled="!batch.is_undoable"
-          class="rounded-xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-600 disabled:cursor-not-allowed disabled:bg-gray-400"
+          class="min-h-[44px] sm:min-h-0 rounded-xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-600 disabled:cursor-not-allowed disabled:bg-gray-400"
           @click="confirmUndo"
         >
           Undo rollover
@@ -148,7 +148,7 @@ onBeforeUnmount(() => {
         <button
           type="button"
           :disabled="!batch.is_undoable"
-          class="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+          class="min-h-[44px] sm:min-h-0 rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
           @click="confirmCloseUndo"
         >
           ปิด undo ก่อนเวลา
@@ -156,7 +156,7 @@ onBeforeUnmount(() => {
         <button
           v-if="entries.length"
           type="button"
-          class="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+          class="min-h-[44px] sm:min-h-0 rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
           @click="exportCsv"
         >
           Export CSV

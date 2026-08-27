@@ -245,7 +245,7 @@ watch(activeTab, (newTab) => {
       <div class="flex flex-col gap-3 sm:flex-row">
         <button
           @click="activeTab = 'marketplace'"
-          class="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-100 px-4 py-2 text-violet-700 transition-colors hover:bg-violet-200 dark:bg-violet-900/30 dark:text-violet-200 dark:hover:bg-violet-900/50"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center gap-2 rounded-xl bg-violet-100 px-4 py-2 text-violet-700 transition-colors hover:bg-violet-200 dark:bg-violet-900/30 dark:text-violet-200 dark:hover:bg-violet-900/50"
         >
           <Icon icon="mdi:store-search-outline" class="h-5 w-5" />
           ไปตลาดรายวิชา
@@ -329,7 +329,7 @@ watch(activeTab, (newTab) => {
 
           <button
             @click="handleSearch"
-            class="rounded-xl bg-primary-600 px-4 py-2.5 text-white transition-colors hover:bg-primary-700"
+            class="min-h-[44px] sm:min-h-0 rounded-xl bg-primary-600 px-4 py-2.5 text-white transition-colors hover:bg-primary-700"
           >
             ค้นหา
           </button>
@@ -423,7 +423,7 @@ watch(activeTab, (newTab) => {
             <div class="mt-4 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <button
                 @click="activeTab = 'marketplace'"
-                class="inline-flex items-center gap-2 rounded-xl bg-violet-100 px-4 py-2 text-violet-700 transition-colors hover:bg-violet-200 dark:bg-violet-900/30 dark:text-violet-200 dark:hover:bg-violet-900/50"
+                class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 rounded-xl bg-violet-100 px-4 py-2 text-violet-700 transition-colors hover:bg-violet-200 dark:bg-violet-900/30 dark:text-violet-200 dark:hover:bg-violet-900/50"
               >
                 <Icon icon="mdi:store-search-outline" class="h-5 w-5" />
                 ไปตลาดรายวิชา
@@ -442,7 +442,7 @@ watch(activeTab, (newTab) => {
             <button
               @click="loadMore"
               :disabled="isLoadingMore"
-              class="flex items-center gap-2 rounded-xl bg-primary-50 px-6 py-2.5 font-medium text-primary-600 transition-colors disabled:opacity-50 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-400 dark:hover:bg-primary-900/50"
+              class="min-h-[44px] sm:min-h-0 flex items-center gap-2 rounded-xl bg-primary-50 px-6 py-2.5 font-medium text-primary-600 transition-colors disabled:opacity-50 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-400 dark:hover:bg-primary-900/50"
             >
               <Icon v-if="isLoadingMore" icon="fluent:spinner-ios-20-regular" class="h-5 w-5 animate-spin" />
               <Icon v-else icon="fluent:arrow-download-24-regular" class="h-5 w-5" />

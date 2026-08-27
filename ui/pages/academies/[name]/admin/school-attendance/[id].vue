@@ -331,7 +331,7 @@ const summaryPercent = (count: number) => {
 
             <button
               v-if="session.status === 'open'"
-              class="flex items-center gap-2 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-vikinger transition-all shadow disabled:opacity-50 disabled:pointer-events-none"
+              class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-vikinger transition-all shadow disabled:opacity-50 disabled:pointer-events-none"
               :disabled="isClosing"
               @click="closeSession"
             >
@@ -679,7 +679,7 @@ const summaryPercent = (count: number) => {
                   <button
                     v-for="(cfg, key) in statusConfig"
                     :key="key"
-                    class="px-3 py-1 text-xs font-medium rounded-lg transition-all"
+                    class="min-h-[44px] sm:min-h-0 px-3 py-1 text-xs font-medium rounded-lg transition-all"
                     :class="record.status === key ? cfg.selectedBtn : cfg.btn"
                     @click="record.status = key"
                   >
@@ -706,7 +706,7 @@ const summaryPercent = (count: number) => {
                 บันทึก {{ manualRecords.length }} รายการ
               </span>
               <button
-                class="flex items-center gap-2 px-5 py-2 bg-gradient-vikinger text-white font-semibold rounded-lg shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-5 py-2 bg-gradient-vikinger text-white font-semibold rounded-lg shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 transition-all disabled:opacity-50 disabled:pointer-events-none"
                 :disabled="isSaving"
                 @click="saveManualRecords"
               >

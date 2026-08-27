@@ -93,21 +93,21 @@ const share = async () => {
         <div class="hidden md:flex items-center gap-2 pb-2">
           <button
             v-if="canManage"
-            class="px-4 py-2 rounded-lg text-xs md:text-sm font-semibold bg-vikinger-purple text-white hover:bg-vikinger-purple/90 flex items-center gap-1.5 transition-colors"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg text-xs md:text-sm font-semibold bg-vikinger-purple text-white hover:bg-vikinger-purple/90 flex items-center gap-1.5 transition-colors"
             @click="emit('manage')"
           >
             <Icon icon="heroicons:cog-6-tooth" class="w-4 h-4" />
             จัดการ
           </button>
           <button
-            class="px-4 py-2 rounded-lg text-xs md:text-sm font-semibold border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 flex items-center gap-1.5 transition-colors"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg text-xs md:text-sm font-semibold border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 flex items-center gap-1.5 transition-colors"
             @click="share"
           >
             <Icon icon="heroicons:share" class="w-4 h-4" />
             แชร์
           </button>
           <button
-            class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-vikinger-dark-100 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-vikinger-dark-100 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
             :title="isMuted ? 'เปิดการแจ้งเตือน' : 'ปิดการแจ้งเตือน'"
             @click="emit(isMuted ? 'unmute' : 'mute')"
           >
@@ -125,20 +125,20 @@ const share = async () => {
       <div class="flex md:hidden gap-2 mt-4">
         <button
           v-if="canManage"
-          class="flex-1 px-3 py-2 rounded-lg text-sm font-bold bg-vikinger-purple text-white hover:bg-vikinger-purple/90 transition-colors"
+          class="min-h-[44px] sm:min-h-0 flex-1 px-3 py-2 rounded-lg text-sm font-bold bg-vikinger-purple text-white hover:bg-vikinger-purple/90 transition-colors"
           @click="emit('manage')"
         >
           จัดการ
         </button>
         <button 
-          class="px-3 py-2 rounded-lg text-sm font-bold border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors flex items-center justify-center gap-1" 
+          class="min-h-[44px] sm:min-h-0 px-3 py-2 rounded-lg text-sm font-bold border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors flex items-center justify-center gap-1" 
           @click="share"
         >
           <Icon icon="heroicons:share" class="w-4 h-4" />
           แชร์
         </button>
         <button 
-          class="p-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors flex items-center justify-center" 
+          class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 p-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors flex items-center justify-center" 
           @click="emit(isMuted ? 'unmute' : 'mute')"
         >
           <Icon :icon="isMuted ? 'heroicons:bell-slash' : 'heroicons:bell'" class="w-4 h-4" />

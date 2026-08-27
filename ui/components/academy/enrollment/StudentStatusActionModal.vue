@@ -398,12 +398,12 @@ function onSubmit() {
                 <button
                   type="button"
                   :disabled="isLoading"
-                  class="rounded-md px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800 disabled:opacity-50"
+                  class="min-h-[44px] sm:min-h-0 rounded-md px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800 disabled:opacity-50"
                   @click="close"
                 >
                   ยกเลิก
                 </button>
-                <button
+                <button class="min-h-[44px] sm:min-h-0"
                   type="submit"
                   :disabled="isLoading || !canSubmit"
                   :class="[

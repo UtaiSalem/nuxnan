@@ -277,7 +277,7 @@ function closeModal() {
               <button 
                 @click="closeModal"
                 :disabled="loading"
-                class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
               >
                 <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
               </button>
@@ -320,7 +320,7 @@ function closeModal() {
               <!-- Tabs -->
               <div class="px-6">
                 <div class="flex border-b border-gray-200 dark:border-gray-700">
-                  <button
+                  <button class="min-h-[44px] sm:min-h-0"
                     @click="activeTab = 'info'"
                     :class="[
                       'px-4 py-2 text-sm font-medium transition-colors border-b-2',
@@ -331,7 +331,7 @@ function closeModal() {
                   >
                     ข้อมูล
                   </button>
-                  <button
+                  <button class="min-h-[44px] sm:min-h-0"
                     @click="activeTab = 'edit'"
                     :class="[
                       'px-4 py-2 text-sm font-medium transition-colors border-b-2',
@@ -342,7 +342,7 @@ function closeModal() {
                   >
                     แก้ไข
                   </button>
-                  <button
+                  <button class="min-h-[44px] sm:min-h-0"
                     @click="activeTab = 'actions'"
                     :class="[
                       'px-4 py-2 text-sm font-medium transition-colors border-b-2',
@@ -387,7 +387,7 @@ function closeModal() {
                       <button
                         v-if="member.student.id"
                         @click="navigateTo(`/academies/${route.params.name}/students/${member.student.id}/profile`)"
-                        class="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                        class="min-h-[44px] sm:min-h-0 mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
                       >
                         <Icon icon="fluent:person-24-regular" class="w-3.5 h-3.5" />
                         ดูโปรไฟล์นักเรียน
@@ -455,7 +455,7 @@ function closeModal() {
                     <button
                       @click="updateMember"
                       :disabled="loading"
-                      class="flex items-center gap-2 px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <div v-if="loading" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
@@ -480,7 +480,7 @@ function closeModal() {
                       <button
                         @click="unsuspendMember"
                         :disabled="loading"
-                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                        class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
                       >
                         ยกเลิกการระงับ
                       </button>
@@ -500,7 +500,7 @@ function closeModal() {
                       <button
                         @click="suspendMember"
                         :disabled="loading"
-                        class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                        class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors disabled:opacity-50"
                       >
                         ระงับ
                       </button>
@@ -521,7 +521,7 @@ function closeModal() {
                       <button
                         @click="removeMember"
                         :disabled="loading"
-                        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                        class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50"
                       >
                         ลบสมาชิก
                       </button>
@@ -536,7 +536,7 @@ function closeModal() {
               <button
                 @click="closeModal"
                 :disabled="loading"
-                class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
               >
                 ปิด
               </button>

@@ -11,7 +11,7 @@
       </div>
       <button
         @click="showCreateModal = true"
-        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center"
+        class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center"
       >
         <Icon icon="mdi:plus" class="w-5 h-5 mr-1" />
         สร้างลิงก์ใหม่
@@ -32,7 +32,7 @@
         <p class="text-gray-500 mb-4">สร้างลิงก์เชิญเพื่อให้ผู้ใช้เข้าร่วมได้ง่ายขึ้น</p>
         <button
           @click="showCreateModal = true"
-          class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
         >
           <Icon icon="mdi:plus" class="w-5 h-5 mr-1 inline" />
           สร้างลิงก์แรก
@@ -75,7 +75,7 @@
                 />
                 <button
                   @click="copyToClipboard(link.invite_url)"
-                  class="flex-shrink-0 p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center flex-shrink-0 p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                   title="คัดลอก"
                 >
                   <Icon icon="mdi:content-copy" class="w-5 h-5" />
@@ -107,7 +107,7 @@
             <div class="flex sm:flex-col gap-2">
               <button
                 @click="downloadQR(link)"
-                class="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                 title="ดาวน์โหลด QR"
               >
                 <Icon icon="mdi:download" class="w-5 h-5" />
@@ -115,14 +115,14 @@
               <button
                 @click="toggleActive(link)"
                 :class="link.is_active ? 'hover:text-orange-600 hover:bg-orange-50' : 'hover:text-green-600 hover:bg-green-50'"
-                class="p-2 text-gray-400 rounded-lg transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-400 rounded-lg transition-colors"
                 :title="link.is_active ? 'ปิดใช้งาน' : 'เปิดใช้งาน'"
               >
                 <Icon :icon="link.is_active ? 'mdi:pause-circle' : 'mdi:play-circle'" class="w-5 h-5" />
               </button>
               <button
                 @click="confirmDelete(link)"
-                class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                 title="ลบ"
               >
                 <Icon icon="mdi:delete-outline" class="w-5 h-5" />
@@ -222,14 +222,14 @@
           <div class="flex justify-end gap-3 px-6 py-4 border-t bg-gray-50 rounded-b-xl">
             <button
               @click="showCreateModal = false"
-              class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               ยกเลิก
             </button>
             <button
               @click="createLink"
               :disabled="creating"
-              class="px-4 py-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
             >
               <Icon v-if="creating" icon="mdi:loading" class="w-4 h-4 mr-1 inline animate-spin" />
               สร้างลิงก์

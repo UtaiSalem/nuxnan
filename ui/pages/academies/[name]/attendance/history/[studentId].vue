@@ -238,7 +238,7 @@ const formatTime = (dt: string) => {
           </div>
           <div class="flex items-end">
             <button
-              class="px-5 py-2 bg-gradient-vikinger text-white font-semibold rounded-lg shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 transition-all text-sm"
+              class="min-h-[44px] sm:min-h-0 px-5 py-2 bg-gradient-vikinger text-white font-semibold rounded-lg shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 transition-all text-sm"
               @click="loadHistory"
             >
               <Icon icon="fluent:search-24-regular" class="w-4 h-4 inline mr-1" />

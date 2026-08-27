@@ -104,7 +104,7 @@ onUnmounted(() => {
             ห้องปัจจุบัน: {{ enrollment?.classroom?.display_name ?? 'ยังไม่มีห้องเรียน' }}
           </div>
           <MenuItem v-for="item in items" :key="item.action" v-slot="{ active }">
-            <button
+            <button class="min-h-[44px] sm:min-h-0"
               type="button"
               :class="[
                 'flex w-full items-center gap-2 px-3 py-2 text-sm transition',

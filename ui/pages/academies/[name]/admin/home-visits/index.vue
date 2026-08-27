@@ -339,7 +339,7 @@ const formatDate = (date: string) => {
             
             <button
               @click="handleSearch"
-              class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
             >
               ค้นหา
             </button>
@@ -406,7 +406,7 @@ const formatDate = (date: string) => {
                   <div class="flex justify-center gap-2">
                     <button
                       @click="viewVisit(visit)"
-                      class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/50 rounded-lg"
+                      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/50 rounded-lg"
                       title="ดูรายละเอียด"
                     >
                       <Icon icon="fluent:eye-24-regular" class="w-5 h-5" />
@@ -434,14 +434,14 @@ const formatDate = (date: string) => {
             <button
               @click="currentPage--; fetchVisits()"
               :disabled="currentPage <= 1"
-              class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm disabled:opacity-50"
+              class="min-h-[44px] sm:min-h-0 px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm disabled:opacity-50"
             >
               ก่อนหน้า
             </button>
             <button
               @click="currentPage++; fetchVisits()"
               :disabled="currentPage >= totalPages"
-              class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm disabled:opacity-50"
+              class="min-h-[44px] sm:min-h-0 px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm disabled:opacity-50"
             >
               ถัดไป
             </button>

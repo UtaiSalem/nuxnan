@@ -70,7 +70,7 @@ const emit = defineEmits<{
               v-if="showApprove"
               @click="emit('approve')"
               :disabled="isProcessing"
-              class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              class="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
             >
               <Icon icon="fluent:checkmark-24-filled" class="w-4 h-4" />
               <span class="hidden sm:inline">อนุมัติ</span>
@@ -81,7 +81,7 @@ const emit = defineEmits<{
               v-if="showReject"
               @click="emit('reject')"
               :disabled="isProcessing"
-              class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              class="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
             >
               <Icon icon="fluent:dismiss-24-filled" class="w-4 h-4" />
               <span class="hidden sm:inline">ปฏิเสธ</span>
@@ -92,7 +92,7 @@ const emit = defineEmits<{
               v-if="showSuspend"
               @click="emit('suspend')"
               :disabled="isProcessing"
-              class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              class="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
             >
               <Icon icon="fluent:person-prohibited-24-filled" class="w-4 h-4" />
               <span class="hidden sm:inline">ระงับ</span>
@@ -103,7 +103,7 @@ const emit = defineEmits<{
               v-if="showAssignRole"
               @click="emit('assign-role')"
               :disabled="isProcessing"
-              class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              class="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
             >
               <Icon icon="fluent:person-tag-24-filled" class="w-4 h-4" />
               <span class="hidden sm:inline">กำหนดบทบาท</span>
@@ -114,7 +114,7 @@ const emit = defineEmits<{
               v-if="showExport"
               @click="emit('export')"
               :disabled="isProcessing"
-              class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              class="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
             >
               <Icon icon="fluent:arrow-download-24-filled" class="w-4 h-4" />
               <span class="hidden sm:inline">ส่งออก</span>
@@ -125,7 +125,7 @@ const emit = defineEmits<{
               v-if="showRemove"
               @click="emit('remove')"
               :disabled="isProcessing"
-              class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              class="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
             >
               <Icon icon="fluent:delete-24-filled" class="w-4 h-4" />
               <span class="hidden sm:inline">ลบ</span>
@@ -138,7 +138,7 @@ const emit = defineEmits<{
             <button
               @click="emit('clear')"
               :disabled="isProcessing"
-              class="flex items-center gap-1.5 p-2 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition-colors disabled:opacity-50"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 justify-center flex items-center gap-1.5 p-2 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition-colors disabled:opacity-50"
               title="ยกเลิกการเลือก"
             >
               <Icon icon="fluent:dismiss-circle-24-regular" class="w-5 h-5" />

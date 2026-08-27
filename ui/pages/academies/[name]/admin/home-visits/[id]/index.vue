@@ -142,7 +142,7 @@ const getStatusBadge = (status: string) => {
           </NuxtLink>
           <button
             @click="showDeleteModal = true"
-            class="px-4 py-2 border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
           >
             <Icon icon="fluent:delete-24-regular" class="w-5 h-5" />
             <span class="hidden sm:inline">ลบ</span>
@@ -311,14 +311,14 @@ const getStatusBadge = (status: string) => {
           <div class="flex justify-end gap-3">
             <button
               @click="showDeleteModal = false"
-              class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300"
             >
               ยกเลิก
             </button>
             <button
               @click="deleteVisit"
               :disabled="isDeleting"
-              class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
             >
               <Icon v-if="isDeleting" icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
               ลบ

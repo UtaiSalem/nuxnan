@@ -103,7 +103,7 @@ const remove = async () => {
       <div class="flex items-center justify-between gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-700">
         <button
           v-if="props.currentTeacherId"
-          class="rounded-xl px-3 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-950/40"
+          class="min-h-[44px] sm:min-h-0 rounded-xl px-3 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-950/40"
           :disabled="saving || removing"
           @click="remove"
         >
@@ -111,8 +111,8 @@ const remove = async () => {
         </button>
         <span v-else></span>
         <div class="flex gap-2">
-          <button class="rounded-xl px-4 py-2 text-sm text-slate-600 dark:text-slate-300" @click="emit('close')">ยกเลิก</button>
-          <button class="rounded-xl bg-primary-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" :disabled="saving || removing" @click="save">{{ saving ? 'กำลังบันทึก...' : 'บันทึก' }}</button>
+          <button class="min-h-[44px] sm:min-h-0 rounded-xl px-4 py-2 text-sm text-slate-600 dark:text-slate-300" @click="emit('close')">ยกเลิก</button>
+          <button class="min-h-[44px] sm:min-h-0 rounded-xl bg-primary-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" :disabled="saving || removing" @click="save">{{ saving ? 'กำลังบันทึก...' : 'บันทึก' }}</button>
         </div>
       </div>
     </div>

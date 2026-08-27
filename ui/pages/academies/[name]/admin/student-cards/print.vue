@@ -160,7 +160,7 @@ const academyAddress = computed(() => academy.value?.address || '')
           v-if="studentsToPrint.length > 0"
           @click="printCards"
           :disabled="isPrinting"
-          class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2"
         >
           <Icon icon="fluent:print-24-regular" class="w-5 h-5" />
           <span>พิมพ์ ({{ studentsToPrint.length }} ใบ)</span>
@@ -202,7 +202,7 @@ const academyAddress = computed(() => academy.value?.address || '')
           <div v-if="students.length > 0">
             <button
               @click="selectAll"
-              class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               {{ selectedStudents.size === students.length ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด' }}
             </button>

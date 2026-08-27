@@ -171,7 +171,7 @@ const relativeDate = (iso?: string) => {
         </select>
         <button
           type="button"
-          class="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+          class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
           @click="handleRemove(admin)"
         >
           <Icon icon="fluent:delete-24-regular" class="w-5 h-5" />

@@ -162,7 +162,7 @@ const closeModal = () => {
               <button 
                 @click="closeModal"
                 :disabled="isSubmitting"
-                class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
               >
                 <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
               </button>
@@ -246,14 +246,14 @@ const closeModal = () => {
               <button
                 @click="closeModal"
                 :disabled="isSubmitting"
-                class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
               >
                 ยกเลิก
               </button>
               <button
                 @click="handleSubmit"
                 :disabled="isSubmitting || !selectedRoleId"
-                class="flex items-center gap-2 px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div v-if="isSubmitting" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 <Icon v-else icon="fluent:checkmark-24-filled" class="w-4 h-4" />

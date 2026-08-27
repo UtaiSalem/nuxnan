@@ -338,7 +338,7 @@ const sections = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
           <button
             type="submit"
             :disabled="isSaving"
-            class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 flex items-center gap-2"
+            class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 flex items-center gap-2"
           >
             <div v-if="isSaving" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
             <span>{{ isSaving ? 'กำลังบันทึก...' : 'บันทึก' }}</span>

@@ -261,7 +261,7 @@ const getStatusBadge = (status: string) => {
           <button
             @click="generateTranscripts"
             :disabled="isGenerating || !selectedSemester"
-            class="px-4 py-2 border border-primary-500 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 border border-primary-500 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
           >
             <Icon :icon="isGenerating ? 'fluent:spinner-ios-20-filled' : 'fluent:calculator-24-filled'" :class="['w-5 h-5', isGenerating && 'animate-spin']" />
             คำนวณผลการเรียน
@@ -269,7 +269,7 @@ const getStatusBadge = (status: string) => {
           <button
             @click="publishTranscripts"
             :disabled="isPublishing || !selectedSemester"
-            class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
           >
             <Icon :icon="isPublishing ? 'fluent:spinner-ios-20-filled' : 'fluent:send-24-filled'" :class="['w-5 h-5', isPublishing && 'animate-spin']" />
             เผยแพร่ทั้งหมด
@@ -457,7 +457,7 @@ const getStatusBadge = (status: string) => {
                   </NuxtLink>
                   <button
                     @click="downloadPdf(transcript)"
-                    class="p-2 text-gray-500 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-500 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                     title="ดาวน์โหลด PDF"
                   >
                     <Icon icon="fluent:document-pdf-24-regular" class="w-5 h-5" />

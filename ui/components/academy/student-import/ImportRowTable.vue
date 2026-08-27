@@ -89,14 +89,14 @@
         <button 
           @click="changePage(meta.current_page - 1)" 
           :disabled="meta.current_page === 1"
-          class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm disabled:opacity-50"
+          class="min-h-[44px] sm:min-h-0 px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm disabled:opacity-50"
         >
           ก่อนหน้า
         </button>
         <button 
           @click="changePage(meta.current_page + 1)" 
           :disabled="meta.current_page === meta.last_page"
-          class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm disabled:opacity-50"
+          class="min-h-[44px] sm:min-h-0 px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm disabled:opacity-50"
         >
           ถัดไป
         </button>

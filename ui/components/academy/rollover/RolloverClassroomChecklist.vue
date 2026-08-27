@@ -43,7 +43,7 @@ const hasMissingTargets = computed(() => rows.value.length > 0)
         v-if="hasMissingTargets"
         type="button"
         :disabled="isCreating"
-        class="rounded-xl border border-primary-200 bg-primary-50 px-4 py-2 text-sm font-medium text-primary-700 transition-colors hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-300"
+        class="min-h-[44px] sm:min-h-0 rounded-xl border border-primary-200 bg-primary-50 px-4 py-2 text-sm font-medium text-primary-700 transition-colors hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-primary-800 dark:bg-primary-900/20 dark:text-primary-300"
         @click="emit('createAll')"
       >
         {{ isCreating ? 'กำลังสร้างห้อง...' : 'สร้างห้องที่ขาดทั้งหมด' }}
@@ -101,7 +101,7 @@ const hasMissingTargets = computed(() => rows.value.length > 0)
           <button
             type="button"
             :disabled="isCreating"
-            class="rounded-xl bg-primary-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:bg-gray-400"
+            class="min-h-[44px] sm:min-h-0 rounded-xl bg-primary-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:bg-gray-400"
             @click="emit('createGrade', row.gradeLevel)"
           >
             {{ isCreating ? 'กำลังสร้าง...' : `สร้าง ${row.gradeLevel}/1` }}

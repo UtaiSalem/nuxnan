@@ -840,7 +840,7 @@ const getRoleBadge = (member: any) => {
           <button 
             v-if="can('members.manage')"
             @click="exportAllMembers"
-            class="px-3 py-2.5 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
+            class="min-h-[44px] sm:min-h-0 px-3 py-2.5 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
             title="ส่งออกข้อมูลสมาชิก"
           >
             <Icon icon="fluent:arrow-download-24-regular" class="w-5 h-5" />
@@ -864,7 +864,7 @@ const getRoleBadge = (member: any) => {
           <button 
             v-if="can('members.manage')"
             @click="showInviteModal = true"
-            class="px-4 py-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm shadow-primary-500/25"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm shadow-primary-500/25"
           >
             <Icon icon="fluent:person-add-24-filled" class="w-5 h-5" />
             <span class="hidden sm:inline">เชิญสมาชิก</span>
@@ -1012,7 +1012,7 @@ const getRoleBadge = (member: any) => {
             <div v-if="!isMobile" class="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
               <button 
                 @click="viewMode = 'card'"
-                class="p-2 rounded-md transition-all"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-md transition-all"
                 :class="viewMode === 'card' ? 'bg-white dark:bg-gray-600 text-primary-600 dark:text-primary-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
                 title="มุมมองการ์ด"
               >
@@ -1020,7 +1020,7 @@ const getRoleBadge = (member: any) => {
               </button>
               <button 
                 @click="viewMode = 'table'"
-                class="p-2 rounded-md transition-all"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-md transition-all"
                 :class="viewMode === 'table' ? 'bg-white dark:bg-gray-600 text-primary-600 dark:text-primary-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
                 title="มุมมองตาราง"
               >
@@ -1132,7 +1132,7 @@ const getRoleBadge = (member: any) => {
           <button
             v-if="activeFiltersCount > 0"
             @click="clearAllFilters"
-            class="inline-flex items-center gap-1.5 px-3 py-2 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-sm font-medium transition-colors"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1.5 px-3 py-2 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-sm font-medium transition-colors"
           >
             <Icon icon="fluent:dismiss-circle-24-regular" class="w-4 h-4" />
             ล้างตัวกรอง
@@ -1158,7 +1158,7 @@ const getRoleBadge = (member: any) => {
         
         <!-- Classroom Quick Filters -->
         <div v-if="filterOptions.classrooms.length > 0 && filterOptions.classrooms.length <= 20" class="px-4 pb-3 flex flex-wrap gap-2">
-          <button
+          <button class="min-h-[44px] sm:min-h-0"
             v-for="classroom in filterOptions.classrooms"
             :key="`${classroom.class_level}-${classroom.class_section}`"
             @click="selectedClassroomKey = `${classroom.class_level}|${classroom.class_section}`; selectedClassLevel = classroom.class_level; selectedClassSection = classroom.class_section; onSearch()"
@@ -1265,7 +1265,7 @@ const getRoleBadge = (member: any) => {
             <button
               @click="fetchMembers(1)"
               :disabled="pagination.current_page === 1"
-              class="p-2 rounded-lg border border-gray-200 dark:border-gray-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-lg border border-gray-200 dark:border-gray-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
               title="หน้าแรก"
             >
               <Icon icon="fluent:chevron-double-left-24-regular" class="w-4 h-4" />
@@ -1273,7 +1273,7 @@ const getRoleBadge = (member: any) => {
             <button
               @click="fetchMembers(pagination.current_page - 1)"
               :disabled="pagination.current_page === 1"
-              class="p-2 rounded-lg border border-gray-200 dark:border-gray-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-lg border border-gray-200 dark:border-gray-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
               title="ก่อนหน้า"
             >
               <Icon icon="fluent:chevron-left-24-regular" class="w-4 h-4" />
@@ -1297,7 +1297,7 @@ const getRoleBadge = (member: any) => {
             <button
               @click="fetchMembers(pagination.current_page + 1)"
               :disabled="pagination.current_page === pagination.last_page"
-              class="p-2 rounded-lg border border-gray-200 dark:border-gray-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-lg border border-gray-200 dark:border-gray-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
               title="ถัดไป"
             >
               <Icon icon="fluent:chevron-right-24-regular" class="w-4 h-4" />
@@ -1305,7 +1305,7 @@ const getRoleBadge = (member: any) => {
             <button
               @click="fetchMembers(pagination.last_page)"
               :disabled="pagination.current_page === pagination.last_page"
-              class="p-2 rounded-lg border border-gray-200 dark:border-gray-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-lg border border-gray-200 dark:border-gray-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
               title="หน้าสุดท้าย"
             >
               <Icon icon="fluent:chevron-double-right-24-regular" class="w-4 h-4" />

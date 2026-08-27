@@ -408,13 +408,13 @@ const rejectRequest = async (memberId: number) => {
               <div class="flex items-center gap-2">
                 <button 
                   @click="acceptRequest(request.id)"
-                  class="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition-colors"
                 >
                   <Icon icon="fluent:checkmark-24-filled" class="w-5 h-5" />
                 </button>
                 <button 
                   @click="rejectRequest(request.id)"
-                  class="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                 >
                   <Icon icon="fluent:dismiss-24-filled" class="w-5 h-5" />
                 </button>

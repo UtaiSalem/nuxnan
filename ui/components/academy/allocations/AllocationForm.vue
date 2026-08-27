@@ -212,7 +212,7 @@ defineExpose({ reset })
         </span>
         <button
           type="button"
-          class="flex-shrink-0 rounded-lg px-2 py-1 font-semibold text-indigo-600 transition hover:bg-indigo-100 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
+          class="min-h-[44px] sm:min-h-0 flex-shrink-0 rounded-lg px-2 py-1 font-semibold text-indigo-600 transition hover:bg-indigo-100 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
           @click="selectedCourseId = null; selectedCourseSnapshot = null"
         >
           ยกเลิก
@@ -257,7 +257,7 @@ defineExpose({ reset })
           v-for="preset in amountPresets"
           :key="preset"
           type="button"
-          class="rounded-lg border px-3 py-1.5 text-sm font-semibold transition"
+          class="min-h-[44px] sm:min-h-0 rounded-lg border px-3 py-1.5 text-sm font-semibold transition"
           :class="normalizedAmount === preset
             ? 'border-indigo-500 bg-indigo-500 text-white'
             : 'border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:text-indigo-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300'"
@@ -268,7 +268,7 @@ defineExpose({ reset })
         <button
           v-if="available > 0"
           type="button"
-          class="rounded-lg border px-3 py-1.5 text-sm font-semibold transition"
+          class="min-h-[44px] sm:min-h-0 rounded-lg border px-3 py-1.5 text-sm font-semibold transition"
           :class="normalizedAmount === available
             ? 'border-violet-500 bg-violet-500 text-white'
             : 'border-violet-200 bg-violet-50 text-violet-600 hover:border-violet-400 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300'"
@@ -294,7 +294,7 @@ defineExpose({ reset })
           v-for="p in purposePresets"
           :key="p"
           type="button"
-          class="rounded-full border px-3 py-1.5 text-xs font-medium transition"
+          class="min-h-[44px] sm:min-h-0 rounded-full border px-3 py-1.5 text-xs font-medium transition"
           :class="purpose.trim() === p
             ? 'border-indigo-500 bg-indigo-500 text-white'
             : 'border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:text-indigo-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300'"

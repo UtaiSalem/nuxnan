@@ -155,7 +155,7 @@ const activeFiltersCount = computed(() => {
               </div>
               <button 
                 @click="closeModal"
-                class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
               </button>
@@ -169,7 +169,7 @@ const activeFiltersCount = computed(() => {
                   สถานะสมาชิก
                 </label>
                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  <button
+                  <button class="min-h-[44px] sm:min-h-0"
                     v-for="opt in statusOptions"
                     :key="opt.value ?? 'all'"
                     @click="filters.status = opt.value"
@@ -242,7 +242,7 @@ const activeFiltersCount = computed(() => {
                   </select>
                   <button
                     @click="filters.sortOrder = filters.sortOrder === 'asc' ? 'desc' : 'asc'"
-                    class="px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
                     :title="filters.sortOrder === 'asc' ? 'น้อยไปมาก' : 'มากไปน้อย'"
                   >
                     <Icon 
@@ -258,20 +258,20 @@ const activeFiltersCount = computed(() => {
             <div class="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
               <button
                 @click="resetFilters"
-                class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
               >
                 รีเซ็ตทั้งหมด
               </button>
               <div class="flex gap-3">
                 <button
                   @click="closeModal"
-                  class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
                   ยกเลิก
                 </button>
                 <button
                   @click="applyFilters"
-                  class="flex items-center gap-2 px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
+                  class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
                 >
                   <Icon icon="fluent:checkmark-24-filled" class="w-4 h-4" />
                   ใช้ตัวกรอง

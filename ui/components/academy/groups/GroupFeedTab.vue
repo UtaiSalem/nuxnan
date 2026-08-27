@@ -100,7 +100,7 @@ onMounted(() => load(1))
     <div v-if="hasMore" class="text-center py-4">
       <button
         type="button"
-        class="px-6 py-2.5 bg-white dark:bg-vikinger-dark-200 text-gray-700 dark:text-gray-300 rounded-lg font-bold shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors"
+        class="min-h-[44px] sm:min-h-0 px-6 py-2.5 bg-white dark:bg-vikinger-dark-200 text-gray-700 dark:text-gray-300 rounded-lg font-bold shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors"
         @click="loadMore"
       >
         โหลดเพิ่มเติม

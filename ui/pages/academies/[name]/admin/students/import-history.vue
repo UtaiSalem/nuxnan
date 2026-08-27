@@ -135,7 +135,7 @@ watch(academyId, (id) => {
         <button
           :disabled="currentPage <= 1"
           @click="currentPage--; fetchBatches()"
-          class="px-3 py-1.5 rounded-md text-sm border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          class="min-h-[44px] sm:min-h-0 px-3 py-1.5 rounded-md text-sm border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
         >
           ก่อนหน้า
         </button>
@@ -143,7 +143,7 @@ watch(academyId, (id) => {
         <button
           :disabled="currentPage >= totalPages"
           @click="currentPage++; fetchBatches()"
-          class="px-3 py-1.5 rounded-md text-sm border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          class="min-h-[44px] sm:min-h-0 px-3 py-1.5 rounded-md text-sm border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
         >
           ถัดไป
         </button>

@@ -168,7 +168,7 @@ const close = () => {
         <!-- Header -->
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white">เชิญสมาชิกใหม่</h3>
-          <button @click="close" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+          <button @click="close" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
             <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
           </button>
         </div>
@@ -177,7 +177,7 @@ const close = () => {
         <div class="p-6 space-y-5 overflow-y-auto max-h-[calc(90vh-160px)]">
           <!-- Method Tabs -->
           <div class="flex gap-2 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
-            <button
+            <button class="min-h-[44px] sm:min-h-0"
               @click="inviteMethod = 'search'"
               :class="[
                 'flex-1 py-2 rounded-md text-sm font-medium transition-colors',
@@ -188,7 +188,7 @@ const close = () => {
             >
               ค้นหาผู้ใช้
             </button>
-            <button
+            <button class="min-h-[44px] sm:min-h-0"
               @click="inviteMethod = 'email'"
               :class="[
                 'flex-1 py-2 rounded-md text-sm font-medium transition-colors',
@@ -285,7 +285,7 @@ const close = () => {
                 <button 
                   @click="addEmail"
                   :disabled="!emailInput || !isValidEmail(emailInput)"
-                  class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
                 </button>
@@ -345,14 +345,14 @@ const close = () => {
         <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
           <button 
             @click="close"
-            class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
             ยกเลิก
           </button>
           <button 
             @click="sendInvitations"
             :disabled="isInviting || (selectedUsers.length === 0 && emailList.length === 0)"
-            class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <span v-if="isInviting" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
             <Icon v-else icon="fluent:send-24-regular" class="w-5 h-5" />

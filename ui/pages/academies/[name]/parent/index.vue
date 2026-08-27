@@ -99,7 +99,7 @@
             <div class="flex items-center gap-4">
               <h3 class="text-xl font-bold text-gray-900 dark:text-white">ข้อมูลของ {{ selectedChild.name }}</h3>
             </div>
-            <button @click="selectedChild = null" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
+            <button @click="selectedChild = null" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
               <Icon icon="fluent:dismiss-24-regular" class="w-6 h-6 text-gray-400" />
             </button>
           </div>

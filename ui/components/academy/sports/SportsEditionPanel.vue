@@ -229,7 +229,7 @@ const deleteEdition = async (edition: SportsEdition) => {
         </div>
         <button
           @click="openCreateForm"
-          class="px-4 py-2 bg-gradient-vikinger text-white font-semibold rounded-vikinger shadow-vikinger hover:shadow-vikinger-lg transition-all flex items-center justify-center gap-2"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-gradient-vikinger text-white font-semibold rounded-vikinger shadow-vikinger hover:shadow-vikinger-lg transition-all flex items-center justify-center gap-2"
         >
           <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
           สร้างครั้งใหม่
@@ -280,7 +280,7 @@ const deleteEdition = async (edition: SportsEdition) => {
             <div class="flex items-center flex-wrap gap-2">
               <button
                 @click="openEditForm(selectedEdition)"
-                class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all"
+                class="min-h-[44px] sm:min-h-0 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all"
               >
                 แก้ไข
               </button>
@@ -289,7 +289,7 @@ const deleteEdition = async (edition: SportsEdition) => {
                 v-if="selectedEdition.status !== 'active'"
                 @click="activateEdition(selectedEdition)"
                 :disabled="isWorking"
-                class="px-3 py-1.5 rounded-lg border border-emerald-300 dark:border-emerald-700 text-sm font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 transition-all"
+                class="min-h-[44px] sm:min-h-0 px-3 py-1.5 rounded-lg border border-emerald-300 dark:border-emerald-700 text-sm font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 transition-all"
               >
                 ใช้ครั้งนี้
               </button>
@@ -298,7 +298,7 @@ const deleteEdition = async (edition: SportsEdition) => {
                 v-if="selectedEdition.status === 'active'"
                 @click="closeEdition(selectedEdition)"
                 :disabled="isWorking"
-                class="px-3 py-1.5 rounded-lg border border-rose-300 dark:border-rose-700 text-sm font-medium hover:bg-rose-50 dark:hover:bg-rose-900/20 text-rose-700 dark:text-rose-300 transition-all"
+                class="min-h-[44px] sm:min-h-0 px-3 py-1.5 rounded-lg border border-rose-300 dark:border-rose-700 text-sm font-medium hover:bg-rose-50 dark:hover:bg-rose-900/20 text-rose-700 dark:text-rose-300 transition-all"
               >
                 ปิด
               </button>
@@ -307,7 +307,7 @@ const deleteEdition = async (edition: SportsEdition) => {
                 v-if="!selectedEdition.students_count"
                 @click="deleteEdition(selectedEdition)"
                 :disabled="isWorking"
-                class="px-3 py-1.5 rounded-lg text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 text-sm font-medium transition-all"
+                class="min-h-[44px] sm:min-h-0 px-3 py-1.5 rounded-lg text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 text-sm font-medium transition-all"
               >
                 ลบ
               </button>
@@ -417,14 +417,14 @@ const deleteEdition = async (edition: SportsEdition) => {
         <div class="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700 mt-6">
           <button
             @click="closeForm"
-            class="px-5 py-2.5 rounded-vikinger border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+            class="min-h-[44px] sm:min-h-0 px-5 py-2.5 rounded-vikinger border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
           >
             ยกเลิก
           </button>
           <button
             @click="saveForm"
             :disabled="isWorking || !form.name || !form.academic_year_id"
-            class="px-6 py-2.5 bg-gradient-vikinger text-white font-semibold rounded-vikinger shadow-vikinger hover:shadow-vikinger-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            class="min-h-[44px] sm:min-h-0 px-6 py-2.5 bg-gradient-vikinger text-white font-semibold rounded-vikinger shadow-vikinger hover:shadow-vikinger-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <Icon v-if="isWorking" icon="fluent:spinner-ios-20-filled" class="w-5 h-5 animate-spin" />
             <Icon v-else icon="fluent:save-24-filled" class="w-5 h-5" />

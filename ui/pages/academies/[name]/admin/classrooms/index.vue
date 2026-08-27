@@ -806,7 +806,7 @@ const applyBulkRenumber = async () => {
           <button
             @click="openBulkRenumberPreview"
             :disabled="isLoadingBulkRenumberPreview"
-            class="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl font-medium transition-colors text-gray-700 dark:text-gray-300 disabled:opacity-50"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl font-medium transition-colors text-gray-700 dark:text-gray-300 disabled:opacity-50"
             title="เรียงเลขที่ใหม่ทุกห้องตามลำดับเลขประจำตัวนักเรียน"
           >
             <Icon v-if="isLoadingBulkRenumberPreview" icon="fluent:spinner-ios-20-filled" class="w-5 h-5 animate-spin" />
@@ -815,7 +815,7 @@ const applyBulkRenumber = async () => {
           </button>
         <button
           @click="openCreateModal"
-          class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
         >
           <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
           <span>สร้างห้องเรียน</span>
@@ -910,7 +910,7 @@ const applyBulkRenumber = async () => {
       <!-- Grade level tabs -->
       <div class="mb-5 overflow-x-auto rounded-2xl border border-gray-100 bg-white p-2 shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div class="flex min-w-max items-center gap-2" role="tablist" aria-label="เลือกระดับชั้น">
-          <button
+          <button class="min-h-[44px] sm:min-h-0"
             type="button"
             role="tab"
             :aria-selected="selectedGradeLevel === null"
@@ -924,7 +924,7 @@ const applyBulkRenumber = async () => {
           >
             ทั้งหมด
           </button>
-          <button
+          <button class="min-h-[44px] sm:min-h-0"
             v-for="level in gradeLevels"
             :key="level"
             type="button"
@@ -954,7 +954,7 @@ const applyBulkRenumber = async () => {
         <p class="text-gray-500 dark:text-gray-400 mb-4">เริ่มต้นสร้างห้องเรียนแรกของโรงเรียน</p>
         <button
           @click="openCreateModal"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
         >
           <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
           <span>สร้างห้องเรียน</span>
@@ -1034,7 +1034,7 @@ const applyBulkRenumber = async () => {
                     @click.stop="openAssignHomeroomModal(classroom)"
                     title="เปลี่ยนครูประจำชั้น"
                     aria-label="เปลี่ยนครูประจำชั้น"
-                    class="shrink-0 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-600 transition-colors hover:border-primary-300 hover:text-primary-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-primary-500 dark:hover:text-primary-400"
+                    class="min-h-[44px] sm:min-h-0 shrink-0 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-600 transition-colors hover:border-primary-300 hover:text-primary-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-primary-500 dark:hover:text-primary-400"
                   >
                     เปลี่ยน
                   </button>
@@ -1047,7 +1047,7 @@ const applyBulkRenumber = async () => {
                   <button
                     type="button"
                     @click.stop="openAssignHomeroomModal(classroom)"
-                    class="shrink-0 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-white shadow-sm shadow-amber-500/30 transition-colors hover:bg-amber-600"
+                    class="min-h-[44px] sm:min-h-0 shrink-0 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-white shadow-sm shadow-amber-500/30 transition-colors hover:bg-amber-600"
                   >
                     แต่งตั้ง
                   </button>
@@ -1102,7 +1102,7 @@ const applyBulkRenumber = async () => {
         <button
           @click="pagination.current_page--; fetchClassrooms()"
           :disabled="pagination.current_page === 1"
-          class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
         >
           ก่อนหน้า
         </button>
@@ -1112,7 +1112,7 @@ const applyBulkRenumber = async () => {
         <button
           @click="pagination.current_page++; fetchClassrooms()"
           :disabled="pagination.current_page === pagination.last_page"
-          class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
         >
           ถัดไป
         </button>
@@ -1126,7 +1126,7 @@ const applyBulkRenumber = async () => {
         <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md">
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">สร้างห้องเรียนใหม่</h3>
-            <button @click="showCreateModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+            <button @click="showCreateModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
@@ -1183,14 +1183,14 @@ const applyBulkRenumber = async () => {
               <button
                 type="button"
                 @click="showCreateModal = false"
-                class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 ยกเลิก
               </button>
               <button
                 type="submit"
                 :disabled="isSubmitting"
-                class="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <div v-if="isSubmitting" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                 <span>{{ isSubmitting ? 'กำลังสร้าง...' : 'สร้างห้องเรียน' }}</span>
@@ -1208,7 +1208,7 @@ const applyBulkRenumber = async () => {
         <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md">
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">แก้ไขห้องเรียน</h3>
-            <button @click="showEditModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+            <button @click="showEditModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
@@ -1262,14 +1262,14 @@ const applyBulkRenumber = async () => {
               <button
                 type="button"
                 @click="showEditModal = false"
-                class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 ยกเลิก
               </button>
               <button
                 type="submit"
                 :disabled="isSubmitting"
-                class="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <div v-if="isSubmitting" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                 <span>{{ isSubmitting ? 'กำลังบันทึก...' : 'บันทึก' }}</span>
@@ -1296,12 +1296,12 @@ const applyBulkRenumber = async () => {
               <button
                 v-if="modalActiveTab === 'students'"
                 @click="openAddStudentsModal"
-                class="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded-lg font-medium transition-colors flex items-center gap-1"
+                class="min-h-[44px] sm:min-h-0 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded-lg font-medium transition-colors flex items-center gap-1"
               >
                 <Icon icon="fluent:add-24-regular" class="w-4 h-4" />
                 เพิ่มนักเรียน
               </button>
-              <button @click="showStudentsModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+              <button @click="showStudentsModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                 <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
               </button>
             </div>
@@ -1379,14 +1379,14 @@ const applyBulkRenumber = async () => {
                         <div class="flex items-center justify-end gap-2">
                           <button
                             @click="openTransferModal(student.id)"
-                            class="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                             title="ย้ายห้อง"
                           >
                             <Icon icon="fluent:arrow-swap-24-regular" class="w-4 h-4" />
                           </button>
                           <button
                             @click="removeStudent(student.id)"
-                            class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                             title="นำออก"
                           >
                             <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
@@ -1420,7 +1420,7 @@ const applyBulkRenumber = async () => {
         <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">เพิ่มนักเรียน</h3>
-            <button @click="showAddStudentModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+            <button @click="showAddStudentModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
@@ -1472,14 +1472,14 @@ const applyBulkRenumber = async () => {
             <div class="flex items-center gap-3">
               <button
                 @click="showAddStudentModal = false"
-                class="px-4 py-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 ยกเลิก
               </button>
               <button
                 @click="addStudentsToClassroom"
                 :disabled="selectedStudentIds.length === 0 || isSubmitting"
-                class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 <div v-if="isSubmitting" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                 <span>เพิ่มนักเรียน</span>
@@ -1497,7 +1497,7 @@ const applyBulkRenumber = async () => {
         <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md">
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">ย้ายห้องเรียน</h3>
-            <button @click="showTransferModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+            <button @click="showTransferModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
@@ -1519,14 +1519,14 @@ const applyBulkRenumber = async () => {
             <div class="flex items-center gap-3 pt-4">
               <button
                 @click="showTransferModal = false"
-                class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 ยกเลิก
               </button>
               <button
                 @click="transferStudent"
                 :disabled="!transferToClassroomId || isSubmitting"
-                class="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <div v-if="isSubmitting" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                 <span>ย้ายห้อง</span>
@@ -1556,7 +1556,7 @@ const applyBulkRenumber = async () => {
               <h3 class="text-lg font-semibold text-gray-900 dark:text-white">จัดเรียงเลขที่ทั้งโรงเรียน</h3>
               <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">เรียงตามลำดับเลขประจำตัวนักเรียน จากน้อยไปมาก</p>
             </div>
-            <button @click="showBulkRenumberModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+            <button @click="showBulkRenumberModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
@@ -1601,14 +1601,14 @@ const applyBulkRenumber = async () => {
           <div class="p-5 border-t border-gray-200 dark:border-gray-700 flex gap-3">
             <button
               @click="showBulkRenumberModal = false"
-              class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               ยกเลิก
             </button>
             <button
               @click="applyBulkRenumber"
               :disabled="isApplyingBulkRenumber"
-              class="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               <Icon v-if="isApplyingBulkRenumber" icon="fluent:spinner-ios-20-filled" class="w-5 h-5 animate-spin" />
               <span>ยืนยันจัดเรียงทั้งหมด</span>

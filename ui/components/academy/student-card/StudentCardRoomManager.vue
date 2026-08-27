@@ -323,7 +323,7 @@ const handleBulkSubmitted = async (result: any) => {
                 <div class="flex items-center gap-3 min-w-0">
                     <button
                         @click="emit('back')"
-                        class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition shrink-0"
+                        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition shrink-0"
                         aria-label="กลับไปเลือกห้อง"
                     >
                         <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5 dark:text-gray-300" />
@@ -369,7 +369,7 @@ const handleBulkSubmitted = async (result: any) => {
                     <button
                         v-if="canManageRoster"
                         @click="showAddModal = true"
-                        class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition flex items-center justify-center gap-2"
+                        class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition flex items-center justify-center gap-2"
                     >
                         <Icon icon="fluent:person-add-24-regular" class="w-5 h-5" />
                         <span>เพิ่มนักเรียน</span>
@@ -394,20 +394,20 @@ const handleBulkSubmitted = async (result: any) => {
                 <div class="flex flex-wrap items-center gap-2">
                     <template v-if="selectMode">
                         <button @click="selectAllEligible"
-                            class="px-3 py-2 text-sm font-medium text-primary-700 bg-primary-50 dark:bg-primary-900/30 dark:text-primary-300 border border-primary-200 dark:border-primary-800 rounded-lg hover:bg-primary-100 transition">
+                            class="min-h-[44px] sm:min-h-0 px-3 py-2 text-sm font-medium text-primary-700 bg-primary-50 dark:bg-primary-900/30 dark:text-primary-300 border border-primary-200 dark:border-primary-800 rounded-lg hover:bg-primary-100 transition">
                             เลือกทั้งหมด ({{ eligibleStudents.length }})
                         </button>
                         <button @click="clearSelection" :disabled="!selectedIds.size"
-                            class="px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition disabled:opacity-40">
+                            class="min-h-[44px] sm:min-h-0 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition disabled:opacity-40">
                             ล้างที่เลือก
                         </button>
                         <button @click="toggleSelectMode"
-                            class="px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition">
+                            class="min-h-[44px] sm:min-h-0 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition">
                             ยกเลิก
                         </button>
                     </template>
                     <button v-else @click="toggleSelectMode"
-                        class="px-4 py-2 text-sm font-semibold text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition flex items-center gap-2">
+                        class="min-h-[44px] sm:min-h-0 px-4 py-2 text-sm font-semibold text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition flex items-center gap-2">
                         <Icon icon="fluent:people-24-regular" class="w-5 h-5" />
                         ส่งคำร้องหลายคน
                     </button>
@@ -426,7 +426,7 @@ const handleBulkSubmitted = async (result: any) => {
             <Icon icon="fluent:error-circle-24-regular" class="w-8 h-8 mx-auto mb-2" />
             <p class="text-sm">{{ loadError }}</p>
             <button @click="fetchStudents"
-                class="mt-3 px-3 py-1.5 bg-red-100 hover:bg-red-200 dark:bg-red-900/50 dark:hover:bg-red-900 text-xs font-semibold rounded-lg transition">
+                class="min-h-[44px] sm:min-h-0 mt-3 px-3 py-1.5 bg-red-100 hover:bg-red-200 dark:bg-red-900/50 dark:hover:bg-red-900 text-xs font-semibold rounded-lg transition">
                 ลองใหม่อีกครั้ง
             </button>
         </div>
@@ -436,7 +436,7 @@ const handleBulkSubmitted = async (result: any) => {
             <Icon icon="fluent:people-24-regular" class="w-12 h-12 mx-auto text-gray-300 mb-3" />
             <p class="text-gray-500 dark:text-gray-400">ไม่พบข้อมูลนักเรียนประจำห้องเรียนนี้</p>
             <button v-if="canManageRoster" @click="showAddModal = true"
-                class="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition inline-flex items-center gap-2">
+                class="min-h-[44px] sm:min-h-0 mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition inline-flex items-center gap-2">
                 <Icon icon="fluent:person-add-24-regular" class="w-5 h-5" />
                 เพิ่มนักเรียนเข้าห้องนี้
             </button>
@@ -461,7 +461,7 @@ const handleBulkSubmitted = async (result: any) => {
                     <div ref="railRef" class="relative max-h-[calc(100vh-11rem)] overflow-y-auto py-1">
                         <button v-for="(student, index) in sortedStudents" :key="student.uid"
                             :id="`row-${student.uid}`" type="button" @click="scrollToIndex(index)"
-                            class="grid w-full grid-cols-[2.5rem_3.5rem_1fr] items-center gap-2 px-3 py-1.5 text-left text-xs transition"
+                            class="min-h-[44px] sm:min-h-0 grid w-full grid-cols-[2.5rem_3.5rem_1fr] items-center gap-2 px-3 py-1.5 text-left text-xs transition"
                             :class="index === currentIndex
                                 ? 'bg-primary-50 dark:bg-primary-900/30 font-semibold text-primary-700 dark:text-primary-300'
                                 : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'">
@@ -579,7 +579,7 @@ const handleBulkSubmitted = async (result: any) => {
                         เลือกแล้ว <span class="font-bold text-primary-300">{{ selectedIds.size }}</span> คน
                     </div>
                     <button @click="showBulkRequestModal = true" :disabled="!selectedIds.size"
-                        class="px-4 py-2 text-sm font-semibold bg-primary-600 rounded-xl hover:bg-primary-500 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5">
+                        class="min-h-[44px] sm:min-h-0 px-4 py-2 text-sm font-semibold bg-primary-600 rounded-xl hover:bg-primary-500 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5">
                         <Icon icon="fluent:send-24-regular" class="w-4 h-4" />
                         ส่งคำร้อง
                     </button>

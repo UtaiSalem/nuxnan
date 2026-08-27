@@ -278,7 +278,7 @@ onMounted(() => {
             <button
               @click="leaveAcademy"
               :disabled="isLeavingAcademy"
-              class="px-6 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+              class="min-h-[44px] sm:min-h-0 px-6 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
             >
               <Icon v-if="isLeavingAcademy" icon="svg-spinners:ring-resize" class="w-4 h-4" />
               <Icon v-else icon="fluent:person-subtract-24-regular" class="w-4 h-4" />

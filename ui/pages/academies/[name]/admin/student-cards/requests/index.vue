@@ -278,7 +278,7 @@ const countFor = (v: StudentCardRequestStatus | '' | 'active') => {
         <h1 class="text-2xl font-bold dark:text-white">คำร้องทำบัตรนักเรียน</h1>
         <p class="text-gray-500">รายการคำร้องทั้งหมดสำหรับตรวจสอบและอนุมัติ</p>
       </div>
-      <button class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700" @click="openCreate">
+      <button class="min-h-[44px] sm:min-h-0 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700" @click="openCreate">
         <Icon icon="fluent:add-24-regular" class="mr-1 inline" />สร้างคำร้องใหม่
       </button>
     </div>
@@ -377,8 +377,8 @@ const countFor = (v: StudentCardRequestStatus | '' | 'active') => {
           หน้า {{ meta.current_page }} จาก {{ meta.last_page }} · ทั้งหมด {{ meta.total }} รายการ
         </span>
         <div class="flex gap-2">
-          <button class="rounded border px-3 py-1 disabled:opacity-40 dark:text-gray-200" :disabled="page <= 1" @click="page--">‹ ก่อนหน้า</button>
-          <button class="rounded border px-3 py-1 disabled:opacity-40 dark:text-gray-200" :disabled="page >= meta.last_page" @click="page++">ถัดไป ›</button>
+          <button class="min-h-[44px] sm:min-h-0 rounded border px-3 py-1 disabled:opacity-40 dark:text-gray-200" :disabled="page <= 1" @click="page--">‹ ก่อนหน้า</button>
+          <button class="min-h-[44px] sm:min-h-0 rounded border px-3 py-1 disabled:opacity-40 dark:text-gray-200" :disabled="page >= meta.last_page" @click="page++">ถัดไป ›</button>
         </div>
       </div>
     </div>
@@ -424,16 +424,16 @@ const countFor = (v: StudentCardRequestStatus | '' | 'active') => {
         <div v-if="createLoading" class="py-14 text-center text-gray-500">กำลังโหลด...</div>
         <template v-else-if="createClassroomId">
           <div class="flex flex-wrap items-center gap-2">
-            <button class="rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 text-sm font-medium text-primary-700 hover:bg-primary-100 dark:border-gray-700 dark:bg-gray-800 dark:text-primary-300" @click="selectAllWithoutCard">
+            <button class="min-h-[44px] sm:min-h-0 rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 text-sm font-medium text-primary-700 hover:bg-primary-100 dark:border-gray-700 dark:bg-gray-800 dark:text-primary-300" @click="selectAllWithoutCard">
               <Icon icon="fluent:people-add-24-regular" class="mr-1 inline" />เลือกทุกคนที่ยังไม่มีบัตร
             </button>
-            <button class="rounded-lg border px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700" @click="toggleSelectAll">
+            <button class="min-h-[44px] sm:min-h-0 rounded-lg border px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700" @click="toggleSelectAll">
               {{ allSelected ? 'ล้างที่เลือก' : `เลือกทั้งหมด (${eligibleStudents.length})` }}
             </button>
             <div class="ml-auto flex items-center gap-3">
               <span v-if="createSelectedIds.size" class="text-sm text-gray-500">เลือกแล้ว <b class="text-primary-600">{{ selectedStudents.length }}</b> คน</span>
               <button
-                class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+                class="min-h-[44px] sm:min-h-0 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
                 :disabled="!selectedStudents.length || submittingBulk"
                 @click="bulkModalOpen = true"
               >
@@ -463,7 +463,7 @@ const countFor = (v: StudentCardRequestStatus | '' | 'active') => {
                   <td class="p-4"><span :class="student.student_card ? 'text-emerald-600' : 'text-gray-500'">{{ student.student_card ? 'มีบัตรแล้ว' : 'ยังไม่มีบัตร' }}</span></td>
                   <td class="p-4 text-right">
                     <SchoolStudentCardRequestStatusBadge v-if="student.active_card_request" :status="student.active_card_request.status" />
-                    <button v-else class="rounded-lg bg-primary-600 px-3 py-2 text-sm text-white" @click="openSingle(student)">ส่งคำร้อง</button>
+                    <button v-else class="min-h-[44px] sm:min-h-0 rounded-lg bg-primary-600 px-3 py-2 text-sm text-white" @click="openSingle(student)">ส่งคำร้อง</button>
                   </td>
                 </tr>
                 <tr v-if="!createStudents.length">
@@ -525,10 +525,10 @@ const countFor = (v: StudentCardRequestStatus | '' | 'active') => {
             <textarea v-model="detailNotes" rows="3" placeholder="บันทึกภายใน" class="mt-3 w-full rounded-lg border p-2.5 dark:bg-gray-800 dark:text-white" />
             <textarea v-if="detailItem.status === 'pending'" v-model="detailRejection" rows="2" placeholder="เหตุผลเมื่อปฏิเสธ" class="mt-3 w-full rounded-lg border p-2.5 dark:bg-gray-800 dark:text-white" />
             <div class="mt-4 flex flex-wrap gap-2">
-              <button v-if="detailItem.status === 'pending'" class="rounded-lg bg-blue-600 px-4 py-2 text-white disabled:opacity-40" :disabled="detailActing" @click="detailAct('approve')">อนุมัติ</button>
-              <button v-if="detailItem.status === 'pending'" class="rounded-lg bg-red-600 px-4 py-2 text-white disabled:opacity-40" :disabled="!detailRejection || detailActing" @click="detailAct('reject')">ปฏิเสธ</button>
-              <button v-if="detailItem.status === 'approved'" class="rounded-lg bg-violet-600 px-4 py-2 text-white disabled:opacity-40" :disabled="detailActing" @click="detailAct('start')">เริ่มจัดทำ</button>
-              <button v-if="detailItem.status === 'in_progress'" class="rounded-lg bg-emerald-600 px-4 py-2 text-white disabled:opacity-40" :disabled="detailActing" @click="detailAct('complete')">จัดทำเสร็จ</button>
+              <button v-if="detailItem.status === 'pending'" class="min-h-[44px] sm:min-h-0 rounded-lg bg-blue-600 px-4 py-2 text-white disabled:opacity-40" :disabled="detailActing" @click="detailAct('approve')">อนุมัติ</button>
+              <button v-if="detailItem.status === 'pending'" class="min-h-[44px] sm:min-h-0 rounded-lg bg-red-600 px-4 py-2 text-white disabled:opacity-40" :disabled="!detailRejection || detailActing" @click="detailAct('reject')">ปฏิเสธ</button>
+              <button v-if="detailItem.status === 'approved'" class="min-h-[44px] sm:min-h-0 rounded-lg bg-violet-600 px-4 py-2 text-white disabled:opacity-40" :disabled="detailActing" @click="detailAct('start')">เริ่มจัดทำ</button>
+              <button v-if="detailItem.status === 'in_progress'" class="min-h-[44px] sm:min-h-0 rounded-lg bg-emerald-600 px-4 py-2 text-white disabled:opacity-40" :disabled="detailActing" @click="detailAct('complete')">จัดทำเสร็จ</button>
               <NuxtLink v-if="detailItem.result_card_id" :to="`/academies/${academyName}/admin/student-cards/${detailItem.result_card_id}`" class="rounded-lg border px-4 py-2 dark:text-white">
                 เปิดบัตรที่สร้าง
               </NuxtLink>

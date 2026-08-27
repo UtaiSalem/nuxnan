@@ -150,7 +150,7 @@ const guardianTypes: Record<string, string> = {
     <div class="flex justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
       <button
         type="button"
-        class="inline-flex items-center gap-2 px-6 py-2.5 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-6 py-2.5 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
         @click="emit('back')"
         :disabled="isSubmitting"
       >
@@ -159,7 +159,7 @@ const guardianTypes: Record<string, string> = {
       </button>
       <button 
         type="button" 
-        class="inline-flex items-center gap-2 px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         @click="emit('submit')"
         :disabled="isSubmitting"
       >

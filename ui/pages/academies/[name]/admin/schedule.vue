@@ -388,7 +388,7 @@ const deleteSchedule = async (schedule: any) => {
         </div>
         <button
           @click="openCreateModal()"
-          class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
         >
           <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
           <span>เพิ่มตารางเรียน</span>
@@ -400,7 +400,7 @@ const deleteSchedule = async (schedule: any) => {
         <div class="flex flex-col sm:flex-row gap-4">
           <!-- View Mode Toggle -->
           <div class="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-            <button
+            <button class="min-h-[44px] sm:min-h-0"
               @click="viewMode = 'classroom'"
               :class="[
                 'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
@@ -412,7 +412,7 @@ const deleteSchedule = async (schedule: any) => {
               <Icon icon="fluent:building-24-regular" class="w-4 h-4 inline mr-1" />
               ห้องเรียน
             </button>
-            <button
+            <button class="min-h-[44px] sm:min-h-0"
               @click="viewMode = 'teacher'"
               :class="[
                 'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
@@ -551,7 +551,7 @@ const deleteSchedule = async (schedule: any) => {
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
               {{ showEditModal ? 'แก้ไขตารางเรียน' : 'เพิ่มตารางเรียน' }}
             </h3>
-            <button @click="showCreateModal = false; showEditModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+            <button @click="showCreateModal = false; showEditModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
@@ -653,14 +653,14 @@ const deleteSchedule = async (schedule: any) => {
               <button
                 type="button"
                 @click="showCreateModal = false; showEditModal = false"
-                class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 ยกเลิก
               </button>
               <button
                 type="submit"
                 :disabled="isSubmitting"
-                class="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <div v-if="isSubmitting" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                 <span>{{ isSubmitting ? 'กำลังบันทึก...' : 'บันทึก' }}</span>

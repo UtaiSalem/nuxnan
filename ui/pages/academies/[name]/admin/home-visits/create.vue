@@ -242,7 +242,7 @@ const purposes = [
                 {{ selectedStudent.student_id }} • ม.{{ selectedStudent.class_level }}/{{ selectedStudent.class_section }}
               </p>
             </div>
-            <button type="button" @click="clearStudent" class="p-2 text-gray-400 hover:text-red-500">
+            <button type="button" @click="clearStudent" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-400 hover:text-red-500">
               <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
             </button>
           </div>
@@ -373,7 +373,7 @@ const purposes = [
           <button
             type="submit"
             :disabled="isSaving"
-            class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 flex items-center gap-2"
+            class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 flex items-center gap-2"
           >
             <Icon v-if="isSaving" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
             <Icon v-else icon="fluent:save-24-regular" class="w-5 h-5" />

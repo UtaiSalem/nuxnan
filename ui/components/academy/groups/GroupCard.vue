@@ -96,7 +96,7 @@ const cls = computed(() => GROUP_TYPE_COLOR_CLASSES[meta.value.color])
           <button
             v-if="canManage"
             type="button"
-            class="text-xs px-2 py-1 rounded font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+            class="min-h-[44px] sm:min-h-0 text-xs px-2 py-1 rounded font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
             @click.stop="emit('manage', group)"
           >
             จัดการ

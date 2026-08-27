@@ -199,7 +199,7 @@ const formatDate = (dateString: string) => {
         <button
           v-if="pendingRequests.length > 0"
           @click="acceptAll"
-          class="px-4 py-2 bg-green-500 text-white rounded-lg font-medium text-sm hover:bg-green-600 transition-colors flex items-center gap-2"
+          class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-green-500 text-white rounded-lg font-medium text-sm hover:bg-green-600 transition-colors flex items-center gap-2"
         >
           <Icon icon="fluent:checkmark-circle-24-filled" class="w-5 h-5" />
           อนุมัติทั้งหมด ({{ pendingRequests.length }})
@@ -278,7 +278,7 @@ const formatDate = (dateString: string) => {
                 <button
                   @click="acceptRequest(request)"
                   :disabled="processingIds.has(request.id)"
-                  class="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                 >
                   <Icon 
                     :icon="processingIds.has(request.id) ? 'svg-spinners:ring-resize' : 'fluent:checkmark-24-filled'" 
@@ -289,7 +289,7 @@ const formatDate = (dateString: string) => {
                 <button
                   @click="rejectRequest(request)"
                   :disabled="processingIds.has(request.id)"
-                  class="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                 >
                   <Icon icon="fluent:dismiss-24-filled" class="w-4 h-4" />
                   ปฏิเสธ

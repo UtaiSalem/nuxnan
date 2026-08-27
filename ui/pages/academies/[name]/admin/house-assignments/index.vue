@@ -653,7 +653,7 @@ const startOver = () => {
               <div class="flex items-center gap-2">
                 <button
                   v-if="batch.status === 'draft'"
-                  class="px-4 py-2.5 rounded-vikinger border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2.5 rounded-vikinger border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
                   @click="discard"
                 >
                   ทิ้งผลนี้
@@ -661,7 +661,7 @@ const startOver = () => {
                 <button
                   v-if="batch.status === 'draft'"
                   :disabled="isWorking || !(batch.summary?.by_status?.ok ?? batch.summary?.total)"
-                  class="px-6 py-2.5 bg-gradient-vikinger text-white font-semibold rounded-vikinger shadow-vikinger hover:shadow-vikinger-lg transition-all disabled:opacity-50 flex items-center gap-2"
+                  class="min-h-[44px] sm:min-h-0 px-6 py-2.5 bg-gradient-vikinger text-white font-semibold rounded-vikinger shadow-vikinger hover:shadow-vikinger-lg transition-all disabled:opacity-50 flex items-center gap-2"
                   @click="commit"
                 >
                   <Icon icon="fluent:save-24-filled" class="w-5 h-5" />
@@ -670,7 +670,7 @@ const startOver = () => {
                 <button
                   v-if="canUndo"
                   :disabled="isWorking"
-                  class="px-4 py-2.5 rounded-vikinger border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 font-medium hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all flex items-center gap-2"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2.5 rounded-vikinger border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 font-medium hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all flex items-center gap-2"
                   @click="undo"
                 >
                   <Icon icon="fluent:arrow-undo-24-filled" class="w-5 h-5" />
@@ -678,7 +678,7 @@ const startOver = () => {
                 </button>
                 <button
                   v-if="batch.status !== 'draft'"
-                  class="px-4 py-2.5 rounded-vikinger border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2.5 rounded-vikinger border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
                   @click="startOver"
                 >
                   แบ่งชุดใหม่
@@ -746,7 +746,7 @@ const startOver = () => {
           >
             <div class="p-5 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center gap-2">
               <button
-                class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
+                class="min-h-[44px] sm:min-h-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
                 :class="rowFilter === '' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'"
                 @click="rowFilter = ''"
               >
@@ -756,7 +756,7 @@ const startOver = () => {
                 v-for="(meta, status) in statusMeta"
                 :key="status"
                 v-show="byStatus?.[status as HouseRowStatus]"
-                class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
+                class="min-h-[44px] sm:min-h-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
                 :class="rowFilter === status ? meta.tone : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'"
                 @click="rowFilter = status as HouseRowStatus"
               >

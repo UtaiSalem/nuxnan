@@ -69,7 +69,7 @@ const colorClasses = (color?: string) => {
         <button
           v-if="primaryCta.id === 'join-academy'"
           @click="emit('join')"
-          class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-sky-600 text-white text-sm font-semibold hover:bg-sky-700 active:scale-95 transition-all focus-visible:ring-2 focus-visible:ring-sky-500"
+          class="min-h-[44px] sm:min-h-0 w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-sky-600 text-white text-sm font-semibold hover:bg-sky-700 active:scale-95 transition-all focus-visible:ring-2 focus-visible:ring-sky-500"
         >
           <Icon :icon="primaryCta.icon" class="w-4 h-4" />
           {{ primaryCta.title }}

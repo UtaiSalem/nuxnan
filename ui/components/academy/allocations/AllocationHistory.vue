@@ -119,7 +119,7 @@ const formatDateTime = (value: string) => {
       <button
         type="button"
         :disabled="currentPage <= 1"
-        class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 transition hover:border-indigo-300 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:text-gray-300"
+        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 transition hover:border-indigo-300 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:text-gray-300"
         @click="emit('page', currentPage - 1)"
       >
         <Icon icon="fluent:chevron-left-24-regular" class="h-4 w-4" />
@@ -129,7 +129,7 @@ const formatDateTime = (value: string) => {
       <button
         type="button"
         :disabled="currentPage >= lastPage"
-        class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 transition hover:border-indigo-300 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:text-gray-300"
+        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 transition hover:border-indigo-300 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:text-gray-300"
         @click="emit('page', currentPage + 1)"
       >
         ถัดไป

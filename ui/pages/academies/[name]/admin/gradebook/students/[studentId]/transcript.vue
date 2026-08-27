@@ -203,7 +203,7 @@ const getPromotionBadge = (status: string) => {
 
       <!-- View Mode Tabs -->
       <div class="flex gap-2">
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           @click="viewMode = 'semester'"
           :class="[
             'px-4 py-2 rounded-lg font-medium transition-colors',
@@ -215,7 +215,7 @@ const getPromotionBadge = (status: string) => {
           <Icon icon="fluent:calendar-24-regular" class="w-5 h-5 inline mr-2" />
           รายภาคเรียน
         </button>
-        <button
+        <button class="min-h-[44px] sm:min-h-0"
           @click="viewMode = 'annual'"
           :class="[
             'px-4 py-2 rounded-lg font-medium transition-colors',
@@ -284,7 +284,7 @@ const getPromotionBadge = (status: string) => {
                 </div>
                 <button
                   @click="downloadPDF(selectedTranscript, 'semester')"
-                  class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-medium transition-colors flex items-center gap-2"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-medium transition-colors flex items-center gap-2"
                 >
                   <Icon icon="fluent:arrow-download-24-filled" class="w-5 h-5" />
                   ดาวน์โหลด PDF
@@ -381,7 +381,7 @@ const getPromotionBadge = (status: string) => {
                 </div>
                 <button
                   @click="downloadPDF(annual, 'annual')"
-                  class="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
                   title="ดาวน์โหลด PDF"
                 >
                   <Icon icon="fluent:arrow-download-24-filled" class="w-5 h-5" />

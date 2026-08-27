@@ -213,7 +213,7 @@ const handleSubmit = async () => {
             </h2>
           </div>
           <button
-            class="p-2 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
+            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
             aria-label="ปิด"
             @click="$emit('close')"
           >
@@ -432,14 +432,14 @@ const handleSubmit = async () => {
         >
           <button
             type="button"
-            class="px-4 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all font-medium"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all font-medium"
             @click="$emit('close')"
           >
             ยกเลิก
           </button>
           <button
             type="button"
-            class="px-5 py-2 bg-gradient-vikinger text-white font-semibold rounded-lg shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
+            class="min-h-[44px] sm:min-h-0 px-5 py-2 bg-gradient-vikinger text-white font-semibold rounded-lg shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
             :disabled="saving"
             @click="handleSubmit"
           >

@@ -235,7 +235,7 @@ const formatRange = (start: string, end: string | null) => {
 
             <button
               :disabled="isExporting"
-              class="mr-2 flex items-center gap-2 px-4 py-2.5 bg-white/15 text-white font-semibold rounded-vikinger transition-all hover:bg-white/25 disabled:opacity-60"
+              class="min-h-[44px] sm:min-h-0 mr-2 flex items-center gap-2 px-4 py-2.5 bg-white/15 text-white font-semibold rounded-vikinger transition-all hover:bg-white/25 disabled:opacity-60"
               @click="exportAttendance"
             >
               <Icon v-if="isExporting" icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
@@ -243,7 +243,7 @@ const formatRange = (start: string, end: string | null) => {
               ส่งออก Excel
             </button>
             <button
-              class="flex items-center gap-2 px-4 py-2.5 bg-white text-purple-700 font-semibold rounded-vikinger transition-all shadow hover:shadow-lg"
+              class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2.5 bg-white text-purple-700 font-semibold rounded-vikinger transition-all shadow hover:shadow-lg"
               @click="openCreateModal"
             >
               <Icon icon="fluent:add-24-filled" class="w-4 h-4" />
@@ -297,7 +297,7 @@ const formatRange = (start: string, end: string | null) => {
               />
             </div>
             <button
-              class="px-4 py-2 bg-gradient-vikinger text-white text-sm font-semibold rounded-lg shadow-vikinger hover:shadow-vikinger-lg transition-all"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-gradient-vikinger text-white text-sm font-semibold rounded-lg shadow-vikinger hover:shadow-vikinger-lg transition-all"
               @click="loadSessions"
             >
               <Icon icon="fluent:search-24-regular" class="w-4 h-4 inline mr-1" />
@@ -326,7 +326,7 @@ const formatRange = (start: string, end: string | null) => {
           <Icon icon="fluent:calendar-empty-24-regular" class="w-16 h-16 text-slate-300 dark:text-slate-600" />
           <p class="font-heading text-lg font-semibold text-slate-500 dark:text-slate-400">ยังไม่มีคาบเช็คชื่อ</p>
           <button
-            class="px-5 py-2.5 bg-gradient-vikinger text-white font-semibold rounded-vikinger shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 transition-all"
+            class="min-h-[44px] sm:min-h-0 px-5 py-2.5 bg-gradient-vikinger text-white font-semibold rounded-vikinger shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 transition-all"
             @click="openCreateModal"
           >
             <Icon icon="fluent:add-24-filled" class="w-4 h-4 inline mr-1" />
@@ -380,14 +380,14 @@ const formatRange = (start: string, end: string | null) => {
 
               <div class="flex gap-2 flex-shrink-0">
                 <button
-                  class="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-semibold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-all"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-semibold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-all"
                   @click="openEditModal(session)"
                 >
                   <Icon icon="fluent:edit-24-regular" class="w-4 h-4 inline mr-1" />
                   แก้ไข
                 </button>
                 <button
-                  class="px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-semibold rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-all"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-semibold rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-all"
                   @click="deleteSession(session)"
                 >
                   <Icon icon="fluent:delete-24-regular" class="w-4 h-4 inline mr-1" />
@@ -506,7 +506,7 @@ const formatRange = (start: string, end: string | null) => {
         <div class="px-5 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
           <button
             type="button"
-            class="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
             @click="showFormModal = false"
           >
             ยกเลิก
@@ -514,7 +514,7 @@ const formatRange = (start: string, end: string | null) => {
           <button
             type="submit"
             :disabled="isSaving"
-            class="flex items-center gap-2 px-5 py-2 bg-gradient-vikinger text-white text-sm font-semibold rounded-lg shadow-vikinger hover:shadow-vikinger-lg transition-all disabled:opacity-50 disabled:pointer-events-none"
+            class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-5 py-2 bg-gradient-vikinger text-white text-sm font-semibold rounded-lg shadow-vikinger hover:shadow-vikinger-lg transition-all disabled:opacity-50 disabled:pointer-events-none"
           >
             <Icon v-if="isSaving" icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
             <Icon v-else icon="fluent:save-24-regular" class="w-4 h-4" />

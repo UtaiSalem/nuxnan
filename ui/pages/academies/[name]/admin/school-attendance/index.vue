@@ -120,7 +120,7 @@ const formatDate = (date: string) => {
             </div>
           </div>
           <button
-            class="flex items-center gap-2 px-5 py-2.5 bg-white text-purple-700 font-semibold rounded-vikinger hover:bg-purple-50 transition-all shadow"
+            class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-5 py-2.5 bg-white text-purple-700 font-semibold rounded-vikinger hover:bg-purple-50 transition-all shadow"
             @click="showCreateModal = true"
           >
             <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
@@ -200,7 +200,7 @@ const formatDate = (date: string) => {
               <option value="closed">ปิดแล้ว</option>
             </select>
             <button
-              class="px-5 py-2 bg-gradient-vikinger text-white font-semibold rounded-lg shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 transition-all"
+              class="min-h-[44px] sm:min-h-0 px-5 py-2 bg-gradient-vikinger text-white font-semibold rounded-lg shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 transition-all"
               @click="loadSessions"
             >
               <Icon icon="fluent:search-24-regular" class="w-4 h-4 inline mr-1" />
@@ -217,7 +217,7 @@ const formatDate = (date: string) => {
           <Icon icon="fluent:calendar-empty-24-regular" class="w-16 h-16 text-slate-300 dark:text-slate-600" />
           <p class="font-heading text-lg font-semibold text-slate-500 dark:text-slate-400">ยังไม่มีการเช็คชื่อ</p>
           <button
-            class="px-5 py-2.5 bg-gradient-vikinger text-white font-semibold rounded-vikinger shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 transition-all"
+            class="min-h-[44px] sm:min-h-0 px-5 py-2.5 bg-gradient-vikinger text-white font-semibold rounded-vikinger shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 transition-all"
             @click="showCreateModal = true"
           >
             <Icon icon="fluent:add-24-filled" class="w-4 h-4 inline mr-1" />
@@ -300,7 +300,7 @@ const formatDate = (date: string) => {
 
               <!-- Action button -->
               <button
-                class="px-4 py-2 bg-gradient-vikinger text-white text-sm font-semibold rounded-lg shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 transition-all flex-shrink-0"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-gradient-vikinger text-white text-sm font-semibold rounded-lg shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 transition-all flex-shrink-0"
                 @click="navigateTo(`/academies/${academyName}/admin/school-attendance/${session.id}`)"
               >
                 <Icon icon="fluent:arrow-right-24-regular" class="w-4 h-4 inline mr-1" />
@@ -332,7 +332,7 @@ const formatDate = (date: string) => {
               <h2 class="font-heading font-bold text-slate-900 dark:text-white">สร้างการเช็คชื่อ</h2>
             </div>
             <button
-              class="p-2 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
               aria-label="ปิด"
               @click="showCreateModal = false"
             >
@@ -397,13 +397,13 @@ const formatDate = (date: string) => {
           <!-- Modal footer -->
           <div class="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3">
             <button
-              class="px-4 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all font-medium"
+              class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all font-medium"
               @click="showCreateModal = false"
             >
               ยกเลิก
             </button>
             <button
-              class="px-5 py-2 bg-gradient-vikinger text-white font-semibold rounded-lg shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
+              class="min-h-[44px] sm:min-h-0 px-5 py-2 bg-gradient-vikinger text-white font-semibold rounded-lg shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
               :disabled="isCreating || !createForm.date"
               @click="createSession"
             >

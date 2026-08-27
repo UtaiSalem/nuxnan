@@ -42,14 +42,14 @@ const emit = defineEmits(['proceed', 'cancel'])
           <button 
             type="button" 
             @click="emit('cancel')"
-            class="px-4 py-2 text-sm font-medium text-amber-900 dark:text-amber-100 bg-amber-100 dark:bg-amber-800 hover:bg-amber-200 dark:hover:bg-amber-700 rounded-lg transition-colors"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 text-sm font-medium text-amber-900 dark:text-amber-100 bg-amber-100 dark:bg-amber-800 hover:bg-amber-200 dark:hover:bg-amber-700 rounded-lg transition-colors"
           >
             ยกเลิกและแก้ไขข้อมูล
           </button>
           <button 
             type="button" 
             @click="emit('proceed')"
-            class="px-4 py-2 text-sm font-medium text-amber-900 dark:text-amber-100 border border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-800/50 rounded-lg transition-colors"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 text-sm font-medium text-amber-900 dark:text-amber-100 border border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-800/50 rounded-lg transition-colors"
           >
             ยืนยันดำเนินการต่อ
           </button>

@@ -382,14 +382,14 @@ const getStatusInfo = (status: string) => {
         <div class="flex gap-2">
           <button
             @click="showPositionModal = true"
-            class="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             <Icon icon="fluent:tag-24-regular" class="w-5 h-5" />
             <span>ตำแหน่ง</span>
           </button>
           <button
             @click="openCreateModal"
-            class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
           >
             <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
             <span>เพิ่มบุคลากร</span>
@@ -495,7 +495,7 @@ const getStatusInfo = (status: string) => {
         <p class="text-gray-500 dark:text-gray-400 mb-4">เริ่มต้นเพิ่มบุคลากรคนแรก</p>
         <button
           @click="openCreateModal"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
         >
           <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
           <span>เพิ่มบุคลากร</span>
@@ -554,14 +554,14 @@ const getStatusInfo = (status: string) => {
                 <div class="flex items-center justify-end gap-2">
                   <button
                     @click="openEditModal(member)"
-                    class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                     title="แก้ไข"
                   >
                     <Icon icon="fluent:edit-24-regular" class="w-5 h-5 text-gray-500" />
                   </button>
                   <button
                     @click="deleteStaff(member)"
-                    class="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                     title="ลบ"
                   >
                     <Icon icon="fluent:delete-24-regular" class="w-5 h-5 text-red-500" />
@@ -577,7 +577,7 @@ const getStatusInfo = (status: string) => {
           <button
             @click="pagination.current_page--; fetchStaff()"
             :disabled="pagination.current_page === 1"
-            class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50"
           >
             ก่อนหน้า
           </button>
@@ -587,7 +587,7 @@ const getStatusInfo = (status: string) => {
           <button
             @click="pagination.current_page++; fetchStaff()"
             :disabled="pagination.current_page === pagination.last_page"
-            class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-50"
           >
             ถัดไป
           </button>
@@ -604,7 +604,7 @@ const getStatusInfo = (status: string) => {
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
               {{ showEditModal ? 'แก้ไขข้อมูลบุคลากร' : 'เพิ่มบุคลากร' }}
             </h3>
-            <button @click="showCreateModal = false; showEditModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+            <button @click="showCreateModal = false; showEditModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
@@ -678,14 +678,14 @@ const getStatusInfo = (status: string) => {
               <button
                 type="button"
                 @click="showCreateModal = false; showEditModal = false"
-                class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 ยกเลิก
               </button>
               <button
                 type="submit"
                 :disabled="isSubmitting"
-                class="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <div v-if="isSubmitting" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                 <span>{{ isSubmitting ? 'กำลังบันทึก...' : 'บันทึก' }}</span>
@@ -703,7 +703,7 @@ const getStatusInfo = (status: string) => {
         <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">จัดการตำแหน่ง</h3>
-            <button @click="showPositionModal = false" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+            <button @click="showPositionModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>

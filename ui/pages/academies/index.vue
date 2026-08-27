@@ -224,14 +224,14 @@ watch(() => route.query.view, (newVal) => {
                <div class="flex p-1 bg-gray-100 dark:bg-vikinger-dark-100 rounded-lg">
                   <button 
                     @click="switchView('all')"
-                    class="flex-1 px-2 py-1.5 rounded-md text-[11px] font-bold transition-all"
+                    class="min-h-[44px] sm:min-h-0 flex-1 px-2 py-1.5 rounded-md text-[11px] font-bold transition-all"
                     :class="currentView === 'all' ? 'bg-white dark:bg-vikinger-dark-50 shadow-sm text-vikinger-purple' : 'text-gray-500'"
                   >
                     ทั้งหมด
                   </button>
                   <button 
                     @click="switchView('my')"
-                    class="flex-1 px-2 py-1.5 rounded-md text-[11px] font-bold transition-all"
+                    class="min-h-[44px] sm:min-h-0 flex-1 px-2 py-1.5 rounded-md text-[11px] font-bold transition-all"
                     :class="currentView === 'my' ? 'bg-white dark:bg-vikinger-dark-50 shadow-sm text-vikinger-purple' : 'text-gray-500'"
                   >
                     ของฉัน
@@ -388,7 +388,7 @@ watch(() => route.query.view, (newVal) => {
         </p>
         <button 
           @click="searchQuery = ''; selectedType = 'all'; currentView = 'all'"
-          class="mt-6 px-6 py-2 bg-gradient-vikinger text-white rounded-xl font-bold text-sm shadow-vikinger hover:scale-105 transition-all"
+          class="min-h-[44px] sm:min-h-0 mt-6 px-6 py-2 bg-gradient-vikinger text-white rounded-xl font-bold text-sm shadow-vikinger hover:scale-105 transition-all"
         >
           ล้างตัวกรองทั้งหมด
         </button>

@@ -420,7 +420,7 @@ watch(activeTab, async (tab) => {
         <div v-if="!isInactiveTab" class="flex items-center gap-3">
           <button
             @click="openAddModal"
-            class="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+            class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
           >
             <Icon icon="fluent:person-add-24-filled" class="w-5 h-5" />
             เพิ่มนักเรียน
@@ -458,7 +458,7 @@ watch(activeTab, async (tab) => {
 
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
         <div class="flex flex-wrap gap-2">
-          <button
+          <button class="min-h-[44px] sm:min-h-0"
             @click="activeTab = 'active'"
             :class="[
               'inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors',
@@ -470,7 +470,7 @@ watch(activeTab, async (tab) => {
             <span>กำลังศึกษา</span>
             <span class="rounded-full bg-white/80 px-2 py-0.5 text-xs dark:bg-black/20">{{ students.length }}</span>
           </button>
-          <button
+          <button class="min-h-[44px] sm:min-h-0"
             @click="activeTab = 'inactive'"
             :class="[
               'inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors',
@@ -592,7 +592,7 @@ watch(activeTab, async (tab) => {
                 <div class="inline-flex items-center gap-1">
                   <button
                     @click="openHistory(cs)"
-                    class="p-1.5 rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 transition"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 transition"
                     aria-label="ดูประวัติการลงห้อง"
                   >
                     <Icon icon="mdi:history" class="w-5 h-5" />
@@ -605,7 +605,7 @@ watch(activeTab, async (tab) => {
                   <button
                     v-if="activeTab === 'active'"
                     @click="removeStudent(cs.student_id)"
-                    class="p-1.5 rounded-md text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-900/30 transition"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 rounded-md text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-900/30 transition"
                     aria-label="ลบนักเรียนออกจากห้อง (legacy)"
                   >
                     <Icon icon="fluent:person-delete-24-regular" class="w-5 h-5" />
@@ -699,14 +699,14 @@ watch(activeTab, async (tab) => {
           <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex items-center gap-3">
             <button
               @click="showAddModal = false"
-              class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               ยกเลิก
             </button>
             <button
               @click="addStudents"
               :disabled="isSaving || selectedStudents.length === 0"
-              class="flex-1 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
             >
               <Icon v-if="isSaving" icon="fluent:spinner-ios-20-filled" class="w-5 h-5 animate-spin" />
               เพิ่มนักเรียน {{ selectedStudents.length > 0 ? `(${selectedStudents.length})` : '' }}

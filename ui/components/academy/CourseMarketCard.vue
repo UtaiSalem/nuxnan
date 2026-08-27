@@ -159,7 +159,7 @@
             <button
               v-else
               @click.stop="emit('purchase', course)"
-              class="flex items-center gap-1 px-3 py-1 bg-violet-600 hover:bg-violet-700 text-white text-[10px] font-bold rounded-full transition-colors shadow-sm"
+              class="min-h-[44px] sm:min-h-0 flex items-center gap-1 px-3 py-1 bg-violet-600 hover:bg-violet-700 text-white text-[10px] font-bold rounded-full transition-colors shadow-sm"
             >
               <Icon icon="mdi:cart-plus" class="w-3.5 h-3.5" /> ซื้อลิขสิทธิ์
             </button>
