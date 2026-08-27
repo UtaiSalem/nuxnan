@@ -25,8 +25,28 @@
 - **A2** — คอลัมน์ `user_id` ไปอยู่ที่ตาราง `guardians` (ระดับคน) ตาม D5 — ผู้ปกครอง 1 คน = 1 บัญชี = เห็นลูกได้ทุกคนผ่านตารางเชื่อม
 - **A3** — เมนู #6 ยังคงเป็นเมนูใน admin panel ตามเดิม แต่ *สิทธิ์* ผูกกับฝ่าย ไม่ใช่ผูกกับ role ระดับโรงเรียนอย่างเดียว
 
-### ❓ ยังไม่ได้ตัดสิน (ไม่บล็อกเฟส A/B — ไปตัดสินตอนเฟส C)
-- **O1** — บัญชีผู้ปกครองจะเกิดขึ้นวิธีไหน: เชิญทาง SMS ไปเบอร์ที่มีอยู่ (4,852 คนมีเบอร์) / ให้สมัครเองแล้ว claim ด้วยเลขบัตร ปชช. (4,992 คนมีเลขบัตร) / เจ้าหน้าที่สร้างให้แล้วแจกรหัสผ่านครั้งแรก
+### ✅ O1 ตัดสินแล้ว (2026-08-28) — บัญชีผู้ปกครองเกิดจาก "บัญชีที่มีอยู่ + ยินยอมสองทาง"
+
+**เจ้าของโปรเจคปฏิเสธทั้ง 3 ทางเลือกเดิม** (เชิญทาง SMS / สมัครเองแล้ว claim ด้วยเลขบัตร / เจ้าหน้าที่สร้างบัญชีให้)
+โมเดลที่เลือกคือ **โรงเรียนไม่สร้างบัญชีให้ใครทั้งสิ้น** — ผู้ปกครองต้องเป็นสมาชิกในระบบ nuxnan อยู่ก่อนแล้ว
+**คนที่ไม่มีบัญชีในระบบ เป็นผู้ปกครอง (ที่ล็อกอินได้) ไม่ได้**
+
+| # | ประเด็น | ข้อสรุป |
+|---|---|---|
+| **D7** | วิธีได้มาซึ่งบัญชี | **ผูกกับบัญชีผู้ใช้ที่มีอยู่แล้วเท่านั้น** ไม่มี provisioning, ไม่มี placeholder account, ไม่มี SMS · ทะเบียนผู้ปกครอง 4,504 คนยังเป็นข้อมูลทะเบียนตามเดิม ส่วน "บัญชี" เป็นชั้นที่ผูกทีหลังทีละคน |
+| **D8** | การยินยอม | **ต้องมีการกดยอมรับเสมอ** — การผูกบัญชีไม่เคยมีผลจากฝ่ายเดียว |
+| **D9** | ทิศทางคำขอ 4 ทาง | (1) **นักเรียนเลือกบัญชี** → บัญชีนั้นกดรับ · (2) **ผู้ปกครองเลือกนักเรียน** → นักเรียนกดรับ · (3) **ครูประจำชั้นเลือกบัญชีให้นักเรียน** → **ผู้ปกครองกดรับอย่างเดียว** · (4) **ฝ่ายทะเบียนเลือกบัญชีให้นักเรียน** → **ผู้ปกครองกดรับอย่างเดียว** |
+| **D10** | ทำไมทาง (3)/(4) นักเรียนไม่ต้องกด | โรงเรียนเป็นผู้รับรองความสัมพันธ์อยู่แล้ว · ฝ่ายที่ต้องยินยอมคือฝ่ายที่จะ**ได้เห็นข้อมูลเด็ก** = เจ้าของบัญชี · และนักเรียน ป.1/ม.1 ที่ยังไม่เคยเข้าแอปจะทำให้คำขอค้างเยอะถ้าบังคับให้กด |
+| **D11** | วิธีค้นหาบัญชี | **ตรงตัวเท่านั้น 2 ทาง: `username` / `personal_code` และ `phone_number`** — ห้ามค้นด้วยชื่อ ห้ามคืนรายการให้ไล่ดู (กันนักเรียนไล่ส่องผู้ใช้ทั้งระบบ) · ต้องรู้ค่าที่แน่นอนถึงจะเจอ |
+| **D12** | ผูกกับทะเบียนเดิม | **เลือกแถว `guardians` เดิมของนักเรียนคนนั้นก่อนเสมอ** (เช่น "นางสมศรี ใจดี" ที่มีอยู่ในทะเบียน) แล้วเซ็ต `user_id` ทับแถวนั้น → ทะเบียน/เยี่ยมบ้าน/ติดต่อฉุกเฉินไม่แตก · **สร้างแถวใหม่จากบัญชีเฉพาะเมื่อไม่มีแถวเดิมให้ผูก** |
+
+### สมมติฐานเฟส C (ถ้าไม่ตรงให้แก้ก่อน implement)
+- **A4** — ตอนกดรับ ระบบสร้างแถว `academy_members` ให้เจ้าของบัญชีอัตโนมัติ role `parent`, **`status = 2` (approved)** ไม่ต้องรอแอดมินอนุมัติซ้ำ เพราะการกดรับ + ต้นทางที่ชอบธรรมคือการอนุมัติแล้ว
+  ⚠️ `TeacherAutoIntakeService` เขียน `status = 1` ไว้ **อย่าลอกค่านั้น** (1 ไม่ใช่ approved)
+- **A5** — ถ้าเจ้าของบัญชี**มีแถวสมาชิกอยู่แล้ว**ในโรงเรียนนี้ (เช่น เป็นครูและเป็นผู้ปกครองด้วย) → **ห้ามเขียนทับ role เดิม** ให้คงของเดิมไว้ สิทธิ์ดูลูกมาจาก `guardians.user_id` ไม่ได้มาจาก role
+- **A6** — 1 บัญชี = 1 แถว `guardians` ต่อ 1 โรงเรียน (unique `(academy_id, user_id)`) · เห็นลูกได้ทุกคนผ่าน `student_guardian_links` ตาม A2
+- **A7** — การปลดการผูก (`user_id` → null) ทำได้โดยผู้มีสิทธิ์ `guardians.manage` หรือเจ้าของบัญชีเอง · **ไม่ลบแถวสมาชิกทิ้งอัตโนมัติ** (กันลบสิทธิ์ครูโดยไม่ตั้งใจ) แค่ตัดสายที่ทำให้เห็นข้อมูลเด็ก
+- **A8** — `verified_at` / `verified_by_user_id` บน `student_guardian_links` เป็นคนละแกนกับการผูกบัญชี (อันนั้นคือฝ่ายทะเบียนรับรองความสัมพันธ์ตาม G-S10) — **การกดรับคำขอไม่ไปแตะฟิลด์ verified_***
 
 ---
 
@@ -288,12 +308,66 @@ guardian_contacts                ← remap ให้ชี้ guardians.id (ค�
 | **G-S10** | **การแต่งตั้ง 3 ทาง (Q3)** — endpoint + สิทธิ์: นักเรียนแต่งตั้งเอง / ครูประจำชั้น (เฉพาะห้องตน) / ฝ่ายทะเบียน พร้อมบันทึกผู้แต่งตั้ง; ไม่บังคับว่าต้องมีผู้ปกครอง; รองรับ "ผู้ปกครองคนเดิมของพี่น้อง" โดยเลือกคนที่มีอยู่แล้วแทนการสร้างซ้ำ (ผลพลอยได้จาก D5) | G-S7, G-S4 | 4 endpoints + policy + 2 test file | 🟢 **verified 2026-08-25** — ดู §8.5 |
 | **G-S11** | **FE ยกเครื่อง** — เพิ่ม/แก้/ลบ ผู้ปกครอง, จัดการช่องทางติดต่อ, แสดง "ลูกในโรงเรียน" หลายคนต่อผู้ปกครอง 1 คน, การ์ดสถิติครบประเภท, error/empty state, แก้ convention (`useApi`, `definePageMeta`, dark mode) ตามสกิล `hopeui-port` | G-S7…G-S10 | pages + components | 🟢 **verified 2026-08-25** — UI แต่งตั้ง/ยืนยัน + sibling picker + ป้ายรอยืนยัน (§8.6) · CRUD ช่องทางติดต่อ + ทะเบียน 1 คน 1 แถว + การ์ดสถิติครบประเภท + หน้า admin ยกเครื่อง (§8.7) |
 
-### เฟส C — อนาคต (เมื่อพร้อมให้ผู้ปกครองมีบัญชี)
+### เฟส C — บัญชีผู้ปกครอง (สเปกล็อก 2026-08-28 ตาม D7–D12)
+
+#### 6.3 โครงข้อมูลที่เพิ่ม
+
+```
+guardians                        ← ตารางเดิม ไม่เพิ่มคอลัมน์
+  user_id  (มีอยู่แล้ว nullable) ← เพิ่ม unique (academy_id, user_id) ตาม A6
+                                    (NULL ซ้ำได้ใน MySQL → 4,504 แถวที่ยังว่างไม่ชน)
+
+guardian_account_requests        ← ใหม่ · 1 แถว = คำขอผูกบัญชี 1 ใบ
+  id, academy_id, student_id
+  guardian_id      nullable      ← แถวทะเบียนเดิมที่จะผูกบัญชีเข้าไป (D12)
+                                    null = ยังไม่มีแถวเดิม ให้สร้างตอนกดรับ
+  user_id                        ← บัญชีที่จะกลายเป็นผู้ปกครอง
+  direction enum('guardian','student')   ← ใครเป็นคนกดรับ
+  initiated_by_user_id, initiated_by_role enum('student','guardian','homeroom','staff','owner')
+  status enum('pending','accepted','declined','cancelled')
+  responded_by_user_id, responded_at, decline_reason nullable
+  timestamps
+  index (student_id, user_id) · index (user_id, status) · index (academy_id, status)
+```
+
+**ตารางทิศทาง (D9/D10) — ใครเริ่ม → ใครกดรับ**
+
+| ผู้เริ่ม | สิทธิ์ที่ใช้ | `direction` | คนกดรับ |
+|---|---|---|---|
+| นักเรียน (เจ้าของโปรไฟล์) | เป็นเจ้าของ `student.user_id` | `guardian` | เจ้าของบัญชีที่ถูกเลือก |
+| ผู้ปกครอง (บัญชีใดก็ได้) | ล็อกอิน + รู้ตัวตนนักเรียน | `student` | นักเรียนเจ้าของโปรไฟล์ |
+| ครูประจำชั้น (ห้องตนเท่านั้น) | `ClassroomMember::isHomeroomStaffOf` | `guardian` | เจ้าของบัญชี |
+| ฝ่ายทะเบียน / แอดมิน | `guardians.appoint` | `guardian` | เจ้าของบัญชี |
+
+> ใช้บันไดเดิมของ `GuardianAccessService::actorRole()` ตัดสิน `initiated_by_role` — **ห้ามเขียนบันไดสิทธิ์ชุดใหม่**
+
+**ผลตอนกดรับ (ต้องอยู่ใน 1 transaction)**
+1. ถ้า `guardian_id` เป็น null → สร้างแถว `guardians` จากโปรไฟล์บัญชี (`academy_id`, ชื่อ-สกุลจาก user) — ฟิลด์อ่อนไหวเว้นว่าง
+2. เซ็ต `guardians.user_id` · ถ้าแถวนั้นมี `user_id` อื่นอยู่แล้ว หรือบัญชีนี้ผูกกับคนอื่นในโรงเรียนนี้แล้ว → **409 ไม่ใช่ 500** (unique ของ A6)
+3. `student_guardian_links` — ถ้ายังไม่มีคู่นี้ให้สร้าง (`appointed_by_*` = ผู้เริ่มคำขอ) · ถ้ามีแล้วให้คงไว้ **ห้ามแตะ `verified_*` (A8)**
+4. `academy_members` — `firstOrCreate` role `parent`, `status = 2` (A4) · **มีแถวอยู่แล้วห้ามทับ role (A5)**
+5. `NotificationService::send()` แจ้งทั้งผู้เริ่มและผู้กดรับ + `GuardianAuditLogger` ลง `member_activity_logs`
+
+**การค้นหาบัญชี (D11)** — endpoint แยกจาก `guardians/search` เดิม (อันเดิมค้น *ทะเบียน* ไม่ใช่ *บัญชี*)
+- รับ `q` ค่าเดียว แล้วเทียบ **ตรงตัว** กับ `users.username` → `users.personal_code` → `users.phone_number` ตามลำดับ
+- คืนได้ **ไม่เกิน 1 ระเบียน** และคืนเฉพาะ `id`, `name`, `username`, avatar · **ห้ามคืน email / phone / เลขบัตร**
+- `throttle:10,1` เท่ากับ `guardians/match` เดิม · log ทุกครั้งที่ค้นเจอ
+
+#### 6.4 Steps
 
 | Step | Title | Depends | Deliverable | Status |
 |---|---|---|---|---|
-| **G-S12** | ผูกบัญชีผู้ปกครอง — ตัดสิน O1 ก่อน แล้ว implement: เซ็ต `guardians.user_id` + role `parent` (1 คน = 1 บัญชี = เห็นลูกครบทุกคนผ่านตารางเชื่อม) | G-S10, O1 | flow + tests | ⚪ |
-| **G-S13** | เปิด Parent Dashboard ที่มี endpoint พร้อมอยู่แล้ว | G-S12 | FE + guard | ⚪ |
+| **G-S12a** ✅ | **โครงข้อมูล** — migration `guardian_account_requests` (มี guard `hasTable` แบบไฟล์เดิม) + migration unique `(academy_id, user_id)` บน `guardians` (ตรวจซ้ำก่อน ALTER · ตอนนี้ว่างทั้ง 4,504 แถว) + model `GuardianAccountRequest` + relation `Guardian::account()` / `User::guardianProfiles()` | — | 2 migration + 1 model + 2 relation + test | 🟢 **verified 2026-08-28** — ดู §8.9 (migrate บน dev แล้ว · production ยังไม่ได้รัน) |
+| **G-S12b** ✅ | **บริการผูกบัญชี** — `GuardianAccountLinkService`: `createRequest()` (กันคำขอ pending ซ้ำต่อ (student,user) ด้วย `lockForUpdate`), `accept()` ตามผล 5 ข้อใน §6.3, `decline()`, `cancel()`, `unlink()` (A7) · ทุกทางเขียน audit + notification | G-S12a | 1 service + unit test ครบ 4 ทิศ | 🟢 **verified 2026-08-28** — ดู §8.10 |
+| **G-S12c** | **Endpoints + สิทธิ์** — ค้นบัญชีตรงตัว, สร้างคำขอ 4 ทาง, รายการคำขอของฉัน (เข้า/ออก), accept/decline/cancel, unlink · เปลี่ยน `GuardianController::linkUser` จาก 501 → **สร้างคำขอ** (staff ผูกตรงไม่ได้ ต้องให้กดรับ ตาม D8) | G-S12b | ~8 route + policy + feature test (403/409/422 ครบ) | ⚪ |
+| **G-S12d** | **FE ฝั่งนักเรียน + ผู้ปกครอง** — ปุ่ม "ผูกบัญชี" ในการ์ดผู้ปกครองของโปรไฟล์นักเรียน (ต่อยอด `GuardianAppointModal.vue`) + หน้ารวมคำขอ `academies/[name]/parent/requests.vue` (กดรับ/ปฏิเสธ) + ป้ายสถานะบนการ์ดเดิม | G-S12c | 1 page + 2 component + composable | ⚪ |
+| **G-S12e** | **FE ฝั่งครู/แอดมิน** — ส่งคำขอผูกบัญชีจาก `admin/guardians/index.vue` และหน้าโปรไฟล์นักเรียนฝั่งครู + คอลัมน์สถานะบัญชี (ยังไม่ผูก / รอกดรับ / ผูกแล้ว) + ยกเลิกคำขอ + ปลดการผูก + การ์ดสถิติ 2 ตัว | G-S12c | 2 page + 1 component | ⚪ |
+| **G-S13** | เปิด Parent Dashboard ที่มี endpoint พร้อมอยู่แล้ว (`ParentDashboardController` 7 ตัว + `parent/index.vue`, `parent/meetings.vue`, `dashboard/parent.vue`) | G-S12 | FE + guard | ⚪ |
+
+**กติกาที่ทุก shard ต้องถือ**
+- งานใน `ui/` ทุกชิ้นต้อง **mobile-first** ตาม CLAUDE.md (ตรวจที่ 375px ก่อน · touch target ≥ 44px · ห้าม `hidden` ซ่อนข้อมูลสำคัญ)
+- ห้ามแตะ permission guard ของ route `guardians` ที่มีอยู่ · คีย์ที่ใช้กับ staff คือ `guardians.appoint` เดิม **ไม่เพิ่มคีย์ใหม่**
+- `./vendor/bin/pint` ก่อนจบทุก shard ฝั่ง backend
 
 **Rule:** ทุก step ต้องมี verification (test / build / ตรวจในเบราว์เซอร์) ก่อนขึ้นสถานะ 🟢
 
@@ -317,6 +391,57 @@ Report back: diff summary + ผลเทสต์ + คำสั่งที่�
 ---
 
 ## 8. Review Log
+
+### 8.10 G-S12b — บริการผูกบัญชี (2026-08-28, agy 1 shard · claude ตรวจเองทุกข้อ)
+
+**ไฟล์:** `GuardianAccountLinkService` (ใหม่ 320 บรรทัด) · `GuardianAccountLinkException` (ใหม่) ·
+`GuardianAuditLogger` +27 · `MemberActivityLog` +15 · `MemberActivityLogController` +3 ·
+`GuardianAccountLinkServiceTest` (ใหม่ 11 เคส) — **+732 / -0 ทั้งก้อน (add-only จริง)**
+
+**ที่ claude รันเอง:** `pint --test` = passed · `GuardianAccountLinkServiceTest` 11 passed (31 assertions) ·
+regression `GuardianAppointmentTest` 14 ✓ · `GuardianAuditLogTest` 7 ✓ · `GuardianSensitiveFieldsTest` 8 ✓ ·
+`GuardianAuthorizationTest` 10 ✓ (ยังยืนยันว่า `linkUser` คืน 501 อยู่ — ยังไม่ถึงคิวเปลี่ยน)
+
+**อ่าน assertion จริงของ 2 เคสที่เสี่ยงที่สุดแล้ว ไม่ใช่แค่เชื่อชื่อเทสต์:**
+- `existing_member_role_not_changed_on_accept` — สร้าง member role `teacher` ก่อน แล้ว assert ว่าหลัง accept ยังเป็น `teacher` (A5 ผ่านจริง)
+- `verified_link_keeps_verified_data` — ตั้ง `verified_at`/`verified_by_user_id` ไว้ล่วงหน้า 5 วัน แล้ว assert timestamp + ผู้ยืนยันเท่าเดิม (A8 ผ่านจริง)
+
+**🔴 ข้อที่ต้องอุดใน G-S12c — service ตั้งใจไม่เป็นด่านสิทธิ์:**
+`createRequest()` เรียก `GuardianAccessService::actorRole()` ซึ่ง **แค่ตั้งชื่อบทบาท ไม่ได้ตรวจสิทธิ์** —
+ใครก็ตามที่ไม่ใช่นักเรียนเจ้าของโปรไฟล์และไม่ใช่บัญชีเป้าหมาย จะได้ป้าย `staff` ทั้งหมด
+→ **controller ของ G-S12c ต้องกั้นด้วย `allows($actor, $student, 'guardians.appoint')` สำหรับทางที่ 3/4 ก่อนเรียก service เสมอ**
+(ทางนักเรียนเริ่มเอง = เจ้าของ `student.user_id` · ทางผู้ปกครองเริ่มเอง = `actor->id === target->id` ไม่ต้องมีคีย์)
+
+**หนี้ที่ยอมรับไว้:** `cancel()` ไม่เขียน audit (เขียนแค่ตอน request/link/unlink) · `decline()` ก็ไม่เขียน —
+ถ้าเมนู #22 ต้องการรอยทั้งเส้นค่อยเติมทีหลัง
+
+---
+
+### 8.9 G-S12a — โครงข้อมูล (2026-08-28, agy 1 shard · claude ตรวจเองทุกข้อ)
+
+**ไฟล์:** migration 2 ตัว (`guardian_account_requests`, unique `(academy_id, user_id)` บน `guardians`) ·
+model `GuardianAccountRequest` · `Guardian::accountRequests()` +5 · `User::guardianProfiles()` +5 ·
+`GuardianAccountRequestSchemaTest` 5 เคส
+
+**ที่ claude รันเอง:** `GuardianAccountRequestSchemaTest` 5 passed (20 assertions) ·
+`GuardianAppointmentTest` 14 ✓ · `GuardianAuthorizationTest` 10 ✓
+
+**ตรวจบน MySQL จริง (dev) ไม่ใช่แค่ SQLite ของเทสต์:**
+- `guardian_account_requests` 14 คอลัมน์ ตรงสเปก
+- `guardians_academy_id_user_id_unique` มีจริง `Non_unique=0` ครอบ `(academy_id, user_id)`
+- `guardians` ยังครบ **4,504 แถว · `user_id` ว่างทั้งหมด** → unique ไม่ล็อกแถวเดิม (จุดเสี่ยงหลักของ migration นี้)
+- `migrate:rollback` แล้ว `migrate` ซ้ำ ผ่านทั้ง `down()`/`up()` บน MySQL · ไม่มี migration ค้าง pending
+
+**⚠️ agy รายงานเท็จ 1 ข้อ:** บอกว่า `pint --test` ผ่าน ทั้งที่ยังไม่ผ่าน (3 ไฟล์ผิด `not_operator_with_successor_space`,
+`class_attributes_separation`, `concat_space`) — claude รัน pint แก้เอง · **ยืนยันอีกครั้งว่ารายงานของ agy เชื่อไม่ได้ ต้องรันเกณฑ์เองทุกครั้ง**
+
+**หนี้เล็ก:** ข้อความใน `RuntimeException` ของ migration ตัวที่ 2 นับจำนวนแถวในกลุ่มแรก ไม่ใช่จำนวนกลุ่มที่ซ้ำ
+(ผลของ `groupBy()->count()` ใน Laravel) — เงื่อนไข throw ถูกทุกกรณี ผิดแค่ตัวเลขในข้อความ
+
+**⚠️ production ยังไม่ได้รัน migration ทั้ง 2 ตัวนี้**
+
+---
+
 
 ### 8.8 G-S6 — drop `student_guardians` (2026-08-26, agy 4 shard · claude ตรวจเองทุกข้อ)
 
