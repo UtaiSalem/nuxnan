@@ -332,7 +332,7 @@ const handleCancel = () => {
             <button
               type="button"
               @click="deleteExistingImage(index, image.id)"
-              class="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
             >
               <Icon icon="fluent:delete-24-filled" class="w-4 h-4" />
             </button>
@@ -350,7 +350,7 @@ const handleCancel = () => {
             <button
               type="button"
               @click="deleteTempImage(index)"
-              class="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
             >
               <Icon icon="fluent:delete-24-filled" class="w-4 h-4" />
             </button>

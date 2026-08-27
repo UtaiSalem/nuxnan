@@ -501,7 +501,7 @@ const formatTime = (dateString) => {
                 <h3 class="font-bold text-gray-800 dark:text-white">ความคิดเห็น</h3>
                 <button 
                   @click="showComments = false"
-                  class="p-1 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-full"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-full"
                 >
                   <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
                 </button>
@@ -591,7 +591,7 @@ const formatTime = (dateString) => {
                     <button 
                       @click="submitComment"
                       :disabled="!newComment.trim() || isSubmittingComment"
-                      class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-vikinger-purple disabled:opacity-50"
+                      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute right-2 top-1/2 -translate-y-1/2 p-1 text-vikinger-purple disabled:opacity-50"
                     >
                       <Icon v-if="isSubmittingComment" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
                       <Icon v-else icon="fluent:send-24-filled" class="w-5 h-5" />

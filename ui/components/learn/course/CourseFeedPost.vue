@@ -654,7 +654,7 @@ const handlePollDelete = () => {
       <div v-if="isAuthor || isCourseAdmin" class="relative">
         <button
           @click="showMenu = !showMenu"
-          class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-vikinger-dark-100 text-gray-400"
+          class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-vikinger-dark-100 text-gray-400"
         >
           <Icon icon="fluent:more-horizontal-24-regular" class="w-5 h-5" />
         </button>

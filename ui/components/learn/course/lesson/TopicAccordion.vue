@@ -157,14 +157,14 @@ const handleImageError = (event: Event) => {
         <div v-if="isAdmin" class="flex items-center gap-1 ml-2" @click.stop>
             <button 
                 @click="handleEditClick"
-                class="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-full transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-full transition-colors"
                 title="แก้ไข"
             >
                 <Icon icon="fluent:edit-20-regular" class="w-4 h-4" />
             </button>
             <button 
                 @click="handleDeleteClick"
-                class="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors"
                 title="ลบ"
             >
                 <Icon icon="fluent:delete-20-regular" class="w-4 h-4" />

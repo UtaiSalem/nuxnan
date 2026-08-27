@@ -296,7 +296,7 @@ watch(() => props.show, (val) => {
                 <img :src="preview" class="w-full h-full object-cover" />
                 <button
                   @click="removeNewFile(idx)"
-                  class="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full shadow-sm hover:bg-red-600 transition-colors"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full shadow-sm hover:bg-red-600 transition-colors"
                 >
                   <Icon icon="fluent:dismiss-12-regular" class="w-3 h-3" />
                 </button>

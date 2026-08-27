@@ -436,7 +436,7 @@ const scrollToTop = () => {
                              <div class="text-right flex items-center gap-2">
                                  <button 
                                    @click="answer.isExpanded = !answer.isExpanded"
-                                   class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-400"
+                                   class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-400"
                                  >
                                     <Icon :icon="answer.isExpanded ? 'fluent:chevron-up-24-regular' : 'fluent:chevron-down-24-regular'" class="w-5 h-5" />
                                  </button>

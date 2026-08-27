@@ -157,7 +157,7 @@ const deleteComment = async () => {
           v-if="canDelete"
           @click="deleteComment"
           :disabled="isDeleting"
-          class="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+          class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-2 right-2 p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
           title="ลบความคิดเห็น"
         >
           <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />

@@ -507,7 +507,7 @@ watch(() => props.academyId, (id) => {
                 <div class="flex items-center justify-end gap-1 list-user-action">
                   <button
                     @click.stop="onViewProfile(student)"
-                    class="p-1.5 rounded-md text-zinc-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 rounded-md text-zinc-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition"
                     title="ดูโปรไฟล์นักเรียน"
                   >
                     <Icon icon="fluent:person-card-profile-24-regular" class="w-4 h-4" />
@@ -515,14 +515,14 @@ watch(() => props.academyId, (id) => {
                   <button
                     v-if="student.account_status !== 'active'"
                     @click.stop="onActivateAccount(student)"
-                    class="p-1.5 rounded-md text-zinc-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 rounded-md text-zinc-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition"
                     title="สร้างลิงก์เปิดบัญชี"
                   >
                     <Icon icon="fluent:person-key-24-regular" class="w-4 h-4" />
                   </button>
                   <button
                     @click.stop="onViewHistory(student)"
-                    class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 transition"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 transition"
                     title="ดูประวัติการลงห้อง"
                   >
                     <Icon icon="mdi:history" class="w-4 h-4" />

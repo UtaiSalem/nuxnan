@@ -370,7 +370,7 @@ watch(() => props.show, (val) => {
                 <img :src="img.full_url || img.image_url" class="w-full h-full object-cover" />
                 <button
                   @click="removeExistingImage(img.id)"
-                  class="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
                 >
                   <Icon icon="fluent:delete-16-filled" class="w-4 h-4" />
                 </button>

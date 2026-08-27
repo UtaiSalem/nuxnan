@@ -269,7 +269,7 @@ const onSubmit = async () => {
                    <div v-if="existingImages.length > 0" class="grid grid-cols-4 gap-2 mb-2">
                       <div v-for="img in existingImages" :key="img.id" class="relative group">
                           <img :src="img.full_url || img.image_url" class="h-16 w-full object-cover rounded-lg border dark:border-gray-600" />
-                          <button @click="removeExistingImage(img.id)" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button @click="removeExistingImage(img.id)" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                               <Icon icon="fluent:dismiss-12-regular" class="w-3 h-3" />
                           </button>
                       </div>
@@ -279,7 +279,7 @@ const onSubmit = async () => {
                    <div v-if="previewImages.length > 0" class="grid grid-cols-4 gap-2 mb-2">
                       <div v-for="(url, idx) in previewImages" :key="idx" class="relative group">
                           <img :src="url" class="h-16 w-full object-cover rounded-lg border dark:border-gray-600" />
-                          <button @click="removeFile(idx)" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button @click="removeFile(idx)" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                               <Icon icon="fluent:dismiss-12-regular" class="w-3 h-3" />
                           </button>
                       </div>
@@ -314,7 +314,7 @@ const onSubmit = async () => {
                            <div class="flex-1">
                                <div v-if="option.image" class="relative mb-2 w-max group">
                                    <img :src="option.image" class="h-16 w-auto object-contain rounded border bg-gray-50 dark:bg-gray-900" />
-                                   <button @click="removeOptionImage(index)" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                   <button @click="removeOptionImage(index)" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                        <Icon icon="fluent:dismiss-12-regular" class="w-3 h-3" />
                                    </button>
                                </div>
@@ -337,7 +337,7 @@ const onSubmit = async () => {
                            <!-- Remove Button -->
                            <button 
                               @click="removeOption(index)" 
-                              class="text-gray-400 hover:text-red-500 p-1"
+                              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center text-gray-400 hover:text-red-500 p-1"
                               v-if="form.options.length > 2"
                            >
                               <Icon icon="fluent:delete-20-regular" class="w-5 h-5" />

@@ -33,7 +33,7 @@
           <!-- Close Button -->
           <button
             @click="removeNotification(notification.id)"
-            class="flex-shrink-0 p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"
+            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center flex-shrink-0 p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"
           >
             <Icon icon="fluent:dismiss-24-regular" class="w-4 h-4 text-gray-500 dark:text-gray-400" />
           </button>

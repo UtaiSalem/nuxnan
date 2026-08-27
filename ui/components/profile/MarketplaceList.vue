@@ -204,7 +204,7 @@ onMounted(() => {
             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
           
-          <button class="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-red-500 text-white rounded-full transition-colors opacity-0 group-hover:opacity-100">
+          <button class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-red-500 text-white rounded-full transition-colors opacity-0 group-hover:opacity-100">
             <Icon icon="fluent:heart-24-regular" class="w-4 h-4" />
           </button>
           

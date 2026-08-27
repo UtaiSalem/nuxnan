@@ -370,7 +370,7 @@ const formatDate = (date: string) => {
                   <Icon icon="fluent:add-24-regular" class="w-4 h-4" />
                 </button>
                 <button @click="removeFromCart(item.product.id)"
-                  class="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg ml-1">
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg ml-1">
                   <Icon icon="fluent:delete-24-regular" class="w-4 h-4 text-red-500" />
                 </button>
               </div>

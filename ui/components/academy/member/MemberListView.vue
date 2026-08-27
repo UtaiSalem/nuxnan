@@ -331,21 +331,21 @@ const isAllSelected = computed(() =>
           <div class="flex items-center gap-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 p-1">
             <button
               @click="emit('edit-role', member)"
-              class="p-1.5 text-gray-500 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-md transition-colors"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 text-gray-500 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-md transition-colors"
               title="กำหนดบทบาท"
             >
               <Icon icon="fluent:shield-person-24-regular" class="w-4 h-4" />
             </button>
             <button
               @click="emit('manage-member', member)"
-              class="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-colors"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-colors"
               title="จัดการสมาชิก"
             >
               <Icon icon="fluent:settings-24-regular" class="w-4 h-4" />
             </button>
             <button
               @click="emit('remove-member', member)"
-              class="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors"
               title="ลบสมาชิก"
             >
               <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />

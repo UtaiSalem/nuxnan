@@ -243,7 +243,7 @@ const hasMetadata = computed(() => !!(semesterLabel.value || academicYearLabel.v
             <button
               v-if="isAdmin"
               @click="$emit('edit-name')"
-              class="mt-0.5 p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all shrink-0"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center mt-0.5 p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all shrink-0"
             >
               <Icon icon="fluent:edit-24-filled" class="w-4 h-4" />
             </button>

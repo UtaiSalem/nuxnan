@@ -279,7 +279,7 @@ const closeModal = () => {
                   <button
                     type="button"
                     @click="clearSelectedCourse"
-                    class="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                   >
                     <Icon icon="fluent:dismiss-16-regular" class="w-4 h-4" />
                   </button>

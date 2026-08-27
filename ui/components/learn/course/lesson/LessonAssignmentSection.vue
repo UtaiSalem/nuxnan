@@ -338,7 +338,7 @@ const formatDate = (date: string) => {
             <div v-if="isCreator" class="flex items-center gap-1 bg-white dark:bg-gray-800 rounded-lg p-1 shadow-sm border border-gray-200 dark:border-gray-700">
               <button
                 @click="emit('edit', activeAssignment)"
-                class="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-colors"
                 title="แก้ไข"
               >
                 <Icon icon="fluent:edit-16-regular" class="w-4 h-4" />
@@ -346,7 +346,7 @@ const formatDate = (date: string) => {
               <div class="w-px h-4 bg-gray-200 dark:bg-gray-700"></div>
               <button
                 @click="emit('delete', activeAssignment)"
-                class="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors"
                 title="ลบ"
               >
                 <Icon icon="fluent:delete-16-regular" class="w-4 h-4" />
@@ -443,7 +443,7 @@ const formatDate = (date: string) => {
                             <div class="text-right flex flex-col items-end gap-1">
                                 <button 
                                     @click="deleteAnswer(answer)" 
-                                    class="text-gray-400 hover:text-red-500 transition-colors p-1" 
+                                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors p-1" 
                                     title="ลบคำตอบ"
                                 >
                                     <Icon icon="fluent:delete-20-regular" class="w-5 h-5" />
@@ -650,7 +650,7 @@ const formatDate = (date: string) => {
                 <img :src="img.full_url || img.image_url" class="w-full h-full object-cover" />
                 <button
                   @click="removeExistingImage(img.id)"
-                  class="absolute top-1 right-1 p-1 bg-red-500/90 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-1 right-1 p-1 bg-red-500/90 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                   title="ลบรูปภาพ"
                 >
                   <Icon icon="fluent:delete-16-regular" class="w-3 h-3" />

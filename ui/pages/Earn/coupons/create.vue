@@ -174,7 +174,7 @@ const formatNumber = (num: number): string => {
                     </code>
                     <button 
                       @click="copyCode(coupon.coupon_code)"
-                      class="px-3 py-1.5 rounded-lg text-xs font-bold bg-vikinger-purple text-white hover:opacity-90 transition-all flex-shrink-0"
+                      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-bold bg-vikinger-purple text-white hover:opacity-90 transition-all flex-shrink-0"
                     >
                       <Icon icon="fluent:copy-24-regular" class="w-4 h-4" />
                     </button>

@@ -610,7 +610,7 @@ const selectAll = () => {
                 <Icon icon="heroicons:cog-6-tooth" class="inline w-5 h-5 mr-2" />
                 ตั้งค่าการดาวน์โหลดใบประกาศ
               </h3>
-              <button @click="showSettingsModal = false" class="p-1 text-gray-400 hover:text-gray-500">
+              <button @click="showSettingsModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 text-gray-400 hover:text-gray-500">
                 <Icon icon="heroicons:x-mark" class="w-5 h-5" />
               </button>
             </div>

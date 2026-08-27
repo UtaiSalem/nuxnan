@@ -797,7 +797,7 @@ onMounted(async () => {
                 </div>
                 <button 
                   type="button"
-                  class="p-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/20 rounded"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/20 rounded"
                   @click="clearRecipient"
                 >
                   <Icon icon="mdi:close" class="w-5 h-5" />

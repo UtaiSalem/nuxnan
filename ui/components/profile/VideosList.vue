@@ -316,7 +316,7 @@ onMounted(() => {
             </button>
             <button
               @click="deleteVideo(video)"
-              class="px-3 py-1.5 bg-red-500/20 text-red-400 text-sm rounded-lg hover:bg-red-500/30 transition-colors flex items-center justify-center gap-1"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 px-3 py-1.5 bg-red-500/20 text-red-400 text-sm rounded-lg hover:bg-red-500/30 transition-colors flex items-center justify-center gap-1"
             >
               <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
             </button>

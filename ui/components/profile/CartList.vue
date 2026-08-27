@@ -152,7 +152,7 @@ onMounted(() => {
                 <div class="flex items-center bg-gray-900 rounded-lg border border-gray-700">
                   <button 
                     @click="updateQuantity(item, -1)"
-                    class="p-1 hover:text-white text-gray-400 transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 hover:text-white text-gray-400 transition-colors"
                     :disabled="item.quantity <= 1"
                   >
                     <Icon icon="fluent:subtract-16-regular" class="w-4 h-4" />
@@ -160,7 +160,7 @@ onMounted(() => {
                   <span class="w-8 text-center text-sm font-bold text-white">{{ item.quantity }}</span>
                   <button 
                     @click="updateQuantity(item, 1)"
-                    class="p-1 hover:text-white text-gray-400 transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 hover:text-white text-gray-400 transition-colors"
                   >
                     <Icon icon="fluent:add-16-regular" class="w-4 h-4" />
                   </button>

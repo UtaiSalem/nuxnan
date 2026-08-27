@@ -741,7 +741,7 @@ const downloadPDF = async () => {
             </div>
             แลกคูปองรับแต้ม
           </h3>
-          <button @click="showRedeemModal = false" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors p-1">
+          <button @click="showRedeemModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors p-1">
             <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
@@ -792,7 +792,7 @@ const downloadPDF = async () => {
             </div>
             QR Code
           </h3>
-          <button @click="showQrModal = false" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors p-1">
+          <button @click="showQrModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors p-1">
             <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>

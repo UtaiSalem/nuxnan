@@ -347,10 +347,10 @@ const getStockBadge = (product: any) => {
                     <p class="text-sm font-semibold text-primary-600 mt-1">฿{{ Number(product.price).toLocaleString() }}</p>
                   </div>
                   <div class="flex items-center gap-1">
-                    <button @click="openEditForm(product)" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                    <button @click="openEditForm(product)" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                       <Icon icon="fluent:edit-24-regular" class="w-4 h-4 text-gray-500" />
                     </button>
-                    <button @click="handleDelete(product)" class="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg">
+                    <button @click="handleDelete(product)" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg">
                       <Icon icon="fluent:delete-24-regular" class="w-4 h-4 text-red-500" />
                     </button>
                   </div>
@@ -396,7 +396,7 @@ const getStockBadge = (product: any) => {
             <h3 class="text-xl font-bold text-gray-900 dark:text-white">
               {{ editingProduct ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่' }}
             </h3>
-            <button @click="showForm = false" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+            <button @click="showForm = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>

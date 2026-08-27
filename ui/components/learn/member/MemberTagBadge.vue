@@ -10,7 +10,7 @@
     <button
       v-if="removable"
       type="button"
-      class="ml-0.5 -mr-1 hover:bg-black/10 rounded-full p-0.5"
+      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center ml-0.5 -mr-1 hover:bg-black/10 rounded-full p-0.5"
       @click.stop="$emit('remove', tag)"
     >
       <Icon icon="mdi:close" class="w-3 h-3" />

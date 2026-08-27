@@ -238,7 +238,7 @@ const handleDeleteAttachment = async (attachment: any) => {
                     <div v-for="img in topic.images" :key="img.id" class="relative group aspect-square rounded-lg overflow-hidden border border-gray-200">
                         <img :src="img.full_url || img.url" class="w-full h-full object-cover" @error="handleImageError">
                         <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                             <button type="button" @click="handleDeleteExistingImage(img.id)" class="p-1.5 bg-red-600 text-white rounded-full hover:bg-red-700">
+                             <button type="button" @click="handleDeleteExistingImage(img.id)" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 bg-red-600 text-white rounded-full hover:bg-red-700">
                                 <Icon icon="fluent:delete-20-regular" class="w-4 h-4" />
                             </button>
                         </div>
@@ -252,7 +252,7 @@ const handleDeleteAttachment = async (attachment: any) => {
                 <div class="grid grid-cols-4 gap-3">
                     <div v-for="(preview, index) in imagePreviews" :key="index" class="relative group aspect-square rounded-lg overflow-hidden border border-green-200 ring-2 ring-green-500/20">
                         <img :src="preview.url" class="w-full h-full object-cover">
-                        <button type="button" @click="removeNewImage(index)" class="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full shadow-sm hover:bg-red-600">
+                        <button type="button" @click="removeNewImage(index)" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full shadow-sm hover:bg-red-600">
                             <Icon icon="fluent:dismiss-16-regular" class="w-3 h-3" />
                         </button>
                     </div>

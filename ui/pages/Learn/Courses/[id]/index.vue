@@ -446,7 +446,7 @@ const respondToInvitation = async (accept: boolean) => {
               <span v-else class="opacity-50 italic">ยังไม่มีหัวข้อ</span>
               <button 
                 @click="toggleSection(index)"
-                class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors"
               >
                 <Icon 
                   :icon="expandedSections.includes(index) ? 'fluent:chevron-up-24-regular' : 'fluent:chevron-down-24-regular'" 

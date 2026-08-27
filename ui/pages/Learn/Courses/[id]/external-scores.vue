@@ -781,7 +781,7 @@ onUnmounted(() => {
                 <Icon :icon="getCategoryIcon(activeColumn.category)" class="w-5 h-5 text-indigo-500" />
                 <h3 class="font-bold text-gray-900 dark:text-white">{{ activeColumn.title }}</h3>
               </div>
-              <button @click="closeColumnMenu" class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+              <button @click="closeColumnMenu" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                 <Icon icon="mdi:close" class="w-5 h-5" />
               </button>
             </div>
@@ -852,7 +852,7 @@ onUnmounted(() => {
           <div class="p-5 sm:p-6 space-y-4">
             <div class="flex items-center justify-between">
               <h3 class="text-lg font-bold text-gray-900 dark:text-white">สร้างหัวข้อคะแนนใหม่</h3>
-              <button @click="showCreateForm = false" class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+              <button @click="showCreateForm = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                 <Icon icon="mdi:close" class="w-5 h-5" />
               </button>
             </div>
@@ -924,7 +924,7 @@ onUnmounted(() => {
           <div class="p-5 sm:p-6 space-y-4">
             <div class="flex items-center justify-between">
               <h3 class="text-lg font-bold text-gray-900 dark:text-white">แก้ไขหัวข้อคะแนน</h3>
-              <button @click="showEditForm = false" class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+              <button @click="showEditForm = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                 <Icon icon="mdi:close" class="w-5 h-5" />
               </button>
             </div>

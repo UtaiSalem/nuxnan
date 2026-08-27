@@ -461,13 +461,13 @@ const getGradeColor = (grade: string) => {
               <div class="flex gap-1">
                 <button
                   @click="openEditCategoryModal(category)"
-                  class="p-1.5 text-gray-500 hover:text-primary-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 text-gray-500 hover:text-primary-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
                 >
                   <Icon icon="fluent:edit-24-regular" class="w-4 h-4" />
                 </button>
                 <button
                   @click="deleteCategory(category)"
-                  class="p-1.5 text-gray-500 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 text-gray-500 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
                 >
                   <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
                 </button>
@@ -585,7 +585,7 @@ const getGradeColor = (grade: string) => {
                         <button
                           type="button"
                           @click="removeScaleItem(index)"
-                          class="p-1 text-gray-400 hover:text-red-500"
+                          class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 text-gray-400 hover:text-red-500"
                         >
                           <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
                         </button>

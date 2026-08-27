@@ -488,7 +488,7 @@ onMounted(() => {
               <div class="flex items-center bg-gray-100 dark:bg-gray-900 rounded-lg p-0.5">
                 <button
                   @click="viewMode = 'list'"
-                  class="p-1.5 rounded-md transition-colors"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 rounded-md transition-colors"
                   :class="viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'"
                   title="มุมมองรายการ"
                 >
@@ -496,7 +496,7 @@ onMounted(() => {
                 </button>
                 <button
                   @click="viewMode = 'card'"
-                  class="p-1.5 rounded-md transition-colors"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 rounded-md transition-colors"
                   :class="viewMode === 'card' ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'"
                   title="มุมมองการ์ด"
                 >
@@ -606,11 +606,11 @@ onMounted(() => {
                           @keyup.escape="cancelEditOrder"
                           :disabled="savingOrderId === member.id"
                         />
-                        <button @click="saveOrderNumber(member)" class="p-0.5 text-green-500 hover:text-green-600" :disabled="savingOrderId === member.id">
+                        <button @click="saveOrderNumber(member)" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-0.5 text-green-500 hover:text-green-600" :disabled="savingOrderId === member.id">
                           <Icon v-if="savingOrderId === member.id" icon="svg-spinners:ring-resize" class="w-3.5 h-3.5" />
                           <Icon v-else icon="heroicons:check-20-solid" class="w-3.5 h-3.5" />
                         </button>
-                        <button @click="cancelEditOrder" class="p-0.5 text-gray-400 hover:text-gray-600">
+                        <button @click="cancelEditOrder" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-0.5 text-gray-400 hover:text-gray-600">
                           <Icon icon="heroicons:x-mark-20-solid" class="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -672,7 +672,7 @@ onMounted(() => {
                     <button
                       @click.stop="removeFromGroup(member)"
                       :disabled="isRemovingFromGroup === member.user_id"
-                      class="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                       title="นำออกจากกลุ่ม"
                     >
                       <Icon v-if="isRemovingFromGroup === member.user_id" icon="svg-spinners:ring-resize" class="w-4 h-4" />
@@ -698,11 +698,11 @@ onMounted(() => {
                             :disabled="savingOrderId === member.id"
                           />
                           <div class="flex gap-0.5">
-                            <button @click="saveOrderNumber(member)" class="p-0.5 text-green-500" :disabled="savingOrderId === member.id">
+                            <button @click="saveOrderNumber(member)" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-0.5 text-green-500" :disabled="savingOrderId === member.id">
                               <Icon v-if="savingOrderId === member.id" icon="svg-spinners:ring-resize" class="w-3 h-3" />
                               <Icon v-else icon="heroicons:check-20-solid" class="w-3 h-3" />
                             </button>
-                            <button @click="cancelEditOrder" class="p-0.5 text-gray-400">
+                            <button @click="cancelEditOrder" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-0.5 text-gray-400">
                               <Icon icon="heroicons:x-mark-20-solid" class="w-3 h-3" />
                             </button>
                           </div>
@@ -775,7 +775,7 @@ onMounted(() => {
                 v-if="isCourseAdmin"
                 @click.stop="removeFromGroup(member)"
                 :disabled="isRemovingFromGroup === member.user_id"
-                class="absolute top-3 right-3 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-3 right-3 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                 title="นำออกจากกลุ่ม"
               >
                 <Icon v-if="isRemovingFromGroup === member.user_id" icon="svg-spinners:ring-resize" class="w-4 h-4" />
@@ -802,11 +802,11 @@ onMounted(() => {
                         @keyup.escape="cancelEditOrder"
                         :disabled="savingOrderId === member.id"
                       />
-                      <button @click="saveOrderNumber(member)" class="p-0.5 text-green-500" :disabled="savingOrderId === member.id">
+                      <button @click="saveOrderNumber(member)" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-0.5 text-green-500" :disabled="savingOrderId === member.id">
                         <Icon v-if="savingOrderId === member.id" icon="svg-spinners:ring-resize" class="w-3 h-3" />
                         <Icon v-else icon="heroicons:check-20-solid" class="w-3 h-3" />
                       </button>
-                      <button @click="cancelEditOrder" class="p-0.5 text-gray-400">
+                      <button @click="cancelEditOrder" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-0.5 text-gray-400">
                         <Icon icon="heroicons:x-mark-20-solid" class="w-3 h-3" />
                       </button>
                     </div>

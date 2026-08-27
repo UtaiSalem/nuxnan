@@ -419,7 +419,7 @@ onMounted(async () => {
           <div class="flex gap-2">
             <button 
               :disabled="currentPage <= 1"
-              class="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-lg disabled:opacity-50"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-lg disabled:opacity-50"
               @click="currentPage--; loadRequests()"
             >
               <Icon icon="mdi:chevron-left" class="w-5 h-5" />
@@ -427,7 +427,7 @@ onMounted(async () => {
             <span class="px-3 py-1 bg-primary-500 text-white rounded-lg">{{ currentPage }}</span>
             <button 
               :disabled="currentPage >= lastPage"
-              class="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-lg disabled:opacity-50"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-lg disabled:opacity-50"
               @click="currentPage++; loadRequests()"
             >
               <Icon icon="mdi:chevron-right" class="w-5 h-5" />

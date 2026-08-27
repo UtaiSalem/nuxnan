@@ -924,7 +924,7 @@ onMounted(() => {
                         </span>
                         <button
                           @click="copyToClipboard(getBankAccount(selectedRequestDetails).account_number, 'account_number')"
-                          class="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors"
+                          class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors"
                           title="คัดลอก"
                         >
                           <Icon :icon="copiedField === 'account_number' ? 'fluent:checkmark-12-filled' : 'fluent:copy-16-regular'" class="w-4 h-4 text-hopeui-primary-500" />
@@ -1217,7 +1217,7 @@ onMounted(() => {
                 <img :src="proofPreviewUrl" class="w-full max-h-40 object-contain rounded-xl" />
                 <button
                   @click="proofFile = null; proofPreviewUrl = ''"
-                  class="absolute top-3 right-3 p-1.5 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg transition-colors"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-3 right-3 p-1.5 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg transition-colors"
                 >
                   <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
                 </button>
@@ -1230,7 +1230,7 @@ onMounted(() => {
                 </div>
                 <button
                   @click="proofFile = null; proofPreviewUrl = ''"
-                  class="p-1.5 bg-red-600 hover:bg-red-700 text-white rounded-full shadow transition-colors flex-shrink-0"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 bg-red-600 hover:bg-red-700 text-white rounded-full shadow transition-colors flex-shrink-0"
                 >
                   <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
                 </button>

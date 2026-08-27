@@ -146,7 +146,7 @@ const formatPoints = (num: number) => {
       </NuxtLink>
       
       <div v-else class="group relative">
-         <button disabled class="text-xs font-medium text-gray-400 bg-gray-100 dark:bg-gray-700 dark:text-gray-500 p-1.5 rounded-lg cursor-not-allowed">
+         <button disabled class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center text-xs font-medium text-gray-400 bg-gray-100 dark:bg-gray-700 dark:text-gray-500 p-1.5 rounded-lg cursor-not-allowed">
             <Icon icon="mdi:lock" class="w-4 h-4" />
          </button>
          <!-- Tooltip -->

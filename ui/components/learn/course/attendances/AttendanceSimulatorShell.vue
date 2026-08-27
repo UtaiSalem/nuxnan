@@ -502,7 +502,7 @@ onUnmounted(() => {
           </div>
           <button
             @click="closeEditor"
-            class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
             aria-label="ปิด"
           >
             <Icon icon="heroicons:x-mark-20-solid" class="w-4 h-4" />

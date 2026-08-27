@@ -291,7 +291,7 @@ onMounted(() => {
 
                 <button
                   @click.stop="deleteNotification(notification)"
-                  class="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 text-gray-400 hover:text-red-500 transition-colors"
                 >
                   <Icon icon="heroicons:trash" class="w-4 h-4" />
                 </button>

@@ -84,14 +84,14 @@
             <div v-if="canManage" class="flex items-center gap-1">
               <button
                 @click="openEditModal(tag)"
-                class="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
                 title="แก้ไข"
               >
                 <Icon icon="mdi:pencil" class="w-4 h-4" />
               </button>
               <button
                 @click="confirmDelete(tag)"
-                class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                 title="ลบ"
               >
                 <Icon icon="mdi:delete" class="w-4 h-4" />

@@ -873,7 +873,7 @@ watch(members, () => {
                         <div v-if="isCourseAdmin" class="flex items-center justify-center gap-0.5">
                             <button 
                                 @click="member.order_number = Math.max(0, (member.order_number || 0) - 1)"
-                                class="p-0.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded dark:hover:bg-red-900/30 transition-colors"
+                                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-0.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded dark:hover:bg-red-900/30 transition-colors"
                                 title="ลด"
                             >
                                 <Icon icon="fluent:subtract-12-filled" class="w-3 h-3" />
@@ -887,7 +887,7 @@ watch(members, () => {
                             >
                             <button 
                                 @click="member.order_number = (member.order_number || 0) + 1"
-                                class="p-0.5 text-gray-400 hover:text-green-500 hover:bg-green-50 rounded dark:hover:bg-green-900/30 transition-colors"
+                                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-0.5 text-gray-400 hover:text-green-500 hover:bg-green-50 rounded dark:hover:bg-green-900/30 transition-colors"
                                 title="เพิ่ม"
                             >
                                 <Icon icon="fluent:add-12-filled" class="w-3 h-3" />
@@ -896,7 +896,7 @@ watch(members, () => {
                                 v-if="member.order_number !== member.original_order_number"
                                 @click="updateOrderNumber(member)"
                                 :disabled="updatingOrderNumber === member.id"
-                                class="p-1 text-green-600 hover:bg-green-100 rounded dark:hover:bg-green-900/30 disabled:opacity-50 transition-colors"
+                                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 text-green-600 hover:bg-green-100 rounded dark:hover:bg-green-900/30 disabled:opacity-50 transition-colors"
                                 title="บันทึก"
                             >
                                 <svg v-if="updatingOrderNumber === member.id" class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -944,7 +944,7 @@ watch(members, () => {
                         <button 
                             v-if="member.scores.bonus_points !== member.scores.original_bonus"
                             @click="updateBonusPoints(member)"
-                            class="p-0.5 text-green-600 hover:bg-green-100 rounded dark:hover:bg-green-900/30"
+                            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-0.5 text-green-600 hover:bg-green-100 rounded dark:hover:bg-green-900/30"
                             title="บันทึก"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
@@ -987,7 +987,7 @@ watch(members, () => {
                             <button 
                                 v-if="member.scores.edited_grade !== member.scores.original_edited_grade"
                                 @click="updateEditedGrade(member)"
-                                class="p-0.5 text-blue-600 hover:bg-blue-100 rounded dark:hover:bg-blue-900/30"
+                                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-0.5 text-blue-600 hover:bg-blue-100 rounded dark:hover:bg-blue-900/30"
                                 title="บันทึกเกรดแก้"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
@@ -1414,7 +1414,7 @@ watch(members, () => {
                     <button 
                       @click="resetLessonScore('assignment_grade', assignment.lesson_id)"
                       :disabled="!!resettingScore"
-                      class="p-1.5 text-orange-500 hover:bg-orange-100 dark:hover:bg-orange-900/20 rounded-md transition-colors"
+                      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 text-orange-500 hover:bg-orange-100 dark:hover:bg-orange-900/20 rounded-md transition-colors"
                       title="รีเซ็ตเฉพาะคะแนน (กลับเป็นรอตรวจ)"
                     >
                       <Icon v-if="resettingScore === `assignment_grade-${assignment.lesson_id}`" icon="fluent:spinner-24-regular" class="w-4 h-4 animate-spin" />
@@ -1423,7 +1423,7 @@ watch(members, () => {
                     <button 
                       @click="resetLessonScore('assignment_full', assignment.lesson_id)"
                       :disabled="!!resettingScore"
-                      class="p-1.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-md transition-colors"
                       title="ล้างคำตอบทั้งหมด (นักเรียนต้องทำใหม่)"
                     >
                       <Icon v-if="resettingScore === `assignment_full-${assignment.lesson_id}`" icon="fluent:spinner-24-regular" class="w-4 h-4 animate-spin" />
@@ -1479,7 +1479,7 @@ watch(members, () => {
                     <button 
                       @click="resetLessonScore('quiz', quiz.lesson_id)"
                       :disabled="!!resettingScore"
-                      class="p-1.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-md transition-colors"
                       title="รีเซ็ตคะแนนแบบทดสอบ (นักเรียนต้องทำใหม่)"
                     >
                       <Icon v-if="resettingScore === `quiz-${quiz.lesson_id}`" icon="fluent:spinner-24-regular" class="w-4 h-4 animate-spin" />

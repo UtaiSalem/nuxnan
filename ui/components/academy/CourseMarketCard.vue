@@ -33,7 +33,7 @@
 
       <!-- Favorite Button -->
       <button
-        class="absolute top-2 right-2 p-1.5 rounded-full bg-white/80 dark:bg-black/50 hover:bg-white dark:hover:bg-black/70 transition-all text-red-500 z-10 shadow-sm backdrop-blur-sm"
+        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute top-2 right-2 p-1.5 rounded-full bg-white/80 dark:bg-black/50 hover:bg-white dark:hover:bg-black/70 transition-all text-red-500 z-10 shadow-sm backdrop-blur-sm"
         @click="toggleFavorite"
       >
         <Icon 

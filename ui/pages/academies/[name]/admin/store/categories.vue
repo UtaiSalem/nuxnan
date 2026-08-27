@@ -212,7 +212,7 @@ const toggleActive = async (category: any) => {
             <h3 class="text-xl font-bold text-gray-900 dark:text-white">
               {{ editingCategory ? 'แก้ไขหมวดหมู่' : 'เพิ่มหมวดหมู่ใหม่' }}
             </h3>
-            <button @click="showForm = false" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+            <button @click="showForm = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>

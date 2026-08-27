@@ -267,7 +267,7 @@ onMounted(async () => {
               <button
                 @click="handleSendRequest(user.id)"
                 :disabled="processingIds.has(user.id)"
-                class="p-1.5 bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white rounded-lg hover:opacity-90 hover:scale-105 transition-all disabled:opacity-50"
+                class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white rounded-lg hover:opacity-90 hover:scale-105 transition-all disabled:opacity-50"
               >
                 <Icon 
                   v-if="processingIds.has(user.id)" 

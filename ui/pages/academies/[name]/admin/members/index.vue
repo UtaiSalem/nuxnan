@@ -1148,7 +1148,7 @@ const getRoleBadge = (member: any) => {
             <span>เฉพาะนักเรียน</span>
             <button
               @click="selectedMemberType = null; onSearch()"
-              class="ml-0.5 hover:bg-primary-100 dark:hover:bg-primary-800/50 rounded p-0.5 transition-colors"
+              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center ml-0.5 hover:bg-primary-100 dark:hover:bg-primary-800/50 rounded p-0.5 transition-colors"
               title="แสดงสมาชิกทั้งหมด"
             >
               <Icon icon="fluent:dismiss-24-regular" class="w-3.5 h-3.5" />

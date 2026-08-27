@@ -332,10 +332,10 @@ const studentPrefixName = (prefix) => {
                     <input type="file" ref="fileInput" @change="handlePhotoUpload" accept="image/*" class="hidden" />
                     <div v-if="previewImage || tempPhoto" class="w-full h-full relative">
                         <img :src="studentImageUrl" alt="Student Photo" class="w-full h-full object-fill" />
-                        <button v-if="canEditCard" class="absolute bottom-2 right-2 bg-white p-1 rounded-full shadow-md cursor-pointer focus:outline-none" @click="triggerFileInput" aria-label="เปลี่ยนรูป">
+                        <button v-if="canEditCard" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute bottom-2 right-2 bg-white p-1 rounded-full shadow-md cursor-pointer focus:outline-none" @click="triggerFileInput" aria-label="เปลี่ยนรูป">
                             <Icon :icon="isEditStudentPhoto ? 'eos-icons:bubble-loading' : 'heroicons:pencil-solid'" class="w-5 h-5 text-gray-600" />
                         </button>
-                        <button v-if="canEditCard" class="absolute bottom-2 left-2 bg-red-500 p-1 rounded-full shadow-md cursor-pointer focus:outline-none" @click="handleDeletePhoto" aria-label="ลบรูป">
+                        <button v-if="canEditCard" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center absolute bottom-2 left-2 bg-red-500 p-1 rounded-full shadow-md cursor-pointer focus:outline-none" @click="handleDeletePhoto" aria-label="ลบรูป">
                             <Icon :icon="isDeletingStudentPhoto ? 'eos-icons:bubble-loading' : 'heroicons:trash-solid'" class="w-5 h-5 text-white" />
                         </button>
                     </div>
