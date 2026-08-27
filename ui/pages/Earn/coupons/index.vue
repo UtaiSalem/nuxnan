@@ -754,14 +754,14 @@ const downloadPDF = async () => {
                 v-model="redeemCode"
                 type="text"
                 placeholder="กรอกรหัสคูปองที่ต้องการแลก"
-                class="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-vikinger-purple focus:border-transparent transition-all"
+                class="min-w-0 flex-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-vikinger-purple focus:border-transparent transition-all"
                 @keyup.enter="redeemCoupon"
               />
               <button
                 @click="redeemCoupon"
                 :disabled="isRedeeming || !redeemCode.trim()"
                 :class="[
-                  'px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 w-full sm:w-auto',
+                  'px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 w-full sm:w-auto sm:flex-shrink-0 whitespace-nowrap',
                   (isRedeeming || !redeemCode.trim()) 
                     ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed' 
                     : 'bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white hover:opacity-90 shadow-lg'

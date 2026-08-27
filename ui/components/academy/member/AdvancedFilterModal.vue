@@ -234,7 +234,7 @@ const activeFiltersCount = computed(() => {
                 <div class="flex gap-3">
                   <select
                     v-model="filters.sortBy"
-                    class="flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    class="min-w-0 flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   >
                     <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">
                       {{ opt.label }}

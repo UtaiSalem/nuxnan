@@ -746,7 +746,7 @@ watch(() => course?.value?.id, id => { if (id && isCourseAdmin?.value) fetchElig
                     min="0"
                     :max="form.discount_type === 'percent' ? 100 : form.tuition_fees"
                     placeholder="0"
-                    class="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all dark:text-white text-base"
+                    class="min-w-0 flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-all dark:text-white text-base"
                   />
                   <select
                     v-model="form.discount_type"

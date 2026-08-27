@@ -190,7 +190,7 @@ const handleNext = () => {
             >
               <select
                 v-model="contact.contact_type"
-                class="w-32 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                class="w-32 flex-shrink-0 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
               >
                 <option value="mobile">มือถือ</option>
                 <option value="phone">โทรศัพท์</option>
@@ -202,12 +202,12 @@ const handleNext = () => {
                 v-model="contact.contact_value"
                 type="text"
                 :placeholder="contact.contact_type === 'email' ? 'email@example.com' : contact.contact_type === 'line' ? 'LINE ID' : '0xx-xxx-xxxx'"
-                class="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                class="min-w-0 flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
               />
               <button
                 type="button"
                 @click="removeGuardianContact(guardian.id!, cIdx)"
-                class="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                class="flex-shrink-0 p-1 text-gray-400 hover:text-red-500 transition-colors"
               >
                 <Icon icon="fluent:dismiss-12-regular" class="w-4 h-4" />
               </button>

@@ -158,7 +158,7 @@ onMounted(() => {
             <div class="flex items-center gap-2">
               <button 
                 @click="form.order_number = Math.max(0, (form.order_number || 0) - 1)"
-                class="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg border border-gray-300 dark:border-gray-600 transition-colors"
+                class="flex-shrink-0 p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg border border-gray-300 dark:border-gray-600 transition-colors"
               >
                 <Icon icon="fluent:subtract-12-filled" class="w-4 h-4" />
               </button>
@@ -166,12 +166,12 @@ onMounted(() => {
                 v-model.number="form.order_number"
                 type="number"
                 min="0"
-                class="flex-1 px-3 py-2.5 text-center border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                class="min-w-0 flex-1 px-3 py-2.5 text-center border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 placeholder="ระบุเลขที่"
               >
               <button 
                 @click="form.order_number = (form.order_number || 0) + 1"
-                class="p-2 text-gray-500 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg border border-gray-300 dark:border-gray-600 transition-colors"
+                class="flex-shrink-0 p-2 text-gray-500 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg border border-gray-300 dark:border-gray-600 transition-colors"
               >
                 <Icon icon="fluent:add-12-filled" class="w-4 h-4" />
               </button>

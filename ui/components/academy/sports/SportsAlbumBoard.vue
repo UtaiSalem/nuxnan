@@ -327,7 +327,7 @@
                   v-model="lightboxCaption"
                   type="text"
                   placeholder="เพิ่มคำบรรยาย..."
-                  class="flex-1 min-h-[44px] px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white placeholder-white/50 focus:bg-white/20 focus:outline-none"
+                  class="min-w-0 flex-1 min-h-[44px] px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white placeholder-white/50 focus:bg-white/20 focus:outline-none"
                 />
                 <button
                   @click="saveCaption"

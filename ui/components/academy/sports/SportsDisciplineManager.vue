@@ -62,7 +62,7 @@
               <span class="text-sm text-slate-600 dark:text-slate-400 flex-shrink-0">อันดับที่</span>
               <input v-model.number="item.placing" type="number" min="1" required class="w-20 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:outline-none min-h-[44px]" />
               <span class="text-sm text-slate-600 dark:text-slate-400 flex-shrink-0">ได้</span>
-              <input v-model.number="item.points" type="number" step="0.01" required class="flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:outline-none min-h-[44px]" />
+              <input v-model.number="item.points" type="number" step="0.01" required class="min-w-0 flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:outline-none min-h-[44px]" />
               <span class="text-sm text-slate-600 dark:text-slate-400 flex-shrink-0 hidden sm:inline">คะแนน</span>
               <button type="button" @click="removeScoringRow(index)" class="text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 p-2 rounded-lg transition-colors flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center">
                 <Icon icon="fluent:delete-24-regular" class="w-5 h-5" />

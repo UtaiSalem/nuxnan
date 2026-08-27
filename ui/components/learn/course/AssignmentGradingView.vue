@@ -476,19 +476,19 @@ const scrollToTop = () => {
                                   v-model.number="answer.points"
                                   :min="0" 
                                   :max="assignment.points"
-                                  class="w-16 px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-center font-bold text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                                  class="w-16 flex-shrink-0 px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-center font-bold text-sm focus:ring-2 focus:ring-orange-500 outline-none"
                               />
                               <input 
                                   type="range" 
                                   v-model.number="answer.points"
                                   :min="0" 
                                   :max="assignment.points"
-                                  class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                                  class="min-w-0 flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
                               />
                               <button 
                                   @click="updateGrade(answer)"
                                   :disabled="answer.isUpdating || (answer.points === null && answer.originalPoints === null) || answer.points === answer.originalPoints"
-                                  class="px-3 py-1 text-xs font-bold text-white bg-orange-500 rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                  class="flex-shrink-0 whitespace-nowrap px-3 py-1 text-xs font-bold text-white bg-orange-500 rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                               >
                                   {{ answer.isUpdating ? '...' : 'บันทึก' }}
                               </button>

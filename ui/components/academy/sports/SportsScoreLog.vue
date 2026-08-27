@@ -12,12 +12,12 @@
 
       <!-- Filters -->
       <div class="flex flex-col sm:flex-row gap-3">
-        <select v-model="filterHouseId" class="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:outline-none min-h-[44px]">
+        <select v-model="filterHouseId" class="min-w-0 flex-1 px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:outline-none min-h-[44px]">
           <option :value="null">คณะสีทั้งหมด</option>
           <option v-for="h in houses" :key="h.id" :value="h.id">{{ h.name }}</option>
         </select>
         
-        <select v-model="filterDisciplineId" class="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:outline-none min-h-[44px]">
+        <select v-model="filterDisciplineId" class="min-w-0 flex-1 px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:outline-none min-h-[44px]">
           <option :value="null">รายการแข่งทั้งหมด</option>
           <option value="manual">-- ให้ด้วยมือ --</option>
           <option v-for="d in uniqueDisciplines" :key="d.id" :value="d.id">{{ d.name }}</option>

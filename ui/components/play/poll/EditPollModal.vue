@@ -253,19 +253,19 @@ watch(() => props.show, (newVal) => {
                   :key="index"
                   class="poll-option-input"
                 >
-                  <span class="text-sm text-gray-500 w-6">{{ index + 1 }}.</span>
+                  <span class="flex-shrink-0 text-sm text-gray-500 w-6">{{ index + 1 }}.</span>
                   <input
                     :model-value="option"
                     @input="updatePollOption(index, ($event.target as HTMLInputElement).value)"
                     type="text"
                     :placeholder="`ตัวเลือกที่ ${index + 1}`"
-                    class="poll-input flex-1"
+                    class="min-w-0 poll-input flex-1"
                     :class="{ 'border-red-500': validationErrors[`option_${index}`] }"
                   />
                   <button
                     v-if="pollOptions.length > 2"
                     @click="removePollOption(index)"
-                    class="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                    class="flex-shrink-0 p-1 text-gray-400 hover:text-red-500 transition-colors"
                   >
                     <Icon icon="mdi:close" class="w-5 h-5" />
                   </button>

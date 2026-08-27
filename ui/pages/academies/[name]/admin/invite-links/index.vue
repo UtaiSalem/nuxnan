@@ -71,11 +71,11 @@
                 <input
                   :value="link.invite_url"
                   readonly
-                  class="flex-1 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600 truncate"
+                  class="min-w-0 flex-1 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600 truncate"
                 />
                 <button
                   @click="copyToClipboard(link.invite_url)"
-                  class="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                  class="flex-shrink-0 p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                   title="คัดลอก"
                 >
                   <Icon icon="mdi:content-copy" class="w-5 h-5" />

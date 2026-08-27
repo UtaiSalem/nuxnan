@@ -70,9 +70,9 @@
                       type="text"
                       readonly
                       :value="invitationLink"
-                      class="form-input flex-1 bg-white dark:bg-gray-900 text-sm"
+                      class="min-w-0 form-input flex-1 bg-white dark:bg-gray-900 text-sm"
                     />
-                    <button @click="copyLink" class="btn-secondary whitespace-nowrap flex items-center gap-2">
+                    <button @click="copyLink" class="btn-secondary whitespace-nowrap flex flex-shrink-0 items-center gap-2">
                       <Icon :icon="copied ? 'fluent:checkmark-24-regular' : 'fluent:copy-24-regular'" class="w-4 h-4" />
                       {{ copied ? 'คัดลอกแล้ว' : 'คัดลอก' }}
                     </button>

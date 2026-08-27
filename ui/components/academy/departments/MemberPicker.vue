@@ -22,11 +22,11 @@
             </div>
           </div>
           <div class="flex gap-3">
-            <select v-model="memberRoleFilter" class="block min-h-[44px] w-full flex-1 rounded-xl border border-gray-300 bg-white py-2 pl-3 pr-10 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white" @change="fetchAvailableMembers(1)">
+            <select v-model="memberRoleFilter" class="min-w-0 block min-h-[44px] w-full flex-1 rounded-xl border border-gray-300 bg-white py-2 pl-3 pr-10 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white" @change="fetchAvailableMembers(1)">
               <option value="staff">บุคลากร/ครู</option>
               <option value="all">ทุกคน</option>
             </select>
-            <select v-model="memberRole" class="block min-h-[44px] w-full flex-1 rounded-xl border border-gray-300 bg-white py-2 pl-3 pr-10 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white">
+            <select v-model="memberRole" class="min-w-0 block min-h-[44px] w-full flex-1 rounded-xl border border-gray-300 bg-white py-2 pl-3 pr-10 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white">
               <option value="member">สมาชิก</option>
               <option value="staff">เจ้าหน้าที่</option>
               <option value="admin">ผู้ดูแลฝ่าย</option>

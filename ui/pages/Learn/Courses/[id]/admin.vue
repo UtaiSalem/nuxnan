@@ -212,8 +212,8 @@ import BaseAvatar from '~/components/atoms/BaseAvatar.vue'
                     <div>
                         <label class="block text-sm font-medium mb-1">ค้นหาผู้ใช้งาน (ชื่อ, อีเมล, รหัสอ้างอิง)</label>
                         <div class="flex gap-2">
-                            <input v-model="searchQuery" @keyup.enter="handleSearch" type="text" class="flex-1 border rounded-lg p-2 dark:bg-gray-900 dark:border-gray-700" placeholder="พิมพ์ชื่อเพื่อค้นหา..." />
-                            <button @click="handleSearch" class="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700">
+                            <input v-model="searchQuery" @keyup.enter="handleSearch" type="text" class="min-w-0 flex-1 border rounded-lg p-2 dark:bg-gray-900 dark:border-gray-700" placeholder="พิมพ์ชื่อเพื่อค้นหา..." />
+                            <button @click="handleSearch" class="flex-shrink-0 bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700">
                                 <Icon icon="heroicons:magnifying-glass" />
                             </button>
                         </div>

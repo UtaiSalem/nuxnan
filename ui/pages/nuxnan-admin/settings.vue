@@ -204,12 +204,12 @@ const saveSettings = async () => {
                   <input
                     v-model="appearanceSettings.primaryColor"
                     type="color"
-                    class="w-12 h-12 rounded-xl border border-slate-200 dark:border-slate-600 cursor-pointer"
+                    class="w-12 h-12 flex-shrink-0 rounded-xl border border-slate-200 dark:border-slate-600 cursor-pointer"
                   />
                   <input
                     v-model="appearanceSettings.primaryColor"
                     type="text"
-                    class="flex-1 px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
+                    class="min-w-0 flex-1 px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
                   />
                 </div>
               </div>

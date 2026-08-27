@@ -581,14 +581,14 @@ onUnmounted(() => {
                     v-model="manualCode"
                     type="text"
                     placeholder="COUPON:12345678 หรือ 12345678"
-                    class="flex-1 px-3 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-vikinger-purple focus:border-transparent"
+                    class="min-w-0 flex-1 px-3 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-vikinger-purple focus:border-transparent"
                     @keyup.enter="handleManualSubmit"
                     :disabled="isProcessing"
                   />
                   <button 
                     @click="pasteCode"
                     type="button"
-                    class="px-3 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+                    class="flex-shrink-0 px-3 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
                     title="วางจากคลิปบอร์ด"
                   >
                     <Icon icon="fluent:clipboard-paste-24-regular" class="w-5 h-5" />

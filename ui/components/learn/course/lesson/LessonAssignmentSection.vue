@@ -471,20 +471,20 @@ const formatDate = (date: string) => {
                 <!-- Grading Slider -->
                 <div class="mt-2 pt-3 border-t border-gray-100 dark:border-gray-700">
                     <div class="flex items-center gap-4">
-                        <span class="text-xs font-medium text-gray-500">ให้คะแนน:</span>
+                        <span class="flex-shrink-0 whitespace-nowrap text-xs font-medium text-gray-500">ให้คะแนน:</span>
                         <input 
                             type="range" 
                             v-model.number="answer.points" 
                             :min="0" 
                             :max="activeAssignment.points" 
                             step="1"
-                            class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-green-500"
+                            class="min-w-0 flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-green-500"
                         >
                         <!-- Manual Save Button -->
                         <button 
                             @click="updateGrade(answer)"
                             :disabled="answer.isUpdating || answer.points === answer.originalPoints"
-                            class="p-1 px-3 text-xs font-bold text-white bg-green-500 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                            class="p-1 px-3 text-xs font-bold text-white bg-green-500 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex flex-shrink-0 items-center gap-1 whitespace-nowrap"
                             title="บันทึกคะแนน"
                         >
                             <Icon v-if="answer.isUpdating" icon="eos-icons:loading" class="w-4 h-4 animate-spin" />

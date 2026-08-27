@@ -567,8 +567,8 @@ const removeTaggedFriend = (friendId) => {
                   <button @click="showLocationInput = false"><Icon icon="mdi:close" class="w-5 h-5 text-gray-500" /></button>
                 </div>
                 <div class="flex items-center gap-2">
-                  <Icon icon="mdi:map-marker" class="w-5 h-5 text-red-500" />
-                  <input v-model="locationInput" type="text" placeholder="ค้นหาหรือพิมพ์สถานที่..." class="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-vikinger-dark-50/30 bg-white dark:bg-vikinger-dark-100 text-gray-800 dark:text-white text-sm" />
+                  <Icon icon="mdi:map-marker" class="w-5 h-5 flex-shrink-0 text-red-500" />
+                  <input v-model="locationInput" type="text" placeholder="ค้นหาหรือพิมพ์สถานที่..." class="min-w-0 flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-vikinger-dark-50/30 bg-white dark:bg-vikinger-dark-100 text-gray-800 dark:text-white text-sm" />
                 </div>
               </div>
 

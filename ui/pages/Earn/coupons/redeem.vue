@@ -366,14 +366,14 @@ onUnmounted(() => {
               pattern="[0-9]*"
               maxlength="8"
               placeholder="00000000"
-              class="flex-1 px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-lg font-mono font-bold tracking-widest focus:ring-2 focus:ring-vikinger-purple focus:border-transparent"
+              class="min-w-0 flex-1 px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-lg font-mono font-bold tracking-widest focus:ring-2 focus:ring-vikinger-purple focus:border-transparent"
               @input="couponCode = couponCode.replace(/\D/g, '')"
               @keyup.enter="redeemCoupon"
               :disabled="isLoading"
             />
             <button 
               @click="pasteCode"
-              class="px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+              class="flex-shrink-0 px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
               title="วางจากคลิปบอร์ด"
             >
               <Icon icon="fluent:clipboard-paste-24-regular" class="w-6 h-6" />

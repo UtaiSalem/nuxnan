@@ -380,12 +380,12 @@ const formatFileSize = (bytes) => {
                       v-model="pollOptions[index]"
                       type="text"
                       :placeholder="`ตัวเลือกที่ ${index + 1}`"
-                      class="flex-1 bg-transparent border-none outline-none text-gray-800 dark:text-white text-sm"
+                      class="min-w-0 flex-1 bg-transparent border-none outline-none text-gray-800 dark:text-white text-sm"
                     />
                     <button 
                       v-if="pollOptions.length > 2"
                       @click="removePollOption(index)"
-                      class="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                      class="flex-shrink-0 p-1 text-gray-400 hover:text-red-500 transition-colors"
                     >
                       <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
                     </button>
