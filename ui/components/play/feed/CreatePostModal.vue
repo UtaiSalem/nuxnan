@@ -593,7 +593,7 @@ const removeTaggedFriend = (friendId) => {
                   </div>
                   <h2 id="create-post-title" class="text-lg font-bold text-gray-800 dark:text-white">{{ modalTitle }}</h2>
                 </div>
-                <button @click="closeModal" class="p-2 hover:bg-white/60 dark:hover:bg-vikinger-dark-200 rounded-xl transition-colors">
+                <button @click="closeModal" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-white/60 dark:hover:bg-vikinger-dark-200 rounded-xl transition-colors">
                   <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors" />
                 </button>
               </div>
@@ -647,7 +647,7 @@ const removeTaggedFriend = (friendId) => {
                   :key="tab.id"
                   @click="activeTab = tab.id"
                   :class="[
-                    'flex-1 py-2.5 text-sm font-bold tracking-wide transition-all duration-200 relative flex items-center justify-center gap-2 rounded-lg',
+                    'flex-1 min-h-[44px] sm:min-h-0 py-2.5 text-sm font-bold tracking-wide transition-all duration-200 relative flex items-center justify-center gap-2 rounded-lg',
                     activeTab === tab.id 
                       ? tab.id === 'status' 
                         ? 'bg-white dark:bg-vikinger-dark-100 text-vikinger-purple shadow-sm' 
@@ -668,7 +668,7 @@ const removeTaggedFriend = (friendId) => {
                 <!-- Privacy Options -->
                 <div v-if="showPrivacyOptions" class="mb-4 p-3 bg-gray-50 dark:bg-vikinger-dark-200 rounded-lg">
                   <div class="space-y-2">
-                    <button v-for="option in privacyOptions" :key="option.value" @click="selectedPrivacy = option.value; showPrivacyOptions = false" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white dark:hover:bg-vikinger-dark-100" :class="{ 'bg-white dark:bg-vikinger-dark-100': selectedPrivacy === option.value }">
+                    <button v-for="option in privacyOptions" :key="option.value" @click="selectedPrivacy = option.value; showPrivacyOptions = false" class="min-h-[44px] sm:min-h-0 w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white dark:hover:bg-vikinger-dark-100" :class="{ 'bg-white dark:bg-vikinger-dark-100': selectedPrivacy === option.value }">
                       <Icon :icon="option.icon" class="w-5 h-5" :class="option.color" />
                       <span class="text-sm text-gray-700 dark:text-gray-300">{{ option.label }}</span>
                     </button>
@@ -752,7 +752,7 @@ const removeTaggedFriend = (friendId) => {
                   <div v-for="(categoryFeelings, category) in feelingsByCategory" :key="category" class="mb-3">
                     <div class="text-xs text-gray-500 uppercase mb-2">{{ category }}</div>
                     <div class="grid grid-cols-5 gap-2">
-                      <button v-for="feeling in categoryFeelings" :key="feeling.id" @click="selectFeeling(feeling)" class="flex flex-col items-center p-2 rounded-lg hover:bg-white dark:hover:bg-vikinger-dark-100" :class="{ 'bg-vikinger-purple/10 ring-1 ring-vikinger-purple': selectedFeeling?.id === feeling.id }">
+                      <button v-for="feeling in categoryFeelings" :key="feeling.id" @click="selectFeeling(feeling)" class="min-h-[44px] sm:min-h-0 flex flex-col items-center p-2 rounded-lg hover:bg-white dark:hover:bg-vikinger-dark-100" :class="{ 'bg-vikinger-purple/10 ring-1 ring-vikinger-purple': selectedFeeling?.id === feeling.id }">
                         <span class="text-xl">{{ feeling.icon }}</span>
                         <span class="text-xs text-gray-600 dark:text-gray-400 truncate w-full text-center">{{ feeling.name_th || feeling.name }}</span>
                       </button>
@@ -769,7 +769,7 @@ const removeTaggedFriend = (friendId) => {
                   <div v-for="(categoryActivities, category) in activitiesByCategory" :key="category" class="mb-3">
                     <div class="text-xs text-gray-500 uppercase mb-2">{{ category }}</div>
                     <div class="grid grid-cols-3 gap-2">
-                      <button v-for="activity in categoryActivities" :key="activity.id" @click="selectActivity(activity)" class="flex items-center gap-2 p-2 rounded-lg hover:bg-white dark:hover:bg-vikinger-dark-100 text-left" :class="{ 'bg-vikinger-purple/10 ring-1 ring-vikinger-purple': selectedActivity?.id === activity.id }">
+                      <button v-for="activity in categoryActivities" :key="activity.id" @click="selectActivity(activity)" class="min-h-[44px] sm:min-h-0 flex items-center gap-2 p-2 rounded-lg hover:bg-white dark:hover:bg-vikinger-dark-100 text-left" :class="{ 'bg-vikinger-purple/10 ring-1 ring-vikinger-purple': selectedActivity?.id === activity.id }">
                         <span class="text-lg">{{ activity.icon }}</span>
                         <span class="text-xs text-gray-600 dark:text-gray-400 truncate">{{ activity.name_th || activity.name }}</span>
                       </button>
@@ -960,31 +960,31 @@ const removeTaggedFriend = (friendId) => {
                 <div class="border-t border-gray-100 dark:border-vikinger-dark-50/15 pt-3">
                   <p class="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 px-1">เพิ่มเติมในโพสต์</p>
                   <div class="flex flex-wrap gap-1.5">
-                    <button @click="triggerImageInput" class="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02]" :class="imagePreviews.length > 0 ? 'bg-green-100 dark:bg-green-900/30 ring-1 ring-green-300 dark:ring-green-700' : 'bg-gray-50 dark:bg-vikinger-dark-200/60 hover:bg-green-50 dark:hover:bg-green-900/20'" :disabled="isSubmitting">
+                    <button @click="triggerImageInput" class="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02]" :class="imagePreviews.length > 0 ? 'bg-green-100 dark:bg-green-900/30 ring-1 ring-green-300 dark:ring-green-700' : 'bg-gray-50 dark:bg-vikinger-dark-200/60 hover:bg-green-50 dark:hover:bg-green-900/20'" :disabled="isSubmitting">
                       <Icon icon="fluent:image-24-filled" class="w-4.5 h-4.5 text-green-500" />
                       <span class="text-xs font-semibold text-gray-600 dark:text-gray-400">รูปภาพ</span>
                     </button>
-                    <button @click="showFeelingPicker = !showFeelingPicker; showActivityPicker = false" class="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02]" :class="selectedFeeling ? 'bg-yellow-100 dark:bg-yellow-900/30 ring-1 ring-yellow-300 dark:ring-yellow-700' : 'bg-gray-50 dark:bg-vikinger-dark-200/60 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'" :disabled="isSubmitting">
+                    <button @click="showFeelingPicker = !showFeelingPicker; showActivityPicker = false" class="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02]" :class="selectedFeeling ? 'bg-yellow-100 dark:bg-yellow-900/30 ring-1 ring-yellow-300 dark:ring-yellow-700' : 'bg-gray-50 dark:bg-vikinger-dark-200/60 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'" :disabled="isSubmitting">
                       <Icon icon="fluent:emoji-24-filled" class="w-4.5 h-4.5 text-yellow-500" />
                       <span class="text-xs font-semibold text-gray-600 dark:text-gray-400">ความรู้สึก</span>
                     </button>
-                    <button @click="showActivityPicker = !showActivityPicker; showFeelingPicker = false" class="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02]" :class="selectedActivity ? 'bg-orange-100 dark:bg-orange-900/30 ring-1 ring-orange-300 dark:ring-orange-700' : 'bg-gray-50 dark:bg-vikinger-dark-200/60 hover:bg-orange-50 dark:hover:bg-orange-900/20'" :disabled="isSubmitting">
+                    <button @click="showActivityPicker = !showActivityPicker; showFeelingPicker = false" class="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02]" :class="selectedActivity ? 'bg-orange-100 dark:bg-orange-900/30 ring-1 ring-orange-300 dark:ring-orange-700' : 'bg-gray-50 dark:bg-vikinger-dark-200/60 hover:bg-orange-50 dark:hover:bg-orange-900/20'" :disabled="isSubmitting">
                       <Icon icon="fluent:run-24-filled" class="w-4.5 h-4.5 text-orange-500" />
                       <span class="text-xs font-semibold text-gray-600 dark:text-gray-400">กิจกรรม</span>
                     </button>
-                    <button @click="showLocationInput = !showLocationInput" class="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02]" :class="locationInput ? 'bg-red-100 dark:bg-red-900/30 ring-1 ring-red-300 dark:ring-red-700' : 'bg-gray-50 dark:bg-vikinger-dark-200/60 hover:bg-red-50 dark:hover:bg-red-900/20'" :disabled="isSubmitting">
+                    <button @click="showLocationInput = !showLocationInput" class="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02]" :class="locationInput ? 'bg-red-100 dark:bg-red-900/30 ring-1 ring-red-300 dark:ring-red-700' : 'bg-gray-50 dark:bg-vikinger-dark-200/60 hover:bg-red-50 dark:hover:bg-red-900/20'" :disabled="isSubmitting">
                       <Icon icon="fluent:location-24-filled" class="w-4.5 h-4.5 text-red-500" />
                       <span class="text-xs font-semibold text-gray-600 dark:text-gray-400">สถานที่</span>
                     </button>
-                    <button @click="showTagFriends = !showTagFriends" class="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02]" :class="taggedFriends.length > 0 ? 'bg-blue-100 dark:bg-blue-900/30 ring-1 ring-blue-300 dark:ring-blue-700' : 'bg-gray-50 dark:bg-vikinger-dark-200/60 hover:bg-blue-50 dark:hover:bg-blue-900/20'" :disabled="isSubmitting">
+                    <button @click="showTagFriends = !showTagFriends" class="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02]" :class="taggedFriends.length > 0 ? 'bg-blue-100 dark:bg-blue-900/30 ring-1 ring-blue-300 dark:ring-blue-700' : 'bg-gray-50 dark:bg-vikinger-dark-200/60 hover:bg-blue-50 dark:hover:bg-blue-900/20'" :disabled="isSubmitting">
                       <Icon icon="fluent:people-team-24-filled" class="w-4.5 h-4.5 text-blue-500" />
                       <span class="text-xs font-semibold text-gray-600 dark:text-gray-400">แท็กเพื่อน</span>
                     </button>
-                    <button v-if="imagePreviews.length === 0" @click="showBackgroundPicker = !showBackgroundPicker" class="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02]" :class="selectedBackground ? 'bg-purple-100 dark:bg-purple-900/30 ring-1 ring-purple-300 dark:ring-purple-700' : 'bg-gray-50 dark:bg-vikinger-dark-200/60 hover:bg-purple-50 dark:hover:bg-purple-900/20'" :disabled="isSubmitting">
+                    <button v-if="imagePreviews.length === 0" @click="showBackgroundPicker = !showBackgroundPicker" class="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02]" :class="selectedBackground ? 'bg-purple-100 dark:bg-purple-900/30 ring-1 ring-purple-300 dark:ring-purple-700' : 'bg-gray-50 dark:bg-vikinger-dark-200/60 hover:bg-purple-50 dark:hover:bg-purple-900/20'" :disabled="isSubmitting">
                       <Icon icon="fluent:color-24-filled" class="w-4.5 h-4.5 text-purple-500" />
                       <span class="text-xs font-semibold text-gray-600 dark:text-gray-400">พื้นหลัง</span>
                     </button>
-                    <button @click="showScheduler = !showScheduler" class="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02]" :class="scheduledDate ? 'bg-indigo-100 dark:bg-indigo-900/30 ring-1 ring-indigo-300 dark:ring-indigo-700' : 'bg-gray-50 dark:bg-vikinger-dark-200/60 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'" :disabled="isSubmitting">
+                    <button @click="showScheduler = !showScheduler" class="min-h-[44px] sm:min-h-0 flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all duration-200 hover:scale-[1.02]" :class="scheduledDate ? 'bg-indigo-100 dark:bg-indigo-900/30 ring-1 ring-indigo-300 dark:ring-indigo-700' : 'bg-gray-50 dark:bg-vikinger-dark-200/60 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'" :disabled="isSubmitting">
                       <Icon icon="fluent:clock-24-filled" class="w-4.5 h-4.5 text-indigo-500" />
                       <span class="text-xs font-semibold text-gray-600 dark:text-gray-400">ตั้งเวลา</span>
                     </button>
@@ -1026,7 +1026,7 @@ const removeTaggedFriend = (friendId) => {
                       <button 
                         v-if="pollOptions.length > 2"
                         @click="removePollOption(index)"
-                        class="flex-shrink-0 p-1 text-gray-400 hover:text-red-500 transition-colors"
+                        class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center flex-shrink-0 p-1 text-gray-400 hover:text-red-500 transition-colors"
                       >
                         <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
                       </button>

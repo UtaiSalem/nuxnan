@@ -425,7 +425,7 @@ const removeTaggedFriend = (friendId) => {
             <!-- Header -->
             <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-vikinger-dark-50/30">
               <h2 class="text-xl font-bold text-gray-800 dark:text-white">แก้ไขโพสต์</h2>
-              <button @click="closeModal" class="p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-full">
+              <button @click="closeModal" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-full">
                 <Icon icon="mdi:close" class="w-6 h-6 text-gray-500" />
               </button>
             </div>
@@ -451,7 +451,7 @@ const removeTaggedFriend = (friendId) => {
               <!-- Privacy Options -->
               <div v-if="showPrivacyOptions" class="mb-4 p-3 bg-gray-50 dark:bg-vikinger-dark-200 rounded-lg">
                 <div class="space-y-2">
-                  <button v-for="option in privacyOptions" :key="option.value" @click="selectedPrivacy = option.value; showPrivacyOptions = false" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white dark:hover:bg-vikinger-dark-100" :class="{ 'bg-white dark:bg-vikinger-dark-100': selectedPrivacy === option.value }">
+                  <button v-for="option in privacyOptions" :key="option.value" @click="selectedPrivacy = option.value; showPrivacyOptions = false" class="min-h-[44px] sm:min-h-0 w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white dark:hover:bg-vikinger-dark-100" :class="{ 'bg-white dark:bg-vikinger-dark-100': selectedPrivacy === option.value }">
                     <Icon :icon="option.icon" class="w-5 h-5" :class="option.color" />
                     <span class="text-sm text-gray-700 dark:text-gray-300">{{ option.label }}</span>
                   </button>
@@ -532,7 +532,7 @@ const removeTaggedFriend = (friendId) => {
                 <div v-for="(categoryFeelings, category) in feelingsByCategory" :key="category" class="mb-3">
                   <div class="text-xs text-gray-500 uppercase mb-2">{{ category }}</div>
                   <div class="grid grid-cols-5 gap-2">
-                    <button v-for="feeling in categoryFeelings" :key="feeling.id" @click="selectFeeling(feeling)" class="flex flex-col items-center p-2 rounded-lg hover:bg-white dark:hover:bg-vikinger-dark-100" :class="{ 'bg-vikinger-purple/10 ring-1 ring-vikinger-purple': selectedFeeling?.id === feeling.id }">
+                    <button v-for="feeling in categoryFeelings" :key="feeling.id" @click="selectFeeling(feeling)" class="min-h-[44px] sm:min-h-0 flex flex-col items-center p-2 rounded-lg hover:bg-white dark:hover:bg-vikinger-dark-100" :class="{ 'bg-vikinger-purple/10 ring-1 ring-vikinger-purple': selectedFeeling?.id === feeling.id }">
                       <span class="text-xl">{{ feeling.icon }}</span>
                       <span class="text-xs text-gray-600 dark:text-gray-400 truncate w-full text-center">{{ feeling.name_th || feeling.name }}</span>
                     </button>
@@ -549,7 +549,7 @@ const removeTaggedFriend = (friendId) => {
                 <div v-for="(categoryActivities, category) in activitiesByCategory" :key="category" class="mb-3">
                   <div class="text-xs text-gray-500 uppercase mb-2">{{ category }}</div>
                   <div class="grid grid-cols-3 gap-2">
-                    <button v-for="activity in categoryActivities" :key="activity.id" @click="selectActivity(activity)" class="flex items-center gap-2 p-2 rounded-lg hover:bg-white dark:hover:bg-vikinger-dark-100 text-left" :class="{ 'bg-vikinger-purple/10 ring-1 ring-vikinger-purple': selectedActivity?.id === activity.id }">
+                    <button v-for="activity in categoryActivities" :key="activity.id" @click="selectActivity(activity)" class="min-h-[44px] sm:min-h-0 flex items-center gap-2 p-2 rounded-lg hover:bg-white dark:hover:bg-vikinger-dark-100 text-left" :class="{ 'bg-vikinger-purple/10 ring-1 ring-vikinger-purple': selectedActivity?.id === activity.id }">
                       <span class="text-lg">{{ activity.icon }}</span>
                       <span class="text-xs text-gray-600 dark:text-gray-400 truncate">{{ activity.name_th || activity.name }}</span>
                     </button>
@@ -632,27 +632,27 @@ const removeTaggedFriend = (friendId) => {
 
               <!-- Action Buttons -->
               <div class="flex flex-wrap gap-2 border-t border-gray-200 dark:border-vikinger-dark-50/30 pt-4">
-                <button @click="triggerImageInput" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all" :disabled="isSubmitting">
+                <button @click="triggerImageInput" class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all" :disabled="isSubmitting">
                   <Icon icon="mdi:image-multiple" class="w-5 h-5 text-green-500" />
                   <span class="text-sm text-gray-700 dark:text-gray-300">รูปภาพ</span>
                 </button>
-                <button @click="showFeelingPicker = !showFeelingPicker; showActivityPicker = false" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-all" :class="{ 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20': selectedFeeling }" :disabled="isSubmitting">
+                <button @click="showFeelingPicker = !showFeelingPicker; showActivityPicker = false" class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-all" :class="{ 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/20': selectedFeeling }" :disabled="isSubmitting">
                   <Icon icon="mdi:emoticon-happy" class="w-5 h-5 text-yellow-500" />
                   <span class="text-sm text-gray-700 dark:text-gray-300">ความรู้สึก</span>
                 </button>
-                <button @click="showActivityPicker = !showActivityPicker; showFeelingPicker = false" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all" :class="{ 'border-orange-400 bg-orange-50 dark:bg-orange-900/20': selectedActivity }" :disabled="isSubmitting">
+                <button @click="showActivityPicker = !showActivityPicker; showFeelingPicker = false" class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all" :class="{ 'border-orange-400 bg-orange-50 dark:bg-orange-900/20': selectedActivity }" :disabled="isSubmitting">
                   <Icon icon="mdi:run" class="w-5 h-5 text-orange-500" />
                   <span class="text-sm text-gray-700 dark:text-gray-300">กิจกรรม</span>
                 </button>
-                <button @click="showLocationInput = !showLocationInput" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all" :class="{ 'border-red-400 bg-red-50 dark:bg-red-900/20': locationInput }" :disabled="isSubmitting">
+                <button @click="showLocationInput = !showLocationInput" class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all" :class="{ 'border-red-400 bg-red-50 dark:bg-red-900/20': locationInput }" :disabled="isSubmitting">
                   <Icon icon="mdi:map-marker" class="w-5 h-5 text-red-500" />
                   <span class="text-sm text-gray-700 dark:text-gray-300">สถานที่</span>
                 </button>
-                <button @click="showTagFriends = !showTagFriends" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all" :class="{ 'border-blue-400 bg-blue-50 dark:bg-blue-900/20': taggedFriends.length > 0 }" :disabled="isSubmitting">
+                <button @click="showTagFriends = !showTagFriends" class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all" :class="{ 'border-blue-400 bg-blue-50 dark:bg-blue-900/20': taggedFriends.length > 0 }" :disabled="isSubmitting">
                   <Icon icon="mdi:account-multiple-plus" class="w-5 h-5 text-blue-500" />
                   <span class="text-sm text-gray-700 dark:text-gray-300">แท็กเพื่อน</span>
                 </button>
-                <button v-if="allImages.length === 0" @click="showBackgroundPicker = !showBackgroundPicker" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all" :class="{ 'border-purple-400 bg-purple-50 dark:bg-purple-900/20': selectedBackground }" :disabled="isSubmitting">
+                <button v-if="allImages.length === 0" @click="showBackgroundPicker = !showBackgroundPicker" class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all" :class="{ 'border-purple-400 bg-purple-50 dark:bg-purple-900/20': selectedBackground }" :disabled="isSubmitting">
                   <Icon icon="mdi:palette" class="w-5 h-5 text-purple-500" />
                   <span class="text-sm text-gray-700 dark:text-gray-300">พื้นหลัง</span>
                 </button>

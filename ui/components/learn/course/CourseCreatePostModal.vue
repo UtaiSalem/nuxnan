@@ -244,7 +244,7 @@ const formatFileSize = (bytes) => {
                 <Icon icon="fluent:book-24-regular" class="w-5 h-5 text-blue-500" />
                 <h2 class="text-xl font-bold text-gray-800 dark:text-white">โพสต์ในรายวิชา</h2>
               </div>
-              <button @click="closeModal" class="p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-full">
+              <button @click="closeModal" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-full">
                 <Icon icon="fluent:dismiss-24-regular" class="w-6 h-6 text-gray-500" />
               </button>
             </div>
@@ -343,7 +343,7 @@ const formatFileSize = (bytes) => {
                   </div>
                   <button 
                     @click="removeFile(index)"
-                    class="p-1 hover:bg-gray-200 dark:hover:bg-vikinger-dark-100 rounded-full"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 hover:bg-gray-200 dark:hover:bg-vikinger-dark-100 rounded-full"
                   >
                     <Icon icon="fluent:dismiss-24-regular" class="w-4 h-4 text-gray-400 hover:text-red-500" />
                   </button>
@@ -385,7 +385,7 @@ const formatFileSize = (bytes) => {
                     <button 
                       v-if="pollOptions.length > 2"
                       @click="removePollOption(index)"
-                      class="flex-shrink-0 p-1 text-gray-400 hover:text-red-500 transition-colors"
+                      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center flex-shrink-0 p-1 text-gray-400 hover:text-red-500 transition-colors"
                     >
                       <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
                     </button>
@@ -500,7 +500,7 @@ const formatFileSize = (bytes) => {
               <div v-if="activeTab === 'status'" class="flex flex-wrap gap-2 border-t border-gray-200 dark:border-vikinger-dark-50/30 pt-4">
                 <button 
                   @click="triggerImageInput" 
-                  class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all" 
+                  class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all" 
                   :disabled="isSubmitting"
                 >
                   <Icon icon="fluent:image-24-regular" class="w-5 h-5 text-green-500" />
@@ -509,7 +509,7 @@ const formatFileSize = (bytes) => {
                 
                 <button 
                   @click="triggerFileInput" 
-                  class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all" 
+                  class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-vikinger-dark-200 border border-gray-200 dark:border-vikinger-dark-50/30 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all" 
                   :disabled="isSubmitting"
                 >
                   <Icon icon="fluent:attach-24-regular" class="w-5 h-5 text-blue-500" />

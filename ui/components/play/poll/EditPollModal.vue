@@ -203,7 +203,7 @@ watch(() => props.show, (newVal) => {
               </div>
               <h2 class="text-xl font-bold text-gray-800 dark:text-white">แก้ไขโพล</h2>
             </div>
-            <button @click="closeModal" class="p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-full transition-colors">
+            <button @click="closeModal" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-vikinger-dark-200 rounded-full transition-colors">
               <Icon icon="mdi:close" class="w-6 h-6 text-gray-500" />
             </button>
           </div>
@@ -265,7 +265,7 @@ watch(() => props.show, (newVal) => {
                   <button
                     v-if="pollOptions.length > 2"
                     @click="removePollOption(index)"
-                    class="flex-shrink-0 p-1 text-gray-400 hover:text-red-500 transition-colors"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center flex-shrink-0 p-1 text-gray-400 hover:text-red-500 transition-colors"
                   >
                     <Icon icon="mdi:close" class="w-5 h-5" />
                   </button>
