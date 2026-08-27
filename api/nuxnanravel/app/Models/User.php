@@ -792,6 +792,11 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         return $this->hasMany(CouponRedemption::class);
     }
 
+    public function guardianProfiles(): HasMany
+    {
+        return $this->hasMany(Guardian::class);
+    }
+
     /**
      * Get users that this user is following.
      */
