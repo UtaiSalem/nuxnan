@@ -1,5 +1,42 @@
 # Work Log — nuxnan project
 
+## 2026-08-28 (ปิดท้าย) — ลบ dead CSS ใน RichTextViewer · เหลือ TODO 4 ข้อ (push แล้ว)
+
+### สถานะ: **ปิด TODO โค้ดตาย · push แล้ว** — `708b0164`
+
+`708b0164` chore(ui): drop 77 lines of dead scoped CSS from RichTextViewer — **−77 บรรทัด ไม่มีบรรทัดเพิ่ม**
+
+`<style scoped>` ของ `components/RichTextViewer.vue` มีกฎ **19 ข้อ** ที่เขียนเป็น `:deep(.prose h1)` ฯลฯ
+คอมไพล์ออกมาเป็น `[data-v-x] .prose h1` ⇒ ต้องการ `.prose` ที่เป็น **ลูก** ของ root แต่ root เองคือ `.prose`
+⇒ **ไม่เคยแมตช์อะไรเลยตั้งแต่แรก** (หน้าตาที่เห็นทุกวันนี้มาจาก plugin typography ล้วน ๆ)
+
+**พิสูจน์ก่อนลบ — ไม่เชื่อการอ่านโค้ดอย่างเดียว:** สร้าง DOM ตามโครงจริง (root มีทั้ง `data-v-*`
+และ `class="prose"` · เนื้อหาจาก `v-html` เป็นลูกโดยตรง) แล้วเรียก `element.matches()` ในเบราว์เซอร์
+- 10 selector ที่ลบ → ไม่แมตช์สักตัว
+- 5 selector ที่เก็บไว้ (`.rtv-table-scroll`, `> table`, `td`, `pre`, `img`) → แมตช์ครบ
+
+สคริปต์ลบมีการ์ด: ตรวจว่าทุก rule ในช่วงที่จะตัดขึ้นต้นด้วย `:deep(.prose` เท่านั้น ถ้าเจออย่างอื่นจะ abort
+เหลือใน style block เฉพาะกฎที่ทำงานจริง: กล่องเลื่อนตาราง / `pre` / `img` / `iframe`+`video`
+
+💡 **กฎที่ได้จากเคสนี้ (ใช้ซ้ำได้):** ใน SFC ที่ root element มี utility class เดียวกับที่อยากอ้างถึง
+(`class="prose"`) **ห้ามเขียน `:deep(.prose X)`** — มันจะกลายเป็นการหา descendant ไม่ใช่ตัวมันเอง
+ถ้าจะจัดสไตล์ให้ node ที่มาจาก `v-html` ให้เขียน `:deep(X)` ตรง ๆ และยืนยันด้วย `compileStyle()` เสมอ
+
+### งานที่ค้าง (TODO ต่อ — เหลือ 4)
+
+- [ ] **เปิดหน้าจริงบนมือถือยืนยัน** — งาน 3 วันนี้ตรวจผ่าน harness ทั้งหมด (ยังไม่เคยเปิดหน้าที่ต้อง login)
+- [ ] ปุ่ม**ที่มีข้อความ** 36–40px อีกราว 1,400 จุดใน ~350 ไฟล์ (ควรทำทีละโดเมนแล้วเปิดดูจริง)
+- [ ] `isomorphic-dompurify` ถ้าต้องการ sanitize ระดับเดียวกันฝั่งเซิร์ฟเวอร์ (ลาก jsdom มาด้วย — เป็นการตัดสินใจเรื่อง dependency)
+- [ ] `npm run build` ผู้ใช้รันเอง — ยังไม่ได้รันตลอด 3 วันนี้
+
+### Branch / Git State
+
+- Branch: `main`
+- Uncommitted: ไม่มี (ยกเว้น worklog นี้)
+- Push: **pushed** — `origin/main` = `708b0164`
+
+---
+
 ## 2026-08-28 (ต่อ) — Touch target 44px: 165 ปุ่มใน 61 ไฟล์ + toolbar เอดิเตอร์เลื่อนแนวนอน (push แล้ว)
 
 ### สถานะ: **ปิด TODO ปุ่มเล็กครบ · push แล้ว** — `738840d1..e9be7d72`
