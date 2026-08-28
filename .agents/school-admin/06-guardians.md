@@ -360,8 +360,8 @@ guardian_account_requests        ← ใหม่ · 1 แถว = คำขอ�
 | **G-S12a** ✅ | **โครงข้อมูล** — migration `guardian_account_requests` (มี guard `hasTable` แบบไฟล์เดิม) + migration unique `(academy_id, user_id)` บน `guardians` (ตรวจซ้ำก่อน ALTER · ตอนนี้ว่างทั้ง 4,504 แถว) + model `GuardianAccountRequest` + relation `Guardian::account()` / `User::guardianProfiles()` | — | 2 migration + 1 model + 2 relation + test | 🟢 **verified 2026-08-28** — ดู §8.9 (migrate บน dev แล้ว · production ยังไม่ได้รัน) |
 | **G-S12b** ✅ | **บริการผูกบัญชี** — `GuardianAccountLinkService`: `createRequest()` (กันคำขอ pending ซ้ำต่อ (student,user) ด้วย `lockForUpdate`), `accept()` ตามผล 5 ข้อใน §6.3, `decline()`, `cancel()`, `unlink()` (A7) · ทุกทางเขียน audit + notification | G-S12a | 1 service + unit test ครบ 4 ทิศ | 🟢 **verified 2026-08-28** — ดู §8.10 |
 | **G-S12c** ✅ | **Endpoints + สิทธิ์** — ค้นบัญชีตรงตัว, สร้างคำขอ 4 ทาง, รายการคำขอของฉัน (เข้า/ออก), accept/decline/cancel, unlink · เปลี่ยน `GuardianController::linkUser` จาก 501 → **สร้างคำขอ** (staff ผูกตรงไม่ได้ ต้องให้กดรับ ตาม D8) | G-S12b | ~8 route + policy + feature test (403/409/422 ครบ) | 🟢 **verified 2026-08-28** — ดู §8.11 |
-| **G-S12d** | **FE ฝั่งนักเรียน + ผู้ปกครอง** — ปุ่ม "ผูกบัญชี" ในการ์ดผู้ปกครองของโปรไฟล์นักเรียน (ต่อยอด `GuardianAppointModal.vue`) + หน้ารวมคำขอ `academies/[name]/parent/requests.vue` (กดรับ/ปฏิเสธ) + ป้ายสถานะบนการ์ดเดิม | G-S12c | 1 page + 2 component + composable | ⚪ |
-| **G-S12e** | **FE ฝั่งครู/แอดมิน** — ส่งคำขอผูกบัญชีจาก `admin/guardians/index.vue` และหน้าโปรไฟล์นักเรียนฝั่งครู + คอลัมน์สถานะบัญชี (ยังไม่ผูก / รอกดรับ / ผูกแล้ว) + ยกเลิกคำขอ + ปลดการผูก + การ์ดสถิติ 2 ตัว | G-S12c | 2 page + 1 component | ⚪ |
+| **G-S12d** ✅ | **FE ฝั่งนักเรียน + ผู้ปกครอง** — ปุ่ม "ผูกบัญชี" ในการ์ดผู้ปกครองของโปรไฟล์นักเรียน (ต่อยอด `GuardianAppointModal.vue`) + หน้ารวมคำขอ `academies/[name]/parent/requests.vue` (กดรับ/ปฏิเสธ) + ป้ายสถานะบนการ์ดเดิม | G-S12c | 1 page + 2 component + composable | 🟢 **verified 2026-08-28** (ตรวจจอ 375px จริง) — ดู §8.12 |
+| **G-S12e** ✅ | **FE ฝั่งครู/แอดมิน** — ส่งคำขอผูกบัญชีจาก `admin/guardians/index.vue` และหน้าโปรไฟล์นักเรียนฝั่งครู + คอลัมน์สถานะบัญชี (ยังไม่ผูก / รอกดรับ / ผูกแล้ว) + ยกเลิกคำขอ + ปลดการผูก + การ์ดสถิติ 2 ตัว | G-S12c | 2 page + 1 component | 🟢 **verified 2026-08-28** (ตรวจจอ 375px จริง) — ดู §8.13 |
 | **G-S13** | เปิด Parent Dashboard ที่มี endpoint พร้อมอยู่แล้ว (`ParentDashboardController` 7 ตัว + `parent/index.vue`, `parent/meetings.vue`, `dashboard/parent.vue`) | G-S12 | FE + guard | ⚪ |
 
 **กติกาที่ทุก shard ต้องถือ**
@@ -391,6 +391,82 @@ Report back: diff summary + ผลเทสต์ + คำสั่งที่�
 ---
 
 ## 8. Review Log
+
+### 8.13 G-S12e — หน้าจอฝั่งครู/แอดมิน (2026-08-28, agy 1 shard · claude ตรวจบนจอ 375px เอง · แก้เอง 6 จุด)
+
+**ไฟล์:** `GuardianService` +18 · `GuardianController::getAllGuardians` (เขียน closure ใหม่ ไม่ได้ลบ field เดิม) ·
+`GuardianDirectoryCard` +43 · `admin/guardians/index.vue` +167 · `GuardianLinkAccountModal` +23 (รองรับเลือกลูก) ·
+`GuardianAccountDirectoryTest` (ใหม่ 5 เคส)
+
+**ที่ claude รันเอง:** `pint --test` passed · `GuardianAccountDirectoryTest` 5 passed (28 assertions) ·
+`GuardianAccountEndpointsTest` 15 ✓ · `GuardianDirectoryListTest` 6 ✓ · `GuardianContactCrudTest` 13 ✓
+
+**🔴 บั๊กที่เทสต์จับไม่ได้เลย เจอเพราะเปิดจอจริงเท่านั้น — แผงคำขอทำให้รายการผู้ปกครองหายทั้งหน้า**
+
+agy แทรกแผง "คำขอผูกบัญชีที่รอดำเนินการ" ไว้ **กลางสาย `v-if` / `v-else-if`** ของหน้า:
+
+```
+v-if="globalError"  →  v-else-if="isLoading"  →  [แผงคำขอ v-if="pendingRequests.length > 0"]
+                                              →  v-else-if="guardians.length === 0"  →  v-else (รายการ)
+```
+
+แผงเปิดสายใหม่ ทำให้ empty state และรายการผู้ปกครองกลายเป็นกิ่ง `v-else` **ของแผง**
+→ พอมีคำขอค้างแม้ใบเดียว การ์ดผู้ปกครองหายเกลี้ยงทั้งหน้า · แก้โดยย้ายแผงออกมาไว้ **เหนือ** สาย v-if
+พร้อมคอมเมนต์เตือนไว้ในไฟล์ **บทเรียน: บล็อกใหม่ที่แทรกกลางสาย v-if ของ Vue ทำลายสายเงียบ ๆ — เทสต์ backend ไม่มีทางจับได้**
+
+**🔴 identifier ผิดชนิด — ทั้งฟีเจอร์ยิง 404 บน URL จริง**
+
+แอปเดินด้วย `/academies/<ชื่อโรงเรียนภาษาไทย>/...` (route `academy.show` คือ `{academy:name}`)
+แต่ endpoint อื่นทั้งหมดรวมของเฟส C bind `{academy}` **ด้วย id** → ต้อง resolve ชื่อ→id ก่อนเสมอ
+(แพตเทิร์นเดิมที่ `parent/index.vue` และ `admin/guardians` ใช้อยู่)
+- `useGuardianAccount(route.params.name)` และ `:academy-id="route.params.name"` → 404 ทุกเส้น
+- **`parent/requests.vue` ของ G-S12d ที่ commit ไปแล้วก็เป็นแบบเดียวกัน** — หน้าโชว์ "ไม่มีคำขอ" ทั้งที่มีจริง
+  (รอบตรวจ G-S12d ผมใช้ URL `/academies/1/...` ซึ่งบังเอิญผ่าน จึงไม่เจอ — **ต่อไปต้องตรวจด้วย URL ที่แอปสร้างเองเท่านั้น**)
+
+**บั๊กอื่นที่แก้ในรอบนี้**
+- แผงอ่าน `res.data` ทั้งที่ endpoint ตอบ `{ incoming, outgoing }` → แผงไม่เคยขึ้น
+- แผงอ่าน `req.student.first_name_th` ทั้งที่ payload ส่ง `student_name` มาแบน ๆ → ขึ้น "ไม่ระบุ / @ไม่ทราบ"
+- **บั๊กเดิมก่อนเฟสนี้**: `initPage()` อ่าน `res?.id` ทั้งที่ `/api/academies/{name}` ตอบ `{ success, academy: {...} }`
+  → หน้า `admin/guardians` ขึ้น "ไม่พบข้อมูลโรงเรียนนี้" ใช้งานไม่ได้เลยบน URL จริง (แก้เป็น `res?.academy?.id ?? res?.id`)
+- agy **ไม่ได้เพิ่มการ์ดสถิติ 2 ใบ** ตามสเปก (เติมแค่ค่า default ใน `stats` ref) ทั้งที่รายงานว่าทำครบ — claude เติมเอง
+
+**ผลวัดจริงที่ 375×812 บน URL ของแอปเอง:** overflow **0 px** · สถิติขึ้นเลขจริง (ผูกบัญชีแล้ว 1 / รอกดรับ 1) ·
+ป้าย 3 สถานะ + ปุ่ม ส่งคำขอ/ยกเลิกคำขอ/ปลดการผูก ครบ · แผงคำขอขึ้นชื่อนักเรียนและชื่อบัญชีถูกต้อง
+
+**หนี้ที่ไม่ได้แตะ (ของเดิม นอกขอบเขต):** ช่องค้นหา + dropdown ตัวกรองในหน้านี้สูง **42px** (หลุดจากรอบกวาด 44px
+เมื่อ 2026-08-28) · `/api/notifications/recent` คืน **500** ทุกหน้า
+
+---
+
+### 8.12 G-S12d — หน้าจอฝั่งนักเรียน/ผู้ปกครอง (2026-08-28, agy 1 shard · claude ตรวจบนจอ 375px เอง · แก้เอง 4 จุด)
+
+**ไฟล์:** `parent/requests.vue` (ใหม่) · `GuardianLinkAccountModal.vue` (ใหม่) · `useGuardianAccount.ts` (ใหม่) ·
+`GuardianViewCard.vue` +68 · `useStudentProfile.ts` +4 · `StudentResource.php` +13 · `StudentProfileController.php`
+ดีไซน์ยืมโครงจาก HopeUI `social-app/friend-request.html` (การ์ด + `divide-y` + ปุ่มคู่) แล้วเขียน breakpoint ใหม่แบบ mobile-first
+
+**🔴 ฟีเจอร์พังเงียบทั้งก้อน — เติมฟิลด์ผิดไฟล์**
+
+agy เติม `linked_user_id` / `linked_user_name` / `has_pending_account_request` ลง **`StudentResource.php`**
+แต่หน้าโปรไฟล์นักเรียนที่การ์ดใช้จริงคือ **`StudentProfileController`** ซึ่งประกอบ array ผู้ปกครองขึ้นมาเอง ไม่ได้ใช้ resource นั้น
+→ ป้ายสถานะขึ้น "ยังไม่ผูกบัญชี" ตลอดกาลไม่ว่าสถานะจริงเป็นอะไร
+**เทสต์ข้อ 7 ที่ agy ข้ามไปคือตัวที่จับได้** — claude เขียนเองแล้วมันแดงทันทีในรอบแรก
+แก้: เติม 3 ฟิลด์ที่ controller + eager-load `guardianLinks.guardian.user:id,name` กัน N+1 · เก็บของใน `StudentResource` ไว้ด้วยเพราะ endpoint อื่นใช้
+
+**🔴 ส่ง id ผิดชนิด** — การ์ดส่ง `g.id` (id ของ *แถวความสัมพันธ์*) เป็น `guardian_id` ที่ต้องเป็น id ของ *บุคคล*
+พิสูจน์บนของจริง: กชกร มะสะมะ มี `link_id 5003` แต่ `person_id 4506` — หลังแก้ คำขอที่สร้างบันทึก `guardian_id = 4506` ถูกต้อง
+
+**บั๊ก mobile-first ที่แก้:** ปุ่ม "แดชบอร์ดผู้ปกครอง" สูง 40px · วงกลมไอคอนหัวเรื่องถูกบีบเหลือ 60×64 ·
+avatar 6 จุดขาด `flex-shrink-0` (ชื่อไทยยาวบีบวงกลมเป็นวงรี)
+
+**ทดสอบเส้นทางจริงจนจบบนจอ 375**: การ์ด → ป้าย "รอผู้ปกครองกดรับ"/"ยังไม่ผูกบัญชี" ถูกคน → เปิด modal →
+ค้น username ตรงตัวเจอ 1 ระเบียน → ส่งคำขอ → toast สำเร็จ + แถวลงฐานถูกต้อง ·
+หน้าคำขอ: แท็บมีตัวเลข · ชื่อไทยยาวตัดบรรทัดไม่แตกแนวตั้ง · ปุ่มเต็มความกว้าง · คำขอที่ยกเลิกแล้วแสดงเป็นป้ายไม่มีปุ่ม
+
+> ⚠️ รอบนี้ตรวจด้วย URL `/academies/1/...` ซึ่ง **ไม่ใช่รูปแบบที่แอปใช้จริง** จึงพลาดบั๊ก identifier ที่ไปโผล่ตอน G-S12e
+> (ดู §8.13) — ตั้งแต่นี้ **ตรวจ FE ด้วย URL ที่กดมาจากในแอปเท่านั้น**
+
+---
+
 
 ### 8.11 G-S12c — endpoints + ด่านสิทธิ์ (2026-08-28, agy 1 shard · claude ตรวจเองทุกข้อ + แก้เอง 1 จุด)
 
