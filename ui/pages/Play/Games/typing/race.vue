@@ -115,7 +115,7 @@ function getPlayComponent() {
       </div>
       <div class="grid md:grid-cols-2 gap-6">
         <!-- Create Room -->
-        <div class="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 space-y-6 shadow-xl shadow-slate-200/50 dark:shadow-none transition-transform hover:scale-[1.02]">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-8 border border-slate-200 dark:border-slate-800 space-y-6 shadow-xl shadow-slate-200/50 dark:shadow-none transition-transform hover:scale-[1.02]">
           <div class="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-2xl flex items-center justify-center text-primary-600">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -141,7 +141,7 @@ function getPlayComponent() {
         </div>
         
         <!-- Join Room -->
-        <div class="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 space-y-6 shadow-xl shadow-slate-200/50 dark:shadow-none transition-transform hover:scale-[1.02]">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-8 border border-slate-200 dark:border-slate-800 space-y-6 shadow-xl shadow-slate-200/50 dark:shadow-none transition-transform hover:scale-[1.02]">
           <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center text-indigo-600">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
@@ -153,7 +153,7 @@ function getPlayComponent() {
             @keydown.enter="handleJoin"
             placeholder="รหัส 6 หลัก"
             maxlength="6"
-            class="w-full py-4 px-6 text-center text-3xl font-black font-mono tracking-widest bg-slate-50 dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700 focus:border-primary-500 focus:outline-none uppercase transition-colors"
+            class="w-full py-4 px-4 sm:px-6 text-center text-3xl font-black font-mono tracking-widest bg-slate-50 dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700 focus:border-primary-500 focus:outline-none uppercase transition-colors"
           />
           <button 
             @click="handleJoin" 
@@ -175,7 +175,7 @@ function getPlayComponent() {
         <p class="text-slate-400 text-sm font-medium">แชร์รหัสนี้ให้เพื่อนในห้องเรียน</p>
       </div>
       
-      <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-lg">
+      <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-lg">
         <div class="flex items-center justify-between mb-6">
           <h2 class="font-black text-slate-600 dark:text-slate-400 uppercase text-xs tracking-widest">
             ผู้เข้าร่วม ({{ participants.length }} / {{ room?.max_players }})
@@ -207,7 +207,7 @@ function getPlayComponent() {
       </div>
       
       <div class="flex gap-4">
-        <button @click="leaveRoom(); view='home'" class="px-6 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-2xl hover:bg-slate-200 transition-colors">
+        <button @click="leaveRoom(); view='home'" class="px-4 sm:px-6 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-2xl hover:bg-slate-200 transition-colors">
           ออก
         </button>
         <button v-if="isHost"
@@ -264,7 +264,7 @@ function getPlayComponent() {
         <p class="text-slate-500">การแข่งขันสิ้นสุดลงแล้ว</p>
       </div>
       
-      <div class="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 space-y-4 shadow-xl">
+      <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-8 border border-slate-200 dark:border-slate-800 space-y-4 shadow-xl">
         <div v-for="(r, i) in rankings" :key="r.user_id"
           class="flex items-center gap-4 p-4 rounded-2xl border transition-all"
           :class="i === 0 

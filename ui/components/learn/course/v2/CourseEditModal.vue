@@ -92,7 +92,7 @@ async function save() {
       <div class="flex gap-3">
         <button
           @click="$emit('close')"
-          class="flex-1 px-6 py-3 rounded-xl bg-gray-100 text-gray-700 font-black hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-all"
+          class="flex-1 px-4 sm:px-6 py-3 rounded-xl bg-gray-100 text-gray-700 font-black hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-all"
         >
           ยกเลิก
         </button>

@@ -201,7 +201,7 @@
     <!-- Redeem Confirmation Modal -->
     <Teleport to="body">
       <div v-if="showConfirmModal" class="modal-overlay fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click="showConfirmModal = false">
-        <div class="modal-content bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-6" @click.stop>
+        <div class="modal-content bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-4 sm:p-6" @click.stop>
           <div class="text-center">
             <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center">
               <Icon icon="mdi:gift" class="w-8 h-8 text-white" />
@@ -250,7 +250,7 @@
     <!-- Success Modal -->
     <Teleport to="body">
       <div v-if="showSuccessModal" class="modal-overlay fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click="showSuccessModal = false">
-        <div class="modal-content bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-6" @click.stop>
+        <div class="modal-content bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-4 sm:p-6" @click.stop>
           <div class="text-center">
             <div class="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center animate-bounce">
               <Icon icon="mdi:check" class="w-10 h-10 text-white" />

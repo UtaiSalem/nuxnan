@@ -191,7 +191,7 @@ const commit = async () => {
                 <div class="flex justify-end pt-4 border-t border-gray-100 dark:border-gray-700">
                   <button
                     @click="step = 2"
-                    class="w-full sm:w-auto min-h-[44px] px-6 py-2 bg-gray-900 text-white dark:bg-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 font-medium transition-colors"
+                    class="w-full sm:w-auto min-h-[44px] px-4 sm:px-6 py-2 bg-gray-900 text-white dark:bg-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 font-medium transition-colors"
                   >
                     ถัดไป
                   </button>

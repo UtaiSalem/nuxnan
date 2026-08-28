@@ -327,7 +327,7 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
     <!-- Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
       <!-- Step Bar -->
-      <div class="mb-8 overflow-hidden bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+      <div class="mb-8 overflow-hidden bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
         <nav aria-label="Progress">
           <ol role="list" class="flex items-center">
             <!-- Step 1: Active -->
@@ -682,7 +682,7 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
       <div v-if="showPublishModal" class="fixed inset-0 z-50 overflow-y-auto">
         <div class="flex min-h-screen items-center justify-center p-4">
           <div class="fixed inset-0 bg-black/50" @click="showPublishModal = false"></div>
-          <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+          <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-4 sm:p-6">
             <div class="text-center">
               <Icon icon="heroicons:megaphone" class="w-12 h-12 mx-auto text-blue-600" />
               <h3 class="mt-4 text-lg font-semibold text-gray-900 dark:text-white">ประกาศเกรด</h3>
@@ -716,7 +716,7 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
       <div v-if="showFinalizeModal" class="fixed inset-0 z-50 overflow-y-auto">
         <div class="flex min-h-screen items-center justify-center p-4">
           <div class="fixed inset-0 bg-black/50" @click="showFinalizeModal = false"></div>
-          <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+          <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-4 sm:p-6">
             <div class="text-center">
               <Icon icon="heroicons:lock-closed" class="w-12 h-12 mx-auto text-purple-600" />
               <h3 class="mt-4 text-lg font-semibold text-gray-900 dark:text-white">ปิดเกรด</h3>
@@ -750,7 +750,7 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
       <div v-if="showEditGradeModal" class="fixed inset-0 z-50 overflow-y-auto">
         <div class="flex min-h-screen items-center justify-center p-4">
           <div class="fixed inset-0 bg-black/50" @click="showEditGradeModal = false"></div>
-          <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+          <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-4 sm:p-6">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">แก้ไขเกรด</h3>
 
             <div class="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -819,7 +819,7 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
         v-if="isProcessing"
         class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm"
       >
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 flex flex-col items-center gap-3 max-w-sm mx-4 border border-gray-200 dark:border-gray-700">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-4 sm:p-6 flex flex-col items-center gap-3 max-w-sm mx-4 border border-gray-200 dark:border-gray-700">
           <div class="relative">
             <Icon icon="heroicons:arrow-path" class="w-12 h-12 text-primary-600 animate-spin" />
           </div>

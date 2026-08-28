@@ -124,7 +124,7 @@ const saveSettings = async () => {
 
       <!-- Content -->
       <div class="flex-1">
-        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-hopeui border border-slate-100 dark:border-slate-700">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 shadow-hopeui border border-slate-100 dark:border-slate-700">
           <!-- General Settings -->
           <div v-if="activeSection === 'general'" class="space-y-6">
             <h2 class="text-lg font-semibold text-slate-800 dark:text-white">การตั้งค่าทั่วไป</h2>

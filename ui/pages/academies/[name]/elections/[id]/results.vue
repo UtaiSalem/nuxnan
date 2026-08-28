@@ -299,7 +299,7 @@ const totalVotesCast = computed(() => {
       <!-- ยังไม่ประกาศผล -->
       <template v-else>
         <!-- status === 'closed' -->
-        <div v-if="election.status === 'closed'" class="mb-6 rounded-2xl bg-white p-8 text-center shadow-sm dark:bg-slate-900">
+        <div v-if="election.status === 'closed'" class="mb-6 rounded-2xl bg-white p-4 sm:p-8 text-center shadow-sm dark:bg-slate-900">
           <Icon icon="lucide:lock" class="mx-auto mb-4 text-5xl text-amber-500" />
           <h2 class="text-xl font-bold">ปิดหีบแล้ว อยู่ระหว่างรอประกาศผลอย่างเป็นทางการ</h2>
           
@@ -321,7 +321,7 @@ const totalVotesCast = computed(() => {
         
         <!-- status === 'voting' -->
         <div v-else-if="election.status === 'voting'" class="flex flex-col gap-6">
-          <div class="rounded-2xl bg-white p-6 shadow-sm dark:bg-slate-900">
+          <div class="rounded-2xl bg-white p-4 sm:p-6 shadow-sm dark:bg-slate-900">
             <div class="mb-4 flex items-center gap-2">
               <Icon icon="lucide:activity" class="animate-pulse text-xl text-primary-500" />
               <h2 class="text-lg font-bold">ความคืบหน้าสด</h2>
@@ -398,7 +398,7 @@ const totalVotesCast = computed(() => {
         </div>
         
         <!-- status อื่น ๆ (ไม่ published, ไม่ closed, ไม่ voting) -->
-        <div v-else class="rounded-2xl bg-white p-10 text-center shadow-sm dark:bg-slate-900">
+        <div v-else class="rounded-2xl bg-white p-4 sm:p-10 text-center shadow-sm dark:bg-slate-900">
           <Icon icon="lucide:clock" class="mx-auto mb-4 text-5xl text-slate-400" />
           <h2 class="text-xl font-bold">ยังไม่ประกาศผลการเลือกตั้ง</h2>
         </div>

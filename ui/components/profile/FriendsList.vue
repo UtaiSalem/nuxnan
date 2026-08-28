@@ -414,7 +414,7 @@ watch(searchQuery, () => {
       <button
         @click="loadMore(props.userId)"
         :disabled="isLoading"
-        class="px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto"
+        class="px-4 sm:px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto"
       >
         <Icon v-if="isLoading" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
         <span>{{ isLoading ? 'กำลังโหลด...' : 'โหลดเพิ่มเติม' }}</span>
@@ -442,7 +442,7 @@ watch(searchQuery, () => {
               <div class="flex gap-3 justify-center">
                 <button
                   @click="showConfirmModal = false"
-                  class="min-h-[44px] sm:min-h-0 px-6 py-2.5 text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                  class="min-h-[44px] sm:min-h-0 px-4 sm:px-6 py-2.5 text-gray-400 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
                 >
                   ยกเลิก
                 </button>

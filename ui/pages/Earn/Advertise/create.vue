@@ -537,7 +537,7 @@ watch(() => authStore.user?.id, async (id) => {
                      @dragleave.prevent="dragingMedia = false"
                      @drop.prevent="onDropMediaFile"
                      :class="{'border-blue-500 bg-blue-50 dark:bg-blue-950/20': dragingMedia}"
-                     class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-3xl p-8 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer text-center group"
+                     class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-3xl p-4 sm:p-8 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer text-center group"
                 >
                   <div class="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
                     <Icon icon="solar:cloud-upload-bold-duotone" class="w-8 h-8" />
@@ -663,7 +663,7 @@ watch(() => authStore.user?.id, async (id) => {
             </div>
 
             <!-- Wallet Method -->
-            <div v-if="payWithWallet" class="p-6 bg-teal-50 dark:bg-teal-950/20 border border-teal-200 dark:border-teal-900 rounded-2xl text-center">
+            <div v-if="payWithWallet" class="p-4 sm:p-6 bg-teal-50 dark:bg-teal-950/20 border border-teal-200 dark:border-teal-900 rounded-2xl text-center">
               <Icon icon="solar:wallet-bold-duotone" class="w-12 h-12 text-teal-600 dark:text-teal-400 mx-auto mb-3" />
               <h3 class="font-bold text-teal-950 dark:text-teal-100 mb-1">ยอดเงินคงเหลือในกระเป๋า</h3>
               <p class="text-3xl font-extrabold text-teal-600 dark:text-teal-400 mb-3">{{ walletBalance.toLocaleString(undefined, {minimumFractionDigits: 2}) }} ฿</p>
@@ -709,7 +709,7 @@ watch(() => authStore.user?.id, async (id) => {
                      @dragleave.prevent="dragingSlip = false"
                      @drop.prevent="onDropSlipFile"
                      :class="{'border-teal-500 bg-teal-50 dark:bg-teal-950/20': dragingSlip}"
-                     class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer text-center group"
+                     class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl p-4 sm:p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer text-center group"
                 >
                   <Icon icon="solar:camera-add-bold-duotone" class="w-8 h-8 text-gray-400 group-hover:text-teal-500 mx-auto mb-2" />
                   <p class="text-sm font-medium text-gray-700 dark:text-gray-300">คลิกเพื่ออัปโหลดรูปภาพสลิป</p>

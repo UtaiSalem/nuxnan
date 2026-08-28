@@ -104,7 +104,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm dark:border-emerald-900/40 dark:bg-gray-800">
+  <div class="rounded-2xl border border-emerald-200 bg-white p-4 sm:p-6 shadow-sm dark:border-emerald-900/40 dark:bg-gray-800">
     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div>
         <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">Rollover สำเร็จแล้ว</h2>

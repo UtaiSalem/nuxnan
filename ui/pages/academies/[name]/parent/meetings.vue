@@ -211,7 +211,7 @@ const getStatusLabel = (status: string) => {
         <!-- Left: Booking Section -->
         <div class="lg:col-span-2 space-y-8">
           <!-- Step 1: Select Teacher -->
-          <section class="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <section class="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
               <span class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm">1</span>
               เลือกครูที่คุณต้องการนัดพบ
@@ -247,7 +247,7 @@ const getStatusLabel = (status: string) => {
           </section>
 
           <!-- Step 2: Select Slot -->
-          <section v-if="selectedTeacherId" class="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <section v-if="selectedTeacherId" class="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
               <span class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm">2</span>
               เลือกช่วงเวลาที่ว่าง
@@ -308,7 +308,7 @@ const getStatusLabel = (status: string) => {
             คิวที่นัดไว้แล้ว
           </h2>
 
-          <div v-if="myBookings.length === 0" class="bg-white dark:bg-gray-800 rounded-3xl p-8 border border-gray-100 dark:border-gray-700 text-center text-gray-400 shadow-sm">
+          <div v-if="myBookings.length === 0" class="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-8 border border-gray-100 dark:border-gray-700 text-center text-gray-400 shadow-sm">
             <p>ยังไม่มีรายการนัดหมาย</p>
           </div>
 
@@ -377,7 +377,7 @@ const getStatusLabel = (status: string) => {
             </button>
           </div>
 
-          <div class="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-3xl mb-8">
+          <div class="bg-blue-50 dark:bg-blue-900/20 p-4 sm:p-6 rounded-3xl mb-8">
             <div class="flex items-center gap-4 mb-4">
               <CircleAvatar :src="selectedSlot?.teacher?.profile_photo_path" :name="selectedSlot?.teacher?.name" size="sm" />
               <div>
@@ -434,7 +434,7 @@ const getStatusLabel = (status: string) => {
               <button 
                 type="button"
                 @click="showBookingModal = false"
-                class="flex-1 px-6 py-4 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-2xl font-bold hover:bg-gray-200 transition-all"
+                class="flex-1 px-4 sm:px-6 py-4 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-2xl font-bold hover:bg-gray-200 transition-all"
               >
                 ยกเลิก
               </button>

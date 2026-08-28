@@ -386,7 +386,7 @@ onUnmounted(() => {
     <!-- Error state -->
     <div
       v-else-if="error && seats.length === 0"
-      class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-6 text-center"
+      class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-4 sm:p-6 text-center"
     >
       <Icon icon="heroicons:exclamation-triangle-20-solid" class="w-12 h-12 text-red-400 mx-auto mb-3" />
       <p class="text-red-700 dark:text-red-300 font-medium">{{ error }}</p>
@@ -466,7 +466,7 @@ onUnmounted(() => {
     <!-- Empty state -->
     <div
       v-if="!loading && !error && seats.length === 0"
-      class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-12 text-center"
+      class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 sm:p-12 text-center"
     >
       <Icon icon="fluent:people-24-regular" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
       <h3 class="text-lg font-semibold text-gray-500 dark:text-gray-400">ไม่มีสมาชิกในกลุ่มนี้</h3>
@@ -475,7 +475,7 @@ onUnmounted(() => {
     <!-- No seat for student message -->
     <div
       v-else-if="!loading && !error && !isCourseAdmin && !mySeat"
-      class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-8 text-center"
+      class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 sm:p-8 text-center"
     >
       <Icon icon="fluent:person-prohibited-24-regular" class="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
       <p class="text-slate-500 dark:text-slate-400 font-medium">คุณไม่ได้ถูกจัดที่นั่งในห้องเรียนนี้</p>

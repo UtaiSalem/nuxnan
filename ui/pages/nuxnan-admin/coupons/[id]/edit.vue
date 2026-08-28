@@ -176,7 +176,7 @@ onMounted(() => {
     </div>
 
     <!-- Loading State -->
-    <div v-if="isLoading" class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-hopeui border border-slate-100 dark:border-slate-700">
+    <div v-if="isLoading" class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-8 shadow-hopeui border border-slate-100 dark:border-slate-700">
       <div class="text-center">
         <Icon icon="fluent:spinner-ios-20-regular" class="w-8 h-8 text-hopeui-primary-600 animate-spin mx-auto" />
         <p class="text-slate-500 mt-2">กำลังโหลดข้อมูล...</p>
@@ -201,7 +201,7 @@ onMounted(() => {
       </div>
 
       <!-- Form -->
-      <form @submit.prevent="handleSubmit" class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-hopeui border border-slate-100 dark:border-slate-700 space-y-6">
+      <form @submit.prevent="handleSubmit" class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 shadow-hopeui border border-slate-100 dark:border-slate-700 space-y-6">
         <!-- Code -->
         <div>
           <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
@@ -408,7 +408,7 @@ onMounted(() => {
           
           <NuxtLink
             to="/nuxnan-admin/coupons"
-            class="flex-1 inline-flex justify-center items-center gap-2 px-6 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-300 font-medium transition-colors"
+            class="flex-1 inline-flex justify-center items-center gap-2 px-4 sm:px-6 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-300 font-medium transition-colors"
           >
             <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
             ยกเลิก

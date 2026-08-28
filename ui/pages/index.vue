@@ -190,7 +190,7 @@ const handleGetDonate = async (donateId: number, idx: number) => {
           v-if="isGetDonateLoading"
           class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center"
         >
-          <div class="bg-white rounded-2xl px-10 py-8 flex flex-col items-center gap-4 shadow-2xl">
+          <div class="bg-white rounded-2xl px-4 sm:px-10 py-8 flex flex-col items-center gap-4 shadow-2xl">
             <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
             <p class="text-gray-600 font-prompt font-medium text-sm">กำลังดำเนินการ...</p>
           </div>

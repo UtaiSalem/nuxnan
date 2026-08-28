@@ -54,7 +54,7 @@ const handleConfirm = () => {
     <Dialog as="div" :open="open" @close="emit('close')" class="relative z-50">
         <div class="fixed inset-0 bg-black/30" aria-hidden="true" />
         <div class="fixed inset-0 flex items-center justify-center p-4">
-            <DialogPanel class="w-full max-w-md bg-white rounded-lg p-6 shadow-xl">
+            <DialogPanel class="w-full max-w-md bg-white rounded-lg p-4 sm:p-6 shadow-xl">
                 <DialogTitle class="text-lg font-medium text-gray-900 mb-4">ย้ายห้องเรียน</DialogTitle>
 
                 <div class="mb-4 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">

@@ -317,7 +317,7 @@ onUnmounted(() => destroyGame())
       @blur="keepFocus"
       :disabled="sharedState.gameOver"
       placeholder="พิมพ์คำแล้วกด Enter หรือ Space..."
-      class="w-full max-w-md py-4 px-6 bg-slate-900 border-2 border-slate-700 focus:border-blue-400 rounded-2xl text-white text-xl font-mono text-center focus:outline-none transition-colors"
+      class="w-full max-w-md py-4 px-4 sm:px-6 bg-slate-900 border-2 border-slate-700 focus:border-blue-400 rounded-2xl text-white text-xl font-mono text-center focus:outline-none transition-colors"
       autocomplete="off" autocorrect="off" spellcheck="false"
     />
   </div>

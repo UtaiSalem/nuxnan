@@ -166,7 +166,7 @@ onMounted(() => {
     </div>
 
     <!-- Loading State -->
-    <div v-if="isLoading" class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-hopeui border border-slate-100 dark:border-slate-700">
+    <div v-if="isLoading" class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-8 shadow-hopeui border border-slate-100 dark:border-slate-700">
       <div class="text-center">
         <Icon icon="fluent:spinner-ios-20-regular" class="w-8 h-8 text-hopeui-primary-600 animate-spin mx-auto" />
         <p class="text-slate-500 mt-2">กำลังโหลดข้อมูล...</p>
@@ -174,7 +174,7 @@ onMounted(() => {
     </div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-hopeui border border-slate-100 dark:border-slate-700">
+    <div v-else-if="error" class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-8 shadow-hopeui border border-slate-100 dark:border-slate-700">
       <div class="text-center">
         <Icon icon="fluent:error-circle-24-regular" class="w-12 h-12 text-red-400 mx-auto" />
         <p class="text-slate-500 mt-2">{{ error }}</p>
@@ -190,7 +190,7 @@ onMounted(() => {
     <!-- User Details -->
     <template v-else-if="user">
       <!-- Profile Card -->
-      <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-hopeui border border-slate-100 dark:border-slate-700">
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 shadow-hopeui border border-slate-100 dark:border-slate-700">
         <div class="flex flex-col sm:flex-row items-center sm:items-start gap-6">
           <!-- Avatar -->
           <div class="w-24 h-24 bg-gradient-to-br from-hopeui-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white text-3xl font-bold">
@@ -223,7 +223,7 @@ onMounted(() => {
       <!-- Details Grid -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- Contact Info -->
-        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-hopeui border border-slate-100 dark:border-slate-700">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 shadow-hopeui border border-slate-100 dark:border-slate-700">
           <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
             <Icon icon="fluent:person-24-regular" class="w-5 h-5 text-hopeui-primary-600" />
             ข้อมูลติดต่อ
@@ -250,7 +250,7 @@ onMounted(() => {
         </div>
 
         <!-- Account Info -->
-        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-hopeui border border-slate-100 dark:border-slate-700">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 shadow-hopeui border border-slate-100 dark:border-slate-700">
           <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
             <Icon icon="fluent:calendar-24-regular" class="w-5 h-5 text-hopeui-primary-600" />
             ข้อมูลบัญชี
@@ -305,7 +305,7 @@ onMounted(() => {
         </div>
 
         <!-- Wallet & Points -->
-        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-hopeui border border-slate-100 dark:border-slate-700">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 shadow-hopeui border border-slate-100 dark:border-slate-700">
           <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
             <Icon icon="fluent:wallet-24-regular" class="w-5 h-5 text-hopeui-primary-600" />
             กระเป๋าเงิน & คะแนน
@@ -328,7 +328,7 @@ onMounted(() => {
         </div>
 
         <!-- Statistics -->
-        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-hopeui border border-slate-100 dark:border-slate-700">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 shadow-hopeui border border-slate-100 dark:border-slate-700">
           <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
             <Icon icon="fluent:data-trending-24-regular" class="w-5 h-5 text-hopeui-primary-600" />
             สถิติ

@@ -172,7 +172,7 @@ watch(isRoot, async (newVal) => {
       <!-- Error State -->
       <div
         v-else-if="error"
-        class="bg-red-50 dark:bg-red-900/20 rounded-xl p-8 text-center max-w-md mx-auto"
+        class="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 sm:p-8 text-center max-w-md mx-auto"
       >
         <Icon icon="fluent:error-circle-24-regular" class="w-16 h-16 text-red-500 mx-auto mb-4" />
         <h3 class="text-xl font-bold text-red-700 dark:text-red-400 mb-2">เกิดข้อผิดพลาด</h3>

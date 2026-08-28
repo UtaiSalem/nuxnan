@@ -220,7 +220,7 @@ const formatDate = (dateString: string) => {
       </div>
 
       <!-- Empty State -->
-      <div v-if="pendingRequests.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-12 text-center">
+      <div v-if="pendingRequests.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-12 text-center">
         <div class="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
           <Icon icon="fluent:checkmark-circle-24-filled" class="w-10 h-10 text-green-500" />
         </div>

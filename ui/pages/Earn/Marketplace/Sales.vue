@@ -48,7 +48,7 @@ const formatNumber = (num: number) => {
     </Teleport></ClientOnly>
 
     <!-- Header -->
-    <div class="bg-white dark:bg-vikinger-dark-200 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-vikinger-dark-100 flex items-center justify-between">
+    <div class="bg-white dark:bg-vikinger-dark-200 p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-vikinger-dark-100 flex items-center justify-between">
       <div class="flex items-center gap-4">
         <div class="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center text-emerald-600 dark:text-emerald-400">
           <Icon icon="fluent:data-line-24-filled" class="w-7 h-7" />
@@ -89,7 +89,7 @@ const formatNumber = (num: number) => {
              </div>
           </div>
           
-          <div class="bg-white dark:bg-vikinger-dark-200 p-6 rounded-2xl border border-gray-100 dark:border-vikinger-dark-100 shadow-sm relative overflow-hidden">
+          <div class="bg-white dark:bg-vikinger-dark-200 p-4 sm:p-6 rounded-2xl border border-gray-100 dark:border-vikinger-dark-100 shadow-sm relative overflow-hidden">
              <Icon icon="fluent:receipt-24-filled" class="absolute -right-4 -bottom-4 w-32 h-32 text-gray-100 dark:text-vikinger-dark-50" />
              <div class="relative z-10">
                <div class="text-xs font-bold uppercase text-gray-500 dark:text-gray-400 mb-2">จำนวนการ Clone ไปสอน</div>

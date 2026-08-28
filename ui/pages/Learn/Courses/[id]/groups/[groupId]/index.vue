@@ -445,7 +445,7 @@ onMounted(() => {
        </div>
 
       <!-- About Tab -->
-      <div v-if="activeTab === 'about'" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
+      <div v-if="activeTab === 'about'" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
           <h2 class="text-xl font-bold mb-4">เกี่ยวกับกลุ่ม</h2>
           <p class="text-gray-600 dark:text-gray-300 whitespace-pre-line">{{ group.description || 'ไม่มีคำอธิบาย' }}</p>
           <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -860,13 +860,13 @@ onMounted(() => {
         </div>
         
         <!-- No search results -->
-        <div v-else-if="memberSearch && members.length > 0" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 text-center">
+        <div v-else-if="memberSearch && members.length > 0" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-8 text-center">
           <Icon icon="heroicons:magnifying-glass" class="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
           <p class="text-gray-500 dark:text-gray-400">ไม่พบสมาชิกที่ค้นหา "{{ memberSearch }}"</p>
         </div>
 
         <!-- Empty State -->
-        <div v-else class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 text-center">
+        <div v-else class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-8 text-center">
           <Icon icon="heroicons:user-group" class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
           <p class="text-gray-500 dark:text-gray-400">ยังไม่มีสมาชิกในกลุ่มนี้</p>
         </div>

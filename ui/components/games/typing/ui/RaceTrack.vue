@@ -15,7 +15,7 @@ defineProps<{
 </script>
 
 <template>
-<div class="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
+<div class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
   <div class="flex items-center justify-between mb-2">
     <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">Race Progress</h3>
     <div class="flex gap-2">

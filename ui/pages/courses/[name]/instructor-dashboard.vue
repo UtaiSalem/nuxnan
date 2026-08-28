@@ -259,7 +259,7 @@ onMounted(() => {
           <!-- Left Column (2/3) -->
           <div class="lg:col-span-2 space-y-6">
             <!-- Grade Distribution -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 sm:p-6">
               <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 การกระจายเกรด
               </h2>
@@ -382,7 +382,7 @@ onMounted(() => {
             </div>
 
             <!-- At-Risk Students -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 sm:p-6">
               <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                   <Icon icon="heroicons:exclamation-circle" class="w-5 h-5 text-red-500" />

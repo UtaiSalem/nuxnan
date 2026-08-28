@@ -72,7 +72,7 @@ const handleLogin = async () => {
 
     <!-- Login Card -->
     <div class="relative w-full max-w-md">
-      <div class="bg-white rounded-3xl shadow-hopeui-lg border border-slate-100 p-8">
+      <div class="bg-white rounded-3xl shadow-hopeui-lg border border-slate-100 p-4 sm:p-8">
         <!-- Logo & Title -->
         <div class="text-center mb-8">
           <div class="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-hopeui mb-4">

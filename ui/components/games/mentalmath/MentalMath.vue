@@ -289,7 +289,7 @@ onUnmounted(() => {
   <div class="mental-math-container font-sans text-black">
     
     <!-- 1. MODE SELECTION -->
-    <div v-if="gameState === 'selectMode'" class="bg-white border-4 border-black p-8 shadow-[8px_8px_0_0_rgba(0,0,0,1)] rounded-none">
+    <div v-if="gameState === 'selectMode'" class="bg-white border-4 border-black p-4 sm:p-8 shadow-[8px_8px_0_0_rgba(0,0,0,1)] rounded-none">
       <div class="text-center mb-8">
         <div class="inline-block p-4 bg-emerald-400 border-4 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] mb-4">
           <Icon icon="fluent:brain-circuit-24-filled" class="w-16 h-16" />
@@ -338,7 +338,7 @@ onUnmounted(() => {
     </div>
 
     <!-- 2. CHALLENGE SETUP (Level Selection) -->
-    <div v-else-if="gameState === 'challengeSetup'" class="bg-white border-4 border-black p-8 shadow-[8px_8px_0_0_rgba(0,0,0,1)] rounded-none">
+    <div v-else-if="gameState === 'challengeSetup'" class="bg-white border-4 border-black p-4 sm:p-8 shadow-[8px_8px_0_0_rgba(0,0,0,1)] rounded-none">
       <div class="flex items-center gap-4 mb-8">
         <button @click="gameState = 'selectMode'" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 border-4 border-black bg-gray-200 hover:bg-gray-300">
           <Icon icon="fluent:arrow-left-24-filled" class="w-6 h-6" />
@@ -396,7 +396,7 @@ onUnmounted(() => {
       </div>
 
       <!-- Question Box -->
-      <div class="bg-white border-4 border-black p-12 shadow-[8px_8px_0_0_rgba(0,0,0,1)] relative overflow-hidden min-h-[300px] flex flex-col items-center justify-center">
+      <div class="bg-white border-4 border-black p-4 sm:p-12 shadow-[8px_8px_0_0_rgba(0,0,0,1)] relative overflow-hidden min-h-[300px] flex flex-col items-center justify-center">
         
         <!-- Feedback Overlay -->
         <div v-if="lastFeedback" 
@@ -463,7 +463,7 @@ onUnmounted(() => {
     </div>
 
     <!-- 4. RESULT SCREEN -->
-    <div v-else-if="gameState === 'result'" class="bg-white border-4 border-black p-8 shadow-[8px_8px_0_0_rgba(0,0,0,1)] rounded-none text-center">
+    <div v-else-if="gameState === 'result'" class="bg-white border-4 border-black p-4 sm:p-8 shadow-[8px_8px_0_0_rgba(0,0,0,1)] rounded-none text-center">
       <div class="mb-8">
         <div class="inline-block p-6 bg-amber-400 border-4 border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)] rounded-full mb-4">
           <Icon icon="fluent:trophy-24-filled" class="w-20 h-20" />

@@ -220,7 +220,7 @@ function onSubmit() {
           leave-to="opacity-0 scale-95"
         >
           <DialogPanel
-            class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-zinc-900"
+            class="w-full max-w-md rounded-xl bg-white p-4 sm:p-6 shadow-xl dark:bg-zinc-900"
           >
             <DialogTitle class="text-lg font-semibold mb-4 text-zinc-900 dark:text-zinc-100">
               {{ action ? titleMap[action] : '' }}

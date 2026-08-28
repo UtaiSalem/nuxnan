@@ -174,7 +174,7 @@ const getPromotionBadge = (status: string) => {
       </div>
 
       <!-- Student Info Card -->
-      <div v-if="student" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div v-if="student" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
         <div class="flex items-center gap-4">
           <img
             v-if="student.user?.avatar"
@@ -235,7 +235,7 @@ const getPromotionBadge = (status: string) => {
         <div class="lg:col-span-1 space-y-4">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">เลือกภาคเรียน</h2>
           
-          <div v-if="transcripts.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-6 text-center border border-gray-200 dark:border-gray-700">
+          <div v-if="transcripts.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 text-center border border-gray-200 dark:border-gray-700">
             <Icon icon="fluent:document-text-24-regular" class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
             <p class="text-gray-600 dark:text-gray-400">ยังไม่มีใบแสดงผลการเรียน</p>
           </div>
@@ -361,7 +361,7 @@ const getPromotionBadge = (status: string) => {
 
       <!-- Annual View -->
       <div v-if="viewMode === 'annual'" class="space-y-4">
-        <div v-if="annualTranscripts.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-12 text-center border border-gray-200 dark:border-gray-700">
+        <div v-if="annualTranscripts.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-12 text-center border border-gray-200 dark:border-gray-700">
           <Icon icon="fluent:calendar-ltr-24-regular" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">ยังไม่มีผลการเรียนรายปี</h3>
           <p class="text-gray-600 dark:text-gray-400">ผลการเรียนรายปีจะปรากฏเมื่อสิ้นสุดปีการศึกษา</p>

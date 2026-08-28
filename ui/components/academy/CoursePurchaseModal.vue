@@ -24,7 +24,7 @@
             leave-from="opacity-100 scale-100"
             leave-to="opacity-0 scale-95"
           >
-            <DialogPanel class="w-full max-w-md transform overflow-hidden rounded-3xl bg-white dark:bg-slate-800 p-6 text-left align-middle shadow-xl transition-all border border-slate-200 dark:border-slate-700">
+            <DialogPanel class="w-full max-w-md transform overflow-hidden rounded-3xl bg-white dark:bg-slate-800 p-4 sm:p-6 text-left align-middle shadow-xl transition-all border border-slate-200 dark:border-slate-700">
               <!-- Step 1: Summary -->
               <div v-if="step === 1">
                 <DialogTitle as="h3" class="text-xl font-black text-slate-900 dark:text-white mb-4">

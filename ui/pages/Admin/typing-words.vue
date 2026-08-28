@@ -203,7 +203,7 @@ onMounted(loadWords)
   <Teleport to="body">
     <Transition name="fade">
       <div v-if="showForm" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-        <div class="bg-white dark:bg-slate-900 rounded-3xl p-8 w-full max-w-md border border-slate-200 dark:border-slate-700 shadow-2xl space-y-6">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-8 w-full max-w-md border border-slate-200 dark:border-slate-700 shadow-2xl space-y-6">
           <h2 class="text-xl font-black text-slate-900 dark:text-white">
             {{ editing ? 'แก้ไขคำ' : 'เพิ่มคำใหม่' }}
           </h2>

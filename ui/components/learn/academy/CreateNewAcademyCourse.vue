@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white p-6 shadow rounded-lg">
+  <div class="bg-white p-4 sm:p-6 shadow rounded-lg">
       <h2 class="text-xl font-bold mb-4">Create New Course</h2>
       <form class="space-y-4">
           <input type="text" placeholder="Course Name" class="w-full border rounded p-2" />

@@ -1404,7 +1404,7 @@ watch(() => academy.value?.id, (id) => {
               </div>
             </template>
             <template v-else>
-              <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-8 text-center">
+              <div class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-4 sm:p-8 text-center">
                 <Icon icon="svg-spinners:ring-resize" class="w-8 h-8 text-vikinger-purple mx-auto" />
               </div>
             </template>
@@ -1428,7 +1428,7 @@ watch(() => academy.value?.id, (id) => {
               @open="openPinnedAnnouncement"
             />
             
-            <div v-if="activities.length === 0" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-8 text-center">
+            <div v-if="activities.length === 0" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-4 sm:p-8 text-center">
               <Icon icon="fluent:feed-24-regular" class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
               <p class="text-gray-500 dark:text-gray-400">ยังไม่มีกิจกรรม</p>
               <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">เริ่มโพสต์เพื่อแชร์ข่าวสารให้กับสมาชิก</p>
@@ -1448,7 +1448,7 @@ watch(() => academy.value?.id, (id) => {
               <button
                 @click="loadMoreActivities"
                 :disabled="isLoadingMoreActivities"
-                class="min-h-[44px] sm:min-h-0 px-6 py-2.5 bg-white dark:bg-vikinger-dark-200 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors shadow-sm border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
+                class="min-h-[44px] sm:min-h-0 px-4 sm:px-6 py-2.5 bg-white dark:bg-vikinger-dark-200 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors shadow-sm border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
               >
                 <Icon v-if="isLoadingMoreActivities" icon="svg-spinners:ring-resize" class="w-4 h-4" />
                 <Icon v-else icon="fluent:arrow-download-24-regular" class="w-4 h-4" />
@@ -1604,7 +1604,7 @@ watch(() => academy.value?.id, (id) => {
             </div>
 
             <!-- Empty state -->
-            <div v-if="courses.length === 0" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-10 text-center">
+            <div v-if="courses.length === 0" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-4 sm:p-10 text-center">
               <Icon icon="fluent:book-24-regular" class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
               <p class="text-gray-500 dark:text-gray-400">
                 {{ hasActiveCourseFilters ? 'ไม่พบรายวิชาตามตัวกรองที่เลือก' : 'ยังไม่มีรายวิชา' }}
@@ -2169,7 +2169,7 @@ watch(() => academy.value?.id, (id) => {
                 </NuxtLink>
               </div>
 
-              <div v-if="classrooms.length === 0" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-8 text-center">
+              <div v-if="classrooms.length === 0" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-4 sm:p-8 text-center">
                 <Icon icon="fluent:board-24-regular" class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
                 <p class="text-gray-500 dark:text-gray-400">ยังไม่มีห้องเรียนในปีการศึกษานี้</p>
                 <p v-if="academy.authIsAcademyAdmin" class="text-sm text-gray-400 dark:text-gray-500 mt-2">ไปที่ "จัดการห้องเรียน" เพื่อสร้างห้องเรียนใหม่</p>
@@ -2258,7 +2258,7 @@ watch(() => academy.value?.id, (id) => {
               </button>
             </div>
 
-            <div v-if="events.length === 0" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-8 text-center">
+            <div v-if="events.length === 0" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-4 sm:p-8 text-center">
               <Icon icon="fluent:calendar-star-24-regular" class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
               <p class="text-gray-500 dark:text-gray-400">ยังไม่มีกิจกรรม</p>
               <p v-if="academy.authIsAcademyAdmin" class="text-sm text-gray-400 dark:text-gray-500 mt-2">คลิก "สร้างกิจกรรมใหม่" เพื่อเริ่มต้น</p>
@@ -2350,7 +2350,7 @@ watch(() => academy.value?.id, (id) => {
               <button
                 @click="loadMoreEvents"
                 :disabled="isLoadingMoreEvents"
-                class="min-h-[44px] sm:min-h-0 px-6 py-2.5 bg-white dark:bg-vikinger-dark-200 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors shadow-sm border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
+                class="min-h-[44px] sm:min-h-0 px-4 sm:px-6 py-2.5 bg-white dark:bg-vikinger-dark-200 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors shadow-sm border border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
               >
                 <Icon v-if="isLoadingMoreEvents" icon="svg-spinners:ring-resize" class="w-4 h-4" />
                 <Icon v-else icon="fluent:arrow-download-24-regular" class="w-4 h-4" />

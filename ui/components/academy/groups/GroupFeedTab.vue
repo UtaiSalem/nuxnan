@@ -81,7 +81,7 @@ onMounted(() => load(1))
     <!-- Empty -->
     <div
       v-else-if="posts.length === 0"
-      class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-8 text-center border border-gray-200 dark:border-gray-700 shadow-sm"
+      class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-4 sm:p-8 text-center border border-gray-200 dark:border-gray-700 shadow-sm"
     >
       <Icon icon="heroicons:document-text" class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
       <p class="text-gray-500 dark:text-gray-400 font-bold">ยังไม่มีโพสต์ในส่วนงานนี้</p>
@@ -100,7 +100,7 @@ onMounted(() => load(1))
     <div v-if="hasMore" class="text-center py-4">
       <button
         type="button"
-        class="min-h-[44px] sm:min-h-0 px-6 py-2.5 bg-white dark:bg-vikinger-dark-200 text-gray-700 dark:text-gray-300 rounded-lg font-bold shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors"
+        class="min-h-[44px] sm:min-h-0 px-4 sm:px-6 py-2.5 bg-white dark:bg-vikinger-dark-200 text-gray-700 dark:text-gray-300 rounded-lg font-bold shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-vikinger-dark-100 transition-colors"
         @click="loadMore"
       >
         โหลดเพิ่มเติม

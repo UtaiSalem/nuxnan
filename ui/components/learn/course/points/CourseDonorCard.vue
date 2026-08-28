@@ -347,7 +347,7 @@ onUnmounted(clearReceiveTimers)
               กำลังโอนแต้มสนับสนุนให้คุณ
               <span v-if="countdownSeconds > 0" class="text-gray-400 dark:text-gray-500">· อีก {{ countdownSeconds }} วินาที</span>
             </p>
-            <button type="button" :disabled="loading" class="rounded-xl bg-gray-200 px-8 py-3 font-semibold text-gray-700 transition hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:text-gray-300" @click="closeReceiveModal">
+            <button type="button" :disabled="loading" class="rounded-xl bg-gray-200 px-4 sm:px-8 py-3 font-semibold text-gray-700 transition hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:text-gray-300" @click="closeReceiveModal">
               {{ loading ? 'กำลังดำเนินการ...' : 'ยกเลิก' }}
             </button>
           </div>

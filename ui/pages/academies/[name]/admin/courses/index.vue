@@ -442,7 +442,7 @@ watch(activeTab, (newTab) => {
             <button
               @click="loadMore"
               :disabled="isLoadingMore"
-              class="min-h-[44px] sm:min-h-0 flex items-center gap-2 rounded-xl bg-primary-50 px-6 py-2.5 font-medium text-primary-600 transition-colors disabled:opacity-50 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-400 dark:hover:bg-primary-900/50"
+              class="min-h-[44px] sm:min-h-0 flex items-center gap-2 rounded-xl bg-primary-50 px-4 sm:px-6 py-2.5 font-medium text-primary-600 transition-colors disabled:opacity-50 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-400 dark:hover:bg-primary-900/50"
             >
               <Icon v-if="isLoadingMore" icon="fluent:spinner-ios-20-regular" class="h-5 w-5 animate-spin" />
               <Icon v-else icon="fluent:arrow-download-24-regular" class="h-5 w-5" />
@@ -504,7 +504,7 @@ watch(activeTab, (newTab) => {
           <button
             @click="loadMoreMarket"
             :disabled="isMarketLoadingMore"
-            class="flex items-center gap-2 rounded-xl bg-violet-50 px-8 py-3 font-bold text-violet-600 transition-all hover:bg-violet-100 dark:bg-violet-900/30 dark:text-violet-200"
+            class="flex items-center gap-2 rounded-xl bg-violet-50 px-4 sm:px-8 py-3 font-bold text-violet-600 transition-all hover:bg-violet-100 dark:bg-violet-900/30 dark:text-violet-200"
           >
             <Icon v-if="isMarketLoadingMore" icon="fluent:spinner-ios-20-regular" class="h-5 w-5 animate-spin" />
             <Icon v-else icon="fluent:arrow-download-24-regular" class="h-5 w-5" />

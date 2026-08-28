@@ -98,7 +98,7 @@ const academyDisplayName = computed(() => {
           </div>
 
           <!-- No Card State -->
-          <div v-if="!cardStudent" class="bg-white dark:bg-gray-800 rounded-2xl p-12 text-center shadow-lg border border-gray-200 dark:border-gray-700">
+          <div v-if="!cardStudent" class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-12 text-center shadow-lg border border-gray-200 dark:border-gray-700">
             <Icon icon="fluent:card-ui-24-regular" class="w-20 h-20 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
             <h3 class="text-xl font-medium text-gray-900 dark:text-white mb-2">ยังไม่มีบัตรนักเรียน</h3>
             <p class="text-gray-600 dark:text-gray-400 mb-6">คุณยังไม่ได้รับบัตรนักเรียน กรุณาติดต่อเจ้าหน้าที่</p>
@@ -150,7 +150,7 @@ const academyDisplayName = computed(() => {
             </div>
 
             <!-- Info & Actions -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
               <div class="grid grid-cols-2 gap-4 mb-6">
                 <div class="text-center p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                   <div class="text-sm text-gray-500 dark:text-gray-400">สถานะ</div>

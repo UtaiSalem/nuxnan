@@ -202,7 +202,7 @@
     <div v-if="declineModalId" class="fixed inset-0 z-50 overflow-y-auto">
       <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" @click="closeDecline"></div>
       <div class="flex min-h-full items-center justify-center p-4">
-        <div class="relative w-full max-w-sm bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6">
+        <div class="relative w-full max-w-sm bg-white dark:bg-gray-800 rounded-xl shadow-xl p-4 sm:p-6">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">ปฏิเสธคำขอ</h3>
           <textarea v-model="declineReason" rows="3" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:outline-none mb-4" placeholder="เหตุผล (ไม่บังคับ)"></textarea>
           <div class="flex gap-3">

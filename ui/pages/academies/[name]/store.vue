@@ -201,7 +201,7 @@ const formatDate = (date: string) => {
       </NuxtLink>
 
       <!-- Store Header -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+      <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
         <div class="flex items-center gap-4">
           <div class="w-14 h-14 bg-primary-100 dark:bg-primary-900/30 rounded-xl flex items-center justify-center shrink-0">
             <Icon icon="fluent:store-microsoft-24-filled" class="w-8 h-8 text-primary-600 dark:text-primary-400" />

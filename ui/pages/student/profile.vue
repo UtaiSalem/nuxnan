@@ -94,12 +94,12 @@ const student = computed(() => studentStore.currentStudent)
       <p class="text-gray-500">จัดการข้อมูลประวัติส่วนตัวและข้อมูลที่เกี่ยวข้อง</p>
     </div>
 
-    <div v-if="studentStore.isLoading && !student" class="p-12 text-center bg-white dark:bg-gray-800 rounded-lg shadow">
+    <div v-if="studentStore.isLoading && !student" class="p-4 sm:p-12 text-center bg-white dark:bg-gray-800 rounded-lg shadow">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
       <p class="text-gray-500">กำลังโหลดข้อมูล...</p>
     </div>
 
-    <div v-else-if="studentStore.error || !student" class="p-12 text-center bg-white dark:bg-gray-800 rounded-lg shadow text-red-500">
+    <div v-else-if="studentStore.error || !student" class="p-4 sm:p-12 text-center bg-white dark:bg-gray-800 rounded-lg shadow text-red-500">
       <i class="fas fa-exclamation-circle text-4xl mb-4"></i>
       <p class="text-lg">{{ studentStore.error || 'ไม่พบข้อมูลนักเรียน' }}</p>
     </div>

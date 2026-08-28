@@ -333,7 +333,7 @@ const getGradeColor = (grade: string) => {
           </button>
         </div>
 
-        <div v-if="gradeScales.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-sm border border-gray-200 dark:border-gray-700">
+        <div v-if="gradeScales.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-12 text-center shadow-sm border border-gray-200 dark:border-gray-700">
           <Icon icon="fluent:data-bar-vertical-24-regular" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">ยังไม่มีเกณฑ์การให้เกรด</h3>
           <p class="text-gray-600 dark:text-gray-400 mb-6">สร้างเกณฑ์การให้เกรดสำหรับสถาบัน</p>
@@ -350,7 +350,7 @@ const getGradeColor = (grade: string) => {
           <div
             v-for="scale in gradeScales"
             :key="scale.id"
-            class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700"
+            class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700"
           >
             <div class="flex items-center justify-between mb-4">
               <div class="flex items-center gap-3">
@@ -429,7 +429,7 @@ const getGradeColor = (grade: string) => {
           </div>
         </div>
 
-        <div v-if="assessmentCategories.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-sm border border-gray-200 dark:border-gray-700">
+        <div v-if="assessmentCategories.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-12 text-center shadow-sm border border-gray-200 dark:border-gray-700">
           <Icon icon="fluent:folder-24-regular" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">ยังไม่มีหมวดหมู่การประเมิน</h3>
           <p class="text-gray-600 dark:text-gray-400 mb-6">สร้างหมวดหมู่สำหรับจัดประเภทการประเมิน เช่น การสอบกลางภาค การสอบปลายภาค</p>
@@ -446,7 +446,7 @@ const getGradeColor = (grade: string) => {
           <div
             v-for="category in assessmentCategories"
             :key="category.id"
-            class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700"
+            class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700"
           >
             <div class="flex items-start justify-between mb-4">
               <div class="flex items-center gap-3">

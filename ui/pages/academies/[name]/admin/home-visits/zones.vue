@@ -310,7 +310,7 @@ const colors = [
     <!-- Delete Modal -->
     <Teleport to="body">
       <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 max-w-md w-full">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">ยืนยันการลบ</h3>
           <p class="text-gray-600 dark:text-gray-400 mb-6">
             คุณต้องการลบโซน "{{ deletingZone?.name }}" หรือไม่?

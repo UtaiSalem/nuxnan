@@ -33,7 +33,7 @@ const handleNext = () => {
 
     <div class="space-y-6">
       <!-- Thai Name -->
-      <div class="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-xl border border-gray-100 dark:border-gray-700">
+      <div class="bg-gray-50 dark:bg-gray-800/50 p-4 sm:p-6 rounded-xl border border-gray-100 dark:border-gray-700">
         <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <Icon icon="fluent:local-language-24-regular" class="w-5 h-5 text-gray-400" />
           ชื่อ-นามสกุล (ภาษาไทย)
@@ -76,7 +76,7 @@ const handleNext = () => {
       </div>
 
       <!-- English Name -->
-      <div class="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-xl border border-gray-100 dark:border-gray-700">
+      <div class="bg-gray-50 dark:bg-gray-800/50 p-4 sm:p-6 rounded-xl border border-gray-100 dark:border-gray-700">
         <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <Icon icon="fluent:text-grammar-options-24-regular" class="w-5 h-5 text-gray-400" />
           ชื่อ-นามสกุล (ภาษาอังกฤษ) <span class="font-normal text-gray-500 text-xs">- ไม่บังคับ</span>
@@ -111,7 +111,7 @@ const handleNext = () => {
       </div>
 
       <!-- Details -->
-      <div class="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-xl border border-gray-100 dark:border-gray-700">
+      <div class="bg-gray-50 dark:bg-gray-800/50 p-4 sm:p-6 rounded-xl border border-gray-100 dark:border-gray-700">
         <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <Icon icon="fluent:person-info-24-regular" class="w-5 h-5 text-gray-400" />
           ข้อมูลอื่นๆ
@@ -168,7 +168,7 @@ const handleNext = () => {
     <div class="flex justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
       <button 
         type="button" 
-        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-6 py-2.5 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
         @click="emit('back')"
       >
         <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />

@@ -108,7 +108,7 @@
         </div>
       </div>
 
-      <div v-if="globalError" class="rounded-xl border border-red-200 bg-red-50 p-6 text-center dark:border-red-900/50 dark:bg-red-900/20">
+      <div v-if="globalError" class="rounded-xl border border-red-200 bg-red-50 p-4 sm:p-6 text-center dark:border-red-900/50 dark:bg-red-900/20">
         <Icon icon="mdi:alert-circle-outline" class="mx-auto mb-3 h-12 w-12 text-red-500 dark:text-red-400" />
         <p class="mb-4 text-red-700 dark:text-red-400">{{ globalError }}</p>
         <button
@@ -125,7 +125,7 @@
       </div>
 
       <!-- Data List -->
-      <div v-else-if="guardians.length === 0" class="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center dark:border-gray-600 dark:bg-gray-800/50">
+      <div v-else-if="guardians.length === 0" class="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 sm:p-8 text-center dark:border-gray-600 dark:bg-gray-800/50">
         <Icon icon="mdi:account-search-outline" class="mx-auto mb-4 h-16 w-16 text-gray-400 dark:text-gray-500" />
         <p class="text-gray-900 dark:text-gray-100 font-medium mb-1">ไม่พบข้อมูลผู้ปกครอง</p>
         <p v-if="searchQuery || filterType" class="text-sm text-gray-500 dark:text-gray-400">
@@ -196,7 +196,7 @@
     <div v-if="showUnlinkConfirm && unlinkGuardianData" class="fixed inset-0 z-50 overflow-y-auto">
       <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" @click="showUnlinkConfirm = false"></div>
       <div class="flex min-h-full items-center justify-center p-4">
-        <div class="relative w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
+        <div class="relative w-full max-w-md rounded-xl bg-white p-4 sm:p-6 shadow-xl dark:bg-gray-800">
           <div class="mb-5 flex items-center gap-3">
             <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
               <Icon icon="mdi:alert" class="h-6 w-6" />

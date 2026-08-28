@@ -400,12 +400,12 @@ const scrollToTop = () => {
         </div>
 
         <!-- Empty State -->
-        <div v-else-if="allAnswers.length === 0" class="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 text-center text-gray-500 border border-dashed border-gray-300 dark:border-gray-700 text-sm">
+        <div v-else-if="allAnswers.length === 0" class="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 sm:p-6 text-center text-gray-500 border border-dashed border-gray-300 dark:border-gray-700 text-sm">
             {{ selectedGroup ? 'ไม่มีงานที่ส่งในกลุ่มนี้' : 'ยังไม่มีนักเรียนส่งงาน' }}
         </div>
 
         <!-- No Search Results -->
-        <div v-else-if="filteredAnswers.length === 0 && searchQuery" class="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 text-center text-gray-500 border border-dashed border-gray-300 dark:border-gray-700 text-sm">
+        <div v-else-if="filteredAnswers.length === 0 && searchQuery" class="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 sm:p-6 text-center text-gray-500 border border-dashed border-gray-300 dark:border-gray-700 text-sm">
             <Icon icon="fluent:search-24-regular" class="w-8 h-8 mx-auto mb-2 text-gray-400" />
             <p>ไม่พบผลลัพธ์สำหรับ "{{ searchQuery }}"</p>
         </div>

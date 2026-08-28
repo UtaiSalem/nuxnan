@@ -106,7 +106,7 @@ const handleSave = async () => {
 
       <form v-else @submit.prevent="handleSave" class="space-y-6">
         <!-- Basic Info -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 space-y-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 space-y-4">
           <h3 class="font-semibold text-gray-900 dark:text-white">ข้อมูลร้านค้า</h3>
 
           <div>
@@ -123,7 +123,7 @@ const handleSave = async () => {
         </div>
 
         <!-- Store Status -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 space-y-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 space-y-4">
           <h3 class="font-semibold text-gray-900 dark:text-white">สถานะร้านค้า</h3>
 
           <label class="flex items-center justify-between cursor-pointer p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
@@ -137,7 +137,7 @@ const handleSave = async () => {
         </div>
 
         <!-- Payment Settings -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 space-y-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 space-y-4">
           <h3 class="font-semibold text-gray-900 dark:text-white">ช่องทางชำระเงิน</h3>
 
           <label class="flex items-center justify-between cursor-pointer p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">

@@ -36,7 +36,7 @@ const submit = () => {
 
 <template>
   <Teleport to="body"><div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="emit('close')">
-    <div class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-800">
+    <div class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-4 sm:p-6 shadow-xl dark:bg-gray-800">
       <h2 class="text-xl font-bold dark:text-white">ส่งคำร้องทำบัตรหลายคน</h2>
       <p class="mt-1 text-sm text-gray-500">เหตุผลชุดเดียวกันจะใช้กับนักเรียนทุกคนที่เลือก</p>
 

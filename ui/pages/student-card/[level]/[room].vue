@@ -218,7 +218,7 @@ onMounted(() => {
     <div class="min-h-screen bg-slate-100">
         <div class="max-w-7xl mx-auto px-0 sm:px-4 py-4">
             <!-- Header -->
-            <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
+            <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 mb-6">
                 <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div class="space-y-2">
                         <h1 class="text-2xl font-bold text-gray-800">ข้อมูลนักเรียน</h1>
@@ -340,7 +340,7 @@ onMounted(() => {
 
             <!-- Empty -->
             <div v-else-if="students.length === 0"
-                class="flex flex-col items-center justify-center bg-white rounded-2xl shadow-xl p-12">
+                class="flex flex-col items-center justify-center bg-white rounded-2xl shadow-xl p-4 sm:p-12">
                 <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />

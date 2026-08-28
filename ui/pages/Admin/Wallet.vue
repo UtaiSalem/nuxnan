@@ -414,7 +414,7 @@ onMounted(loadData)
       <!-- Adjust Wallet Modal -->
       <Teleport to="body">
         <div v-if="showAdjustModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click="showAdjustModal = false">
-          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-6" @click.stop>
+          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-4 sm:p-6" @click.stop>
             <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-6">ปรับยอดเงินผู้ใช้</h3>
             
             <div class="space-y-4">
@@ -498,7 +498,7 @@ onMounted(loadData)
       <!-- Reject Modal -->
       <Teleport to="body">
         <div v-if="showRejectModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click="showRejectModal = false">
-          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-6" @click.stop>
+          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-4 sm:p-6" @click.stop>
             <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-6">ปฏิเสธคำขอถอนเงิน</h3>
             
             <div>

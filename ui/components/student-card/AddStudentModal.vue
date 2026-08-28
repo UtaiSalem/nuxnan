@@ -74,7 +74,7 @@ const handleAdd = async (student: AvailableStudent) => {
     <Dialog as="div" :open="open" @close="emit('close')" class="relative z-50">
         <div class="fixed inset-0 bg-black/30" aria-hidden="true" />
         <div class="fixed inset-0 flex items-center justify-center p-4">
-            <DialogPanel class="w-full max-w-lg bg-white rounded-lg p-6 shadow-xl">
+            <DialogPanel class="w-full max-w-lg bg-white rounded-lg p-4 sm:p-6 shadow-xl">
                 <DialogTitle class="text-lg font-medium text-gray-900 mb-1">เพิ่มนักเรียนเข้าห้อง {{ classroomName }}</DialogTitle>
                 <p class="text-sm text-gray-500 mb-4">ค้นหาด้วยชื่อ นามสกุล หรือรหัสนักเรียน (อย่างน้อย 2 ตัวอักษร)</p>
 

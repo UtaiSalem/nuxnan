@@ -1,5 +1,5 @@
 <template>
-  <div class="recent-courses bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+  <div class="recent-courses bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 sm:p-6">
     <div class="flex items-center justify-between mb-6">
       <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
         <Icon icon="fluent:book-open-24-filled" class="w-5 h-5 text-blue-500" />

@@ -373,7 +373,7 @@ onUnmounted(() => destroyGame())
       @blur="keepFocus"
       :disabled="sharedState.gameOver"
       placeholder="พิมพ์คำแล้วกด Enter หรือ Space..."
-      class="w-full max-w-md py-4 px-6 bg-slate-900 border-2 border-slate-700 focus:border-yellow-400 rounded-2xl text-white text-xl font-mono text-center focus:outline-none transition-colors"
+      class="w-full max-w-md py-4 px-4 sm:px-6 bg-slate-900 border-2 border-slate-700 focus:border-yellow-400 rounded-2xl text-white text-xl font-mono text-center focus:outline-none transition-colors"
       autocomplete="off" autocorrect="off" spellcheck="false"
     />
     <p class="text-slate-600 text-sm">พิมพ์คำบนมอนสเตอร์ที่ highlight สีแดง กด <kbd class="bg-slate-800 px-2 py-0.5 rounded font-mono text-xs">Enter</kbd> เพื่อโจมตี</p>

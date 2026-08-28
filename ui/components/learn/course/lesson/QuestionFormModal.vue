@@ -241,7 +241,7 @@ const onSubmit = async () => {
             leave-from="opacity-100 scale-100"
             leave-to="opacity-0 scale-95"
           >
-            <DialogPanel class="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-6 text-left align-middle shadow-xl transition-all">
+            <DialogPanel class="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-4 sm:p-6 text-left align-middle shadow-xl transition-all">
               <DialogTitle as="h3" class="text-lg font-bold leading-6 text-gray-900 dark:text-white mb-4 flex items-center justify-between">
                 <span>{{ question ? 'แก้ไขคำถาม' : 'เพิ่มคำถามใหม่' }}</span>
                 <button @click="emit('close')" class="text-gray-400 hover:text-gray-500">

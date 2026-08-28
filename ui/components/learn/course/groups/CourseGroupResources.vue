@@ -15,7 +15,7 @@ const props = withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 min-h-[400px]">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 min-h-[400px]">
     <div class="mb-6 flex items-center justify-between">
       <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
         <Icon icon="heroicons:document-duplicate" class="w-6 h-6 text-blue-500" />

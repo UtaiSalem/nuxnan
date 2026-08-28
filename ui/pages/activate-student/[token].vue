@@ -79,7 +79,7 @@ onMounted(() => fetchInfo())
       </div>
 
       <!-- Error -->
-      <div v-else-if="state === 'error'" class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
+      <div v-else-if="state === 'error'" class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-8 text-center">
         <div class="w-16 h-16 mx-auto rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
           <Icon icon="fluent:error-circle-24-filled" class="w-8 h-8 text-red-600 dark:text-red-400" />
         </div>
@@ -92,7 +92,7 @@ onMounted(() => fetchInfo())
       </div>
 
       <!-- Success -->
-      <div v-else-if="state === 'success'" class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
+      <div v-else-if="state === 'success'" class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 sm:p-8 text-center">
         <div class="w-16 h-16 mx-auto rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
           <Icon icon="fluent:checkmark-circle-24-filled" class="w-8 h-8 text-green-600 dark:text-green-400" />
         </div>

@@ -52,7 +52,7 @@ function updateForm<K extends keyof YearForm>(key: K, value: YearForm[K]) {
 </script>
 
 <template>
-  <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+  <div class="rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
     <div class="mb-6">
       <h2 class="text-xl font-semibold text-gray-900 dark:text-white">เลือกปีต้นทางและปีปลายทาง</h2>
       <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">

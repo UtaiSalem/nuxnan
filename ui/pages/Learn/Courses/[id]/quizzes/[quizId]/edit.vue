@@ -635,7 +635,7 @@ const deleteQuestion = async (qId: number) => {
             <div class="flex justify-end gap-3 pt-4">
                 <button 
                   @click="$router.back()"
-                  class="min-h-[44px] sm:min-h-0 px-6 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  class="min-h-[44px] sm:min-h-0 px-4 sm:px-6 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   :disabled="isSaving"
                 >
                   ยกเลิก

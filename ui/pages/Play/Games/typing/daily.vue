@@ -63,7 +63,7 @@ function startChallenge() {
       </button>
     </div>
 
-    <div v-else-if="!challenge" class="bg-slate-100 dark:bg-slate-900 rounded-3xl p-12 text-center space-y-4">
+    <div v-else-if="!challenge" class="bg-slate-100 dark:bg-slate-900 rounded-3xl p-4 sm:p-12 text-center space-y-4">
       <Icon icon="heroicons:calendar-days" class="text-6xl text-slate-300 dark:text-slate-700" />
       <p class="text-slate-500 font-bold text-xl">ไม่มีภารกิจสำหรับวันนี้</p>
       <p class="text-slate-400">ลองกลับมาตรวจสอบใหม่ภายหลังนะ!</p>
@@ -134,7 +134,7 @@ function startChallenge() {
         </NuxtLink>
       </div>
 
-      <div class="bg-blue-50 dark:bg-blue-900/20 rounded-3xl p-6 border border-blue-100 dark:border-blue-900/30">
+      <div class="bg-blue-50 dark:bg-blue-900/20 rounded-3xl p-4 sm:p-6 border border-blue-100 dark:border-blue-900/30">
         <div class="flex gap-4">
           <Icon icon="heroicons:information-circle" class="text-blue-500 text-2xl flex-shrink-0" />
           <div class="space-y-1">

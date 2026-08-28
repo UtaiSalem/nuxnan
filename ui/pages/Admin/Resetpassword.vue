@@ -434,7 +434,7 @@ function highlightMatch(text, query) {
         </div>
 
         <!-- Search Section -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 space-y-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 space-y-4">
             <!-- Search Type Tabs -->
             <div class="flex flex-wrap gap-2">
                 <button class="min-h-[44px] sm:min-h-0"
@@ -616,7 +616,7 @@ function highlightMatch(text, query) {
         <!-- Loading State -->
         <div 
             v-else-if="isSearching" 
-            class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center"
+            class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-12 text-center"
         >
             <Icon icon="svg-spinners:blocks-shuffle-3" class="w-16 h-16 mx-auto text-teal-500 mb-4" />
             <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">กำลังค้นหา...</h3>
@@ -626,7 +626,7 @@ function highlightMatch(text, query) {
         <!-- Empty State -->
         <div 
             v-else-if="hasSearched && usersResult.length === 0" 
-            class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center"
+            class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-12 text-center"
         >
             <Icon icon="mdi:account-search" class="w-16 h-16 mx-auto text-gray-400 mb-4" />
             <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">ไม่พบผู้ใช้</h3>
@@ -636,7 +636,7 @@ function highlightMatch(text, query) {
         <!-- Initial State -->
         <div 
             v-else 
-            class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center"
+            class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-12 text-center"
         >
             <Icon icon="mdi:account-key" class="w-16 h-16 mx-auto text-teal-500 mb-4" />
             <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">เริ่มต้นการค้นหา</h3>

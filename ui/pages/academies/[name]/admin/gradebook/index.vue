@@ -215,7 +215,7 @@ const menuItems = computed(() => [
 
       <!-- Quick Stats -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
               <Icon icon="fluent:calendar-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -227,7 +227,7 @@ const menuItems = computed(() => [
           </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="w-12 h-12 rounded-lg bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center">
               <Icon icon="fluent:building-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
@@ -239,7 +239,7 @@ const menuItems = computed(() => [
           </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
               <Icon icon="fluent:people-24-filled" class="w-6 h-6 text-green-600 dark:text-green-400" />
@@ -251,7 +251,7 @@ const menuItems = computed(() => [
           </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
           <div class="flex items-center gap-4">
             <div class="w-12 h-12 rounded-lg bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
               <Icon icon="fluent:book-24-filled" class="w-6 h-6 text-amber-600 dark:text-amber-400" />
@@ -272,7 +272,7 @@ const menuItems = computed(() => [
             v-for="item in menuItems"
             :key="item.title"
             :to="item.to"
-            class="group bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:border-primary-300 dark:hover:border-primary-600 transition-all duration-200"
+            class="group bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg hover:border-primary-300 dark:hover:border-primary-600 transition-all duration-200"
           >
             <div class="flex items-start gap-4">
               <div :class="['w-12 h-12 rounded-lg flex items-center justify-center text-white', item.color]">

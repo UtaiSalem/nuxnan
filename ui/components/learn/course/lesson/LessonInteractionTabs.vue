@@ -1147,7 +1147,7 @@ const submitReply = async (parentComment: any) => {
         </div>
 
         <!-- Exercises Locked Banner -->
-        <div v-if="exercisesLocked" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 text-center mb-6">
+        <div v-if="exercisesLocked" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 sm:p-6 text-center mb-6">
           <Icon icon="fluent:lock-closed-24-filled" class="w-12 h-12 text-amber-500 mx-auto mb-3" />
           <h4 class="text-lg font-bold text-amber-800 dark:text-amber-400 mb-1">ส่วนนี้ถูกล็อกอยู่</h4>
           <p class="text-amber-700 dark:text-amber-500 text-sm mb-4">คุณต้องทำเครื่องหมายว่า "อ่านแล้ว" ในหน้าบทเรียนก่อน จึงจะสามารถทำแบบฝึกหัดได้</p>
@@ -1196,7 +1196,7 @@ const submitReply = async (parentComment: any) => {
       <!-- Quiz Tab -->
       <div v-show="activeTab === 'quiz'">
         <!-- Exercises Locked Banner -->
-        <div v-if="exercisesLocked" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 text-center">
+        <div v-if="exercisesLocked" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 sm:p-6 text-center">
           <Icon icon="fluent:lock-closed-24-filled" class="w-12 h-12 text-amber-500 mx-auto mb-3" />
           <h4 class="text-lg font-bold text-amber-800 dark:text-amber-400 mb-1">แบบทดสอบถูกล็อกอยู่</h4>
           <p class="text-amber-700 dark:text-amber-500 text-sm mb-4">คุณต้องทำเครื่องหมายว่า "อ่านแล้ว" ในหน้าบทเรียนก่อน จึงจะสามารถทำแบบทดสอบได้</p>

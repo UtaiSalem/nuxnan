@@ -140,7 +140,7 @@ const clearFilters = () => {
     </div>
 
     <!-- Search and Filters -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-md">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-md">
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <!-- Search -->
         <div class="lg:col-span-2">
@@ -279,7 +279,7 @@ const clearFilters = () => {
       <button
         v-else-if="searchQuery || selectedStatus !== 'all'"
         @click="clearFilters"
-        class="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all font-medium"
+        class="inline-flex items-center gap-2 px-4 sm:px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all font-medium"
       >
         <Icon icon="fluent:dismiss-circle-24-regular" class="w-5 h-5" />
         ล้างตัวกรอง

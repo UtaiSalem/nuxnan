@@ -446,7 +446,7 @@ onMounted(() => {
         v-if="hasMorePages"
         @click="loadMore"
         :disabled="isLoadingMore"
-        class="min-h-[44px] sm:min-h-0 px-6 py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-medium transition-colors flex items-center gap-2 disabled:opacity-50 shadow-sm"
+        class="min-h-[44px] sm:min-h-0 px-4 sm:px-6 py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-medium transition-colors flex items-center gap-2 disabled:opacity-50 shadow-sm"
       >
         <Icon v-if="isLoadingMore" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
         <Icon v-else icon="fluent:arrow-download-24-regular" class="w-5 h-5" />

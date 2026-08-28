@@ -118,7 +118,7 @@ const handleDelete = async () => {
         class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
         @click.self="cancelDelete"
       >
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-sm w-full shadow-xl">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 max-w-sm w-full shadow-xl">
           <div class="text-center mb-4">
             <Icon icon="fluent:warning-24-regular" class="w-12 h-12 text-yellow-500 mx-auto mb-3" />
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">

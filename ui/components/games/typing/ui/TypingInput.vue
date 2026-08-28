@@ -54,7 +54,7 @@ defineExpose({ focus })
       type="text"
       :value="modelValue"
       :disabled="disabled"
-      class="w-full px-6 py-4 text-2xl font-mono text-center bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 outline-none transition-all duration-200"
+      class="w-full px-4 sm:px-6 py-4 text-2xl font-mono text-center bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 outline-none transition-all duration-200"
       placeholder="Type here..."
       autocomplete="off"
       autocorrect="off"

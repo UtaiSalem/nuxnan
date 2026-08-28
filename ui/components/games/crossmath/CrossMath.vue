@@ -189,7 +189,7 @@
       <!-- Quit Confirm Modal -->
       <div v-if="showQuitConfirm" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/70" @click="showQuitConfirm = false"></div>
-        <div class="relative bg-slate-800 p-6 rounded-2xl shadow-2xl border-2 border-red-500 max-w-xs w-full text-center">
+        <div class="relative bg-slate-800 p-4 sm:p-6 rounded-2xl shadow-2xl border-2 border-red-500 max-w-xs w-full text-center">
           <p class="text-4xl mb-3">🚪</p>
           <h3 class="text-white font-bold text-lg mb-1">ยกเลิกการเล่น?</h3>
           <p class="text-slate-400 text-sm mb-5">ความคืบหน้าในด่านนี้จะหายไป</p>

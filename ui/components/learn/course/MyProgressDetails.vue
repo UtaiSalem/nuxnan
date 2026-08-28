@@ -471,7 +471,7 @@ const showGradeAcceptance = computed(() => {
         <div v-else-if="data" class="animate-fade-in">
              
              <!-- Profile Settings Card -->
-             <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
+             <div class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <div>
                          <h3 class="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
@@ -533,7 +533,7 @@ const showGradeAcceptance = computed(() => {
              </div>
 
              <!-- Warning for No Order Number -->
-             <div v-if="!canShowScore" class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-6 text-center mb-8">
+             <div v-if="!canShowScore" class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4 sm:p-6 text-center mb-8">
                  <Icon icon="fluent:warning-24-filled" class="w-12 h-12 text-yellow-500 mx-auto mb-2" />
                  <h3 class="text-lg font-bold text-yellow-800 dark:text-yellow-200">ยังไม่มีเลขที่ (Order Number)</h3>
                  <p class="text-yellow-700 dark:text-yellow-300 mt-1">
@@ -620,7 +620,7 @@ const showGradeAcceptance = computed(() => {
                              <button 
                                 @click="acceptGrade"
                                 :disabled="isAcceptingGrade"
-                                class="flex-1 bg-white text-blue-600 hover:bg-blue-50 px-6 py-3 rounded-xl font-bold transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+                                class="flex-1 bg-white text-blue-600 hover:bg-blue-50 px-4 sm:px-6 py-3 rounded-xl font-bold transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                              >
                                  <Icon v-if="isAcceptingGrade" icon="eos-icons:loading" class="animate-spin" />
                                  <Icon v-else icon="fluent:checkmark-circle-24-filled" />
@@ -628,7 +628,7 @@ const showGradeAcceptance = computed(() => {
                              </button>
                              
                              <button 
-                                class="flex-1 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl font-bold transition-all border border-white/30 flex items-center justify-center gap-2"
+                                class="flex-1 bg-white/10 hover:bg-white/20 text-white px-4 sm:px-6 py-3 rounded-xl font-bold transition-all border border-white/30 flex items-center justify-center gap-2"
                              >
                                  <Icon icon="fluent:chat-help-24-filled" />
                                  สอบถาม / อุทธรณ์เกรด

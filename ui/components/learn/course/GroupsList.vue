@@ -166,7 +166,7 @@ defineExpose({
     </div>
 
     <!-- Empty State -->
-    <div v-else class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
+    <div v-else class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-12 text-center">
       <Icon icon="heroicons-outline:user-group" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
       <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">ยังไม่มีกลุ่มเรียน</h3>
       <p class="text-gray-500 dark:text-gray-400 mb-4">รายวิชานี้ยังไม่มีกลุ่มเรียน</p>

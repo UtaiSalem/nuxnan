@@ -376,7 +376,7 @@ const closeModal = () => {
                 type="button"
                 @click="closeModal"
                 :disabled="isLoading"
-                class="min-h-[44px] sm:min-h-0 px-6 py-2.5 rounded-xl font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+                class="min-h-[44px] sm:min-h-0 px-4 sm:px-6 py-2.5 rounded-xl font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
               >
                 ยกเลิก
               </button>

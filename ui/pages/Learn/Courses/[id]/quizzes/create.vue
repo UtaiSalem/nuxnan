@@ -537,7 +537,7 @@ const handleSubmit = async () => {
           v-if="isDuplicating"
           class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
         >
-          <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 flex flex-col items-center gap-4 shadow-2xl">
+          <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-8 flex flex-col items-center gap-4 shadow-2xl">
             <div class="relative">
               <Icon icon="svg-spinners:ring-resize" class="w-14 h-14 text-purple-600" />
             </div>

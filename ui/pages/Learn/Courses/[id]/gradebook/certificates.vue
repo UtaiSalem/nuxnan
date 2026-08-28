@@ -542,7 +542,7 @@ const selectAll = () => {
       <div v-if="showIssueModal" class="fixed inset-0 z-50 overflow-y-auto">
         <div class="flex min-h-screen items-center justify-center p-4">
           <div class="fixed inset-0 bg-black/50" @click="showIssueModal = false"></div>
-          <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[80vh] overflow-y-auto">
+          <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full p-4 sm:p-6 max-h-[80vh] overflow-y-auto">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">ออกใบประกาศนียบัตร</h3>
 
             <div v-if="eligibleStudents.length > 0">
@@ -590,7 +590,7 @@ const selectAll = () => {
             <div v-else class="py-8 text-center">
               <Icon icon="heroicons:check-circle" class="w-16 h-16 mx-auto text-green-400" />
               <p class="mt-4 text-gray-600 dark:text-gray-300">ออกใบประกาศนียบัตรครบทุกคนแล้ว!</p>
-              <button @click="showIssueModal = false" class="min-h-[44px] sm:min-h-0 mt-4 px-6 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg">
+              <button @click="showIssueModal = false" class="min-h-[44px] sm:min-h-0 mt-4 px-4 sm:px-6 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg">
                 ปิด
               </button>
             </div>
@@ -604,7 +604,7 @@ const selectAll = () => {
       <div v-if="showSettingsModal" class="fixed inset-0 z-50 overflow-y-auto">
         <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
           <div class="fixed inset-0 transition-opacity bg-gray-500/75 dark:bg-gray-900/75" @click="showSettingsModal = false"></div>
-          <div class="relative z-10 w-full max-w-md p-6 bg-white dark:bg-gray-800 rounded-xl shadow-xl">
+          <div class="relative z-10 w-full max-w-md p-4 sm:p-6 bg-white dark:bg-gray-800 rounded-xl shadow-xl">
             <div class="flex items-center justify-between mb-6">
               <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
                 <Icon icon="heroicons:cog-6-tooth" class="inline w-5 h-5 mr-2" />

@@ -140,7 +140,7 @@ const handleSelectRoom = (link: string) => {
 
                 <!-- Room Grid -->
                 <div class="max-w-5xl mx-auto" v-if="currentLevel">
-                    <div class="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg p-6">
+                    <div class="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg p-4 sm:p-6">
                         <h2 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
                             <span class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
                                 <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

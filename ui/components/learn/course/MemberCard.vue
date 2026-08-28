@@ -268,7 +268,7 @@ const handleReject = () => {
                 </button>
                 <button
                     @click="handleReject"
-                    class="min-h-[44px] sm:min-h-0 flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 py-2 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 border border-red-200 dark:border-red-800 font-bold rounded-lg transition-colors active:scale-95"
+                    class="min-h-[44px] sm:min-h-0 flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-2 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 border border-red-200 dark:border-red-800 font-bold rounded-lg transition-colors active:scale-95"
                 >
                     <Icon icon="heroicons:x-circle" class="w-5 h-5" />
                     <span>ปฏิเสธ</span>

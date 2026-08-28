@@ -383,7 +383,7 @@ const quickActions = computed(() => [
       </div>
 
       <!-- Navigation Menu -->
-      <div class="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+      <div class="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 sm:p-6">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">เมนูจัดการ</h2>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <NuxtLink 

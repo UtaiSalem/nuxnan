@@ -485,7 +485,7 @@ const formatDate = (dateString: string) => {
         <div class="animate-spin rounded-full h-8 w-8 border-4 border-primary-500 border-t-transparent"></div>
       </div>
 
-      <div v-else-if="announcements.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-sm border border-gray-100 dark:border-gray-700">
+      <div v-else-if="announcements.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-12 text-center shadow-sm border border-gray-100 dark:border-gray-700">
         <Icon icon="fluent:megaphone-24-regular" class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
         <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">ยังไม่มีประกาศ</h3>
         <p class="text-gray-500 dark:text-gray-400 mb-4">เริ่มต้นสร้างประกาศแรกของโรงเรียน</p>

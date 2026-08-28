@@ -79,7 +79,7 @@ watch(gameState, (newVal) => {
       :mistakes="mistakes"
     />
 
-    <div class="relative bg-slate-50 dark:bg-slate-900/50 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-inner min-h-[400px] flex flex-col items-center justify-center overflow-hidden">
+    <div class="relative bg-slate-50 dark:bg-slate-900/50 rounded-3xl p-4 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-inner min-h-[400px] flex flex-col items-center justify-center overflow-hidden">
       
       <!-- Loading State -->
       <div v-if="isLoading" class="text-center space-y-4">
@@ -108,7 +108,7 @@ watch(gameState, (newVal) => {
         <button
           @click="startCountdown"
           :disabled="words.length === 0"
-          class="px-8 py-4 bg-orange-600 hover:bg-orange-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-black text-xl rounded-2xl shadow-lg shadow-orange-500/30 transition-all hover:scale-105 active:scale-95 disabled:scale-100"
+          class="px-4 sm:px-8 py-4 bg-orange-600 hover:bg-orange-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-black text-xl rounded-2xl shadow-lg shadow-orange-500/30 transition-all hover:scale-105 active:scale-95 disabled:scale-100"
         >
           START CHALLENGE
         </button>

@@ -156,7 +156,7 @@ onMounted(async () => {
     </div>
 
     <!-- Form -->
-    <form @submit.prevent="handleSubmit" class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-6">
+    <form @submit.prevent="handleSubmit" class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-6">
       <!-- Title -->
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -277,7 +277,7 @@ onMounted(async () => {
         
         <NuxtLink
           :to="`/academies/${academyName}/admin/courses`"
-          class="flex-1 inline-flex justify-center items-center gap-2 px-6 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl text-gray-700 dark:text-gray-300 font-medium transition-colors"
+          class="flex-1 inline-flex justify-center items-center gap-2 px-4 sm:px-6 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl text-gray-700 dark:text-gray-300 font-medium transition-colors"
         >
           <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
           ยกเลิก

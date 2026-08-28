@@ -444,7 +444,7 @@ onBeforeUnmount(() => {
             </div>
             <button
               @click="goToCreateDonate"
-              class="px-6 py-3 bg-white text-amber-600 font-semibold rounded-xl hover:bg-amber-50 transition-colors flex items-center gap-2 shadow-lg"
+              class="px-4 sm:px-6 py-3 bg-white text-amber-600 font-semibold rounded-xl hover:bg-amber-50 transition-colors flex items-center gap-2 shadow-lg"
             >
               <Icon icon="mdi:gift-outline" class="w-5 h-5" />
               ให้การสนับสนุน
@@ -613,7 +613,7 @@ onBeforeUnmount(() => {
           <button
             @click="loadMore"
             :disabled="isLoadingMore"
-            class="px-8 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 mx-auto"
+            class="px-4 sm:px-8 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 mx-auto"
           >
             <template v-if="isLoadingMore">
               <Icon icon="mdi:loading" class="w-5 h-5 animate-spin" />
@@ -804,7 +804,7 @@ onBeforeUnmount(() => {
               <button
                 @click="cancelCountdown"
                 :disabled="isProcessingDonate"
-                class="px-8 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                class="px-4 sm:px-8 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {{ isProcessingDonate ? 'กำลังดำเนินการ...' : 'ยกเลิก' }}
               </button>

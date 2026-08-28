@@ -235,7 +235,7 @@ onMounted(() => {
           </button>
           <button
             @click="goBack"
-            class="min-h-[44px] sm:min-h-0 px-6 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
+            class="min-h-[44px] sm:min-h-0 px-4 sm:px-6 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
           >
             ยกเลิก
           </button>

@@ -1045,7 +1045,7 @@ onMounted(() => {
     <Teleport to="body">
       <div v-if="showApproveModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="showApproveModal = false"></div>
-        <div class="relative bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-xl">
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 w-full max-w-md shadow-xl">
           <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-4">ยืนยันการอนุมัติ</h3>
 
           <div v-if="errorMessage" class="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-xl text-sm mb-4">
@@ -1108,7 +1108,7 @@ onMounted(() => {
     <Teleport to="body">
       <div v-if="showRejectModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="showRejectModal = false"></div>
-        <div class="relative bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-xl">
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 w-full max-w-md shadow-xl">
           <div class="flex items-center gap-3 mb-4 text-red-600">
              <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
                 <Icon icon="fluent:warning-24-filled" class="w-6 h-6" />
@@ -1169,7 +1169,7 @@ onMounted(() => {
     <Teleport to="body">
       <div v-if="showPaidModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="showPaidModal = false"></div>
-        <div class="relative bg-white dark:bg-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl transform transition-all scale-100">
+        <div class="relative bg-white dark:bg-slate-800 rounded-3xl p-4 sm:p-6 w-full max-w-md shadow-2xl transform transition-all scale-100">
 
           <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-2 flex items-center gap-2">
             <Icon icon="fluent:receipt-play-24-regular" class="text-green-600 w-6 h-6" />
@@ -1275,7 +1275,7 @@ onMounted(() => {
     <Teleport to="body">
       <div v-if="showFailedModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="showFailedModal = false"></div>
-        <div class="relative bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-xl">
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 w-full max-w-md shadow-xl">
           <div class="flex items-center gap-3 mb-4 text-red-600">
              <Icon icon="fluent:error-circle-24-filled" class="w-8 h-8" />
              <h3 class="text-lg font-bold text-slate-900 dark:text-white">ทำรายการโอนเงินล้มเหลว</h3>

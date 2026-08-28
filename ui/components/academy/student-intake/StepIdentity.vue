@@ -41,7 +41,7 @@ const handleNext = async () => {
     </div>
 
     <!-- Form -->
-    <div class="space-y-5 bg-gray-50 dark:bg-gray-800/50 p-6 rounded-xl border border-gray-100 dark:border-gray-700">
+    <div class="space-y-5 bg-gray-50 dark:bg-gray-800/50 p-4 sm:p-6 rounded-xl border border-gray-100 dark:border-gray-700">
       <div class="space-y-1.5">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
           รหัสนักเรียน <span class="text-red-500">*</span>

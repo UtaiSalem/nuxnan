@@ -54,7 +54,7 @@ watch(() => props.sessionId, refreshQR)
 
 <template>
   <div
-    class="flex flex-col items-center justify-center p-6 bg-white dark:bg-gray-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 transition-all duration-300"
+    class="flex flex-col items-center justify-center p-4 sm:p-6 bg-white dark:bg-gray-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 transition-all duration-300"
     :class="{ 'fixed inset-0 z-[100] rounded-none': isFullscreen }"
   >
     <!-- Header -->

@@ -422,7 +422,7 @@ const handleBulkSubmitted = async (result: any) => {
 
         <!-- Error -->
         <div v-else-if="loadError"
-            class="p-8 text-center text-red-500 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30 max-w-md mx-auto my-6">
+            class="p-4 sm:p-8 text-center text-red-500 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30 max-w-md mx-auto my-6">
             <Icon icon="fluent:error-circle-24-regular" class="w-8 h-8 mx-auto mb-2" />
             <p class="text-sm">{{ loadError }}</p>
             <button @click="fetchStudents"

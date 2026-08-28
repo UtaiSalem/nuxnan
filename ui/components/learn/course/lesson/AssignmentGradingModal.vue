@@ -190,7 +190,7 @@ const formatDate = (date: string) => {
           <div class="flex-1 overflow-y-auto p-6 bg-gray-50 dark:bg-gray-900">
             <div v-if="selectedAnswer" class="space-y-6">
               <!-- Student Answer -->
-              <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+              <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
                 <div class="flex items-center gap-3 mb-4">
                   <img :src="getUserAvatar(selectedAnswer.user)" class="w-10 h-10 rounded-full" />
                   <div>

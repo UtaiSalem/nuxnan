@@ -77,7 +77,7 @@ watch(academyId, (id) => {
     </div>
 
     <!-- Empty -->
-    <div v-else-if="batches.length === 0" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
+    <div v-else-if="batches.length === 0" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-8 text-center">
       <Icon icon="fluent:history-24-regular" class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
       <h3 class="text-lg font-semibold text-gray-900 dark:text-white">ยังไม่มีประวัติการนำเข้า</h3>
       <p class="text-gray-500 dark:text-gray-400 mt-2">เมื่อนำเข้าข้อมูลนักเรียน ประวัติจะแสดงที่นี่</p>

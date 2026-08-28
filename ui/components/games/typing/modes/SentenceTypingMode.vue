@@ -77,7 +77,7 @@ watch(gameState, (newVal) => {
       :mistakes="mistakes"
     />
 
-    <div class="relative bg-slate-50 dark:bg-slate-900/50 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-inner min-h-[400px] flex flex-col items-center justify-center overflow-hidden">
+    <div class="relative bg-slate-50 dark:bg-slate-900/50 rounded-3xl p-4 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-inner min-h-[400px] flex flex-col items-center justify-center overflow-hidden">
       
       <!-- Idle State -->
       <div v-if="gameState === 'idle'" class="text-center space-y-6">

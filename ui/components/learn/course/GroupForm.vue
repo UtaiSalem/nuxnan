@@ -262,7 +262,7 @@ const saveGroup = async () => {
       <button
         @click="emit('cancel')"
         :disabled="isSaving"
-        class="min-h-[44px] sm:min-h-0 px-6 py-2.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+        class="min-h-[44px] sm:min-h-0 px-4 sm:px-6 py-2.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         ยกเลิก
       </button>

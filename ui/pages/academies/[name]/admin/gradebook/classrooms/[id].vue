@@ -429,7 +429,7 @@ watch(activeTab, async (tab) => {
       </div>
 
       <!-- Classroom Info -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+      <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div>
             <div class="text-sm text-gray-600 dark:text-gray-400">ปีการศึกษา</div>

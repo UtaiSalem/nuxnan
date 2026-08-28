@@ -441,7 +441,7 @@ const summaryPercent = (count: number) => {
 
           <!-- Tab: สแกน/รหัส -->
           <div v-else-if="activeTab === 'scan'" class="p-6 space-y-6">
-            <div class="bg-slate-50 dark:bg-slate-700/40 rounded-vikinger border border-slate-200 dark:border-slate-700 p-6">
+            <div class="bg-slate-50 dark:bg-slate-700/40 rounded-vikinger border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
               <div class="text-center mb-6">
                 <div class="w-16 h-16 bg-gradient-vikinger rounded-full flex items-center justify-center mx-auto mb-3 shadow-vikinger">
                   <Icon icon="fluent:barcode-scanner-24-regular" class="w-8 h-8 text-white" />

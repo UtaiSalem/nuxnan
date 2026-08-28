@@ -23,7 +23,7 @@
           leave-from="opacity-100 scale-100"
           leave-to="opacity-0 scale-95"
         >
-          <DialogPanel class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-900">
+          <DialogPanel class="w-full max-w-md rounded-xl bg-white p-4 sm:p-6 shadow-xl dark:bg-gray-900">
             <DialogTitle class="text-lg font-bold mb-4 text-gray-900 dark:text-white">
               เปิดบัญชีนักเรียน
             </DialogTitle>

@@ -189,7 +189,7 @@ const handleShare = () => {
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
         @click.self="showCloseConfirm = false"
       >
-        <div class="bg-white dark:bg-vikinger-dark-100 rounded-xl shadow-vikinger-lg p-6 max-w-md mx-4">
+        <div class="bg-white dark:bg-vikinger-dark-100 rounded-xl shadow-vikinger-lg p-4 sm:p-6 max-w-md mx-4">
           <div class="flex items-center gap-3 mb-4">
             <div class="w-12 h-12 rounded-full bg-vikinger-orange/10 flex items-center justify-center">
               <Icon icon="fluent:pause-circle-24-regular" class="w-6 h-6 text-vikinger-orange" />
@@ -248,7 +248,7 @@ const handleShare = () => {
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
         @click.self="showDeleteConfirm = false"
       >
-        <div class="bg-white dark:bg-vikinger-dark-100 rounded-xl shadow-vikinger-lg p-6 max-w-md mx-4">
+        <div class="bg-white dark:bg-vikinger-dark-100 rounded-xl shadow-vikinger-lg p-4 sm:p-6 max-w-md mx-4">
           <div class="flex items-center gap-3 mb-4">
             <div class="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
               <Icon icon="fluent:delete-24-regular" class="w-6 h-6 text-red-500" />

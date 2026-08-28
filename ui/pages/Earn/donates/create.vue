@@ -985,7 +985,7 @@ watch(() => authStore.user, (user) => {
               </button>
               <NuxtLink
                 to="/earn/donates"
-                class="flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl transition-all"
+                class="flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl transition-all"
               >
                 <Icon icon="mdi:close" class="w-5 h-5" />
                 ยกเลิก
@@ -1002,7 +1002,7 @@ watch(() => authStore.user, (user) => {
         v-if="showSuccessModal"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm transition-all"
       >
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-8 text-center animate-bounce-in">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-4 sm:p-8 text-center animate-bounce-in">
           <div class="w-20 h-20 mx-auto mb-4 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
             <Icon icon="mdi:check-circle" class="w-12 h-12 text-green-500" />
           </div>

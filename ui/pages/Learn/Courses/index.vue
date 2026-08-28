@@ -562,7 +562,7 @@ watch(() => authStore.user?.id, (id) => {
       </template>
 
       <!-- Error State -->
-      <div v-else-if="activeError" class="bg-white dark:bg-vikinger-dark-200 rounded-2xl p-12 text-center shadow-sm border border-gray-100 dark:border-vikinger-dark-100">
+      <div v-else-if="activeError" class="bg-white dark:bg-vikinger-dark-200 rounded-2xl p-4 sm:p-12 text-center shadow-sm border border-gray-100 dark:border-vikinger-dark-100">
         <Icon icon="fluent:error-circle-24-regular" class="w-16 h-16 text-red-500 mx-auto mb-4" />
         <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-2">เกิดข้อผิดพลาด</h3>
         <p class="text-sm text-gray-500 mb-6">{{ activeError }}</p>
@@ -614,7 +614,7 @@ watch(() => authStore.user?.id, (id) => {
           <button
             @click="loadMore"
             :disabled="isLoadingMore"
-            class="group relative inline-flex items-center gap-2 px-8 py-3.5 bg-white dark:bg-vikinger-dark-200 text-vikinger-purple dark:text-vikinger-cyan font-black rounded-2xl shadow-sm border border-gray-100 dark:border-vikinger-dark-100 transition-all hover:shadow-md hover:-translate-y-1 active:scale-95 disabled:opacity-50"
+            class="group relative inline-flex items-center gap-2 px-4 sm:px-8 py-3.5 bg-white dark:bg-vikinger-dark-200 text-vikinger-purple dark:text-vikinger-cyan font-black rounded-2xl shadow-sm border border-gray-100 dark:border-vikinger-dark-100 transition-all hover:shadow-md hover:-translate-y-1 active:scale-95 disabled:opacity-50"
           >
             <Icon :icon="isLoadingMore ? 'svg-spinners:ring-resize' : 'fluent:arrow-down-24-filled'" class="w-5 h-5 transition-transform group-hover:translate-y-1" />
             {{ isLoadingMore ? 'กำลังโหลดข้อมูล...' : 'ดูรายวิชาเพิ่มเติม' }}

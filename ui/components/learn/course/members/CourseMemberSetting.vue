@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white p-6 shadow rounded-lg">
+  <div class="bg-white p-4 sm:p-6 shadow rounded-lg">
       <h3 class="text-xl font-bold mb-4">Member Settings</h3>
       <p>Member: {{ member_info.member_name }}</p>
       <div class="mt-4">

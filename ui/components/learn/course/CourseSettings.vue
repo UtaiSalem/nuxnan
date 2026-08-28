@@ -157,7 +157,7 @@ const netPrice = computed(() => {
 </script>
 
 <template>
-  <div class="bg-white dark:bg-gray-800 p-8 shadow-sm rounded-2xl border border-gray-100 dark:border-gray-700">
+  <div class="bg-white dark:bg-gray-800 p-4 sm:p-8 shadow-sm rounded-2xl border border-gray-100 dark:border-gray-700">
       
       <div class="mb-8 border-b border-gray-100 dark:border-gray-700 pb-4">
           <h3 class="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">

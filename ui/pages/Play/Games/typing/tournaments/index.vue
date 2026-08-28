@@ -124,7 +124,7 @@ function formatDate(d: string): string {
         <h2 class="text-xl font-black uppercase tracking-wider text-slate-800 dark:text-white mb-6">กำลังจะมา</h2>
         <div class="grid md:grid-cols-3 gap-4">
           <div v-for="t in data.upcoming" :key="t.id"
-            class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-100 dark:border-slate-800 space-y-3 opacity-75">
+            class="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-6 border border-slate-100 dark:border-slate-800 space-y-3 opacity-75">
             <span class="text-xs font-black uppercase text-slate-400">{{ t.type }}</span>
             <h3 class="font-black text-slate-700 dark:text-slate-200">{{ t.name }}</h3>
             <p class="text-xs text-slate-500">เริ่ม {{ formatDate(t.starts_at) }}</p>
@@ -138,7 +138,7 @@ function formatDate(d: string): string {
         <div class="grid md:grid-cols-3 gap-4">
           <NuxtLink v-for="t in data.finished" :key="t.id"
             :to="`/play/games/typing/tournaments/${t.id}`"
-            class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-100 dark:border-slate-800 space-y-3 hover:border-primary-500 transition-colors">
+            class="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-6 border border-slate-100 dark:border-slate-800 space-y-3 hover:border-primary-500 transition-colors">
             <span class="text-xs font-black uppercase text-slate-400">{{ t.type }}</span>
             <h3 class="font-black text-slate-700 dark:text-slate-200">{{ t.name }}</h3>
             <p class="text-xs text-slate-500">จบเมื่อ {{ formatDate(t.ends_at) }}</p>

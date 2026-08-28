@@ -5,7 +5,7 @@
       <p class="mt-2 text-gray-500 dark:text-gray-400">อัปโหลดไฟล์ CSV ตามแบบฟอร์มเพื่อนำเข้าข้อมูลนักเรียนจำนวนมากเข้าสู่ระบบ</p>
     </div>
 
-    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6 flex flex-col md:flex-row gap-6 items-center justify-between">
+    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 sm:p-6 flex flex-col md:flex-row gap-6 items-center justify-between">
       <div>
         <h3 class="text-lg font-semibold text-blue-900 dark:text-blue-100">1. ดาวน์โหลดแบบฟอร์ม (CSV Template)</h3>
         <p class="mt-1 text-sm text-blue-700 dark:text-blue-300">กรุณาใช้ไฟล์แม่แบบนี้ในการกรอกข้อมูล เพื่อให้ระบบอ่านข้อมูลได้อย่างถูกต้อง (ห้ามแก้ไขหัวตาราง)</p>
@@ -17,7 +17,7 @@
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+      <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">2. ตั้งค่าการนำเข้า</h3>
         <div class="space-y-4">
           <div>
@@ -48,7 +48,7 @@
         </div>
       </div>
 
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+      <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">3. อัปโหลดไฟล์ข้อมูล</h3>
         
         <div 

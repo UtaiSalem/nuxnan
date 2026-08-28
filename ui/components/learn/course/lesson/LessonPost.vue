@@ -753,7 +753,7 @@ const publicationStatusColor = computed(() => {
           <button
             v-if="isContentOverflowing && showFullContent"
             @click="toggleContent"
-            class="min-h-[44px] sm:min-h-0 mt-4 w-full px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
+            class="min-h-[44px] sm:min-h-0 mt-4 w-full px-4 sm:px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium"
           >
             ย่อเนื้อหา
             <Icon icon="fluent:chevron-up-24-regular" class="w-4 h-4 inline ml-1" />
@@ -914,7 +914,7 @@ const publicationStatusColor = computed(() => {
               </div>
           </div>
           
-          <div v-else class="p-8 text-center border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+          <div v-else class="p-4 sm:p-8 text-center border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/50">
                <p class="text-gray-500 dark:text-gray-400 mb-2">ยังไม่มีหัวข้อย่อยในบทเรียนนี้</p>
                <button v-if="isAdmin" @click="openCreateTopicModal" class="text-purple-600 hover:text-purple-700 font-medium hover:underline">เพิ่มหัวข้อแรกเลย</button>
           </div>

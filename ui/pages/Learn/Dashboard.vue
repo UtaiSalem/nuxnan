@@ -288,7 +288,7 @@ onMounted(() => {
       <!-- Stats Cards -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <!-- Overall Progress Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-shadow">
           <div class="flex items-center justify-between mb-4">
             <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
               <Icon icon="fluent:chart-multiple-24-filled" class="w-6 h-6 text-white" />
@@ -311,7 +311,7 @@ onMounted(() => {
         </div>
 
         <!-- Courses Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-shadow">
           <div class="flex items-center justify-between mb-4">
             <div class="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
               <Icon icon="fluent:book-open-24-filled" class="w-6 h-6 text-white" />
@@ -325,7 +325,7 @@ onMounted(() => {
         </div>
 
         <!-- Lessons Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-shadow">
           <div class="flex items-center justify-between mb-4">
             <div class="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center">
               <Icon icon="fluent:learning-app-24-filled" class="w-6 h-6 text-white" />
@@ -339,7 +339,7 @@ onMounted(() => {
         </div>
 
         <!-- Assignments Card -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 sm:p-6 hover:shadow-xl transition-shadow">
           <div class="flex items-center justify-between mb-4">
             <div class="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
               <Icon icon="fluent:clipboard-task-24-filled" class="w-6 h-6 text-white" />
@@ -358,7 +358,7 @@ onMounted(() => {
         <!-- Left Column (2/3) -->
         <div class="lg:col-span-2 space-y-8">
           <!-- Quick Actions -->
-          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 sm:p-6">
             <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
               <Icon icon="fluent:lightning-24-filled" class="w-5 h-5 text-yellow-500" />
               การกระทำด่วน
@@ -445,7 +445,7 @@ onMounted(() => {
           </div>
 
           <!-- Recent Courses -->
-          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 sm:p-6">
             <div class="flex items-center justify-between mb-6">
               <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <Icon icon="fluent:book-open-24-filled" class="w-5 h-5 text-blue-500" />
@@ -502,7 +502,7 @@ onMounted(() => {
           </div>
 
           <!-- Upcoming Assignments -->
-          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 sm:p-6">
             <div class="flex items-center justify-between mb-6">
               <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <Icon icon="fluent:clipboard-task-24-filled" class="w-5 h-5 text-orange-500" />
@@ -556,7 +556,7 @@ onMounted(() => {
         <!-- Right Column (1/3) -->
         <div class="space-y-8">
           <!-- Learning Progress Widget -->
-          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 sm:p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <Icon icon="fluent:chart-multiple-24-filled" class="w-5 h-5 text-violet-500" />
               สถิติการเรียน
@@ -582,7 +582,7 @@ onMounted(() => {
           </div>
 
           <!-- Recent Activity Widget -->
-          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 sm:p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <Icon icon="fluent:history-24-filled" class="w-5 h-5 text-blue-500" />
               กิจกรรมล่าสุด

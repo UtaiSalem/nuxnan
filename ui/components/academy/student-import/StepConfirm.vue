@@ -8,7 +8,7 @@
     </div>
 
     <!-- Confirm Screen -->
-    <div v-if="!isProcessing && !isFinished" class="bg-white dark:bg-gray-800 rounded-xl p-8 border border-gray-200 dark:border-gray-700 max-w-lg mx-auto text-center">
+    <div v-if="!isProcessing && !isFinished" class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-8 border border-gray-200 dark:border-gray-700 max-w-lg mx-auto text-center">
       <Icon icon="fluent:checkmark-circle-24-regular" class="w-16 h-16 text-primary-500 mx-auto mb-4" />
       <h3 class="text-xl font-bold text-gray-900 dark:text-white">ยืนยันนำเข้าข้อมูล</h3>
       <p class="text-gray-500 dark:text-gray-400 mt-2 mb-6">
@@ -27,7 +27,7 @@
     </div>
 
     <!-- Processing Screen -->
-    <div v-else-if="isProcessing" class="bg-white dark:bg-gray-800 rounded-xl p-12 border border-gray-200 dark:border-gray-700 text-center">
+    <div v-else-if="isProcessing" class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-12 border border-gray-200 dark:border-gray-700 text-center">
       <div class="max-w-md mx-auto">
         <Icon icon="fluent:settings-24-regular" class="w-12 h-12 text-primary-500 animate-spin mx-auto mb-4" />
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">กำลังนำเข้าข้อมูล...</h3>
@@ -45,7 +45,7 @@
     </div>
 
     <!-- Finished Screen -->
-    <div v-else-if="isFinished" class="bg-white dark:bg-gray-800 rounded-xl p-8 border border-gray-200 dark:border-gray-700">
+    <div v-else-if="isFinished" class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-8 border border-gray-200 dark:border-gray-700">
       <div class="text-center mb-8">
         <Icon 
           :icon="currentBatch?.status === 'completed' ? 'fluent:checkmark-circle-24-regular' : (currentBatch?.status === 'partial' ? 'fluent:warning-24-regular' : 'fluent:dismiss-circle-24-regular')" 

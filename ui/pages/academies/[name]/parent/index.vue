@@ -50,7 +50,7 @@
           <div v-for="i in 3" :key="i" class="h-32 bg-gray-200 dark:bg-gray-800 animate-pulse rounded-xl"></div>
         </div>
 
-        <div v-else-if="children.length === 0" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center">
+        <div v-else-if="children.length === 0" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-12 text-center">
           <div class="w-20 h-20 bg-gray-50 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
             <Icon icon="fluent:person-search-24-regular" class="w-10 h-10 text-gray-400" />
           </div>
@@ -182,19 +182,19 @@
               <div v-else>
                 <!-- Summary -->
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div class="p-6 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900/30 rounded-2xl">
+                  <div class="p-4 sm:p-6 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900/30 rounded-2xl">
                     <div class="text-sm font-bold text-green-700 dark:text-green-400 mb-1">มาเรียน</div>
                     <div class="text-3xl font-black text-green-600">{{ attendanceSummary.present }}</div>
                   </div>
-                  <div class="p-6 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-2xl">
+                  <div class="p-4 sm:p-6 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-2xl">
                     <div class="text-sm font-bold text-red-700 dark:text-red-400 mb-1">ขาดเรียน</div>
                     <div class="text-3xl font-black text-red-600">{{ attendanceSummary.absent }}</div>
                   </div>
-                  <div class="p-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-100 dark:border-yellow-900/30 rounded-2xl">
+                  <div class="p-4 sm:p-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-100 dark:border-yellow-900/30 rounded-2xl">
                     <div class="text-sm font-bold text-yellow-700 dark:text-yellow-400 mb-1">มาสาย</div>
                     <div class="text-3xl font-black text-yellow-600">{{ attendanceSummary.late }}</div>
                   </div>
-                  <div class="p-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-2xl">
+                  <div class="p-4 sm:p-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-2xl">
                     <div class="text-sm font-bold text-blue-700 dark:text-blue-400 mb-1">ลากิจ/ป่วย</div>
                     <div class="text-3xl font-black text-blue-600">{{ attendanceSummary.leave }}</div>
                   </div>
@@ -249,7 +249,7 @@
                     <div class="text-sm font-bold opacity-80 mb-1">ยอดค้างชำระทั้งหมด</div>
                     <div class="text-3xl font-black">฿{{ formatNumber(feeSummary.total_due) }}</div>
                   </div>
-                  <div class="flex-1 p-6 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm">
+                  <div class="flex-1 p-4 sm:p-6 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm">
                     <div class="text-sm font-bold text-gray-400 mb-1">ชำระแล้ว</div>
                     <div class="text-3xl font-black text-green-600">฿{{ formatNumber(feeSummary.total_paid) }}</div>
                   </div>
@@ -290,7 +290,7 @@
                     <Icon icon="fluent:person-info-24-regular" class="w-5 h-5" />
                     ข้อมูลทั่วไป
                   </h4>
-                  <div class="space-y-3 bg-gray-50 dark:bg-gray-900/50 p-6 rounded-2xl">
+                  <div class="space-y-3 bg-gray-50 dark:bg-gray-900/50 p-4 sm:p-6 rounded-2xl">
                     <div class="flex justify-between py-2 border-b border-gray-100 dark:border-gray-800">
                       <span class="text-gray-500">รหัสนักเรียน</span>
                       <span class="font-bold text-gray-900 dark:text-white">{{ childDetail?.student_id }}</span>
@@ -350,7 +350,7 @@
             <div v-for="i in 3" :key="i" class="h-24 bg-gray-200 dark:bg-gray-800 animate-pulse rounded-2xl"></div>
           </div>
 
-          <div v-else-if="announcements.length === 0" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 text-center text-gray-500">
+          <div v-else-if="announcements.length === 0" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-8 text-center text-gray-500">
             ไม่มีประกาศใหม่
           </div>
 
@@ -389,7 +389,7 @@
             </h2>
           </div>
 
-          <div v-if="events.length === 0" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 text-center text-gray-500">
+          <div v-if="events.length === 0" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-8 text-center text-gray-500">
             ไม่มีกิจกรรมที่กำลังจะเกิดขึ้น
           </div>
 

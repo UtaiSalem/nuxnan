@@ -185,7 +185,7 @@ const purposes = [
       <!-- Form -->
       <form @submit.prevent="saveVisit" class="space-y-6">
         <!-- Student Selection -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <Icon icon="fluent:person-24-regular" class="w-5 h-5 text-primary-600" />
             เลือกนักเรียน
@@ -249,7 +249,7 @@ const purposes = [
         </div>
 
         <!-- Visit Details -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <Icon icon="fluent:calendar-24-regular" class="w-5 h-5 text-primary-600" />
             รายละเอียดการเยี่ยมบ้าน
@@ -329,7 +329,7 @@ const purposes = [
         </div>
 
         <!-- Observations -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <Icon icon="fluent:notepad-24-regular" class="w-5 h-5 text-primary-600" />
             บันทึกการเยี่ยมบ้าน
@@ -366,7 +366,7 @@ const purposes = [
         <div class="flex justify-end gap-3">
           <NuxtLink
             :to="`/academies/${academyName}/admin/home-visits`"
-            class="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            class="px-4 sm:px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             ยกเลิก
           </NuxtLink>

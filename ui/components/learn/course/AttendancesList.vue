@@ -878,7 +878,7 @@ onUnmounted(() => {
       </template>
       
       <!-- Empty State with illustration -->
-      <div v-else class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-12 text-center">
+      <div v-else class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 sm:p-12 text-center">
         <div class="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-3xl flex items-center justify-center">
           <Icon icon="fluent:calendar-empty-24-regular" class="w-20 h-20 text-blue-500 dark:text-blue-400" />
         </div>

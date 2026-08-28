@@ -56,7 +56,7 @@ const formatNumber = (num: number) => new Intl.NumberFormat().format(num || 0)
       <p class="text-slate-500">กำลังโหลดข้อมูล...</p>
     </div>
 
-    <div v-else-if="error" class="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 text-center px-6">
+    <div v-else-if="error" class="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 text-center px-4 sm:px-6">
       <div class="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-600 mb-4">
         <Icon icon="fluent:error-circle-24-filled" class="w-10 h-10" />
       </div>
@@ -74,7 +74,7 @@ const formatNumber = (num: number) => new Intl.NumberFormat().format(num || 0)
     <template v-else>
       <!-- Stats Cards -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+        <div class="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
           <div class="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center text-emerald-600 mb-4">
             <Icon icon="fluent:money-24-filled" class="w-6 h-6" />
           </div>
@@ -82,7 +82,7 @@ const formatNumber = (num: number) => new Intl.NumberFormat().format(num || 0)
           <div class="text-sm text-slate-500">รายได้รวม (บาท)</div>
         </div>
         
-        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+        <div class="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
           <div class="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center text-amber-600 mb-4">
             <Icon icon="fluent:star-24-filled" class="w-6 h-6" />
           </div>
@@ -90,7 +90,7 @@ const formatNumber = (num: number) => new Intl.NumberFormat().format(num || 0)
           <div class="text-sm text-slate-500">รายได้รวม (แต้ม)</div>
         </div>
 
-        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+        <div class="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
           <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-600 mb-4">
             <Icon icon="fluent:cart-24-filled" class="w-6 h-6" />
           </div>
@@ -100,7 +100,7 @@ const formatNumber = (num: number) => new Intl.NumberFormat().format(num || 0)
       </div>
 
       <!-- Placeholder for chart or detailed list -->
-      <div class="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm text-center">
+      <div class="bg-white dark:bg-slate-800 p-4 sm:p-8 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm text-center">
         <Icon icon="fluent:document-chart-24-regular" class="w-16 h-16 text-slate-200 mx-auto mb-4" />
         <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-2">อยู่ระหว่างการพัฒนา</h3>
         <p class="text-slate-500">กราฟสถิติและรายละเอียดการขายเชิงลึกกำลังจะมาเร็วๆ นี้</p>

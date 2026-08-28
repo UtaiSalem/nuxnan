@@ -128,7 +128,7 @@ definePageMeta({
 
     <!-- Coming Soon Section -->
     <div class="mt-16 text-center">
-      <div class="inline-block p-8 px-12 rounded-2xl bg-gray-50 dark:bg-vikinger-dark-200/50 border-2 border-dashed border-gray-200 dark:border-vikinger-dark-50">
+      <div class="inline-block p-4 sm:p-8 px-12 rounded-2xl bg-gray-50 dark:bg-vikinger-dark-200/50 border-2 border-dashed border-gray-200 dark:border-vikinger-dark-50">
         <Icon icon="fluent:games-24-regular" class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
         <h3 class="text-lg font-semibold text-gray-500 dark:text-gray-400 mb-1">
           เกมใหม่กำลังมา

@@ -401,7 +401,7 @@ watch(gameState, (state) => {
       <div class="flex gap-4 justify-center flex-wrap">
         <button
           @click="restart()"
-          class="px-8 py-4 bg-slate-700 hover:bg-slate-600 text-white font-black rounded-vikinger transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
+          class="px-4 sm:px-8 py-4 bg-slate-700 hover:bg-slate-600 text-white font-black rounded-vikinger transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
         >
           <Icon icon="heroicons:arrow-path" class="text-xl" />
           Try Again

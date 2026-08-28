@@ -69,7 +69,7 @@ const declineInvite = async () => {
       </button>
       <button 
         @click="declineInvite" 
-        class="flex-1 md:flex-none px-8 py-3 bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 font-black shadow-sm transition-all active:scale-95"
+        class="flex-1 md:flex-none px-4 sm:px-8 py-3 bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 font-black shadow-sm transition-all active:scale-95"
       >
         ปฏิเสธ
       </button>

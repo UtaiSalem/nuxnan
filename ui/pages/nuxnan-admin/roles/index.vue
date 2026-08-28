@@ -662,7 +662,7 @@ onMounted(() => {
     <Teleport to="body">
       <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/50" @click="showDeleteModal = false"></div>
-        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-md w-full p-6">
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-md w-full p-4 sm:p-6">
           <div class="text-center">
             <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
               <Icon icon="fluent:delete-24-regular" class="w-8 h-8 text-red-600" />

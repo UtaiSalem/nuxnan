@@ -220,7 +220,7 @@ onMounted(() => {
         
         <NuxtLink 
           to="/marketplace"
-          class="inline-flex items-center gap-2 px-6 py-3 bg-gray-700 text-white rounded-xl hover:bg-gray-600 transition-colors font-bold"
+          class="inline-flex items-center gap-2 px-4 sm:px-6 py-3 bg-gray-700 text-white rounded-xl hover:bg-gray-600 transition-colors font-bold"
         >
           ไปที่ Marketplace
         </NuxtLink>

@@ -65,7 +65,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+  <div class="rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
     <div class="mb-6 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
       <div>
         <h2 class="text-xl font-semibold text-gray-900 dark:text-white">ตรวจแผนก่อน commit</h2>

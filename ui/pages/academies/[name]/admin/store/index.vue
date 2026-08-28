@@ -295,7 +295,7 @@ const handleCreateStore = async () => {
     <Teleport to="body">
       <div v-if="showCreateModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50" @click="showCreateModal = false"></div>
-        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-6 space-y-5">
+        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-4 sm:p-6 space-y-5">
           <div class="flex items-center justify-between">
             <h3 class="text-xl font-bold text-gray-900 dark:text-white">สร้างร้านค้า</h3>
             <button @click="showCreateModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">

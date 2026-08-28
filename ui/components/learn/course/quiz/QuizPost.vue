@@ -201,7 +201,7 @@
               <span>{{ isAdmin ? 'ทดสอบ (Admin)' : (hasAttempted ? 'ทำแบบทดสอบอีกครั้ง' : 'เริ่มทำแบบทดสอบ') }}</span>
           </button>
           
-          <div v-if="!isAdmin && !isAvailable" class="flex-[2] py-3 px-6 rounded-xl font-bold bg-gray-100 text-gray-400 flex items-center justify-center gap-2 cursor-not-allowed">
+          <div v-if="!isAdmin && !isAvailable" class="flex-[2] py-3 px-4 sm:px-6 rounded-xl font-bold bg-gray-100 text-gray-400 flex items-center justify-center gap-2 cursor-not-allowed">
               <Icon icon="fluent:lock-closed-24-filled" />
               <span>ยังไม่เปิด</span>
           </div>

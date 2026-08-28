@@ -49,12 +49,12 @@ const formatDate = (dateString: string) => {
       <h1 class="text-2xl font-bold text-gray-900 dark:text-white">รายละเอียดนักเรียน</h1>
     </div>
 
-    <div v-if="studentStore.isLoading" class="p-12 text-center bg-white dark:bg-gray-800 rounded-lg shadow">
+    <div v-if="studentStore.isLoading" class="p-4 sm:p-12 text-center bg-white dark:bg-gray-800 rounded-lg shadow">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
       <p class="text-gray-500">กำลังโหลดข้อมูล...</p>
     </div>
 
-    <div v-else-if="studentStore.error || !studentStore.currentStudent" class="p-12 text-center bg-white dark:bg-gray-800 rounded-lg shadow text-red-500">
+    <div v-else-if="studentStore.error || !studentStore.currentStudent" class="p-4 sm:p-12 text-center bg-white dark:bg-gray-800 rounded-lg shadow text-red-500">
       <i class="fas fa-exclamation-circle text-4xl mb-4"></i>
       <p class="text-lg">{{ studentStore.error || 'ไม่พบข้อมูลนักเรียน' }}</p>
     </div>
@@ -301,7 +301,7 @@ const formatDate = (dateString: string) => {
                 <button class="text-sm text-primary-600 hover:text-primary-700"><i class="fas fa-edit"></i> แก้ไข</button>
               </div>
               
-              <div v-if="studentStore.currentStudent.healthInfo" class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+              <div v-if="studentStore.currentStudent.healthInfo" class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 sm:p-6">
                 <div class="grid grid-cols-2 gap-6 mb-6">
                   <div>
                     <span class="block text-sm font-medium text-gray-500">ส่วนสูง</span>

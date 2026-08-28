@@ -110,7 +110,7 @@ onMounted(() => {
       </div>
 
       <!-- Game Stats -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6 border border-gray-100 dark:border-gray-700">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 sm:p-6 mb-6 border border-gray-100 dark:border-gray-700">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
           <div class="text-center">
             <p class="text-gray-500 dark:text-gray-400 text-sm uppercase tracking-wider font-semibold">Moves</p>
@@ -150,7 +150,7 @@ onMounted(() => {
       </div>
 
       <!-- Game Board -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 border border-gray-100 dark:border-gray-700 mb-8">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 sm:p-8 border border-gray-100 dark:border-gray-700 mb-8">
         <div
           class="grid gap-4 mx-auto"
           :style="`grid-template-columns: repeat(${currentSettings.gridCols}, minmax(0, 1fr)); max-width: ${currentSettings.gridCols * 100}px;`"
@@ -190,7 +190,7 @@ onMounted(() => {
 
       <!-- Victory Message -->
       <div v-if="!isGameActive && matchedPairs === currentSettings.pairs" class="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm p-4">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl border border-gray-200 dark:border-gray-700 transform scale-100 animate-bounce-in">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-8 max-w-sm w-full text-center shadow-2xl border border-gray-200 dark:border-gray-700 transform scale-100 animate-bounce-in">
           <div class="text-6xl mb-4">🎉</div>
           <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Congratulations!</h2>
           <p class="text-lg text-gray-600 dark:text-gray-300 mb-2">You found all pairs!</p>

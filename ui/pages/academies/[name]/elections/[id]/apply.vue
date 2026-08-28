@@ -347,7 +347,7 @@ onMounted(async () => {
       <!-- Approved Status Header -->
       <div
         v-if="myParty?.status === 'approved'"
-        class="mb-6 rounded-2xl bg-white p-6 text-center shadow-sm dark:bg-slate-900"
+        class="mb-6 rounded-2xl bg-white p-4 sm:p-6 text-center shadow-sm dark:bg-slate-900"
       >
         <h2 class="text-2xl font-bold text-emerald-600">ใบสมัครได้รับการอนุมัติ</h2>
         <div class="mt-4 flex flex-col items-center justify-center gap-4">

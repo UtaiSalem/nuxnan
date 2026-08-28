@@ -573,7 +573,7 @@ const handleCancel = () => {
         <button
           type="button"
           @click="handleCancel"
-          class="px-6 py-3 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
+          class="px-4 sm:px-6 py-3 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
         >
           ยกเลิก
         </button>

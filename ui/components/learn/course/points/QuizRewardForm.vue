@@ -46,7 +46,7 @@ const cancel = async () => {
 }
 </script>
 <template>
-  <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800 space-y-5">
+  <div class="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800 space-y-5">
     <div><h3 class="text-lg font-semibold text-slate-800 dark:text-white">รางวัลเมื่อสอบได้คะแนนเต็ม</h3><p class="text-sm text-slate-500">แจกแต้มเฉพาะเมื่อผู้เรียนทำคะแนนได้เต็ม 100%</p></div>
     <label class="flex items-center gap-2 text-sm"><input v-model="enabled" type="checkbox" class="rounded text-vikinger-purple" /> เปิดใช้งานรางวัล</label>
     <template v-if="enabled">

@@ -894,7 +894,7 @@ onMounted(async () => {
         <p class="text-slate-500 dark:text-slate-400 text-sm font-medium animate-pulse">กำลังโหลดข้อมูลห้องเรียน...</p>
       </div>
 
-      <div v-else-if="errorMessage" class="rounded-2xl border border-red-100 bg-red-50 p-8 text-center dark:border-red-950 dark:bg-red-950/20">
+      <div v-else-if="errorMessage" class="rounded-2xl border border-red-100 bg-red-50 p-4 sm:p-8 text-center dark:border-red-950 dark:bg-red-950/20">
         <Icon icon="fluent:error-circle-24-regular" class="mx-auto mb-3 h-12 w-12 text-red-500" />
         <p class="text-red-700 dark:text-red-300 font-semibold">{{ errorMessage }}</p>
       </div>
@@ -961,7 +961,7 @@ onMounted(async () => {
           <!-- Overview Stats Cards -->
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <!-- Capacity card -->
-            <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-800 hover:shadow-md transition-shadow">
+            <div class="rounded-2xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-800 hover:shadow-md transition-shadow">
               <div class="flex items-center justify-between">
                 <p class="text-sm font-semibold text-slate-500 dark:text-slate-400">อัตราความจุห้องเรียน</p>
                 <Icon icon="fluent:people-community-24-regular" class="h-6 w-6 text-primary-500" />
@@ -977,7 +977,7 @@ onMounted(async () => {
             </div>
 
             <!-- Homeroom Teacher card -->
-            <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-800 hover:shadow-md transition-shadow">
+            <div class="rounded-2xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-800 hover:shadow-md transition-shadow">
               <div class="flex items-center justify-between">
                 <p class="text-sm font-semibold text-slate-500 dark:text-slate-400">ครูประจำชั้น</p>
                 <Icon icon="fluent:person-board-24-regular" class="h-6 w-6 text-indigo-500" />
@@ -1009,7 +1009,7 @@ onMounted(async () => {
             </div>
 
             <!-- Attendance Rate card -->
-            <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-800 hover:shadow-md transition-shadow">
+            <div class="rounded-2xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-800 hover:shadow-md transition-shadow">
               <div class="flex items-center justify-between">
                 <p class="text-sm font-semibold text-slate-500 dark:text-slate-400">อัตราการเข้าเรียนเฉลี่ย</p>
                 <Icon icon="fluent:calendar-checkmark-24-regular" class="h-6 w-6 text-emerald-500" />
@@ -1022,7 +1022,7 @@ onMounted(async () => {
             </div>
 
             <!-- GPA card -->
-            <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-800 hover:shadow-md transition-shadow">
+            <div class="rounded-2xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-800 hover:shadow-md transition-shadow">
               <div class="flex items-center justify-between">
                 <p class="text-sm font-semibold text-slate-500 dark:text-slate-400">เกรดเฉลี่ยห้องเรียน (GPA)</p>
                 <Icon icon="fluent:hat-graduation-24-regular" class="h-6 w-6 text-amber-500" />
@@ -1039,7 +1039,7 @@ onMounted(async () => {
             <!-- Left Info Columns -->
             <div class="space-y-6 lg:col-span-2">
               <!-- Latest Announcements -->
-              <div class="rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-800 p-6">
+              <div class="rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-800 p-4 sm:p-6">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-700">
                   <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-lg">
                     <Icon icon="fluent:megaphone-24-regular" class="h-5 w-5 text-primary-500" />
@@ -1068,7 +1068,7 @@ onMounted(async () => {
               </div>
 
               <!-- Quick Schedule Calendar -->
-              <div class="rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-800 p-6">
+              <div class="rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-800 p-4 sm:p-6">
                 <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-lg border-b border-slate-100 pb-4 dark:border-slate-700">
                   <Icon icon="fluent:calendar-ltr-24-regular" class="h-5 w-5 text-indigo-500" />
                   ตารางสอนวันพรุ่งนี้
@@ -1093,7 +1093,7 @@ onMounted(async () => {
             <!-- Right Sidebar Columns -->
             <div class="space-y-6">
               <!-- Top Performing Subjects -->
-              <div class="rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-800 p-6">
+              <div class="rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-800 p-4 sm:p-6">
                 <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-lg border-b border-slate-100 pb-4 dark:border-slate-700">
                   <Icon icon="fluent:arrow-trending-lines-24-regular" class="h-5 w-5 text-amber-500" />
                   รายวิชาผลสัมฤทธิ์ดีเด่น
@@ -1131,7 +1131,7 @@ onMounted(async () => {
               </div>
 
               <!-- At risk Students -->
-              <div class="rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-800 p-6">
+              <div class="rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-800 p-4 sm:p-6">
                 <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-lg border-b border-slate-100 pb-4 dark:border-slate-700">
                   <Icon icon="fluent:warning-24-regular" class="h-5 w-5 text-red-500" />
                   กลุ่มความเสี่ยงการเข้าเรียน
@@ -1516,7 +1516,7 @@ onMounted(async () => {
           <!-- Active Session details -->
           <div v-else-if="activeSession" class="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <!-- Roster checklist column -->
-            <div class="lg:col-span-2 space-y-4 bg-white dark:bg-slate-800 rounded-2xl border dark:border-slate-700 p-6 shadow-sm">
+            <div class="lg:col-span-2 space-y-4 bg-white dark:bg-slate-800 rounded-2xl border dark:border-slate-700 p-4 sm:p-6 shadow-sm">
               <div class="flex items-center justify-between border-b pb-4 dark:border-slate-700">
                 <h3 class="font-extrabold text-slate-950 dark:text-white text-base">รายชื่อเช็คชื่อประจำวัน</h3>
                 <span class="text-xs text-slate-400">เลือกสถานะของนักเรียนแต่ละคนด้านล่าง</span>
@@ -1582,7 +1582,7 @@ onMounted(async () => {
             <!-- Attendance stats & QR column -->
             <div class="space-y-6">
               <!-- Summary breakdown -->
-              <div class="bg-white dark:bg-slate-800 rounded-2xl border dark:border-slate-700 p-6 shadow-sm space-y-4">
+              <div class="bg-white dark:bg-slate-800 rounded-2xl border dark:border-slate-700 p-4 sm:p-6 shadow-sm space-y-4">
                 <h3 class="font-bold text-slate-900 dark:text-white text-base">สรุปผลเช็คชื่อประจำวัน</h3>
                 <div class="grid grid-cols-2 gap-3">
                   <div class="bg-green-50 dark:bg-green-950/20 border border-green-100 dark:border-green-900/40 rounded-xl p-3 text-center">
@@ -1605,7 +1605,7 @@ onMounted(async () => {
               </div>
 
               <!-- Student QR Checkin panel -->
-              <div v-if="activeSession.status === 'open' && academy" class="bg-white dark:bg-slate-800 rounded-2xl border dark:border-slate-700 p-6 shadow-sm flex flex-col items-center gap-4 text-center">
+              <div v-if="activeSession.status === 'open' && academy" class="bg-white dark:bg-slate-800 rounded-2xl border dark:border-slate-700 p-4 sm:p-6 shadow-sm flex flex-col items-center gap-4 text-center">
                 <Icon icon="fluent:qr-code-24-regular" class="h-10 w-10 text-primary-500" />
                 <div>
                   <h4 class="font-bold text-slate-900 dark:text-white text-base">สแกนเช็คชื่อด้วย QR</h4>
@@ -1624,7 +1624,7 @@ onMounted(async () => {
           </div>
 
           <!-- Empty Date view: prompt to open daily attendance -->
-          <div v-else class="rounded-2xl border bg-white dark:bg-slate-800 p-12 text-center shadow-sm">
+          <div v-else class="rounded-2xl border bg-white dark:bg-slate-800 p-4 sm:p-12 text-center shadow-sm">
             <Icon icon="fluent:calendar-empty-24-regular" class="h-16 w-16 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
             <h3 class="text-lg font-bold text-slate-900 dark:text-white">ยังไม่มีเซสชันเช็คชื่อสำหรับวันนี้</h3>
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-sm mx-auto">
@@ -1744,14 +1744,14 @@ onMounted(async () => {
           <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <!-- Announcements List -->
             <div class="lg:col-span-2 space-y-4">
-              <div v-if="announcements.length === 0" class="rounded-2xl border bg-white dark:bg-slate-800 p-12 text-center text-slate-400">
+              <div v-if="announcements.length === 0" class="rounded-2xl border bg-white dark:bg-slate-800 p-4 sm:p-12 text-center text-slate-400">
                 ยังไม่มีการลงประกาศสำหรับห้องนี้
               </div>
               
               <div 
                 v-for="ann in announcements" 
                 :key="ann.id"
-                class="bg-white dark:bg-slate-800 rounded-2xl border dark:border-slate-700 p-6 shadow-sm space-y-3"
+                class="bg-white dark:bg-slate-800 rounded-2xl border dark:border-slate-700 p-4 sm:p-6 shadow-sm space-y-3"
               >
                 <div class="flex justify-between items-start">
                   <h3 class="text-lg font-bold text-slate-900 dark:text-white">{{ ann.title }}</h3>
@@ -1775,7 +1775,7 @@ onMounted(async () => {
 
             <!-- Calendar & Reminders -->
             <div class="space-y-6">
-              <div class="bg-white dark:bg-slate-800 rounded-2xl border dark:border-slate-700 p-6 shadow-sm space-y-4">
+              <div class="bg-white dark:bg-slate-800 rounded-2xl border dark:border-slate-700 p-4 sm:p-6 shadow-sm space-y-4">
                 <h3 class="font-bold text-slate-900 dark:text-white text-base border-b pb-3 dark:border-slate-700 flex items-center gap-2">
                   <Icon icon="fluent:clock-24-regular" class="h-5 w-5 text-indigo-500" />
                   ปฏิทินส่งงาน/กิจกรรม
@@ -1809,7 +1809,7 @@ onMounted(async () => {
 
           <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <!-- Report Card 1: Student Roster -->
-            <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-800 flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div class="rounded-2xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-800 flex flex-col justify-between hover:shadow-md transition-shadow">
               <div class="space-y-3">
                 <div class="h-10 w-10 rounded-xl bg-primary-100 flex items-center justify-center font-bold text-primary-600 dark:bg-primary-950 dark:text-primary-300">
                   <Icon icon="fluent:people-list-24-regular" class="h-6 w-6" />
@@ -1829,7 +1829,7 @@ onMounted(async () => {
             </div>
 
             <!-- Report Card 2: Attendance -->
-            <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-800 flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div class="rounded-2xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-800 flex flex-col justify-between hover:shadow-md transition-shadow">
               <div class="space-y-3">
                 <div class="h-10 w-10 rounded-xl bg-emerald-100 flex items-center justify-center font-bold text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300">
                   <Icon icon="fluent:calendar-checkmark-24-regular" class="h-6 w-6" />
@@ -1849,7 +1849,7 @@ onMounted(async () => {
             </div>
 
             <!-- Report Card 3: Academic Grades -->
-            <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-800 flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div class="rounded-2xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-800 flex flex-col justify-between hover:shadow-md transition-shadow">
               <div class="space-y-3">
                 <div class="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center font-bold text-amber-600 dark:bg-amber-950 dark:text-amber-300">
                   <Icon icon="fluent:hat-graduation-24-regular" class="h-6 w-6" />

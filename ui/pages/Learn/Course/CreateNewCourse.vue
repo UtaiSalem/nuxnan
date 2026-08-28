@@ -303,7 +303,7 @@ async function handleSubmitForm(){
             <!-- LEFT COLUMN: Identity & Preview -->
             <div class="lg:col-span-4 space-y-6">
                 <!-- Cover Image Preview Card -->
-                <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">รูปภาพปกรายวิชา</label>
                     
                     <div class="group relative aspect-video w-full rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-violet-500 dark:hover:border-violet-500 transition-colors cursor-pointer"
@@ -329,7 +329,7 @@ async function handleSubmitForm(){
                 </div>
 
                 <!-- Instructor Card -->
-                <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">ผู้สอน</label>
                     <div class="flex items-center gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50">
                         <img 
@@ -345,7 +345,7 @@ async function handleSubmitForm(){
                 </div>
 
                  <!-- Course Code -->
-                 <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                 <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
                      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">รหัสวิชา</label>
                      <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -368,7 +368,7 @@ async function handleSubmitForm(){
                         <span class="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/50 text-violet-600 flex items-center justify-center text-sm">1</span>
                         ข้อมูลทั่วไป
                     </h2>
-                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-gray-700 space-y-6">
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-8 shadow-sm border border-gray-100 dark:border-gray-700 space-y-6">
                         <!-- Name -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ชื่อรายวิชา <span class="text-red-500">*</span></label>
@@ -395,7 +395,7 @@ async function handleSubmitForm(){
                         <span class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/50 text-blue-600 flex items-center justify-center text-sm">2</span>
                         การจัดหมวดหมู่และระดับ
                     </h2>
-                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-gray-700 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-8 shadow-sm border border-gray-100 dark:border-gray-700 grid grid-cols-1 md:grid-cols-2 gap-6">
                         
                         <!-- Category (combobox: pick from the list or type a custom subject group) -->
                          <div class="relative" v-click-outside="closeCategoryOptions">
@@ -495,7 +495,7 @@ async function handleSubmitForm(){
                         <span class="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-600 flex items-center justify-center text-sm">3</span>
                         การตั้งค่าและเวลา
                     </h2>
-                     <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-gray-700 space-y-6">
+                     <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-8 shadow-sm border border-gray-100 dark:border-gray-700 space-y-6">
                         
                          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                              <!-- Semester -->
@@ -586,7 +586,7 @@ async function handleSubmitForm(){
                         <span class="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 flex items-center justify-center text-sm">4</span>
                         ค่าธรรมเนียมและราคา
                     </h2>
-                     <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm border border-gray-100 dark:border-gray-700 space-y-6">
+                     <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-8 shadow-sm border border-gray-100 dark:border-gray-700 space-y-6">
                          
                          <!-- Is Saleable Toggle -->
                         <div class="flex items-center justify-between mb-4">
@@ -659,7 +659,7 @@ async function handleSubmitForm(){
                 <!-- Action Buttons -->
                 <div class="flex items-center justify-end gap-4 pt-4 pb-12">
                      <button type="button" @click="navigateTo('/Learn/Courses')" 
-                        class="px-6 py-3 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                        class="px-4 sm:px-6 py-3 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                      >
                          ยกเลิก
                      </button>

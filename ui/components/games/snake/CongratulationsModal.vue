@@ -1,6 +1,6 @@
 <template>
     <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white dark:bg-gray-800 px-8 py-6 rounded-xl shadow-lg text-center max-w-md mx-4">
+      <div class="bg-white dark:bg-gray-800 px-4 sm:px-8 py-6 rounded-xl shadow-lg text-center max-w-md mx-4">
         <div class="text-6xl mb-4">🎉</div>
         <h2 class="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Congratulations!</h2>
         <p class="mb-6 text-gray-600 dark:text-gray-400">You've completed level {{ level }}!</p>
@@ -15,7 +15,7 @@
           </button>
           <button
             @click="$emit('quit-game')"
-            class="min-h-[44px] sm:min-h-0 px-6 py-2.5 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium shadow-lg hover:shadow-gray-500/30 transition-all"
+            class="min-h-[44px] sm:min-h-0 px-4 sm:px-6 py-2.5 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-medium shadow-lg hover:shadow-gray-500/30 transition-all"
           >
             Quit Game
           </button>

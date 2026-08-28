@@ -59,7 +59,7 @@ const formatDate = (date: string) => {
     </Teleport></ClientOnly>
 
     <!-- Header -->
-    <div class="bg-white dark:bg-vikinger-dark-200 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-vikinger-dark-100 flex items-center justify-between">
+    <div class="bg-white dark:bg-vikinger-dark-200 p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-vikinger-dark-100 flex items-center justify-between">
       <div class="flex items-center gap-4">
         <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400">
           <Icon icon="fluent:history-24-filled" class="w-7 h-7" />

@@ -155,7 +155,7 @@ const getStatusBadge = (status: string) => {
         <!-- Left: Visit Details -->
         <div class="lg:col-span-2 space-y-6">
           <!-- Visit Info -->
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <Icon icon="fluent:document-24-regular" class="w-5 h-5 text-primary-600" />
               ข้อมูลการเยี่ยมบ้าน
@@ -192,7 +192,7 @@ const getStatusBadge = (status: string) => {
           </div>
 
           <!-- Location Info -->
-          <div v-if="visit.address || visit.latitude" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <div v-if="visit.address || visit.latitude" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <Icon icon="fluent:location-24-regular" class="w-5 h-5 text-primary-600" />
               ที่ตั้งบ้าน
@@ -211,7 +211,7 @@ const getStatusBadge = (status: string) => {
           </div>
 
           <!-- Photos -->
-          <div v-if="visit.photos && visit.photos.length > 0" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <div v-if="visit.photos && visit.photos.length > 0" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <Icon icon="fluent:image-24-regular" class="w-5 h-5 text-primary-600" />
               รูปภาพ ({{ visit.photos.length }})
@@ -235,7 +235,7 @@ const getStatusBadge = (status: string) => {
         <!-- Right: Sidebar -->
         <div class="space-y-6">
           <!-- Student Info -->
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <Icon icon="fluent:person-24-regular" class="w-5 h-5 text-primary-600" />
               ข้อมูลนักเรียน
@@ -267,7 +267,7 @@ const getStatusBadge = (status: string) => {
           </div>
 
           <!-- Teacher Info -->
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <Icon icon="fluent:person-board-24-regular" class="w-5 h-5 text-primary-600" />
               ครูผู้เยี่ยมบ้าน
@@ -303,7 +303,7 @@ const getStatusBadge = (status: string) => {
     <!-- Delete Modal -->
     <Teleport to="body">
       <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 max-w-md w-full mx-4">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">ยืนยันการลบ</h3>
           <p class="text-gray-600 dark:text-gray-400 mb-6">
             คุณต้องการลบข้อมูลการเยี่ยมบ้านนี้หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้

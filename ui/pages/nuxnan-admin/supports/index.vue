@@ -492,7 +492,7 @@ onMounted(() => {
             @click.stop
           />
           <div class="mt-6 flex justify-center">
-              <a :href="selectedSlip" download class="px-8 py-3 bg-white text-slate-900 rounded-2xl font-black text-sm hover:scale-105 transition-transform flex items-center gap-2">
+              <a :href="selectedSlip" download class="px-4 sm:px-8 py-3 bg-white text-slate-900 rounded-2xl font-black text-sm hover:scale-105 transition-transform flex items-center gap-2">
                   <Icon icon="fluent:arrow-download-24-regular" class="w-5 h-5" />
                   ดาวน์โหลดสลิป
               </a>

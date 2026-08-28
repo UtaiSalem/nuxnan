@@ -282,7 +282,7 @@ const goBack = () => {
       </div>
 
       <!-- Tab Content -->
-      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6">
         <!-- Overview Tab -->
         <div v-if="activeTab === 'overview'" class="space-y-6">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white">ข้อมูลพื้นฐาน</h3>

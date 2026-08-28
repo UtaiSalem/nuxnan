@@ -37,7 +37,7 @@ const submit = () => {
 
 <template>
   <Teleport to="body"><div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="emit('close')">
-    <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-800">
+    <div class="w-full max-w-lg rounded-2xl bg-white p-4 sm:p-6 shadow-xl dark:bg-gray-800">
       <h2 class="text-xl font-bold dark:text-white">ส่งคำร้องทำบัตร</h2>
       <p class="mt-1 text-sm text-gray-500">{{ student?.name }} · ประเภทคำร้อง: <span class="font-medium text-primary-600 dark:text-primary-400">{{ derivedTypeLabel }}</span> (ระบบจัดให้อัตโนมัติ)</p>
       <div class="mt-5 space-y-4">

@@ -298,7 +298,7 @@ const handleGetDonate = async (donateId: number, idx: number) => {
                 class="w-10 h-10 sm:w-12 sm:h-12 text-yellow-300 animate-spin-slow"
               />
               <span
-                class="bg-white/10 backdrop-blur-sm px-6 py-3 rounded-2xl border border-white/20 shadow-xl audiowide-font"
+                class="bg-white/10 backdrop-blur-sm px-4 sm:px-6 py-3 rounded-2xl border border-white/20 shadow-xl audiowide-font"
                 >เรียนบ้าง เล่นบ้าง สร้างรายได้ด้วย nuxnan</span
               >
               <IconWrapper

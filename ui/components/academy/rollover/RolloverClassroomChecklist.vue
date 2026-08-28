@@ -31,7 +31,7 @@ const hasMissingTargets = computed(() => rows.value.length > 0)
 </script>
 
 <template>
-  <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+  <div class="rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
     <div class="mb-6 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
       <div>
         <h2 class="text-xl font-semibold text-gray-900 dark:text-white">ตรวจห้องเรียนปี {{ targetYearName }}</h2>
@@ -69,7 +69,7 @@ const hasMissingTargets = computed(() => rows.value.length > 0)
       </div>
     </div>
 
-    <div v-if="!hasMissingTargets" class="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 dark:border-emerald-800 dark:bg-emerald-900/20">
+    <div v-if="!hasMissingTargets" class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 sm:p-6 dark:border-emerald-800 dark:bg-emerald-900/20">
       <div class="text-lg font-semibold text-emerald-800 dark:text-emerald-300">ห้องปลายทางพร้อมแล้ว</div>
       <p class="mt-1 text-sm text-emerald-700 dark:text-emerald-400">
         ไม่พบระดับชั้นที่ขาดในปี {{ targetYearName }} สามารถไปจัดกลุ่มนักเรียนต่อได้เลย

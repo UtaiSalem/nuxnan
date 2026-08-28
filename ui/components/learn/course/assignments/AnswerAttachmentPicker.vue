@@ -97,7 +97,7 @@ const triggerFileInput = () => {
   <div class="space-y-4">
     <div 
       @click="triggerFileInput"
-      class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+      class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-4 sm:p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
     >
       <Icon icon="heroicons:document-plus" class="w-8 h-8 text-gray-400 mb-2" />
       <p class="text-sm font-medium text-gray-700 dark:text-gray-300">แนบไฟล์เอกสาร</p>

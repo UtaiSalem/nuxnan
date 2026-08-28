@@ -535,7 +535,7 @@ watch(() => course?.value?.id, id => { if (id && isCourseAdmin?.value) fetchElig
           v-if="isAnySectionDirty"
           @click="saveSettings"
           :disabled="isSaving"
-          class="min-h-[44px] sm:min-h-0 hidden md:flex items-center gap-2 px-6 py-2.5 bg-white text-blue-600 font-bold rounded-xl shadow-lg hover:bg-blue-50 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="min-h-[44px] sm:min-h-0 hidden md:flex items-center gap-2 px-4 sm:px-6 py-2.5 bg-white text-blue-600 font-bold rounded-xl shadow-lg hover:bg-blue-50 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Icon v-if="isSaving" icon="svg-spinners:ring-resize" class="w-5 h-5" />
           <Icon v-else icon="fluent:save-24-filled" class="w-5 h-5" />
@@ -1084,7 +1084,7 @@ watch(() => course?.value?.id, id => { if (id && isCourseAdmin?.value) fetchElig
     <!-- Withdraw Modal -->
     <div v-if="showWithdrawModal"
          class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-gray-200 dark:border-gray-700 animate-in zoom-in duration-200">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-4 sm:p-6 w-full max-w-sm border border-gray-200 dark:border-gray-700 animate-in zoom-in duration-200">
         <div class="flex items-center gap-3 mb-4">
           <div class="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
             <Icon icon="mdi:bank-transfer" class="w-6 h-6 text-amber-600" />

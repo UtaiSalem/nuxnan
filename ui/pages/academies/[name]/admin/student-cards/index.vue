@@ -302,7 +302,7 @@ const getProfileImage = (student: any) => {
       </div>
 
       <!-- Empty State: No students at all -->
-      <div v-if="stats.totalStudents === 0 && !isLoadingStats && !statsError" class="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-sm border border-gray-100 dark:border-gray-700 text-center max-w-xl mx-auto my-12">
+      <div v-if="stats.totalStudents === 0 && !isLoadingStats && !statsError" class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-8 shadow-sm border border-gray-100 dark:border-gray-700 text-center max-w-xl mx-auto my-12">
         <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
           <Icon icon="fluent:contact-card-key-24-regular" class="w-10 h-10 text-gray-400" />
         </div>
@@ -378,7 +378,7 @@ const getProfileImage = (student: any) => {
               v-for="room in roomsForLevel"
               :key="room"
               @click="openRoom(activeLevel, room)"
-              class="group bg-white dark:bg-gray-800 shadow-sm rounded-2xl p-6 cursor-pointer hover:scale-105 hover:shadow-lg transition-all text-center border-2 border-gray-200 dark:border-gray-700 hover:border-primary-400 dark:hover:border-primary-500 relative overflow-hidden"
+              class="group bg-white dark:bg-gray-800 shadow-sm rounded-2xl p-4 sm:p-6 cursor-pointer hover:scale-105 hover:shadow-lg transition-all text-center border-2 border-gray-200 dark:border-gray-700 hover:border-primary-400 dark:hover:border-primary-500 relative overflow-hidden"
             >
               <div class="flex flex-col items-center justify-center">
                 <span class="text-2xl sm:text-3xl font-bold text-primary-700 dark:text-primary-400 group-hover:text-primary-800 transition mb-1">
@@ -390,7 +390,7 @@ const getProfileImage = (student: any) => {
           </div>
 
           <!-- Room Empty State when levels length is 0 but total students > 0 -->
-          <div v-else-if="levels.length === 0 && !isLoadingStats && !statsError" class="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-sm border border-gray-100 dark:border-gray-700 text-center max-w-xl mx-auto my-12">
+          <div v-else-if="levels.length === 0 && !isLoadingStats && !statsError" class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-8 shadow-sm border border-gray-100 dark:border-gray-700 text-center max-w-xl mx-auto my-12">
             <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
               <Icon icon="fluent:branch-fork-24-regular" class="w-10 h-10 text-gray-400" />
             </div>
@@ -451,13 +451,13 @@ const getProfileImage = (student: any) => {
           </div>
 
           <!-- List Loading State -->
-          <div v-if="isLoadingList" class="p-12 text-center text-gray-500 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center gap-2">
+          <div v-if="isLoadingList" class="p-4 sm:p-12 text-center text-gray-500 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center gap-2">
             <div class="animate-spin rounded-full h-8 w-8 border-4 border-primary-500 border-t-transparent"></div>
             <span class="text-sm">กำลังโหลดรายชื่อนักเรียน...</span>
           </div>
 
           <!-- List Error State -->
-          <div v-else-if="listError" class="p-12 text-center text-red-500 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-red-100 dark:border-red-955 flex flex-col items-center justify-center gap-2">
+          <div v-else-if="listError" class="p-4 sm:p-12 text-center text-red-500 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-red-100 dark:border-red-955 flex flex-col items-center justify-center gap-2">
             <Icon icon="fluent:error-circle-24-regular" class="w-8 h-8 text-red-500" />
             <span class="text-sm">{{ listError }}</span>
             <button @click="fetchStudents" class="min-h-[44px] sm:min-h-0 mt-2 text-xs font-semibold px-3 py-1.5 bg-red-100 hover:bg-red-200 dark:bg-red-900/50 dark:hover:bg-red-900 rounded-lg transition text-red-700 dark:text-red-400">

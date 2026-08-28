@@ -171,7 +171,7 @@ const rounds = computed(() => groupByRound(matches.value))
 
 <template>
   <div class="flex flex-col gap-6">
-    <div v-if="disciplines.length === 0" class="bg-white dark:bg-slate-800 rounded-vikinger shadow-card dark:shadow-card-dark border border-slate-200 dark:border-slate-700 p-6 text-center text-slate-500 dark:text-slate-400">
+    <div v-if="disciplines.length === 0" class="bg-white dark:bg-slate-800 rounded-vikinger shadow-card dark:shadow-card-dark border border-slate-200 dark:border-slate-700 p-4 sm:p-6 text-center text-slate-500 dark:text-slate-400">
       ยังไม่มีรายการแข่ง ให้ไปสร้างที่แท็บรายการแข่งก่อน
     </div>
     
@@ -252,7 +252,7 @@ const rounds = computed(() => groupByRound(matches.value))
         <div class="h-32 bg-slate-200 dark:bg-slate-700 rounded-vikinger w-full"></div>
       </div>
 
-      <div v-else-if="matches.length === 0" class="bg-white dark:bg-slate-800 rounded-vikinger shadow-card dark:shadow-card-dark border border-slate-200 dark:border-slate-700 p-6 text-center text-slate-500 dark:text-slate-400">
+      <div v-else-if="matches.length === 0" class="bg-white dark:bg-slate-800 rounded-vikinger shadow-card dark:shadow-card-dark border border-slate-200 dark:border-slate-700 p-4 sm:p-6 text-center text-slate-500 dark:text-slate-400">
         ยังไม่มีแมตช์ ให้ไปกดสร้างตารางแข่ง
       </div>
 

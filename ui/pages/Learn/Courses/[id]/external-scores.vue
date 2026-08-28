@@ -548,7 +548,7 @@ onUnmounted(() => {
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">
+    <div v-if="loading" class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-8">
       <div class="animate-pulse space-y-4">
         <div class="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
         <div class="space-y-3">

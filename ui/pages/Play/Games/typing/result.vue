@@ -116,22 +116,22 @@ function formatWpm(wpm: number) {
 
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
           <!-- WPM -->
-          <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
+          <div class="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
             <span class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">WPM</span>
             <span class="text-4xl font-black text-primary-600">{{ result.wpm }}</span>
           </div>
           <!-- Accuracy -->
-          <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
+          <div class="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
             <span class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Accuracy</span>
             <span class="text-4xl font-black text-blue-600">{{ result.accuracy }}%</span>
           </div>
           <!-- Score -->
-          <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
+          <div class="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
             <span class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Score</span>
             <span class="text-4xl font-black text-orange-500">{{ result.score }}</span>
           </div>
           <!-- XP -->
-          <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-primary-500/20 shadow-lg shadow-primary-500/10">
+          <div class="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-3xl border border-primary-500/20 shadow-lg shadow-primary-500/10">
             <span class="block text-xs font-black text-primary-400 uppercase tracking-widest mb-1">XP Earned</span>
             <span class="text-4xl font-black text-primary-500">+{{ result.xp_earned }}</span>
           </div>
@@ -141,7 +141,7 @@ function formatWpm(wpm: number) {
       <!-- Details and Leaderboard -->
       <div class="grid md:grid-cols-2 gap-8 items-start">
         <!-- Bonuses -->
-        <div v-if="result" class="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
+        <div v-if="result" class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-8 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
           <h2 class="text-xl font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
             <Icon icon="heroicons:sparkles" class="text-yellow-500" />
             Bonus Points
@@ -167,7 +167,7 @@ function formatWpm(wpm: number) {
         </div>
 
         <!-- Leaderboard -->
-        <div class="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-8 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
           <h2 class="text-xl font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
             <Icon icon="heroicons:trophy" class="text-orange-500" />
             Global Ranking
@@ -230,7 +230,7 @@ function formatWpm(wpm: number) {
 
         <NuxtLink
           to="/play/games/typing"
-          class="px-12 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-xl rounded-2xl shadow-xl transition-all hover:scale-105 active:scale-95 text-center"
+          class="px-4 sm:px-12 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-xl rounded-2xl shadow-xl transition-all hover:scale-105 active:scale-95 text-center"
         >
           LOBBY
         </NuxtLink>

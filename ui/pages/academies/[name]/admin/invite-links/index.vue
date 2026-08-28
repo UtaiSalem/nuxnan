@@ -26,7 +26,7 @@
       </div>
 
       <!-- Empty -->
-      <div v-else-if="links.length === 0" class="bg-white rounded-xl shadow-sm border p-12 text-center">
+      <div v-else-if="links.length === 0" class="bg-white rounded-xl shadow-sm border p-4 sm:p-12 text-center">
         <Icon icon="mdi:link-variant-off" class="w-16 h-16 mx-auto text-gray-300 mb-4" />
         <h3 class="text-lg font-medium text-gray-700 mb-2">ยังไม่มีลิงก์เชิญ</h3>
         <p class="text-gray-500 mb-4">สร้างลิงก์เชิญเพื่อให้ผู้ใช้เข้าร่วมได้ง่ายขึ้น</p>

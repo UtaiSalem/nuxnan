@@ -89,13 +89,13 @@ onMounted(() => {
     </div>
 
     <!-- Loading State -->
-    <div v-if="loading" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 text-center">
+    <div v-if="loading" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-8 text-center">
       <Icon icon="svg-spinners:ring-resize" class="w-8 h-8 text-blue-500 mx-auto mb-3" />
       <p class="text-gray-500 dark:text-gray-400">กำลังโหลดข้อมูลการเข้าเรียน...</p>
     </div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="bg-white dark:bg-gray-800 rounded-xl border border-red-200 dark:border-red-700 p-8 text-center">
+    <div v-else-if="error" class="bg-white dark:bg-gray-800 rounded-xl border border-red-200 dark:border-red-700 p-4 sm:p-8 text-center">
       <Icon icon="heroicons:exclamation-triangle" class="w-10 h-10 text-red-400 mx-auto mb-3" />
       <p class="text-red-600 dark:text-red-400 mb-4">{{ error }}</p>
       <button 
@@ -107,7 +107,7 @@ onMounted(() => {
     </div>
 
     <!-- Empty State -->
-    <div v-else-if="attendances.length === 0" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 text-center">
+    <div v-else-if="attendances.length === 0" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-8 text-center">
       <Icon icon="heroicons:calendar-days" class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
       <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-1">ยังไม่มีข้อมูลการเข้าเรียน</h3>
       <p class="text-sm text-gray-500 dark:text-gray-400">ยังไม่มีการบันทึกการเข้าเรียนในกลุ่มนี้</p>

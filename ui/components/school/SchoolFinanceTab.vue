@@ -189,7 +189,7 @@
         </div>
 
         <div class="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
-          <button type="button" @click="showBulkModal = false" class="min-h-[44px] sm:min-h-0 px-6 py-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl font-bold">
+          <button type="button" @click="showBulkModal = false" class="min-h-[44px] sm:min-h-0 px-4 sm:px-6 py-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl font-bold">
             ยกเลิก
           </button>
           <button type="submit" :disabled="generatingInvoices" class="min-h-[44px] sm:min-h-0 px-8 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">

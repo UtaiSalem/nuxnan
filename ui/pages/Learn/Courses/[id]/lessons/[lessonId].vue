@@ -249,7 +249,7 @@ watch(lesson, (newLesson) => {
 
       <!-- Error State -->
       <div v-else-if="error" class="flex justify-center items-center min-h-[50vh]">
-        <div class="bg-red-50 dark:bg-red-900/20 rounded-xl p-8 text-center max-w-md">
+        <div class="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 sm:p-8 text-center max-w-md">
           <Icon icon="fluent:error-circle-24-regular" class="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h3 class="text-xl font-bold text-red-700 dark:text-red-400 mb-2">เกิดข้อผิดพลาด</h3>
           <p class="text-red-600 dark:text-red-400 mb-4">{{ error }}</p>

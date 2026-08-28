@@ -29,7 +29,7 @@
 
         <!-- Course List Grouped by Year/Semester -->
         <div v-if="Object.keys(groupedCourses).length > 0" class="space-y-8">
-            <div v-for="(semesters, year) in groupedCourses" :key="year" class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6">
+            <div v-for="(semesters, year) in groupedCourses" :key="year" class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 sm:p-6">
                 <h3 class="text-lg font-bold mb-4 dark:text-white">ชั้นปีที่ {{ year }}</h3>
                 <div class="space-y-6">
                     <div v-for="(courses, semester) in semesters" :key="semester">

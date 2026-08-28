@@ -175,7 +175,7 @@ const sections = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
       <!-- Form -->
       <form @submit.prevent="saveStudent" class="space-y-6">
         <!-- Photo Upload -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">รูปภาพ</h3>
           
           <div class="flex items-center gap-6">
@@ -203,7 +203,7 @@ const sections = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
         </div>
 
         <!-- Basic Info -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">ข้อมูลพื้นฐาน</h3>
           
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -331,7 +331,7 @@ const sections = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
         <div class="flex justify-end gap-3">
           <NuxtLink 
             :to="`/academies/${academyName}/admin/student-cards/${studentId}`"
-            class="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            class="px-4 sm:px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             ยกเลิก
           </NuxtLink>

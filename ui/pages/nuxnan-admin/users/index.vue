@@ -974,7 +974,7 @@ onMounted(fetchUsers)
           class="fixed inset-0 z-50 flex items-center justify-center p-4"
         >
           <div class="absolute inset-0 bg-black/50" @click="showVerifyModal = false" />
-          <div class="relative bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-xl p-6">
+          <div class="relative bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-xl p-4 sm:p-6">
             <div class="flex items-center gap-4 mb-6">
               <div 
                 class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"

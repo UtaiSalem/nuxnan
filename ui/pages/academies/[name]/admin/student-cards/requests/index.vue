@@ -387,7 +387,7 @@ const countFor = (v: StudentCardRequestStatus | '' | 'active') => {
 
     <!-- Create Request Modal (classroom → students → submit) -->
     <div v-if="createOpen" class="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/50 p-4" @click.self="closeCreate">
-      <div class="my-8 w-full max-w-5xl space-y-5 rounded-2xl bg-white p-6 dark:bg-gray-900">
+      <div class="my-8 w-full max-w-5xl space-y-5 rounded-2xl bg-white p-4 sm:p-6 dark:bg-gray-900">
         <div class="flex items-start justify-between">
           <div>
             <h2 class="text-xl font-bold dark:text-white">สร้างคำร้องทำบัตรใหม่</h2>
@@ -485,7 +485,7 @@ const countFor = (v: StudentCardRequestStatus | '' | 'active') => {
 
     <!-- Detail Modal -->
     <div v-if="detailOpen" class="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/50 p-4" @click.self="closeDetail">
-      <div class="my-8 w-full max-w-3xl space-y-5 rounded-2xl bg-white p-6 dark:bg-gray-900">
+      <div class="my-8 w-full max-w-3xl space-y-5 rounded-2xl bg-white p-4 sm:p-6 dark:bg-gray-900">
         <div class="flex items-start justify-between">
           <div>
             <h2 class="text-xl font-bold dark:text-white">รายละเอียดคำร้อง</h2>

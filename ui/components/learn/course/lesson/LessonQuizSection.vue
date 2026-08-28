@@ -524,7 +524,7 @@ onUnmounted(() => {
           v-for="(question, index) in localQuestions"
           :key="question.id"
           :id="`quiz-question-${question.id}`"
-          class="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm transition-all hover:shadow-md scroll-mt-40"
+          class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm transition-all hover:shadow-md scroll-mt-40"
         >
             <div class="flex items-start gap-5">
                 <!-- Question Number -->
@@ -645,7 +645,7 @@ onUnmounted(() => {
         <!-- ตอบครบทุกข้อแล้ว แต่ยังมีข้อที่ผิดค้างอยู่ -->
         <div
             v-else-if="allAnswered && incorrectQuestions.length > 0"
-            class="mt-8 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-6"
+            class="mt-8 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4 sm:p-6"
         >
             <div class="flex items-start gap-4">
                 <div class="flex-shrink-0 p-3 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">

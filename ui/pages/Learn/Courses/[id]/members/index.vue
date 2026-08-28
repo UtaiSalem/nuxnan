@@ -807,7 +807,7 @@ async function assignGroupToMember(memberId: number, groupId: number) {
         <div v-if="showUnlockModal" class="fixed inset-0 z-50 overflow-y-auto">
             <div class="flex min-h-screen items-center justify-center p-4">
                 <div class="fixed inset-0 bg-black/50" @click="showUnlockModal = false"></div>
-                <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+                <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-4 sm:p-6">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                         <Icon icon="heroicons:lock-open" class="w-5 h-5 text-blue-500" />
                         ปลดล็อคสิทธิ์สอบ
@@ -872,7 +872,7 @@ async function assignGroupToMember(memberId: number, groupId: number) {
         <div v-if="showBulkUnlockConfirm" class="fixed inset-0 z-50 overflow-y-auto">
             <div class="flex min-h-screen items-center justify-center p-4">
                 <div class="fixed inset-0 bg-black/50" @click="showBulkUnlockConfirm = false"></div>
-                <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+                <div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-4 sm:p-6">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
                         <Icon icon="heroicons:lock-open" class="w-5 h-5 text-blue-500" />
                         ปลดล็อคทั้งกลุ่ม

@@ -409,7 +409,7 @@ onMounted(() => {
         <div class="absolute inset-0 bg-black/80"></div>
         
         <div 
-          class="relative bg-gray-800 rounded-xl p-6 max-w-lg w-full z-10"
+          class="relative bg-gray-800 rounded-xl p-4 sm:p-6 max-w-lg w-full z-10"
           @click.stop
         >
           <h3 class="text-xl font-bold text-white mb-4">อัปโหลดวิดีโอ</h3>

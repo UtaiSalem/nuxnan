@@ -192,7 +192,7 @@ const editionStatusText = (status?: string) => {
           <p class="text-sm text-rose-800 dark:text-rose-300">{{ errorMessage }}</p>
         </div>
 
-        <div v-if="editions.length === 0" class="bg-white dark:bg-slate-800 rounded-vikinger shadow-card dark:shadow-card-dark border border-slate-200 dark:border-slate-700 p-8 text-center">
+        <div v-if="editions.length === 0" class="bg-white dark:bg-slate-800 rounded-vikinger shadow-card dark:shadow-card-dark border border-slate-200 dark:border-slate-700 p-4 sm:p-8 text-center">
           <Icon icon="fluent:flag-off-24-regular" class="w-16 h-16 text-slate-400 mx-auto mb-4" />
           <h2 class="text-lg font-bold text-slate-900 dark:text-white mb-2">ยังไม่มีการสร้างงานกีฬาสี</h2>
           <p class="text-slate-500 dark:text-slate-400 mb-6">คุณต้องสร้าง "ครั้งที่จัด" และกำหนดคณะสีก่อน จึงจะสามารถจัดการคะแนนได้</p>

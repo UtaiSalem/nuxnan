@@ -112,7 +112,7 @@ const getGPAColor = (gpa: number) => {
         </div>
 
         <!-- Empty State -->
-        <div v-if="transcripts.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-sm border border-gray-200 dark:border-gray-700">
+        <div v-if="transcripts.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-12 text-center shadow-sm border border-gray-200 dark:border-gray-700">
           <Icon icon="fluent:document-text-24-regular" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">ยังไม่มีใบแสดงผลการเรียน</h3>
           <p class="text-gray-600 dark:text-gray-400">ใบแสดงผลการเรียนจะปรากฏเมื่อมีการประกาศผลเรียบร้อยแล้ว</p>

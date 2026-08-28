@@ -251,7 +251,7 @@ const joinModeOptions = [
         <!-- Content -->
         <div class="flex-1">
           <!-- General Tab -->
-          <div v-if="activeTab === 'general'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 space-y-6">
+          <div v-if="activeTab === 'general'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6 space-y-6">
             <h2 class="font-semibold text-gray-900 dark:text-white">ข้อมูลทั่วไป</h2>
 
             <!-- Cover & Avatar -->
@@ -341,7 +341,7 @@ const joinModeOptions = [
           </div>
 
           <!-- Contact Tab -->
-          <div v-if="activeTab === 'contact'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 space-y-6">
+          <div v-if="activeTab === 'contact'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6 space-y-6">
             <h2 class="font-semibold text-gray-900 dark:text-white">ข้อมูลติดต่อ</h2>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -415,7 +415,7 @@ const joinModeOptions = [
           </div>
 
           <!-- Privacy Tab -->
-          <div v-if="activeTab === 'privacy'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 space-y-6">
+          <div v-if="activeTab === 'privacy'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6 space-y-6">
             <h2 class="font-semibold text-gray-900 dark:text-white">ความเป็นส่วนตัว</h2>
 
             <div>
@@ -461,7 +461,7 @@ const joinModeOptions = [
           </div>
 
           <!-- Registration Tab -->
-          <div v-if="activeTab === 'registration'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 space-y-6">
+          <div v-if="activeTab === 'registration'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6 space-y-6">
             <h2 class="font-semibold text-gray-900 dark:text-white">การลงทะเบียน</h2>
 
             <div>
@@ -507,7 +507,7 @@ const joinModeOptions = [
           </div>
 
           <!-- Danger Zone -->
-          <div v-if="activeTab === 'danger'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-red-200 dark:border-red-900/50 p-6 space-y-6">
+          <div v-if="activeTab === 'danger'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-red-200 dark:border-red-900/50 p-4 sm:p-6 space-y-6">
             <h2 class="font-semibold text-red-600 dark:text-red-400 flex items-center gap-2">
               <Icon icon="fluent:warning-24-regular" class="w-5 h-5" />
               โซนอันตราย

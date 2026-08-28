@@ -621,7 +621,7 @@ const startOver = () => {
         <!-- ขั้นที่ 2/3: ผลการแบ่ง -->
         <div v-else class="space-y-6">
           <div
-            class="bg-white dark:bg-slate-800 rounded-vikinger shadow-card dark:shadow-card-dark border border-slate-200 dark:border-slate-700 p-6"
+            class="bg-white dark:bg-slate-800 rounded-vikinger shadow-card dark:shadow-card-dark border border-slate-200 dark:border-slate-700 p-4 sm:p-6"
           >
             <div class="flex flex-wrap items-start justify-between gap-4 mb-5">
               <div>

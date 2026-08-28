@@ -109,19 +109,19 @@ const chartOptions = {
     <template v-else-if="reportData">
       <!-- Summary Cards -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
+        <div class="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
           <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">นักเรียนทั้งหมด</p>
           <p class="text-3xl font-black text-slate-900 dark:text-white">{{ reportData.summary.total_students }}</p>
         </div>
-        <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
+        <div class="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
           <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Active (7 วัน)</p>
           <p class="text-3xl font-black text-primary-500">{{ reportData.summary.active_students }}</p>
         </div>
-        <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
+        <div class="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
           <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Avg WPM ของห้อง</p>
           <p class="text-3xl font-black text-blue-500">{{ reportData.summary.class_avg_wpm }}</p>
         </div>
-        <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
+        <div class="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
           <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Avg Accuracy</p>
           <p class="text-3xl font-black text-green-500">{{ reportData.summary.class_avg_acc }}%</p>
         </div>
@@ -129,7 +129,7 @@ const chartOptions = {
 
       <div class="grid lg:grid-cols-3 gap-8">
         <!-- Trend Chart -->
-        <div class="lg:col-span-2 bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
+        <div class="lg:col-span-2 bg-white dark:bg-slate-900 p-4 sm:p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
           <h2 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
             <Icon icon="heroicons:presentation-chart-line" class="text-primary-500" />
             Class WPM Trend
@@ -140,7 +140,7 @@ const chartOptions = {
         </div>
 
         <!-- Needs Help -->
-        <div class="bg-red-50 dark:bg-red-950/20 p-8 rounded-3xl border border-red-100 dark:border-red-900/30 space-y-6">
+        <div class="bg-red-50 dark:bg-red-950/20 p-4 sm:p-8 rounded-3xl border border-red-100 dark:border-red-900/30 space-y-6">
           <h2 class="text-xl font-black text-red-900 dark:text-red-400 uppercase tracking-wider flex items-center gap-2">
             <Icon icon="heroicons:exclamation-triangle" />
             ควรฝึกเพิ่ม

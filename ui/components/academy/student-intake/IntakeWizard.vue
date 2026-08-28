@@ -70,7 +70,7 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6">
     <!-- Stepper header -->
     <nav class="mb-8">
       <ol class="flex items-center">

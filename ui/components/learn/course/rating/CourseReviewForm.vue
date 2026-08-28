@@ -66,7 +66,7 @@ const cancel = () => {
 </script>
 
 <template>
-  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
     <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
       {{ isEditing ? 'แก้ไขรีวิว' : 'เขียนรีวิว' }}
     </h4>

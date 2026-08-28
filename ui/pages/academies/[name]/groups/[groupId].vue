@@ -188,7 +188,7 @@ const typeCls = computed(() => typeMeta.value ? GROUP_TYPE_COLOR_CLASSES[typeMet
 
     <!-- Error -->
     <div v-else-if="error" class="flex items-center justify-center min-h-[50vh]">
-      <div class="text-center p-8 max-w-md bg-white dark:bg-vikinger-dark-200 rounded-2xl shadow-sm">
+      <div class="text-center p-4 sm:p-8 max-w-md bg-white dark:bg-vikinger-dark-200 rounded-2xl shadow-sm">
         <Icon icon="heroicons:exclamation-triangle" class="w-16 h-16 text-amber-500 mx-auto mb-4" />
         <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-2">ไม่พบส่วนงาน</h2>
         <p class="text-gray-600 dark:text-gray-400 mb-6">{{ error }}</p>

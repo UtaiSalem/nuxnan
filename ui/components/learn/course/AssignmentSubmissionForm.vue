@@ -146,7 +146,7 @@ const submitAnswer = async () => {
 </script>
 
 <template>
-    <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-lg">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-lg">
        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <Icon icon="fluent:form-new-24-regular" class="w-6 h-6 text-orange-500" />
           {{ isEditing ? 'แก้ไขการส่งงาน' : 'ส่งงาน' }}
@@ -232,7 +232,7 @@ const submitAnswer = async () => {
           <button 
              v-if="isEditing && showCancel !== false" 
              @click="emit('cancel')"
-             class="min-h-[44px] sm:min-h-0 px-6 py-2.5 rounded-xl font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+             class="min-h-[44px] sm:min-h-0 px-4 sm:px-6 py-2.5 rounded-xl font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
           >
              ยกเลิก
           </button>

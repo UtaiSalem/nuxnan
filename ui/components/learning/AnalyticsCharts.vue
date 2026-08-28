@@ -1,7 +1,7 @@
 <template>
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <!-- Monthly Scores Trend (Line Chart) -->
-    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+    <div class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
       <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-white">Monthly Performance Trend</h3>
       <div class="h-64">
         <Line :data="trendData" :options="lineOptions" />
@@ -9,7 +9,7 @@
     </div>
 
     <!-- Student vs Class Average (Radar Chart) -->
-    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+    <div class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
       <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-white">Subject Comparison</h3>
       <div class="h-64 flex justify-center">
         <Radar :data="comparisonData" :options="radarOptions" />

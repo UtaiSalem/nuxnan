@@ -392,7 +392,7 @@ onMounted(() => {
       v-if="!isGameActive && matchedPairs === currentPairsTotal"
       class="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center z-50 p-4"
     >
-      <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-sm w-full text-center border-2 border-black">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 max-w-sm w-full text-center border-2 border-black">
         <div class="text-6xl mb-2">🎉</div>
         <h2 class="text-3xl font-black text-gray-900 dark:text-white mb-1">
           Congratulations!

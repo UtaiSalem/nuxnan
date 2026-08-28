@@ -46,7 +46,7 @@ const handleNext = () => {
     <!-- Empty State -->
     <div 
       v-if="payload.guardians.length === 0" 
-      class="bg-gray-50 dark:bg-gray-800/50 p-12 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center text-center"
+      class="bg-gray-50 dark:bg-gray-800/50 p-4 sm:p-12 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center text-center"
     >
       <Icon icon="fluent:people-community-24-regular" class="w-12 h-12 text-gray-400 mb-3" />
       <h3 class="text-gray-900 dark:text-white font-medium mb-1">ยังไม่มีข้อมูลผู้ปกครอง</h3>
@@ -58,7 +58,7 @@ const handleNext = () => {
       <div 
         v-for="(guardian, index) in payload.guardians" 
         :key="guardian.id"
-        class="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm relative overflow-hidden"
+        class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm relative overflow-hidden"
       >
         <!-- Guardian Header -->
         <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100 dark:border-gray-700">
@@ -245,7 +245,7 @@ const handleNext = () => {
     <div class="flex justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
       <button 
         type="button" 
-        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-6 py-2.5 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
         @click="emit('back')"
       >
         <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />

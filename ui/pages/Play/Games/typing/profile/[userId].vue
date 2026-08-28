@@ -200,7 +200,7 @@ function formatDateShort(d: string) {
     <!-- ─── Tab: Stats ────────────────────────────────────────────── -->
     <div v-show="activeTab === 'stats'" class="space-y-6">
       <!-- WPM Chart -->
-      <div class="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800">
+      <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-8 border border-slate-200 dark:border-slate-800">
         <h3 class="font-black text-slate-800 dark:text-white mb-6 uppercase tracking-wider text-sm">
           📈 WPM Progress (30 วันย้อนหลัง)
         </h3>
@@ -211,7 +211,7 @@ function formatDateShort(d: string) {
       </div>
 
       <!-- Best by Mode -->
-      <div class="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800">
+      <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-8 border border-slate-200 dark:border-slate-800">
         <h3 class="font-black text-slate-800 dark:text-white mb-6 uppercase tracking-wider text-sm">
           🎯 สถิติสูงสุดแต่ละโหมด
         </h3>
@@ -254,7 +254,7 @@ function formatDateShort(d: string) {
     <div v-show="activeTab === 'history'" class="space-y-3">
       <div v-if="history.length === 0" class="text-slate-400 text-center py-12 text-sm">ยังไม่มีประวัติการเล่น</div>
       <div v-for="session in history" :key="session.id"
-        class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 px-6 py-4 flex items-center gap-4">
+        class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 px-4 sm:px-6 py-4 flex items-center gap-4">
         <!-- Mode icon -->
         <div class="w-12 h-12 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center flex-shrink-0 text-xl">
           {{ { word_typing:'📝', time_attack:'⏱️', sentence_typing:'📜',

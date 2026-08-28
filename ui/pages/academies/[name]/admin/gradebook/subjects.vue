@@ -281,7 +281,7 @@ const toggleGradeLevel = (level: string) => {
       </div>
 
       <!-- Subjects Grid -->
-      <div v-if="filteredSubjects.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-sm border border-gray-200 dark:border-gray-700">
+      <div v-if="filteredSubjects.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-12 text-center shadow-sm border border-gray-200 dark:border-gray-700">
         <Icon icon="fluent:book-24-regular" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
         <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">ยังไม่มีรายวิชา</h3>
         <p class="text-gray-600 dark:text-gray-400 mb-6">เริ่มต้นด้วยการสร้างรายวิชาใหม่</p>
@@ -298,7 +298,7 @@ const toggleGradeLevel = (level: string) => {
         <div
           v-for="subject in filteredSubjects"
           :key="subject.id"
-          class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
+          class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
         >
           <div class="flex items-start justify-between mb-4">
             <div class="flex items-center gap-3">

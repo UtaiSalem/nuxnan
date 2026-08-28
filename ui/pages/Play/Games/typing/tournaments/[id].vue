@@ -138,7 +138,7 @@ onMounted(loadTournament)
       </div>
 
       <!-- My Status -->
-      <div v-if="myEntry" class="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-6 shadow-sm">
+      <div v-if="myEntry" class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-8 border border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-6 shadow-sm">
         <div class="flex items-center gap-8 flex-wrap">
           <div class="text-center">
             <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">อันดับของฉัน</p>
@@ -171,7 +171,7 @@ onMounted(loadTournament)
       </div>
 
       <!-- Last Result -->
-      <div v-if="lastResult" class="bg-green-50 dark:bg-green-900/10 border-2 border-green-200 dark:border-green-800/50 rounded-2xl p-6 flex items-center gap-6 animate-in slide-in-from-top duration-500">
+      <div v-if="lastResult" class="bg-green-50 dark:bg-green-900/10 border-2 border-green-200 dark:border-green-800/50 rounded-2xl p-4 sm:p-6 flex items-center gap-6 animate-in slide-in-from-top duration-500">
         <span class="text-4xl">{{ lastResult.is_new_best ? '🎉' : '👍' }}</span>
         <div class="flex-1">
           <p class="font-black text-green-800 dark:text-green-300 text-lg">{{ lastResult.is_new_best ? 'New Personal Best!' : 'ผลการเล่นของคุณ' }}</p>
@@ -186,7 +186,7 @@ onMounted(loadTournament)
       <div class="grid lg:grid-cols-3 gap-8 items-start">
         <!-- Play Button / Game -->
         <div class="lg:col-span-1 space-y-4 sticky top-8">
-          <div v-if="!playing" class="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 space-y-6 text-center shadow-sm">
+          <div v-if="!playing" class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-8 border border-slate-200 dark:border-slate-800 space-y-6 text-center shadow-sm">
             <div class="space-y-4">
               <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl space-y-2">
                 <p class="text-slate-500 text-xs font-bold uppercase tracking-widest">การตั้งค่า</p>
@@ -235,7 +235,7 @@ onMounted(loadTournament)
         </div>
 
         <!-- Leaderboard -->
-        <div class="lg:col-span-2 bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div class="lg:col-span-2 bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-sm">
           <div class="flex items-center justify-between mb-8">
             <h2 class="font-black text-slate-800 dark:text-white uppercase tracking-widest text-sm flex items-center gap-2">
               <Icon icon="heroicons:trophy" class="text-xl text-yellow-500" />

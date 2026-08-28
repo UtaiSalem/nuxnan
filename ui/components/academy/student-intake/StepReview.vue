@@ -32,7 +32,7 @@ const guardianTypes: Record<string, string> = {
 
     <div class="space-y-6">
       <!-- Identity & Personal -->
-      <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+      <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
           ข้อมูลประจำตัวและข้อมูลส่วนตัว
         </h3>
@@ -61,7 +61,7 @@ const guardianTypes: Record<string, string> = {
       </div>
 
       <!-- Admission -->
-      <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+      <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
           ข้อมูลการเรียน
         </h3>
@@ -85,7 +85,7 @@ const guardianTypes: Record<string, string> = {
       </div>
 
       <!-- Guardians -->
-      <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+      <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
           ข้อมูลผู้ปกครอง ({{ payload.guardians.length }} คน)
         </h3>
@@ -124,7 +124,7 @@ const guardianTypes: Record<string, string> = {
     </div>
 
     <!-- Account Mode -->
-      <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+      <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
           การสร้างบัญชีผู้ใช้
         </h3>
@@ -150,7 +150,7 @@ const guardianTypes: Record<string, string> = {
     <div class="flex justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
       <button
         type="button"
-        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-6 py-2.5 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
         @click="emit('back')"
         :disabled="isSubmitting"
       >

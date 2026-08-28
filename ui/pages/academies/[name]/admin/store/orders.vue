@@ -289,7 +289,7 @@ const formatDate = (date: string) => {
     <Teleport to="body">
       <div v-if="showCancelModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="fixed inset-0 bg-black/50" @click="showCancelModal = false"></div>
-        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-sm w-full p-6 space-y-4">
+        <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-sm w-full p-4 sm:p-6 space-y-4">
           <h3 class="text-lg font-bold text-gray-900 dark:text-white">ยกเลิกคำสั่งซื้อ</h3>
           <p class="text-sm text-gray-600 dark:text-gray-400">คำสั่งซื้อ: {{ selectedOrder?.order_number }}</p>
           <div>

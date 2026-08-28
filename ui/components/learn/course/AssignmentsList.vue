@@ -118,7 +118,7 @@ const deleteAssignment = async (assignment: any) => {
 
     <!-- Empty State -->
     <!-- Empty State -->
-    <div v-else class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-12 text-center border border-gray-100 dark:border-gray-700">
+    <div v-else class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 sm:p-12 text-center border border-gray-100 dark:border-gray-700">
       <div class="w-24 h-24 bg-gray-50 dark:bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-6">
         <Icon icon="fluent:clipboard-task-24-regular" class="w-12 h-12 text-gray-400" />
       </div>

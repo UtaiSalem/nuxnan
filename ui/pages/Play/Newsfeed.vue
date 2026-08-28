@@ -272,7 +272,7 @@ onUnmounted(() => {
       <CreatePostBox @post-created="handlePostCreated" />
 
       <!-- Error State -->
-      <div v-if="error && !isLoading" class="bg-red-50 dark:bg-red-900/20 rounded-xl p-6 text-center">
+      <div v-if="error && !isLoading" class="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 sm:p-6 text-center">
         <Icon icon="fluent:error-circle-24-regular" class="w-12 h-12 mx-auto mb-3 text-red-500" />
         <p class="text-red-600 dark:text-red-400 mb-4">{{ error }}</p>
         <button 
@@ -289,7 +289,7 @@ onUnmounted(() => {
         <div
           v-for="i in 3"
           :key="i"
-          class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-6 animate-pulse"
+          class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-4 sm:p-6 animate-pulse"
         >
           <div class="flex items-center gap-4 mb-4">
             <div class="w-12 h-12 bg-gray-200 dark:bg-vikinger-dark-100 rounded-full"></div>
@@ -334,7 +334,7 @@ onUnmounted(() => {
         >
           <div 
             v-if="isLoadingMore" 
-            class="flex items-center gap-2 px-6 py-3 bg-white dark:bg-vikinger-dark-200 text-vikinger-purple rounded-full shadow-sm"
+            class="flex items-center gap-2 px-4 sm:px-6 py-3 bg-white dark:bg-vikinger-dark-200 text-vikinger-purple rounded-full shadow-sm"
           >
             <Icon icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
             กำลังโหลด...
@@ -351,7 +351,7 @@ onUnmounted(() => {
         <!-- Empty State -->
         <div
           v-if="activities.length === 0 && !error"
-          class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-8 text-center"
+          class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-4 sm:p-8 text-center"
         >
           <Icon icon="fluent:document-text-24-regular" class="w-16 h-16 mx-auto mb-4 text-gray-400" />
           <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">

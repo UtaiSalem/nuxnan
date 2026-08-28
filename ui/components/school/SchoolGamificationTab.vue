@@ -199,7 +199,7 @@
         </div>
 
         <div class="flex gap-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-          <button type="button" @click="showRuleModal = false" class="flex-1 px-6 py-4 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-2xl font-bold hover:bg-gray-200 transition-all">
+          <button type="button" @click="showRuleModal = false" class="flex-1 px-4 sm:px-6 py-4 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-2xl font-bold hover:bg-gray-200 transition-all">
             ยกเลิก
           </button>
           <button type="submit" :disabled="savingRule" class="flex-[2] px-6 py-4 bg-primary-500 text-white rounded-2xl font-bold shadow-xl shadow-primary-200 dark:shadow-none hover:bg-primary-600 active:scale-95 transition-all disabled:opacity-50">

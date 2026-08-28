@@ -194,7 +194,7 @@ const previewImage = computed(() => {
           <div class="sticky bottom-0 flex items-center gap-3 p-4 border-t border-gray-200 dark:border-vikinger-dark-50/30 bg-white dark:bg-vikinger-dark-100">
             <button
               @click="closeModal"
-              class="flex-1 px-6 py-3 rounded-xl border border-gray-300 dark:border-vikinger-dark-50/30 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-vikinger-dark-200 transition-all"
+              class="flex-1 px-4 sm:px-6 py-3 rounded-xl border border-gray-300 dark:border-vikinger-dark-50/30 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-vikinger-dark-200 transition-all"
             >
               ยกเลิก
             </button>

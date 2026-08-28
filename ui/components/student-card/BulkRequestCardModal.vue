@@ -75,7 +75,7 @@ const handleSubmit = async () => {
     <Dialog as="div" :open="open" @close="!isSubmitting && emit('close')" class="relative z-50">
         <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" aria-hidden="true" />
         <div class="fixed inset-0 flex items-center justify-center p-4">
-            <DialogPanel class="w-full max-w-lg bg-white rounded-2xl p-6 shadow-2xl border border-gray-100 overflow-hidden transform transition-all max-h-[90vh] overflow-y-auto">
+            <DialogPanel class="w-full max-w-lg bg-white rounded-2xl p-4 sm:p-6 shadow-2xl border border-gray-100 overflow-hidden transform transition-all max-h-[90vh] overflow-y-auto">
                 <div class="flex items-center gap-3 border-b border-gray-100 pb-4 mb-4">
                     <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
                         <Icon icon="heroicons:user-group" class="w-6 h-6" />

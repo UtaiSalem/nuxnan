@@ -1386,7 +1386,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                   <Icon icon="fluent:person-add-24-filled" class="w-5 h-5" />
                   ขอเป็นเพื่อนเพื่อดูข้อมูล
                 </button>
-                <div v-else class="px-6 py-3 bg-gray-700/50 text-gray-300 rounded-xl font-medium inline-flex items-center gap-2">
+                <div v-else class="px-4 sm:px-6 py-3 bg-gray-700/50 text-gray-300 rounded-xl font-medium inline-flex items-center gap-2">
                   <Icon icon="fluent:clock-24-regular" class="w-5 h-5" />
                   {{ friendshipStatus?.status === 'pending_sent' ? 'ส่งคำขอแล้ว รอการยืนยัน' : 'รอคุณยืนยันคำขอเป็นเพื่อน' }}
                 </div>
@@ -1416,7 +1416,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                 <button 
                   @click="loadMoreActivities"
                   :disabled="isLoadingMore"
-                  class="px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto"
+                  class="px-4 sm:px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto"
                 >
                   <Icon 
                     v-if="isLoadingMore" 

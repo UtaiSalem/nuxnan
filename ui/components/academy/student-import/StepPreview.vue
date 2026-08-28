@@ -5,7 +5,7 @@
       <p class="mt-2 text-gray-500 dark:text-gray-400">ระบบกำลังตรวจสอบความถูกต้องของข้อมูล กรุณารอสักครู่</p>
     </div>
 
-    <div v-if="isValidating" class="bg-white dark:bg-gray-800 rounded-xl p-12 border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center">
+    <div v-if="isValidating" class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-12 border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center">
       <Icon icon="fluent:spinner-ios-20-regular" class="w-12 h-12 text-primary-500 animate-spin mb-4" />
       <h3 class="text-lg font-semibold text-gray-900 dark:text-white">กำลังประมวลผลไฟล์...</h3>
       <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">อาจใช้เวลาสักครู่ขึ้นอยู่กับจำนวนข้อมูล</p>

@@ -68,7 +68,7 @@ function start() {
           <Icon icon="heroicons:trophy" />
           <span>🏆 TOURNAMENTS</span>
         </NuxtLink>
-        <NuxtLink v-if="authStore.user" :to="`/play/games/typing/profile/${authStore.user.id}`" class="px-8 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black rounded-2xl border-2 border-slate-200 dark:border-slate-700 transition-all hover:scale-105 flex items-center gap-2">
+        <NuxtLink v-if="authStore.user" :to="`/play/games/typing/profile/${authStore.user.id}`" class="px-4 sm:px-8 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black rounded-2xl border-2 border-slate-200 dark:border-slate-700 transition-all hover:scale-105 flex items-center gap-2">
           <Icon icon="heroicons:user" />
           <span>MY PROFILE</span>
         </NuxtLink>

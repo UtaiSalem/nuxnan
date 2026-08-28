@@ -2,13 +2,13 @@
   <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-0 py-4 sm:px-4">
     <div class="w-full max-w-md">
       <!-- Loading -->
-      <div v-if="loading" class="bg-white rounded-2xl shadow-xl p-8 text-center">
+      <div v-if="loading" class="bg-white rounded-2xl shadow-xl p-4 sm:p-8 text-center">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
         <p class="text-gray-500">กำลังตรวจสอบลิงก์เชิญ...</p>
       </div>
 
       <!-- Invalid Link -->
-      <div v-else-if="!isValid" class="bg-white rounded-2xl shadow-xl p-8 text-center">
+      <div v-else-if="!isValid" class="bg-white rounded-2xl shadow-xl p-4 sm:p-8 text-center">
         <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <Icon icon="mdi:link-off" class="w-8 h-8 text-red-600" />
         </div>

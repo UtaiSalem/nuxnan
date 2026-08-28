@@ -263,7 +263,7 @@ const confirmSync = async () => {
           </button>
         </div>
 
-        <div v-if="syncResult.to_add?.length === 0 && syncResult.missing?.length === 0" class="p-8 text-center bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl">
+        <div v-if="syncResult.to_add?.length === 0 && syncResult.missing?.length === 0" class="p-4 sm:p-8 text-center bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl">
           <Icon icon="fluent:checkmark-circle-24-filled" class="w-12 h-12 text-emerald-500 mx-auto mb-2" />
           <h4 class="font-bold text-emerald-700 dark:text-emerald-400">ตรงกับห้องเรียนอยู่แล้ว</h4>
           <p class="text-sm text-emerald-600/80 mt-1">จำนวนสมาชิก {{ syncResult.unchanged_count }} คน ไม่มีการเปลี่ยนแปลง</p>

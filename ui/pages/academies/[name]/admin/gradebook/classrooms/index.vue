@@ -292,7 +292,7 @@ const commonGradeLevels = [
       </div>
 
       <!-- Classrooms Grid -->
-      <div v-if="filteredClassrooms.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-12 text-center shadow-sm border border-gray-200 dark:border-gray-700">
+      <div v-if="filteredClassrooms.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-12 text-center shadow-sm border border-gray-200 dark:border-gray-700">
         <Icon icon="fluent:building-24-regular" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
         <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">ยังไม่มีห้องเรียน</h3>
         <p class="text-gray-600 dark:text-gray-400 mb-6">เริ่มต้นด้วยการสร้างห้องเรียนใหม่</p>
@@ -309,7 +309,7 @@ const commonGradeLevels = [
         <div
           v-for="classroom in filteredClassrooms"
           :key="classroom.id"
-          class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
+          class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
         >
           <div class="flex items-start justify-between mb-4">
             <div class="flex items-center gap-3">

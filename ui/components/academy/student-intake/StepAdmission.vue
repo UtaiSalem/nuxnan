@@ -67,7 +67,7 @@ const handleNext = () => {
 
     <div class="space-y-6">
       <!-- Current Admission -->
-      <div class="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-xl border border-gray-100 dark:border-gray-700">
+      <div class="bg-gray-50 dark:bg-gray-800/50 p-4 sm:p-6 rounded-xl border border-gray-100 dark:border-gray-700">
         <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <Icon icon="fluent:building-desktop-24-regular" class="w-5 h-5 text-gray-400" />
           การเข้าเรียน
@@ -125,7 +125,7 @@ const handleNext = () => {
       </div>
 
       <!-- Previous School -->
-      <div class="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-xl border border-gray-100 dark:border-gray-700">
+      <div class="bg-gray-50 dark:bg-gray-800/50 p-4 sm:p-6 rounded-xl border border-gray-100 dark:border-gray-700">
         <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <Icon icon="fluent:building-24-regular" class="w-5 h-5 text-gray-400" />
           โรงเรียนเดิม
@@ -166,7 +166,7 @@ const handleNext = () => {
     <div class="flex justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
       <button 
         type="button" 
-        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-6 py-2.5 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+        class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
         @click="emit('back')"
       >
         <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />

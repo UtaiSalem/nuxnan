@@ -456,7 +456,7 @@ onMounted(loadData)
       <!-- Rule Modal -->
       <Teleport to="body">
         <div v-if="showRuleModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click="showRuleModal = false">
-          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-lg w-full p-6" @click.stop>
+          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-lg w-full p-4 sm:p-6" @click.stop>
             <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-6">
               {{ editingRule ? 'แก้ไขกฎ' : 'เพิ่มกฎใหม่' }}
             </h3>
@@ -542,7 +542,7 @@ onMounted(loadData)
       <!-- Adjust Points Modal -->
       <Teleport to="body">
         <div v-if="showAdjustModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click="showAdjustModal = false">
-          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-6" @click.stop>
+          <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full p-4 sm:p-6" @click.stop>
             <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-6">ปรับแต้มผู้ใช้</h3>
             
             <div class="space-y-4">

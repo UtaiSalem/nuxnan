@@ -176,7 +176,7 @@ onUnmounted(() => {
 <template>
   <div class="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 p-4">
     <div class="max-w-4xl mx-auto w-full">
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-6">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6 mb-6">
         <h1 class="text-3xl font-bold mb-4 text-center text-gray-900 dark:text-white">🐍 Snake Game</h1>
         <p class="text-center text-gray-600 dark:text-gray-400 mb-4">Play the classic snake game and earn points!</p>
     <div class="flex-col items-center justify-center">

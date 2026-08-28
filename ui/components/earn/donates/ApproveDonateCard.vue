@@ -174,7 +174,7 @@ const handleReject = () => {
           </div>
         </div>
       </div>
-      <div v-else class="mt-3 bg-gray-50 dark:bg-gray-900/30 rounded-xl p-8 border-2 border-dashed border-gray-100 dark:border-gray-700 text-center">
+      <div v-else class="mt-3 bg-gray-50 dark:bg-gray-900/30 rounded-xl p-4 sm:p-8 border-2 border-dashed border-gray-100 dark:border-gray-700 text-center">
         <Icon icon="fluent:image-off-24-regular" class="w-10 h-10 text-gray-300 mx-auto mb-2" />
         <p class="text-xs text-gray-400 font-medium">ไม่มีสลิปโอนเงิน</p>
       </div>
