@@ -215,7 +215,8 @@ class ParentDashboardController extends Controller
             })
             ->where(function ($q) {
                 $q->whereJsonContains('target_audience', 'all')
-                    ->orWhereJsonContains('target_audience', 'parents');
+                    ->orWhereJsonContains('target_audience', 'parents')
+                    ->orWhereJsonContains('target_audience', 'parent');
             })
             ->orderBy('is_pinned', 'desc')
             ->orderBy('published_at', 'desc')

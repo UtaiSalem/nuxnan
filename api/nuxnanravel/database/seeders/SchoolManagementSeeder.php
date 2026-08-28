@@ -205,10 +205,10 @@ class SchoolManagementSeeder extends Seeder
 
         // Fee Structures - columns: id,academy_id,academic_year_id,name,description,grade_levels,total_amount,is_active,created_by
         $feeStructures = [
-            ['name' => 'ค่าเทอม ป.1', 'description' => 'ค่าธรรมเนียมการศึกษาระดับ ป.1', 'grade_levels' => json_encode(['ป.1']), 'total_amount' => 15000],
-            ['name' => 'ค่าเทอม ป.2', 'description' => 'ค่าธรรมเนียมการศึกษาระดับ ป.2', 'grade_levels' => json_encode(['ป.2']), 'total_amount' => 15000],
-            ['name' => 'ค่าเทอม ม.1', 'description' => 'ค่าธรรมเนียมการศึกษาระดับ ม.1', 'grade_levels' => json_encode(['ม.1']), 'total_amount' => 20000],
-            ['name' => 'ค่าเทอม ม.4', 'description' => 'ค่าธรรมเนียมการศึกษาระดับ ม.4', 'grade_levels' => json_encode(['ม.4']), 'total_amount' => 25000],
+            ['name' => 'ค่าเทอม ป.1', 'description' => 'ค่าธรรมเนียมการศึกษาระดับ ป.1', 'grade_levels' => ['ป.1'], 'total_amount' => 15000],
+            ['name' => 'ค่าเทอม ป.2', 'description' => 'ค่าธรรมเนียมการศึกษาระดับ ป.2', 'grade_levels' => ['ป.2'], 'total_amount' => 15000],
+            ['name' => 'ค่าเทอม ม.1', 'description' => 'ค่าธรรมเนียมการศึกษาระดับ ม.1', 'grade_levels' => ['ม.1'], 'total_amount' => 20000],
+            ['name' => 'ค่าเทอม ม.4', 'description' => 'ค่าธรรมเนียมการศึกษาระดับ ม.4', 'grade_levels' => ['ม.4'], 'total_amount' => 25000],
         ];
 
         foreach ($feeStructures as $data) {
@@ -481,7 +481,7 @@ class SchoolManagementSeeder extends Seeder
                 array_merge($data, [
                     'academy_id' => $this->academy->id,
                     'created_by' => $this->users->first()->id,
-                    'target_audience' => json_encode(['all']),
+                    'target_audience' => ['all'],
                     'is_pinned' => $data['priority'] === 'high',
                     'is_published' => true,
                     'published_at' => now(),
@@ -663,7 +663,7 @@ class SchoolManagementSeeder extends Seeder
                 ['academy_id' => $this->academy->id, 'code' => $data['code']],
                 array_merge($data, [
                     'academy_id' => $this->academy->id,
-                    'display_config' => json_encode([]),
+                    'display_config' => [],
                     'is_system' => false,
                     'is_active' => true,
                 ])
