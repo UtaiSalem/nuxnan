@@ -1,5 +1,78 @@
 # Work Log — nuxnan project
 
+## 2026-08-28 (ต่อ) — เมนู #6 เฟส C ปิดครบ: บัญชีผู้ปกครอง G-S12a–e + G-S13 + G-S14 + G-S14b
+
+### งานที่ทำในวันนี้
+
+**ปิด O1 ที่ค้างมาตั้งแต่ 2026-07-29** — เจ้าของโปรเจคปฏิเสธทั้ง 3 ทางเลือกเดิม (SMS / claim ด้วยเลขบัตร /
+เจ้าหน้าที่สร้างบัญชีให้) เลือกโมเดลใหม่: **ผูกกับบัญชีที่มีอยู่ในระบบเท่านั้น + ยินยอมสองทาง**
+บันทึกเป็น D7–D12 + A4–A8 ใน [`.agents/school-admin/06-guardians.md`](.agents/school-admin/06-guardians.md) §0
+- คำขอ 4 ทาง: นักเรียน→บัญชีกดรับ · ผู้ปกครอง→นักเรียนกดรับ · ครูประจำชั้น/ฝ่ายทะเบียน→**ผู้ปกครองกดรับอย่างเดียว**
+- ค้นบัญชี **ตรงตัวเท่านั้น** (username/personal_code/phone) ห้ามค้นด้วยชื่อ — กันนักเรียนไล่ส่องผู้ใช้ทั้งระบบ
+- ผูกทับแถว `guardians` เดิมก่อน สร้างใหม่เฉพาะเมื่อไม่มี · 1 บัญชี = 1 คนต่อโรงเรียน (unique `academy_id,user_id`)
+
+**8 commit** (a2139e16 → 115a9cc9 ยกเว้น f63edf74 ที่เป็นงาน responsive ของอีก session):
+| step | สาระ |
+|---|---|
+| G-S12a | ตาราง `guardian_account_requests` + unique บน `guardians` + model |
+| G-S12b | `GuardianAccountLinkService` (createRequest/accept/decline/cancel/unlink) + audit 3 action |
+| G-S12c | 8 endpoint + ด่านสิทธิ์ที่ controller · `linkUser` 501 → 201 สร้างคำขอ |
+| G-S12d | หน้า `parent/requests.vue` + `GuardianLinkAccountModal` + ป้ายสถานะบนการ์ดผู้ปกครอง |
+| G-S12e | หน้าแอดมิน: ป้าย 3 สถานะ + ส่งคำขอ/ยกเลิก/ปลดผูก + สถิติ 2 การ์ด + แผงคำขอทั้งโรงเรียน |
+| G-S13 | เปิด Parent Dashboard · `dashboard/parent.vue` → redirect ไปตัวจริง |
+| G-S14 | ซ่อม 4 endpoint ที่อ้างตารางไม่มีจริง (ประกาศ/กิจกรรม/เข้าเรียน/ค่าธรรมเนียม) |
+| G-S14b | migration normalize `target_audience` ที่ encode ซ้อน 2 ชั้น + แก้ seeder ต้นทาง |
+
+**บั๊กที่เจอจากการเปิดจอจริง (เทสต์จับไม่ได้เลยสักตัว)**
+1. **แผงคำขอทำให้รายการผู้ปกครองหายทั้งหน้า** — บล็อกใหม่ถูกแทรกกลางสาย `v-if/v-else-if` ทำให้รายการกลายเป็น
+   `v-else` ของแผง · พอมีคำขอค้างแม้ใบเดียวการ์ดหายเกลี้ยง
+2. **identifier ผิดชนิด** — แอปเดินด้วย `/academies/<ชื่อโรงเรียนไทย>/...` แต่ endpoint bind ด้วย **id**
+   ต้อง resolve `GET /api/academies/{ชื่อ}` → `res.academy.id` ก่อนเสมอ
+3. **`/parent/children` คืน 500 มาตลอด** — `with('currentClassroom.classroom')` อ้าง relation ที่ไม่มี
+   (`currentClassroom` เป็น string accessor) ตัวจริงคือ `currentEnrollment`
+4. **ฟิลด์สถานะบัญชีถูกเติมผิดไฟล์** — เติมใน `StudentResource` แต่หน้าโปรไฟล์ใช้ `StudentProfileController`
+5. **การ์ดส่ง link id แทน person id** ทำให้ยิงคำขอไม่ผ่าน
+6. **`target_audience` encode ซ้อน 2 ชั้น** — seeder ส่ง `json_encode()` เข้า Eloquent ที่มี cast `array` อยู่แล้ว
+   → `whereJsonContains` ไม่ match ประกาศจึงไม่เคยขึ้นเลย
+
+### งานที่ค้างอยู่ (TODO ต่อ)
+
+- [ ] **ยืนยันการ์ดประกาศด้วยตาบนหน้าจอ** — API คืน 3 ใบแล้ว (พิสูจน์ระดับ controller) แต่ยังไม่ได้เห็นการ์ดจริง
+      เพราะ session หมดอายุ · จุดที่แก้ไว้คือ `parent/index.vue` บรรทัด ~372 (`excerptOf(ann.content)`) และตัด `ann.author` ออก
+- [ ] **`fee_structures.grade_levels` เสียแบบเดียวกัน 4 แถว** (encode ซ้อน) — `FeeStructure::scopeForGradeLevel`
+      (`app/Models/FeeStructure.php:89`) ใช้ `whereJsonContains` จึงหาไม่เจอเงียบ ๆ · migration G-S14b ครอบแค่
+      `school_announcements`/`school_events` ยังไม่ได้ขยายไปตารางนี้
+- [ ] **ช่องค้นหา + dropdown ตัวกรองในหน้า `admin/guardians/index.vue` สูง 42px** (ต่ำกว่าเกณฑ์ 44) หลุดจากรอบกวาด
+- [ ] **`/api/notifications/recent` คืน 500 ทุกหน้า** — ไม่เกี่ยวกับเฟสนี้ แต่เจอทุกครั้งที่เปิดจอ
+- [ ] **production ยังไม่ได้รัน migration 3 ตัวของเฟสนี้**: `2026_08_28_000001_create_guardian_account_requests_table`,
+      `2026_08_28_000002_add_unique_account_link_to_guardians_table`, `2026_08_28_000003_fix_double_encoded_target_audience`
+      (dev รันครบแล้ว · ก่อนรัน production ให้ `mysqldump` ตาราง `guardians` + `school_announcements` ไว้ก่อน)
+- [ ] เมนูถัดไปตามคิว OVERVIEW: **#7 ตั้งค่าโรงเรียน** → #8 → #10
+
+### Context สำคัญ
+
+- **ฐาน dev สะอาดแล้ว** ไม่มีข้อมูลทดสอบค้าง: `guardian_account_requests` 0 แถว · `guardians.user_id` ว่างทั้ง 4,504 แถว
+  · `student_guardian_links` 4,999 แถวครบ · ระหว่างทดสอบเคยตั้ง `school_attendances` id 1 `date` เป็นวันนี้แล้วคืนเป็น
+  `2026-05-31` (เท่ากับ `created_at` — ค่าเดิมถูกเขียนทับไปแล้ว ถ้าค่าจริงไม่ใช่วันนี้ให้แก้เอง)
+- **agy รายงาน `pint --test` ผ่านทั้งที่ไม่ผ่าน 6 shard ติด** และข้ามงานที่สเปกสั่งไป 2 ครั้ง (เทสต์ข้อ 7 ของ G-S12d,
+  การ์ดสถิติ 2 ใบของ G-S12e) — **ต้องรันเกณฑ์เองทุกครั้ง ห้ามเชื่อรายงาน**
+- **เรพนี้มีคนเขียนมากกว่าหนึ่งทางพร้อมกัน** — วันนี้มี session งาน responsive รันขนานอยู่ในเวิร์กทรีเดียวกัน
+  ทำให้ `git status` มีไฟล์ของอีกฝั่งปนมา 157 ไฟล์ · **ก่อนสรุปว่า "agy แหกสเปก" ต้องเช็ค `git log` ก่อนเสมอ**
+  และควร diff เทียบเฉพาะไฟล์ที่อยู่ในสเปกแทนที่จะดูทั้งเวิร์กทรี
+- **สคีมาจริงต่างจากที่สเปกเก่าสมมติไว้เยอะ**: `student_fees` / `announcements` / `student_attendances` **ไม่มีตาราง**
+  ตัวจริงคือ `tuition_fees` / `school_announcements` / `school_attendance_records`+`school_attendances`
+  (ตารางเทียบครบอยู่ใน `06-guardians.md` §6.5)
+- `tuition_fees` มี 0 แถวโดยตั้งใจ — ส่วนค่าธรรมเนียมจะขึ้น "ยังไม่มีรายการ" จนกว่าโรงเรียนจะออกใบแจ้งหนี้จริง
+
+### Branch / Git State
+
+- Branch: `main`
+- Uncommitted: `ui/pages/Learn/Courses/[id]/index.vue` (งานกวาด 44px ค้างมาจากรอบก่อน — ไม่ใช่ของเฟสนี้)
+- Push status: **ยังไม่ push 1 commit** (`115a9cc9` G-S14b) · ที่เหลือ push ไปแล้ว
+
+---
+
+
 ## 2026-08-28 (จบงาน responsive) — กวาด mobile-first ทั้งแอป 760 ไฟล์: 579 finding → ของจริง 30 จุด (push แล้ว)
 
 ### สถานะ: **แก้ครบ 30/30 · เหลือ 0 ที่ยังไม่ตัดสิน** — `0d14170f` · `2014a134` · `7ecb0a16`
