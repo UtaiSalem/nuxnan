@@ -1,5 +1,94 @@
 # Work Log — nuxnan project
 
+## 2026-08-29 — เมนู #7 ตั้งค่าโรงเรียน: audit + ปิด S1/S3/S4 · แทรก S9 ของเมนู #1 (push แล้ว)
+
+### สถานะ: **SET-S1 ✅ · SET-S3 ✅ · SET-S4 ✅ · เมนู #1 S9 ✅** — 8 commit (`d33af5f5` → `22429451`)
+
+เอกสารหลัก: [`.agents/school-admin/07-settings.md`](school-admin/07-settings.md) ·
+[`01-roles-permissions.md`](school-admin/01-roles-permissions.md) §10
+
+### สิ่งที่เจอตอน audit (12 gap) — 3 ข้อที่ไม่คาดคิด
+
+1. **ช่องโหว่สิทธิ์ P0** — `PATCH /api/academies/{academy}/update` อยู่ในกลุ่ม `auth:api` เฉย ๆ
+   controller ไม่เช็คอะไรเลย ⇒ ใครที่ล็อกอินก็เปลี่ยนชื่อ/โลโก้/ปก ของโรงเรียนไหนก็ได้
+   · ไม่มีผู้เรียกใน `ui/` ⇒ **ลบทั้ง route และทั้งเมธอด**
+2. **ปุ่ม "ลบโรงเรียน" เป็นปุ่มตาย** — เรียก `DELETE /api/academies/{id}` ที่ไม่มี route ⇒ 405
+3. **สวิตช์ 5 ตัวบันทึกได้แต่ไม่มีใครอ่าน** — `privacy`, `show_member_list`, `show_course_list`,
+   `allow_student_registration`, `allow_parent_registration` · ฐาน dev **ปิด 4 ตัวไว้อยู่แล้ว**
+   แต่หน้าเว็บยังแสดงรายชื่อสมาชิกและคอร์สตามปกติ
+
+### การตัดสินใจของเจ้าของโปรเจค (เคาะแล้ว)
+
+- **D1** ลบโรงเรียน → เปลี่ยนเป็น **เก็บถาวร (soft delete)** เฉพาะ owner
+- **D2** สวิตช์ write-only → **บังคับใช้ 3** (`privacy`/`show_member_list`/`show_course_list`)
+  **ถอด 2** (`allow_*_registration` ซ้ำซ้อนกับ `join_mode`)
+- **D3** `invite_only` ต้อง**บล็อกการกดขอเข้าร่วมจริง**
+
+### งานที่ปิดไปแล้ว
+
+| step | สาระ |
+|---|---|
+| SET-S1 | ลบ route+method ที่ไม่ตรวจสิทธิ์ · ย้าย `POST /settings` ไปใช้ middleware `academy.permission:settings.manage` แทนด่านที่เขียนเอง (ด่านเก่าไม่กรอง `status = 2` ⇒ สมาชิกพ้นสภาพยังบันทึกได้) |
+| SET-S3 | รวมคีย์สิทธิ์ 2 ชุดที่ทับกันให้เหลือ `settings.view`/`settings.manage` ชุดเดียว + migration ย้ายคีย์ในแถว `academy_roles` จริง |
+| **เมนู #1 S9** | reconcile สิทธิ์ system role ฐาน↔โค้ด (แทรกคิวตามที่เจ้าของสั่ง) |
+| SET-S4 | โหมดดูอย่างเดียวด้วย `settings.view` — ปุ่มบันทึก/อัปโหลดซ่อน · 16 ช่อง disabled · แถบแจ้งเตือน · แท็บโซนอันตรายเฉพาะเจ้าของ |
+
+### 🔴 เรื่องใหญ่ที่เจอระหว่างทาง — S9 role drift (แก้แล้ว แต่ต้องรู้)
+
+`AcademyRole::SYSTEM_ROLES` ใช้ตอน**สร้าง role ให้โรงเรียนใหม่เท่านั้น** ไม่มีกลไก sync ย้อนกลับ
+⇒ ฐานกับโค้ดเคลื่อนออกจากกัน **คนละทาง**: `director`/`admin` ในฐาน**ขาด 19 คีย์**
+(`roles.manage`, `groups.manage`, `staff.manage`, `grades.manage`, `events.manage`,
+`school_attendance.*` ฯลฯ) และ**เกิน 8 คีย์** (`elections.*`/`guardians.*` ที่มาจาก migration
+ของเมนู #25/#6 แต่ไม่ได้เติมกลับค่าคงที่) · `card_admin` **ไม่มีแถวในฐานเลย**
+
+**กับดักที่อันตรายที่สุด:** `AcademyRoleSeeder` ใช้ `updateOrCreate` แล้วเซ็ต
+`'permissions' => $data['permissions']` = **เขียนทับทั้งก้อน** ⇒ ถ้าใครรัน
+`db:seed --class=AcademyRoleSeeder` ตอนก่อนแก้ director/admin จะ**เสีย** `elections.*`
+และ `guardians.*` ทันที ระบบเลือกตั้งกับผู้ปกครองจะล็อกผู้ดูแลออกเงียบ ๆ
+(ตอนนี้ปลอดภัยแล้วเพราะค่าคงที่เป็น superset — แต่กับดักยังอยู่ถ้ามี migration เพิ่มสิทธิ์อีกโดยไม่เติมค่าคงที่)
+
+**เครื่องมือใหม่: `php artisan academy:roles-doctor`** — รายงาน drift + คีย์ผี (อ่านอย่างเดียว)
+**ควรรันหลัง deploy ทุกครั้ง** · เทสต์แทนไม่ได้ (ฐานเทสต์เป็น sqlite ว่างเปล่า และ seeder
+เขียนค่าจากค่าคงที่ตัวเดียวกับที่เอามาเทียบ = ตรวจเป็นวงกลม)
+
+### กับดักที่เจอรอบนี้ (บันทึกไว้ใช้ครั้งหน้า)
+
+1. **grep หา test ด้วยชื่อ method ไม่เจอ** — ผมสรุปว่า "ไม่มี test เลย" ซึ่งผิด ของจริงมี
+   `AcademySettingsUpdateTest` 5 เคสอยู่แล้ว แต่ไฟล์ใช้ `AcademySetting` เอกพจน์ + URL `/settings`
+   ไม่ตรงกับคำที่ผม grep (`updateSettings`/`academy_settings`)
+   ⇒ **ครั้งหน้า grep ด้วยชื่อโดเมนกว้าง ๆ + `ls tests/Feature/<Domain>/` ดูด้วยตา**
+2. **ยิง `-F "name=<ชื่อไทย>"` ผ่าน Git Bash ได้ 500 Malformed UTF-8** — เป็นปัญหา encode
+   ของ shell ไม่ใช่ของโค้ด · ต้องเขียนชื่อลงไฟล์ด้วย tinker แล้วใช้ `-F "name=<ไฟล์"`
+3. **`GET /api/academies/1` ได้ 404 ไม่ใช่เรื่องสิทธิ์** — route bind ด้วยคอลัมน์ `name`
+   ถ้าจะใช้ id ต้องยิง `/api/academies/by-id/{id}`
+4. **PHP บน Windows ไม่เข้าใจ path แบบ MSYS (`/c/...`)** — ต้องส่ง `C:/...` ให้ PHP
+   ส่วน bash ใช้ `/c/...` ⇒ เวลาสลับไปมาต้องเตรียมตัวแปรสองชุด
+5. **agy รายงานตัวเลขที่ตัวเองรันมาให้ แต่บางตัวไม่ตรงกับที่สเปคคาดหวัง** — เทสต์ตัวที่ 2 ของ S9
+   ผมสั่งไว้ว่าเป็น "กับดักจับ drift" พอตรวจจริงพบว่ามันตรวจเป็นวงกลม **สเปคผมเองคาดหวังเกินจริง**
+   ⇒ ต้องตรวจว่าเทสต์ "ล้มเป็น" ด้วย mutation check ทุกครั้ง ไม่ใช่ดูแค่ PASS
+
+### งานที่ค้าง (TODO)
+
+- [ ] **SET-S5 เป็นตัวถัดไป** — ทำให้สวิตช์มีผลจริงตาม D2/D3 · มี **migration drop 2 คอลัมน์**
+      (`allow_student_registration`, `allow_parent_registration`) และแตะ `AcademyMemberController`
+      ให้อ่าน `join_mode` เป็นหลักแทน `auto_accept_members`
+- [ ] **production ยังไม่ได้รัน migration 3 ตัว** — `2026_08_26_000001` (drop `student_guardians`),
+      `2026_08_29_000001` (unify settings keys), `2026_08_29_000002` (reconcile role permissions)
+      · dev รันครบแล้ว · **ก่อนรันบน production ให้ `mysqldump` ตาราง `academy_roles` ไว้ก่อน**
+- [ ] **หนี้ตรวจด้วยตา SET-S4** — ยังไม่ได้เห็นโหมดอ่านอย่างเดียวบนหน้าจอจริง (แถบเหลืองขึ้นไหม
+      ช่องจางไหม ปุ่มกล้องหายไหม) ต้องล็อกอินเป็นผู้ใช้ที่มีแค่ `settings.view`
+- [ ] `npm run build` — **ผู้ใช้รันเอง** (งานรอบนี้แตะ `ui/` 5 ไฟล์: settings.vue, admin.vue,
+      admin/index.vue, dashboard/admin.vue, useAcademyNavigation.ts, useAcademyRole.ts)
+- [ ] เมนู #1 S1–S8 ยังไม่ได้ทำ (S9 แทรกเข้าไปก่อนเพราะเป็นของที่เมนูอื่นพึ่ง)
+
+### Branch / Git State
+
+- Branch: `main`
+- Uncommitted: `ui/pages/Learn/Courses/[id]/index.vue` — **งานของอีก session ผมไม่แตะเลย**
+- Push: **pushed**
+
+---
+
 ## 2026-08-28 (จบงาน tablet) — ตรวจ 768px ทั้งแอป: 132 finding → ของจริง 4 จุด (push แล้ว)
 
 ### สถานะ: **แก้ครบ 4/4 · หมวดหนักสุดสะอาด** — `f487822a`
