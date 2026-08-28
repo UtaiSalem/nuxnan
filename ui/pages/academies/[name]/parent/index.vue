@@ -15,8 +15,18 @@
           </div>
           <div class="flex items-center gap-3">
             <NuxtLink 
+              :to="`/academies/${academyName}/parent/requests`"
+              class="px-4 py-2 bg-white/10 text-white hover:bg-white/20 rounded-xl font-semibold transition-colors flex items-center gap-2 relative min-h-[44px]"
+            >
+              <Icon icon="fluent:link-24-regular" class="w-5 h-5" />
+              คำขอผูกบัญชี
+              <span v-if="pendingRequestsCount > 0" class="absolute -top-2 -right-2 min-w-[20px] h-5 px-1 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold shadow-sm">
+                {{ pendingRequestsCount }}
+              </span>
+            </NuxtLink>
+            <NuxtLink 
               :to="`/academies/${academyName}/parent/meetings`"
-              class="px-4 py-2 bg-white text-blue-700 hover:bg-blue-50 rounded-xl font-semibold shadow-sm transition-colors flex items-center gap-2"
+              class="px-4 py-2 bg-white text-blue-700 hover:bg-blue-50 rounded-xl font-semibold shadow-sm transition-colors flex items-center gap-2 min-h-[44px]"
             >
               <Icon icon="fluent:calendar-chat-24-regular" class="w-5 h-5" />
               นัดพบครู
@@ -44,8 +54,11 @@
           <div class="w-20 h-20 bg-gray-50 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
             <Icon icon="fluent:person-search-24-regular" class="w-10 h-10 text-gray-400" />
           </div>
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">ไม่พบข้อมูลบุตรหลาน</h3>
-          <p class="text-gray-500 dark:text-gray-400 mt-1 max-w-xs mx-auto">หากคุณมีบุตรหลานเรียนอยู่ที่นี่ กรุณาติดต่อฝ่ายธุรการเพื่อเชื่อมโยงบัญชี</p>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">ยังไม่ได้ผูกบัญชีกับนักเรียนคนใด</h3>
+          <p class="text-gray-500 dark:text-gray-400 mt-1 max-w-md mx-auto mb-6">ส่งคำขอผูกบัญชี แล้วให้นักเรียนหรือทางโรงเรียนกดยอมรับ ถึงจะเห็นข้อมูล (หรือรอรับคำขอจากครูประจำชั้น/ฝ่ายทะเบียนก็ได้)</p>
+          <NuxtLink :to="`/academies/${academyName}/parent/requests`" class="inline-flex items-center justify-center min-h-[44px] px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors">
+            ส่งคำขอผูกบัญชี
+          </NuxtLink>
         </div>
 
         <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -438,6 +451,7 @@ const fees = ref<any[]>([])
 const feeSummary = ref({ total_due: 0, total_paid: 0, overdue_count: 0 })
 const announcements = ref<any[]>([])
 const events = ref<any[]>([])
+const pendingRequestsCount = ref(0)
 
 // Loading states
 const loadingChildren = ref(true)
@@ -587,6 +601,20 @@ const loadEvents = async () => {
   }
 }
 
+// Load pending requests count
+const loadPendingRequestsCount = async () => {
+  if (!academyId.value) return
+  try {
+    const { fetchRequests } = useGuardianAccount(academyId.value)
+    const result = await fetchRequests({ status: 'pending' })
+    if (result && result.incoming) {
+      pendingRequestsCount.value = result.incoming.length
+    }
+  } catch (error) {
+    // โหลดคำขอล้มเหลว → เงียบ ๆ ไม่ต้องขึ้น error
+  }
+}
+
 // Helper functions
 const formatDate = (date: string) => {
   if (!date) return '-'
@@ -650,6 +678,7 @@ onMounted(async () => {
     loadAnnouncements()
     loadEvents()
     loadFees()
+    loadPendingRequestsCount()
   }
 })
 </script>

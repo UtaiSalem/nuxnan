@@ -30,7 +30,7 @@ class ParentDashboardController extends Controller
         $studentIds = app(GuardianAccessService::class)->guardianStudentIds($user, $academy);
 
         $students = Student::whereIn('id', $studentIds)
-            ->with(['currentClassroom.classroom'])
+            ->with(['currentEnrollment.classroom'])
             ->get();
 
         return response()->json([
@@ -41,10 +41,10 @@ class ParentDashboardController extends Controller
                     'student_id' => $student->student_id,
                     'name' => $student->first_name_th.' '.$student->last_name_th,
                     'name_en' => $student->first_name_en.' '.$student->last_name_en,
-                    'photo' => $student->photo_url,
-                    'classroom' => $student->currentClassroom?->classroom?->name ?? 'ไม่มีห้องเรียน',
-                    'grade_level' => $student->currentClassroom?->classroom?->grade_level ?? '-',
-                    'student_number' => $student->currentClassroom?->student_number ?? '-',
+                    'photo' => $student->profile_image_url,
+                    'classroom' => $student->currentEnrollment?->classroom?->name ?? 'ไม่มีห้องเรียน',
+                    'grade_level' => $student->currentEnrollment?->classroom?->grade_level ?? '-',
+                    'student_number' => $student->currentEnrollment?->student_number ?? '-',
                     'birth_date' => $student->birth_date,
                     'status' => $student->status,
                 ];
@@ -73,7 +73,7 @@ class ParentDashboardController extends Controller
         }
 
         $student->load([
-            'currentClassroom.classroom',
+            'currentEnrollment.classroom',
             'guardianLinks.guardian.contacts',
         ]);
 
@@ -85,17 +85,17 @@ class ParentDashboardController extends Controller
                 'name' => $student->first_name_th.' '.$student->last_name_th,
                 'name_en' => $student->first_name_en.' '.$student->last_name_en,
                 'nickname' => $student->nickname,
-                'photo' => $student->photo_url,
+                'photo' => $student->profile_image_url,
                 'birth_date' => $student->birth_date,
                 'age' => $student->birth_date ? now()->diffInYears($student->birth_date) : null,
                 'blood_type' => $student->blood_type,
                 'nationality' => $student->nationality,
                 'religion' => $student->religion,
-                'classroom' => $student->currentClassroom?->classroom ? [
-                    'id' => $student->currentClassroom->classroom->id,
-                    'name' => $student->currentClassroom->classroom->name,
-                    'grade_level' => $student->currentClassroom->classroom->grade_level,
-                    'student_number' => $student->currentClassroom->student_number,
+                'classroom' => $student->currentEnrollment?->classroom ? [
+                    'id' => $student->currentEnrollment->classroom->id,
+                    'name' => $student->currentEnrollment->classroom->name,
+                    'grade_level' => $student->currentEnrollment->classroom->grade_level,
+                    'student_number' => $student->currentEnrollment->student_number,
                 ] : null,
                 'guardians' => $student->guardianLinks->map(function ($link) {
                     return [
