@@ -190,7 +190,7 @@ export const useAcademyNavigation = (
       intent: 'manage',
       color: 'rose',
       order: 12,
-      visibleWhen: (c) => c.role.isAdmin.value || c.role.can('academy.settings.view')
+      visibleWhen: (c) => c.role.isAdmin.value || c.role.can('settings.view') || c.role.can('settings.manage')
     }
   ]
 

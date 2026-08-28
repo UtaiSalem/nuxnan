@@ -165,7 +165,7 @@ export const useAcademyRole = (academyId: Ref<number | null>) => {
    * Check if user can access admin features
    */
   const canAccessAdmin = computed(() => {
-    return isAdmin.value || can('academy.settings.view')
+    return isAdmin.value || can('settings.view') || can('settings.manage')
   })
 
   /**

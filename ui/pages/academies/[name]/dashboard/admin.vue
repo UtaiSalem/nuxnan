@@ -165,7 +165,7 @@ const quickActions = computed(() => [
     icon: 'fluent:settings-24-regular',
     to: `/academies/${academyName.value}/admin/settings`,
     color: 'bg-gray-500',
-    show: can('academy.settings.edit'),
+    show: can('settings.manage'),
   },
   {
     title: 'จัดการบทบาท',

@@ -270,13 +270,13 @@ const menuItems = computed(() => [
         name: 'ระบบบริหารโรงเรียน',
         icon: 'fluent:building-24-regular',
         to: `/academies/${academyName.value}/admin/school-management`,
-        show: can('settings.manage') || can('academy.settings.edit'),
+        show: can('settings.manage'),
       },
       {
         name: 'ตั้งค่าโรงเรียน',
         icon: 'fluent:settings-24-regular',
         to: `/academies/${academyName.value}/admin/settings`,
-        show: can('academy.settings.view') || can('academy.settings.edit'),
+        show: can('settings.manage'),
       },
     ]
   },

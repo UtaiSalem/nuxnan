@@ -61,8 +61,6 @@ class AcademyPermission extends Model
         'academy' => [
             ['name' => 'academy.view', 'display_name' => 'ดูข้อมูลโรงเรียน'],
             ['name' => 'academy.view.public', 'display_name' => 'ดูข้อมูลสาธารณะของโรงเรียน'],
-            ['name' => 'academy.settings.view', 'display_name' => 'ดูการตั้งค่าโรงเรียน'],
-            ['name' => 'academy.settings.edit', 'display_name' => 'แก้ไขการตั้งค่าโรงเรียน'],
         ],
         'members' => [
             ['name' => 'members.view', 'display_name' => 'ดูรายชื่อสมาชิก'],
@@ -169,8 +167,8 @@ class AcademyPermission extends Model
             ['name' => 'staff.manage', 'display_name' => 'จัดการบุคลากร'],
         ],
         'settings' => [
-            ['name' => 'settings.view', 'display_name' => 'ดูการตั้งค่า'],
-            ['name' => 'settings.manage', 'display_name' => 'จัดการการตั้งค่า'],
+            ['name' => 'settings.view', 'display_name' => 'ดูการตั้งค่าโรงเรียน'],
+            ['name' => 'settings.manage', 'display_name' => 'แก้ไขการตั้งค่าโรงเรียน'],
         ],
         'behavior' => [
             ['name' => 'behavior.view', 'display_name' => 'ดูพฤติกรรม'],

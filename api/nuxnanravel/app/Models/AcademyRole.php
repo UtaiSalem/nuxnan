@@ -50,7 +50,7 @@ class AcademyRole extends Model
             'icon' => 'fluent:building-24-filled',
             'sort_order' => 2,
             'permissions' => [
-                'academy.view', 'academy.settings.view', 'academy.settings.edit',
+                'academy.view',
                 'members.view', 'members.manage', 'members.roles.manage',
                 'courses.view', 'courses.create', 'courses.edit', 'courses.delete',
                 'students.view', 'students.manage',
@@ -74,7 +74,7 @@ class AcademyRole extends Model
             'icon' => 'fluent:settings-24-filled',
             'sort_order' => 3,
             'permissions' => [
-                'academy.view', 'academy.settings.view', 'academy.settings.edit',
+                'academy.view',
                 'members.view', 'members.manage',
                 'courses.view', 'courses.create', 'courses.edit',
                 'students.view', 'students.manage',

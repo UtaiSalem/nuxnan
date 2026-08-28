@@ -245,7 +245,7 @@ const quickActions = computed(() => [
     icon: 'fluent:settings-24-filled',
     to: `/academies/${academyName.value}/admin/settings`,
     color: 'from-slate-600 to-slate-700',
-    show: can('academy.settings.edit'),
+    show: can('settings.manage'),
   },
 ])
 
