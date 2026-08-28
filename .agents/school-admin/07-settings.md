@@ -207,6 +207,43 @@ member / permission ใด ๆ → **ผู้ใช้ที่ล็อกอ�
 > · ปุ่มหลัก `min-h-[44px] sm:min-h-0` · แท็บ `py-3` (46px) · ไม่มีตาราง/กริดกว้าง
 > ไม่มีงาน responsive ค้างในเมนูนี้
 
+### 5.0 🔴 ปัญหาข้ามเมนู ที่เจอระหว่างทำ SET-S3 — ใหญ่กว่าเมนู #7 (ยังไม่แก้)
+
+**G14. แถว `academy_roles` ในฐานกับค่าคงที่ `AcademyRole::SYSTEM_ROLES` ในโค้ด เคลื่อนออกจากกันคนละทาง**
+
+`SYSTEM_ROLES` ถูกใช้ **ตอนสร้าง role ให้โรงเรียนใหม่เท่านั้น** ไม่มีกลไก sync ย้อนกลับ
+ที่ผ่านมาการเพิ่มสิทธิ์ทำสองทางแยกกันโดยไม่นัดกัน: บางรอบเพิ่มใน migration อย่างเดียว
+บางรอบเพิ่มในค่าคงที่อย่างเดียว ⇒ ตอนนี้ไม่ตรงกันทั้งคู่ วัดจากฐาน dev:
+
+| role | ในฐานมี | ในโค้ดมี | ขาดในฐาน | เกินในฐาน |
+|---|---|---|---|---|
+| `director` | 31 | 42 | **19** | 8 |
+| `admin` | 31 | 42 | **19** | 8 |
+| `teacher` | — | — | 9 | 2 |
+| `registrar` | — | — | 5 | 6 |
+| `staff` | — | — | 3 | 1 |
+| `finance_staff` | — | — | 2 | 1 |
+| `card_admin` | **ไม่มีแถวในฐานเลย** | มีในโค้ด | — | — |
+
+- **ขาดในฐาน** (โค้ดมี ฐานไม่มี) ของ director/admin: `roles.view`, `roles.manage`, `groups.view`,
+  `groups.manage`, `staff.view`, `staff.manage`, `grades.view`, `grades.manage`, `events.view`,
+  `events.manage`, `school_attendance.view`, `school_attendance.manage`, `courses.manage`,
+  `schedule.view`, `students.cards.produce`, `behavior.*` 4 ตัว
+  ⇒ **ถ้ามอบ role `director`/`admin` ให้ใครวันนี้ เขาจะจัดการบทบาท/ฝ่าย/บุคลากร/ผลการเรียน/
+  กิจกรรม/การมาเรียน ไม่ได้เลย** ทั้งที่ชื่อ role บอกว่าได้
+- **เกินในฐาน** (ฐานมี โค้ดไม่มี): `elections.*` 3 ตัว + `guardians.*` 5 ตัว — มาจาก migration
+  backfill ของเมนู #25 และ #6 ที่ไม่ได้เติมกลับเข้าค่าคงที่
+  ⇒ **โรงเรียนที่สร้างใหม่วันนี้ จะได้ director ที่ไม่มีสิทธิ์เลือกตั้งและผู้ปกครองเลย**
+- `card_admin` มีในโค้ดแต่ไม่มีแถวในฐาน ⇒ มอบหมายไม่ได้
+
+**ยังไม่มีใครเจอปัญหานี้** เพราะฐาน dev ไม่มีสมาชิกคนไหนถือ role `director`/`admin` เลย
+(ทุกคนเป็น teacher/staff/student และเจ้าของโรงเรียนผ่านด้วย `Academy::isAdmin()` ไม่ผ่าน role)
+
+**เป็นงานของเมนู #1 (บทบาทและสิทธิ์) ไม่ใช่ #7** — ต้องมี migration reconcile สองทาง
++ กลไกกัน drift รอบหน้า · **ยังไม่ได้แก้ รอเจ้าของโปรเจคตัดสินใจว่าจะแทรกคิวหรือไม่**
+
+---
+
 ### 5.1 การตัดสินใจของเจ้าของโปรเจค (เคาะแล้ว 2026-08-28)
 
 **D1 (ปิด Q1 — ปลด SET-S2): "ลบโรงเรียน" → เปลี่ยนเป็น "เก็บถาวร" (soft delete)**
@@ -233,7 +270,7 @@ member / permission ใด ๆ → **ผู้ใช้ที่ล็อกอ�
 |---|---|---|---|---|
 | **SET-S1** | อุดช่องโหว่สิทธิ์ (G1 + G5) | — | ลบ route+method `PATCH /{academy}/update` · ย้าย `POST /{academy}/settings` ไปใช้ `academy.permission:settings.manage` แล้วถอดด่านที่เขียนเองใน controller | 🟢 **verified** (ยังไม่ commit) |
 | **SET-S2** | เก็บถาวรโรงเรียน แทนการลบ (G2 · D1) | SET-S1 | migration `archived_at` + `POST/DELETE /{academy}/archive` เฉพาะ owner + ซ่อนจากทุก listing + แท็บโซนอันตรายเรียกของจริง | ⚪ pending |
-| **SET-S3** | รวมคีย์สิทธิ์ให้เหลือชุดเดียว (§4) | SET-S1 | ให้ sidebar/หน้า/API ใช้ `settings.view`/`settings.manage` เหมือนกัน · `academy.settings.*` เป็น alias ถอยหลังเข้ากันได้ | ⚪ pending |
+| **SET-S3** | รวมคีย์สิทธิ์ให้เหลือชุดเดียว (§4) | SET-S1 | ถอด `academy.settings.view/edit` ออกจากแคตตาล็อก+SYSTEM_ROLES · ย้าย 6 จุดใน FE มาใช้ `settings.*` · migration ย้ายคีย์ในแถว `academy_roles` จริง | 🟢 **verified + migrate แล้ว** |
 | **SET-S4** | โหมดดูอย่างเดียว (G6) | SET-S3 | `settings.view` เข้าหน้าได้แบบ read-only · ปุ่มบันทึกซ่อน · API ยังกัน `settings.manage` | ⚪ pending |
 | **SET-S5** | ทำให้สวิตช์มีผลจริง (G3 + G4 · D2 + D3) | SET-S1 | บังคับใช้ `privacy`/`show_member_list`/`show_course_list` · drop `allow_*_registration` 2 คอลัมน์ + ถอดออกจากฟอร์ม · `join_mode` เป็นตัวหลักแทน `auto_accept_members` และ `invite_only` บล็อกการขอเข้าร่วมจริง | ⚪ pending |
 | **SET-S6** | เพิ่มแท็บ "ระบบและนโยบาย" (G9 ข้อ 1–3) | SET-S1 | `card_request_flow_enabled`, `student_editable_fields`, `donation_enabled` ตั้งค่าได้จากหน้าจอ | ⚪ pending |
@@ -300,4 +337,22 @@ Report back: git diff --stat + สรุปสิ่งที่ทำจริ�
   — เป็นปัญหาการ encode ของ shell ไม่ใช่ของโค้ด · ต้องเขียนชื่อลงไฟล์ด้วย tinker แล้วใช้
   `-F "name=<ไฟล์"` จึงได้ 200 · ถ้าเจออีกครั้งอย่าเพิ่งโทษ controller
 
-  **ยังไม่ commit** — รอผู้ใช้สั่ง
+  commit: `d33af5f5` (โค้ด) · `9753c096` (เอกสาร)
+
+- **2026-08-29 SET-S3** — agy แก้ 7 ไฟล์ + สร้าง migration
+  `2026_08_29_000001_unify_settings_permission_keys.php` · **Claude ตรวจเองทุกข้อ:**
+
+  | ตรวจอะไร | วิธีตรวจ | ผล |
+  |---|---|---|
+  | ขอบเขต diff | `git status` + `git diff --stat` | ตรงสเปค 7 ไฟล์ + migration 1 ไฟล์ ไม่มีไฟล์แปลกปลอม |
+  | อ่าน diff ทุกบรรทัด | `git diff` | เป็นการแก้เงื่อนไขล้วน ไม่มี markup/Tailwind ถูกแตะเลย |
+  | คีย์เก่าหมดจากโค้ด | `grep -rn "academy\.settings\.\(view\|edit\)"` | เหลือ 3 จุด **อยู่ในตัว migration เองทั้งหมด** (ต้องมี) · โค้ดแอป + UI = 0 |
+  | ชื่อ route ไม่โดนลูกหลง | `grep -c "api.academy.settings.update"` | 1 |
+  | syntax + style | `php -l` × 3, `pint --test` | ผ่าน |
+  | SFC compile | `@vue/compiler-sfc` 3 ไฟล์ | OK ทั้ง 3 |
+  | **รัน migration จริงบน dev** | `migrate` → ตรวจแถว | `director`/`admin` เปลี่ยนจาก `academy.settings.view,edit` เป็น `settings.view,settings.manage` · role ที่ยังถือคีย์เก่า = **0** |
+  | **ทดสอบ `down()` จริง** | `migrate:rollback --step=1` → ตรวจแถว → `migrate` ใหม่ | คืนคีย์เก่ากลับได้ตามที่ docblock ระบุ (คืนแบบ superset ไม่ใช่ย้อน byte ต่อ byte) |
+  | **ตรวจ end-to-end บนเซิร์ฟเวอร์จริง** | ตั้ง member id 1 (user 2 — **ไม่ใช่เจ้าของ ไม่ใช่ academyAdmin ไม่ใช่ superadmin**) เป็น role `admin` ชั่วคราว แล้วยิง `POST /api/academies/1/settings` | **200** ⇒ ผ่านด้วยสิทธิ์จาก role ล้วน ๆ · คืนค่า `academy_role_id` กลับเป็น staff (5) แล้ว · `academies.updated_at` ยังเป็น `2026-08-06 10:14:07` ไม่ถูกแตะ |
+
+  ระหว่างตรวจเจอ **G14 (ดู §5.0)** — แถว `academy_roles` กับค่าคงที่ `SYSTEM_ROLES` เคลื่อนออกจากกัน
+  คนละทาง เป็นปัญหาของเมนู #1 ไม่ใช่ #7 · **บันทึกไว้ ยังไม่แก้**
