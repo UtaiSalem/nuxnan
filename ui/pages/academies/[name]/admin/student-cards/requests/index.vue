@@ -301,7 +301,7 @@ const countFor = (v: StudentCardRequestStatus | '' | 'active') => {
 
     <!-- Filter bar -->
     <div class="rounded-xl border bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-      <div class="grid gap-3 md:grid-cols-4">
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <label class="text-sm">
           <span class="text-gray-600 dark:text-gray-300">ปีการศึกษา</span>
           <select v-model="academicYearId" class="mt-1 w-full rounded-lg border p-2 dark:bg-gray-900 dark:text-white">

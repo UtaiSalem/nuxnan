@@ -334,7 +334,7 @@ const getStatusBadge = (status: string) => {
       </div>
 
       <!-- Stats -->
-      <div v-if="stats" class="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div v-if="stats" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
           <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.total }}</div>
           <div class="text-sm text-gray-600 dark:text-gray-400">นักเรียนทั้งหมด</div>

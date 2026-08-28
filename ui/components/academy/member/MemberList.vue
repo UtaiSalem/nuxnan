@@ -209,7 +209,7 @@ function exportMembers() {
 <template>
   <div class="space-y-6">
     <!-- Stats Cards -->
-    <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
       <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.total }}</p>
         <p class="text-sm text-gray-500 dark:text-gray-400">ทั้งหมด</p>
