@@ -956,7 +956,7 @@ watch(() => authStore.user, (user) => {
                 </div>
               </div>
             </div>
-             <p v-if="errors.dateTime" class="text-xs text-red-500 -mt-2 hidden md:block">
+             <p v-if="errors.dateTime" class="text-xs text-red-500 -mt-2">
                  {{ errors.dateTime }}
              </p>
 
