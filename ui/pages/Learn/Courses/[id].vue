@@ -236,7 +236,7 @@ watch(courseId, (newId) => {
     />
 
     <!-- Error State -->
-    <div v-if="error && !course" class="p-8 text-center bg-white dark:bg-gray-800 rounded-2xl shadow-xl m-4">
+    <div v-if="error && !course" class="px-0 py-8 sm:px-8 text-center bg-white dark:bg-gray-800 rounded-2xl shadow-xl m-4">
       <Icon icon="fluent:error-circle-24-regular" class="w-16 h-16 text-red-500 mx-auto mb-4" />
       <h3 class="text-xl font-black text-gray-900 dark:text-white mb-2">เกิดข้อผิดพลาด</h3>
       <p class="text-gray-500 dark:text-gray-400 mb-6">{{ error }}</p>

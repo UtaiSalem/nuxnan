@@ -7,7 +7,7 @@ const courseId = computed(() => route.params.id as string)
 
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="max-w-5xl mx-auto px-0 sm:px-4 sm:px-6 lg:px-8 py-6">
       <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 sm:p-8">
         <div class="flex flex-col sm:flex-row gap-4 sm:items-start">
           <div class="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-300 flex items-center justify-center shrink-0">

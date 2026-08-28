@@ -19,7 +19,7 @@ const targetMemberId = computed(() => {
 </script>
 
 <template>
-  <div class="space-y-4 sm:space-y-6 px-3 sm:px-4 lg:px-0 pb-6">
+  <div class="space-y-4 sm:space-y-6 px-0 sm:px-3 sm:px-4 lg:px-0 pb-6">
     <!-- Header -->
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
       <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">

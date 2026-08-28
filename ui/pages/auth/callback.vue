@@ -85,7 +85,7 @@ onMounted(async () => {
 
 <template>
   <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-blue-900 to-black">
-    <div class="text-center max-w-md px-4">
+    <div class="text-center max-w-md px-0 sm:px-4">
       <!-- Loading State -->
       <div v-if="loading && !error" class="space-y-4">
         <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500 mx-auto"></div>

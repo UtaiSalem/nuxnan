@@ -289,7 +289,7 @@ watch(
       </header>
 
       <!-- Page Content -->
-      <main class="p-4 lg:p-6">
+      <main class="px-0 py-4 lg:p-6">
         <slot />
       </main>
     </div>

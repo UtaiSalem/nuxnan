@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900 pb-24 lg:pb-0">
-    <div class="container mx-auto px-4 py-8">
+    <div class="container mx-auto px-0 sm:px-4 py-8">
       <!-- Header -->
       <div class="flex items-center justify-between mb-8">
         <div class="flex items-center gap-3">

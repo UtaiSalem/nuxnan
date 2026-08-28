@@ -44,7 +44,7 @@ function startChallenge() {
 </script>
 
 <template>
-  <div class="max-w-2xl mx-auto py-12 px-4 space-y-8">
+  <div class="max-w-2xl mx-auto py-12 px-0 sm:px-4 space-y-8">
     <div class="text-center space-y-2">
       <h1 class="text-4xl font-black uppercase tracking-tighter text-slate-900 dark:text-white">📅 Daily Challenge</h1>
       <p class="text-slate-500 font-medium">ภารกิจประจำวัน — รีเซ็ตทุกเที่ยงคืน</p>

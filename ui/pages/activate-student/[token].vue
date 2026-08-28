@@ -70,7 +70,7 @@ onMounted(() => fetchInfo())
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+  <div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center px-0 py-4 sm:px-4">
     <div class="w-full max-w-md">
       <!-- Loading -->
       <div v-if="state === 'loading'" class="text-center py-12">

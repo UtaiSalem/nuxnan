@@ -58,7 +58,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="admin-students-page p-6 max-w-7xl mx-auto">
+  <div class="admin-students-page px-0 py-6 sm:px-6 max-w-7xl mx-auto">
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-2xl font-bold text-gray-900 dark:text-white">ทะเบียนประวัตินักเรียน (Master Profile)</h1>
       <div class="flex space-x-2">

@@ -1313,16 +1313,16 @@ const onQRActionComplete = (result) => {
         ]"
       >
         <!-- Hero: with responsive margins matching grid padding -->
-        <div id="hero-slot" :class="['w-full min-w-0 mx-auto max-w-[1440px] 2xl:max-w-[1600px] py-4 empty:hidden px-4 sm:px-6', isLeftDrawerOpen ? 'lg:px-8' : 'lg:px-4']">
+        <div id="hero-slot" :class="['w-full min-w-0 mx-auto max-w-[1440px] 2xl:max-w-[1600px] py-4 empty:hidden px-0 sm:px-6', isLeftDrawerOpen ? 'lg:px-8' : 'lg:px-4']">
           <slot name="hero" />
         </div>
 
         <!-- Tabs: sticky below header, matching grid padding -->
-        <div id="tabs-slot" :class="['w-full min-w-0 mx-auto max-w-[1440px] 2xl:max-w-[1600px] sticky top-16 z-30 empty:hidden px-4 sm:px-6', isLeftDrawerOpen ? 'lg:px-8' : 'lg:px-4']">
+        <div id="tabs-slot" :class="['w-full min-w-0 mx-auto max-w-[1440px] 2xl:max-w-[1600px] sticky top-16 z-30 empty:hidden px-0 sm:px-6', isLeftDrawerOpen ? 'lg:px-8' : 'lg:px-4']">
           <slot name="tabs" />
         </div>
 
-        <div :class="['mx-auto py-6 pb-24 lg:pb-8 w-full min-w-0 max-w-[1440px] 2xl:max-w-[1600px] px-4 sm:px-6', isLeftDrawerOpen ? 'lg:px-8' : 'lg:px-4']">
+        <div :class="['mx-auto py-6 pb-24 lg:pb-8 w-full min-w-0 max-w-[1440px] 2xl:max-w-[1600px] px-0 sm:px-6', isLeftDrawerOpen ? 'lg:px-8' : 'lg:px-4']">
           <!-- 12 Column Grid Layout -->
           <div class="grid min-w-0 grid-cols-1 lg:grid-cols-12 xl:grid-cols-12 gap-6">
             <!-- Left Widgets (3/12) - visible lg+, slide-out on mobile -->

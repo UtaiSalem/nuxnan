@@ -41,7 +41,7 @@ function formatDate(d: string): string {
 </script>
 
 <template>
-  <div class="max-w-5xl mx-auto py-12 px-4 space-y-12">
+  <div class="max-w-5xl mx-auto py-12 px-0 sm:px-4 space-y-12">
     <div class="text-center">
       <h1 class="text-5xl font-black uppercase tracking-tighter">🏆 Tournaments</h1>
       <p class="text-slate-500 mt-2">แข่งขันกับผู้เล่นทั่วโลก รับรางวัล XP และ PP</p>

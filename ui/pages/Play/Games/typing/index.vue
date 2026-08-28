@@ -50,7 +50,7 @@ function start() {
 </script>
 
 <template>
-  <div class="max-w-6xl mx-auto py-12 px-4 space-y-12">
+  <div class="max-w-6xl mx-auto py-12 px-0 sm:px-4 space-y-12">
     <!-- Header -->
     <div class="text-center space-y-4">
       <h1 class="text-5xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Typing Master</h1>

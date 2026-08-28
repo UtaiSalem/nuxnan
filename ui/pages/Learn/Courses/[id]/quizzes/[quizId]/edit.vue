@@ -515,7 +515,7 @@ const deleteQuestion = async (qId: number) => {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6 pb-32 sm:pb-12 space-y-4 sm:space-y-6">
+  <div class="max-w-4xl mx-auto px-0 sm:px-3 sm:px-4 lg:px-6 pb-32 sm:pb-12 space-y-4 sm:space-y-6">
     <!-- Header -->
     <div class="flex items-center gap-4 mb-6">
       <button 

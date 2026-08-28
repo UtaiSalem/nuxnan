@@ -20,7 +20,7 @@ const flowSteps = [
 
 <template>
   <div class="space-y-8">
-    <section class="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 to-sky-50 p-6 shadow-sm dark:border-violet-900/40 dark:from-slate-900 dark:to-indigo-950/40">
+    <section class="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 to-sky-50 px-0 py-6 sm:px-6 shadow-sm dark:border-violet-900/40 dark:from-slate-900 dark:to-indigo-950/40">
       <p class="text-sm font-semibold text-violet-500 dark:text-violet-300">Course Revenue</p>
       <h1 class="mt-1 text-2xl font-black text-gray-900 dark:text-white">รายได้</h1>
       <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">รายวิชานี้ได้รับทุนจากผู้สนับสนุน แล้วจ่ายกลับเป็นแต้มให้สมาชิกที่มากดรับ</p>

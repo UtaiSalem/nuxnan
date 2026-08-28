@@ -77,7 +77,7 @@ watch(
 )
 </script>
 <template>
-  <div class="space-y-5">
+  <div class="space-y-5 px-4 sm:px-0">
     <div v-if="loading" class="flex justify-center py-16">
       <div
         class="h-10 w-10 animate-spin rounded-full border-4 border-primary-500 border-t-transparent"

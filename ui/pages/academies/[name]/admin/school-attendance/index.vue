@@ -94,7 +94,7 @@ const formatDate = (date: string) => {
 <template>
   <div class="min-h-screen bg-slate-50 dark:bg-slate-900">
     <!-- Skeleton -->
-    <div v-if="isLoading" class="space-y-6 p-6">
+    <div v-if="isLoading" class="space-y-6 px-0 py-6 sm:px-6">
       <div class="h-40 rounded-vikinger bg-slate-200 dark:bg-slate-700 animate-pulse" />
       <div class="grid grid-cols-4 gap-4">
         <div

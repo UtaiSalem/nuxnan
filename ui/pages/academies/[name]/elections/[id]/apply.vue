@@ -296,7 +296,7 @@ onMounted(async () => {
 
 <template>
   <main
-    class="min-h-screen bg-slate-50 px-4 py-4 text-slate-900 dark:bg-slate-950 dark:text-white sm:px-8"
+    class="min-h-screen bg-slate-50 px-0 sm:px-4 py-4 text-slate-900 dark:bg-slate-950 dark:text-white sm:px-8"
   >
     <div class="mx-auto max-w-4xl">
       <!-- Alerts -->

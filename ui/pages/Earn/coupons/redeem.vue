@@ -181,7 +181,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="container mx-auto px-4 py-6 max-w-lg">
+  <div class="container mx-auto px-0 sm:px-4 py-6 max-w-lg">
     <!-- Back Button -->
     <NuxtLink 
       to="/earn/coupons"

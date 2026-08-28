@@ -101,7 +101,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col p-4 bg-gray-50 dark:bg-gray-900">
+  <div class="min-h-screen flex flex-col px-0 py-4 sm:px-4 bg-gray-50 dark:bg-gray-900">
     <div class="max-w-4xl mx-auto w-full">
       <!-- Header -->
       <div class="text-center mb-8">

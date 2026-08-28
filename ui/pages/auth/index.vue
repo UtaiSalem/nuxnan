@@ -1,7 +1,7 @@
 <template>
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 items-center min-h-screen w-full relative py-4 overflow-hidden">
     <!-- Left Side: Branding & Welcome -->
-    <div class="flex flex-col items-center lg:items-start text-center lg:text-left space-y-4 lg:space-y-6 relative px-4 lg:px-8">
+    <div class="flex flex-col items-center lg:items-start text-center lg:text-left space-y-4 lg:space-y-6 relative px-0 sm:px-4 lg:px-8">
       <!-- Logo with glow effect -->
       <div class="relative group">
         <div class="absolute -inset-4 bg-gradient-to-r from-vikinger-purple to-vikinger-cyan rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity"></div>

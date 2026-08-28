@@ -1,5 +1,5 @@
 <template>
-  <div class="max-w-4xl mx-auto p-6">
+  <div class="max-w-4xl mx-auto px-0 py-6 sm:px-6">
     <div v-if="pending" class="text-center py-16 text-gray-400">{{ $t('discoverySchools.loading') }}</div>
     <div v-else-if="!school" class="text-center py-16">
       <div class="text-6xl mb-3">😕</div>

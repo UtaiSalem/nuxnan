@@ -97,7 +97,7 @@ onMounted(loadTournament)
 </script>
 
 <template>
-  <div class="max-w-5xl mx-auto py-12 px-4 space-y-8">
+  <div class="max-w-5xl mx-auto py-12 px-0 sm:px-4 space-y-8">
     <div v-if="loading" class="text-center py-20 text-slate-400">
       <div class="animate-spin mb-4 text-4xl">🏆</div>
       กำลังโหลด...

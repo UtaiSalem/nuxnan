@@ -204,7 +204,7 @@ const formatRange = (start: string, end: string | null) => {
 <template>
   <div class="min-h-screen bg-slate-50 dark:bg-slate-900">
     <!-- Skeleton -->
-    <div v-if="isLoading" class="space-y-6 p-6">
+    <div v-if="isLoading" class="space-y-6 px-0 py-6 sm:px-6">
       <div class="h-32 rounded-vikinger bg-slate-200 dark:bg-slate-700 animate-pulse" />
       <div class="h-16 rounded-vikinger bg-slate-200 dark:bg-slate-700 animate-pulse" />
       <div v-for="i in 3" :key="i" class="h-24 rounded-vikinger bg-slate-200 dark:bg-slate-700 animate-pulse" />

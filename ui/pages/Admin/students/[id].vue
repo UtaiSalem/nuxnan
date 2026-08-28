@@ -41,7 +41,7 @@ const formatDate = (dateString: string) => {
 </script>
 
 <template>
-  <div class="admin-student-detail p-6 max-w-7xl mx-auto">
+  <div class="admin-student-detail px-0 py-6 sm:px-6 max-w-7xl mx-auto">
     <div class="flex items-center mb-6">
       <NuxtLink to="/admin/students" class="text-gray-500 hover:text-gray-700 mr-4">
         <i class="fas fa-arrow-left text-xl"></i>

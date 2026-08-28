@@ -60,7 +60,7 @@ const currentModeComponent = computed(() => {
 </script>
 
 <template>
-  <div class="min-h-screen py-12 px-4 bg-slate-50/50 dark:bg-slate-950/50">
+  <div class="min-h-screen py-12 px-0 sm:px-4 bg-slate-50/50 dark:bg-slate-950/50">
     <div class="max-w-5xl mx-auto space-y-8">
       <!-- Breadcrumbs / Back -->
       <div class="flex items-center gap-4">

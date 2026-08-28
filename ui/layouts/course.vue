@@ -191,7 +191,7 @@ const logout = async () => {
       </nav>
 
       <!-- 3-Column Body -->
-      <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
+      <div class="max-w-screen-2xl mx-auto px-0 sm:px-6 lg:px-8 py-6 lg:py-10">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
           <!-- Left Sidebar (3/12) -->
           <aside class="lg:col-span-3">

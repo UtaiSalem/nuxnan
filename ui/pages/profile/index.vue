@@ -21,7 +21,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex items-center justify-center min-h-[400px]">
+  <div class="flex items-center justify-center min-h-[400px] px-4 sm:px-0">
     <Icon icon="fluent:spinner-ios-20-regular" class="w-12 h-12 animate-spin text-vikinger-purple" aria-hidden="true" />
   </div>
 </template>

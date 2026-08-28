@@ -1,5 +1,5 @@
 <template>
-  <div class="container mx-auto px-4 py-6 sm:px-6">
+  <div class="container mx-auto px-0 sm:px-4 py-6 sm:px-6">
     <!-- Header -->
     <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>

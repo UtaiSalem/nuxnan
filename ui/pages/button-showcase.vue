@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 p-8">
+  <div class="min-h-screen bg-gray-50 px-0 py-8 sm:px-8">
     <div class="max-w-6xl mx-auto">
       <div class="mb-12 text-center">
         <h1 class="text-5xl font-bold text-gray-900 mb-4">Button Variants Showcase</h1>

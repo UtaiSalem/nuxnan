@@ -154,7 +154,7 @@ const downloadCard = async (index, studentNumber) => {
 
 <template>
     <div class="min-h-screen bg-gray-100">
-        <div class="max-w-7xl mx-auto px-4 py-4">
+        <div class="max-w-7xl mx-auto px-0 sm:px-4 py-4">
             <!-- Header -->
             <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
                 <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">

@@ -148,7 +148,7 @@ const getStatusBadge = computed(() => {
 </script>
 
 <template>
-  <div class="container mx-auto px-4 py-6 max-w-4xl">
+  <div class="container mx-auto px-0 sm:px-4 py-6 max-w-4xl">
     
     <!-- Loading -->
     <div v-if="pending" class="flex justify-center p-8 sm:p-12">

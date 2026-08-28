@@ -498,7 +498,7 @@ const onSetupSuccess = async () => {
 
 <template>
   <NuxtPage v-if="route.params.id" />
-  <div v-else>
+  <div v-else class="px-4 sm:px-0">
   <div>
     <div v-if="isLoading" class="flex items-center justify-center py-20">
       <div class="animate-spin rounded-full h-10 w-10 border-4 border-primary-500 border-t-transparent"></div>

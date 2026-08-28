@@ -253,7 +253,7 @@ const finishAttempt = async () => {
 </script>
 
 <template>
-  <div class="container mx-auto px-3 py-4 sm:px-4 sm:py-6 max-w-4xl">
+  <div class="container mx-auto px-0 sm:px-3 py-4 sm:px-4 sm:py-6 max-w-4xl">
       <!-- Loading -->
       <!-- Loading (ContentLoader) -->
       <ContentLoader v-if="isLoading" />

@@ -156,7 +156,7 @@ const editionStatusText = (status?: string) => {
 
 <template>
   <div class="min-h-screen bg-slate-50 dark:bg-slate-900">
-    <div v-if="isLoading" class="space-y-6 p-6">
+    <div v-if="isLoading" class="space-y-6 px-0 py-6 sm:px-6">
       <div class="h-40 rounded-vikinger bg-slate-200 dark:bg-slate-700 animate-pulse" />
       <div class="h-64 rounded-vikinger bg-slate-200 dark:bg-slate-700 animate-pulse" />
     </div>

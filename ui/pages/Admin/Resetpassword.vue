@@ -402,7 +402,7 @@ function highlightMatch(text, query) {
 </script>
 
 <template>
-    <div class="p-6 space-y-6">
+    <div class="px-0 py-6 sm:px-6 space-y-6">
         <!-- Header -->
         <div class="flex items-center justify-between">
             <div>

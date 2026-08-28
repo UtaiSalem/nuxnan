@@ -23,7 +23,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex items-center justify-center min-h-[400px]">
+  <div class="flex items-center justify-center min-h-[400px] px-4 sm:px-0">
     <div class="text-center">
       <Icon icon="fluent:spinner-ios-20-regular" class="w-12 h-12 animate-spin text-blue-500 mx-auto mb-4" />
       <p class="text-gray-600 dark:text-gray-400">กำลังเปลี่ยนเส้นทาง...</p>

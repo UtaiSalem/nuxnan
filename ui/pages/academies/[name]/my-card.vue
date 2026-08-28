@@ -81,7 +81,7 @@ const academyDisplayName = computed(() => {
 
 <template>
   <NuxtLayout name="academy" :academy-name="academyName">
-    <div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900/20 py-8 px-4">
+    <div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900/20 py-8 px-0 sm:px-4">
       <div class="max-w-2xl mx-auto">
         <div v-if="isLoading" class="flex items-center justify-center py-20">
           <div class="animate-spin rounded-full h-10 w-10 border-4 border-primary-500 border-t-transparent"></div>

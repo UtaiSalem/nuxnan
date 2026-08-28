@@ -162,7 +162,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-6 px-4 sm:px-0">
     <!-- หัวข้อหน้า -->
     <header class="flex flex-wrap items-start justify-between gap-4 border-b border-gray-200 pb-5 dark:border-gray-700">
       <div class="flex items-start gap-3">

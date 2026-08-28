@@ -877,7 +877,7 @@ onMounted(async () => {
 <template>
   <div class="min-h-screen bg-slate-50 dark:bg-slate-900 pb-12">
     <!-- Top Nav Back -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+    <div class="max-w-7xl mx-auto px-0 sm:px-4 sm:px-6 lg:px-8 pt-4">
       <NuxtLink
         :to="`/academies/${academyName}/admin/classrooms`"
         class="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-primary-600 dark:text-slate-400 dark:hover:text-primary-400 transition-colors"

@@ -43,7 +43,7 @@ const formatNumber = (num: number) => new Intl.NumberFormat().format(num || 0)
 <template>
   <div class="space-y-6">
     <!-- Hero Section -->
-    <div class="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl p-8 text-white shadow-lg">
+    <div class="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl px-0 py-8 sm:px-8 text-white shadow-lg">
       <h1 class="text-3xl font-black mb-2 flex items-center gap-3">
         <Icon icon="fluent:data-line-24-filled" />
         รายได้จากการขายลิขสิทธิ์

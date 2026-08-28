@@ -407,7 +407,7 @@ const downloadPDF = async () => {
 </script>
 
 <template>
-  <div class="container mx-auto px-4 py-6 max-w-6xl">
+  <div class="container mx-auto px-0 sm:px-4 py-6 max-w-6xl">
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
       <div>

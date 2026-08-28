@@ -97,7 +97,7 @@ function getPlayComponent() {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto py-12 px-4">
+  <div class="max-w-4xl mx-auto py-12 px-0 sm:px-4">
     <!-- Error Message -->
     <div v-if="errorMsg" class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl flex items-center gap-3 text-red-600 dark:text-red-400 animate-in fade-in slide-in-from-top-4">
       <Icon icon="heroicons:exclamation-circle" class="text-xl shrink-0" />

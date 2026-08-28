@@ -125,7 +125,7 @@ onMounted(() => {
 
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-6">
-    <div class="container mx-auto px-4">
+    <div class="container mx-auto px-0 sm:px-4">
       <!-- Loading -->
       <div v-if="isLoading" class="flex items-center justify-center py-20">
         <Icon icon="heroicons:arrow-path" class="w-8 h-8 animate-spin text-primary-500" />

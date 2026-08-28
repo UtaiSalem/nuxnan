@@ -23,7 +23,7 @@ useHead({
       :is-course-admin="isCourseAdmin"
     />
 
-    <div v-else class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-8 text-center border border-gray-100 dark:border-vikinger-dark-100 shadow-sm">
+    <div v-else class="bg-white dark:bg-vikinger-dark-200 rounded-xl px-0 py-8 sm:px-8 text-center border border-gray-100 dark:border-vikinger-dark-100 shadow-sm">
       <Icon icon="fluent:spinner-ios-20-regular" class="w-8 h-8 animate-spin mx-auto text-blue-500 mb-4" />
       <p class="text-gray-500 dark:text-gray-400">กำลังโหลดข้อมูลรายวิชา...</p>
     </div>

@@ -12,7 +12,7 @@ const academyId = inject<Ref<number | null>>('academyId', ref(null))
 </script>
 
 <template>
-  <div>
+  <div class="px-4 sm:px-0">
     <!-- Header -->
     <div class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
       <div>

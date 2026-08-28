@@ -67,7 +67,7 @@ definePageMeta({
 </script>
 
 <template>
-  <div class="max-w-6xl mx-auto py-8">
+  <div class="max-w-6xl mx-auto py-8 px-4 sm:px-0">
     <!-- Header -->
     <div class="text-center mb-12">
       <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">

@@ -552,7 +552,7 @@ async function assignGroupToMember(memberId: number, groupId: number) {
 </script>
 
 <template>
-    <div class="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-7xl pb-24 lg:pb-8">
+    <div class="container mx-auto px-0 sm:px-3 sm:px-4 py-4 sm:py-8 max-w-7xl pb-24 lg:pb-8">
         <!-- Header -->
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>

@@ -114,7 +114,7 @@ const formatNumber = (num: number): string => {
 </script>
 
 <template>
-  <div class="container mx-auto px-4 py-6 max-w-2xl">
+  <div class="container mx-auto px-0 sm:px-4 py-6 max-w-2xl">
     <!-- Back Button -->
     <NuxtLink 
       to="/earn/coupons"

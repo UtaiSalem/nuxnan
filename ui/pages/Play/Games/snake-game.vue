@@ -7,7 +7,7 @@ definePageMeta({
 </script>
 
 <template>
-  <div class="w-full h-full flex flex-col items-center justify-center min-h-[calc(100vh-100px)]">
+  <div class="w-full h-full flex flex-col items-center justify-center min-h-[calc(100vh-100px)] px-4 sm:px-0">
     <div class="w-full max-w-4xl">
       <SnakeGameComponent />
     </div>

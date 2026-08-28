@@ -103,7 +103,7 @@ function formatWpm(wpm: number) {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto py-12 px-4 space-y-12">
+  <div class="max-w-4xl mx-auto py-12 px-0 sm:px-4 space-y-12">
       <!-- Achievement Notification -->
       <AchievementToast :achievements="newAchievements" />
 

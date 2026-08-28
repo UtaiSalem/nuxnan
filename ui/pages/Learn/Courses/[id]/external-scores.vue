@@ -470,7 +470,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="space-y-4 sm:space-y-6 -mx-4 px-2 sm:mx-0 sm:px-4 lg:px-0 pb-6">
+  <div class="space-y-4 sm:space-y-6 -mx-4 px-0 sm:px-2 sm:mx-0 sm:px-4 lg:px-0 pb-6">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
       <div>

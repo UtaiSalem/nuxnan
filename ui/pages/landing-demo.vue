@@ -21,7 +21,7 @@
     <LandingModernTestimonialsSection />
 
     <!-- CTA Section -->
-    <section class="relative py-20 sm:py-32 px-4 sm:px-6 lg:px-8 xl:px-12 z-20 bg-vikinger-dark overflow-hidden">
+    <section class="relative py-20 sm:py-32 px-0 sm:px-4 sm:px-6 lg:px-8 xl:px-12 z-20 bg-vikinger-dark overflow-hidden">
       <!-- Starfield Canvas -->
       <canvas ref="starfieldCanvas" class="absolute inset-0 w-full h-full"></canvas>
       <div class="absolute inset-0 bg-gradient-to-b from-vikinger-dark via-vikinger-dark/90 to-vikinger-dark pointer-events-none"></div>

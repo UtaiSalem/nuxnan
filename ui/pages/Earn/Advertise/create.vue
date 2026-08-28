@@ -360,7 +360,7 @@ watch(() => authStore.user?.id, async (id) => {
 </script>
 
 <template>
-  <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+  <div class="min-h-screen py-8 px-0 sm:px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
     <div class="max-w-7xl mx-auto">
       
       <!-- Banner -->

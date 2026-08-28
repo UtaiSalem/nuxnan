@@ -216,7 +216,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-5xl mx-auto px-4 py-8">
+  <div class="max-w-5xl mx-auto px-0 sm:px-4 py-8">
     <ContentLoader v-if="isLoading" />
 
     <!-- Back Button -->

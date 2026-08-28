@@ -162,7 +162,7 @@ function formatDateTime(value: string | null | undefined): string {
 </script>
 
 <template>
-  <div class="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
+  <div class="mx-auto max-w-5xl space-y-6 px-0 py-4 sm:px-4 sm:p-6">
     <header class="flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-3">
         <NuxtLink

@@ -1,5 +1,5 @@
 <template>
-  <div class="max-w-6xl mx-auto p-6">
+  <div class="max-w-6xl mx-auto px-0 py-6 sm:px-6">
     <div class="text-center py-8">
       <h1 class="text-3xl font-bold mb-2">{{ $t('discoverySchools.title') }}</h1>
       <p class="text-gray-500">{{ $t('discoverySchools.subtitle') }}</p>

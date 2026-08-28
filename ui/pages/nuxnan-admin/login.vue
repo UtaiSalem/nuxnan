@@ -63,7 +63,7 @@ const handleLogin = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-hopeui-container p-4">
+  <div class="min-h-screen flex items-center justify-center bg-hopeui-container px-0 py-4 sm:px-4">
     <!-- Background decoration -->
     <div class="absolute inset-0 overflow-hidden">
       <div class="absolute -top-40 -right-40 w-80 h-80 bg-hopeui-primary-100/60 rounded-full blur-3xl"></div>

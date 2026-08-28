@@ -101,7 +101,7 @@ const formatTime = (dt: string) => {
 </script>
 
 <template>
-  <div class="max-w-3xl mx-auto px-4 py-6 space-y-6">
+  <div class="max-w-3xl mx-auto px-0 sm:px-4 py-6 space-y-6">
     <!-- Back -->
     <NuxtLink
       :to="`/academies/${academyName}/admin/members`"

@@ -136,7 +136,7 @@ import BaseAvatar from '~/components/atoms/BaseAvatar.vue'
 </script>
 
 <template>
-    <div class="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-6xl pb-24 lg:pb-8">
+    <div class="container mx-auto px-0 sm:px-3 sm:px-4 py-4 sm:py-8 max-w-6xl pb-24 lg:pb-8">
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
             <div>
                 <h1 class="text-xl sm:text-2xl font-bold flex items-center gap-2">

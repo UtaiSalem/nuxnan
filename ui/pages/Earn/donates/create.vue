@@ -522,7 +522,7 @@ watch(() => authStore.user, (user) => {
 </script>
 
 <template>
-  <div class="py-6 px-4">
+  <div class="py-6 px-0 sm:px-4">
     <!-- Header Banner -->
     <div class="mb-6 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 rounded-2xl shadow-xl overflow-hidden">
       <div class="px-6 py-8 flex flex-col md:flex-row items-center justify-between">

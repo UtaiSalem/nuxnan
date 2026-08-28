@@ -84,7 +84,7 @@ const reportSections = computed(() => [
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-6 px-4 sm:px-0">
     <!-- Header -->
     <div>
       <h1 class="text-2xl font-bold text-gray-900 dark:text-white">รายงานและสถิติ</h1>

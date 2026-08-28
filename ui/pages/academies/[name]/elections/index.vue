@@ -80,7 +80,7 @@ const getLevelDisplay = (level: number | null) => {
 </script>
 
 <template>
-  <main class="min-h-screen bg-slate-50 p-3 sm:p-6 text-slate-900 dark:bg-slate-950 dark:text-white">
+  <main class="min-h-screen bg-slate-50 px-0 py-3 sm:px-3 sm:p-6 text-slate-900 dark:bg-slate-950 dark:text-white">
     <div class="mx-auto max-w-2xl">
       <h1 class="mb-6 text-2xl font-bold sm:text-3xl">การเลือกตั้ง</h1>
       

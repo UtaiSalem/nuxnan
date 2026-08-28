@@ -234,7 +234,7 @@ watch(activeTab, (newTab) => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-6 px-4 sm:px-0">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h1 class="text-2xl font-bold text-gray-800 dark:text-white">จัดการรายวิชา</h1>

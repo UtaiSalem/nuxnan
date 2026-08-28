@@ -512,7 +512,7 @@ watch(() => course?.value?.id, id => { if (id && isCourseAdmin?.value) fetchElig
 </script>
 
 <template>
-  <div class="space-y-5 sm:space-y-8 max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 pb-32 sm:pb-20">
+  <div class="space-y-5 sm:space-y-8 max-w-7xl mx-auto px-0 sm:px-3 sm:px-4 lg:px-6 pb-32 sm:pb-20">
     
     <!-- Header -->
     <div class="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-700 p-4 sm:p-6 lg:p-8 text-white shadow-lg sm:shadow-xl transition-all duration-300">

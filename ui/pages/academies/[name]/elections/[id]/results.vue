@@ -160,7 +160,7 @@ const totalVotesCast = computed(() => {
 </script>
 
 <template>
-  <main class="min-h-screen bg-slate-50 p-3 sm:p-6 text-slate-900 dark:bg-slate-950 dark:text-white">
+  <main class="min-h-screen bg-slate-50 px-0 py-3 sm:px-3 sm:p-6 text-slate-900 dark:bg-slate-950 dark:text-white">
     <div v-if="loading" class="flex min-h-[44px] items-center justify-center py-10">
       <Icon icon="lucide:loader-2" class="animate-spin text-3xl text-slate-500" />
     </div>

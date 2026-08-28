@@ -103,7 +103,7 @@ const translateField = (field: string) => {
 </script>
 
 <template>
-  <div class="admin-student-requests p-6 max-w-7xl mx-auto">
+  <div class="admin-student-requests px-0 py-6 sm:px-6 max-w-7xl mx-auto">
     <div class="flex justify-between items-center mb-6">
       <div class="flex items-center">
         <NuxtLink to="/admin/students" class="text-gray-500 hover:text-gray-700 mr-4">

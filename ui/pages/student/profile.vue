@@ -88,7 +88,7 @@ const student = computed(() => studentStore.currentStudent)
 </script>
 
 <template>
-  <div class="student-profile p-4 sm:p-6 max-w-5xl mx-auto">
+  <div class="student-profile px-0 py-4 sm:px-4 sm:p-6 max-w-5xl mx-auto">
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-gray-900 dark:text-white">โปรไฟล์ของฉัน (My Profile)</h1>
       <p class="text-gray-500">จัดการข้อมูลประวัติส่วนตัวและข้อมูลที่เกี่ยวข้อง</p>

@@ -200,7 +200,7 @@ const statusClass = computed(() => voter.value?.status === 'eligible' ? 'text-em
 </script>
 
 <template>
-  <main class="min-h-screen bg-slate-50 px-4 py-4 text-slate-900 dark:bg-slate-950 dark:text-white sm:px-8">
+  <main class="min-h-screen bg-slate-50 px-0 sm:px-4 py-4 text-slate-900 dark:bg-slate-950 dark:text-white sm:px-8">
     <section v-if="stationNotFound" class="mx-auto flex min-h-[calc(100vh-2rem)] max-w-xl items-center justify-center text-center">
       <div class="rounded-2xl bg-white p-6 shadow-sm dark:bg-slate-900 sm:p-10">
         <Icon icon="lucide:map-pin-off" class="mx-auto text-6xl text-rose-500" />

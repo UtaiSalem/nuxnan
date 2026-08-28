@@ -8,7 +8,7 @@ useHead({
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 px-4 py-8 sm:py-12 flex flex-col justify-center items-center">
+  <div class="min-h-screen bg-gray-50 px-0 sm:px-4 py-8 sm:py-12 flex flex-col justify-center items-center">
     <div class="w-full max-w-lg mx-auto bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 lg:p-8">
       
       <!-- หัวการ์ด -->

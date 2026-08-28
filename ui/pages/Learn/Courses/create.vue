@@ -19,7 +19,7 @@ definePageMeta({
 </script>
 
 <template>
-  <div v-if="isThresholdLoading" class="min-h-screen flex items-center justify-center p-4 text-sm sm:text-base text-gray-500 dark:text-gray-400">
+  <div v-if="isThresholdLoading" class="min-h-screen flex items-center justify-center px-0 py-4 sm:px-4 text-sm sm:text-base text-gray-500 dark:text-gray-400">
     กำลังตรวจสอบคะแนนสะสม...
   </div>
   <CreateNewCourse v-else-if="canCreate" />

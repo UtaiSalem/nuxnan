@@ -82,7 +82,7 @@ const chartOptions = {
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto py-10 px-4 space-y-8">
+  <div class="max-w-7xl mx-auto py-10 px-0 sm:px-4 space-y-8">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div class="space-y-1">
         <h1 class="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Typing Class Report</h1>

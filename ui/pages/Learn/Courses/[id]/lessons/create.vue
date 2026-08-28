@@ -60,7 +60,7 @@ useHead({
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6 pb-32 sm:pb-12 space-y-4 sm:space-y-6">
+  <div class="max-w-4xl mx-auto px-0 sm:px-3 sm:px-4 lg:px-6 pb-32 sm:pb-12 space-y-4 sm:space-y-6">
     <!-- Breadcrumb -->
     <nav class="flex items-center gap-2 text-sm mb-6">
       <NuxtLink

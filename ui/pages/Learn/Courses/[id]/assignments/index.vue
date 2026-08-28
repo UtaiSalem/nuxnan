@@ -37,7 +37,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="px-3 sm:px-4 lg:px-0 pb-6">
+  <div class="px-0 sm:px-3 sm:px-4 lg:px-0 pb-6">
     <ContentLoader v-if="isLoading" />
     
     <AssignmentsList 
