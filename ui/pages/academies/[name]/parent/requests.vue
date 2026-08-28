@@ -216,9 +216,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, type Ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGuardianAccount } from '~/composables/useGuardianAccount'
+import { useApi } from '~/composables/useApi'
 import { errorStatus, errorMessage } from '~/composables/useGuardianAppointment'
 import { useToast } from '#imports'
 
@@ -229,10 +230,14 @@ definePageMeta({
 
 const route = useRoute()
 const academyName = computed(() => route.params.name as string)
+// The guardian-account endpoints bind {academy} by id, while the app navigates by academy
+// name (/academies/<ชื่อโรงเรียน>/...). Resolve the id once, the same way parent/index.vue does,
+// or every call 404s and the page shows an empty list that looks like real data.
+const academyId = ref<number | null>(null)
 const auth = useNuxtApp().$auth
 const toast = useToast()
 
-const { isSearching, isSubmitting, isResponding, searchStudent, createAccountRequest, fetchRequests, acceptRequest, declineRequest, cancelRequest } = useGuardianAccount(academyName)
+const { isSearching, isSubmitting, isResponding, searchStudent, createAccountRequest, fetchRequests, acceptRequest, declineRequest, cancelRequest } = useGuardianAccount(academyId as unknown as Ref<string | number>)
 
 const searchForm = ref({
   student_code: '',
@@ -365,7 +370,19 @@ const formatDate = (date: string) => {
   })
 }
 
-onMounted(() => {
-  loadRequests()
+const api = useApi()
+
+const resolveAcademyId = async () => {
+  try {
+    const res: any = await api.get(`/api/academies/${academyName.value}`)
+    academyId.value = res?.academy?.id ?? res?.id ?? null
+  } catch {
+    academyId.value = null
+  }
+}
+
+onMounted(async () => {
+  await resolveAcademyId()
+  if (academyId.value) loadRequests()
 })
 </script>

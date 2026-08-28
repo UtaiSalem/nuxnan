@@ -24,7 +24,7 @@ class GuardianService
     {
         $query = Guardian::query()
             ->where('academy_id', $academy->id)
-            ->with(['contacts', 'students:id,first_name_th,last_name_th,student_id']);
+            ->with(['user:id,name', 'contacts', 'students:id,first_name_th,last_name_th,student_id']);
 
         if (! empty($filters['search'])) {
             $search = $filters['search'];
@@ -56,7 +56,21 @@ class GuardianService
         $total = array_sum($stats);
         $withContact = (clone $base)->whereHas('guardian', fn ($q) => $q->whereHas('contacts'))->count();
 
-        return ['total' => $total, 'by_type' => $stats, 'with_contact' => $withContact, 'without_contact' => $total - $withContact];
+        $guardiansQuery = Guardian::query()->where('academy_id', $academy->id);
+        $linkedAccounts = (clone $guardiansQuery)->whereNotNull('user_id')->count();
+        $pendingAccountRequests = DB::table('guardian_account_requests')
+            ->where('academy_id', $academy->id)
+            ->where('status', 'pending')
+            ->count();
+
+        return [
+            'total' => $total,
+            'by_type' => $stats,
+            'with_contact' => $withContact,
+            'without_contact' => $total - $withContact,
+            'linked_accounts' => $linkedAccounts,
+            'pending_account_requests' => $pendingAccountRequests,
+        ];
     }
 
     /**

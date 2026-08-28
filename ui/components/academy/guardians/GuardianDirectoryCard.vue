@@ -6,9 +6,20 @@
           {{ typeIcon }}
         </div>
         <div class="min-w-0 flex-1 break-words">
-          <p class="break-words text-sm font-semibold text-gray-900 dark:text-gray-100 sm:text-base">
-            {{ guardian.full_name }}
-          </p>
+          <div class="flex flex-wrap items-center gap-2 mb-1">
+            <p class="break-words text-sm font-semibold text-gray-900 dark:text-gray-100 sm:text-base">
+              {{ guardian.full_name }}
+            </p>
+            <span v-if="guardian.linked_user_id" class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-300">
+              ผูกบัญชีแล้ว ({{ guardian.linked_user_name }})
+            </span>
+            <span v-else-if="guardian.pending_account_request" class="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+              รอเจ้าของบัญชีกดรับ
+            </span>
+            <span v-else class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+              ยังไม่ผูกบัญชี
+            </span>
+          </div>
           <p v-if="guardian.occupation" class="break-words text-xs text-gray-500 dark:text-gray-400">
             {{ guardian.occupation }}
           </p>
@@ -22,6 +33,30 @@
         >
           <Icon icon="mdi:card-account-phone-outline" class="h-5 w-5" />
           จัดการช่องทางติดต่อ
+        </button>
+
+        <button
+          v-if="!guardian.linked_user_id && !guardian.pending_account_request"
+          @click="$emit('link-account', guardian)"
+          class="flex min-h-[44px] sm:min-h-0 items-center justify-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 text-sm font-medium text-purple-700 hover:bg-purple-100 dark:border-purple-900/30 dark:bg-purple-900/20 dark:text-purple-300 dark:hover:bg-purple-900/40 transition-colors w-full sm:w-auto"
+        >
+          ส่งคำขอผูกบัญชี
+        </button>
+
+        <button
+          v-else-if="guardian.pending_account_request"
+          @click="$emit('cancel-request', guardian)"
+          class="flex min-h-[44px] sm:min-h-0 items-center justify-center gap-2 rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-50 dark:border-amber-900/50 dark:bg-gray-800 dark:text-amber-400 dark:hover:bg-amber-900/20 transition-colors w-full sm:w-auto"
+        >
+          ยกเลิกคำขอ
+        </button>
+
+        <button
+          v-else-if="guardian.linked_user_id"
+          @click="$emit('unlink-account', guardian)"
+          class="flex min-h-[44px] sm:min-h-0 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors w-full sm:w-auto"
+        >
+          ปลดการผูกบัญชี
         </button>
       </div>
     </div>
@@ -118,7 +153,7 @@ const props = defineProps<{
   academyName: string
 }>()
 
-defineEmits(['manage-contacts'])
+defineEmits(['manage-contacts', 'link-account', 'cancel-request', 'unlink-account'])
 
 const showAllChildren = ref(false)
 

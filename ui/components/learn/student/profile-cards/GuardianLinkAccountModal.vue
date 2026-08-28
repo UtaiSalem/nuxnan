@@ -19,6 +19,25 @@
 
         <!-- Form/Body -->
         <div class="p-4 sm:p-6 space-y-4 overflow-y-auto max-h-[70vh]">
+          <div v-if="children && children.length > 0" class="mb-4">
+            <template v-if="children.length > 1">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ส่งคำขอผ่านนักเรียน:</label>
+              <select v-model="selectedStudentId" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100">
+                <option v-for="child in children" :key="child.id" :value="child.id">
+                  {{ child.name }}
+                </option>
+              </select>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                เลือกลูกคนไหนก็ได้ — เมื่อผู้ปกครองกดรับแล้วจะเห็นบุตรหลานครบทุกคนอัตโนมัติ
+              </p>
+            </template>
+            <template v-else>
+              <p class="text-sm text-gray-600 dark:text-gray-300">
+                ส่งคำขอผ่านนักเรียน: <span class="font-medium">{{ children[0].name }}</span>
+              </p>
+            </template>
+          </div>
+
           <div>
             <p class="text-sm text-gray-600 dark:text-gray-300 mb-2">
               กรอกชื่อผู้ใช้ (username) รหัสส่วนตัว หรือเบอร์โทรศัพท์ ให้ตรงตัว
@@ -100,6 +119,7 @@ const props = defineProps<{
   studentId: number | string
   guardianId: number | null
   guardianName: string
+  children?: Array<{ id: number; name: string }>
 }>()
 
 const emit = defineEmits(['close', 'requested'])
@@ -111,6 +131,7 @@ const searchQuery = ref('')
 const result = ref<any>(null)
 const hasSearched = ref(false)
 const searchError = ref('')
+const selectedStudentId = ref(props.children && props.children.length > 0 ? props.children[0].id : props.studentId)
 
 const canSearch = computed(() => searchQuery.value.trim().length > 0)
 
@@ -150,7 +171,7 @@ const sendRequest = async () => {
       payload.guardian_id = props.guardianId
     }
     
-    await createAccountRequest(Number(props.studentId), payload)
+    await createAccountRequest(Number(selectedStudentId.value), payload)
     
     toast.add({ severity: 'success', summary: 'สำเร็จ', detail: 'ส่งคำขอผูกบัญชีแล้ว รอการตอบรับ', life: 3000 })
     emit('requested')
