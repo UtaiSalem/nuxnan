@@ -330,7 +330,7 @@ const respondToInvitation = async (accept: boolean) => {
 <template>
   <div v-if="course" class="flex flex-col gap-6">
     <!-- Invitation Alert Card -->
-    <div v-if="pendingInvitation" class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6 relative overflow-hidden">
+    <div v-if="pendingInvitation" class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl px-0 py-6 sm:px-6 relative overflow-hidden">
       <div class="absolute top-0 right-0 p-4 opacity-10">
         <Icon icon="fluent:mail-read-24-filled" class="w-24 h-24 text-blue-600" />
       </div>
@@ -357,7 +357,7 @@ const respondToInvitation = async (accept: boolean) => {
           <button @click="respondToInvitation(true)" class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
             ตอบรับคำเชิญ
           </button>
-          <button @click="respondToInvitation(false)" class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+          <button @click="respondToInvitation(false)" class="min-h-[44px] sm:min-h-0 px-4 sm:px-6 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
             ปฏิเสธ
           </button>
         </div>
@@ -418,7 +418,7 @@ const respondToInvitation = async (accept: boolean) => {
     </div>
 
     <!-- Curriculum Card -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
       <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
         <Icon icon="fluent:book-24-regular" class="w-5 h-5 text-blue-500" />
         เนื้อหาบทเรียน
