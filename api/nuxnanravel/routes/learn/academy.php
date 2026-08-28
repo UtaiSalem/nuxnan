@@ -138,8 +138,6 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::get('/{academy:name}/courses/create', [AcademyCourseController::class, 'create'])->name('academy.courses.create');
     Route::post('/{academy}/courses', [AcademyCourseController::class, 'store'])->name('academy.courses.store');
 
-    Route::patch('/{academy}/update', [AcademyController::class, 'update'])->name('academy.update');
-
     // Route::get('/{academy}/members', [AcademyMemberController::class, 'index'])->name('academy.members');
     // Route::get('/{academy}/members', [AcademyMemberController::class, 'index'])->name('academy.members');
     // Route::get('/{academy}/members', [AcademyMemberController::class, 'index'])->name('academy.members');
@@ -237,7 +235,9 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::get('/{academy}/members/export', [AcademyMemberController::class, 'exportMembersToCsv'])->name('api.academy.members.export');
 
     // Academy Settings
-    Route::post('/{academy}/settings', [AcademyController::class, 'updateSettings'])->name('api.academy.settings.update');
+    Route::post('/{academy}/settings', [AcademyController::class, 'updateSettings'])
+        ->middleware('academy.permission:settings.manage')
+        ->name('api.academy.settings.update');
 
     // ============================================
     // Academy Roles & Permissions Routes

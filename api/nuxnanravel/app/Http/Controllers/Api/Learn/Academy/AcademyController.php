@@ -184,58 +184,6 @@ class AcademyController extends Controller
     }
 
     /**
-     * Update the specified resource in storage.
-     */
-    public function update(Academy $academy, Request $request)
-    {
-        $validated = $request->validate([
-            'name' => 'nullable|string|max:255',
-            'slogan' => 'nullable|string|max:255',
-            'address' => 'nullable|string',
-            'cover' => 'nullable|mimes:jpeg,png,jpg,gif|max:2048',
-            'logo' => 'nullable|mimes:jpeg,png,jpg,gif|max:2048',
-        ]);
-
-        if ($request->hasFile('cover')) {
-            if ($academy->cover && ($academy->cover !== 'default_cover.png')) {
-                Storage::disk('public')->delete($academy->cover);
-            }
-
-            $cover = $validated['cover'];
-
-            $cover_name = uniqid().'.'.$cover->getClientOriginalExtension();
-            $cover_path = Storage::disk('public')->putFileAs('images/academies/covers', $cover, $cover_name);
-            $academy->cover = $cover_name;
-        }
-
-        if ($request->hasFile('logo')) {
-            if ($academy->logo && ($academy->logo !== 'default_logo.png')) {
-                Storage::disk('public')->delete($academy->logo);
-            }
-
-            $logo = $validated['logo'];
-
-            $logo_name = uniqid().'.'.$logo->getClientOriginalExtension();
-            $logo_path = Storage::disk('public')->putFileAs('images/academies/logos', $logo, $logo_name);
-            $academy->logo = $logo_name;
-        }
-
-        if ($request->name) {
-            $academy->name = $request->name;
-        }
-        if ($request->slogan) {
-            $academy->slogan = $request->slogan;
-        }
-        if ($request->address) {
-            $academy->address = $request->address;
-        }
-
-        $academy->update();
-
-        return redirect()->back();
-    }
-
-    /**
      * Remove the specified resource from storage.
      */
     public function destroy(Academy $academy)
@@ -477,20 +425,8 @@ class AcademyController extends Controller
      */
     public function updateSettings(Academy $academy, Request $request)
     {
-        // Check if user is owner or has permission
-        if ($academy->user_id !== auth()->id()) {
-            $member = AcademyMember::where('academy_id', $academy->id)
-                ->where('user_id', auth()->id())
-                ->with('academyRole')
-                ->first();
-
-            if (! $member || ! $member->hasPermission('settings.manage')) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'คุณไม่มีสิทธิ์แก้ไขการตั้งค่าโรงเรียน',
-                ], 403);
-            }
-        }
+        // สิทธิ์ถูกตรวจที่ middleware `academy.permission:settings.manage` (CheckAcademyPermission)
+        // ซึ่งครอบ superadmin, เจ้าของโรงเรียน, สถานะสมาชิก APPROVED และสิทธิ์ที่ได้จากฝ่าย/กลุ่ม
 
         $request->validate([
             'name' => 'required|string|max:255',
