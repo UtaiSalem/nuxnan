@@ -23,6 +23,8 @@ const activeTab = ref('general')
 // Academy Role
 const academyId = ref<number | null>(null)
 const { can, isOwner, fetchMyRole } = useAcademyRole(academyId)
+const canManage = computed(() => isOwner.value || can('settings.manage'))
+const isReadOnly = computed(() => ! canManage.value)
 
 // Form
 const form = ref({
@@ -50,13 +52,26 @@ const avatarPreview = ref<string | null>(null)
 const coverFile = ref<File | null>(null)
 const coverPreview = ref<string | null>(null)
 
-const tabs = [
-  { id: 'general', label: 'ข้อมูลทั่วไป', icon: 'fluent:building-24-regular' },
-  { id: 'contact', label: 'ข้อมูลติดต่อ', icon: 'fluent:mail-24-regular' },
-  { id: 'privacy', label: 'ความเป็นส่วนตัว', icon: 'fluent:lock-closed-24-regular' },
-  { id: 'registration', label: 'การลงทะเบียน', icon: 'fluent:person-add-24-regular' },
-  { id: 'danger', label: 'โซนอันตราย', icon: 'fluent:warning-24-regular' },
-]
+const tabs = computed(() => {
+  const base = [
+    { id: 'general', label: 'ข้อมูลทั่วไป', icon: 'fluent:building-24-regular' },
+    { id: 'contact', label: 'ข้อมูลติดต่อ', icon: 'fluent:mail-24-regular' },
+    { id: 'privacy', label: 'ความเป็นส่วนตัว', icon: 'fluent:lock-closed-24-regular' },
+    { id: 'registration', label: 'การลงทะเบียน', icon: 'fluent:person-add-24-regular' },
+  ]
+
+  if (isOwner.value) {
+    base.push({ id: 'danger', label: 'โซนอันตราย', icon: 'fluent:warning-24-regular' })
+  }
+
+  return base
+})
+
+watch(tabs, (list) => {
+  if (! list.some(tab => tab.id === activeTab.value)) {
+    activeTab.value = list[0]?.id ?? 'general'
+  }
+}, { immediate: true })
 
 onMounted(async () => {
   try {
@@ -66,7 +81,7 @@ onMounted(async () => {
       academyId.value = response.academy.id
       await fetchMyRole()
       
-      if (!can('settings.manage') && !isOwner.value) {
+      if (!can('settings.view') && !canManage.value) {
         navigateTo(`/academies/${academyName.value}/admin`)
         return
       }
@@ -124,6 +139,7 @@ const onCoverChange = (e: Event) => {
 }
 
 const saveSettings = async () => {
+  if (! canManage.value) return
   if (!academyId.value) return
   
   isSaving.value = true
@@ -216,6 +232,7 @@ const joinModeOptions = [
           <p class="text-gray-600 dark:text-gray-400 mt-1">จัดการข้อมูลและการตั้งค่าของโรงเรียน</p>
         </div>
         <button 
+          v-if="canManage"
           @click="saveSettings"
           :disabled="isSaving"
           class="min-h-[44px] sm:min-h-0 px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-2 disabled:opacity-50"
@@ -224,6 +241,16 @@ const joinModeOptions = [
           <Icon v-else icon="fluent:save-24-regular" class="w-5 h-5" />
           บันทึก
         </button>
+      </div>
+
+      <div
+        v-if="isReadOnly"
+        class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-900/20"
+      >
+        <Icon icon="fluent:eye-24-regular" class="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+        <p class="min-w-0 flex-1 break-words text-sm text-amber-800 dark:text-amber-300">
+          คุณกำลังดูการตั้งค่าในโหมดอ่านอย่างเดียว — ต้องมีสิทธิ์ "แก้ไขการตั้งค่าโรงเรียน" จึงจะแก้ไขได้
+        </p>
       </div>
 
       <div class="flex flex-col lg:flex-row gap-6">
@@ -264,7 +291,7 @@ const joinModeOptions = [
                     :src="coverPreview" 
                     class="w-full h-full object-cover"
                   />
-                  <label class="absolute inset-0 flex items-center justify-center cursor-pointer hover:bg-black/20 transition-colors">
+                  <label v-if="canManage" class="absolute inset-0 flex items-center justify-center cursor-pointer hover:bg-black/20 transition-colors">
                     <Icon icon="fluent:camera-24-regular" class="w-8 h-8 text-gray-400" />
                     <input type="file" accept="image/*" @change="onCoverChange" class="hidden" />
                   </label>
@@ -279,7 +306,7 @@ const joinModeOptions = [
                       :src="avatarPreview || '/images/default-academy.png'"
                       class="w-20 h-20 rounded-xl object-cover"
                     />
-                    <label class="absolute inset-0 flex items-center justify-center cursor-pointer rounded-xl hover:bg-black/20 transition-colors">
+                    <label v-if="canManage" class="absolute inset-0 flex items-center justify-center cursor-pointer rounded-xl hover:bg-black/20 transition-colors">
                       <Icon icon="fluent:camera-24-regular" class="w-6 h-6 text-white/80" />
                       <input type="file" accept="image/*" @change="onAvatarChange" class="hidden" />
                     </label>
@@ -297,8 +324,9 @@ const joinModeOptions = [
                 </label>
                 <input
                   v-model="form.name"
+                  :disabled="isReadOnly"
                   type="text"
-                  class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+                  class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </div>
               <div>
@@ -307,8 +335,9 @@ const joinModeOptions = [
                 </label>
                 <input
                   v-model="form.name_en"
+                  :disabled="isReadOnly"
                   type="text"
-                  class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+                  class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </div>
             </div>
@@ -321,8 +350,9 @@ const joinModeOptions = [
                 </label>
                 <textarea
                   v-model="form.description"
+                  :disabled="isReadOnly"
                   rows="4"
-                  class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+                  class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white disabled:cursor-not-allowed disabled:opacity-60"
                   placeholder="อธิบายเกี่ยวกับโรงเรียน..."
                 />
               </div>
@@ -332,8 +362,9 @@ const joinModeOptions = [
                 </label>
                 <textarea
                   v-model="form.description_en"
+                  :disabled="isReadOnly"
                   rows="4"
-                  class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+                  class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white disabled:cursor-not-allowed disabled:opacity-60"
                   placeholder="Describe your academy..."
                 />
               </div>
@@ -351,8 +382,9 @@ const joinModeOptions = [
                   <Icon icon="fluent:mail-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     v-model="form.email"
+                    :disabled="isReadOnly"
                     type="email"
-                    class="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+                    class="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white disabled:cursor-not-allowed disabled:opacity-60"
                     placeholder="academy@example.com"
                   />
                 </div>
@@ -363,8 +395,9 @@ const joinModeOptions = [
                   <Icon icon="fluent:call-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     v-model="form.phone"
+                    :disabled="isReadOnly"
                     type="tel"
-                    class="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+                    class="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white disabled:cursor-not-allowed disabled:opacity-60"
                     placeholder="02-xxx-xxxx"
                   />
                 </div>
@@ -377,8 +410,9 @@ const joinModeOptions = [
                 <Icon icon="fluent:globe-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   v-model="form.website"
+                  :disabled="isReadOnly"
                   type="url"
-                  class="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+                  class="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white disabled:cursor-not-allowed disabled:opacity-60"
                   placeholder="https://www.example.com"
                 />
               </div>
@@ -388,8 +422,9 @@ const joinModeOptions = [
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ที่อยู่</label>
               <textarea
                 v-model="form.address"
+                :disabled="isReadOnly"
                 rows="2"
-                class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+                class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white disabled:cursor-not-allowed disabled:opacity-60"
                 placeholder="ที่อยู่โรงเรียน..."
               />
             </div>
@@ -399,16 +434,18 @@ const joinModeOptions = [
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">จังหวัด</label>
                 <input
                   v-model="form.province"
+                  :disabled="isReadOnly"
                   type="text"
-                  class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+                  class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ประเทศ</label>
                 <input
                   v-model="form.country"
+                  :disabled="isReadOnly"
                   type="text"
-                  class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+                  class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </div>
             </div>
@@ -430,6 +467,7 @@ const joinModeOptions = [
                   <input
                     type="radio"
                     v-model="form.privacy"
+                    :disabled="isReadOnly"
                     :value="opt.value"
                     class="mt-1 text-primary-600 focus:ring-primary-500"
                   />
@@ -447,7 +485,7 @@ const joinModeOptions = [
                   <p class="font-medium text-gray-900 dark:text-white">แสดงรายชื่อสมาชิก</p>
                   <p class="text-sm text-gray-500">อนุญาตให้ผู้อื่นดูรายชื่อสมาชิก</p>
                 </div>
-                <input type="checkbox" v-model="form.show_member_list" class="toggle" />
+                <input type="checkbox" v-model="form.show_member_list" :disabled="isReadOnly" class="toggle" />
               </label>
 
               <label class="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50">
@@ -455,7 +493,7 @@ const joinModeOptions = [
                   <p class="font-medium text-gray-900 dark:text-white">แสดงรายการคอร์ส</p>
                   <p class="text-sm text-gray-500">อนุญาตให้ผู้อื่นดูรายการคอร์ส</p>
                 </div>
-                <input type="checkbox" v-model="form.show_course_list" class="toggle" />
+                <input type="checkbox" v-model="form.show_course_list" :disabled="isReadOnly" class="toggle" />
               </label>
             </div>
           </div>
@@ -476,6 +514,7 @@ const joinModeOptions = [
                   <input
                     type="radio"
                     v-model="form.join_mode"
+                    :disabled="isReadOnly"
                     :value="opt.value"
                     class="mt-1 text-primary-600 focus:ring-primary-500"
                   />
@@ -493,7 +532,7 @@ const joinModeOptions = [
                   <p class="font-medium text-gray-900 dark:text-white">อนุญาตการลงทะเบียนนักเรียน</p>
                   <p class="text-sm text-gray-500">นักเรียนสามารถสมัครเป็นสมาชิกได้</p>
                 </div>
-                <input type="checkbox" v-model="form.allow_student_registration" class="toggle" />
+                <input type="checkbox" v-model="form.allow_student_registration" :disabled="isReadOnly" class="toggle" />
               </label>
 
               <label class="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50">
@@ -501,7 +540,7 @@ const joinModeOptions = [
                   <p class="font-medium text-gray-900 dark:text-white">อนุญาตการลงทะเบียนผู้ปกครอง</p>
                   <p class="text-sm text-gray-500">ผู้ปกครองสามารถสมัครเป็นสมาชิกได้</p>
                 </div>
-                <input type="checkbox" v-model="form.allow_parent_registration" class="toggle" />
+                <input type="checkbox" v-model="form.allow_parent_registration" :disabled="isReadOnly" class="toggle" />
               </label>
             </div>
           </div>

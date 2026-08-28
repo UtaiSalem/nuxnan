@@ -276,7 +276,7 @@ const menuItems = computed(() => [
         name: 'ตั้งค่าโรงเรียน',
         icon: 'fluent:settings-24-regular',
         to: `/academies/${academyName.value}/admin/settings`,
-        show: can('settings.manage'),
+        show: can('settings.view') || can('settings.manage'),
       },
     ]
   },
