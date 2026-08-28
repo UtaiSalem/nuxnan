@@ -283,7 +283,7 @@ cache ไม่ค้าง · slug ชนแล้วต่อ `-1`
 | **SET-S1** | อุดช่องโหว่สิทธิ์ (G1 + G5) | — | ลบ route+method `PATCH /{academy}/update` · ย้าย `POST /{academy}/settings` ไปใช้ `academy.permission:settings.manage` แล้วถอดด่านที่เขียนเองใน controller | 🟢 **verified** (ยังไม่ commit) |
 | **SET-S2** | เก็บถาวรโรงเรียน แทนการลบ (G2 · D1) | SET-S1 | migration `archived_at` + `POST/DELETE /{academy}/archive` เฉพาะ owner + ซ่อนจากทุก listing + แท็บโซนอันตรายเรียกของจริง | ⚪ pending |
 | **SET-S3** | รวมคีย์สิทธิ์ให้เหลือชุดเดียว (§4) | SET-S1 | ถอด `academy.settings.view/edit` ออกจากแคตตาล็อก+SYSTEM_ROLES · ย้าย 6 จุดใน FE มาใช้ `settings.*` · migration ย้ายคีย์ในแถว `academy_roles` จริง | 🟢 **verified + migrate แล้ว** |
-| **SET-S4** | โหมดดูอย่างเดียว (G6) | SET-S3 | `settings.view` เข้าหน้าได้แบบ read-only · ปุ่มบันทึกซ่อน · API ยังกัน `settings.manage` | ⚪ pending |
+| **SET-S4** | โหมดดูอย่างเดียว (G6) | SET-S3 | `settings.view` เข้าหน้าได้แบบ read-only · ปุ่มบันทึก+ปุ่มอัปโหลดซ่อน · 16 ช่อง disabled · แถบแจ้งเตือน · แท็บโซนอันตรายเฉพาะเจ้าของ · API ยังกัน `settings.manage` | 🟢 **verified** |
 | **SET-S5** | ทำให้สวิตช์มีผลจริง (G3 + G4 · D2 + D3) | SET-S1 | บังคับใช้ `privacy`/`show_member_list`/`show_course_list` · drop `allow_*_registration` 2 คอลัมน์ + ถอดออกจากฟอร์ม · `join_mode` เป็นตัวหลักแทน `auto_accept_members` และ `invite_only` บล็อกการขอเข้าร่วมจริง | ⚪ pending |
 | **SET-S6** | เพิ่มแท็บ "ระบบและนโยบาย" (G9 ข้อ 1–3) | SET-S1 | `card_request_flow_enabled`, `student_editable_fields`, `donation_enabled` ตั้งค่าได้จากหน้าจอ | ⚪ pending |
 | **SET-S7** | เพิ่มฟิลด์อัตลักษณ์โรงเรียน (G9 ข้อ 4–5) | SET-S6 | `slogan`, `established_year`, `type`, `director`, `social_media_links` เข้าแท็บ "ข้อมูลทั่วไป" · ตัดสินใจเรื่อง `approval_flow` | ⚪ pending |
@@ -368,3 +368,23 @@ Report back: git diff --stat + สรุปสิ่งที่ทำจริ�
 
   ระหว่างตรวจเจอ **G14 (ดู §5.0)** — แถว `academy_roles` กับค่าคงที่ `SYSTEM_ROLES` เคลื่อนออกจากกัน
   คนละทาง เป็นปัญหาของเมนู #1 ไม่ใช่ #7 · **บันทึกไว้ ยังไม่แก้**
+
+- **2026-08-29 SET-S4** — agy แก้ 2 ไฟล์ (`admin/settings.vue`, `admin.vue`) · **Claude ตรวจเองทุกข้อ:**
+
+  | ตรวจอะไร | วิธีตรวจ | ผล |
+  |---|---|---|
+  | ขอบเขต diff | `git diff --stat` | 2 ไฟล์ตามสเปค · +74 / −35 · ไม่มีบรรทัด `-` นอกขอบเขต |
+  | ช่องกรอกถูกล็อกครบ | `grep -c 'v-model="form\.'` เทียบ `grep -c ':disabled="isReadOnly"'` | **16 = 16** (ข้อความ 10 · radio 2 · checkbox 4) |
+  | ด่านเก่าหาย / computed ใหม่มี | `grep -c` | ด่านเก่า 0 · `canManage` 1 · `isReadOnly` 1 · `v-if="canManage"` 3 (ปุ่มบันทึก + กล้อง 2) |
+  | เมนูใน `admin.vue` แก้ถูกตัว | `grep -c` | `settings.view \|\| settings.manage` 1 (ตั้งค่าโรงเรียน) · `settings.manage` เดี่ยวเหลือ 1 (ระบบบริหารโรงเรียน — ถูกต้อง ไม่ควรแตะ) |
+  | SFC compile | `@vue/compiler-sfc` 2 ไฟล์ | OK ทั้งคู่ |
+  | **ยิงจริงด้วยสมาชิกที่มีแค่ `settings.view`** | ตั้ง member id 1 (user 2 ไม่ใช่เจ้าของ) เป็น role `finance_staff` ชั่วคราว | `GET /api/academies/{ชื่อ}` **200** (`myRole.permissions` = `settings.view`) ⇒ เข้าหน้าได้ · `GET /my-role` **200** · **`POST /settings` = 403 `Insufficient permissions`** ⇒ ปลดล็อกหน้าจอแล้วแต่ API ยังกันอยู่ (defense in depth) |
+  | ข้อมูล dev ไม่ถูกแตะ | ตรวจหลังคืนค่า | member 1 กลับเป็น `staff` · `academies.updated_at` ยังเป็น `2026-08-06 10:14:07` |
+
+  **Claude แก้เองหลัง agy 1 จุด:** แถบแจ้งเตือนโหมดอ่านอย่างเดียวย่อหน้าเกินไป 2 ช่อง
+  (8 แทนที่จะเป็น 6) ไม่ตรงระดับกับพี่น้องในบล็อกเดียวกัน — จัดย่อหน้าให้ตรงแล้ว
+
+  ⚠️ **ยังไม่ได้ยืนยันด้วยตาบนหน้าจอจริง** — dev server ไม่ได้รันอยู่ และการจะเห็นโหมด
+  อ่านอย่างเดียวต้องล็อกอินเป็นผู้ใช้ที่มีแค่ `settings.view` ซึ่งต้องใช้รหัสผ่านของคนนั้น
+  ที่พิสูจน์แล้วคือ **ตรรกะ + สัญญาของ API** ส่วนการเรนเดอร์ (แถบเหลืองขึ้นจริง ช่องเป็นสีจาง
+  ปุ่มกล้องหาย) ยังเป็นหนี้ตรวจอยู่ — จุดเดียวกับที่งานเมนู #6 เคยเจอว่าเทสต์จับบั๊ก UI ไม่ได้
