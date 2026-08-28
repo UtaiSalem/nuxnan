@@ -533,66 +533,68 @@ const getGradeColor = (grade: string) => {
               </div>
               
               <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                <table class="w-full">
-                  <thead class="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                      <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">เกรด</th>
-                      <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">คะแนน</th>
-                      <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">คะแนนต่ำสุด</th>
-                      <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">คะแนนสูงสุด</th>
-                      <th class="px-4 py-2"></th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                    <tr v-for="(item, index) in scaleForm.items" :key="index">
-                      <td class="px-4 py-2">
-                        <input
-                          v-model="item.letter_grade"
-                          type="text"
-                          class="w-16 px-2 py-1 text-center rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
-                          placeholder="A"
-                        />
-                      </td>
-                      <td class="px-4 py-2">
-                        <input
-                          v-model.number="item.grade_points"
-                          type="number"
-                          step="0.5"
-                          min="0"
-                          max="4"
-                          class="w-20 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
-                        />
-                      </td>
-                      <td class="px-4 py-2">
-                        <input
-                          v-model.number="item.min_score"
-                          type="number"
-                          min="0"
-                          max="100"
-                          class="w-20 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
-                        />
-                      </td>
-                      <td class="px-4 py-2">
-                        <input
-                          v-model.number="item.max_score"
-                          type="number"
-                          min="0"
-                          max="100"
-                          class="w-20 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
-                        />
-                      </td>
-                      <td class="px-4 py-2">
-                        <button
-                          type="button"
-                          @click="removeScaleItem(index)"
-                          class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 text-gray-400 hover:text-red-500"
-                        >
-                          <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                <div class="overflow-x-auto">
+                  <table class="w-full">
+                    <thead class="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">เกรด</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">คะแนน</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">คะแนนต่ำสุด</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">คะแนนสูงสุด</th>
+                        <th class="px-4 py-2"></th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                      <tr v-for="(item, index) in scaleForm.items" :key="index">
+                        <td class="px-4 py-2">
+                          <input
+                            v-model="item.letter_grade"
+                            type="text"
+                            class="w-16 px-2 py-1 text-center rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                            placeholder="A"
+                          />
+                        </td>
+                        <td class="px-4 py-2">
+                          <input
+                            v-model.number="item.grade_points"
+                            type="number"
+                            step="0.5"
+                            min="0"
+                            max="4"
+                            class="w-20 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                          />
+                        </td>
+                        <td class="px-4 py-2">
+                          <input
+                            v-model.number="item.min_score"
+                            type="number"
+                            min="0"
+                            max="100"
+                            class="w-20 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                          />
+                        </td>
+                        <td class="px-4 py-2">
+                          <input
+                            v-model.number="item.max_score"
+                            type="number"
+                            min="0"
+                            max="100"
+                            class="w-20 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                          />
+                        </td>
+                        <td class="px-4 py-2">
+                          <button
+                            type="button"
+                            @click="removeScaleItem(index)"
+                            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 text-gray-400 hover:text-red-500"
+                          >
+                            <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
             

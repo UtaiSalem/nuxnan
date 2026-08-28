@@ -536,53 +536,55 @@ const getGradeColor = (score: any, maxScore: number) => {
         </div>
 
         <div class="flex-1 overflow-y-auto p-6">
-          <table class="w-full">
-            <thead class="bg-gray-50 dark:bg-gray-700 sticky top-0">
-              <tr>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  นักเรียน
-                </th>
-                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
-                  คะแนน
-                </th>
-                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
-                  สถานะ
-                </th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-              <tr v-for="student in scoreForm" :key="student.student_id">
-                <td class="px-4 py-3">
-                  <div class="flex items-center gap-2">
-                    <span class="text-gray-500 dark:text-gray-400 text-sm">{{ student.student_number }}</span>
-                    <span class="font-medium text-gray-900 dark:text-white">{{ student.student_name }}</span>
-                  </div>
-                </td>
-                <td class="px-4 py-3">
-                  <input
-                    v-model.number="student.score"
-                    type="number"
-                    :min="0"
-                    :max="selectedAssessment?.max_score"
-                    :disabled="student.status === 'excused' || student.status === 'missing'"
-                    class="w-full px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-primary-500 disabled:bg-gray-100 dark:disabled:bg-gray-700"
-                    @input="student.status = 'graded'"
-                  />
-                </td>
-                <td class="px-4 py-3">
-                  <select
-                    v-model="student.status"
-                    class="w-full px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500"
-                  >
-                    <option value="pending">รอให้คะแนน</option>
-                    <option value="graded">ให้คะแนนแล้ว</option>
-                    <option value="excused">ยกเว้น</option>
-                    <option value="missing">ขาด/ไม่ส่ง</option>
-                  </select>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-50 dark:bg-gray-700 sticky top-0">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    นักเรียน
+                  </th>
+                  <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
+                    คะแนน
+                  </th>
+                  <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
+                    สถานะ
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                <tr v-for="student in scoreForm" :key="student.student_id">
+                  <td class="px-4 py-3">
+                    <div class="flex items-center gap-2">
+                      <span class="text-gray-500 dark:text-gray-400 text-sm">{{ student.student_number }}</span>
+                      <span class="font-medium text-gray-900 dark:text-white">{{ student.student_name }}</span>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3">
+                    <input
+                      v-model.number="student.score"
+                      type="number"
+                      :min="0"
+                      :max="selectedAssessment?.max_score"
+                      :disabled="student.status === 'excused' || student.status === 'missing'"
+                      class="w-full px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-primary-500 disabled:bg-gray-100 dark:disabled:bg-gray-700"
+                      @input="student.status = 'graded'"
+                    />
+                  </td>
+                  <td class="px-4 py-3">
+                    <select
+                      v-model="student.status"
+                      class="w-full px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="pending">รอให้คะแนน</option>
+                      <option value="graded">ให้คะแนนแล้ว</option>
+                      <option value="excused">ยกเว้น</option>
+                      <option value="missing">ขาด/ไม่ส่ง</option>
+                    </select>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex items-center gap-3">

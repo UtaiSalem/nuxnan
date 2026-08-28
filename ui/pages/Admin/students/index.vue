@@ -124,58 +124,60 @@ onMounted(() => {
         <p>ไม่พบข้อมูลนักเรียนที่ตรงกับเงื่อนไข</p>
       </div>
 
-      <table v-else class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead class="bg-gray-50 dark:bg-gray-700">
-          <tr>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">รหัส นร.</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ชื่อ - สกุล</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ชั้นเรียน</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">สถานะ</th>
-            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">จัดการ</th>
-          </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
-          <tr v-for="student in studentStore.students" :key="student.id" class="hover:bg-gray-50 dark:hover:bg-gray-750 transition">
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-              {{ student.student_id || '-' }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="flex items-center">
-                <div class="flex-shrink-0 h-10 w-10">
-                  <img class="h-10 w-10 rounded-full object-cover border border-gray-200" :src="student.profile_image ? (config.public.apiBase + '/storage/' + student.profile_image) : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(student.first_name_th || 'S') + '&background=random'" alt="" />
-                </div>
-                <div class="ml-4">
-                  <div class="text-sm font-medium text-gray-900 dark:text-white">
-                    {{ student.full_name_th }}
+      <div v-else class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead class="bg-gray-50 dark:bg-gray-700">
+            <tr>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">รหัส นร.</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ชื่อ - สกุล</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ชั้นเรียน</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">สถานะ</th>
+              <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
+            <tr v-for="student in studentStore.students" :key="student.id" class="hover:bg-gray-50 dark:hover:bg-gray-750 transition">
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                {{ student.student_id || '-' }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex items-center">
+                  <div class="flex-shrink-0 h-10 w-10">
+                    <img class="h-10 w-10 rounded-full object-cover border border-gray-200" :src="student.profile_image ? (config.public.apiBase + '/storage/' + student.profile_image) : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(student.first_name_th || 'S') + '&background=random'" alt="" />
                   </div>
-                  <div class="text-sm text-gray-500 dark:text-gray-400">
-                    {{ student.citizen_id || 'ไม่มีข้อมูลบัตร ปชช.' }}
+                  <div class="ml-4">
+                    <div class="text-sm font-medium text-gray-900 dark:text-white">
+                      {{ student.full_name_th }}
+                    </div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                      {{ student.citizen_id || 'ไม่มีข้อมูลบัตร ปชช.' }}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-              <span v-if="student.class_level">{{ student.class_level }}{{ student.class_section ? '/' + student.class_section : '' }}</span>
-              <span v-else class="text-gray-400 italic">ไม่ได้ระบุ</span>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" 
-                    :class="{
-                      'bg-green-100 text-green-800': student.status === 'active' || !student.status,
-                      'bg-gray-100 text-gray-800': student.status === 'graduated',
-                      'bg-red-100 text-red-800': student.status === 'dropped_out'
-                    }">
-                {{ student.status === 'active' || !student.status ? 'กำลังศึกษา' : (student.status === 'graduated' ? 'จบการศึกษา' : 'ลาออก') }}
-              </span>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-              <NuxtLink :to="`/admin/students/${student.id}`" class="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300 mr-3">
-                <i class="fas fa-eye mr-1"></i> รายละเอียด
-              </NuxtLink>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                <span v-if="student.class_level">{{ student.class_level }}{{ student.class_section ? '/' + student.class_section : '' }}</span>
+                <span v-else class="text-gray-400 italic">ไม่ได้ระบุ</span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" 
+                      :class="{
+                        'bg-green-100 text-green-800': student.status === 'active' || !student.status,
+                        'bg-gray-100 text-gray-800': student.status === 'graduated',
+                        'bg-red-100 text-red-800': student.status === 'dropped_out'
+                      }">
+                  {{ student.status === 'active' || !student.status ? 'กำลังศึกษา' : (student.status === 'graduated' ? 'จบการศึกษา' : 'ลาออก') }}
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <NuxtLink :to="`/admin/students/${student.id}`" class="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300 mr-3">
+                  <i class="fas fa-eye mr-1"></i> รายละเอียด
+                </NuxtLink>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <!-- Pagination -->
       <div v-if="studentStore.studentsPagination && studentStore.studentsPagination.last_page > 1" class="bg-white dark:bg-gray-800 px-4 py-3 border-t border-gray-200 dark:border-gray-700 sm:px-6 flex items-center justify-between">

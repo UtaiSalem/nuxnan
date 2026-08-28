@@ -157,56 +157,58 @@ const translateField = (field: string) => {
         <p class="text-lg">ไม่มีคำขอที่รอการดำเนินการ</p>
       </div>
 
-      <table v-else class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead class="bg-gray-50 dark:bg-gray-700">
-          <tr>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">นักเรียน / เวลาที่ขอ</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ข้อมูลที่ขอแก้ไข</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ค่าเดิม <i class="fas fa-arrow-right mx-2"></i> ค่าใหม่</th>
-            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">จัดการ</th>
-          </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
-          <tr v-for="request in studentStore.changeRequests" :key="request.id" class="hover:bg-gray-50 dark:hover:bg-gray-750">
-            <td class="px-6 py-4">
-              <div class="text-sm font-medium text-gray-900 dark:text-white">
-                {{ request.student?.first_name_th }} {{ request.student?.last_name_th }}
-              </div>
-              <div class="text-xs text-gray-500 mt-1">รหัส: {{ request.student?.student_id || '-' }}</div>
-              <div class="text-xs text-gray-400 mt-1"><i class="far fa-clock mr-1"></i>{{ formatDate(request.created_at) }}</div>
-            </td>
-            <td class="px-6 py-4">
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
-                {{ request.model_type }}
-              </span>
-              <div class="text-sm font-medium mt-2">{{ translateField(request.field) }}</div>
-            </td>
-            <td class="px-6 py-4 text-sm">
-              <div class="flex flex-col space-y-2">
-                <div class="text-red-600 line-through decoration-red-400">{{ request.old_value || '(ว่าง)' }}</div>
-                <div class="text-green-600 font-medium">{{ request.new_value || '(ว่าง)' }}</div>
-              </div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-              <div v-if="request.status === 'pending'" class="flex justify-end space-x-2">
-                <button @click="handleApprove(request.id)" class="text-green-600 hover:text-green-900 bg-green-50 hover:bg-green-100 p-2 rounded-md transition" title="อนุมัติ">
-                  <i class="fas fa-check"></i>
-                </button>
-                <button @click="openRejectModal(request.id)" class="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 p-2 rounded-md transition" title="ไม่อนุมัติ">
-                  <i class="fas fa-times"></i>
-                </button>
-              </div>
-              <div v-else-if="request.status === 'approved'" class="text-green-600 font-medium text-xs">
-                <i class="fas fa-check-circle mr-1"></i> อนุมัติแล้ว
-              </div>
-              <div v-else-if="request.status === 'rejected'" class="text-red-600 font-medium text-xs flex flex-col items-end">
-                <span><i class="fas fa-times-circle mr-1"></i> ถูกปฏิเสธ</span>
-                <span class="text-gray-500 mt-1" :title="request.reason">เหตุผล: {{ request.reason?.substring(0, 20) }}{{ request.reason?.length > 20 ? '...' : '' }}</span>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div v-else class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead class="bg-gray-50 dark:bg-gray-700">
+            <tr>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">นักเรียน / เวลาที่ขอ</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ข้อมูลที่ขอแก้ไข</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ค่าเดิม <i class="fas fa-arrow-right mx-2"></i> ค่าใหม่</th>
+              <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
+            <tr v-for="request in studentStore.changeRequests" :key="request.id" class="hover:bg-gray-50 dark:hover:bg-gray-750">
+              <td class="px-6 py-4">
+                <div class="text-sm font-medium text-gray-900 dark:text-white">
+                  {{ request.student?.first_name_th }} {{ request.student?.last_name_th }}
+                </div>
+                <div class="text-xs text-gray-500 mt-1">รหัส: {{ request.student?.student_id || '-' }}</div>
+                <div class="text-xs text-gray-400 mt-1"><i class="far fa-clock mr-1"></i>{{ formatDate(request.created_at) }}</div>
+              </td>
+              <td class="px-6 py-4">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                  {{ request.model_type }}
+                </span>
+                <div class="text-sm font-medium mt-2">{{ translateField(request.field) }}</div>
+              </td>
+              <td class="px-6 py-4 text-sm">
+                <div class="flex flex-col space-y-2">
+                  <div class="text-red-600 line-through decoration-red-400">{{ request.old_value || '(ว่าง)' }}</div>
+                  <div class="text-green-600 font-medium">{{ request.new_value || '(ว่าง)' }}</div>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <div v-if="request.status === 'pending'" class="flex justify-end space-x-2">
+                  <button @click="handleApprove(request.id)" class="text-green-600 hover:text-green-900 bg-green-50 hover:bg-green-100 p-2 rounded-md transition" title="อนุมัติ">
+                    <i class="fas fa-check"></i>
+                  </button>
+                  <button @click="openRejectModal(request.id)" class="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 p-2 rounded-md transition" title="ไม่อนุมัติ">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+                <div v-else-if="request.status === 'approved'" class="text-green-600 font-medium text-xs">
+                  <i class="fas fa-check-circle mr-1"></i> อนุมัติแล้ว
+                </div>
+                <div v-else-if="request.status === 'rejected'" class="text-red-600 font-medium text-xs flex flex-col items-end">
+                  <span><i class="fas fa-times-circle mr-1"></i> ถูกปฏิเสธ</span>
+                  <span class="text-gray-500 mt-1" :title="request.reason">เหตุผล: {{ request.reason?.substring(0, 20) }}{{ request.reason?.length > 20 ? '...' : '' }}</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <!-- Pagination -->
       <div v-if="studentStore.requestsPagination && studentStore.requestsPagination.last_page > 1" class="bg-white dark:bg-gray-800 px-4 py-3 border-t border-gray-200 dark:border-gray-700 sm:px-6 flex items-center justify-between">

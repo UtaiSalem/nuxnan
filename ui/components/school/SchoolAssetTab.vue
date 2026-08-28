@@ -38,56 +38,58 @@
     </div>
 
     <div v-else class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <table class="w-full text-left">
-        <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-          <tr>
-            <th class="px-6 py-4">รหัสทรัพย์สิน</th>
-            <th class="px-6 py-4">ชื่อรายการ</th>
-            <th class="px-6 py-4">หมวดหมู่</th>
-            <th class="px-6 py-4">สถานที่</th>
-            <th class="px-6 py-4">สถานะ</th>
-            <th class="px-6 py-4"></th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-          <tr v-for="asset in assets" :key="asset.id" class="hover:bg-gray-50 dark:hover:bg-gray-900/20">
-            <td class="px-6 py-4 font-mono text-xs font-bold text-primary-600">{{ asset.asset_code }}</td>
-            <td class="px-6 py-4">
-              <div class="font-bold text-gray-900 dark:text-white text-sm">{{ asset.name }}</div>
-              <div class="text-[10px] text-gray-400">{{ asset.description || 'ไม่มีคำอธิบาย' }}</div>
-            </td>
-            <td class="px-6 py-4 text-sm text-gray-500">{{ asset.category }}</td>
-            <td class="px-6 py-4 text-sm text-gray-500">
-              <div class="flex items-center gap-1">
-                <Icon icon="heroicons:map-pin" class="h-4 w-4" />
-                {{ asset.location || '-' }}
-              </div>
-            </td>
-            <td class="px-6 py-4">
-              <span :class="getStatusClass(asset.status)" class="px-2 py-1 rounded-full text-[10px] font-black uppercase">
-                {{ getStatusLabel(asset.status) }}
-              </span>
-            </td>
-            <td class="px-6 py-4 text-right">
-              <div class="flex justify-end gap-2">
-                <button 
-                  @click="openMaintenanceModal(asset)"
-                  class="p-2 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors"
-                  title="แจ้งซ่อม"
-                >
-                  <Icon icon="heroicons:wrench-screwdriver" class="h-5 w-5" />
-                </button>
-                <button 
-                  @click="viewAssetDetails(asset)"
-                  class="p-2 text-gray-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors"
-                >
-                  <Icon icon="heroicons:eye" class="h-5 w-5" />
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left">
+          <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <tr>
+              <th class="px-6 py-4">รหัสทรัพย์สิน</th>
+              <th class="px-6 py-4">ชื่อรายการ</th>
+              <th class="px-6 py-4">หมวดหมู่</th>
+              <th class="px-6 py-4">สถานที่</th>
+              <th class="px-6 py-4">สถานะ</th>
+              <th class="px-6 py-4"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            <tr v-for="asset in assets" :key="asset.id" class="hover:bg-gray-50 dark:hover:bg-gray-900/20">
+              <td class="px-6 py-4 font-mono text-xs font-bold text-primary-600">{{ asset.asset_code }}</td>
+              <td class="px-6 py-4">
+                <div class="font-bold text-gray-900 dark:text-white text-sm">{{ asset.name }}</div>
+                <div class="text-[10px] text-gray-400">{{ asset.description || 'ไม่มีคำอธิบาย' }}</div>
+              </td>
+              <td class="px-6 py-4 text-sm text-gray-500">{{ asset.category }}</td>
+              <td class="px-6 py-4 text-sm text-gray-500">
+                <div class="flex items-center gap-1">
+                  <Icon icon="heroicons:map-pin" class="h-4 w-4" />
+                  {{ asset.location || '-' }}
+                </div>
+              </td>
+              <td class="px-6 py-4">
+                <span :class="getStatusClass(asset.status)" class="px-2 py-1 rounded-full text-[10px] font-black uppercase">
+                  {{ getStatusLabel(asset.status) }}
+                </span>
+              </td>
+              <td class="px-6 py-4 text-right">
+                <div class="flex justify-end gap-2">
+                  <button 
+                    @click="openMaintenanceModal(asset)"
+                    class="p-2 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors"
+                    title="แจ้งซ่อม"
+                  >
+                    <Icon icon="heroicons:wrench-screwdriver" class="h-5 w-5" />
+                  </button>
+                  <button 
+                    @click="viewAssetDetails(asset)"
+                    class="p-2 text-gray-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors"
+                  >
+                    <Icon icon="heroicons:eye" class="h-5 w-5" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       <div v-if="assets.length === 0" class="p-12 text-center text-gray-400">
         <Icon icon="heroicons:archive-box" class="h-12 w-12 mx-auto mb-3 opacity-20" />
         <p>ยังไม่มีข้อมูลทรัพย์สินในระบบ</p>

@@ -37,38 +37,40 @@
                             ภาคเรียนที่ {{ semester }}
                         </h4>
                         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 overflow-hidden">
-                            <table class="w-full text-left">
-                                <thead class="bg-gray-50 dark:bg-gray-700 text-xs text-gray-500 dark:text-gray-300 uppercase">
-                                    <tr>
-                                        <th class="px-4 py-3">รหัสวิชา</th>
-                                        <th class="px-4 py-3">ชื่อวิชา</th>
-                                        <th class="px-4 py-3">ประเภท</th>
-                                        <th class="px-4 py-3 text-center">หน่วยกิต</th>
-                                        <th v-if="isAcademyAdmin" class="px-4 py-3 text-center">จัดการ</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                                    <tr v-for="course in courses" :key="course.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                        <td class="px-4 py-3 text-sm font-medium dark:text-gray-200">{{ course.course?.code || '-' }}</td>
-                                        <td class="px-4 py-3 text-sm dark:text-gray-200">{{ course.course?.name }}</td>
-                                        <td class="px-4 py-3 text-xs">
-                                            <span :class="{
-                                                'bg-red-100 text-red-800': course.course_type === 'required',
-                                                'bg-blue-100 text-blue-800': course.course_type === 'elective',
-                                                'bg-gray-100 text-gray-800': course.course_type === 'general'
-                                            }" class="px-2 py-1 rounded-full">
-                                                {{ getCourseTypeLabel(course.course_type) }}
-                                            </span>
-                                        </td>
-                                        <td class="px-4 py-3 text-sm text-center dark:text-gray-200">{{ course.credits }}</td>
-                                        <td v-if="isAcademyAdmin" class="px-4 py-3 text-center">
-                                            <button @click="removeCourse(course)" class="text-red-500 hover:text-red-700 text-sm">
-                                                ลบ
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                            <div class="overflow-x-auto">
+                              <table class="w-full text-left">
+                                  <thead class="bg-gray-50 dark:bg-gray-700 text-xs text-gray-500 dark:text-gray-300 uppercase">
+                                      <tr>
+                                          <th class="px-4 py-3">รหัสวิชา</th>
+                                          <th class="px-4 py-3">ชื่อวิชา</th>
+                                          <th class="px-4 py-3">ประเภท</th>
+                                          <th class="px-4 py-3 text-center">หน่วยกิต</th>
+                                          <th v-if="isAcademyAdmin" class="px-4 py-3 text-center">จัดการ</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                      <tr v-for="course in courses" :key="course.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                          <td class="px-4 py-3 text-sm font-medium dark:text-gray-200">{{ course.course?.code || '-' }}</td>
+                                          <td class="px-4 py-3 text-sm dark:text-gray-200">{{ course.course?.name }}</td>
+                                          <td class="px-4 py-3 text-xs">
+                                              <span :class="{
+                                                  'bg-red-100 text-red-800': course.course_type === 'required',
+                                                  'bg-blue-100 text-blue-800': course.course_type === 'elective',
+                                                  'bg-gray-100 text-gray-800': course.course_type === 'general'
+                                              }" class="px-2 py-1 rounded-full">
+                                                  {{ getCourseTypeLabel(course.course_type) }}
+                                              </span>
+                                          </td>
+                                          <td class="px-4 py-3 text-sm text-center dark:text-gray-200">{{ course.credits }}</td>
+                                          <td v-if="isAcademyAdmin" class="px-4 py-3 text-center">
+                                              <button @click="removeCourse(course)" class="text-red-500 hover:text-red-700 text-sm">
+                                                  ลบ
+                                              </button>
+                                          </td>
+                                      </tr>
+                                  </tbody>
+                              </table>
+                            </div>
                         </div>
                     </div>
                 </div>

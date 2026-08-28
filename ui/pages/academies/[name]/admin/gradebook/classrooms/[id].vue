@@ -517,104 +517,106 @@ watch(activeTab, async (tab) => {
           </button>
         </div>
 
-        <table v-else class="w-full">
-          <thead class="bg-gray-50 dark:bg-gray-700">
-            <tr>
-              <th v-if="activeTab === 'active'" class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                เลขที่
-              </th>
-              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                รหัสนักเรียน
-              </th>
-              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                ชื่อ-นามสกุล
-              </th>
-              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                สถานะ
-              </th>
-              <th v-if="activeTab === 'inactive'" class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                วันที่ออก
-              </th>
-              <th v-if="activeTab === 'inactive'" class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                เหตุผล
-              </th>
-              <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                จัดการ
-              </th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-            <tr v-for="(cs, index) in filteredStudents" :key="cs.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-              <td v-if="activeTab === 'active'" class="px-6 py-4 whitespace-nowrap">
-                <input
-                  type="number"
-                  :value="cs.student_number || index + 1"
-                  @change="updateStudentNumber(cs, Number(($event.target as HTMLInputElement).value))"
-                  class="w-16 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-primary-500"
-                />
-              </td>
-              <td
-                class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white cursor-pointer"
-                @click="openHistory(cs)"
-              >
-                {{ cs.student?.student_id }}
-              </td>
-              <td
-                class="px-6 py-4 whitespace-nowrap cursor-pointer"
-                @click="openHistory(cs)"
-              >
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center">
-                    <span class="text-sm font-medium text-primary-600 dark:text-primary-400">
-                      {{ cs.student?.first_name_th?.[0] }}
-                    </span>
-                  </div>
-                  <div>
-                    <div class="font-medium text-gray-900 dark:text-white">
-                      {{ cs.student?.prefix }}{{ cs.student?.first_name_th }} {{ cs.student?.last_name_th }}
-                    </div>
-                    <div class="text-sm text-gray-500 dark:text-gray-400">
-                      {{ cs.student?.first_name_en }} {{ cs.student?.last_name_en }}
-                    </div>
-                  </div>
-                </div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <StudentStatusBadge :status="cs.status" :status-text="cs.status_text" />
-              </td>
-              <td v-if="activeTab === 'inactive'" class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                {{ cs.left_at || '-' }}
-              </td>
-              <td v-if="activeTab === 'inactive'" class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                {{ cs.leave_reason || '-' }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right">
-                <div class="inline-flex items-center gap-1">
-                  <button
-                    @click="openHistory(cs)"
-                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 transition"
-                    aria-label="ดูประวัติการลงห้อง"
-                  >
-                    <Icon icon="mdi:history" class="w-5 h-5" />
-                  </button>
-                  <StudentActionMenu v-if="activeTab === 'active'"
-                    :student="buildStudentDTO(cs)"
-                    :enrollment="buildEnrollmentDTO(cs)"
-                    @select="(action) => onActionSelect(cs, action)"
+        <div v-else class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th v-if="activeTab === 'active'" class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  เลขที่
+                </th>
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  รหัสนักเรียน
+                </th>
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  ชื่อ-นามสกุล
+                </th>
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  สถานะ
+                </th>
+                <th v-if="activeTab === 'inactive'" class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  วันที่ออก
+                </th>
+                <th v-if="activeTab === 'inactive'" class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  เหตุผล
+                </th>
+                <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  จัดการ
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+              <tr v-for="(cs, index) in filteredStudents" :key="cs.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                <td v-if="activeTab === 'active'" class="px-6 py-4 whitespace-nowrap">
+                  <input
+                    type="number"
+                    :value="cs.student_number || index + 1"
+                    @change="updateStudentNumber(cs, Number(($event.target as HTMLInputElement).value))"
+                    class="w-16 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center focus:ring-2 focus:ring-primary-500"
                   />
-                  <button
-                    v-if="activeTab === 'active'"
-                    @click="removeStudent(cs.student_id)"
-                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 rounded-md text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-900/30 transition"
-                    aria-label="ลบนักเรียนออกจากห้อง (legacy)"
-                  >
-                    <Icon icon="fluent:person-delete-24-regular" class="w-5 h-5" />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                </td>
+                <td
+                  class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white cursor-pointer"
+                  @click="openHistory(cs)"
+                >
+                  {{ cs.student?.student_id }}
+                </td>
+                <td
+                  class="px-6 py-4 whitespace-nowrap cursor-pointer"
+                  @click="openHistory(cs)"
+                >
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center">
+                      <span class="text-sm font-medium text-primary-600 dark:text-primary-400">
+                        {{ cs.student?.first_name_th?.[0] }}
+                      </span>
+                    </div>
+                    <div>
+                      <div class="font-medium text-gray-900 dark:text-white">
+                        {{ cs.student?.prefix }}{{ cs.student?.first_name_th }} {{ cs.student?.last_name_th }}
+                      </div>
+                      <div class="text-sm text-gray-500 dark:text-gray-400">
+                        {{ cs.student?.first_name_en }} {{ cs.student?.last_name_en }}
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <StudentStatusBadge :status="cs.status" :status-text="cs.status_text" />
+                </td>
+                <td v-if="activeTab === 'inactive'" class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                  {{ cs.left_at || '-' }}
+                </td>
+                <td v-if="activeTab === 'inactive'" class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+                  {{ cs.leave_reason || '-' }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-right">
+                  <div class="inline-flex items-center gap-1">
+                    <button
+                      @click="openHistory(cs)"
+                      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 transition"
+                      aria-label="ดูประวัติการลงห้อง"
+                    >
+                      <Icon icon="mdi:history" class="w-5 h-5" />
+                    </button>
+                    <StudentActionMenu v-if="activeTab === 'active'"
+                      :student="buildStudentDTO(cs)"
+                      :enrollment="buildEnrollmentDTO(cs)"
+                      @select="(action) => onActionSelect(cs, action)"
+                    />
+                    <button
+                      v-if="activeTab === 'active'"
+                      @click="removeStudent(cs.student_id)"
+                      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 rounded-md text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-900/30 transition"
+                      aria-label="ลบนักเรียนออกจากห้อง (legacy)"
+                    >
+                      <Icon icon="fluent:person-delete-24-regular" class="w-5 h-5" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 

@@ -1343,59 +1343,61 @@ const applyBulkRenumber = async () => {
               </div>
               
               <div v-else>
-                <table class="w-full">
-                  <thead>
-                    <tr class="text-left text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
-                      <th class="pb-3 font-medium">เลขที่</th>
-                      <th class="pb-3 font-medium">ชื่อ-นามสกุล</th>
-                      <th class="pb-3 font-medium hidden sm:table-cell">รหัสนักเรียน</th>
-                      <th class="pb-3 font-medium text-right">การดำเนินการ</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                    <tr v-for="(student, index) in classroomStudents" :key="student.id" class="text-gray-900 dark:text-white">
-                      <td class="py-3">
-                        <input
-                          type="text"
-                          :value="student.student_number || (index + 1)"
-                          @blur="updateStudentNumber(student.id, ($event.target as HTMLInputElement).value)"
-                          class="w-16 px-2 py-1 text-center border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900"
-                        />
-                      </td>
-                      <td class="py-3">
-                        <div class="flex items-center gap-3">
-                          <img
-                            :src="student.user?.profile_photo_url || '/images/default-avatar.png'"
-                            :alt="student.user?.name"
-                            class="w-8 h-8 rounded-full object-cover"
+                <div class="overflow-x-auto">
+                  <table class="w-full">
+                    <thead>
+                      <tr class="text-left text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                        <th class="pb-3 font-medium">เลขที่</th>
+                        <th class="pb-3 font-medium">ชื่อ-นามสกุล</th>
+                        <th class="pb-3 font-medium hidden sm:table-cell">รหัสนักเรียน</th>
+                        <th class="pb-3 font-medium text-right">การดำเนินการ</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                      <tr v-for="(student, index) in classroomStudents" :key="student.id" class="text-gray-900 dark:text-white">
+                        <td class="py-3">
+                          <input
+                            type="text"
+                            :value="student.student_number || (index + 1)"
+                            @blur="updateStudentNumber(student.id, ($event.target as HTMLInputElement).value)"
+                            class="w-16 px-2 py-1 text-center border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900"
                           />
-                          <span class="font-medium">{{ student.user?.name }}</span>
-                        </div>
-                      </td>
-                      <td class="py-3 hidden sm:table-cell text-gray-500 dark:text-gray-400">
-                        {{ student.student_id || '-' }}
-                      </td>
-                      <td class="py-3">
-                        <div class="flex items-center justify-end gap-2">
-                          <button
-                            @click="openTransferModal(student.id)"
-                            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                            title="ย้ายห้อง"
-                          >
-                            <Icon icon="fluent:arrow-swap-24-regular" class="w-4 h-4" />
-                          </button>
-                          <button
-                            @click="removeStudent(student.id)"
-                            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                            title="นำออก"
-                          >
-                            <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                        </td>
+                        <td class="py-3">
+                          <div class="flex items-center gap-3">
+                            <img
+                              :src="student.user?.profile_photo_url || '/images/default-avatar.png'"
+                              :alt="student.user?.name"
+                              class="w-8 h-8 rounded-full object-cover"
+                            />
+                            <span class="font-medium">{{ student.user?.name }}</span>
+                          </div>
+                        </td>
+                        <td class="py-3 hidden sm:table-cell text-gray-500 dark:text-gray-400">
+                          {{ student.student_id || '-' }}
+                        </td>
+                        <td class="py-3">
+                          <div class="flex items-center justify-end gap-2">
+                            <button
+                              @click="openTransferModal(student.id)"
+                              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                              title="ย้ายห้อง"
+                            >
+                              <Icon icon="fluent:arrow-swap-24-regular" class="w-4 h-4" />
+                            </button>
+                            <button
+                              @click="removeStudent(student.id)"
+                              class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                              title="นำออก"
+                            >
+                              <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
 
@@ -1576,22 +1578,24 @@ const applyBulkRenumber = async () => {
             </div>
             
             <div class="max-h-[50vh] overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-xl relative">
-              <table class="w-full text-sm text-left">
-                <thead class="text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 sticky top-0 shadow-sm">
-                  <tr>
-                    <th class="px-4 py-3 font-medium">ห้อง</th>
-                    <th class="px-4 py-3 font-medium text-center">นักเรียน</th>
-                    <th class="px-4 py-3 font-medium text-center">เลขที่ที่เปลี่ยน</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                  <tr v-for="room in bulkRenumberSummary?.classrooms.filter((c: any) => c.changed_count > 0)" :key="room.classroom_id" class="text-gray-900 dark:text-white">
-                    <td class="px-4 py-3">{{ room.name }}</td>
-                    <td class="px-4 py-3 text-center font-mono tabular-nums">{{ room.total }}</td>
-                    <td class="px-4 py-3 text-center text-amber-600 dark:text-amber-400 font-medium font-mono tabular-nums">{{ room.changed_count }}</td>
-                  </tr>
-                </tbody>
-              </table>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                  <thead class="text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 sticky top-0 shadow-sm">
+                    <tr>
+                      <th class="px-4 py-3 font-medium">ห้อง</th>
+                      <th class="px-4 py-3 font-medium text-center">นักเรียน</th>
+                      <th class="px-4 py-3 font-medium text-center">เลขที่ที่เปลี่ยน</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    <tr v-for="room in bulkRenumberSummary?.classrooms.filter((c: any) => c.changed_count > 0)" :key="room.classroom_id" class="text-gray-900 dark:text-white">
+                      <td class="px-4 py-3">{{ room.name }}</td>
+                      <td class="px-4 py-3 text-center font-mono tabular-nums">{{ room.total }}</td>
+                      <td class="px-4 py-3 text-center text-amber-600 dark:text-amber-400 font-medium font-mono tabular-nums">{{ room.changed_count }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
             <p v-if="bulkRenumberSummary?.classroom_count - bulkRenumberSummary?.affected_classroom_count > 0" class="text-sm text-gray-500 dark:text-gray-400 mt-3 text-center">
               อีก <span class="font-mono tabular-nums">{{ bulkRenumberSummary?.classroom_count - bulkRenumberSummary?.affected_classroom_count }}</span> ห้องเรียงถูกต้องอยู่แล้ว

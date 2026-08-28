@@ -2172,30 +2172,32 @@ onMounted(async () => {
 
               <div class="flex-1 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col">
                 <div class="overflow-y-auto max-h-[60vh]">
-                  <table class="w-full text-left border-collapse">
-                    <thead class="sticky top-0 bg-slate-50 dark:bg-slate-900 shadow-sm z-10">
-                      <tr class="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                        <th class="px-4 py-3 w-20">เลขที่เดิม</th>
-                        <th class="px-2 py-3 w-10 text-center">→</th>
-                        <th class="px-4 py-3 w-20">เลขที่ใหม่</th>
-                        <th class="px-4 py-3 w-32">เลขประจำตัว</th>
-                        <th class="px-4 py-3 min-w-[200px]">ชื่อ-นามสกุล</th>
-                      </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 dark:divide-slate-700/60 text-sm">
-                      <tr
-                        v-for="row in renumberPreview"
-                        :key="row.student_id"
-                        :class="row.changed ? 'bg-amber-50/50 dark:bg-amber-900/10' : 'text-slate-500 dark:text-slate-400'"
-                      >
-                        <td class="px-4 py-2.5 font-mono tabular-nums">{{ row.from === null ? '-' : row.from }}</td>
-                        <td class="px-2 py-2.5 text-center text-slate-300 dark:text-slate-600"><Icon icon="fluent:arrow-right-16-regular" class="h-3 w-3 inline-block" /></td>
-                        <td class="px-4 py-2.5 font-mono tabular-nums" :class="row.changed ? 'font-bold text-slate-900 dark:text-white' : ''">{{ row.to }}</td>
-                        <td class="px-4 py-2.5 font-mono">{{ row.student_code || '-' }}</td>
-                        <td class="px-4 py-2.5" :class="row.changed ? 'font-semibold text-slate-900 dark:text-white' : ''">{{ row.full_name }}</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                      <thead class="sticky top-0 bg-slate-50 dark:bg-slate-900 shadow-sm z-10">
+                        <tr class="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                          <th class="px-4 py-3 w-20">เลขที่เดิม</th>
+                          <th class="px-2 py-3 w-10 text-center">→</th>
+                          <th class="px-4 py-3 w-20">เลขที่ใหม่</th>
+                          <th class="px-4 py-3 w-32">เลขประจำตัว</th>
+                          <th class="px-4 py-3 min-w-[200px]">ชื่อ-นามสกุล</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-slate-100 dark:divide-slate-700/60 text-sm">
+                        <tr
+                          v-for="row in renumberPreview"
+                          :key="row.student_id"
+                          :class="row.changed ? 'bg-amber-50/50 dark:bg-amber-900/10' : 'text-slate-500 dark:text-slate-400'"
+                        >
+                          <td class="px-4 py-2.5 font-mono tabular-nums">{{ row.from === null ? '-' : row.from }}</td>
+                          <td class="px-2 py-2.5 text-center text-slate-300 dark:text-slate-600"><Icon icon="fluent:arrow-right-16-regular" class="h-3 w-3 inline-block" /></td>
+                          <td class="px-4 py-2.5 font-mono tabular-nums" :class="row.changed ? 'font-bold text-slate-900 dark:text-white' : ''">{{ row.to }}</td>
+                          <td class="px-4 py-2.5 font-mono">{{ row.student_code || '-' }}</td>
+                          <td class="px-4 py-2.5" :class="row.changed ? 'font-semibold text-slate-900 dark:text-white' : ''">{{ row.full_name }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>

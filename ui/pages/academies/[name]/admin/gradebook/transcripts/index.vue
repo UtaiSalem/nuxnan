@@ -379,94 +379,96 @@ const getStatusBadge = (status: string) => {
           </button>
         </div>
 
-        <table v-else class="w-full">
-          <thead class="bg-gray-50 dark:bg-gray-700">
-            <tr>
-              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                นักเรียน
-              </th>
-              <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                ห้องเรียน
-              </th>
-              <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                หน่วยกิต
-              </th>
-              <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                GPA
-              </th>
-              <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                อันดับ
-              </th>
-              <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                สถานะ
-              </th>
-              <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                จัดการ
-              </th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-            <tr v-for="transcript in filteredTranscripts" :key="transcript.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center">
-                    <span class="text-sm font-medium text-primary-600 dark:text-primary-400">
-                      {{ transcript.student?.first_name_th?.[0] }}
-                    </span>
-                  </div>
-                  <div>
-                    <div class="font-medium text-gray-900 dark:text-white">
-                      {{ transcript.student?.first_name_th }} {{ transcript.student?.last_name_th }}
+        <div v-else class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  นักเรียน
+                </th>
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  ห้องเรียน
+                </th>
+                <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  หน่วยกิต
+                </th>
+                <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  GPA
+                </th>
+                <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  อันดับ
+                </th>
+                <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  สถานะ
+                </th>
+                <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  จัดการ
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+              <tr v-for="transcript in filteredTranscripts" :key="transcript.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center">
+                      <span class="text-sm font-medium text-primary-600 dark:text-primary-400">
+                        {{ transcript.student?.first_name_th?.[0] }}
+                      </span>
                     </div>
-                    <div class="text-sm text-gray-500 dark:text-gray-400">
-                      {{ transcript.student?.student_id }}
+                    <div>
+                      <div class="font-medium text-gray-900 dark:text-white">
+                        {{ transcript.student?.first_name_th }} {{ transcript.student?.last_name_th }}
+                      </div>
+                      <div class="text-sm text-gray-500 dark:text-gray-400">
+                        {{ transcript.student?.student_id }}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-white">
-                {{ transcript.classroom?.name || '-' }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-center text-gray-900 dark:text-white">
-                {{ transcript.total_credits || 0 }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-center">
-                <span :class="['font-bold text-lg', getGpaColor(transcript.gpa)]">
-                  {{ transcript.gpa?.toFixed(2) || '-' }}
-                </span>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-center">
-                <span v-if="transcript.class_rank" class="text-gray-900 dark:text-white">
-                  {{ transcript.class_rank }}/{{ transcript.class_total }}
-                </span>
-                <span v-else class="text-gray-400">-</span>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-center">
-                <span :class="['px-2 py-1 text-xs font-medium rounded-full', getStatusBadge(transcript.status).class]">
-                  {{ getStatusBadge(transcript.status).text }}
-                </span>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right">
-                <div class="flex items-center justify-end gap-2">
-                  <NuxtLink
-                    :to="`/academies/${academyName}/admin/gradebook/transcripts/${transcript.id}`"
-                    class="p-2 text-gray-500 hover:text-primary-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                    title="ดูรายละเอียด"
-                  >
-                    <Icon icon="fluent:eye-24-regular" class="w-5 h-5" />
-                  </NuxtLink>
-                  <button
-                    @click="downloadPdf(transcript)"
-                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-500 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                    title="ดาวน์โหลด PDF"
-                  >
-                    <Icon icon="fluent:document-pdf-24-regular" class="w-5 h-5" />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-white">
+                  {{ transcript.classroom?.name || '-' }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center text-gray-900 dark:text-white">
+                  {{ transcript.total_credits || 0 }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center">
+                  <span :class="['font-bold text-lg', getGpaColor(transcript.gpa)]">
+                    {{ transcript.gpa?.toFixed(2) || '-' }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center">
+                  <span v-if="transcript.class_rank" class="text-gray-900 dark:text-white">
+                    {{ transcript.class_rank }}/{{ transcript.class_total }}
+                  </span>
+                  <span v-else class="text-gray-400">-</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center">
+                  <span :class="['px-2 py-1 text-xs font-medium rounded-full', getStatusBadge(transcript.status).class]">
+                    {{ getStatusBadge(transcript.status).text }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-right">
+                  <div class="flex items-center justify-end gap-2">
+                    <NuxtLink
+                      :to="`/academies/${academyName}/admin/gradebook/transcripts/${transcript.id}`"
+                      class="p-2 text-gray-500 hover:text-primary-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                      title="ดูรายละเอียด"
+                    >
+                      <Icon icon="fluent:eye-24-regular" class="w-5 h-5" />
+                    </NuxtLink>
+                    <button
+                      @click="downloadPdf(transcript)"
+                      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-gray-500 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                      title="ดาวน์โหลด PDF"
+                    >
+                      <Icon icon="fluent:document-pdf-24-regular" class="w-5 h-5" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>

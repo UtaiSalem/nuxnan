@@ -88,52 +88,54 @@
     <!-- Borrowing History Section -->
     <div v-if="activeSection === 'borrowings'" class="space-y-4">
       <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <table class="w-full text-left">
-          <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-            <tr>
-              <th class="px-6 py-4">หนังสือ</th>
-              <th class="px-6 py-4">ผู้ยืม</th>
-              <th class="px-6 py-4">วันที่ยืม</th>
-              <th class="px-6 py-4">กำหนดคืน</th>
-              <th class="px-6 py-4">สถานะ</th>
-              <th class="px-6 py-4"></th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-            <tr v-for="item in borrowings" :key="item.id" class="hover:bg-gray-50 dark:hover:bg-gray-900/20">
-              <td class="px-6 py-4">
-                <div class="font-bold text-gray-900 dark:text-white text-sm">{{ item.book?.title }}</div>
-                <div class="text-[10px] text-gray-400">ISBN: {{ item.book?.isbn || '-' }}</div>
-              </td>
-              <td class="px-6 py-4">
-                <div class="flex items-center gap-2">
-                  <CircleAvatar :src="item.user?.profile_photo_path" :name="item.user?.name" size="xs" />
-                  <span class="text-sm font-medium">{{ item.user?.name }}</span>
-                </div>
-              </td>
-              <td class="px-6 py-4 text-sm text-gray-500">{{ formatDate(item.borrowed_at) }}</td>
-              <td class="px-6 py-4 text-sm text-gray-500">
-                <span :class="isOverdue(item.due_at) && item.status === 'borrowed' ? 'text-red-500 font-bold' : ''">
-                  {{ formatDate(item.due_at) }}
-                </span>
-              </td>
-              <td class="px-6 py-4">
-                <span :class="getStatusClass(item.status)" class="px-2 py-1 rounded-full text-[10px] font-black uppercase">
-                  {{ getStatusLabel(item.status) }}
-                </span>
-              </td>
-              <td class="px-6 py-4 text-right">
-                <button 
-                  v-if="item.status === 'borrowed' || item.status === 'overdue'"
-                  @click="processReturn(item)"
-                  class="min-h-[44px] sm:min-h-0 px-3 py-1 bg-green-500 text-white text-[10px] font-black rounded-lg hover:bg-green-600 transition-colors uppercase"
-                >
-                  คืนหนังสือ
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left">
+            <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <tr>
+                <th class="px-6 py-4">หนังสือ</th>
+                <th class="px-6 py-4">ผู้ยืม</th>
+                <th class="px-6 py-4">วันที่ยืม</th>
+                <th class="px-6 py-4">กำหนดคืน</th>
+                <th class="px-6 py-4">สถานะ</th>
+                <th class="px-6 py-4"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+              <tr v-for="item in borrowings" :key="item.id" class="hover:bg-gray-50 dark:hover:bg-gray-900/20">
+                <td class="px-6 py-4">
+                  <div class="font-bold text-gray-900 dark:text-white text-sm">{{ item.book?.title }}</div>
+                  <div class="text-[10px] text-gray-400">ISBN: {{ item.book?.isbn || '-' }}</div>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-2">
+                    <CircleAvatar :src="item.user?.profile_photo_path" :name="item.user?.name" size="xs" />
+                    <span class="text-sm font-medium">{{ item.user?.name }}</span>
+                  </div>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500">{{ formatDate(item.borrowed_at) }}</td>
+                <td class="px-6 py-4 text-sm text-gray-500">
+                  <span :class="isOverdue(item.due_at) && item.status === 'borrowed' ? 'text-red-500 font-bold' : ''">
+                    {{ formatDate(item.due_at) }}
+                  </span>
+                </td>
+                <td class="px-6 py-4">
+                  <span :class="getStatusClass(item.status)" class="px-2 py-1 rounded-full text-[10px] font-black uppercase">
+                    {{ getStatusLabel(item.status) }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <button 
+                    v-if="item.status === 'borrowed' || item.status === 'overdue'"
+                    @click="processReturn(item)"
+                    class="min-h-[44px] sm:min-h-0 px-3 py-1 bg-green-500 text-white text-[10px] font-black rounded-lg hover:bg-green-600 transition-colors uppercase"
+                  >
+                    คืนหนังสือ
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
         <div v-if="borrowings.length === 0" class="p-12 text-center text-gray-400">
           <p>ยังไม่มีรายการยืม-คืนในช่วงนี้</p>
         </div>

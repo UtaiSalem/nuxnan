@@ -503,74 +503,76 @@ const getStatusInfo = (status: string) => {
       </div>
 
       <div v-else class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-        <table class="w-full">
-          <thead class="bg-gray-50 dark:bg-gray-700/50">
-            <tr>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">บุคลากร</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">ตำแหน่ง</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">ประเภท</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">สถานะ</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">จัดการ</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-            <tr v-for="member in staff" :key="member.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-              <td class="px-4 py-3">
-                <div class="flex items-center gap-3">
-                  <img
-                    :src="member.user?.avatar || '/images/default-avatar.png'"
-                    :alt="member.user?.name"
-                    class="w-10 h-10 rounded-full object-cover"
-                  />
-                  <div>
-                    <p class="font-medium text-gray-900 dark:text-white">{{ member.user?.name }}</p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ member.employee_id }}</p>
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-gray-50 dark:bg-gray-700/50">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">บุคลากร</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">ตำแหน่ง</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">ประเภท</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">สถานะ</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+              <tr v-for="member in staff" :key="member.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-3">
+                    <img
+                      :src="member.user?.avatar || '/images/default-avatar.png'"
+                      :alt="member.user?.name"
+                      class="w-10 h-10 rounded-full object-cover"
+                    />
+                    <div>
+                      <p class="font-medium text-gray-900 dark:text-white">{{ member.user?.name }}</p>
+                      <p class="text-sm text-gray-500 dark:text-gray-400">{{ member.employee_id }}</p>
+                    </div>
                   </div>
-                </div>
-              </td>
-              <td class="px-4 py-3">
-                <p class="text-gray-900 dark:text-white">{{ member.position?.name || '-' }}</p>
-                <p v-if="member.department" class="text-sm text-gray-500 dark:text-gray-400">{{ member.department }}</p>
-              </td>
-              <td class="px-4 py-3">
-                <span class="text-gray-600 dark:text-gray-400">
-                  {{ employeeTypes.find(t => t.value === member.employee_type)?.label || member.employee_type }}
-                </span>
-              </td>
-              <td class="px-4 py-3">
-                <span
-                  :class="[
-                    'inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium',
-                    getStatusInfo(member.status).color === 'green' ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' :
-                    getStatusInfo(member.status).color === 'amber' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300' :
-                    getStatusInfo(member.status).color === 'blue' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' :
-                    'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                  ]"
-                >
-                  {{ getStatusInfo(member.status).label }}
-                </span>
-              </td>
-              <td class="px-4 py-3 text-right">
-                <div class="flex items-center justify-end gap-2">
-                  <button
-                    @click="openEditModal(member)"
-                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                    title="แก้ไข"
+                </td>
+                <td class="px-4 py-3">
+                  <p class="text-gray-900 dark:text-white">{{ member.position?.name || '-' }}</p>
+                  <p v-if="member.department" class="text-sm text-gray-500 dark:text-gray-400">{{ member.department }}</p>
+                </td>
+                <td class="px-4 py-3">
+                  <span class="text-gray-600 dark:text-gray-400">
+                    {{ employeeTypes.find(t => t.value === member.employee_type)?.label || member.employee_type }}
+                  </span>
+                </td>
+                <td class="px-4 py-3">
+                  <span
+                    :class="[
+                      'inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium',
+                      getStatusInfo(member.status).color === 'green' ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' :
+                      getStatusInfo(member.status).color === 'amber' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300' :
+                      getStatusInfo(member.status).color === 'blue' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' :
+                      'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                    ]"
                   >
-                    <Icon icon="fluent:edit-24-regular" class="w-5 h-5 text-gray-500" />
-                  </button>
-                  <button
-                    @click="deleteStaff(member)"
-                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                    title="ลบ"
-                  >
-                    <Icon icon="fluent:delete-24-regular" class="w-5 h-5 text-red-500" />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                    {{ getStatusInfo(member.status).label }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <div class="flex items-center justify-end gap-2">
+                    <button
+                      @click="openEditModal(member)"
+                      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                      title="แก้ไข"
+                    >
+                      <Icon icon="fluent:edit-24-regular" class="w-5 h-5 text-gray-500" />
+                    </button>
+                    <button
+                      @click="deleteStaff(member)"
+                      class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                      title="ลบ"
+                    >
+                      <Icon icon="fluent:delete-24-regular" class="w-5 h-5 text-red-500" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
         
         <!-- Pagination -->
         <div v-if="pagination.last_page > 1" class="flex items-center justify-center gap-2 py-4 border-t border-gray-100 dark:border-gray-700">

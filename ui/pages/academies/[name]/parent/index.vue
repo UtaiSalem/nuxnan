@@ -191,32 +191,34 @@
                 <div class="mt-8">
                   <h4 class="font-bold text-gray-800 dark:text-white mb-4">ประวัติการเข้าเรียนล่าสุด</h4>
                   <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden">
-                    <table class="w-full text-left">
-                      <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        <tr>
-                          <th class="px-6 py-4">วันที่</th>
-                          <th class="px-6 py-4">สถานะ</th>
-                          <th class="px-6 py-4 hidden sm:table-cell">เวลา</th>
-                        </tr>
-                      </thead>
-                      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                        <tr v-for="att in attendance" :key="att.date" class="hover:bg-gray-50 dark:hover:bg-gray-900/20 transition-colors">
-                          <td class="px-6 py-4">
-                            <div class="font-bold text-gray-900 dark:text-white">{{ formatDate(att.date) }}</div>
-                            <div class="text-xs text-gray-400">{{ att.day_name }}</div>
-                          </td>
-                          <td class="px-6 py-4">
-                            <span :class="['px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1', getAttendanceClass(att.status)]">
-                              {{ getAttendanceLabel(att.status) }}
-                            </span>
-                          </td>
-                          <td class="px-6 py-4 hidden sm:table-cell text-sm text-gray-500">
-                            <div v-if="att.check_in">{{ att.check_in }} - {{ att.check_out || '??:??' }}</div>
-                            <div v-else>-</div>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
+                    <div class="overflow-x-auto">
+                      <table class="w-full text-left">
+                        <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <tr>
+                            <th class="px-6 py-4">วันที่</th>
+                            <th class="px-6 py-4">สถานะ</th>
+                            <th class="px-6 py-4 hidden sm:table-cell">เวลา</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                          <tr v-for="att in attendance" :key="att.date" class="hover:bg-gray-50 dark:hover:bg-gray-900/20 transition-colors">
+                            <td class="px-6 py-4">
+                              <div class="font-bold text-gray-900 dark:text-white">{{ formatDate(att.date) }}</div>
+                              <div class="text-xs text-gray-400">{{ att.day_name }}</div>
+                            </td>
+                            <td class="px-6 py-4">
+                              <span :class="['px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1', getAttendanceClass(att.status)]">
+                                {{ getAttendanceLabel(att.status) }}
+                              </span>
+                            </td>
+                            <td class="px-6 py-4 hidden sm:table-cell text-sm text-gray-500">
+                              <div v-if="att.check_in">{{ att.check_in }} - {{ att.check_out || '??:??' }}</div>
+                              <div v-else>-</div>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               </div>

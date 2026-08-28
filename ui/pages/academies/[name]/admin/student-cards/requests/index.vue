@@ -340,36 +340,38 @@ const countFor = (v: StudentCardRequestStatus | '' | 'active') => {
     <!-- List -->
     <div class="overflow-hidden rounded-xl border bg-white dark:border-gray-700 dark:bg-gray-800">
       <div v-if="loading" class="p-12 text-center text-gray-500">กำลังโหลด...</div>
-      <table v-else class="w-full text-left">
-        <thead class="bg-gray-50 text-sm dark:bg-gray-900">
-          <tr>
-            <th class="p-4">นักเรียน</th>
-            <th class="p-4">ชั้น/ห้อง</th>
-            <th class="p-4">ครูประจำชั้น</th>
-            <th class="p-4">ประเภท</th>
-            <th class="p-4">สถานะ</th>
-            <th class="p-4" />
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="row in rows" :key="row.id" class="border-t dark:border-gray-700">
-            <td class="p-4">
-              <div class="font-medium dark:text-white">{{ row.full_name }}</div>
-              <div class="text-xs text-gray-500">{{ row.student_number }}</div>
-            </td>
-            <td class="p-4 dark:text-gray-200">{{ row.grade_level }}/{{ row.section }}</td>
-            <td class="p-4 dark:text-gray-200">{{ row.classroom?.homeroom_teacher?.name || '—' }}</td>
-            <td class="p-4 dark:text-gray-200">{{ row.request_type }}</td>
-            <td class="p-4"><SchoolStudentCardRequestStatusBadge :status="row.status" /></td>
-            <td class="p-4 text-right">
-              <button class="text-primary-600 hover:underline" @click="openDetail(row.id)">ดูรายละเอียด</button>
-            </td>
-          </tr>
-          <tr v-if="!rows.length">
-            <td colspan="6" class="p-10 text-center text-gray-500">ไม่พบคำร้องตามตัวกรองที่เลือก</td>
-          </tr>
-        </tbody>
-      </table>
+      <div v-else class="overflow-x-auto">
+        <table class="w-full text-left">
+          <thead class="bg-gray-50 text-sm dark:bg-gray-900">
+            <tr>
+              <th class="p-4">นักเรียน</th>
+              <th class="p-4">ชั้น/ห้อง</th>
+              <th class="p-4">ครูประจำชั้น</th>
+              <th class="p-4">ประเภท</th>
+              <th class="p-4">สถานะ</th>
+              <th class="p-4" />
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in rows" :key="row.id" class="border-t dark:border-gray-700">
+              <td class="p-4">
+                <div class="font-medium dark:text-white">{{ row.full_name }}</div>
+                <div class="text-xs text-gray-500">{{ row.student_number }}</div>
+              </td>
+              <td class="p-4 dark:text-gray-200">{{ row.grade_level }}/{{ row.section }}</td>
+              <td class="p-4 dark:text-gray-200">{{ row.classroom?.homeroom_teacher?.name || '—' }}</td>
+              <td class="p-4 dark:text-gray-200">{{ row.request_type }}</td>
+              <td class="p-4"><SchoolStudentCardRequestStatusBadge :status="row.status" /></td>
+              <td class="p-4 text-right">
+                <button class="text-primary-600 hover:underline" @click="openDetail(row.id)">ดูรายละเอียด</button>
+              </td>
+            </tr>
+            <tr v-if="!rows.length">
+              <td colspan="6" class="p-10 text-center text-gray-500">ไม่พบคำร้องตามตัวกรองที่เลือก</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <!-- Pagination -->
       <div v-if="meta && meta.last_page > 1" class="flex items-center justify-between border-t p-3 text-sm dark:border-gray-700">
@@ -443,34 +445,36 @@ const countFor = (v: StudentCardRequestStatus | '' | 'active') => {
           </div>
 
           <div class="overflow-hidden rounded-xl border dark:border-gray-700">
-            <table class="w-full text-left">
-              <thead class="bg-gray-50 text-sm dark:bg-gray-800">
-                <tr>
-                  <th class="w-12 p-4"><input type="checkbox" class="h-4 w-4 rounded border-gray-300" :checked="allSelected" @change="toggleSelectAll"></th>
-                  <th class="p-4">นักเรียน</th>
-                  <th class="p-4">เลขประจำตัว</th>
-                  <th class="p-4">บัตรปัจจุบัน</th>
-                  <th class="p-4 text-right">คำร้อง</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="student in createStudents" :key="student.id" class="border-t dark:border-gray-700" :class="createSelectedIds.has(student.student_id) ? 'bg-primary-50/50 dark:bg-gray-800/40' : ''">
-                  <td class="p-4">
-                    <input v-if="!student.active_card_request" type="checkbox" class="h-4 w-4 rounded border-gray-300" :checked="createSelectedIds.has(student.student_id)" @change="toggleSelect(student)">
-                  </td>
-                  <td class="p-4 font-medium dark:text-white">{{ student.name }}</td>
-                  <td class="p-4 text-gray-500">{{ student.student_id }}</td>
-                  <td class="p-4"><span :class="student.student_card ? 'text-emerald-600' : 'text-gray-500'">{{ student.student_card ? 'มีบัตรแล้ว' : 'ยังไม่มีบัตร' }}</span></td>
-                  <td class="p-4 text-right">
-                    <SchoolStudentCardRequestStatusBadge v-if="student.active_card_request" :status="student.active_card_request.status" />
-                    <button v-else class="min-h-[44px] sm:min-h-0 rounded-lg bg-primary-600 px-3 py-2 text-sm text-white" @click="openSingle(student)">ส่งคำร้อง</button>
-                  </td>
-                </tr>
-                <tr v-if="!createStudents.length">
-                  <td colspan="5" class="p-10 text-center text-gray-500">ไม่พบนักเรียนในห้องนี้</td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left">
+                <thead class="bg-gray-50 text-sm dark:bg-gray-800">
+                  <tr>
+                    <th class="w-12 p-4"><input type="checkbox" class="h-4 w-4 rounded border-gray-300" :checked="allSelected" @change="toggleSelectAll"></th>
+                    <th class="p-4">นักเรียน</th>
+                    <th class="p-4">เลขประจำตัว</th>
+                    <th class="p-4">บัตรปัจจุบัน</th>
+                    <th class="p-4 text-right">คำร้อง</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="student in createStudents" :key="student.id" class="border-t dark:border-gray-700" :class="createSelectedIds.has(student.student_id) ? 'bg-primary-50/50 dark:bg-gray-800/40' : ''">
+                    <td class="p-4">
+                      <input v-if="!student.active_card_request" type="checkbox" class="h-4 w-4 rounded border-gray-300" :checked="createSelectedIds.has(student.student_id)" @change="toggleSelect(student)">
+                    </td>
+                    <td class="p-4 font-medium dark:text-white">{{ student.name }}</td>
+                    <td class="p-4 text-gray-500">{{ student.student_id }}</td>
+                    <td class="p-4"><span :class="student.student_card ? 'text-emerald-600' : 'text-gray-500'">{{ student.student_card ? 'มีบัตรแล้ว' : 'ยังไม่มีบัตร' }}</span></td>
+                    <td class="p-4 text-right">
+                      <SchoolStudentCardRequestStatusBadge v-if="student.active_card_request" :status="student.active_card_request.status" />
+                      <button v-else class="min-h-[44px] sm:min-h-0 rounded-lg bg-primary-600 px-3 py-2 text-sm text-white" @click="openSingle(student)">ส่งคำร้อง</button>
+                    </td>
+                  </tr>
+                  <tr v-if="!createStudents.length">
+                    <td colspan="5" class="p-10 text-center text-gray-500">ไม่พบนักเรียนในห้องนี้</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </template>
       </div>
