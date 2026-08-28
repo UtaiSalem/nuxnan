@@ -4,16 +4,16 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
-use App\Models\Announcement;
 use App\Models\CourseMember;
+use App\Models\SchoolAnnouncement;
 use App\Models\SchoolEvent;
 use App\Models\Student;
-use App\Models\StudentAttendance;
-use App\Models\StudentFee;
+use App\Models\TuitionFee;
 use App\Models\User;
 use App\Services\GuardianAccessService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Parent Dashboard Controller - ระบบดูข้อมูลบุตรหลานสำหรับผู้ปกครอง
@@ -160,22 +160,27 @@ class ParentDashboardController extends Controller
         }
 
         $month = $request->get('month', now()->format('Y-m'));
-        $startDate = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
-        $endDate = $startDate->copy()->endOfMonth();
+        $startDate = Carbon::createFromFormat('Y-m', $month)->startOfMonth()->format('Y-m-d');
+        $endDate = Carbon::createFromFormat('Y-m', $month)->endOfMonth()->format('Y-m-d');
 
-        // Get student attendance from classroom
-        $attendances = StudentAttendance::where('student_id', $student->id)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->orderBy('date')
+        // Get student attendance from DB join
+        $attendances = DB::table('school_attendance_records')
+            ->join('school_attendances', 'school_attendance_records.attendance_id', '=', 'school_attendances.id')
+            ->where('school_attendance_records.student_id', $student->id)
+            ->where('school_attendance_records.academy_id', $academy->id)
+            ->whereBetween('school_attendances.date', [$startDate, $endDate])
+            ->select(
+                'school_attendances.date',
+                'school_attendances.title',
+                'school_attendance_records.status as status',
+                'school_attendance_records.checked_in_at',
+                'school_attendance_records.remarks'
+            )
+            ->orderBy('school_attendances.date')
             ->get();
 
-        $summary = [
-            'present' => $attendances->where('status', 'present')->count(),
-            'absent' => $attendances->where('status', 'absent')->count(),
-            'late' => $attendances->where('status', 'late')->count(),
-            'leave' => $attendances->whereIn('status', ['sick', 'leave'])->count(),
-            'total_days' => $attendances->count(),
-        ];
+        $summary = $attendances->groupBy('status')->map->count()->toArray();
+        $summary['total'] = $attendances->count();
 
         return response()->json([
             'success' => true,
@@ -184,11 +189,10 @@ class ParentDashboardController extends Controller
             'attendance' => $attendances->map(function ($a) {
                 return [
                     'date' => $a->date,
-                    'day_name' => $a->date ? Carbon::parse($a->date)->locale('th')->dayName : '',
+                    'title' => $a->title,
                     'status' => $a->status,
-                    'note' => $a->note,
-                    'check_in' => $a->check_in_time,
-                    'check_out' => $a->check_out_time,
+                    'checked_in_at' => $a->checked_in_at,
+                    'remarks' => $a->remarks,
                 ];
             }),
         ], 200);
@@ -199,16 +203,23 @@ class ParentDashboardController extends Controller
      */
     public function getAnnouncements(Academy $academy, Request $request)
     {
-        $announcements = Announcement::where('academy_id', $academy->id)
-            ->where('status', 'published')
+        $announcements = SchoolAnnouncement::where('academy_id', $academy->id)
+            ->where('is_published', true)
             ->where(function ($q) {
-                $q->whereNull('target_audience')
-                    ->orWhere('target_audience', 'all')
-                    ->orWhere('target_audience', 'LIKE', '%parent%');
+                $q->whereNull('published_at')
+                    ->orWhere('published_at', '<=', now());
+            })
+            ->where(function ($q) {
+                $q->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now());
+            })
+            ->where(function ($q) {
+                $q->whereJsonContains('target_audience', 'all')
+                    ->orWhereJsonContains('target_audience', 'parents');
             })
             ->orderBy('is_pinned', 'desc')
             ->orderBy('published_at', 'desc')
-            ->take(20)
+            ->take(10)
             ->get();
 
         return response()->json([
@@ -218,11 +229,10 @@ class ParentDashboardController extends Controller
                     'id' => $a->id,
                     'title' => $a->title,
                     'content' => $a->content,
-                    'excerpt' => \Str::limit(strip_tags($a->content), 150),
+                    'announcement_type' => $a->announcement_type,
+                    'priority' => $a->priority,
                     'is_pinned' => $a->is_pinned,
-                    'category' => $a->category,
                     'published_at' => $a->published_at,
-                    'author' => $a->author?->name ?? 'ฝ่ายบริหาร',
                 ];
             }),
         ], 200);
@@ -234,9 +244,9 @@ class ParentDashboardController extends Controller
     public function getUpcomingEvents(Academy $academy, Request $request)
     {
         $events = SchoolEvent::where('academy_id', $academy->id)
-            ->where('start_date', '>=', now())
-            ->where('status', 'active')
-            ->orderBy('start_date')
+            ->where('start_datetime', '>=', now())
+            ->where('status', 'published')
+            ->orderBy('start_datetime')
             ->take(10)
             ->get();
 
@@ -247,11 +257,12 @@ class ParentDashboardController extends Controller
                     'id' => $e->id,
                     'title' => $e->title,
                     'description' => $e->description,
-                    'start_date' => $e->start_date,
-                    'end_date' => $e->end_date,
-                    'location' => $e->location,
+                    'event_type' => $e->event_type,
                     'category' => $e->category,
-                    'is_holiday' => $e->is_holiday,
+                    'location' => $e->location,
+                    'start_datetime' => $e->start_datetime,
+                    'end_datetime' => $e->end_datetime,
+                    'is_all_day' => $e->is_all_day,
                 ];
             }),
         ], 200);
@@ -265,15 +276,17 @@ class ParentDashboardController extends Controller
         $user = $request->user();
         $children = $this->getStudentIdsForParent($user, $academy);
 
-        $fees = StudentFee::whereIn('student_id', $children)
+        $fees = TuitionFee::whereIn('student_id', $children)
             ->with(['feeStructure', 'payments'])
             ->orderBy('due_date')
             ->get();
 
         $summary = [
-            'total_due' => $fees->where('status', 'pending')->sum('amount'),
-            'total_paid' => $fees->where('status', 'paid')->sum('amount'),
-            'overdue_count' => $fees->where('status', 'overdue')->count(),
+            'total_due' => $fees->where('status', '!=', 'paid')->sum('balance_amount'),
+            'total_paid' => $fees->sum('paid_amount'),
+            'overdue_count' => $fees->filter(function ($fee) {
+                return $fee->due_date < now() && $fee->balance_amount > 0;
+            })->count(),
         ];
 
         return response()->json([
@@ -282,12 +295,15 @@ class ParentDashboardController extends Controller
             'fees' => $fees->map(function ($f) {
                 return [
                     'id' => $f->id,
-                    'description' => $f->feeStructure?->name ?? $f->description,
-                    'amount' => $f->amount,
+                    'invoice_number' => $f->invoice_number,
+                    'total_amount' => $f->total_amount,
+                    'discount_amount' => $f->discount_amount,
+                    'net_amount' => $f->net_amount,
+                    'paid_amount' => $f->paid_amount,
+                    'balance_amount' => $f->balance_amount,
                     'due_date' => $f->due_date,
-                    'status' => $f->status,
                     'paid_date' => $f->paid_date,
-                    'student_id' => $f->student_id,
+                    'status' => $f->status,
                 ];
             }),
         ], 200);

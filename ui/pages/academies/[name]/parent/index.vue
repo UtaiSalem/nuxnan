@@ -217,7 +217,7 @@
                           <tr v-for="att in attendance" :key="att.date" class="hover:bg-gray-50 dark:hover:bg-gray-900/20 transition-colors">
                             <td class="px-6 py-4">
                               <div class="font-bold text-gray-900 dark:text-white">{{ formatDate(att.date) }}</div>
-                              <div class="text-xs text-gray-400">{{ att.day_name }}</div>
+                              <div class="text-xs text-gray-400">{{ att.title }}</div>
                             </td>
                             <td class="px-6 py-4">
                               <span :class="['px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1', getAttendanceClass(att.status)]">
@@ -225,7 +225,7 @@
                               </span>
                             </td>
                             <td class="px-6 py-4 hidden sm:table-cell text-sm text-gray-500">
-                              <div v-if="att.check_in">{{ att.check_in }} - {{ att.check_out || '??:??' }}</div>
+                              <div v-if="att.checked_in_at">{{ formatTime(att.checked_in_at) }}</div>
                               <div v-else>-</div>
                             </td>
                           </tr>
@@ -262,14 +262,14 @@
                     class="p-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl flex items-center justify-between"
                   >
                     <div>
-                      <div class="font-bold text-gray-900 dark:text-white">{{ fee.description }}</div>
+                      <div class="font-bold text-gray-900 dark:text-white">{{ fee.invoice_number || 'ใบแจ้งค่าธรรมเนียม' }}</div>
                       <div class="text-xs text-gray-500 mt-1 flex items-center gap-2">
                         <Icon icon="fluent:calendar-clock-24-regular" class="w-3.5 h-3.5" />
                         ครบกำหนด: {{ formatDate(fee.due_date) }}
                       </div>
                     </div>
                     <div class="text-right">
-                      <div class="font-black text-gray-900 dark:text-white">฿{{ formatNumber(fee.amount) }}</div>
+                      <div class="font-black text-gray-900 dark:text-white">฿{{ formatNumber(fee.net_amount) }}</div>
                       <span :class="[
                         'px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tight',
                         fee.status === 'paid' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
@@ -369,13 +369,10 @@
                 </div>
                 <div class="flex-1">
                   <h3 class="font-bold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors">{{ ann.title }}</h3>
-                  <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{{ ann.excerpt }}</p>
+                  <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{{ excerptOf(ann.content) }}</p>
                   <div class="flex items-center mt-3 text-[10px] font-black uppercase tracking-widest text-gray-400">
                     <Icon icon="fluent:calendar-16-regular" class="w-3.5 h-3.5 mr-1" />
                     {{ formatDate(ann.published_at) }}
-                    <span class="mx-2 text-gray-200">|</span>
-                    <Icon icon="fluent:person-16-regular" class="w-3.5 h-3.5 mr-1" />
-                    {{ ann.author }}
                   </div>
                 </div>
               </div>
@@ -403,8 +400,8 @@
               class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 flex items-center gap-5 hover:bg-gray-50 dark:hover:bg-gray-900/40 transition-all"
             >
               <div class="flex-shrink-0 w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-2xl flex flex-col items-center justify-center border border-purple-200 dark:border-purple-800 shadow-inner">
-                <span class="text-xl font-black text-purple-700 dark:text-purple-400 leading-none">{{ formatDay(event.start_date) }}</span>
-                <span class="text-[10px] font-black text-purple-600 dark:text-purple-500 uppercase">{{ formatMonth(event.start_date) }}</span>
+                <span class="text-xl font-black text-purple-700 dark:text-purple-400 leading-none">{{ formatDay(event.start_datetime) }}</span>
+                <span class="text-[10px] font-black text-purple-600 dark:text-purple-500 uppercase">{{ formatMonth(event.start_datetime) }}</span>
               </div>
               <div class="flex-1">
                 <h3 class="font-bold text-gray-900 dark:text-white">{{ event.title }}</h3>
@@ -413,7 +410,7 @@
                     <Icon icon="fluent:location-16-regular" class="w-3.5 h-3.5" />
                     {{ event.location || 'ไม่ระบุสถานที่' }}
                   </span>
-                  <span v-if="event.is_holiday" class="px-2 py-0.5 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded-full text-[10px] font-black uppercase">วันหยุด</span>
+                  <span v-if="event.is_all_day" class="px-2 py-0.5 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 rounded-full text-[10px] font-black uppercase">ทั้งวัน</span>
                 </div>
               </div>
             </div>
@@ -546,7 +543,14 @@ const loadAttendance = async (studentId: number) => {
     const response: any = await api.get(`/api/academies/${academyId.value}/parent/children/${studentId}/attendance`)
     if (response.success) {
       attendance.value = response.attendance || []
-      attendanceSummary.value = response.summary || { present: 0, absent: 0, late: 0, leave: 0 }
+      const s = response.summary || {}
+      // The API groups by whichever statuses exist in the data, so a missing key means zero.
+      attendanceSummary.value = {
+        present: s.present || 0,
+        absent: s.absent || 0,
+        late: s.late || 0,
+        leave: (s.leave || 0) + (s.sick || 0),
+      }
     }
   } catch (error) {
     console.error('Error loading attendance:', error)
@@ -616,6 +620,17 @@ const loadPendingRequestsCount = async () => {
 }
 
 // Helper functions
+const formatTime = (value: string) => {
+  if (!value) return '-'
+  return new Date(value).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+}
+
+const excerptOf = (content: string) => {
+  if (!content) return ''
+  const plain = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+  return plain.length > 150 ? plain.slice(0, 150) + '…' : plain
+}
+
 const formatDate = (date: string) => {
   if (!date) return '-'
   return new Date(date).toLocaleDateString('th-TH', {
