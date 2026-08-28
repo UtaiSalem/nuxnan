@@ -362,7 +362,25 @@ guardian_account_requests        ← ใหม่ · 1 แถว = คำขอ�
 | **G-S12c** ✅ | **Endpoints + สิทธิ์** — ค้นบัญชีตรงตัว, สร้างคำขอ 4 ทาง, รายการคำขอของฉัน (เข้า/ออก), accept/decline/cancel, unlink · เปลี่ยน `GuardianController::linkUser` จาก 501 → **สร้างคำขอ** (staff ผูกตรงไม่ได้ ต้องให้กดรับ ตาม D8) | G-S12b | ~8 route + policy + feature test (403/409/422 ครบ) | 🟢 **verified 2026-08-28** — ดู §8.11 |
 | **G-S12d** ✅ | **FE ฝั่งนักเรียน + ผู้ปกครอง** — ปุ่ม "ผูกบัญชี" ในการ์ดผู้ปกครองของโปรไฟล์นักเรียน (ต่อยอด `GuardianAppointModal.vue`) + หน้ารวมคำขอ `academies/[name]/parent/requests.vue` (กดรับ/ปฏิเสธ) + ป้ายสถานะบนการ์ดเดิม | G-S12c | 1 page + 2 component + composable | 🟢 **verified 2026-08-28** (ตรวจจอ 375px จริง) — ดู §8.12 |
 | **G-S12e** ✅ | **FE ฝั่งครู/แอดมิน** — ส่งคำขอผูกบัญชีจาก `admin/guardians/index.vue` และหน้าโปรไฟล์นักเรียนฝั่งครู + คอลัมน์สถานะบัญชี (ยังไม่ผูก / รอกดรับ / ผูกแล้ว) + ยกเลิกคำขอ + ปลดการผูก + การ์ดสถิติ 2 ตัว | G-S12c | 2 page + 1 component | 🟢 **verified 2026-08-28** (ตรวจจอ 375px จริง) — ดู §8.13 |
-| **G-S13** | เปิด Parent Dashboard ที่มี endpoint พร้อมอยู่แล้ว (`ParentDashboardController` 7 ตัว + `parent/index.vue`, `parent/meetings.vue`, `dashboard/parent.vue`) | G-S12 | FE + guard | ⚪ |
+| **G-S13** ✅ | เปิด Parent Dashboard — redirect `dashboard/parent` ไปตัวจริง + ปุ่มเข้าหน้าคำขอ + empty state ใหม่ · **ซ่อม `/parent/children` ที่คืน 500 มาตลอด** (`currentClassroom` ไม่ใช่ relation) และรูปลูกที่เป็น null (`photo_url` → `profile_image_url`) | G-S12 | FE + guard + 5 เทสต์สิทธิ์ | 🟢 **verified 2026-08-28** (ตรวจจอ 375px จริง) — ดู §8.14 |
+| **G-S14** | **ซ่อม 4 ส่วนที่เหลือของแดชบอร์ด** — ประกาศ / กิจกรรม / การเข้าเรียน / ค่าธรรมเนียม ที่อ้างตารางไม่มีจริง (ตัดสินครบแล้ว ดู §6.5) | G-S13 | 4 endpoint + tests | ⚪ |
+
+
+#### 6.5 G-S14 — ซ่อม 4 ส่วนของ Parent Dashboard ที่อ้างตารางผิด (ตัดสิน 2026-08-28)
+
+G-S13 เปิดแดชบอร์ดได้แล้ว แต่พบว่า **5 ใน 7 endpoint สร้างบนตาราง/relation ที่ไม่มีจริง** เพราะไม่เคยมีใครเรียกใช้
+(ไม่มีบัญชีผู้ปกครองมาก่อน) · G-S13 ซ่อมไป 2 จุด (`currentEnrollment`, `profile_image_url`) เหลืออีก 4 ส่วน
+ซึ่งต้องตัดสินว่าดึงจากตารางไหน — **เจ้าของโปรเจคเคาะแล้วทั้ง 4 ข้อ**
+
+| ส่วน | ของเดิมอ้าง (ไม่มีจริง) | ✅ ตัดสินให้ใช้ | หมายเหตุ |
+|---|---|---|---|
+| ประกาศ | ตาราง `announcements` | **`school_announcements`** · กรอง `is_published` + ยังไม่หมดอายุ (`expires_at`) + `target_audience` (JSON array) มี `all` หรือ `parents` | ตอนนี้ 3 แถวเป็น `["all"]` ทั้งหมด · โครงรองรับการเจาะกลุ่มผู้ปกครองภายหลังโดยไม่ต้องแก้โค้ดอีก |
+| กิจกรรม | `school_events.start_date` | **`school_events`** คอลัมน์จริงคือ `start_datetime` / `end_datetime` · กรอง `status` ตามค่าที่มีจริง (`published`) | แก้ชื่อคอลัมน์อย่างเดียว ไม่ผูกกับ `event_registrations` ในเฟสนี้ |
+| การเข้าเรียน | ตาราง `student_attendances` | **`school_attendance_records` join `school_attendances`** (เช็คชื่อเข้าโรงเรียนรายวัน ระบบ QR ของเมนู #18) | ไม่ใช้ `course_attendances` (รายคาบ) — ผู้ปกครองถามว่า "วันนี้ลูกมาโรงเรียนไหม" ไม่ใช่ขาดวิชาไหน · **ไม่มี Eloquent model** ทั้งคู่ ทั้งเรพใช้ `DB::table()` + join (ดู `ReportController` บรรทัด ~277 เป็นแบบอย่าง) |
+| ค่าธรรมเนียม | `App\Models\StudentFee` (คลาสไม่มี) | **`TuitionFee`** (`tuition_fees`) | ตารางมีจริงแต่ **0 แถว** — ตั้งใจให้ขึ้น "ยังไม่มีรายการ" ไปก่อน พอโรงเรียนเริ่มออกใบแจ้งหนี้จะขึ้นเองโดยไม่ต้องแก้โค้ด |
+
+**กติกาที่ใช้ร่วมกันทั้ง 4 ส่วน:** ทุก endpoint ต้องกรองด้วย `guardianStudentIds()` / `isGuardianOf()` เหมือนเดิม
+**ห้ามคลายด่านสิทธิ์เพื่อให้ query ง่ายขึ้น** · ส่วนที่ยังไม่มีข้อมูลต้องคืน 200 พร้อมโครงว่าง ไม่ใช่ 500
 
 **กติกาที่ทุก shard ต้องถือ**
 - งานใน `ui/` ทุกชิ้นต้อง **mobile-first** ตาม CLAUDE.md (ตรวจที่ 375px ก่อน · touch target ≥ 44px · ห้าม `hidden` ซ่อนข้อมูลสำคัญ)
