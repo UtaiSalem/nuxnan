@@ -181,7 +181,7 @@ onUnmounted(() => {
         <p class="text-center text-gray-600 dark:text-gray-400 mb-4">Play the classic snake game and earn points!</p>
     <div class="flex-col items-center justify-center">
         <div v-if="gameStarted" class="flex justify-center max-w-full items-center mb-4">
-            <div class="flex w-[400px] justify-between items-center">
+            <div class="flex w-full max-w-[400px] justify-between items-center gap-2">
             <ScoreBoard :score="score" :level="level" />
             <button
                 @click="restartGame"

@@ -493,7 +493,7 @@ const formatTime = (dateString) => {
           <Transition name="slide-left">
             <div 
               v-if="showComments" 
-              class="w-96 bg-white dark:bg-vikinger-dark-300 h-full flex flex-col border-l border-gray-200 dark:border-vikinger-dark-50/30"
+              class="w-full max-w-full sm:w-96 sm:max-w-[24rem] shrink-0 bg-white dark:bg-vikinger-dark-300 h-full flex flex-col border-l border-gray-200 dark:border-vikinger-dark-50/30"
               @click.stop
             >
               <!-- Header -->

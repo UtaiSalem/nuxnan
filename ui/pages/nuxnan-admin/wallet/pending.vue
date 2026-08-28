@@ -943,7 +943,7 @@ onMounted(() => {
             <!-- Transaction Amounts -->
             <div class="bg-gradient-to-br from-slate-50 to-slate-100/50 dark:from-slate-900/30 dark:to-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 space-y-2.5">
               <h4 class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">รายละเอียดจำนวนเงิน</h4>
-              <div class="grid grid-cols-3 gap-4 text-center">
+              <div class="grid grid-cols-1 gap-3 text-center sm:grid-cols-3 sm:gap-4">
                 <div class="p-2.5 bg-white dark:bg-slate-800/80 rounded-xl shadow-sm border border-slate-50 dark:border-slate-700/60">
                   <p class="text-xs text-slate-500">ยอดที่ขอถอน</p>
                   <p class="text-base font-bold text-slate-800 dark:text-white mt-1">{{ formatCurrency(selectedRequestDetails.amount) }}</p>

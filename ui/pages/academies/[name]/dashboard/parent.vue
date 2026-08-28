@@ -330,7 +330,7 @@ const visibleQuickActions = computed(() => quickActions.value.filter(a => a.show
               </NuxtLink>
             </div>
             <div class="p-6">
-              <div class="grid grid-cols-4 gap-4 text-center">
+              <div class="grid grid-cols-2 gap-4 text-center sm:grid-cols-4">
                 <div class="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
                   <p class="text-2xl font-bold text-green-600 dark:text-green-400">0</p>
                   <p class="text-sm text-gray-500">มาเรียน</p>

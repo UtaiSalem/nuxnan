@@ -526,10 +526,10 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
                 />
               </div>
             </div>
-            <div class="flex gap-3">
+            <div class="flex flex-col gap-3 sm:flex-row">
               <select
                 v-model="gradeFilter"
-                class="px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                class="min-w-0 w-full sm:flex-1 min-h-[44px] sm:min-h-0 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 <option value="all">ทุกเกรด</option>
                 <option v-for="g in gradeOptions" :key="g" :value="g">{{ g }} ({{ gradeCount(g) }})</option>
@@ -537,7 +537,7 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
               </select>
               <select
                 v-model="statusFilter"
-                class="px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                class="min-w-0 w-full sm:flex-1 min-h-[44px] sm:min-h-0 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
                 <option value="all">ทุกสถานะ</option>
                 <option value="accepted">ยอมรับแล้ว</option>

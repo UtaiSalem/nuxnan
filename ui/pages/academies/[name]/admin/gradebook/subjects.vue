@@ -367,8 +367,8 @@ const toggleGradeLevel = (level: string) => {
           </div>
           
           <form @submit.prevent="saveSubject" class="p-6 space-y-4">
-            <div class="grid grid-cols-3 gap-4">
-              <div class="col-span-1">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div class="sm:col-span-1">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">รหัสวิชา</label>
                 <input
                   v-model="form.subject_code"
@@ -377,7 +377,7 @@ const toggleGradeLevel = (level: string) => {
                   class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
-              <div class="col-span-2">
+              <div class="sm:col-span-2">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ชื่อวิชา (ภาษาไทย) *</label>
                 <input
                   v-model="form.name_th"

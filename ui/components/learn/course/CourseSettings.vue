@@ -353,7 +353,7 @@ const netPrice = computed(() => {
                            <div>
                                <label class="text-xs text-gray-500 block mb-1">ส่วนลด</label>
                                <div class="flex">
-                                  <input type="number" v-model="form.discount" class="w-full px-3 py-2 border rounded-l-lg bg-gray-50" />
+                                  <input type="number" v-model="form.discount" class="min-w-0 w-full px-3 py-2 border rounded-l-lg bg-gray-50" />
                                   <select v-model="form.discount_type" class="border-y border-r rounded-r-lg bg-gray-100 px-2">
                                       <option value="fixed">฿</option>
                                       <option value="percent">%</option>

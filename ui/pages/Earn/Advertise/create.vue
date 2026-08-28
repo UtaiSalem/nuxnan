@@ -432,7 +432,7 @@ watch(() => authStore.user?.id, async (id) => {
               <h2 class="text-xl font-bold text-gray-800 dark:text-white">พื้นที่แสดงผล (Scope)</h2>
             </div>
             
-            <div class="grid grid-cols-3 gap-3 mb-6 bg-gray-100 dark:bg-gray-900 p-1.5 rounded-2xl">
+            <div class="grid grid-cols-1 gap-2 mb-6 bg-gray-100 dark:bg-gray-900 p-1.5 rounded-2xl sm:grid-cols-3 sm:gap-3">
               <button 
                 @click="scopeType = 'public'" 
                 :class="scopeType === 'public' ? 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-800 dark:hover:text-white'"

@@ -35,7 +35,7 @@ const emit = defineEmits<{ support: [] }>()
         </div>
       </div>
 
-      <div class="mt-6 grid grid-cols-3 gap-2 sm:gap-3">
+      <div class="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
         <div class="rounded-xl bg-white/80 p-3 shadow-sm dark:bg-gray-800/60">
           <p class="text-xs text-gray-500 dark:text-gray-400">เงินบริจาคสะสม</p>
           <p class="mt-1 text-lg font-bold text-emerald-600 dark:text-emerald-400">{{ (summary?.approved_cash_total ?? 0).toLocaleString() }}</p>
