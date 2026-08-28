@@ -129,8 +129,9 @@
 | S6 | เปลี่ยน layout `roles.vue` จาก `main` → `academy-admin` (G8) | — | Small fix | ⚪ |
 | **S7** | **Department-scoped role model** (G9) — schema + service + policy | S1–S5 | migration `academy_role_scopes` (role_id, scope_type: department/classroom, scope_id) + `hasPermissionInScope()` + docs | ⚪ |
 | S8 | UI: ผูก role กับ department ที่หน้าจัดการฝ่าย (จะทำจริงในเมนู #9) | S7 | เตรียม hook | ⚪ |
+| **S9** | **Reconcile สิทธิ์ system role: ฐาน ↔ `SYSTEM_ROLES`** (ดู §10) | — | เติมคีย์ `elections.*`/`guardians.*` กลับเข้าค่าคงที่ · migration union แถวในฐาน · สร้างแถว `card_admin` · คำสั่ง `academy:roles-doctor` · test กัน drift | 🟢 **verified + migrate แล้ว** (2026-08-29) |
 
-**ลำดับส่งงาน codex:** S1 → S2 → S6 → S3 → S4 → S5 → S7 → S8
+**ลำดับส่งงาน codex:** **S9 (แทรกก่อน — 2026-08-29)** → S1 → S2 → S6 → S3 → S4 → S5 → S7 → S8
 
 ---
 
@@ -231,3 +232,114 @@ Report back:
 
 **D7 — BE-only orphans (G16) `enrollment.*`, `student.*`, `donate`:**
   - เหล่านี้เป็น namespace แยก (Gate/Policy) ไม่ใช่ role-permission เดียวกัน → **แนะนำ:** ปล่อยไว้ก่อน แล้ว document ใน section แยกว่า "Non-role Gates" (ไม่ต้องอยู่ใน canonical role permissions)
+
+---
+
+## 10. S9 — Role permission drift ระหว่างฐานกับโค้ด (พบ 2026-08-29 ระหว่างทำเมนู #7)
+
+> อ้างอิงเดิม: [`07-settings.md`](07-settings.md) §5.0 (ที่นั่นเรียกว่า G14)
+> **ระวังชื่อชน:** "G14" ในไฟล์นี้ (§8 Review Log 2026-07-19) เป็นคนละเรื่อง — อันนั้นคือ spelling drift
+
+### อาการ
+
+`AcademyRole::SYSTEM_ROLES` ถูกใช้ **ตอนสร้าง role ให้โรงเรียนใหม่เท่านั้น** ไม่มีกลไก sync
+ย้อนกลับเข้าแถวที่มีอยู่แล้ว · ที่ผ่านมาการเพิ่มสิทธิ์ทำสองทางแยกกันโดยไม่นัดกัน
+⇒ ฐานกับโค้ดเคลื่อนออกจากกัน **คนละทาง** (วัดจากฐาน dev 2026-08-29)
+
+| role | ในฐาน | ในโค้ด | ขาดในฐาน | เกินในฐาน |
+|---|---|---|---|---|
+| `director` | 31 | 42 | **19** | 8 |
+| `admin` | 27 | 38 | **19** | 8 |
+| `teacher` | 14 | 21 | 9 | 2 |
+| `registrar` | 16 | 15 | 5 | 6 |
+| `staff` | 5 | 7 | 3 | 1 |
+| `finance_staff` | 8 | 9 | 2 | 1 |
+| `student` | 8 | 8 | 1 | 1 |
+| `parent` | 9 | 10 | 1 | 0 |
+| `card_admin` | **ไม่มีแถว** | 4 | — | — |
+| `owner`, `guest` | — | — | ตรงกัน | ตรงกัน |
+
+- **ขาดในฐาน** = เพิ่มในค่าคงที่แต่ไม่เคยมี migration backfill
+  director/admin ขาด `roles.view/manage`, `groups.view/manage`, `staff.view/manage`,
+  `grades.view/manage`, `events.view/manage`, `school_attendance.*`, `courses.manage`,
+  `schedule.view`, `students.cards.produce`, `behavior.*` 4 ตัว
+  ⇒ **มอบ role `director`/`admin` ให้ใครวันนี้ เขาจัดการบทบาท/ฝ่าย/บุคลากร/ผลการเรียน/
+  กิจกรรม/การมาเรียน ไม่ได้เลย** ทั้งที่ชื่อ role บอกว่าได้
+- **เกินในฐาน** = เพิ่มผ่าน migration backfill ของเมนู #25 (`elections.*`) และเมนู #6
+  (`guardians.*`) แต่ไม่ได้เติมกลับเข้าค่าคงที่
+  ⇒ **โรงเรียนที่สร้างใหม่วันนี้ จะได้ director ที่ไม่มีสิทธิ์เลือกตั้งและผู้ปกครองเลย**
+- `card_admin` มีในโค้ดแต่ไม่มีแถวในฐาน ⇒ มอบหมายไม่ได้ (กระทบเมนู #16 บัตรนักเรียน)
+
+### กับดักที่อันตรายที่สุดของเรื่องนี้
+
+`database/seeders/AcademyRoleSeeder.php::seedSystemRoles()` ใช้ `updateOrCreate` โดยเซ็ต
+`'permissions' => $data['permissions']` = **เขียนทับของเดิมทั้งก้อน**
+⇒ ถ้าใครรัน `php artisan db:seed --class=AcademyRoleSeeder` ตอนนี้ **director/admin จะเสีย
+`elections.*` และ `guardians.*` ทันที** — ระบบเลือกตั้งและผู้ปกครองจะล็อกผู้ดูแลออกเงียบ ๆ
+การเติมคีย์กลับเข้าค่าคงที่ใน S9 ปิดกับดักนี้ไปด้วย
+
+### วิธีแก้ที่เลือก — union สองทาง
+
+ตรวจแล้วว่า **ไม่มีคีย์ผีทั้งสองฝั่ง** (ทุกคีย์มีจริงในแคตตาล็อก 90 คีย์ของ
+`AcademyPermission::PERMISSIONS`) ⇒ ทั้ง "ขาด" และ "เกิน" คือสิทธิ์ที่ตั้งใจให้มีทั้งคู่
+แค่ไม่เคย sync ⇒ union ไม่มีใครเสียสิทธิ์ และไม่มีการให้สิทธิ์เกินเจตนา
+
+**ยังไม่มีใครเจอปัญหานี้บนฐาน dev** เพราะไม่มีสมาชิกคนไหนถือ role `director`/`admin` เลย
+(ทุกคนเป็น teacher/staff/student · เจ้าของโรงเรียนผ่านด้วย `Academy::isAdmin()` ไม่ผ่าน role)
+
+### ของที่ S9 ส่งมอบ
+
+1. เติม `elections.*`/`guardians.*` กลับเข้า `SYSTEM_ROLES` 7 role (add-only)
+2. migration `2026_08_29_000002_reconcile_system_role_permissions.php` — union แถวในฐาน
+   ด้วยลิสต์ที่ **แช่ไว้ในตัว migration** (ไม่อ่านค่าคงที่ เพราะค่าคงที่จะเปลี่ยนอีก)
+   + สร้างแถว `card_admin` + ข้ามฐานที่ยังว่าง (กัน test sqlite พัง)
+3. `php artisan academy:roles-doctor` — คำสั่งอ่านอย่างเดียว รายงาน drift + คีย์ผี
+4. `SystemRolePermissionSyncTest` — กันไม่ให้ drift กลับมาอีก
+
+### ผลหลังทำ S9 (2026-08-29) — Claude ตรวจเองทุกข้อ
+
+`php artisan academy:roles-doctor` **ก่อน** migration → exit **1** รายงาน drift ตรงกับตารางด้านบนทุกตัว
+**หลัง** migration → exit **0** ทุก role ตรงกันหมด:
+
+| role | ในฐาน | ในโค้ด | ขาด | เกิน |
+|---|---|---|---|---|
+| owner | `*` | `*` | — | — |
+| director | 50 | 50 | 0 | 0 |
+| admin | 46 | 46 | 0 | 0 |
+| teacher | 23 | 23 | 0 | 0 |
+| registrar | 21 | 21 | 0 | 0 |
+| staff | 8 | 8 | 0 | 0 |
+| **card_admin** | **4** (แถวใหม่) | 4 | 0 | 0 |
+| finance_staff | 10 | 10 | 0 | 0 |
+| student | 9 | 9 | 0 | 0 |
+| parent | 10 | 10 | 0 | 0 |
+| guest | 1 | 1 | 0 | 0 |
+
+- `AcademyRole.php` เป็น **add-only จริง** — `git diff --numstat` = `9  0`
+- `php -l` ผ่านทั้ง 4 ไฟล์ · `pint --test` ผ่าน · migration ไม่อ้าง `SYSTEM_ROLES` เลย (grep = 0)
+- **ทดสอบ `down()` จริง** — director 50 → 31 คีย์ (เท่าเดิมก่อน migrate) · แถว `card_admin` ถูกลบ
+  · รัน `migrate` ใหม่กลับมา 50 คีย์ + `card_admin` กลับมา ⇒ เป็น inverse ที่ตรงจริง
+- `tests/Feature/Academy` ทั้งโฟลเดอร์: **116 passed · 2 incomplete · 0 failed**
+
+**พิสูจน์ว่าเทสต์ล้มเป็น (mutation check)** — ฉีดคีย์ผี `totally.fake.key` เข้า role `teacher`
+แล้วรันเทสต์ → **FAIL** พร้อมข้อความ `Role 'teacher' has an invalid permission key`
+จากนั้นกู้ไฟล์กลับ (`numstat` = `9  0` เท่าเดิม) ⇒ เทสต์ตัวที่ 1 มีค่าจริง ไม่ใช่ผ่านลอย ๆ
+
+### ⚠️ ข้อจำกัดที่ต้องรู้ — เทสต์ **แทน** `academy:roles-doctor` ไม่ได้
+
+เทสต์ตัวที่ 2 (`test_seeder_writes_every_role_verbatim_from_the_constant`) **จับ drift ของจริงไม่ได้**
+เพราะ seeder เขียนค่าจากค่าคงที่ตัวเดียวกับที่เอามาเทียบ = ตรวจเป็นวงกลม และฐานของเทสต์
+เป็น sqlite ที่ว่างเปล่าเสมอ ส่วน drift ของจริงเกิดบนฐานที่ใช้งานมานาน
+สิ่งที่มันล็อกได้จริงคือ **สัญญาของ seeder** (ต้องเขียนสิทธิ์จากค่าคงที่แบบตรงตัว ครบทุก role)
+— ถ้าใครแก้ seeder ให้ merge/filter/ข้ามแถวเดิม เทสต์นี้จะดัง
+
+⇒ **การตรวจ drift ของจริงต้องรัน `php artisan academy:roles-doctor` บนฐานนั้น ๆ เอง**
+ควรรันหลัง deploy ทุกครั้ง และหลังรัน migration ที่แตะสิทธิ์
+(Claude เขียนหมายเหตุนี้ลงใน docblock ของเทสต์ด้วยแล้ว หลังพบว่าสเปคเดิมคาดหวังเกินจริง)
+
+### ยังไม่ได้ทำ (ต่อจาก S9)
+
+- [ ] **`production` ยังไม่ได้รัน migration `2026_08_29_000002`** — dev รันแล้ว
+- [ ] `AcademyRoleSeeder` ยังเขียนทับสิทธิ์ทั้งก้อนอยู่ (ตอนนี้ปลอดภัยเพราะค่าคงที่เป็น superset แล้ว
+      แต่กับดักยังอยู่ถ้ามี migration เพิ่มสิทธิ์อีกโดยไม่เติมค่าคงที่) — พิจารณาทำใน S1/S2
+- [ ] ยังไม่มีสมาชิกคนไหนถือ role `director`/`admin` บนฐาน dev ⇒ สิทธิ์ชุดใหม่ยังไม่ถูกใช้จริง

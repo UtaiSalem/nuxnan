@@ -187,7 +187,19 @@ member / permission ใด ๆ → **ผู้ใช้ที่ล็อกอ�
 4. `slogan`, `established_year`, `type`, `director`, `social_media_links` — ขึ้นหน้าสาธารณะแต่แก้ไม่ได้
 5. `approval_flow` — ไม่มีใครอ่าน → dead column ตัดทิ้งหรือทำให้ใช้งานได้
 
-**G10. ไม่มี test เลย** — 0 ไฟล์ที่แตะ `updateSettings`/`academy_settings`
+**G10. ~~ไม่มี test เลย~~ → มีอยู่แล้ว 5 เคส แต่ครอบไม่ครบ** *(แก้ข้อมูล 2026-08-29)*
+รอบ audit แรกผมสรุปว่า "0 ไฟล์" ซึ่ง**ผิด** — grep ใช้คำว่า `updateSettings`/`academy_settings`
+แต่ไฟล์จริงชื่อ `AcademySettingsUpdateTest` และอ้าง `AcademySetting` (เอกพจน์) กับ URL `/settings`
+จึงไม่ match สักคำ · ของจริงคือ [`tests/Feature/Academy/AcademySettingsUpdateTest.php`](../../api/nuxnanravel/tests/Feature/Academy/AcademySettingsUpdateTest.php)
+(commit `e1a12493`) ครอบ 5 เคส: owner แก้ได้ครบทุกฟิลด์ · non-owner 403 · validation 422 ·
+cache ไม่ค้าง · slug ชนแล้วต่อ `-1`
+
+**รันแล้วหลัง SET-S1 + SET-S3: ผ่านครบ 5/5 (57 assertions)** และรันทั้งโฟลเดอร์
+`tests/Feature/Academy` ได้ **114 passed · 2 incomplete · 0 failed** ⇒ ไม่มี regression
+
+สิ่งที่ยังขาด (เหลือให้ SET-S10 ทำ): เคสสิทธิ์ระดับ role (สมาชิกที่ถือ `settings.manage` ต้องผ่าน),
+เคสสถานะสมาชิกไม่ใช่ APPROVED ต้องโดนปฏิเสธ (จุดที่ G5 แก้), เคส superadmin,
+และเคสสิทธิ์ที่ได้จากฝ่าย/กลุ่ม — ทั้งหมดนี้ยังไม่มีเทสต์คุม
 
 **G10b. `AcademyController` มีเมธอดตายที่ไม่มี route ชี้มา 11 ตัว** — ตรวจแล้วทั้ง `routes/` ไม่มีสักตัวที่ถูก
 ประกาศเป็น route: `edit`, `create_course`, `joinAcademy`, `leaveAcademy`, `acceptMember`, `rejectMember`,
@@ -277,7 +289,7 @@ member / permission ใด ๆ → **ผู้ใช้ที่ล็อกอ�
 | **SET-S7** | เพิ่มฟิลด์อัตลักษณ์โรงเรียน (G9 ข้อ 4–5) | SET-S6 | `slogan`, `established_year`, `type`, `director`, `social_media_links` เข้าแท็บ "ข้อมูลทั่วไป" · ตัดสินใจเรื่อง `approval_flow` | ⚪ pending |
 | **SET-S8** | ซ่อม `name_slug` + redirect (G7) | SET-S1 | เลิกใช้ `Str::slug` กับชื่อไทย (fallback เป็น `academy-{id}` หรือทับศัพท์) + ตัด redirect ที่พาไป URL ผิดคีย์ | ⚪ pending |
 | **SET-S9** | audit log การแก้ตั้งค่า (G11) | SET-S1 | บันทึกทุกครั้งที่ `updateSettings` เปลี่ยนค่า พร้อม before/after | ⚪ pending |
-| **SET-S10** | tests (G10) | SET-S1..S6 | feature test: ด่านสิทธิ์ 403/200 · สถานะสมาชิกไม่ใช่ 2 ต้องโดนปฏิเสธ · round-trip ทุกฟิลด์ · cache ถูกล้าง | ⚪ pending |
+| **SET-S10** | เติมเทสต์ที่ยังขาด (G10) | SET-S1..S6 | ต่อยอด `AcademySettingsUpdateTest` ที่มีอยู่แล้ว (round-trip/validation/cache/slug ครอบแล้ว) — เพิ่ม: role ที่ถือ `settings.manage` ต้องผ่าน · สมาชิกสถานะไม่ใช่ APPROVED ต้องโดนปฏิเสธ · superadmin · สิทธิ์จากฝ่าย/กลุ่ม | ⚪ pending |
 | **SET-S11** | UX เก็บตก (G12) | SET-S4 | เตือนก่อนออกโดยไม่บันทึก · refresh หลังบันทึก · ซ่อนแท็บโซนอันตรายถ้าไม่ใช่ owner | ⚪ pending |
 | **SET-S12** | รูปโลโก้/ปกเป็น relative path (G8) | — | ต่อยอดจาก `.agents/photo-path-migration-plan.md` — **แยกไปทำพร้อมงาน migration รูปทั้งระบบ** | 🔵 deferred |
 | **SET-S13** | ล้างเมธอดตายใน `AcademyController` (G10b) | SET-S1 | ลบ 11 เมธอดที่ไม่มี route ชี้มา + ตรวจว่าไม่มี import ไหนหลุดค้าง | ⚪ pending |
