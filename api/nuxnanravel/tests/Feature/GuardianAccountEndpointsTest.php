@@ -9,6 +9,7 @@ use App\Models\AcademyRole;
 use App\Models\Classroom;
 use App\Models\ClassroomMember;
 use App\Models\ClassroomStudent;
+use App\Models\GuardianAccountRequest;
 use App\Models\Student;
 use App\Models\User;
 use App\Services\GuardianAccountLinkService;
@@ -310,5 +311,47 @@ class GuardianAccountEndpointsTest extends TestCase
         $this->actingAs($parentUser, 'api')
             ->deleteJson("/api/academies/{$academy->id}/guardian-people/{$guardian->id}/account")
             ->assertOk();
+    }
+
+    /**
+     * The profile card decides between "ผูกบัญชีแล้ว", "รอผู้ปกครองกดรับ" and "ยังไม่ผูกบัญชี"
+     * from these three keys, so the payload has to carry them through all three states.
+     */
+    public function test_student_profile_payload_carries_account_link_state(): void
+    {
+        $owner = User::factory()->create();
+        $academy = Academy::factory()->create(['user_id' => $owner->id]);
+        [$student, $guardian] = $this->createStudentWithGuardian($academy);
+        $parentUser = User::factory()->create();
+
+        $url = "/api/academies/{$academy->id}/students/{$student->id}/profile";
+
+        $before = $this->actingAs($owner, 'api')->getJson($url);
+        $before->assertOk();
+        $before->assertJsonPath('data.guardians.0.linked_user_id', null);
+        $before->assertJsonPath('data.guardians.0.linked_user_name', null);
+        $before->assertJsonPath('data.guardians.0.has_pending_account_request', false);
+
+        $request = app(GuardianAccountLinkService::class)
+            ->createRequest($academy, $student, $parentUser, $owner, $guardian);
+
+        $pending = $this->actingAs($owner, 'api')->getJson($url);
+        $pending->assertOk();
+        $pending->assertJsonPath('data.guardians.0.has_pending_account_request', true);
+        $pending->assertJsonPath('data.guardians.0.linked_user_id', null);
+
+        app(GuardianAccountLinkService::class)->accept($request, $parentUser);
+
+        $linked = $this->actingAs($owner, 'api')->getJson($url);
+        $linked->assertOk();
+        $linked->assertJsonPath('data.guardians.0.linked_user_id', $parentUser->id);
+        $linked->assertJsonPath('data.guardians.0.linked_user_name', $parentUser->name);
+        // The request left the pending state, so the badge must stop saying "รอผู้ปกครองกดรับ".
+        $linked->assertJsonPath('data.guardians.0.has_pending_account_request', false);
+
+        $this->assertSame(
+            GuardianAccountRequest::STATUS_ACCEPTED,
+            $request->fresh()->status
+        );
     }
 }

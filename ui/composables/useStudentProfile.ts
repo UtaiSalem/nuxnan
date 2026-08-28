@@ -84,6 +84,7 @@ export interface StudentContact {
 
 export interface StudentGuardian {
   id: number
+  guardian_id?: number | null
   guardian_type: string
   title_prefix: string | null
   first_name: string | null
@@ -100,6 +101,9 @@ export interface StudentGuardian {
   appointed_by_role?: string | null
   verified_at?: string | null
   is_verified?: boolean
+  linked_user_id?: number | null
+  linked_user_name?: string | null
+  has_pending_account_request?: boolean
 }
 
 export interface StudentHealthInfo {

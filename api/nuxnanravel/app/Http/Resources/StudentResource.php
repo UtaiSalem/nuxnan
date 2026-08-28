@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\AcademyMember;
+use App\Models\GuardianAccountRequest;
 use App\Services\GuardianAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -97,7 +98,14 @@ class StudentResource extends JsonResource
                     ? $access->unverifiedSelfAppointedIds($this->resource)
                     : ['link' => [], 'person' => [], 'legacy' => []];
 
-                return $this->guardianLinks->map(function ($link) use ($access, $showSensitive, $blockedGuardianIds) {
+                $pendingGuardianIds = GuardianAccountRequest::query()
+                    ->where('student_id', $this->resource->id)
+                    ->pending()
+                    ->pluck('guardian_id')
+                    ->filter()
+                    ->all();
+
+                return $this->guardianLinks->map(function ($link) use ($access, $showSensitive, $blockedGuardianIds, $pendingGuardianIds) {
                     $data = [
                         'id' => $link->id,
                         'guardian_id' => $link->guardian_id,
@@ -116,6 +124,9 @@ class StudentResource extends JsonResource
                         'appointed_by_role' => $link->appointed_by_role,
                         'verified_at' => $link->verified_at,
                         'is_verified' => $link->verified_at !== null,
+                        'linked_user_id' => $link->guardian?->user_id,
+                        'linked_user_name' => $link->guardian?->user?->name,
+                        'has_pending_account_request' => in_array($link->guardian_id, $pendingGuardianIds, true),
                         'contacts' => $link->guardian?->contacts->map(fn ($contact): array => [
                             'id' => $contact->id,
                             'contact_type' => $contact->contact_type,

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\AcademyMember;
 use App\Models\ClassroomMember;
+use App\Models\GuardianAccountRequest;
 use App\Models\Student;
 use App\Services\GuardianAccessService;
 use App\Services\GuardianAuditLogger;
@@ -203,6 +204,7 @@ class StudentProfileController extends Controller
             'addresses',
             'contacts',
             'guardianLinks.guardian',
+            'guardianLinks.guardian.user:id,name',
             'healthInfo',
             'activeClassroom',
             'currentEnrollment',
@@ -262,6 +264,15 @@ class StudentProfileController extends Controller
         // A guardian this student attached from someone else's record stays masked until staff verifies it.
         $blockedGuardianIds = app(GuardianAccessService::class)->unverifiedSelfAppointedIds($student);
 
+        // Account-link state for the guardian cards (G-S12d). One query for the whole student,
+        // not one per guardian row.
+        $pendingAccountGuardianIds = GuardianAccountRequest::query()
+            ->where('student_id', $student->id)
+            ->pending()
+            ->pluck('guardian_id')
+            ->filter()
+            ->all();
+
         if ($showSensitive && $student->guardianLinks->isNotEmpty()) {
             app(GuardianAuditLogger::class)->sensitiveViewed(Auth::user(), $student);
         }
@@ -309,7 +320,7 @@ class StudentProfileController extends Controller
                         'is_primary' => $contact->is_primary,
                     ];
                 }),
-                'guardians' => $student->guardianLinks->map(function ($link) use ($showSensitive, $blockedGuardianIds) {
+                'guardians' => $student->guardianLinks->map(function ($link) use ($showSensitive, $blockedGuardianIds, $pendingAccountGuardianIds) {
                     $data = [
                         // `id` is the link row now. Nothing posts it back — the guardian write routes
                         // take the student, not a guardian id — so this is a list key only.
@@ -329,6 +340,9 @@ class StudentProfileController extends Controller
                         'appointed_by_role' => $link->appointed_by_role,
                         'verified_at' => $link->verified_at,
                         'is_verified' => $link->verified_at !== null,
+                        'linked_user_id' => $link->guardian?->user_id,
+                        'linked_user_name' => $link->guardian?->user?->name,
+                        'has_pending_account_request' => in_array($link->guardian_id, $pendingAccountGuardianIds, true),
                     ];
 
                     if ($showSensitive && ! app(GuardianAccessService::class)->isBlockedGuardianRow($blockedGuardianIds, $link)) {

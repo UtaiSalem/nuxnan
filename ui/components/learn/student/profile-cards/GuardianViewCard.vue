@@ -4,6 +4,7 @@ import { Icon } from '@iconify/vue'
 import type { StudentGuardian } from '~/composables/useStudentProfile'
 import { useStudentEdit } from '~/composables/useStudentEdit'
 import GuardianAppointModal from './GuardianAppointModal.vue'
+import GuardianLinkAccountModal from './GuardianLinkAccountModal.vue'
 import { useGuardianAppointment, errorStatus, errorMessage } from '~/composables/useGuardianAppointment'
 import { useToast } from '#imports'
 
@@ -171,6 +172,22 @@ const onAppointed = () => {
   isAppointModalOpen.value = false
   emit('saved')
 }
+
+const isLinkModalOpen = ref(false)
+const linkGuardianId = ref<number | null>(null)
+const linkGuardianName = ref('')
+
+const openLinkModal = (g: StudentGuardian) => {
+  // g.id is the link row; the account endpoints key on the guardian *person*.
+  linkGuardianId.value = g.guardian_id ?? null
+  linkGuardianName.value = fullName(g)
+  isLinkModalOpen.value = true
+}
+
+const onLinkRequested = () => {
+  isLinkModalOpen.value = false
+  emit('saved')
+}
 </script>
 
 <template>
@@ -309,6 +326,15 @@ const onAppointed = () => {
                   <Icon icon="mdi:clock-alert-outline" class="h-3.5 w-3.5" />
                   รอครูยืนยัน
                 </span>
+                <span v-if="g.linked_user_id" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200">
+                  ผูกบัญชีแล้ว {{ g.linked_user_name ? `(${g.linked_user_name})` : '' }}
+                </span>
+                <span v-else-if="g.has_pending_account_request" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200">
+                  รอผู้ปกครองกดรับ
+                </span>
+                <span v-else class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700">
+                  ยังไม่ผูกบัญชี
+                </span>
               </div>
               <dl class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                 <div v-if="g.relationship">
@@ -329,18 +355,27 @@ const onAppointed = () => {
                 </div>
               </dl>
               
-              <div v-if="canVerify(g)" class="mt-3 flex flex-col gap-2 border-t border-gray-100 pt-3 dark:border-gray-700 sm:flex-row sm:items-center sm:justify-end">
-                <p class="min-w-0 flex-1 text-xs text-gray-500 dark:text-gray-400 break-words">
-                  นักเรียนเป็นผู้แต่งตั้งผู้ปกครองคนนี้เอง ยืนยันเมื่อตรวจสอบข้อมูลแล้ว
-                </p>
-                <button type="button" :disabled="isVerifying" @click="verify(g)"
-                        class="min-h-[44px] flex-shrink-0 whitespace-nowrap rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 sm:min-h-0 sm:py-2">
-                  <svg v-if="isVerifying" class="w-4 h-4 mr-1.5 animate-spin text-white inline" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                  </svg>
-                  ยืนยันการแต่งตั้ง
-                </button>
+              <div class="mt-3 flex flex-col gap-2 border-t border-gray-100 pt-3 dark:border-gray-700 sm:flex-row sm:items-center sm:justify-end">
+                <div v-if="canVerify(g)" class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end w-full">
+                  <p class="min-w-0 flex-1 text-xs text-gray-500 dark:text-gray-400 break-words">
+                    นักเรียนเป็นผู้แต่งตั้งผู้ปกครองคนนี้เอง ยืนยันเมื่อตรวจสอบข้อมูลแล้ว
+                  </p>
+                  <button type="button" :disabled="isVerifying" @click="verify(g)"
+                          class="min-h-[44px] flex-shrink-0 whitespace-nowrap rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 sm:min-h-0 sm:py-2">
+                    <svg v-if="isVerifying" class="w-4 h-4 mr-1.5 animate-spin text-white inline" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    ยืนยันการแต่งตั้ง
+                  </button>
+                </div>
+                <div v-if="!g.linked_user_id && !g.has_pending_account_request && (canEdit || accessLevel === 'self')" class="flex justify-end w-full">
+                  <button type="button" @click="openLinkModal(g)"
+                          class="min-h-[44px] flex-shrink-0 whitespace-nowrap rounded-xl bg-purple-600 px-4 text-sm font-semibold text-white hover:bg-purple-700 sm:min-h-0 sm:py-2 flex items-center gap-1.5">
+                    <Icon icon="mdi:link-variant" class="w-4 h-4" />
+                    ผูกบัญชีผู้ปกครอง
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -356,6 +391,16 @@ const onAppointed = () => {
       :mode="accessLevel === 'self' ? 'match' : 'search'"
       @close="isAppointModalOpen = false"
       @appointed="onAppointed"
+    />
+
+    <GuardianLinkAccountModal
+      v-if="isLinkModalOpen"
+      :academy-id="academyId"
+      :student-id="studentId"
+      :guardian-id="linkGuardianId"
+      :guardian-name="linkGuardianName"
+      @close="isLinkModalOpen = false"
+      @requested="onLinkRequested"
     />
   </div>
 </template>
