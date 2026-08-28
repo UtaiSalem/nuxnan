@@ -65,6 +65,8 @@ class AcademyRole extends Model
                 'grades.view', 'grades.manage', 'staff.view', 'staff.manage',
                 'settings.view', 'settings.manage', 'events.view', 'events.manage',
                 'school_attendance.view', 'school_attendance.manage', 'courses.manage',
+                'elections.view', 'elections.manage', 'elections.station',
+                'guardians.view', 'guardians.manage', 'guardians.sensitive.view', 'guardians.sensitive.manage', 'guardians.appoint',
             ],
         ],
         'admin' => [
@@ -89,6 +91,8 @@ class AcademyRole extends Model
                 'grades.view', 'grades.manage', 'staff.view', 'staff.manage',
                 'settings.view', 'settings.manage', 'events.view', 'events.manage',
                 'school_attendance.view', 'school_attendance.manage', 'courses.manage',
+                'elections.view', 'elections.manage', 'elections.station',
+                'guardians.view', 'guardians.manage', 'guardians.sensitive.view', 'guardians.sensitive.manage', 'guardians.appoint',
             ],
         ],
         'teacher' => [
@@ -109,6 +113,7 @@ class AcademyRole extends Model
                 'behavior.view', 'behavior.record',
                 'grades.view', 'schedule.view', 'groups.view', 'staff.view', 'events.view',
                 'school_attendance.view',
+                'elections.view', 'elections.station',
             ],
         ],
         'registrar' => [
@@ -126,6 +131,7 @@ class AcademyRole extends Model
                 'announcements.view',
                 'behavior.view',
                 'groups.view', 'schedule.view', 'staff.view', 'events.view',
+                'elections.view', 'guardians.view', 'guardians.manage', 'guardians.sensitive.view', 'guardians.sensitive.manage', 'guardians.appoint',
             ],
         ],
         'staff' => [
@@ -141,6 +147,7 @@ class AcademyRole extends Model
                 'announcements.view',
                 'behavior.view',
                 'schedule.view', 'events.view',
+                'elections.view',
             ],
         ],
         'card_admin' => [
@@ -168,6 +175,7 @@ class AcademyRole extends Model
                 'finance.view', 'finance.manage', 'finance.reports',
                 'announcements.view',
                 'events.view', 'settings.view',
+                'elections.view',
             ],
         ],
         'student' => [
@@ -184,6 +192,7 @@ class AcademyRole extends Model
                 'schedule.view.own',
                 'announcements.view',
                 'behavior.view.own',
+                'elections.view',
             ],
         ],
         'parent' => [
