@@ -1,5 +1,64 @@
 # Work Log — nuxnan project
 
+## 2026-08-30 — ปิดงานกำพร้า: ไฟล์ค้าง 1 ไฟล์ที่ไม่มีใครยอมรับเป็นเจ้าของ 4 session — commit `c060cb42` (push แล้ว)
+
+### สถานะ: **working tree สะอาด 0 ไฟล์ค้าง เป็นครั้งแรกตั้งแต่ 28 ส.ค.** · `main` = `origin/main`
+
+### สิ่งที่ค้าง
+
+`ui/pages/Learn/Courses/[id]/index.vue` — 10 บรรทัด แตะเฉพาะ `class` ในส่วน "เนื้อหาบทเรียน" (บรรทัด 433–478):
+
+- header ของ section เพิ่ม `gap-2` · ชื่อบท `min-w-0 flex-1 break-words`
+  · กล่องตัวนับ `flex-shrink-0` + `whitespace-nowrap` + `gap-1 sm:gap-3`
+- แถวรายการหัวข้อ เพิ่ม `gap-2` · ไอคอน `flex-shrink-0` · ข้อความ `min-w-0 break-words`
+  · ป้าย duration `flex-shrink-0 whitespace-nowrap`
+
+คือ mobile-first guard ตามกติกาใน CLAUDE.md เป๊ะ ๆ — เป็นงานของ **ชุด responsive** ชัดเจน
+
+### 🔴 root cause — ป้ายผิดที่ส่งต่อกันมาเป็นทอด ๆ
+
+ไล่ worklog ย้อนกลับ เจอสายพันธุกรรมของความเข้าใจผิด แต่ละรอบเห็นไฟล์ dirty อยู่ก่อนตัวเองเริ่ม
+เลยสรุปว่าเป็นของ session อื่นแล้วกันออกจาก commit โดยไม่เคยเปิด diff ดูจริง:
+
+| รอบ | ป้ายที่ติดไว้ |
+|---|---|
+| guardians เฟส C (เก่าสุด) | "งานกวาด 44px ค้างมาจากรอบก่อน — ไม่ใช่ของเฟสนี้" |
+| ชุด responsive | "งาน guardians ไม่ใช่ของชุด responsive — ไม่ได้แตะ" |
+| ชุด padding | "งาน guardians ของอีก session" |
+| ชุด tablet | "งาน guardians ของอีก session" |
+
+ป้ายกลายพันธุ์จาก "งาน 44px" → "งาน guardians" ระหว่างทาง ทั้งที่ไฟล์ **ไม่มีอะไรเกี่ยวกับ guardians
+เลยสักบรรทัด** (grep แล้วไม่มี guardian / ผู้ปกครอง / บัญชีผู้ปกครอง)
+
+`5f6092e5` (28 ส.ค. 20:04) เปิดดูจริงครั้งแรก แล้วแยก commit เฉพาะ 3 บรรทัดที่พิสูจน์ได้ว่าเป็นของ
+รอบ padding/layout ส่วนที่เหลือเขียนใน commit message เองว่า *"ให้เจ้าของงาน commit เอง"*
+⇒ แต่ **"เจ้าของงาน" ไม่มีอยู่จริง** มันคือเศษของชุด responsive ที่ตกหล่นตั้งแต่ต้น
+mtime ของไฟล์ = 20:04:20 ตรงกับเวลา commit นั้นพอดี ⇒ ไม่มีใครแตะอีกเลย 2 วัน
+
+### บทเรียน (กันไม่ให้เกิดซ้ำ)
+
+**ห้ามติดป้ายไฟล์ค้างจากคำบอกเล่าใน worklog รอบก่อน — ต้อง `git diff` ไฟล์นั้นเองทุกครั้ง**
+ป้ายที่ต่อ ๆ กันมาโดยไม่มีใครตรวจ กลายเป็นงานกำพร้าที่ทุก session หลบ และค้างได้ไม่จำกัดเวลา
+ถ้าไฟล์ค้างข้าม session ให้บันทึก **เนื้อ diff** ลง worklog ไม่ใช่แค่ชื่อเจ้าของที่เดาเอา
+
+### Verification
+
+- `git diff` เต็ม ๆ ก่อน commit: 10 บรรทัด class-only · ไม่แตะ logic / template structure / script
+- `git diff --stat` = 1 ไฟล์ +10 / −10 ตรงกับที่อ่าน
+- grep หา guardians ในไฟล์ → ไม่พบ (ยืนยันว่าป้ายเดิมผิด)
+- หลัง commit: `git status` สะอาด · `git push` → `f96d3c89..c060cb42  main -> main`
+
+**ไม่ได้ตรวจ:** ไม่ได้เปิดหน้าจริงที่ 375px (เป็น class-only ตามแพตเทิร์นที่กวาดทั้งแอปไปแล้ว
+ในรอบ responsive — ไม่ได้คิดแพตเทิร์นใหม่)
+
+### Branch / Git State
+
+- Branch: `main`
+- Uncommitted: **ไม่มี**
+- Push: **pushed** (`c060cb42`)
+
+---
+
 ## 2026-08-30 — แก้ super admin เข้าหน้า gradebook ไม่ได้ (403) — commit `d1b54b29`
 
 ### อาการ
@@ -61,7 +120,8 @@ course 16 เจ้าของคือ user 2 · user 1 ไม่มีแถ�
 
 ### ค้างไว้
 
-- `ui/pages/Learn/Courses/[id]/index.vue` ยังไม่ commit (10/10 บรรทัด) — งานค้างจากก่อนหน้า ไม่เกี่ยวกับ fix นี้
+- ~~`ui/pages/Learn/Courses/[id]/index.vue` ยังไม่ commit (10/10 บรรทัด)~~ → **ปิดแล้ว** `c060cb42`
+  (เป็นงาน mobile-first guard ของชุด responsive ที่ถูกติดป้ายผิดว่าเป็น "งาน guardians" ดูรายการบนสุด)
 - warning ที่ยังเด้งรัวใน console หน้า course (คนละเรื่องกับ 403 นี้ · แยก session ไปทำแล้ว):
   - `Invalid prop: type check failed for prop "balance". Expected Number, got String "1134596.00"`
     ⇒ API คืน decimal เป็น string ให้ `DonationCourseDonationModal` / `DonationSupportDonationModal`
