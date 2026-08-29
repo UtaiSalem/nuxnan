@@ -1,8 +1,77 @@
 # Work Log — nuxnan project
 
-## 2026-08-30 — เมนู #7 SET-S5: ทำให้สวิตช์ 5 ตัวมีผลจริง (ยังไม่ commit)
+## 2026-08-30 — แก้ super admin เข้าหน้า gradebook ไม่ได้ (403) — commit `d1b54b29`
 
-### สถานะ: **SET-S5 ✅ ตรวจครบทุกข้อ** — 14 ไฟล์ (แก้ 11 · ใหม่ 3) · ยังไม่ commit
+### อาการ
+
+user 1 (`SUPER_ADMIN`) เปิด `/Learn/Courses/16/gradebook` แล้วโดน 403 สองตัวพร้อมกัน:
+- `GET /api/courses/16/score-breakdown`
+- `GET /api/courses/16/points/account`
+
+ทั้งที่ frontend ส่ง `is-course-admin=true` และแสดงหน้าให้ตามปกติ
+
+### root cause — มีนิยาม "แอดมินรายวิชา" อยู่ 3 แบบที่ไม่ตรงกัน
+
+| ที่ | เช็คอะไร | ผลกับ user 1 |
+|---|---|---|
+| `Course::isAdmin()` | super admin / เจ้าของ / member role 4 status 1 | ✅ true |
+| `Course::hasPermission()` | เจ้าของ / มีแถวใน `course_permissions` | ❌ false |
+| `authorizeCourseAdmin()` ใน `points/` × 4 | เจ้าของ / `hasRole('admin')` | ❌ false |
+
+frontend ใช้แบบที่ 1 (`'isCourseAdmin' => $course->isAdmin(...)`) แต่ endpoint ใช้แบบ 2 กับ 3
+⇒ UI โชว์เมนูที่ endpoint ตอบ 403 (คอมเมนต์เหนือ `scopeAdministeredBy` เตือนกับดักนี้ไว้เองอยู่แล้ว)
+
+course 16 เจ้าของคือ user 2 · user 1 ไม่มีแถวใน `course_members` ของวิชานี้เลย
+
+### สิ่งที่แก้ (1 shard ผ่าน agy · Claude ตรวจเองทุกบรรทัด)
+
+- `Course::hasPermission()` เพิ่ม 2 guard: `isSuperAdmin()` และ `(int) $member->role === 4`
+  ⇒ role 4 = admin เต็มสิทธิ์โดยนิยาม ไม่ต้องพึ่งแถว `course_permissions` ที่อาจไม่เคยถูก seed
+- `authorizeCourseAdmin()` ใน 4 controller ใต้ `points/` เปลี่ยนไปใช้ `Course::isAdmin()`
+  (`CoursePointAccount` · `CoursePointCampaign` · `LessonRewardCampaign` · `QuizRewardCampaign`)
+
+### กับดักที่เจอระหว่างทาง
+
+1. **`hasRole('admin')` รอดมาได้เพราะ collation** — ตาราง `roles` เก็บชื่อเป็น `ADMIN` / `SUPER_ADMIN`
+   ตัวใหญ่ แต่โค้ดเทียบ `'admin'` ตัวเล็ก ผ่านเพราะ collation ของ MySQL เป็น case-insensitive
+   ถ้าย้าย DB หรือเปลี่ยน collation เมื่อไหร่ พังเงียบทันที
+   grep แล้วตอนนี้ไม่เหลือ `hasRole('admin')` ใน `app/` กับ `routes/` แล้ว
+2. **สมมติฐานจากการอ่านโค้ดผิด ต้อง query DB ก่อนเชื่อ** — ตอนแรกสรุปว่า "ครู role 3 ทั้ง 21 คน
+   ไม่มีแถว `course_permissions` เลย ⇒ โดน 403 หมด" พอ query จริง: 20/21 คือ **เจ้าของวิชาเอง**
+   (ระบบสร้าง member row role 3 ให้ผู้สร้างอัตโนมัติ) ⇒ ผ่าน owner check อยู่แล้ว ไม่มีใครโดนบล็อกจริง
+   ⇒ **ยกเลิก migration backfill ที่วางแผนไว้** เพราะจะเป็น migration ที่ไม่แตะแถวไหนเลย
+   เส้นทางเชิญ TA (`CourseAdminController:253`) ก็เรียก `grantDefaultPermissions()` ให้อยู่แล้ว
+3. **agy timeout แต่งานลงครบ** — `agy --print` จบด้วย `Error: timeout waiting for response` exit code 1
+   แต่ไฟล์ถูกแก้ครบทั้ง 5 ไฟล์และถูกต้องทุกบรรทัด
+   ⇒ **timeout ไม่ได้แปลว่างานไม่ลง — ต้อง `git diff` ดูก่อนเสมอ ห้ามสั่งซ้ำทันที**
+
+### Verification (Claude รันเองทุกข้อ — รอบนี้ agy ไม่มีรายงานให้เชื่อด้วยซ้ำ)
+
+- `git diff --stat` = 5 ไฟล์ +22 / −15 ตรงสเปค ไม่มีไฟล์เกิน ไม่มีโค้ดอื่นหาย
+- `php -l` ผ่านครบ 5 ไฟล์ · `pint --test` → `{"result":"passed"}`
+- `php artisan test` 6 ไฟล์ที่เกี่ยวข้อง → **39 passed / 0 failed** (1 incomplete, 1 skipped)
+- tinker กับข้อมูลจริง course 16:
+  - u1 `SUPER_ADMIN` → `isAdmin=true`, `edit_grades=true` (เดิม false ← ตัวที่ทำให้ 403)
+  - u2 เจ้าของ → true / true
+  - u3 คนนอก → **false / false** (ไม่ได้เปิดกว้างเกิน)
+  - role 4 (u288 บน course 19 ที่ไม่ใช่เจ้าของ) → true ทุกสิทธิ์
+
+**ไม่ได้ตรวจ:** ไม่ได้ยิง HTTP จริงผ่านเบราว์เซอร์ (in-app browser ไม่มี JWT session ของผู้ใช้)
+ที่ตรวจคือ gate logic ตรง ๆ ซึ่งเป็นจุดเดียวที่ตอบ 403
+
+### ค้างไว้
+
+- `ui/pages/Learn/Courses/[id]/index.vue` ยังไม่ commit (10/10 บรรทัด) — งานค้างจากก่อนหน้า ไม่เกี่ยวกับ fix นี้
+- warning ที่ยังเด้งรัวใน console หน้า course (คนละเรื่องกับ 403 นี้ · แยก session ไปทำแล้ว):
+  - `Invalid prop: type check failed for prop "balance". Expected Number, got String "1134596.00"`
+    ⇒ API คืน decimal เป็น string ให้ `DonationCourseDonationModal` / `DonationSupportDonationModal`
+  - `Extraneous non-props attributes (class)` ที่ `LearnCoursePointsCourseClaimWidget` (template หลาย root)
+
+---
+
+## 2026-08-30 — เมนู #7 SET-S5: ทำให้สวิตช์ 5 ตัวมีผลจริง (commit แล้ว a960ad87..90b38cb1)
+
+### สถานะ: **SET-S5 ✅ ตรวจครบทุกข้อ** — 14 ไฟล์ (แก้ 11 · ใหม่ 3) · commit ครบ 4 shard แล้ว
 
 เอกสารหลัก: [`.agents/school-admin/07-settings.md`](school-admin/07-settings.md) §5.2–5.4
 
@@ -68,7 +137,7 @@ migration เขียนผ่าน `DB::table()` ⇒ event `saved` ของ 
 
 ### งานที่ค้าง (TODO)
 
-- [ ] **ยังไม่ commit** — 14 ไฟล์รอเจ้าของสั่ง (ควรแยกเป็น 4 commit ตาม shard)
+- [x] **commit แล้ว** — แยกเป็น 4 commit ตาม shard: `a960ad87` (S5/1) · `efafadb3` (S5/2) · `1f6eae17` (S5/3) · `90b38cb1` (S5/4)
 - [ ] `npm run build` — **ผู้ใช้รันเอง** (แตะ `ui/` 4 ไฟล์: `[name].vue`, `admin/settings.vue`,
       `useAcademyNavigation.ts`, `SchoolQuickMenu.vue`)
 - [ ] **production ยังไม่ได้รัน migration 4 ตัว** — `2026_08_26_000001`, `2026_08_29_000001`,
@@ -83,8 +152,8 @@ migration เขียนผ่าน `DB::table()` ⇒ event `saved` ของ 
 ### Branch / Git State
 
 - Branch: `main`
-- Uncommitted: 14 ไฟล์ของ SET-S5 + `ui/pages/Learn/Courses/[id]/index.vue` (**งานของอีก session ไม่แตะเลย** — ยืนยันด้วย mtime 08-28)
-- Push: **ยังไม่ push**
+- Uncommitted: เหลือแค่ `ui/pages/Learn/Courses/[id]/index.vue` (**งานของอีก session ไม่แตะเลย** — ยืนยันด้วย mtime 08-28)
+- Push: push แล้วพร้อมกับ commit `d1b54b29` (ดูรายการบนสุดของไฟล์นี้)
 
 ---
 
