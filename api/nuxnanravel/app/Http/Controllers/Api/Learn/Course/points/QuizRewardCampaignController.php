@@ -58,7 +58,7 @@ class QuizRewardCampaignController extends Controller
 
     private function authorizeCourseAdmin(Course $course): void
     {
-        $user = auth()->user();
-        abort_unless($course->user_id === $user->id || $user->hasRole('admin'), 403);
+        // ใช้นิยามเดียวกับ Course::isAdmin() — owner / super admin / member role 4
+        abort_unless($course->isAdmin(auth()->user()), 403);
     }
 }

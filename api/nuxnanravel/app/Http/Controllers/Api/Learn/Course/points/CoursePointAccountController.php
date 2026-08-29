@@ -58,10 +58,9 @@ class CoursePointAccountController extends Controller
 
     private function authorizeCourseAdmin(Course $course): void
     {
-        $user = auth()->user();
-        // owner หรือ admin
+        // ใช้นิยามเดียวกับ Course::isAdmin() — owner / super admin / member role 4
         abort_unless(
-            $course->user_id === $user->id || $user->hasRole('admin'),
+            $course->isAdmin(auth()->user()),
             403,
             'ไม่มีสิทธิ์จัดการบัญชีแต้มรายวิชานี้'
         );

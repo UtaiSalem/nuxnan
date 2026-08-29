@@ -501,11 +501,19 @@ class Course extends Model
 
     /**
      * Check if the given user has a specific permission for this course.
+     *
+     * ต้องเดินคู่ไปกับ isAdmin() เสมอ — ทุกคนที่ isAdmin() ตอบ true
+     * ต้องผ่านเมธอดนี้ด้วย ไม่งั้น UI จะโชว์ปุ่มที่ endpoint ตอบ 403
      */
     public function hasPermission($user, string $permission): bool
     {
         if (! $user) {
             return false;
+        }
+
+        // Super Admin has full control (same rule as isAdmin()).
+        if ($user->isSuperAdmin()) {
+            return true;
         }
 
         // Course owner has all permissions
@@ -521,6 +529,12 @@ class Course extends Model
 
         if (! $member) {
             return false;
+        }
+
+        // Role 4 (Admin) holds every permission by definition — don't depend on
+        // course_permissions rows, which may never have been seeded for a member.
+        if ((int) $member->role === 4) {
+            return true;
         }
 
         return $member->hasPermission($permission);
