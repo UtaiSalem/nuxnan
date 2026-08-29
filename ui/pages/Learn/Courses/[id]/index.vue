@@ -433,17 +433,17 @@ const respondToInvitation = async (accept: boolean) => {
         >
           <!-- Section Header -->
           <div
-            class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between transition-colors"
+            class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between gap-2 transition-colors"
           >
             <NuxtLink 
               :to="`/Learn/Courses/${course.id}/lessons/${section.id}`"
-              class="font-medium text-gray-900 dark:text-white hover:text-blue-500 transition-colors"
+              class="min-w-0 flex-1 break-words font-medium text-gray-900 dark:text-white hover:text-blue-500 transition-colors"
             >
               {{ section.title }}
             </NuxtLink>
-            <div class="flex items-center gap-3 text-gray-500 text-sm">
-              <span v-if="section.videos > 0">{{ section.videos }} หัวข้อ</span>
-              <span v-else class="opacity-50 italic">ยังไม่มีหัวข้อ</span>
+            <div class="flex-shrink-0 flex items-center gap-1 sm:gap-3 text-gray-500 text-sm">
+              <span v-if="section.videos > 0" class="whitespace-nowrap">{{ section.videos }} หัวข้อ</span>
+              <span v-else class="whitespace-nowrap opacity-50 italic">ยังไม่มีหัวข้อ</span>
               <button 
                 @click="toggleSection(index)"
                 class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors"
@@ -461,21 +461,21 @@ const respondToInvitation = async (accept: boolean) => {
             <div 
               v-for="item in section.items" 
               :key="item.id"
-              class="px-4 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+              class="px-4 py-3 flex items-center justify-between gap-2 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
             >
-              <div class="flex items-center gap-3">
+              <div class="min-w-0 flex-1 flex items-center gap-3">
                 <Icon 
                   :icon="item.type === 'locked' ? 'fluent:lock-closed-24-regular' : 'fluent:play-circle-24-regular'" 
                   :class="[
-                    'w-5 h-5',
+                    'w-5 h-5 flex-shrink-0',
                     item.type === 'locked' ? 'text-gray-400' : 'text-blue-500'
                   ]"
                 />
-                <span class="text-gray-700 dark:text-gray-300 text-sm">
+                <span class="min-w-0 break-words text-gray-700 dark:text-gray-300 text-sm">
                   {{ item.title }}
                 </span>
               </div>
-              <span class="text-gray-500 text-sm">{{ item.duration }}</span>
+              <span class="flex-shrink-0 whitespace-nowrap text-gray-500 text-sm">{{ item.duration }}</span>
             </div>
           </div>
         </div>
