@@ -38,7 +38,6 @@ class AcademySettingsUpdateTest extends TestCase
             'academy_id' => $this->academy->id,
             'privacy' => 'public',
             'join_mode' => 'open',
-            'auto_accept_members' => true,
         ]);
     }
 
@@ -63,8 +62,6 @@ class AcademySettingsUpdateTest extends TestCase
                 'country' => 'Thailand',
                 'privacy' => 'private',
                 'join_mode' => 'approval',
-                'allow_student_registration' => false,
-                'allow_parent_registration' => false,
                 'show_member_list' => false,
                 'show_course_list' => false,
                 'avatar' => $avatar,
@@ -94,9 +91,6 @@ class AcademySettingsUpdateTest extends TestCase
         $setting = $this->academy->academySetting;
         $this->assertEquals('private', $setting->privacy);
         $this->assertEquals('approval', $setting->join_mode);
-        $this->assertFalse((bool) $setting->auto_accept_members);
-        $this->assertFalse((bool) $setting->allow_student_registration);
-        $this->assertFalse((bool) $setting->allow_parent_registration);
         $this->assertFalse((bool) $setting->show_member_list);
         $this->assertFalse((bool) $setting->show_course_list);
 
@@ -116,8 +110,6 @@ class AcademySettingsUpdateTest extends TestCase
                 'name_slug',
                 'privacy',
                 'join_mode',
-                'allow_student_registration',
-                'allow_parent_registration',
                 'show_member_list',
                 'show_course_list',
             ],
@@ -125,7 +117,8 @@ class AcademySettingsUpdateTest extends TestCase
 
         $response->assertJsonPath('academy.privacy', 'private');
         $response->assertJsonPath('academy.join_mode', 'approval');
-        $response->assertJsonPath('academy.allow_student_registration', false);
+        $response->assertJsonMissingPath('academy.allow_student_registration');
+        $response->assertJsonMissingPath('academy.allow_parent_registration');
     }
 
     public function test_non_owner_without_permission_cannot_update_settings()

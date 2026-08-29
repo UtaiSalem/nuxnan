@@ -276,6 +276,96 @@ cache ไม่ค้าง · slug ชนแล้วต่อ `-1`
 
 ---
 
+---
+
+### 5.2 การตัดสินใจของเจ้าของโปรเจค รอบ SET-S5 (เคาะแล้ว 2026-08-30)
+
+**D4 — `privacy = private` คือ "หน้าพรีวิว + ปุ่มขอเข้าร่วม"**
+คนที่ล็อกอินแล้วแต่ไม่ใช่สมาชิก ยังเปิด `/academies/{name}` ได้ และเห็นเฉพาะ
+ชื่อ · โลโก้ · ปก · คำอธิบาย · ปุ่มขอเข้าร่วม — **แท็บทั้ง 8 ถูกซ่อน** และ endpoint เนื้อหา
+(feeds/activities/members/courses/groups/events/classrooms/announcements/gamification) ตอบ 403
+· โรงเรียนแบบ private **ยังอยู่ในไดเรกทอรี** `/academies` ตามเดิม (ไม่ซ่อนจากการค้นหา)
+
+**D5 — `show_member_list`/`show_course_list` = เปิด ⇒ ผู้ใช้ที่ล็อกอินทุกคนดูได้**
+ตรงกับข้อความในฟอร์ม "อนุญาตให้ผู้อื่นดูรายชื่อสมาชิก" · ปิด ⇒ เหลือแค่**สมาชิกที่อนุมัติแล้ว + ผู้ดูแล**
+· ถ้า `privacy = private` จะถูกจำกัดเป็นสมาชิกเท่านั้นอยู่ดี ไม่ว่าสวิตช์จะเปิดหรือปิด
+
+สูตรที่ใช้ (เขียนเป็นเมธอดบน `Academy` ห้ามกระจายเงื่อนไขไปตาม controller):
+```
+canViewContent(u)    = isAdmin(u) || isApprovedMember(u) || privacy !== 'private'
+canViewMemberList(u) = isAdmin(u) || isApprovedMember(u) || (canViewContent(u) && show_member_list)
+canViewCourseList(u) = isAdmin(u) || isApprovedMember(u) || (canViewContent(u) && show_course_list)
+```
+
+**D6 — migration รีเซ็ต `show_member_list`/`show_course_list` เป็น `1` ให้ทุกแถวที่มีอยู่**
+ค่า `0` ที่ค้างในฐาน dev ถูกตั้งตอนที่สวิตช์ยังไม่มีผล = ไม่ใช่เจตนาจริงของผู้ดูแล
+ถ้าไม่รีเซ็ต พอ deploy แล้วรายชื่อสมาชิกกับคอร์สของโรงเรียนเดียวในระบบจะหายจากสายตาคนนอกทันที
+**ข้อจำกัด:** `down()` คืนค่าเดิมไม่ได้ (ค่าเก่าไม่ถูกเก็บไว้) — ต้องเขียนบอกไว้ในหัวไฟล์ migration
+
+**D7 — `academy_settings.auto_accept_members` drop ทิ้ง** — `join_mode` เป็นแหล่งความจริงเดียว
+(`course_settings.auto_accept_members` เป็นคนละคอลัมน์ คนละตาราง **ไม่แตะ**)
+
+---
+
+### 5.3 🔴 สองบั๊กที่เจอตอน audit SET-S5 (ยืนยันกับของจริงแล้ว)
+
+**G15. `join_mode: open` พังมาตั้งแต่ 2026-07-10 — คำขอเข้าร่วมค้าง pending ทุกใบ**
+
+`AcademyMemberController.php:75` เขียนว่า
+```php
+if ($academy->academySetting->auto_accept_members === 1) {
+```
+แต่ `AcademySetting::$casts` แปลง `auto_accept_members` เป็น `boolean` (commit `59af6c73`, 2026-07-10)
+⇒ ค่าที่ได้คือ `true` ไม่ใช่ `1` ⇒ `true === 1` เป็น **false เสมอ** ⇒ ตกเข้า else ทุกครั้ง
+
+ยืนยันกับฐาน dev ด้วย tinker:
+```
+academy 1: join_mode=open · auto_accept_members=true · (auto_accept_members === 1) => false
+```
+⇒ โรงเรียนที่ตั้งเป็น "เปิดรับสมัคร" ทุกคำขอกลายเป็น **สถานะ 1 (รออนุมัติ)** และ
+`total_students` ไม่เคยเพิ่ม · **ไม่ใช่แค่ `invite_only` ที่ตาย — `open` ก็ตายด้วย**
+เอกสาร audit รอบแรกที่เขียนว่า "`open` มีผล" **ผิด** (แก้ข้อมูลแล้ว ณ 2026-08-30)
+
+**G16. `GET /api/academies/{academy}/members` ไม่มีด่านสิทธิ์เลยสักชั้น**
+
+`routes/learn/academy.php:180` → `getAcademyMembers()` (บรรทัด 455) ไม่เช็คสมาชิกภาพ ไม่เช็ค permission
+และ `AcademyMemberResource` คืน `user.email`, `student.full_name_th`, `student.gender`,
+`student.current_classroom`, `member_code`
+⇒ **ผู้ใช้ที่ล็อกอินคนไหนก็ได้ ไล่อ่านรายชื่อนักเรียนพร้อม PII ของโรงเรียนไหนก็ได้**
+(ฐาน dev มีนักเรียน 4,500+) · นี่คือสิ่งที่ `show_member_list` ควรจะกันมาตลอด
+⇒ ยกระดับ G3 จาก "สวิตช์ไม่มีผล" เป็น **ช่องโหว่ความเป็นส่วนตัว P1**
+
+**G17. `AcademyController::store()` เขียน `auto_accept_members` แต่ไม่เขียน `join_mode`**
+
+โรงเรียนที่สร้างใหม่โดยเลือก "ต้องอนุมัติ" จะได้ `auto_accept_members = 0` แต่ `join_mode = 'open'`
+(ค่า default ของคอลัมน์) ⇒ พอ `join_mode` กลายเป็นแหล่งความจริงเดียวใน S5
+โรงเรียนนั้นจะ**พลิกเป็นเปิดรับสมัครเงียบ ๆ** ⇒ migration ต้อง reconcile ก่อน drop:
+**แถวไหนสองค่าไม่ตรงกัน ให้เชื่อ `auto_accept_members`** (เพราะ `updateSettings` เขียนสองค่าพร้อมกันเสมอ
+แถวที่ขัดกันจึงมาจาก `store()` เท่านั้น)
+
+**G18. endpoint อื่นของโรงเรียนที่ยังไม่มีด่านสมาชิกภาพ (เจอตอนตรวจเบราว์เซอร์ S5 — ยังไม่แก้)**
+
+ตอนเปิดหน้าโรงเรียนแบบ private ด้วยบัญชีคนนอก endpoint พวกนี้ยังตอบ **200**:
+`/{academy}/school-attendances` · `/{academy}/emergency-alerts/active` · `/{academy}/revenue/support-summary` · `/{academy}/my-role`
+ตรวจ payload จริงแล้ว **รอบนี้ยังไม่รั่วข้อมูล** (ว่างทั้งหมด เพราะไม่มีคาบเช็กชื่อเปิดอยู่/ไม่มีประกาศฉุกเฉิน/ยอดบริจาคเป็น 0)
+แต่ `school-attendances` ไม่มีการกรองสมาชิกภาพเลย ⇒ ถ้ามีคาบเปิดอยู่ คนนอกจะเห็น
+→ ไม่รวมใน S5 (คนละโดเมน) · ควรเปิดเป็นงานของเมนู #9/#19 หรือ SET-S14
+
+---
+
+### 5.4 SET-S5 — แผนแตก shard (6 shard)
+
+| shard | สาระ | ไฟล์ | ขึ้นกับ |
+|---|---|---|---|
+| **S5-A** | แกนกลางการมองเห็น — เมธอดบน `Academy` + middleware `academy.visibility` | `app/Models/Academy.php`, `app/Http/Middleware/EnsureAcademyVisibility.php` (ใหม่), `bootstrap/app.php` | — |
+| **S5-B** | ติดด่านกับ route ที่หน้าโรงเรียนเรียกจริง | `routes/learn/academy.php` | S5-A |
+| **S5-C** | `join_mode` เป็นตัวหลัก + `invite_only` บล็อกจริง + ซ่อม G15/G17 | `AcademyMemberController.php`, `AcademyController.php`, `AcademyResource.php` | S5-A |
+| **S5-D** | migration: reconcile → reset show_* → drop 3 คอลัมน์ | migration ใหม่ 1 ไฟล์, `AcademySetting.php` | S5-C |
+| **S5-E** | frontend: ถอด 2 สวิตช์ · ซ่อนแท็บ · หน้าพรีวิว private · ปุ่มเข้าร่วมใต้ `invite_only` | `admin/settings.vue`, `[name].vue`, `useAcademyNavigation.ts`, `SchoolQuickMenu.vue` | S5-C |
+| **S5-F** | เทสต์: แก้ของเดิม + `AcademyJoinModeTest` + `AcademyVisibilityTest` | `tests/Feature/Academy/` | S5-B..E |
+
+**ลำดับ:** A → C → D → B → E → F (A/C ขนานกับ E ไม่ได้เพราะ E พึ่ง field ใหม่ใน resource)
+
 ## 6. Implementation Tasks
 
 | Step | Title | Depends on | Deliverable | Status |
@@ -284,7 +374,7 @@ cache ไม่ค้าง · slug ชนแล้วต่อ `-1`
 | **SET-S2** | เก็บถาวรโรงเรียน แทนการลบ (G2 · D1) | SET-S1 | migration `archived_at` + `POST/DELETE /{academy}/archive` เฉพาะ owner + ซ่อนจากทุก listing + แท็บโซนอันตรายเรียกของจริง | ⚪ pending |
 | **SET-S3** | รวมคีย์สิทธิ์ให้เหลือชุดเดียว (§4) | SET-S1 | ถอด `academy.settings.view/edit` ออกจากแคตตาล็อก+SYSTEM_ROLES · ย้าย 6 จุดใน FE มาใช้ `settings.*` · migration ย้ายคีย์ในแถว `academy_roles` จริง | 🟢 **verified + migrate แล้ว** |
 | **SET-S4** | โหมดดูอย่างเดียว (G6) | SET-S3 | `settings.view` เข้าหน้าได้แบบ read-only · ปุ่มบันทึก+ปุ่มอัปโหลดซ่อน · 16 ช่อง disabled · แถบแจ้งเตือน · แท็บโซนอันตรายเฉพาะเจ้าของ · API ยังกัน `settings.manage` | 🟢 **verified** |
-| **SET-S5** | ทำให้สวิตช์มีผลจริง (G3 + G4 · D2 + D3) | SET-S1 | บังคับใช้ `privacy`/`show_member_list`/`show_course_list` · drop `allow_*_registration` 2 คอลัมน์ + ถอดออกจากฟอร์ม · `join_mode` เป็นตัวหลักแทน `auto_accept_members` และ `invite_only` บล็อกการขอเข้าร่วมจริง | ⚪ pending |
+| **SET-S5** | ทำให้สวิตช์มีผลจริง (G3 + G4 · D2 + D3) | SET-S1 | บังคับใช้ `privacy`/`show_member_list`/`show_course_list` · drop `allow_*_registration` 2 คอลัมน์ + ถอดออกจากฟอร์ม · `join_mode` เป็นตัวหลักแทน `auto_accept_members` และ `invite_only` บล็อกการขอเข้าร่วมจริง | 🟢 **verified + migrate แล้ว** |
 | **SET-S6** | เพิ่มแท็บ "ระบบและนโยบาย" (G9 ข้อ 1–3) | SET-S1 | `card_request_flow_enabled`, `student_editable_fields`, `donation_enabled` ตั้งค่าได้จากหน้าจอ | ⚪ pending |
 | **SET-S7** | เพิ่มฟิลด์อัตลักษณ์โรงเรียน (G9 ข้อ 4–5) | SET-S6 | `slogan`, `established_year`, `type`, `director`, `social_media_links` เข้าแท็บ "ข้อมูลทั่วไป" · ตัดสินใจเรื่อง `approval_flow` | ⚪ pending |
 | **SET-S8** | ซ่อม `name_slug` + redirect (G7) | SET-S1 | เลิกใช้ `Str::slug` กับชื่อไทย (fallback เป็น `academy-{id}` หรือทับศัพท์) + ตัด redirect ที่พาไป URL ผิดคีย์ | ⚪ pending |

@@ -1,5 +1,93 @@
 # Work Log — nuxnan project
 
+## 2026-08-30 — เมนู #7 SET-S5: ทำให้สวิตช์ 5 ตัวมีผลจริง (ยังไม่ commit)
+
+### สถานะ: **SET-S5 ✅ ตรวจครบทุกข้อ** — 14 ไฟล์ (แก้ 11 · ใหม่ 3) · ยังไม่ commit
+
+เอกสารหลัก: [`.agents/school-admin/07-settings.md`](school-admin/07-settings.md) §5.2–5.4
+
+### สิ่งที่เจอตอน audit — 3 บั๊กที่ไม่มีใครรู้
+
+1. **`join_mode: open` พังมาตั้งแต่ 2026-07-10** — `AcademyMemberController:75` เทียบ
+   `auto_accept_members === 1` แต่ `AcademySetting::$casts` แปลงเป็น `boolean`
+   ⇒ `true === 1` เป็น false เสมอ ⇒ ทุกคำขอค้าง pending และ `total_students` ไม่เคยเพิ่ม
+   (เอกสาร audit รอบแรกเขียนว่า "`open` มีผล" — **ผิด** แก้ข้อมูลแล้ว)
+2. **`GET /academies/{id}/members` ไม่มีด่านสิทธิ์เลย** — ใครล็อกอินก็ไล่อ่าน
+   `user.email` + `student.full_name_th` + เพศ + ห้องเรียน ของโรงเรียนไหนก็ได้ (นักเรียน 4,500+)
+3. **`AcademyController::store()` เขียน `auto_accept_members` แต่ไม่เขียน `join_mode`**
+   ⇒ โรงเรียนที่สร้างแบบ "ต้องอนุมัติ" จะพลิกเป็น open เงียบ ๆ ตอน join_mode ขึ้นเป็นแหล่งความจริง
+   ⇒ migration ต้อง reconcile ก่อน drop (เชื่อ `auto_accept_members` เมื่อสองค่าขัดกัน)
+
+### การตัดสินใจของเจ้าของโปรเจค (D4–D7 เคาะครบ)
+
+- **D4** `privacy=private` = หน้าพรีวิว + ปุ่มขอเข้าร่วม · แท็บหายหมด · endpoint เนื้อหา 403
+  · **ยังอยู่ในไดเรกทอรี** ไม่ซ่อนจากการค้นหา
+- **D5** สวิตช์เปิด ⇒ ผู้ใช้ที่ล็อกอินทุกคนดูได้ · ปิด ⇒ สมาชิก(status 2) + ผู้ดูแลเท่านั้น
+  · `privacy=private` กดทับสวิตช์เสมอ
+- **D6** migration รีเซ็ต `show_member_list`/`show_course_list` เป็น 1 ทุกแถว
+- **D7** drop `academy_settings.auto_accept_members` ทิ้ง (`course_settings` คนละตาราง ไม่แตะ)
+
+### สิ่งที่ทำ (4 shard ผ่าน agy · Claude ตรวจเองทุกบรรทัด)
+
+| shard | สาระ |
+|---|---|
+| 1 | `Academy` +6 เมธอด (`isApprovedMember`/`joinMode`/`isPrivate`/`canView*`) · middleware `academy.visibility:content\|members\|courses` · แขวนกับ 11 route |
+| 2 | `storemember()` เขียนใหม่ทั้งเมธอด · `store()` เขียน `join_mode` · `AcademyResource` ตัด payload ให้คนนอก · migration drop 3 คอลัมน์ |
+| 3 | ถอด 2 toggle ตายออกจาก settings.vue · กรองแท็บสมาชิก/รายวิชา · การ์ดพรีวิวโรงเรียนส่วนตัว · ป้าย "เข้าร่วมได้เฉพาะผู้ได้รับคำเชิญ" |
+| 4 | เทสต์: แก้ `AcademySettingsUpdateTest` + `AcademyJoinModeTest` (5 เคส) + `AcademyVisibilityTest` (6 เคส) |
+
+### 🔴 บั๊กที่ Claude เจอเองตอนตรวจ แล้วแก้เอง — แคชกลบ migration
+
+migration เขียนผ่าน `DB::table()` ⇒ event `saved` ของ `AcademySetting` ไม่ทำงาน
+⇒ `Academy::getSettings()` ยังคืนค่าเก่าจากแคช 24 ชม. **พร้อมคอลัมน์ที่เพิ่งถูก drop**
+ยิง API หลัง migrate ครั้งแรกได้ **403 ทั้งที่ค่าในฐานเป็นเปิดแล้ว** — ถ้าขึ้น production
+ทั้งระบบจะอ่านค่าเก่าไปอีก 24 ชม. · แก้ด้วย `flushSettingsCache()` ใน `up()` **และ** `down()`
+· พิสูจน์ด้วยการอุ่นแคชค่าเก่าไว้ก่อนแล้ว migrate: อ่านได้ `false` → หลัง migrate เป็น `true`
+
+**บทเรียน:** ทุก migration ที่แตะตารางซึ่งมีแคชครอบอยู่ ต้องล้างแคชในตัว migration เอง
+เทสต์จับไม่ได้ (ฐานเทสต์ใช้ cache array ที่ว่างทุกเคส)
+
+### หลักฐานที่ Claude รันเอง (ไม่มีตัวเลขไหนมาจากรายงาน agy)
+
+- `php -l` 9 ไฟล์ · `pint --test` ผ่าน · SFC 3 ไฟล์คอมไพล์ผ่าน
+- `route:list -v` → 11 route ถือ `academy.visibility:*`
+  (เส้นที่ 12 `academy.groups.index` เป็น URI ซ้ำที่ Laravel ทับด้วย `api.academy.groups.index` — แก้ทั้งคู่แล้ว)
+- migrate → rollback → migrate ครบวง · คอลัมน์หาย 3 ตัว · `show_*` = 1 · `course_settings` ไม่ถูกแตะ
+- ยิง API จริงด้วย JWT 3 ใบ (เจ้าของ / สมาชิก status 2 / คนนอก):
+  - public + สวิตช์เปิด ⇒ 200 หมดทั้ง 3 คน × 8 endpoint (**ด่านเป็น no-op จริง**)
+  - `show_member_list=0` ⇒ คนนอก 403 `member_list_hidden` · สมาชิก/เจ้าของ 200
+  - `privacy=private` ⇒ คนนอก 403 ครบทั้ง 8 endpoint · payload เหลือ 24 คีย์ ไม่มี email/phone/address/setting
+  - join: invite_only 403 ไม่สร้างแถว · approval status 1 · กดซ้ำ 409 (เดิม 500) · open status 2 + total_students 2540→2541
+  - **ล้างข้อมูลทดสอบครบ** (ลบแถวสมาชิก · total_students กลับเป็น 2540 · settings กลับเป็น public/open/1/1)
+- `php artisan test tests/Feature/Academy` ⇒ **127 passed · 0 failed · 2 incomplete** (2 ตัวเดิม)
+- **mutation check 4 แบบ** (ปิดด่าน middleware / ถอด invite_only / เอา `status=2` ออก / ให้ resource คืน payload เต็ม)
+  ⇒ เทสต์ล้ม 3/1/1/1 ตามลำดับ **แล้วคืนไฟล์ครบทั้ง 4 (`diff -q` ผ่าน)**
+- เบราว์เซอร์จริงที่ **375px**: การ์ดพรีวิว private ขึ้นถูก ไม่มีแท็บ · ป้าย invite_only ขึ้นแทนปุ่ม ·
+  ปิดสวิตช์แล้วแท็บ "รายวิชา/สมาชิก" หายจริง · แท็บการลงทะเบียนเหลือ 3 ตัวเลือก + กล่องอธิบาย
+  · `document.body.scrollWidth === 375` ไม่มีเลื่อนแนวนอน · **ไม่มี 403 โผล่ใน network เลย** (early return ทำงาน)
+
+### งานที่ค้าง (TODO)
+
+- [ ] **ยังไม่ commit** — 14 ไฟล์รอเจ้าของสั่ง (ควรแยกเป็น 4 commit ตาม shard)
+- [ ] `npm run build` — **ผู้ใช้รันเอง** (แตะ `ui/` 4 ไฟล์: `[name].vue`, `admin/settings.vue`,
+      `useAcademyNavigation.ts`, `SchoolQuickMenu.vue`)
+- [ ] **production ยังไม่ได้รัน migration 4 ตัว** — `2026_08_26_000001`, `2026_08_29_000001`,
+      `2026_08_29_000002`, **`2026_08_30_000001` (ตัวใหม่)**
+      · ก่อนรัน ให้ `mysqldump` ตาราง `academy_roles` **และ `academy_settings`** ไว้ก่อน
+      · ตัวใหม่ **drop 3 คอลัมน์ + รีเซ็ต show_\* เป็น 1** ⇒ ย้อนค่าเดิมของ show_\* ไม่ได้
+- [ ] **G18** — `school-attendances` / `emergency-alerts` / `revenue/support-summary` / `my-role`
+      ยังไม่มีด่านสมาชิกภาพ (รอบนี้ payload ว่าง ยังไม่รั่ว) → เปิดเป็นงานเมนู #9/#19
+- [ ] **หนี้ตรวจด้วยตา SET-S4** (ยกมาจากรอบก่อน) — ยังไม่ได้เห็นโหมดอ่านอย่างเดียวบนจอจริง
+- [ ] SET-S2 (เก็บถาวรโรงเรียน) เป็นตัวถัดไปตามลำดับที่ตกลง: S1→S3→S4→**S5**→S2→S8→S6→S7→S9→S11→S10
+
+### Branch / Git State
+
+- Branch: `main`
+- Uncommitted: 14 ไฟล์ของ SET-S5 + `ui/pages/Learn/Courses/[id]/index.vue` (**งานของอีก session ไม่แตะเลย** — ยืนยันด้วย mtime 08-28)
+- Push: **ยังไม่ push**
+
+---
+
 ## 2026-08-29 — เมนู #7 ตั้งค่าโรงเรียน: audit + ปิด S1/S3/S4 · แทรก S9 ของเมนู #1 (push แล้ว)
 
 ### สถานะ: **SET-S1 ✅ · SET-S3 ✅ · SET-S4 ✅ · เมนู #1 S9 ✅** — 8 commit (`d33af5f5` → `22429451`)
