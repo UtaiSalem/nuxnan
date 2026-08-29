@@ -63,6 +63,33 @@ class AcademyMemberController extends Controller
 
     public function storemember(Academy $academy)
     {
+        // `join_mode` เป็นแหล่งความจริงเดียว — คอลัมน์ `auto_accept_members` ถูก drop แล้ว
+        $joinMode = $academy->joinMode();
+
+        if ($joinMode === 'invite_only') {
+            return response()->json([
+                'success' => false,
+                'code' => 'invite_only',
+                'msg' => 'โรงเรียนนี้เข้าร่วมได้เฉพาะผู้ที่ได้รับคำเชิญเท่านั้น',
+                'message' => 'โรงเรียนนี้เข้าร่วมได้เฉพาะผู้ที่ได้รับคำเชิญเท่านั้น',
+            ], 403);
+        }
+
+        $existingMember = AcademyMember::where('academy_id', $academy->id)
+            ->where('user_id', auth()->id())
+            ->first();
+
+        if ($existingMember) {
+            return response()->json([
+                'success' => false,
+                'code' => 'already_requested',
+                'msg' => 'คุณมีสถานะกับโรงเรียนนี้อยู่แล้ว',
+                'message' => 'คุณมีสถานะกับโรงเรียนนี้อยู่แล้ว',
+                'memberStatus' => $existingMember->status,
+                'totalStudents' => $academy->total_students,
+            ], 409);
+        }
+
         if (auth()->user()->pp < $academy->membership_fees_points) {
             return response()->json([
                 'success' => false,
@@ -70,32 +97,24 @@ class AcademyMemberController extends Controller
             ], 201);
         }
 
-        $curent_member_status = AcademyMember::where('academy_id', $academy->id)->where('user_id', auth()->id())->first();
+        $status = $joinMode === 'open' ? 2 : 1;
 
-        if ($academy->academySetting->auto_accept_members === 1) {
-            if (! $curent_member_status) {
-                $newStatus = $academy->academyMembers()->create([
-                    'user_id' => auth()->id(),
-                    'status' => 2,
-                ]);
-                $academy->increment('total_students');
-            }
-        } else {
-            if (! $curent_member_status) {
-                $newStatus = $academy->academyMembers()->create([
-                    'user_id' => auth()->id(),
-                    'status' => 1,
-                ]);
-            }
+        $newStatus = $academy->academyMembers()->create([
+            'user_id' => auth()->id(),
+            'status' => $status,
+        ]);
+
+        if ($status === 2) {
+            $academy->increment('total_students');
         }
 
-        if (isset($newStatus)) {
-            MemberActivityLog::logActivity(['academy_id' => $academy->id, 'academy_member_id' => $newStatus->id, 'target_user_id' => auth()->id(), 'action' => MemberActivityLog::ACTION_JOIN, 'description' => 'ส่งคำขอเข้าร่วมโรงเรียน']);
-        }
-
-        // $academy->members()->toggle(auth()->id());
-        // $isMember = $academy->isMember(auth()->user());
-        // $isMember ? $academy->increment('total_students'): $academy->decrement('total_students');
+        MemberActivityLog::logActivity([
+            'academy_id' => $academy->id,
+            'academy_member_id' => $newStatus->id,
+            'target_user_id' => auth()->id(),
+            'action' => MemberActivityLog::ACTION_JOIN,
+            'description' => $status === 2 ? 'เข้าร่วมโรงเรียน (โหมดเปิดรับสมัคร)' : 'ส่งคำขอเข้าร่วมโรงเรียน',
+        ]);
 
         return response()->json([
             'success' => true,

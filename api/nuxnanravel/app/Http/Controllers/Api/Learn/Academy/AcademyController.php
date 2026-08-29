@@ -104,7 +104,7 @@ class AcademyController extends Controller
             $academy->save();
 
             $academy->academySetting()->create([
-                'auto_accept_members' => $validated['autoAcceptMember'] === 'true' ? true : false,
+                'join_mode' => $validated['autoAcceptMember'] === 'true' ? 'open' : 'approval',
             ]);
 
             auth()->user()->decrement('pp', 860000);
@@ -222,19 +222,6 @@ class AcademyController extends Controller
     public function removeMember(Academy $academy, $memberId)
     {
         $academy->members()->detach($memberId);
-
-        return redirect()->back();
-    }
-
-    public function updateAcademySetting(Academy $academy, Request $request)
-    {
-        $validated = $request->validate([
-            'autoAcceptMember' => 'required|string',
-        ]);
-
-        $academy->academySetting->update([
-            'auto_accept_members' => $validated['autoAcceptMember'] === 'true' ? true : false,
-        ]);
 
         return redirect()->back();
     }
@@ -491,13 +478,6 @@ class AcademyController extends Controller
             }
             if ($request->has('join_mode')) {
                 $setting->join_mode = $request->join_mode;
-                $setting->auto_accept_members = $request->join_mode === 'open' ? 1 : 0;
-            }
-            if ($request->has('allow_student_registration')) {
-                $setting->allow_student_registration = $request->boolean('allow_student_registration');
-            }
-            if ($request->has('allow_parent_registration')) {
-                $setting->allow_parent_registration = $request->boolean('allow_parent_registration');
             }
             if ($request->has('show_member_list')) {
                 $setting->show_member_list = $request->boolean('show_member_list');

@@ -14,11 +14,9 @@ class AcademySetting extends Model
     protected $guarded = [];
 
     protected $casts = [
-        'allow_student_registration' => 'boolean',
-        'allow_parent_registration' => 'boolean',
         'show_member_list' => 'boolean',
         'show_course_list' => 'boolean',
-        'auto_accept_members' => 'boolean',
+        'card_request_flow_enabled' => 'boolean',
     ];
 
     protected static function boot()
