@@ -122,6 +122,70 @@ class Academy extends Model
                $this->academyAdmins()->where('user_id', $user->id)->exists();
     }
 
+    /**
+     * สมาชิกที่ผ่านการอนุมัติแล้วเท่านั้น (status = 2)
+     * 1=รออนุมัติ 3=ปฏิเสธ 4=ถูกเชิญ 5=ระงับ — ไม่นับเป็นสมาชิก
+     */
+    public function isApprovedMember($user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return $this->academyMembers()
+            ->where('user_id', $user->id)
+            ->where('status', 2)
+            ->exists();
+    }
+
+    /**
+     * โหมดการเข้าร่วมที่บังคับใช้จริง — `join_mode` เป็นแหล่งความจริงเดียว
+     * ค่าที่ไม่รู้จัก/ว่าง ให้ถือเป็น 'approval' (ปลอดภัยกว่าเปิดรับอัตโนมัติ)
+     */
+    public function joinMode(): string
+    {
+        $mode = $this->getSettings()?->join_mode;
+
+        return in_array($mode, ['open', 'approval', 'invite_only'], true) ? $mode : 'approval';
+    }
+
+    public function isPrivate(): bool
+    {
+        return ($this->getSettings()?->privacy ?? 'public') === 'private';
+    }
+
+    /**
+     * เนื้อหาของโรงเรียน (ฟีด/กลุ่ม/กิจกรรม/ห้องเรียน/ประกาศ/แต้ม) มองเห็นได้ไหม
+     */
+    public function canViewContent($user): bool
+    {
+        if (! $this->isPrivate()) {
+            return true;
+        }
+
+        return $this->isAdmin($user) || $this->isApprovedMember($user);
+    }
+
+    public function canViewMemberList($user): bool
+    {
+        if ($this->isAdmin($user) || $this->isApprovedMember($user)) {
+            return true;
+        }
+
+        return $this->canViewContent($user)
+            && (bool) ($this->getSettings()?->show_member_list ?? true);
+    }
+
+    public function canViewCourseList($user): bool
+    {
+        if ($this->isAdmin($user) || $this->isApprovedMember($user)) {
+            return true;
+        }
+
+        return $this->canViewContent($user)
+            && (bool) ($this->getSettings()?->show_course_list ?? true);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

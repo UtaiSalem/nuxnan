@@ -104,7 +104,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::get('/{academy:name}', [AcademyController::class, 'show'])->name('academy.show');
 
     // Academy Groups
-    Route::get('/{academy}/groups', [AcademyGroupController::class, 'index'])->name('academy.groups.index');
+    Route::get('/{academy}/groups', [AcademyGroupController::class, 'index'])->middleware('academy.visibility:content')->name('academy.groups.index');
     Route::get('/{academy}/postable-groups', [AcademyGroupController::class, 'postableForUser'])->name('api.academy.postableGroups');
     Route::patch('/{academy}/groups/reorder', [AcademyGroupController::class, 'reorder'])->name('academy.groups.reorder');
     Route::get('/{academy}/groups/type/{type}', [AcademyGroupController::class, 'getByType'])->name('academy.groups.byType');
@@ -133,7 +133,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::post('/groups/{academyGroup}/mute', [AcademyGroupMuteController::class, 'mute'])->name('api.academy.groups.mute');
     Route::delete('/groups/{academyGroup}/mute', [AcademyGroupMuteController::class, 'unmute'])->name('api.academy.groups.unmute');
 
-    Route::get('/{academy:name}/feeds', [AcademyActivityController::class, 'index'])->name('academy.feeds');
+    Route::get('/{academy:name}/feeds', [AcademyActivityController::class, 'index'])->middleware('academy.visibility:content')->name('academy.feeds');
 
     Route::get('/{academy:name}/courses/create', [AcademyCourseController::class, 'create'])->name('academy.courses.create');
     Route::post('/{academy}/courses', [AcademyCourseController::class, 'store'])->name('academy.courses.store');
@@ -153,9 +153,9 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::get('/{academy}/posts/{post}', [AcademyPostController::class, 'show'])->name('academy_post.show');
 
     // Gamification
-    Route::get('/{academy}/gamification/summary', [GamificationController::class, 'summary'])->name('academy.gamification.summary');
-    Route::get('/{academy}/gamification/leaderboard', [GamificationController::class, 'leaderboard'])->name('academy.gamification.leaderboard');
-    Route::get('/{academy}/gamification/recent', [GamificationController::class, 'recentEvents'])->name('academy.gamification.recent');
+    Route::get('/{academy}/gamification/summary', [GamificationController::class, 'summary'])->middleware('academy.visibility:content')->name('academy.gamification.summary');
+    Route::get('/{academy}/gamification/leaderboard', [GamificationController::class, 'leaderboard'])->middleware('academy.visibility:content')->name('academy.gamification.leaderboard');
+    Route::get('/{academy}/gamification/recent', [GamificationController::class, 'recentEvents'])->middleware('academy.visibility:content')->name('academy.gamification.recent');
 
 });
 
@@ -176,13 +176,13 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::patch('/groups/{academyGroup}/admins/role', [AcademyGroupAdminController::class, 'updateRole'])->name('api.academy.groups.admins.updateRole');
 
     // Additional wildcard routes
-    Route::get('/{academy}/courses', [AcademyCourseController::class, 'getAcademyCourses'])->name('api.academy.courses.getAcademyCourses');
-    Route::get('/{academy}/members', [AcademyMemberController::class, 'getAcademyMembers'])->name('api.academy.members.list');
+    Route::get('/{academy}/courses', [AcademyCourseController::class, 'getAcademyCourses'])->middleware('academy.visibility:courses')->name('api.academy.courses.getAcademyCourses');
+    Route::get('/{academy}/members', [AcademyMemberController::class, 'getAcademyMembers'])->middleware('academy.visibility:members')->name('api.academy.members.list');
     Route::post('/{academy}/posts', [AcademyPostController::class, 'store'])->name('api.academy.posts.store');
     Route::patch('/{academy}/posts/{post}', [AcademyPostController::class, 'update'])->name('api.academy.posts.update');
     Route::delete('/{academy}/posts/{post}', [AcademyPostController::class, 'destroy'])->name('api.academy.posts.destroy');
-    Route::get('/{academy}/activities', [AcademyActivityController::class, 'getActivities'])->name('api.academy.activities.getActivities');
-    Route::get('/{academy}/groups', [AcademyGroupController::class, 'index'])->name('api.academy.groups.index');
+    Route::get('/{academy}/activities', [AcademyActivityController::class, 'getActivities'])->middleware('academy.visibility:content')->name('api.academy.activities.getActivities');
+    Route::get('/{academy}/groups', [AcademyGroupController::class, 'index'])->middleware('academy.visibility:content')->name('api.academy.groups.index');
     Route::post('/{academy}/groups', [AcademyGroupController::class, 'store'])->name('api.academy.groups.store');
 
     // Academy Post Comments Routes
@@ -493,7 +493,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // Classroom Management Routes (ห้องเรียน)
     // ============================================
     Route::prefix('{academy}/classrooms')->group(function () {
-        Route::get('/', [ClassroomController::class, 'index'])->name('api.academy.classrooms.index');
+        Route::get('/', [ClassroomController::class, 'index'])->middleware('academy.visibility:content')->name('api.academy.classrooms.index');
         Route::post('/', [ClassroomController::class, 'store'])->name('api.academy.classrooms.store');
         Route::get('grade-levels', [ClassroomController::class, 'getGradeLevels'])->name('api.academy.classrooms.gradeLevels');
         Route::get('statistics', [ClassroomController::class, 'getStatistics'])->name('api.academy.classrooms.statistics');
@@ -781,7 +781,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
 
     // Announcements - ประกาศ
     Route::prefix('{academy}/announcements')->group(function () {
-        Route::get('/', [AnnouncementController::class, 'index'])->name('api.academy.announcements.index');
+        Route::get('/', [AnnouncementController::class, 'index'])->middleware('academy.visibility:content')->name('api.academy.announcements.index');
         Route::post('/', [AnnouncementController::class, 'store'])->name('api.academy.announcements.store');
         Route::get('/stats', [AnnouncementController::class, 'stats'])->name('api.academy.announcements.stats');
         Route::get('/{announcement}', [AnnouncementController::class, 'show'])->name('api.academy.announcements.show');
@@ -793,7 +793,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
 
     // School Events - กิจกรรมโรงเรียน
     Route::prefix('{academy}/events')->group(function () {
-        Route::get('/', [SchoolEventController::class, 'index'])->name('api.academy.events.index');
+        Route::get('/', [SchoolEventController::class, 'index'])->middleware('academy.visibility:content')->name('api.academy.events.index');
         Route::post('/', [SchoolEventController::class, 'store'])->name('api.academy.events.store');
         Route::get('/upcoming', [SchoolEventController::class, 'upcoming'])->name('api.academy.events.upcoming');
         Route::get('/my-schedule', [SchoolEventController::class, 'mySchedule'])->name('api.academy.events.mySchedule');

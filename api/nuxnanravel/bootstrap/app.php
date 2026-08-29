@@ -3,6 +3,7 @@
 use App\Http\Middleware\AuditRequest;
 use App\Http\Middleware\CheckAcademyPermission;
 use App\Http\Middleware\CheckPermission;
+use App\Http\Middleware\EnsureAcademyVisibility;
 use App\Http\Middleware\EnsureAdminRole;
 use App\Http\Middleware\EnsurePlearndAdmin;
 use App\Http\Middleware\EnsureSuperAdmin;
@@ -41,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => EnsureAdminRole::class,
             'permission' => CheckPermission::class,
             'academy.permission' => CheckAcademyPermission::class,
+            'academy.visibility' => EnsureAcademyVisibility::class,
             'audit.log' => AuditRequest::class,
         ]);
 
