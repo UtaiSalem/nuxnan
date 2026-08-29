@@ -23,12 +23,13 @@ export interface NavContext {
   hasParentLink: boolean
   isMember: boolean
   isPending: boolean
+  canRequestJoin?: boolean
 }
 
 export const useAcademyNavigation = (
   academyName: ComputedRef<string> | Ref<string> | string,
   role: ReturnType<typeof useAcademyRole>,
-  extraCtx?: { isPending?: () => boolean }
+  extraCtx?: { isPending?: () => boolean; canRequestJoin?: () => boolean }
 ) => {
   const nameStr = computed(() => typeof academyName === 'string' ? academyName : academyName.value)
 
@@ -36,6 +37,7 @@ export const useAcademyNavigation = (
   const ctx = computed<NavContext>(() => {
     const isMem = role.isMember.value
     const isPen = extraCtx?.isPending ? extraCtx.isPending() : false
+    const canRequest = extraCtx?.canRequestJoin ? extraCtx.canRequestJoin() : true
     
     return {
       academyName: nameStr.value,
@@ -43,7 +45,8 @@ export const useAcademyNavigation = (
       hasStudentLink: role.isStudent.value || role.isAdmin.value, // staff/admin can view profiles
       hasParentLink: role.isParent.value,
       isMember: isMem,
-      isPending: isPen
+      isPending: isPen,
+      canRequestJoin: canRequest
     }
   })
 
@@ -213,8 +216,8 @@ export const useAcademyNavigation = (
         to: dashboardDest.to.replace('{n}', encodeURIComponent(nameStr.value))
       }
     }
-    // Fallback if not member / guest
-    if (!ctx.value.isMember && !ctx.value.isPending) {
+    // Fallback if not member / guest — โรงเรียนโหมด "เชิญเท่านั้น" ไม่มีปุ่มขอเข้าร่วม
+    if (!ctx.value.isMember && !ctx.value.isPending && ctx.value.canRequestJoin !== false) {
       return {
         id: 'join-academy',
         title: 'เข้าร่วมโรงเรียน',

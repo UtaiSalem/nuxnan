@@ -12,6 +12,7 @@ interface Props {
     authIsAcademyAdmin?: boolean
   }
   isPending?: boolean
+  canRequestJoin?: boolean
 }
 
 const props = defineProps<Props>()
@@ -22,7 +23,10 @@ const role = useAcademyRole(academyId)
 const { visibleDestinations, primaryCta, pendingHint } = useAcademyNavigation(
   computed(() => props.academy.name),
   role,
-  { isPending: () => !!props.isPending }
+  { 
+    isPending: () => !!props.isPending,
+    canRequestJoin: () => props.canRequestJoin !== false
+  }
 )
 
 const tabMap: Record<string, string> = {

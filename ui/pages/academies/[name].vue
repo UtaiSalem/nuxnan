@@ -195,25 +195,46 @@ const memberStatusText = computed(() => {
   return null
 })
 
+const isRestricted = computed(() => academy.value?.is_restricted === true)
+
+const isInviteOnly = computed(() => academy.value?.join_mode === 'invite_only')
+
 const canJoin = computed(() => {
-  return academy.value && !academy.value.memberStatus && !academy.value.authIsAcademyAdmin
+  return academy.value && !academy.value.memberStatus && !academy.value.authIsAcademyAdmin && !isInviteOnly.value
 })
 
 const canLeave = computed(() => {
   return academy.value && academy.value.memberStatus && !academy.value.authIsAcademyAdmin
 })
 
-// Tabs
-const tabs = computed(() => [
-  { id: 'feed', label: t('academy.tabs.feed'), icon: 'fluent:feed-24-regular' },
-  { id: 'courses', label: t('academy.tabs.courses'), icon: 'fluent:book-24-regular' },
-  { id: 'members', label: t('academy.tabs.members'), icon: 'fluent:people-24-regular' },
-  { id: 'classrooms', label: t('academy.tabs.classrooms'), icon: 'fluent:board-24-regular' },
-  { id: 'events', label: t('academy.tabs.events'), icon: 'fluent:calendar-star-24-regular' },
-  { id: 'groups', label: t('academy.tabs.groups'), icon: 'fluent:people-community-24-regular' },
-  { id: 'revenue', label: 'รายได้', icon: 'fluent:money-hand-24-regular' },
-  { id: 'about', label: t('academy.tabs.about'), icon: 'fluent:info-24-regular' },
-])
+// Tabs — โรงเรียนส่วนตัวที่ผู้ดูไม่ใช่สมาชิก ไม่มีแท็บให้กดเลย (เห็นแค่หน้าปก)
+const tabs = computed(() => {
+  if (isRestricted.value) return []
+
+  const all = [
+    { id: 'feed', label: t('academy.tabs.feed'), icon: 'fluent:feed-24-regular' },
+    { id: 'courses', label: t('academy.tabs.courses'), icon: 'fluent:book-24-regular' },
+    { id: 'members', label: t('academy.tabs.members'), icon: 'fluent:people-24-regular' },
+    { id: 'classrooms', label: t('academy.tabs.classrooms'), icon: 'fluent:board-24-regular' },
+    { id: 'events', label: t('academy.tabs.events'), icon: 'fluent:calendar-star-24-regular' },
+    { id: 'groups', label: t('academy.tabs.groups'), icon: 'fluent:people-community-24-regular' },
+    { id: 'revenue', label: 'รายได้', icon: 'fluent:money-hand-24-regular' },
+    { id: 'about', label: t('academy.tabs.about'), icon: 'fluent:info-24-regular' },
+  ]
+
+  return all.filter((tab) => {
+    if (tab.id === 'members') return academy.value?.can_view_member_list !== false
+    if (tab.id === 'courses') return academy.value?.can_view_course_list !== false
+    return true
+  })
+})
+
+watch(tabs, (list) => {
+  if (list.length === 0) return
+  if (!list.some(tab => tab.id === currentTab.value)) {
+    switchTab(list[0].id)
+  }
+})
 
 const formatCompactNumber = (value?: number | null) => {
   if (value == null) return null
@@ -386,6 +407,11 @@ const fetchAcademy = async () => {
       academy.value = JSON.parse(JSON.stringify(response.academy))
       isAcademyAdmin.value = response.isAcademyAdmin || false
       
+      // โรงเรียนส่วนตัวที่ผู้ดูไม่ใช่สมาชิก: endpoint เนื้อหาทุกตัวตอบ 403 อยู่แล้ว อย่ายิงให้เปลือง
+      if (response.academy?.is_restricted === true) {
+        return
+      }
+
       // Parallel fetch gamification summary
       await fetchGamificationSummary()
       await loadPinnedAnnouncements()
@@ -1297,6 +1323,13 @@ watch(() => academy.value?.id, (id) => {
                 <Icon v-else icon="fluent:person-add-24-regular" class="w-4 h-4" />
                 เข้าร่วมโรงเรียน
               </button>
+              <div
+                v-else-if="isInviteOnly && !academy?.memberStatus && !academy?.authIsAcademyAdmin"
+                class="flex min-h-[44px] items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-600 sm:min-h-0 dark:border-gray-700 dark:bg-vikinger-dark-100 dark:text-gray-300"
+              >
+                <Icon icon="fluent:mail-24-regular" class="h-4 w-4 flex-shrink-0" />
+                <span class="min-w-0 break-words">เข้าร่วมได้เฉพาะผู้ได้รับคำเชิญ</span>
+              </div>
               
               <!-- Member Settings Button (replaces Leave button) -->
               <NuxtLink
@@ -1339,7 +1372,7 @@ watch(() => academy.value?.id, (id) => {
       </div>
 
       <!-- Mobile Drawer Triggers -->
-      <div class="flex gap-3 mb-6 lg:hidden">
+      <div v-if="!isRestricted" class="flex gap-3 mb-6 lg:hidden">
         <button
           type="button"
           class="flex-1 px-4 py-3 bg-white dark:bg-vikinger-dark-200 text-gray-800 dark:text-gray-200 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-bold flex items-center justify-center gap-2 shadow-sm active:bg-gray-50 dark:active:bg-vikinger-dark-100"
@@ -1358,14 +1391,53 @@ watch(() => academy.value?.id, (id) => {
         </button>
       </div>
       
+      <!-- โรงเรียนส่วนตัว: คนนอกเห็นแค่หน้าปกกับปุ่มขอเข้าร่วม -->
+      <div
+        v-if="isRestricted"
+        class="rounded-2xl border border-gray-200 bg-white p-4 text-center sm:p-8 dark:border-gray-700 dark:bg-vikinger-dark-200"
+      >
+        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
+          <Icon icon="fluent:lock-closed-24-regular" class="h-7 w-7 text-amber-600 dark:text-amber-400" />
+        </div>
+        <h2 class="mt-4 text-base font-bold text-gray-900 sm:text-lg dark:text-white">
+          โรงเรียนนี้เป็นแบบส่วนตัว
+        </h2>
+        <p class="mx-auto mt-2 max-w-md break-words text-sm text-gray-500 sm:text-base dark:text-gray-400">
+          <template v-if="isInviteOnly">
+            เนื้อหาของโรงเรียนเปิดให้เฉพาะสมาชิก และโรงเรียนนี้รับสมาชิกผ่านคำเชิญเท่านั้น
+            ติดต่อผู้ดูแลโรงเรียนเพื่อขอลิงก์เชิญ
+          </template>
+          <template v-else>
+            ฟีด รายวิชา รายชื่อสมาชิก และกิจกรรม เปิดให้เฉพาะสมาชิกของโรงเรียนนี้เท่านั้น
+          </template>
+        </p>
+
+        <button
+          v-if="canJoin"
+          type="button"
+          class="mt-5 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg bg-vikinger-purple px-5 py-2.5 font-medium text-white transition-colors hover:bg-vikinger-purple/90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+          :disabled="isMemberActionLoading"
+          @click="requestMembership"
+        >
+          <Icon v-if="isMemberActionLoading" icon="svg-spinners:ring-resize" class="h-4 w-4" />
+          <Icon v-else icon="fluent:person-add-24-regular" class="h-4 w-4" />
+          ขอเข้าร่วมโรงเรียน
+        </button>
+
+        <p v-else-if="memberStatusText" class="mt-5 text-sm text-gray-500 dark:text-gray-400">
+          สถานะของคุณ: {{ memberStatusText.text }}
+        </p>
+      </div>
+
       <!-- Tab Content -->
-      <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-5 min-[1421px]:grid-cols-[260px_minmax(0,1fr)_320px]">
+      <div v-if="!isRestricted" class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-5 min-[1421px]:grid-cols-[260px_minmax(0,1fr)_320px]">
         <!-- Left Sidebar -->
         <aside class="hidden lg:block lg:sticky lg:top-[86px] lg:space-y-5">
           <SchoolQuickMenu
             v-if="academy"
             :academy="academy"
             :is-pending="academy?.memberStatus === 1 || academy?.memberStatus === 'pending'"
+            :can-request-join="!isInviteOnly"
             @join="requestMembership"
             @navigate="switchTab"
           />
@@ -2649,6 +2721,7 @@ watch(() => academy.value?.id, (id) => {
         <SchoolQuickMenu
           :academy="academy"
           :is-pending="academy?.memberStatus === 1 || academy?.memberStatus === 'pending'"
+          :can-request-join="!isInviteOnly"
           @join="() => { requestMembership(); showMobileLeftDrawer = false; }"
           @navigate="(t) => { switchTab(t); showMobileLeftDrawer = false; }"
         />

@@ -40,8 +40,6 @@ const form = ref({
   country: 'Thailand',
   privacy: 'public' as 'public' | 'private',
   join_mode: 'open' as 'open' | 'approval' | 'invite_only',
-  allow_student_registration: true,
-  allow_parent_registration: true,
   show_member_list: true,
   show_course_list: true,
 })
@@ -112,8 +110,6 @@ const populateForm = () => {
     country: academy.value.country || 'Thailand',
     privacy: academy.value.privacy || 'public',
     join_mode: academy.value.join_mode || 'open',
-    allow_student_registration: academy.value.allow_student_registration ?? true,
-    allow_parent_registration: academy.value.allow_parent_registration ?? true,
     show_member_list: academy.value.show_member_list ?? true,
     show_course_list: academy.value.show_course_list ?? true,
   }
@@ -496,6 +492,14 @@ const joinModeOptions = [
                 <input type="checkbox" v-model="form.show_course_list" :disabled="isReadOnly" class="toggle" />
               </label>
             </div>
+            
+            <div class="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-3 sm:p-4 dark:border-blue-900/50 dark:bg-blue-900/20">
+              <Icon icon="fluent:info-24-regular" class="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+              <p class="min-w-0 flex-1 break-words text-sm text-blue-800 dark:text-blue-200">
+                สมาชิกที่อนุมัติแล้วและผู้ดูแลเห็นรายชื่อสมาชิกกับรายวิชาได้เสมอ สวิตช์สองตัวนี้คุมเฉพาะคนนอกโรงเรียน
+                · ถ้าตั้งความเป็นส่วนตัวเป็น "ส่วนตัว" คนนอกจะเห็นแค่หน้าปกโรงเรียนกับปุ่มขอเข้าร่วมเท่านั้น
+              </p>
+            </div>
           </div>
 
           <!-- Registration Tab -->
@@ -526,22 +530,12 @@ const joinModeOptions = [
               </div>
             </div>
 
-            <div class="space-y-4">
-              <label class="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50">
-                <div>
-                  <p class="font-medium text-gray-900 dark:text-white">อนุญาตการลงทะเบียนนักเรียน</p>
-                  <p class="text-sm text-gray-500">นักเรียนสามารถสมัครเป็นสมาชิกได้</p>
-                </div>
-                <input type="checkbox" v-model="form.allow_student_registration" :disabled="isReadOnly" class="toggle" />
-              </label>
-
-              <label class="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50">
-                <div>
-                  <p class="font-medium text-gray-900 dark:text-white">อนุญาตการลงทะเบียนผู้ปกครอง</p>
-                  <p class="text-sm text-gray-500">ผู้ปกครองสามารถสมัครเป็นสมาชิกได้</p>
-                </div>
-                <input type="checkbox" v-model="form.allow_parent_registration" :disabled="isReadOnly" class="toggle" />
-              </label>
+            <div class="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-3 sm:p-4 dark:border-blue-900/50 dark:bg-blue-900/20">
+              <Icon icon="fluent:info-24-regular" class="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+              <p class="min-w-0 flex-1 break-words text-sm text-blue-800 dark:text-blue-200">
+                โหมดการเข้าร่วมคุมทั้งหมดว่าใครเข้าโรงเรียนได้บ้าง — เลือก "เชิญเท่านั้น" แล้วปุ่มขอเข้าร่วม
+                จะหายไปจากหน้าโรงเรียน และคำขอที่ยิงตรงเข้ามาจะถูกปฏิเสธ เข้าได้เฉพาะทางลิงก์เชิญหรือคำเชิญตรงเท่านั้น
+              </p>
             </div>
           </div>
 
