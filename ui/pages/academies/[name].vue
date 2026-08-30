@@ -2546,6 +2546,8 @@ watch(() => academy.value?.id, (id) => {
                 </div>
               </div>
               <div class="mt-3">
+                <!-- SET-S6 — resource ส่งค่า resolve แล้วเป็น boolean เสมอ
+                     ใช้ === true เพื่อไม่ให้ payload ของคนนอก (ที่ไม่มีคีย์นี้) กลายเป็นเปิด -->
                 <AcademySupportPanel
                   v-if="academy"
                   :key="claimWidgetKey"
@@ -2553,7 +2555,7 @@ watch(() => academy.value?.id, (id) => {
                   :summary="supportSummary"
                   :loading="supportSummaryLoading"
                   :can-claim="academy.memberStatus === 2 || academy.authIsAcademyAdmin"
-                  :donation-enabled="academy.donation_enabled !== false"
+                  :donation-enabled="academy.donation_enabled === true"
                   @donate="openAcademyDonation"
                   @claimed="handleAcademyClaimed"
                 />

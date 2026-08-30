@@ -42,7 +42,59 @@ const form = ref({
   join_mode: 'open' as 'open' | 'approval' | 'invite_only',
   show_member_list: true,
   show_course_list: true,
+  card_request_flow_enabled: true,
+  donation_enabled: true,
+  student_editable_fields: {
+    mode: 'blacklist' as 'blacklist' | 'whitelist',
+    fields: [] as string[],
+  },
 })
+
+// SET-S6 — แคตตาล็อกมาจาก backend (Academy::STUDENT_EDITABLE_FIELD_CATALOG) ห้าม hardcode ซ้ำ
+const editableFieldCatalog = ref<string[]>([])
+
+const FIELD_LABELS: Record<string, string> = {
+  academic: 'ข้อมูลการศึกษา (ทั้งกลุ่ม)',
+  health: 'ข้อมูลสุขภาพ (ทั้งกลุ่ม)',
+  address: 'ที่อยู่ (ทั้งกลุ่ม)',
+  contact: 'ข้อมูลติดต่อ (ทั้งกลุ่ม)',
+  guardian: 'ผู้ปกครอง (ทั้งกลุ่ม)',
+  citizen_id: 'เลขบัตรประชาชน',
+  student_id: 'รหัสนักเรียน',
+  gender: 'เพศ',
+  date_of_birth: 'วันเกิด',
+  title_prefix_th: 'คำนำหน้า (ไทย)',
+  title_prefix_en: 'คำนำหน้า (อังกฤษ)',
+  first_name_th: 'ชื่อ (ไทย)',
+  first_name_en: 'ชื่อ (อังกฤษ)',
+  last_name_th: 'นามสกุล (ไทย)',
+  last_name_en: 'นามสกุล (อังกฤษ)',
+  nickname: 'ชื่อเล่น',
+  nationality: 'สัญชาติ',
+  religion: 'ศาสนา',
+  profile_image: 'รูปโปรไฟล์',
+}
+
+const fieldLabel = (key: string) => FIELD_LABELS[key] || key
+
+// blacklist ว่าง = ไม่มีอะไรต้องขออนุมัติเลย · whitelist ว่าง = ต้องขออนุมัติทุกอย่าง
+const editableFieldsWarning = computed(() => {
+  const { mode, fields } = form.value.student_editable_fields
+  if (mode === 'blacklist' && fields.length === 0) {
+    return 'ตอนนี้ไม่มีฟิลด์ไหนต้องขออนุมัติเลย — นักเรียนแก้ข้อมูลตัวเองได้ทุกอย่างทันที รวมถึงชื่อและเลขบัตรประชาชน'
+  }
+  if (mode === 'whitelist' && fields.length === 0) {
+    return 'ตอนนี้นักเรียนแก้อะไรเองไม่ได้เลย ทุกการแก้ไขจะกลายเป็นคำขอรออนุมัติทั้งหมด'
+  }
+  return ''
+})
+
+const toggleEditableField = (key: string) => {
+  const list = form.value.student_editable_fields.fields
+  const i = list.indexOf(key)
+  if (i === -1) list.push(key)
+  else list.splice(i, 1)
+}
 
 // Avatar/Cover
 const avatarFile = ref<File | null>(null)
@@ -56,6 +108,7 @@ const tabs = computed(() => {
     { id: 'contact', label: 'ข้อมูลติดต่อ', icon: 'fluent:mail-24-regular' },
     { id: 'privacy', label: 'ความเป็นส่วนตัว', icon: 'fluent:lock-closed-24-regular' },
     { id: 'registration', label: 'การลงทะเบียน', icon: 'fluent:person-add-24-regular' },
+    { id: 'system', label: 'ระบบและนโยบาย', icon: 'fluent:settings-24-regular' },
   ]
 
   if (isOwner.value) {
@@ -112,8 +165,16 @@ const populateForm = () => {
     join_mode: academy.value.join_mode || 'open',
     show_member_list: academy.value.show_member_list ?? true,
     show_course_list: academy.value.show_course_list ?? true,
+    card_request_flow_enabled: academy.value.setting?.card_request_flow_enabled ?? false,
+    donation_enabled: academy.value.donation_enabled ?? true,
+    student_editable_fields: {
+      mode: academy.value.student_editable_fields?.mode ?? 'blacklist',
+      fields: [...(academy.value.student_editable_fields?.fields ?? [])],
+    },
   }
   
+  editableFieldCatalog.value = academy.value.student_editable_field_catalog ?? []
+
   avatarPreview.value = academy.value.logo_url || academy.value.logo
   coverPreview.value = academy.value.cover_url || academy.value.cover
 }
@@ -143,8 +204,19 @@ const saveSettings = async () => {
     const formData = new FormData()
     
     // Add form fields
+    // SET-S6 — student_editable_fields เป็นอ็อบเจกต์ `String(value)` จะได้ "[object Object]"
+    // ต้องส่งเป็นคีย์ซ้อนแบบที่ Laravel แปลงกลับเป็นอาเรย์ได้
     Object.entries(form.value).forEach(([key, value]) => {
-      formData.append(key, String(value))
+      if (key === 'student_editable_fields') return
+      // multipart ส่งได้แต่สตริง และกฎ `boolean` ของ Laravel ไม่รับ "true"/"false" — รับแค่ "1"/"0"
+      // (สวิตช์เดิมอย่าง show_member_list รอดมาได้เพราะไม่มีกฎ validate คุมอยู่เลย
+      //  อ่านผ่าน $request->boolean() ตรง ๆ ซึ่งรับสตริง "true" ได้)
+      formData.append(key, typeof value === 'boolean' ? (value ? '1' : '0') : String(value))
+    })
+
+    formData.append('student_editable_fields[mode]', form.value.student_editable_fields.mode)
+    form.value.student_editable_fields.fields.forEach((field) => {
+      formData.append('student_editable_fields[fields][]', field)
     })
     
     // Add files if changed
@@ -567,6 +639,82 @@ const joinModeOptions = [
                 โหมดการเข้าร่วมคุมทั้งหมดว่าใครเข้าโรงเรียนได้บ้าง — เลือก "เชิญเท่านั้น" แล้วปุ่มขอเข้าร่วม
                 จะหายไปจากหน้าโรงเรียน และคำขอที่ยิงตรงเข้ามาจะถูกปฏิเสธ เข้าได้เฉพาะทางลิงก์เชิญหรือคำเชิญตรงเท่านั้น
               </p>
+            </div>
+          </div>
+
+          <!-- System & Policy -->
+          <div v-if="activeTab === 'system'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6 space-y-6">
+            <h2 class="font-semibold text-gray-900 dark:text-white">ระบบและนโยบาย</h2>
+
+            <div class="space-y-4">
+              <label class="flex items-center justify-between gap-3 p-3 sm:p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                <div class="min-w-0 flex-1">
+                  <p class="font-medium text-gray-900 dark:text-white break-words">ระบบคำร้องทำบัตรนักเรียน</p>
+                  <p class="text-sm text-gray-500 break-words">เปิดให้นักเรียนยื่นคำร้องขอทำบัตรผ่านระบบ ปิดแล้วเจ้าหน้าที่ออกบัตรให้เองอย่างเดียว</p>
+                </div>
+                <input type="checkbox" v-model="form.card_request_flow_enabled" :disabled="isReadOnly" class="toggle flex-shrink-0" />
+              </label>
+
+              <label class="flex items-center justify-between gap-3 p-3 sm:p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                <div class="min-w-0 flex-1">
+                  <p class="font-medium text-gray-900 dark:text-white break-words">เปิดรับบริจาคให้โรงเรียน</p>
+                  <p class="text-sm text-gray-500 break-words">ปิดแล้วแผงรับบริจาคจะหายจากหน้าโรงเรียน และคำขอบริจาคที่ยิงตรงเข้ามาจะถูกปฏิเสธ</p>
+                </div>
+                <input type="checkbox" v-model="form.donation_enabled" :disabled="isReadOnly" class="toggle flex-shrink-0" />
+              </label>
+            </div>
+
+            <div class="space-y-3 border-t border-gray-100 dark:border-gray-700 pt-6">
+              <div>
+                <p class="font-medium text-gray-900 dark:text-white break-words">ข้อมูลที่นักเรียนแก้เองได้</p>
+                <p class="text-sm text-gray-500 break-words">
+                  เลือกโหมดแล้วติ๊กรายการ — ฟิลด์ที่ "ต้องขออนุมัติ" เมื่อนักเรียนแก้จะกลายเป็นคำขอรอเจ้าหน้าที่อนุมัติแทนการบันทึกทันที
+                </p>
+              </div>
+
+              <div class="flex flex-col gap-2 sm:flex-row">
+                <label
+                  v-for="opt in [
+                    { value: 'blacklist', label: 'รายการที่ติ๊ก = ต้องขออนุมัติ' },
+                    { value: 'whitelist', label: 'รายการที่ติ๊ก = แก้ได้เลย' },
+                  ]"
+                  :key="opt.value"
+                  class="flex min-h-[44px] flex-1 items-center gap-3 rounded-xl border-2 p-3 cursor-pointer transition-colors sm:min-h-0"
+                  :class="form.student_editable_fields.mode === opt.value ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border-gray-200 dark:border-gray-600'"
+                >
+                  <input
+                    type="radio"
+                    v-model="form.student_editable_fields.mode"
+                    :disabled="isReadOnly"
+                    :value="opt.value"
+                    class="flex-shrink-0 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span class="min-w-0 flex-1 break-words text-sm text-gray-900 dark:text-white">{{ opt.label }}</span>
+                </label>
+              </div>
+
+              <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <label
+                  v-for="key in editableFieldCatalog"
+                  :key="key"
+                  class="flex min-h-[44px] items-center gap-3 rounded-lg border border-gray-200 p-3 cursor-pointer transition-colors dark:border-gray-600 sm:min-h-0"
+                  :class="form.student_editable_fields.fields.includes(key) ? 'bg-primary-50 dark:bg-primary-900/20' : ''"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="form.student_editable_fields.fields.includes(key)"
+                    :disabled="isReadOnly"
+                    @change="toggleEditableField(key)"
+                    class="flex-shrink-0 rounded text-primary-600 focus:ring-primary-500"
+                  />
+                  <span class="min-w-0 flex-1 break-words text-sm text-gray-900 dark:text-white">{{ fieldLabel(key) }}</span>
+                </label>
+              </div>
+
+              <div v-if="editableFieldsWarning" class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 sm:p-4 dark:border-amber-900/50 dark:bg-amber-900/20">
+                <Icon icon="fluent:warning-24-regular" class="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+                <p class="min-w-0 flex-1 break-words text-sm text-amber-800 dark:text-amber-200">{{ editableFieldsWarning }}</p>
+              </div>
             </div>
           </div>
 
