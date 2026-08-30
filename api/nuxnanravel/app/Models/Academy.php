@@ -78,6 +78,7 @@ class Academy extends Model
     protected $casts = [
         'donation_enabled' => 'boolean',
         'student_editable_fields' => 'array',
+        'archived_at' => 'datetime',
     ];
 
     public function donationEnabled(): bool
@@ -123,6 +124,44 @@ class Academy extends Model
     }
 
     /**
+     * SET-S2 — โรงเรียนที่ยังไม่ถูกเก็บถาวร
+     *
+     * ใช้กับ "จุดที่แสดงรายการโรงเรียน" เท่านั้น (directory / ค้นหา / เป้าหมายแคมเปญ)
+     * จงใจไม่ทำเป็น global scope — ดูเหตุผลในหัว migration add_archived_at_to_academies_table
+     */
+    public function scopeNotArchived($query)
+    {
+        return $query->whereNull('archived_at');
+    }
+
+    public function scopeArchived($query)
+    {
+        return $query->whereNotNull('archived_at');
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->archived_at !== null;
+    }
+
+    /**
+     * ใครกดเก็บถาวร/กู้คืนโรงเรียนนี้ได้ — **นิยามเดียวของทั้งระบบ**
+     *
+     * เจ้าของโรงเรียน หรือ super admin เท่านั้น
+     * admin/director ของโรงเรียน (แม้ถือ settings.manage) ทำไม่ได้ — เป็นการตัดสินใจของเจ้าของโปรเจค
+     *
+     * ห้ามเขียนเงื่อนไขนี้ซ้ำใน controller/middleware/route — ให้เรียกเมธอดนี้เสมอ
+     */
+    public function canManageArchive($user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return $user->isSuperAdmin() || $this->user_id === $user->id;
+    }
+
+    /**
      * สมาชิกที่ผ่านการอนุมัติแล้วเท่านั้น (status = 2)
      * 1=รออนุมัติ 3=ปฏิเสธ 4=ถูกเชิญ 5=ระงับ — ไม่นับเป็นสมาชิก
      */
@@ -159,6 +198,11 @@ class Academy extends Model
      */
     public function canViewContent($user): bool
     {
+        // SET-S2 — โรงเรียนที่ถูกเก็บถาวรมองเห็นได้เฉพาะคนที่กู้คืนมันได้
+        if ($this->isArchived() && ! $this->canManageArchive($user)) {
+            return false;
+        }
+
         if (! $this->isPrivate()) {
             return true;
         }
