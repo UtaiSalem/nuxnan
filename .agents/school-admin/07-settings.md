@@ -600,6 +600,133 @@ after drop column: no such column: "name_slug"
 
 ---
 
+### 5.11 การตัดสินใจของเจ้าของโปรเจค รอบ SET-S6 (เคาะแล้ว 2026-08-31)
+
+**D13 — `student_editable_fields` ตั้งค่าด้วยเช็กบ็อกซ์จากแคตตาล็อกปิด ไม่ใช่ช่องแก้ JSON**
+19 รายการ = **กลุ่ม 5** (`academic` · `health` · `address` · `contact` · `guardian`)
++ **ฟิลด์อัตลักษณ์ 14** (`citizen_id` · `student_id` · `gender` · `date_of_birth` ·
+`title_prefix_th/en` · `first_name_th/en` · `last_name_th/en` · `nickname` · `nationality` ·
+`religion` · `profile_image`) · มีตัวเลือกโหมด `blacklist` / `whitelist`
+backend ต้อง validate ว่าทุกค่าอยู่ในแคตตาล็อก ⇒ เขียนค่ามั่วเข้าไปไม่ได้
+
+**เหตุผลที่ไม่เปิดช่อง JSON:** ค่านี้คุมว่านักเรียนแก้ข้อมูลตัวเองได้โดยไม่ต้องขออนุมัติหรือไม่
+พิมพ์ผิดตัวเดียว (เช่นตกคำว่า `citizen_id`) = นักเรียนแก้เลขบัตรประชาชนกับชื่อตัวเองได้เงียบ ๆ
+ซึ่งเป็นรูรั่วที่ migration `2026_08_07_100000` เพิ่งอุดไป
+
+**D14 — `donation_enabled` เป็นสวิตช์เปิด/ปิดชัดเจน เขียนค่า boolean ลงเสมอ**
+เลิกปล่อยให้เป็น `NULL` แล้วไป fallback · `AcademyResource` ส่ง**ค่าที่ resolve แล้ว**
+จาก `Academy::donationEnabled()` ⇒ UI กับ API อ่านค่าเดียวกันเสมอ
+
+---
+
+### 5.12 🔴 บั๊กที่เจอตอน audit SET-S6
+
+**G21. สวิตช์รับบริจาคของโรงเรียนเป็นสวิตช์หลอกอยู่แล้ววันนี้ — และพร้อมจะกลายเป็นบั๊ก 403 ซ้ำรอย**
+
+`AcademyResource` **ไม่ส่ง `donation_enabled` ออกมาเลย** แต่ [`[name].vue:2556`](../../ui/pages/academies/[name].vue) เขียนว่า
+```js
+:donation-enabled="academy.donation_enabled !== false"
+```
+⇒ `undefined !== false` เป็น **true เสมอ** ⇒ แผงรับบริจาคโชว์ตลอด ไม่ว่าค่าในฐานจะเป็นอะไร
+
+ฝั่ง API กลับบังคับใช้จริงผ่าน `AcademyDonatePolicy` และ `AcademyDonateService:95`:
+```php
+public function donationEnabled(): bool
+{
+    return $this->donation_enabled ?? (bool) config('platform.course_donation.enabled');
+}
+```
+สังเกตว่า **โรงเรียนไปหยิบ config ของคอร์สมาเป็นค่า fallback** (`platform.course_donation.enabled`)
+⇒ วันไหนมีคนตั้ง `COURSE_DONATION_ENABLED=false` ใน `.env` หน้าเว็บจะยังโชว์ปุ่มบริจาค
+แต่ API ตอบปฏิเสธ — **แพตเทิร์นเดียวกับบั๊ก 403 หน้า gradebook ใน `d1b54b29` เป๊ะ ๆ**
+(UI ใช้นิยามหนึ่ง endpoint ใช้อีกนิยามหนึ่ง)
+
+⇒ SET-S6 ต้องปิดช่องนี้ด้วยการให้ resource ส่ง **ผลลัพธ์ของ `donationEnabled()`** ออกมาตรง ๆ
+ห้ามให้ frontend เดาจากคอลัมน์ดิบอีก
+
+**สถานะจริงของทั้งสามสวิตช์ (วัดจากฐาน dev)**
+
+| สวิตช์ | เก็บที่ | บังคับใช้จริง | ค่าใน dev | ตั้งค่าได้ไหม |
+|---|---|---|---|---|
+| `card_request_flow_enabled` | `academy_settings` (bool) | **5 จุด** — `StudentCardController:490` · `StudentCardManageController:53` · `AcademyStudentCardManageController:74` · `PublicStudentCardRequestController:173` · `StudentCardSyncService:141` | `true` | ❌ |
+| `donation_enabled` | `academies` (bool nullable) | `AcademyDonatePolicy` + `AcademyDonateService:95` | **NULL** | ❌ |
+| `student_editable_fields` | `academies` (json) | `HandlesStudentUpdates::needsApproval()` — 13 call site ใน 6 controller | blacklist 12 ฟิลด์ | ❌ ตั้งได้เฉพาะผ่าน migration |
+
+**กติกาการจับคู่ของ `needsApproval()`** (ต้องเข้าใจก่อนทำ UI): ชื่อกลุ่มเปล่า ๆ ครอบลูกทั้งหมด
+(`academic` ครอบ `academic.gpa`, `academic.create`) เพราะเทียบด้วย `str_starts_with($field, $pattern.'.')`
+⇒ **ไม่ต้องมี wildcard ใน UI** — เช็กที่ชื่อกลุ่มพอ
+
+---
+
+### 5.13 SET-S6 — แผนแตก shard (3 shard)
+
+| shard | สาระ | ไฟล์ | ขึ้นกับ |
+|---|---|---|---|
+| **S6-A** | แคตตาล็อกฟิลด์ + validate/เขียนค่า 3 ตัว + resource ส่งค่าที่ resolve แล้ว | `Academy.php`, `AcademyController.php`, `AcademyResource.php` | — |
+| **S6-B** | frontend: แท็บ "ระบบและนโยบาย" + ซ่อมด่านบริจาคบนหน้าโรงเรียน | `admin/settings.vue`, `[name].vue` | S6-A |
+| **S6-C** | เทสต์: 3 สวิตช์ round-trip + validate นอกแคตตาล็อกต้อง 422 | `tests/Feature/Academy/` | S6-A..B |
+
+**ลำดับ:** A → B → C
+
+#### S6-A รายละเอียด
+- `Academy::STUDENT_EDITABLE_FIELD_CATALOG` — const array 19 คีย์ · **นิยามเดียวของทั้งระบบ**
+  controller ใช้ validate · frontend รับผ่าน payload ไม่ hardcode ซ้ำ
+- `updateSettings()` เพิ่มกฎ:
+  - `card_request_flow_enabled` → `nullable|boolean` เขียนลง `academy_settings` ด้วย `$request->boolean(...)`
+  - `donation_enabled` → `nullable|boolean` เขียนลง `academies`
+  - `student_editable_fields.mode` → `in:blacklist,whitelist`
+  - `student_editable_fields.fields` → `array` · `student_editable_fields.fields.*` → `in:<แคตตาล็อก>`
+  - ⚠️ `student_editable_fields` **ไม่อยู่ใน `$fillable`** ⇒ ต้องเซ็ตตรง ๆ ไม่ใช่ `fill()`
+  - ⚠️ ถ้าผู้ดูแลติ๊กออกหมด จะไม่มีคีย์ `fields` ส่งมาเลย ⇒ ต้อง normalize เป็น `[]` ไม่ใช่ปล่อยหาย
+- `AcademyResource` เพิ่มในบล็อกที่คนดูเนื้อหาได้เห็น:
+  `donation_enabled` = **`$this->resource->donationEnabled()`** (ค่า resolve แล้ว ไม่ใช่คอลัมน์ดิบ)
+  · `student_editable_fields` · `student_editable_field_catalog` (ให้ UI สร้างเช็กบ็อกซ์ตามนี้)
+  · `card_request_flow_enabled` มาทาง `'setting' => $settings` อยู่แล้ว ไม่ต้องเพิ่ม
+
+#### S6-B รายละเอียด
+- แท็บใหม่ `system` ชื่อ **"ระบบและนโยบาย"** แทรกระหว่าง "การลงทะเบียน" กับ "โซนอันตราย"
+- ทุก input ต้องมี `:disabled="isReadOnly"` ตามแพตเทิร์นของ SET-S4
+- FormData: `student_editable_fields` เป็นอาเรย์ ⇒ `String(value)` เดิมใช้ไม่ได้
+  ต้อง append เป็น `student_editable_fields[mode]` และ `student_editable_fields[fields][]` ทีละตัว
+- **ต้องมีคำเตือนบนจอ** เมื่อ blacklist ว่าง (= นักเรียนแก้ได้ทุกอย่างโดยไม่ต้องขออนุมัติ)
+- `[name].vue` — ตอนนี้ `academy.donation_enabled !== false` ใช้ได้แล้วเพราะ resource ส่งค่าจริง
+  แต่ให้เขียนเป็น `=== true` เพื่อไม่ให้ค่า `undefined` (payload ของคนนอก) กลายเป็นเปิด
+
+---
+
+### 5.14 🔴 กับดักที่เจอตอน implement SET-S6 — multipart กับกฎ `boolean` ของ Laravel
+
+หลัง shard A/B ลงครบ **เทสต์ผ่านหมด 162/162** แต่พอกดปุ่ม "บันทึก" บนฟอร์มจริงในเบราว์เซอร์
+ได้ **422** ทันที:
+```
+The card request flow enabled field must be true or false. (and 1 more error)
+```
+
+**ต้นเหตุ:** หน้าตั้งค่าส่งเป็น `multipart/form-data` ซึ่งส่งได้แต่สตริง และโค้ดเดิมเขียน
+`formData.append(key, String(value))` ⇒ boolean กลายเป็น `"true"` / `"false"`
+· กฎ `boolean` ของ Laravel รับ `true, false, 1, 0, "1", "0"` — **ไม่รับ `"true"` / `"false"`**
+
+**ทำไมสวิตช์เดิมถึงไม่เคยพัง:** `show_member_list` / `show_course_list` / `privacy`
+**ไม่มีกฎ `boolean` คุมอยู่เลย** — controller อ่านผ่าน `$request->boolean()` ตรง ๆ ซึ่งรับ `"true"` ได้
+สองสวิตช์ของ SET-S6 เป็น **boolean ตัวแรกของ endpoint นี้ที่ถูก validate** จึงเป็นตัวแรกที่ชนกฎ
+
+**ทำไมเทสต์ทั้งชุดจับไม่ได้:** เทสต์ใช้ `postJson()` ซึ่งส่ง boolean จริงลงไปใน JSON
+⇒ ไม่มีทางเจอเส้นทาง multipart เลย · เจอได้ทางเดียวคือกดผ่านฟอร์มจริง
+(หมายเหตุ: `AcademyDonationEndpointsTest` เคยเขียนคอมเมนต์เตือนกับดักนี้ไว้แล้วว่า
+*"Multipart form data serializes booleans as the strings true/false"* — แต่คนละไฟล์ คนละรอบงาน)
+
+**แก้ที่ frontend** (ไม่ใช่ผ่อนกฎฝั่ง backend):
+```js
+formData.append(key, typeof value === 'boolean' ? (value ? '1' : '0') : String(value))
+```
+แล้วเพิ่มเคส `test_multipart_form_accepts_string_boolean_flags` ที่ยิงด้วย `->post()` (ไม่ใช่ `postJson`)
+เพื่อล็อกสัญญานี้ไว้
+
+**บทเรียน:** endpoint ที่ frontend เรียกด้วย `FormData` ห้ามเชื่อเทสต์ที่ใช้ `postJson()` อย่างเดียว
+— ต้องมีอย่างน้อยหนึ่งเคสที่ยิงเป็น multipart จริง หรือกดผ่านหน้าเว็บจริงก่อนปิดงาน
+
+---
+
 ## 6. Implementation Tasks
 
 | Step | Title | Depends on | Deliverable | Status |
@@ -609,7 +736,7 @@ after drop column: no such column: "name_slug"
 | **SET-S3** | รวมคีย์สิทธิ์ให้เหลือชุดเดียว (§4) | SET-S1 | ถอด `academy.settings.view/edit` ออกจากแคตตาล็อก+SYSTEM_ROLES · ย้าย 6 จุดใน FE มาใช้ `settings.*` · migration ย้ายคีย์ในแถว `academy_roles` จริง | 🟢 **verified + migrate แล้ว** |
 | **SET-S4** | โหมดดูอย่างเดียว (G6) | SET-S3 | `settings.view` เข้าหน้าได้แบบ read-only · ปุ่มบันทึก+ปุ่มอัปโหลดซ่อน · 16 ช่อง disabled · แถบแจ้งเตือน · แท็บโซนอันตรายเฉพาะเจ้าของ · API ยังกัน `settings.manage` | 🟢 **verified** |
 | **SET-S5** | ทำให้สวิตช์มีผลจริง (G3 + G4 · D2 + D3) | SET-S1 | บังคับใช้ `privacy`/`show_member_list`/`show_course_list` · drop `allow_*_registration` 2 คอลัมน์ + ถอดออกจากฟอร์ม · `join_mode` เป็นตัวหลักแทน `auto_accept_members` และ `invite_only` บล็อกการขอเข้าร่วมจริง | 🟢 **verified + migrate แล้ว** |
-| **SET-S6** | เพิ่มแท็บ "ระบบและนโยบาย" (G9 ข้อ 1–3) | SET-S1 | `card_request_flow_enabled`, `student_editable_fields`, `donation_enabled` ตั้งค่าได้จากหน้าจอ | ⚪ pending |
+| **SET-S6** | เพิ่มแท็บ "ระบบและนโยบาย" (G9 ข้อ 1–3 · G21 · D13 + D14) | SET-S1 | `card_request_flow_enabled`, `student_editable_fields` (เช็กบ็อกซ์จากแคตตาล็อกปิด 19 รายการ), `donation_enabled` ตั้งค่าได้จากหน้าจอ + resource ส่งค่าบริจาคที่ resolve แล้ว (ปิด G21) | 🟢 **verified** |
 | **SET-S7** | เพิ่มฟิลด์อัตลักษณ์โรงเรียน (G9 ข้อ 4–5) | SET-S6 | `slogan`, `established_year`, `type`, `director`, `social_media_links` เข้าแท็บ "ข้อมูลทั่วไป" · ตัดสินใจเรื่อง `approval_flow` | ⚪ pending |
 | **SET-S8** | ลบ `name_slug` ทิ้ง + ซ่อม redirect (G7 · D12) | SET-S1 | migration drop คอลัมน์ `name_slug` · ถอด `Str::slug` ออกจาก `updateSettings` · ย้ายด่านกันชื่อซ้ำไปไว้ที่คอลัมน์ `name` ที่เป็น UNIQUE จริง (ปิด G19 — เดิมได้ 500 พร้อม SQL ดิบ) · redirect หลังเปลี่ยนชื่อใช้ `name` + encodeURIComponent | 🟢 **verified + migrate แล้ว** |
 | **SET-S9** | audit log การแก้ตั้งค่า (G11) | SET-S1 | บันทึกทุกครั้งที่ `updateSettings` เปลี่ยนค่า พร้อม before/after | ⚪ pending |

@@ -1,5 +1,112 @@
 # Work Log — nuxnan project
 
+## 2026-08-31 — เมนู #7 SET-S6: แท็บ "ระบบและนโยบาย" + ปิดสวิตช์บริจาคหลอก (G21)
+
+### สถานะ: **SET-S6 ✅ ตรวจครบทุกข้อ** — 6 ไฟล์ (แก้ 5 · ใหม่ 1) · ไม่มี migration
+
+เอกสารหลัก: [`.agents/school-admin/07-settings.md`](school-admin/07-settings.md) §5.11–5.14
+
+### สิ่งที่ปิด — สวิตช์ 3 ตัวที่ระบบบังคับใช้จริงแต่ตั้งค่าไม่ได้เลย
+
+| สวิตช์ | บังคับใช้จริง | ก่อนหน้านี้ตั้งค่ายังไง |
+|---|---|---|
+| `card_request_flow_enabled` | **5 จุด** (StudentCard 4 controller + SyncService) | ไม่ได้เลย |
+| `donation_enabled` | `AcademyDonatePolicy` + `AcademyDonateService` | ไม่ได้เลย |
+| `student_editable_fields` | `HandlesStudentUpdates` 13 call site ใน 6 controller | เฉพาะผ่าน migration |
+
+### 🔴 G21 — สวิตช์บริจาคเป็นสวิตช์หลอกอยู่แล้ววันนี้ (ระเบิดเวลาแบบเดียวกับบั๊ก 403)
+
+`AcademyResource` **ไม่ส่ง `donation_enabled` เลย** แต่ `[name].vue:2556` เขียน
+`:donation-enabled="academy.donation_enabled !== false"` ⇒ `undefined !== false` = **true เสมอ**
+⇒ แผงบริจาคโชว์ตลอด ขณะที่ API บังคับใช้ค่าจริงผ่าน policy
+
+และ `Academy::donationEnabled()` fallback ไปที่ **config ของคอร์ส** (`platform.course_donation.enabled`)
+⇒ วันไหนตั้ง `COURSE_DONATION_ENABLED=false` หน้าเว็บจะยังโชว์ปุ่ม แต่ API ปฏิเสธ
+— **แพตเทิร์นเดียวกับบั๊ก 403 หน้า gradebook ใน `d1b54b29` เป๊ะ ๆ** (UI ใช้นิยามหนึ่ง endpoint ใช้อีกนิยาม)
+
+**แก้:** resource ส่ง **ผลลัพธ์ของ `donationEnabled()`** (ค่า resolve แล้ว) ไม่ใช่คอลัมน์ดิบ
+· frontend เปลี่ยนเป็น `=== true` ⇒ UI กับ API อ่านค่าเดียวกันเสมอ
+
+### การตัดสินใจของเจ้าของโปรเจค (D13–D14)
+
+- **D13** `student_editable_fields` ใช้เช็กบ็อกซ์จาก **แคตตาล็อกปิด 19 รายการ** ไม่ใช่ช่อง JSON
+  (`Academy::STUDENT_EDITABLE_FIELD_CATALOG` — นิยามเดียว controller validate · resource ส่งให้ UI)
+  เหตุผล: ค่านี้คุมว่านักเรียนแก้เลขบัตรประชาชน/ชื่อตัวเองได้ไหม พิมพ์ผิดตัวเดียว = เปิดรูรั่วที่
+  migration `2026_08_07_100000` เพิ่งอุดไป
+- **D14** `donation_enabled` เป็นเปิด/ปิดชัดเจน เขียน boolean ลงเสมอ เลิกปล่อยเป็น NULL
+
+### 🔴 กับดักใหญ่ของรอบนี้ — เทสต์ผ่าน 162/162 แต่กดบันทึกจริงได้ 422
+
+หลัง shard A/B ลงครบ เทสต์ผ่านหมด แต่พอกด "บันทึก" บนฟอร์มจริงในเบราว์เซอร์:
+```
+The card request flow enabled field must be true or false. (and 1 more error)
+```
+**ต้นเหตุ:** ฟอร์มส่งเป็น `multipart/form-data` → `String(value)` ทำให้ boolean กลายเป็น `"true"`/`"false"`
+· กฎ `boolean` ของ Laravel รับ `true,false,1,0,"1","0"` — **ไม่รับ `"true"`/`"false"`**
+
+**ทำไมสวิตช์เดิมไม่เคยพัง:** `show_member_list`/`show_course_list`/`privacy` **ไม่มีกฎ validate คุมเลย**
+อ่านผ่าน `$request->boolean()` ตรง ๆ ซึ่งรับ `"true"` ได้ ⇒ สองสวิตช์ของ S6 เป็น boolean ตัวแรก
+ของ endpoint นี้ที่ถูก validate จึงเป็นตัวแรกที่ชนกฎ
+
+**ทำไมเทสต์จับไม่ได้:** ทั้งชุดใช้ `postJson()` ซึ่งส่ง boolean จริง ⇒ ไม่เคยแตะเส้นทาง multipart เลย
+**Claude แก้เอง** ที่ frontend (`typeof value === 'boolean' ? (value ? '1' : '0') : String(value)`)
+แล้วเพิ่มเคส `test_multipart_form_accepts_string_boolean_flags` ที่ยิงด้วย `->post()` ล็อกสัญญาไว้
+
+**บทเรียน:** endpoint ที่ frontend เรียกด้วย `FormData` — เทสต์ `postJson()` ล้วนพิสูจน์ไม่ได้
+ต้องมีอย่างน้อย 1 เคสที่ยิง multipart จริง **หรือกดผ่านหน้าเว็บจริงก่อนปิดงาน**
+
+### หลักฐานที่ Claude รันเอง
+
+- `php -l` 4 ไฟล์ · `pint --test` ผ่าน · SFC 2 ไฟล์คอมไพล์ผ่าน
+- `php artisan test tests/Feature/Academy + AcademyDonationEndpointsTest` ⇒ **163 passed · 0 failed · 2 incomplete**
+  (`AcademySystemPolicyTest` เดี่ยว ⇒ **11 passed · 38 assertions**)
+- **mutation check 4 แบบ** — ถอดการเขียน `card_request_flow_enabled` / ถอด `Rule::in(แคตตาล็อก)` /
+  ให้ resource ส่งคอลัมน์ดิบแทน `donationEnabled()` / ถอด normalize `fields` เป็น `[]`
+  ⇒ ล้มตรงเคสที่ควรล้มทุกครั้ง · คืนไฟล์ครบ (diffstat กลับมาเป็น **+69 / −0** ตามเดิม ไม่มี `.bak` ตกค้าง)
+- **ยิง API จริงบน MySQL:** payload คืน `donation_enabled=true` จากคอลัมน์ **NULL** (ปิด G21)
+  · catalog 19 คีย์ · เขียนค่าครบ 3 ตัว 200 · ฟิลด์นอกแคตตาล็อก **422** ที่คีย์ `...fields.1`
+  · mode ผิด **422** · ไม่ส่งคีย์ `fields` เลย ⇒ เก็บเป็น `{"mode":"blacklist","fields":[]}`
+  · `AcademyDonatePolicy::donate()` คืน **false** ตอนปิดสวิตช์ (ด่านปิดจริง)
+- **เบราว์เซอร์จริงที่ 375px:** แท็บ "ระบบและนโยบาย" อยู่ระหว่าง "การลงทะเบียน" กับ "โซนอันตราย"
+  · 2 toggle + 2 radio + 19 เช็กบ็อกซ์ · สถานะติ๊กตรงกับฐานเป๊ะ · `scrollWidth === 375`
+  · ติ๊กออกหมดแล้วแถบเตือนสีเหลืองขึ้นถูกต้อง
+  · **กดบันทึกผ่านฟอร์มจริง** (หลังแก้บั๊ก) ⇒ "สำเร็จ" และฐานได้ `donation_enabled=false`
+    + `fields` เพิ่ม `address` จริง ⇒ อาเรย์ซ้อนผ่าน multipart ได้
+  · **ล้างข้อมูลทดสอบครบ** — คืน `donation_enabled=NULL`, blacklist 12 ตัวเดิม, `card=true`
+
+### สิ่งที่ยังไม่ได้ตรวจ
+
+- ไม่ได้ตรวจ 768/1280px ในแท็บใหม่ (ตรวจ 375px ซึ่งเป็นจุดที่แตกง่ายสุด)
+- ไม่ได้ยิงบริจาคจริงบน MySQL เพื่อดู 403 (เลี่ยงการสร้างแถวใน ledger ของ dev)
+  — พิสูจน์ด้วย `AcademyDonatePolicy::donate()` บน MySQL + เทสต์ endpoint จริงบน SQLite แทน
+- `npm run build` — **ผู้ใช้รันเอง** (แตะ `ui/` 2 ไฟล์)
+
+### งานที่ค้าง (TODO)
+
+- [ ] **ยังไม่ push** — สะสม 13 commit บน `main` (SET-S2 5 · SET-S8 4 · SET-S6 4)
+- [ ] ⚠️ **ไฟล์ค้างที่ไม่ใช่ของ session นี้:** `ui/components/learn/course/ProgressList.vue`
+      (+11/−11 · mtime 2026-08-30 21:53) เป็น **mobile-first guard ล้วน** (`flex-wrap`,
+      `flex-shrink-0`, `whitespace-nowrap` บนแถบเครื่องมือ) ตระกูลเดียวกับ commit `9f99fe9a`
+      "44px touch targets across the learn domain" · agy ทั้ง 7 รอบของ session นี้ไม่มีรอบไหน
+      แตะไฟล์นี้ (ยืนยันด้วย grep log ครบ) และทุกสเปคห้าม `ui/components/**` ไว้ชัด
+      → **บันทึกเนื้อ diff ไว้แล้วตรงนี้ ไม่ใช่แค่ชื่อเจ้าของที่เดาเอา** ตามบทเรียนวันที่ 30 ส.ค.
+- [ ] `PublicAcademyController.php` ตก `pint --test` (`statement_indentation`) — เป็นของเดิมที่ commit
+      ไปแล้ว ไม่ได้แตะในรอบนี้ · เปิดเป็นงานแยก
+- [ ] **G18** (ยกมา) — `school-attendances` / `emergency-alerts` / `revenue/support-summary` / `my-role`
+      ยังไม่มีด่านสมาชิกภาพและด่าน archived
+- [ ] **หนี้ตรวจด้วยตา SET-S4** (ยกมา) · **UX `?view=archived` ของ SET-S2** (ยกมา → SET-S11)
+- [ ] ตัวถัดไปตามลำดับ: S1→S3→S4→S5→S2→S8→**S6**→S7→S9→S11→S10 ⇒ **SET-S7**
+      (ฟิลด์อัตลักษณ์: `slogan`, `established_year`, `type`, `director`, `social_media_links`
+      + ตัดสินใจเรื่อง `approval_flow` ที่เป็น dead column)
+
+### Branch / Git State
+
+- Branch: `main` · Uncommitted หลัง commit รอบนี้: เหลือแค่ `ProgressList.vue` ของ session อื่น
+- Push: **ยังไม่ push**
+
+---
+
+
 ## 2026-08-30 — เมนู #7 SET-S8: ลบ name_slug ทิ้ง + ปิดช่อง 500 ตอนชื่อโรงเรียนซ้ำ
 
 ### สถานะ: **SET-S8 ✅ ตรวจครบทุกข้อ** — 6 ไฟล์ (แก้ 5 · ใหม่ 1) · **migrate บน dev แล้ว**
