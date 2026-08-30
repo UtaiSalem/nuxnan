@@ -721,9 +721,9 @@ watch(members, () => {
         />
       </div>
       
-      <div class="flex gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         <!-- View Mode -->
-        <div class="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
+        <div class="flex flex-shrink-0 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
             <button @click="viewMode = 'grid'" :class="['p-1.5 rounded-md transition-colors', viewMode === 'grid' ? 'bg-white dark:bg-gray-600 shadow text-blue-600' : 'text-gray-500 hover:text-gray-700']">
                 <Icon icon="fluent:grid-24-regular" class="w-5 h-5" />
             </button>
@@ -732,10 +732,10 @@ watch(members, () => {
             </button>
         </div>
 
-        <button class="min-h-[44px] sm:min-h-0"
+        <button class="min-h-[44px] sm:min-h-0 flex-shrink-0"
           @click="toggleSort('order_number')"
           :class="[
-            'px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors',
+            'px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 whitespace-nowrap transition-colors',
             sortBy === 'order_number' 
               ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' 
               : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -749,10 +749,10 @@ watch(members, () => {
           />
         </button>
 
-        <button class="min-h-[44px] sm:min-h-0"
+        <button class="min-h-[44px] sm:min-h-0 flex-shrink-0"
           @click="toggleSort('name')"
           :class="[
-            'px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors',
+            'px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 whitespace-nowrap transition-colors',
             sortBy === 'name' 
               ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' 
               : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -766,10 +766,10 @@ watch(members, () => {
           />
         </button>
         
-        <button class="min-h-[44px] sm:min-h-0"
+        <button class="min-h-[44px] sm:min-h-0 flex-shrink-0"
           @click="toggleSort('progress')"
           :class="[
-            'px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors',
+            'px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 whitespace-nowrap transition-colors',
             sortBy === 'progress' 
               ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' 
               : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -783,10 +783,10 @@ watch(members, () => {
           />
         </button>
         
-        <button class="min-h-[44px] sm:min-h-0"
+        <button class="min-h-[44px] sm:min-h-0 flex-shrink-0"
           @click="toggleSort('last_activity')"
           :class="[
-            'px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 transition-colors',
+            'px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1 whitespace-nowrap transition-colors',
             sortBy === 'last_activity' 
               ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' 
               : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -804,7 +804,7 @@ watch(members, () => {
         <button
           v-if="isCourseAdmin"
           @click="exportProgress"
-          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+          class="min-h-[44px] sm:min-h-0 flex-shrink-0 inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 whitespace-nowrap transition-colors text-sm font-medium"
         >
           <Icon icon="fluent:arrow-download-24-regular" class="w-4 h-4" />
           <span>ส่งออก Excel</span>
