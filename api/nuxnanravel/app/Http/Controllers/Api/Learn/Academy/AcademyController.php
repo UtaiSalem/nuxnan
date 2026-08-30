@@ -10,6 +10,7 @@ use App\Models\AcademyMember;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Intervention\Image\Facades\Image;
 
 class AcademyController extends Controller
@@ -57,7 +58,8 @@ class AcademyController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => 'required|string',
+            // SET-S8 — กันชื่อซ้ำตั้งแต่ตอนสร้าง ไม่งั้น UNIQUE index จะโยน QueryException ออกไปเป็น 500
+            'name' => 'required|string|unique:academies,name',
             'slogan' => 'required|string',
             'address' => 'required|string',
             'autoAcceptMember' => 'required|string',
@@ -497,7 +499,9 @@ class AcademyController extends Controller
         // ซึ่งครอบ superadmin, เจ้าของโรงเรียน, สถานะสมาชิก APPROVED และสิทธิ์ที่ได้จากฝ่าย/กลุ่ม
 
         $request->validate([
-            'name' => 'required|string|max:255',
+            // SET-S8 — `academies.name` เป็น UNIQUE index ในฐาน ถ้าไม่กันที่นี่จะได้ 500
+            // พร้อม SQL error ดิบแทน 422 (ด่านเดิมไล่หาชนผิดคอลัมน์)
+            'name' => ['required', 'string', 'max:255', Rule::unique('academies', 'name')->ignore($academy->id)],
             'name_en' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'description_en' => 'nullable|string',
@@ -517,18 +521,6 @@ class AcademyController extends Controller
                 'name', 'name_en', 'description', 'description_en',
                 'email', 'phone', 'website', 'address', 'province', 'country',
             ]));
-
-            // Generate slug if name changed
-            if ($request->has('name') && $academy->isDirty('name')) {
-                $slug = \Str::slug($request->name);
-                $originalSlug = $slug;
-                $counter = 1;
-                while (Academy::where('name_slug', $slug)->where('id', '!=', $academy->id)->exists()) {
-                    $slug = $originalSlug.'-'.$counter;
-                    $counter++;
-                }
-                $academy->name_slug = $slug;
-            }
 
             // Handle avatar upload
             if ($request->hasFile('avatar')) {

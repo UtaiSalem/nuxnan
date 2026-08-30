@@ -28,7 +28,6 @@ class AcademyResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'name_en' => $this->name_en,
-            'name_slug' => $this->name_slug,
             'slogan' => $this->slogan,
             'description' => $this->description,
             'description_en' => $this->description_en,

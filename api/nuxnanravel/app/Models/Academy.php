@@ -71,7 +71,6 @@ class Academy extends Model
         'website',
         'province',
         'country',
-        'name_slug',
         'donation_enabled',
     ];
 
