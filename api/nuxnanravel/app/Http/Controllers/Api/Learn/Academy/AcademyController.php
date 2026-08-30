@@ -513,6 +513,14 @@ class AcademyController extends Controller
             'country' => 'nullable|string|max:100',
             'privacy' => 'nullable|string|in:public,private',
             'join_mode' => 'nullable|string|in:open,approval,invite_only',
+
+            // SET-S6 — สวิตช์ที่ระบบบังคับใช้อยู่แล้วแต่เดิมตั้งค่าไม่ได้
+            'card_request_flow_enabled' => 'nullable|boolean',
+            'donation_enabled' => 'nullable|boolean',
+            'student_editable_fields' => 'nullable|array',
+            'student_editable_fields.mode' => 'required_with:student_editable_fields|string|in:blacklist,whitelist',
+            'student_editable_fields.fields' => 'nullable|array',
+            'student_editable_fields.fields.*' => ['string', Rule::in(Academy::STUDENT_EDITABLE_FIELD_CATALOG)],
         ]);
 
         try {
@@ -521,6 +529,22 @@ class AcademyController extends Controller
                 'name', 'name_en', 'description', 'description_en',
                 'email', 'phone', 'website', 'address', 'province', 'country',
             ]));
+
+            // SET-S6 — เขียนค่า boolean ลงเสมอ ไม่ปล่อยให้เป็น NULL แล้วไป fallback config ของคอร์ส
+            if ($request->has('donation_enabled')) {
+                $academy->donation_enabled = $request->boolean('donation_enabled');
+            }
+
+            // student_editable_fields ไม่อยู่ใน $fillable โดยตั้งใจ จึงต้องเซ็ตตรง ๆ
+            // ถ้าผู้ดูแลติ๊กออกหมด multipart จะไม่ส่งคีย์ fields มาเลย ⇒ ต้อง normalize เป็น []
+            // ไม่ใช่ปล่อยคีย์หาย ไม่งั้นค่าที่เก็บจะกลายเป็นรูปทรงที่ needsApproval() อ่านไม่ตรงเจตนา
+            if ($request->has('student_editable_fields')) {
+                $editable = $request->input('student_editable_fields');
+                $academy->student_editable_fields = [
+                    'mode' => $editable['mode'],
+                    'fields' => array_values($editable['fields'] ?? []),
+                ];
+            }
 
             // Handle avatar upload
             if ($request->hasFile('avatar')) {
@@ -557,6 +581,10 @@ class AcademyController extends Controller
             }
             if ($request->has('show_course_list')) {
                 $setting->show_course_list = $request->boolean('show_course_list');
+            }
+            // SET-S6 — สวิตช์ระบบคำร้องทำบัตรนักเรียน (มีผู้อ่านไปใช้จริง 5 จุด)
+            if ($request->has('card_request_flow_enabled')) {
+                $setting->card_request_flow_enabled = $request->boolean('card_request_flow_enabled');
             }
             $setting->save();
 

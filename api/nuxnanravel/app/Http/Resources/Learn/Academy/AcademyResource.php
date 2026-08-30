@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Learn\Academy;
 
 use App\Http\Resources\UserResource;
+use App\Models\Academy;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -78,6 +79,14 @@ class AcademyResource extends JsonResource
             'academy_timings' => $this->academy_timings,
             'holidays' => $this->holidays,
             'social_media_links' => $this->social_media_links,
+
+            // SET-S6 — ส่ง "ค่าที่ resolve แล้ว" ไม่ใช่คอลัมน์ดิบ
+            // ก่อนหน้านี้ resource ไม่ส่งคีย์นี้เลย frontend เลยเขียน `!== false` แล้วได้ true เสมอ
+            // ⇒ แผงบริจาคโชว์ตลอดทั้งที่ API บังคับใช้ค่าจริง (บั๊กแบบเดียวกับ 403 หน้า gradebook)
+            'donation_enabled' => $this->resource->donationEnabled(),
+            'student_editable_fields' => $this->student_editable_fields,
+            'student_editable_field_catalog' => Academy::STUDENT_EDITABLE_FIELD_CATALOG,
+
             'setting' => $settings,
         ]);
     }

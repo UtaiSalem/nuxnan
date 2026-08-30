@@ -17,6 +17,38 @@ class Academy extends Model
     use Auditable, HasFactory;
     // use HasUlids;
 
+    /**
+     * SET-S6 — รายการฟิลด์ทั้งหมดที่ตั้งใน `student_editable_fields` ได้ · **นิยามเดียวของทั้งระบบ**
+     *
+     * 5 ตัวแรกเป็น "ชื่อกลุ่ม" ซึ่ง HandlesStudentUpdates::needsApproval() ให้ครอบลูกทั้งหมด
+     * โดยอัตโนมัติ (`academic` ครอบ `academic.gpa`, `academic.create`) จึงไม่ต้องมี wildcard
+     * ที่เหลือเป็นฟิลด์บนตาราง students ตรง ๆ
+     *
+     * ห้าม hardcode รายการนี้ซ้ำที่อื่น — controller ใช้ validate และ resource ส่งให้ frontend
+     * สร้างเช็กบ็อกซ์ตามนี้
+     */
+    public const STUDENT_EDITABLE_FIELD_CATALOG = [
+        'academic',
+        'health',
+        'address',
+        'contact',
+        'guardian',
+        'citizen_id',
+        'student_id',
+        'gender',
+        'date_of_birth',
+        'title_prefix_th',
+        'title_prefix_en',
+        'first_name_th',
+        'first_name_en',
+        'last_name_th',
+        'last_name_en',
+        'nickname',
+        'nationality',
+        'religion',
+        'profile_image',
+    ];
+
     protected static function boot()
     {
         parent::boot();
