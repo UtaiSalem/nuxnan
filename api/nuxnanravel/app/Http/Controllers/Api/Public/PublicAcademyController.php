@@ -40,7 +40,7 @@ class PublicAcademyController extends Controller
             $q->latest();
         }
 
-return PublicAcademyResource::collection($q->paginate(12));
+        return PublicAcademyResource::collection($q->paginate(12));
     }
 
     public function show(string $academy)
