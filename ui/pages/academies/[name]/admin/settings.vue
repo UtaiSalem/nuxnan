@@ -160,9 +160,10 @@ const saveSettings = async () => {
     if (response.success) {
       Swal.fire('สำเร็จ', 'บันทึกการตั้งค่าเรียบร้อยแล้ว', 'success')
       
-      // Update academy name in URL if changed
-      if (response.academy?.name_slug && response.academy.name_slug !== academyName.value) {
-        navigateTo(`/academies/${response.academy.name_slug}/admin/settings`)
+      // SET-S8 — route param [name] ผูกกับคอลัมน์ `name` ไม่ใช่ slug (คอลัมน์ name_slug ถูกลบทิ้งแล้ว)
+      // ถ้าไม่ย้าย URL ตามชื่อใหม่ การ refresh ครั้งถัดไปจะได้ 404 เพราะ URL ยังค้างที่ชื่อเก่า
+      if (response.academy?.name && response.academy.name !== academyName.value) {
+        navigateTo(`/academies/${encodeURIComponent(response.academy.name)}/admin/settings`)
       }
     }
   } catch (err: any) {
