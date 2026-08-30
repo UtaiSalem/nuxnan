@@ -1,5 +1,117 @@
 # Work Log — nuxnan project
 
+## 2026-08-30 — เมนู #7 SET-S8: ลบ name_slug ทิ้ง + ปิดช่อง 500 ตอนชื่อโรงเรียนซ้ำ
+
+### สถานะ: **SET-S8 ✅ ตรวจครบทุกข้อ** — 6 ไฟล์ (แก้ 5 · ใหม่ 1) · **migrate บน dev แล้ว**
+
+เอกสารหลัก: [`.agents/school-admin/07-settings.md`](school-admin/07-settings.md) §5.7–5.10
+
+### พลิกจากแผนเดิม: ไม่ซ่อม slug แต่ลบทิ้ง (D12)
+
+audit เดิม (G7) เสนอให้ทำ slug ให้ใช้ได้ (fallback `academy-{id}` หรือทับศัพท์)
+พอวัดของจริงแล้ว **ไม่มีอะไรคุ้มให้ซ่อม**:
+
+| วัดได้ | ผล |
+|---|---|
+| `academies.name` เป็น **UNIQUE index** อยู่แล้ว | route ด้วยชื่อไทยตรง ๆ ชนกันไม่ได้ |
+| `ui/` route ด้วยชื่อดิบ **130+ จุด** | ไม่มีใครใช้ slug นำทาง |
+| grep `name_slug` ทั้ง `app/` `routes/` `resources/` `config/` | เจอ 3 จุด — **เขียน** อย่างเดียว |
+| ผู้อ่านรายเดียวคือ redirect ใน `settings.vue` | ซึ่งเป็นตัวที่พังอยู่ |
+
+```
+Str::slug('โรงเรียนจริยธรรมศึกษามูลนิธิ')  =>  ''
+Str::slug('โรงเรียน ABC 2569')            =>  'abc-2569'   ← กลืนภาษาไทยหายไป
+```
+ข้อสองแย่กว่าที่ audit รอบแรกบันทึกไว้ — ไม่ใช่แค่ "คืนค่าว่าง"
+
+### 🔴 G19 — บั๊กที่เจอตอน audit: เปลี่ยนชื่อไปชนชื่อที่มีอยู่ ⇒ 500 พร้อม SQL ดิบ
+
+`updateSettings()` validate แค่ `'name' => 'required|string|max:255'` **ไม่มีกฎ unique**
+ทั้งที่ `academies.name` เป็น UNIQUE index ⇒ `save()` โยน QueryException แล้ว catch คืน
+`$th->getMessage()` เป็น 500 ⇒ ผู้ใช้เห็นข้อความ SQL ดิบ
+
+**ทำไมไม่มีใครเจอ:** loop กันชนของ slug ทำงาน**ผิดคอลัมน์** — ไล่หาชนบน `name_slug`
+ทั้งที่ตัวที่ชนได้จริงคือ `name` · เทสต์เดิมเขียนคอมเมนต์เตือนกับดักนี้ไว้เองว่า
+*"But names must be unique due to DB unique constraint on name"* แล้ว assert ผิดตัว
+⇒ **ลบ slug อย่างเดียวไม่พอ ต้องย้ายด่านกันชนไปไว้ที่ `name`** ด้วย
+`Rule::unique('academies','name')->ignore($academy->id)` (+ `unique:academies,name` ใน `store()`)
+
+### 🔴 G20 — redirect หลังเปลี่ยนชื่อ "ตัดทิ้งเฉย ๆ ไม่ได้"
+
+เดิมส่ง `name_slug` เข้า route ที่ผูกด้วยคอลัมน์ `name` ⇒ 404
+แต่ถ้าตัด redirect ทิ้ง URL จะค้างอยู่ที่ชื่อเก่า และ refresh ครั้งถัดไปได้ 404 อยู่ดี
+⇒ เปลี่ยนไปใช้ `name` + `encodeURIComponent` (แพตเทิร์นเดียวกับ `academies/index.vue`)
+
+### 🔴 กับดักใหญ่ที่สุดของรอบนี้ — migration ผ่านบน MySQL แต่ล้มเทสต์ 7/7 บน sqlite
+
+migration ที่ agy เขียนหา index ด้วย `SHOW INDEX FROM academies` แล้ว **ข้ามขั้นนี้เมื่อ driver ไม่ใช่ mysql**
+⇒ `php artisan migrate` บน dev ผ่านสวย แต่พอรันเทสต์:
+```
+SQLSTATE[HY000]: General error: 1 error in index academies_name_slug_index
+after drop column: no such column: "name_slug"
+```
+**ต้นเหตุ:** migration `2026_07_10_000001` ประกาศ `->index()` ไว้ในสาขา `if (! hasColumn(...))`
+- ฐาน dev (MySQL) คอลัมน์มีอยู่ก่อนแล้ว ⇒ สาขาไม่วิ่ง ⇒ **ไม่มี index**
+- ฐานเทสต์ (sqlite) สร้างใหม่ทุกครั้ง ⇒ สาขาวิ่ง ⇒ **มี index**
+
+⇒ schema ของฐานสองตัว**ไม่ตรงกันจริง ๆ** · MySQL ยอมให้ drop คอลัมน์ที่ยังมี index ค้าง sqlite ไม่ยอม
+**Claude แก้เอง** เป็น `Schema::getIndexes('academies')` แล้วกรอง index ที่มี `name_slug` — ใช้ได้ทุก driver
+
+**บทเรียน:** ห้ามแตกสาขาตาม `DB::getDriverName()` เพื่อ "ข้าม" งาน schema ใน migration
+· `migrate` ผ่านบน MySQL **ไม่ได้แปลว่า migration ถูก** — ต้องรันเทสต์จริงต่อทุกครั้ง
+
+### หลักฐานที่ Claude รันเอง
+
+- `php -l` 5 ไฟล์ · `pint --test` ผ่านทุกไฟล์ · SFC คอมไพล์ผ่าน
+- `migrate` → `rollback` (คอลัมน์กลับมา) → `migrate` **ครบวงบน MySQL** หลังแก้บั๊ก index แล้ว
+- `grep name_slug` ใน `app/` + `routes/` ⇒ **0 บรรทัด**
+- `php artisan test tests/Feature/Academy` ⇒ **141 passed · 0 failed · 2 incomplete**
+  (139 หลัง SET-S2 − 1 เคส slug + 3 เคสใหม่) · `+ Campaign` ⇒ **154 passed**
+- **mutation check 3 แบบ:** ถอด `->ignore()` / ถอดกฎ unique / เอา `name_slug` กลับเข้า resource
+  ⇒ ล้มตรงเคสที่ควรล้มทุกครั้ง (ถอด `->ignore()` ล้ม **2 เคส** รวมเทสต์แคชเดิมด้วย —
+  ยืนยันว่า `ignore()` เป็นตัวที่แบกเส้นทาง "กดบันทึกโดยไม่เปลี่ยนชื่อ" ไว้) · คืนไฟล์ครบไม่มี `.bak` ตกค้าง
+- **ยิง API จริงบน MySQL:**
+  - บันทึกโดยไม่เปลี่ยนชื่อ ⇒ **200** (พิสูจน์ว่า `->ignore()` ไม่ทำให้ปุ่มบันทึกพัง)
+  - แทรกโรงเรียนชั่วคราวชื่อ `ZZZ Temp Unique Probe` ด้วย `DB::table()` (เลี่ยง model event
+    จึงไม่มี audit log ตกค้าง) แล้วเปลี่ยนชื่อ academy 1 ไปชน ⇒ **422 `The name has already been taken.`**
+    (เดิมเส้นทางนี้คือ 500) · **ลบแถวทดสอบแล้ว** เหลือ 1 โรงเรียนตามเดิม
+- **เบราว์เซอร์จริงที่ 375px — end-to-end ของ G20:**
+  กดบันทึกโดยไม่เปลี่ยนชื่อ ⇒ Swal "สำเร็จ" URL ไม่ขยับ ·
+  เปลี่ยนชื่อเป็น "โรงเรียนทดสอบ SET-S8" ⇒ URL **ย้ายไปชื่อใหม่แบบ percent-encoded**
+  และ **reload แล้วหน้ายังโหลดได้ ฟอร์มมีข้อมูลครบ** (เดิมจะพาไป slug แล้ว 404)
+  · เปลี่ยนกลับเป็นชื่อเดิม ⇒ ยืนยัน `name` ในฐานกลับมาเหมือนเดิมเป๊ะ
+
+### ข้อควรรู้ (ไม่ใช่บั๊กของแอป)
+
+ยิง `curl -F "name=<ภาษาไทย>"` จาก Git Bash บน Windows ได้ **500 "Malformed UTF-8 characters"**
+เป็นเพราะ shell แปลง encoding ของ argument ไม่ใช่บั๊กของ API — พิสูจน์แล้วด้วยการยิงเป็น JSON body
+จากไฟล์ UTF-8 (200) และกดบันทึกผ่านฟอร์มจริงในเบราว์เซอร์ซึ่งส่ง multipart (200)
+
+### สิ่งที่ยังไม่ได้ตรวจ
+
+- ไม่ได้ตรวจ 768/1280px — shard นี้แตะแค่ logic ใน `<script setup>` ไม่ได้เพิ่ม markup
+- `npm run build` — **ผู้ใช้รันเอง** (แตะ `ui/` 1 ไฟล์)
+
+### งานที่ค้าง (TODO)
+
+- [ ] **production ยังไม่ได้รัน migration 6 ตัว** — 5 ตัวเดิม + **`2026_08_30_000003` (drop name_slug)**
+      · `down()` เติมคอลัมน์กลับได้ แต่คืนค่าเดิมไม่ได้ (ซึ่งไม่เป็นปัญหา เพราะค่าเดิมคือค่าที่ผิด)
+- [ ] **ยังไม่ push**
+- [ ] ตัวถัดไปตามลำดับ: S1→S3→S4→S5→S2→**S8**→S6→S7→S9→S11→S10 ⇒ **SET-S6**
+      (แท็บ "ระบบและนโยบาย": `card_request_flow_enabled` · `student_editable_fields` · `donation_enabled`)
+- [ ] **G18** (ยกมา) — `school-attendances` / `emergency-alerts` / `revenue/support-summary` / `my-role`
+      ยังไม่มีด่านสมาชิกภาพและด่าน archived
+- [ ] **หนี้ตรวจด้วยตา SET-S4** (ยกมา) — ยังไม่ได้เห็นโหมดอ่านอย่างเดียวบนจอจริง
+- [ ] UX เล็กของ SET-S2 (ยกมา) — `?view=archived` ที่เปลี่ยน query อย่างเดียวไม่ refetch → งาน SET-S11
+
+### Branch / Git State
+
+- Branch: `main` · Uncommitted: **6 ไฟล์ของ SET-S8** + เอกสาร 2 ไฟล์
+- Push: **ยังไม่ push**
+
+---
+
+
 ## 2026-08-30 — เมนู #7 SET-S2: เก็บถาวรโรงเรียนแทนการลบ (ยังไม่ commit)
 
 ### สถานะ: **SET-S2 ✅ ตรวจครบทุกข้อ** — 12 ไฟล์ (แก้ 10 · ใหม่ 2) · **migrate บน dev แล้ว** · รอคำสั่ง commit

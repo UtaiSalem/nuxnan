@@ -489,6 +489,117 @@ academy 1: join_mode=open · auto_accept_members=true · (auto_accept_members ==
 
 ---
 
+### 5.7 การตัดสินใจของเจ้าของโปรเจค รอบ SET-S8 (เคาะแล้ว 2026-08-30)
+
+**D12 — `academies.name_slug` ลบทิ้งทั้งคอลัมน์ ไม่ซ่อม**
+audit เดิม (G7) เสนอให้ทำ slug ให้ใช้งานได้ (fallback `academy-{id}` หรือทับศัพท์)
+แต่พอวัดของจริงแล้ว **ไม่มีอะไรคุ้มให้ซ่อม**:
+
+| ข้อเท็จจริงที่วัดได้ | ผล |
+|---|---|
+| `academies.name` มี **UNIQUE index** อยู่แล้ว (`SHOW INDEX`) | route ด้วยชื่อไทยตรง ๆ ไม่มีทางชนกัน |
+| `ui/` route ด้วย `academyName` (ชื่อดิบ) **130+ จุด** | ไม่มีใครใช้ slug นำทาง |
+| grep `name_slug` ทั้ง `app/` `routes/` `resources/` `config/` | เจอแค่ 3 จุด — **เขียน** อย่างเดียว + ส่งใน payload |
+| ผู้อ่านเพียงรายเดียวคือ redirect ใน `settings.vue` | ซึ่งเป็นตัวที่ **พัง** (ส่ง slug เข้า route ที่ผูกด้วย `name`) |
+| คอลัมน์ประกาศ `->index()` ใน migration 2026-07-10 | แต่ `SHOW INDEX` **ไม่มี index ตัวนี้จริง** — สาขา `hasColumn` ไม่เคยวิ่ง |
+
+⇒ คอลัมน์นี้เป็น **dead column ที่มีต้นทุน** (สร้างค่าผิดทุกครั้งที่ชื่อเป็นไทย) ⇒ ตัดทิ้ง
+
+**หลักฐานที่ยืนยันว่าค่ามันผิดจริง (tinker บนฐาน dev):**
+```
+Str::slug('โรงเรียนจริยธรรมศึกษามูลนิธิ')  =>  ''          ← โรงเรียนเดียวในฐานได้ค่านี้
+Str::slug('โรงเรียน ABC 2569')            =>  'abc-2569'  ← ตัดภาษาไทยทิ้งเงียบ ๆ
+```
+ข้อสองแย่กว่าที่ audit รอบแรกบันทึกไว้ — ไม่ใช่แค่ "คืนค่าว่าง" แต่ **กลืนส่วนภาษาไทยหายไป**
+
+---
+
+### 5.8 🔴 บั๊กที่เจอตอน audit SET-S8 (ยืนยันกับโค้ดจริงแล้ว)
+
+**G19. เปลี่ยนชื่อโรงเรียนไปชนชื่อที่มีอยู่ ⇒ 500 พร้อม SQL error ดิบหลุดถึงผู้ใช้**
+
+`updateSettings()` validate ว่า `'name' => 'required|string|max:255'` — **ไม่มีกฎ `unique`**
+แต่ `academies.name` เป็น UNIQUE index ในฐาน ⇒ `save()` โยน `QueryException` (SQLSTATE 23000)
+แล้วถูก `catch (\Throwable $th)` ตอบกลับเป็น `500` พร้อม `$th->getMessage()`
+⇒ ผู้ใช้เห็นข้อความ SQL ดิบ ๆ แทนที่จะเป็น 422 "ชื่อนี้ถูกใช้แล้ว"
+
+`store()` ก็มีช่องเดียวกัน (`'name' => 'required|string'` ไม่มี unique) แต่ `catch` ของมัน
+`throw $th` ต่อ ⇒ 500 เหมือนกัน
+
+**ทำไมถึงไม่มีใครเจอ:** loop กันชนของ slug ทำงาน**ผิดคอลัมน์** — มันไล่หาชนบน `name_slug`
+ไม่ใช่ `name` ⇒ แถวที่ชนจริงคือ `name` ไม่เคยถูกกัน · และฐาน dev มีโรงเรียนเดียว
+⇒ **การลบ slug ทิ้งต้องมาพร้อมการย้ายด่านกันชนไปไว้ที่ `name` ให้ถูกที่**
+(เทสต์เดิม `test_name_slug_regenerates_and_avoids_collision` เขียนคอมเมนต์เตือนกับดักนี้ไว้เองว่า
+*"But names must be unique due to DB unique constraint on name"* แล้ว assert ผิดตัว)
+
+**G20. redirect หลังเปลี่ยนชื่อไม่ได้แค่ "ผิดคีย์" — มันจำเป็น แต่ชี้ผิดที่**
+
+`settings.vue` เดิม:
+```js
+if (response.academy?.name_slug && response.academy.name_slug !== academyName.value) {
+  navigateTo(`/academies/${response.academy.name_slug}/admin/settings`)
+}
+```
+route param `[name]` ผูกกับคอลัมน์ `name` ⇒ ส่ง slug เข้าไปจะได้ 404
+**แต่จะตัดทิ้งเฉย ๆ ไม่ได้** — เพราะถ้าเจ้าของเปลี่ยนชื่อโรงเรียนแล้วไม่ redirect
+URL ปัจจุบันจะค้างอยู่ที่ชื่อเก่า และ refresh ครั้งถัดไปได้ 404 ทันที
+⇒ ต้องเปลี่ยนไปใช้ `name` + `encodeURIComponent` (แพตเทิร์นเดียวกับ `academies/index.vue` ที่ใช้อยู่แล้ว)
+
+---
+
+### 5.9 🔴 กับดักที่เจอตอน implement SET-S8 — ฐานสองตัวไม่ได้มี index เหมือนกัน
+
+migration ที่ลบ `name_slug` เขียนหา index ที่ต้อง drop ด้วย `SHOW INDEX FROM academies`
+แล้ว **ข้ามขั้นนี้ไปเมื่อ driver ไม่ใช่ mysql** ⇒ ผ่านบน MySQL แต่ **เทสต์ล้มทั้งไฟล์ 7/7 เคส** บน sqlite:
+
+```
+SQLSTATE[HY000]: General error: 1 error in index academies_name_slug_index
+after drop column: no such column: "name_slug"
+```
+
+**ต้นเหตุ:** migration `2026_07_10_000001` ประกาศ `->index()` ไว้ในสาขา `if (! hasColumn(...))`
+- **ฐาน dev (MySQL)** คอลัมน์มีอยู่ก่อนแล้ว ⇒ สาขานั้นไม่วิ่ง ⇒ **ไม่มี index**
+- **ฐานเทสต์ (sqlite in-memory)** สร้างใหม่ทุกครั้ง ⇒ สาขาวิ่ง ⇒ **มี index**
+
+⇒ ฐานสองตัวมี schema ไม่ตรงกันจริง ๆ และ MySQL ยอมให้ drop คอลัมน์ที่ยังมี index ค้าง
+ส่วน sqlite ไม่ยอม · แก้ด้วย `Schema::getIndexes('academies')` ซึ่งใช้ได้ทุก driver
+แล้วกรอง index ที่มี `name_slug` อยู่ในคอลัมน์
+
+**บทเรียน:** ห้ามเขียน migration ที่แตกสาขาตาม `DB::getDriverName()` เพื่อ "ข้าม" งาน schema
+— ให้ใช้ API ของ Laravel ที่ครอบทุก driver แทน · และ **ต้องรันเทสต์จริงหลัง migrate ทุกครั้ง**
+`php artisan migrate` ผ่านบน MySQL ไม่ได้แปลว่า migration ถูก
+
+---
+
+### 5.10 SET-S8 — แผนแตก shard (3 shard)
+
+| shard | สาระ | ไฟล์ | ขึ้นกับ |
+|---|---|---|---|
+| **S8-A** | migration drop `name_slug` + ถอดโค้ดสร้าง slug + ย้ายด่านกันชนไปที่ `name` | migration ใหม่ 1 ไฟล์, `AcademyController.php`, `Academy.php`, `AcademyResource.php` | — |
+| **S8-B** | frontend: redirect หลังเปลี่ยนชื่อใช้ `name` | `admin/settings.vue` | S8-A |
+| **S8-C** | เทสต์: แก้ `AcademySettingsUpdateTest` 4 จุดที่อ้าง slug + เคสชื่อซ้ำ 422 | `tests/Feature/Academy/` | S8-A..B |
+
+**ลำดับ:** A → B → C
+
+#### S8-A รายละเอียด
+- migration `drop_name_slug_from_academies_table` — `up()` drop คอลัมน์ (guard `hasColumn`
+  · ตรวจ index ก่อน drop เผื่อฐาน production มี index ที่ dev ไม่มี)
+  · `down()` เติมคอลัมน์กลับเป็น `string nullable after name_en` — **คืนค่าเดิมไม่ได้** เขียนบอกในหัวไฟล์
+  · migration เก่า `2026_07_10_000001` มี `down()` ที่ guard ด้วย `hasColumn` อยู่แล้ว ⇒ rollback ซ้อนไม่พัง
+- `updateSettings()` — ลบบล็อกสร้าง slug 9 บรรทัด · เปลี่ยนกฎเป็น
+  `'name' => ['required','string','max:255', Rule::unique('academies','name')->ignore($academy->id)]`
+- `store()` — เพิ่ม `unique:academies,name` ในกฎของ `name`
+- `Academy::$fillable` ถอด `'name_slug'` · `AcademyResource` ถอดคีย์ `'name_slug'`
+
+#### S8-C — 4 จุดในเทสต์เดิมที่จะพังถ้าไม่แก้
+1. `setUp()` ส่ง `'name_slug' => 'original-academy-name'` ให้ factory
+2. บรรทัด assert `assertEquals('updated-academy-name', $this->academy->name_slug)`
+3. `assertJsonStructure` ที่ list `'name_slug'` ⇒ เปลี่ยนเป็น `assertJsonMissingPath('academy.name_slug')`
+4. `test_name_slug_regenerates_and_avoids_collision()` ⇒ เขียนใหม่เป็น
+   `test_renaming_to_a_taken_name_is_rejected_with_422`
+
+---
+
 ## 6. Implementation Tasks
 
 | Step | Title | Depends on | Deliverable | Status |
@@ -500,7 +611,7 @@ academy 1: join_mode=open · auto_accept_members=true · (auto_accept_members ==
 | **SET-S5** | ทำให้สวิตช์มีผลจริง (G3 + G4 · D2 + D3) | SET-S1 | บังคับใช้ `privacy`/`show_member_list`/`show_course_list` · drop `allow_*_registration` 2 คอลัมน์ + ถอดออกจากฟอร์ม · `join_mode` เป็นตัวหลักแทน `auto_accept_members` และ `invite_only` บล็อกการขอเข้าร่วมจริง | 🟢 **verified + migrate แล้ว** |
 | **SET-S6** | เพิ่มแท็บ "ระบบและนโยบาย" (G9 ข้อ 1–3) | SET-S1 | `card_request_flow_enabled`, `student_editable_fields`, `donation_enabled` ตั้งค่าได้จากหน้าจอ | ⚪ pending |
 | **SET-S7** | เพิ่มฟิลด์อัตลักษณ์โรงเรียน (G9 ข้อ 4–5) | SET-S6 | `slogan`, `established_year`, `type`, `director`, `social_media_links` เข้าแท็บ "ข้อมูลทั่วไป" · ตัดสินใจเรื่อง `approval_flow` | ⚪ pending |
-| **SET-S8** | ซ่อม `name_slug` + redirect (G7) | SET-S1 | เลิกใช้ `Str::slug` กับชื่อไทย (fallback เป็น `academy-{id}` หรือทับศัพท์) + ตัด redirect ที่พาไป URL ผิดคีย์ | ⚪ pending |
+| **SET-S8** | ลบ `name_slug` ทิ้ง + ซ่อม redirect (G7 · D12) | SET-S1 | migration drop คอลัมน์ `name_slug` · ถอด `Str::slug` ออกจาก `updateSettings` · ย้ายด่านกันชื่อซ้ำไปไว้ที่คอลัมน์ `name` ที่เป็น UNIQUE จริง (ปิด G19 — เดิมได้ 500 พร้อม SQL ดิบ) · redirect หลังเปลี่ยนชื่อใช้ `name` + encodeURIComponent | 🟢 **verified + migrate แล้ว** |
 | **SET-S9** | audit log การแก้ตั้งค่า (G11) | SET-S1 | บันทึกทุกครั้งที่ `updateSettings` เปลี่ยนค่า พร้อม before/after | ⚪ pending |
 | **SET-S10** | เติมเทสต์ที่ยังขาด (G10) | SET-S1..S6 | ต่อยอด `AcademySettingsUpdateTest` ที่มีอยู่แล้ว (round-trip/validation/cache/slug ครอบแล้ว) — เพิ่ม: role ที่ถือ `settings.manage` ต้องผ่าน · สมาชิกสถานะไม่ใช่ APPROVED ต้องโดนปฏิเสธ · superadmin · สิทธิ์จากฝ่าย/กลุ่ม | ⚪ pending |
 | **SET-S11** | UX เก็บตก (G12) | SET-S4 | เตือนก่อนออกโดยไม่บันทึก · refresh หลังบันทึก · ซ่อนแท็บโซนอันตรายถ้าไม่ใช่ owner | ⚪ pending |
