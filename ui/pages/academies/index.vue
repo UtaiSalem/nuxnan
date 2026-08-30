@@ -23,9 +23,13 @@ const route = useRoute()
 // State
 const allAcademies = ref<any[]>([])
 const myAcademies = ref<any[]>([])
+const archivedAcademies = ref<any[]>([])
+const isRestoring = ref<number | null>(null)
 const isLoading = ref(true)
 const searchQuery = ref('')
-const currentView = ref<'all' | 'my'>(route.query.view === 'my' ? 'my' : 'all')
+const currentView = ref<'all' | 'my' | 'archived'>(
+  route.query.view === 'my' ? 'my' : route.query.view === 'archived' ? 'archived' : 'all'
+)
 const page = ref(1)
 const hasMore = ref(false)
 
@@ -41,7 +45,11 @@ const selectedType = ref('all')
 
 // Computed
 const filteredAcademies = computed(() => {
-  const list = currentView.value === 'all' ? allAcademies.value : myAcademies.value
+  const list = currentView.value === 'all'
+    ? allAcademies.value
+    : currentView.value === 'archived'
+      ? archivedAcademies.value
+      : myAcademies.value
   
   return list.filter(academy => {
     const matchesSearch = !searchQuery.value.trim() || 
@@ -98,6 +106,34 @@ const fetchMyAcademies = async () => {
   }
 }
 
+const fetchArchivedAcademies = async () => {
+  if (!user.value) return
+
+  try {
+    const response: any = await api.get('/api/academies/archived')
+    if (response.success) {
+      archivedAcademies.value = response.academies?.data || response.academies || []
+    }
+  } catch (error) {
+    // ผู้ใช้ทั่วไปไม่มีโรงเรียนที่เก็บถาวร — เงียบไว้ ไม่ต้องรบกวน
+    archivedAcademies.value = []
+  }
+}
+
+const restoreAcademy = async (academy: any) => {
+  isRestoring.value = academy.id
+  try {
+    await api.delete(`/api/academies/${academy.id}/archive`)
+    archivedAcademies.value = archivedAcademies.value.filter(a => a.id !== academy.id)
+    if (archivedAcademies.value.length === 0) currentView.value = 'all'
+    await fetchAllAcademies()
+  } catch (error) {
+    console.error('Failed to restore academy:', error)
+  } finally {
+    isRestoring.value = null
+  }
+}
+
 const getLogoUrl = (academy: any) => {
   if (!academy.logo) {
     return `${config.public.apiBase}/storage/images/academies/logos/default_logo.png`
@@ -118,7 +154,7 @@ const getAcademyTypeInfo = (type: string | null) => {
   return typeMap[type || ''] || { label: 'ทั่วไป', icon: 'fluent:building-24-regular', color: 'text-gray-600', bg: 'bg-gray-100 dark:bg-gray-700' }
 }
 
-const switchView = (view: 'all' | 'my') => {
+const switchView = (view: 'all' | 'my' | 'archived') => {
   currentView.value = view
   if (view === 'my' && myAcademies.value.length === 0) {
     fetchMyAcademies()
@@ -131,8 +167,11 @@ onMounted(() => {
   if (user.value) {
     fetchAllAcademies()
     fetchMyAcademies()
+    fetchArchivedAcademies()
     if (route.query.view === 'my') {
       switchView('my')
+    } else if (route.query.view === 'archived') {
+      switchView('archived')
     }
   }
 })
@@ -140,6 +179,8 @@ onMounted(() => {
 watch(() => route.query.view, (newVal) => {
   if (newVal === 'my') {
     switchView('my')
+  } else if (newVal === 'archived') {
+    switchView('archived')
   } else {
     currentView.value = 'all'
   }
@@ -236,6 +277,14 @@ watch(() => route.query.view, (newVal) => {
                   >
                     ของฉัน
                   </button>
+                  <button
+                    v-if="archivedAcademies.length > 0"
+                    @click="switchView('archived')"
+                    class="min-h-[44px] sm:min-h-0 flex-1 px-2 py-1.5 rounded-md text-[11px] font-bold transition-all"
+                    :class="currentView === 'archived' ? 'bg-white dark:bg-vikinger-dark-50 shadow-sm text-amber-600' : 'text-gray-500'"
+                  >
+                    เก็บถาวรแล้ว
+                  </button>
                </div>
             </div>
           </div>
@@ -320,6 +369,12 @@ watch(() => route.query.view, (newVal) => {
             :style="{ backgroundImage: academy.cover ? `url(${academy.cover})` : 'none' }"
           >
             <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+            <div v-if="academy.is_archived" class="absolute top-3 left-3">
+              <div class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-lg backdrop-blur-md bg-amber-100 text-amber-700 flex-shrink-0 whitespace-nowrap">
+                <Icon icon="fluent:archive-24-filled" class="w-3.5 h-3.5" />
+                เก็บถาวรแล้ว
+              </div>
+            </div>
             <!-- Type Badge Overlap -->
             <div class="absolute top-3 right-3">
                <div :class="['inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-lg backdrop-blur-md', getAcademyTypeInfo(academy.type).bg, getAcademyTypeInfo(academy.type).color]">
@@ -369,7 +424,15 @@ watch(() => route.query.view, (newVal) => {
                  </div>
               </div>
 
-              <div class="w-8 h-8 rounded-full bg-gray-50 dark:bg-vikinger-dark-100 flex items-center justify-center text-gray-300 group-hover:bg-vikinger-purple group-hover:text-white transition-all">
+              <button
+                v-if="academy.is_archived"
+                :disabled="isRestoring === academy.id"
+                @click.prevent.stop="restoreAcademy(academy)"
+                class="min-h-[44px] sm:min-h-0 flex-shrink-0 whitespace-nowrap px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 disabled:opacity-50 transition-all"
+              >
+                {{ isRestoring === academy.id ? 'กำลังกู้คืน...' : 'กู้คืน' }}
+              </button>
+              <div v-else class="w-8 h-8 rounded-full bg-gray-50 dark:bg-vikinger-dark-100 flex items-center justify-center text-gray-300 group-hover:bg-vikinger-purple group-hover:text-white transition-all">
                 <Icon icon="fluent:chevron-right-24-filled" class="w-4 h-4" />
               </div>
             </div>
@@ -381,10 +444,10 @@ watch(() => route.query.view, (newVal) => {
       <div v-else class="bg-white dark:bg-vikinger-dark-200 rounded-2xl p-16 text-center border border-dashed border-gray-200 dark:border-vikinger-dark-100 shadow-sm">
         <Icon icon="fluent:building-search-24-regular" class="w-20 h-20 text-gray-200 dark:text-gray-700 mx-auto mb-4" />
         <h3 class="text-xl font-black text-gray-900 dark:text-white mb-2">
-          {{ currentView === 'my' ? 'ยังไม่ได้เข้าเป็นสมาชิกสถาบันใด' : 'ไม่พบข้อมูลสถาบัน' }}
+          {{ currentView === 'archived' ? 'ไม่มีโรงเรียนที่เก็บถาวร' : (currentView === 'my' ? 'ยังไม่ได้เข้าเป็นสมาชิกสถาบันใด' : 'ไม่พบข้อมูลสถาบัน') }}
         </h3>
         <p class="text-gray-500 dark:text-gray-400 text-sm">
-          {{ currentView === 'my' ? 'ลองค้นหาและเข้าร่วมสถาบันเพื่อเริ่มต้นการเรียนรู้' : 'ลองเปลี่ยนคำค้นหาหรือปรับเปลี่ยนตัวกรอง' }}
+          {{ currentView === 'archived' ? 'โรงเรียนที่คุณเก็บถาวรจะมาแสดงที่นี่ และกู้คืนได้จากตรงนี้' : (currentView === 'my' ? 'ลองค้นหาและเข้าร่วมสถาบันเพื่อเริ่มต้นการเรียนรู้' : 'ลองเปลี่ยนคำค้นหาหรือปรับเปลี่ยนตัวกรอง') }}
         </p>
         <button 
           @click="searchQuery = ''; selectedType = 'all'; currentView = 'all'"

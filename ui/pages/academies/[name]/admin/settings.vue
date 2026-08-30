@@ -172,13 +172,16 @@ const saveSettings = async () => {
   }
 }
 
-const confirmDeleteAcademy = async () => {
+const isArchived = computed(() => academy.value?.is_archived === true)
+const isArchiving = ref(false)
+
+const confirmArchiveAcademy = async () => {
   const result = await Swal.fire({
-    title: 'ลบโรงเรียน?',
-    text: 'คุณแน่ใจหรือไม่ว่าต้องการลบโรงเรียนนี้? ข้อมูลทั้งหมดจะถูกลบถาวรและไม่สามารถกู้คืนได้',
+    title: 'เก็บถาวรโรงเรียน?',
+    text: 'โรงเรียนจะหายจากไดเรกทอรีและการค้นหา สมาชิกภายนอกจะเข้าดูไม่ได้ — แต่ข้อมูลทั้งหมดยังอยู่ครบและกู้คืนได้ทุกเมื่อ',
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonText: 'ลบ',
+    confirmButtonText: 'เก็บถาวร',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#ef4444',
     input: 'text',
@@ -191,14 +194,41 @@ const confirmDeleteAcademy = async () => {
     }
   })
 
-  if (result.isConfirmed) {
-    try {
-      await api.delete(`/api/academies/${academyId.value}`)
-      Swal.fire('สำเร็จ', 'ลบโรงเรียนเรียบร้อยแล้ว', 'success')
-      navigateTo('/academies')
-    } catch (err: any) {
-      Swal.fire('เกิดข้อผิดพลาด', err.data?.message || 'ไม่สามารถลบได้', 'error')
-    }
+  if (! result.isConfirmed) return
+
+  isArchiving.value = true
+  try {
+    await api.post(`/api/academies/${academyId.value}/archive`, {})
+    await Swal.fire('สำเร็จ', 'เก็บถาวรโรงเรียนเรียบร้อยแล้ว', 'success')
+    navigateTo('/academies?view=archived')
+  } catch (err: any) {
+    Swal.fire('เกิดข้อผิดพลาด', err.data?.message || 'ไม่สามารถเก็บถาวรได้', 'error')
+  } finally {
+    isArchiving.value = false
+  }
+}
+
+const confirmRestoreAcademy = async () => {
+  const result = await Swal.fire({
+    title: 'กู้คืนโรงเรียน?',
+    text: 'โรงเรียนจะกลับมาแสดงในไดเรกทอรีและการค้นหาตามปกติ',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'กู้คืน',
+    cancelButtonText: 'ยกเลิก',
+  })
+
+  if (! result.isConfirmed) return
+
+  isArchiving.value = true
+  try {
+    await api.delete(`/api/academies/${academyId.value}/archive`)
+    await Swal.fire('สำเร็จ', 'กู้คืนโรงเรียนเรียบร้อยแล้ว', 'success')
+    window.location.reload()
+  } catch (err: any) {
+    Swal.fire('เกิดข้อผิดพลาด', err.data?.message || 'ไม่สามารถกู้คืนได้', 'error')
+  } finally {
+    isArchiving.value = false
   }
 }
 
@@ -546,20 +576,42 @@ const joinModeOptions = [
               โซนอันตราย
             </h2>
 
-            <div class="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-              <h3 class="font-medium text-red-800 dark:text-red-300 mb-2">ลบโรงเรียน</h3>
-              <p class="text-sm text-red-600 dark:text-red-400 mb-4">
-                การลบโรงเรียนจะลบข้อมูลทั้งหมดรวมถึงสมาชิก คอร์ส และข้อมูลที่เกี่ยวข้องทั้งหมด การกระทำนี้ไม่สามารถย้อนกลับได้
+            <!-- สถานะปกติ: เสนอให้เก็บถาวร -->
+            <div v-if="! isArchived" class="p-3 sm:p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+              <h3 class="font-medium text-red-800 dark:text-red-300 mb-2 break-words">เก็บถาวรโรงเรียน</h3>
+              <p class="text-sm text-red-600 dark:text-red-400 mb-4 break-words">
+                โรงเรียนจะหายจากไดเรกทอรี การค้นหา และรายการของผู้ใช้คนอื่น — <strong>ข้อมูลไม่ถูกลบ</strong>
+                สมาชิก คอร์ส และผลการเรียนยังอยู่ครบ และเจ้าของกู้คืนได้ทุกเมื่อจากหน้ารายการโรงเรียน
               </p>
               <button
                 v-if="isOwner"
-                @click="confirmDeleteAcademy"
-                class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                :disabled="isArchiving"
+                @click="confirmArchiveAcademy"
+                class="w-full sm:w-auto min-h-[44px] sm:min-h-0 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
               >
-                ลบโรงเรียนนี้
+                {{ isArchiving ? 'กำลังดำเนินการ...' : 'เก็บถาวรโรงเรียนนี้' }}
               </button>
-              <p v-else class="text-sm text-gray-500 italic">
-                เฉพาะเจ้าของโรงเรียนเท่านั้นที่สามารถลบโรงเรียนได้
+              <p v-else class="text-sm text-gray-500 italic break-words">
+                เฉพาะเจ้าของโรงเรียนหรือผู้ดูแลระบบเท่านั้นที่เก็บถาวรโรงเรียนได้
+              </p>
+            </div>
+
+            <!-- สถานะถูกเก็บถาวรอยู่: เสนอให้กู้คืน -->
+            <div v-else class="p-3 sm:p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+              <h3 class="font-medium text-amber-800 dark:text-amber-300 mb-2 break-words">โรงเรียนนี้ถูกเก็บถาวรอยู่</h3>
+              <p class="text-sm text-amber-700 dark:text-amber-400 mb-4 break-words">
+                ผู้ใช้คนอื่นมองไม่เห็นโรงเรียนนี้ในไดเรกทอรีและการค้นหา กดกู้คืนเพื่อให้กลับมาแสดงตามปกติ
+              </p>
+              <button
+                v-if="isOwner"
+                :disabled="isArchiving"
+                @click="confirmRestoreAcademy"
+                class="w-full sm:w-auto min-h-[44px] sm:min-h-0 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+              >
+                {{ isArchiving ? 'กำลังดำเนินการ...' : 'กู้คืนโรงเรียนนี้' }}
+              </button>
+              <p v-else class="text-sm text-gray-500 italic break-words">
+                เฉพาะเจ้าของโรงเรียนหรือผู้ดูแลระบบเท่านั้นที่กู้คืนโรงเรียนได้
               </p>
             </div>
           </div>

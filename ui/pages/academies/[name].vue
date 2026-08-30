@@ -197,6 +197,10 @@ const memberStatusText = computed(() => {
 
 const isRestricted = computed(() => academy.value?.is_restricted === true)
 
+// SET-S2 — เจ้าของ/ผู้ดูแลระบบเท่านั้นที่ยังเปิดหน้าโรงเรียนที่ถูกเก็บถาวรได้
+// (คนอื่นถูกกันที่ API แล้ว) จึงไม่ต้องเช็คสิทธิ์ซ้ำในนี้ — เห็นแถบนี้ = มีสิทธิ์กู้คืนอยู่แล้ว
+const isArchivedAcademy = computed(() => academy.value?.is_archived === true)
+
 const isInviteOnly = computed(() => academy.value?.join_mode === 'invite_only')
 
 const canJoin = computed(() => {
@@ -1203,6 +1207,23 @@ watch(() => academy.value?.id, (id) => {
 
     <!-- Academy Content -->
     <div v-else-if="academy" class="max-w-7xl mx-auto px-4 py-6">
+      <!-- SET-S2 — แถบเตือนโรงเรียนที่ถูกเก็บถาวร -->
+      <div
+        v-if="isArchivedAcademy"
+        class="mb-4 flex flex-col gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20 sm:flex-row sm:items-center sm:p-4"
+      >
+        <Icon icon="fluent:archive-24-filled" class="h-5 w-5 flex-shrink-0 text-amber-600" />
+        <p class="min-w-0 flex-1 break-words text-sm text-amber-800 dark:text-amber-200">
+          โรงเรียนนี้ถูกเก็บถาวร — ผู้ใช้คนอื่นมองไม่เห็นในไดเรกทอรีและการค้นหา ข้อมูลยังอยู่ครบและกู้คืนได้
+        </p>
+        <NuxtLink
+          :to="`/academies/${encodeURIComponent(academyName)}/admin/settings`"
+          class="min-h-[44px] flex-shrink-0 whitespace-nowrap rounded-lg bg-amber-600 px-4 py-2 text-center text-sm font-bold text-white transition-colors hover:bg-amber-700 sm:min-h-0"
+        >
+          ไปที่หน้าตั้งค่า
+        </NuxtLink>
+      </div>
+
       <!-- Emergency Alerts -->
       <SchoolEmergencyAlertBanner :academy-id="academy.id" />
 
