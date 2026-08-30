@@ -54,7 +54,9 @@ class CampaignController extends Controller
 
     public function targetAcademies(Request $request): JsonResponse
     {
+        // SET-S2 — โรงเรียนที่ถูกเก็บถาวรเลือกเป็นเป้าหมายแคมเปญไม่ได้
         $query = Academy::query()
+            ->notArchived()
             ->select(['id', 'name', 'logo'])
             ->when($request->filled('id'), fn ($q) => $q->whereKey($request->integer('id')))
             ->when($request->filled('q'), fn ($q) => $q->where('name', 'like', '%'.$request->string('q')->toString().'%'))

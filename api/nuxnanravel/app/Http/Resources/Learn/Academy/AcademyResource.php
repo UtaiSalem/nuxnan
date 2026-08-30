@@ -52,6 +52,10 @@ class AcademyResource extends JsonResource
 
             'memberStatus' => $this->memberStatus ?? $this->member_status($this->id),
             'authIsAcademyAdmin' => auth()->id() === $this->user_id,
+
+            // SET-S2 — ต้องอยู่ใน $base เพราะโรงเรียนที่ถูกเก็บถาวรคืนแค่ $base ให้คนนอก
+            'is_archived' => $this->resource->isArchived(),
+            'archived_at' => $this->archived_at,
         ];
 
         if (! $canViewContent) {

@@ -94,6 +94,8 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
 
     // Specific routes MUST come before wildcard routes
     Route::get('/all-academies', [AcademyController::class, 'getAllAcademies'])->name('academies.all-academies');
+    // SET-S2 — ต้องอยู่เหนือ /{academy:name} ไม่งั้น wildcard จะกลืนคำว่า "archived" ไปเป็นชื่อโรงเรียน
+    Route::get('/archived', [AcademyController::class, 'archivedIndex'])->name('academies.archived');
     Route::get('/users/{user}/my-academies', [AcademyController::class, 'getMyAcademies'])->name('academies.my-academies');
     Route::get('/users/{user}/membered-academies', [AcademyController::class, 'getAuthMemberedAcademies'])->name('academies.membered');
     Route::get('/by-id/{academy}', [AcademyController::class, 'show'])->name('academy.showById');
@@ -238,6 +240,10 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::post('/{academy}/settings', [AcademyController::class, 'updateSettings'])
         ->middleware('academy.permission:settings.manage')
         ->name('api.academy.settings.update');
+
+    // SET-S2 — เก็บถาวร/กู้คืนโรงเรียน (สิทธิ์ตรวจใน controller ด้วย Academy::canManageArchive)
+    Route::post('/{academy}/archive', [AcademyController::class, 'archive'])->name('api.academy.archive');
+    Route::delete('/{academy}/archive', [AcademyController::class, 'restore'])->name('api.academy.archive.restore');
 
     // ============================================
     // Academy Roles & Permissions Routes

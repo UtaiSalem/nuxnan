@@ -183,14 +183,6 @@ class AcademyController extends Controller
         //
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Academy $academy)
-    {
-        //
-    }
-
     public function joinAcademy(Academy $academy)
     {
         $academy->members()->attach(auth()->id());
@@ -283,7 +275,8 @@ class AcademyController extends Controller
 
     public function searchAcademies(Request $request)
     {
-        $academies = Academy::where('name', 'like', '%'.$request->search.'%')->get();
+        // SET-S2 — ซ่อนโรงเรียนที่ถูกเก็บถาวรออกจากรายการ
+        $academies = Academy::notArchived()->where('name', 'like', '%'.$request->search.'%')->get();
 
         return response()->json([
             'academies' => AcademyResource::collection($academies),
@@ -331,9 +324,10 @@ class AcademyController extends Controller
         try {
             // $academiesAuthMember = AcademyMember::where('user_id', auth()->id())->get('academy_id');
 
+            // SET-S2 — ซ่อนโรงเรียนที่ถูกเก็บถาวรออกจากรายการ
             return response()->json([
                 'success' => true,
-                'academies' => AcademyResource::collection(auth()->user()->academies()->paginate(10)),
+                'academies' => AcademyResource::collection(auth()->user()->academies()->notArchived()->paginate(10)),
             ], 200);
 
         } catch (\Throwable $th) {
@@ -365,7 +359,8 @@ class AcademyController extends Controller
             $academyIds = $memberships->pluck('academy_id');
 
             // Get academies with pagination
-            $academies = Academy::whereIn('id', $academyIds)->paginate(10);
+            // SET-S2 — ซ่อนโรงเรียนที่ถูกเก็บถาวรออกจากรายการ
+            $academies = Academy::notArchived()->whereIn('id', $academyIds)->paginate(10);
 
             // Map member status to each academy
             $academiesWithStatus = $academies->getCollection()->map(function ($academy) use ($memberships) {
@@ -394,9 +389,10 @@ class AcademyController extends Controller
     public function getAllAcademies()
     {
         try {
+            // SET-S2 — ซ่อนโรงเรียนที่ถูกเก็บถาวรออกจากรายการ
             return response()->json([
                 'success' => true,
-                'academies' => AcademyResource::collection(Academy::paginate(10)),
+                'academies' => AcademyResource::collection(Academy::notArchived()->paginate(10)),
             ], 200);
 
         } catch (\Throwable $th) {
@@ -405,6 +401,91 @@ class AcademyController extends Controller
                 'message' => $th->getMessage(),
             ], 200);
         }
+    }
+
+    /**
+     * SET-S2 — เก็บถาวรโรงเรียน (ไม่ลบข้อมูลจริง กู้คืนได้)
+     *
+     * สิทธิ์: เจ้าของโรงเรียน หรือ super admin เท่านั้น (Academy::canManageArchive)
+     * admin/director ของโรงเรียนทำไม่ได้ แม้ถือ settings.manage
+     */
+    public function archive(Academy $academy, Request $request)
+    {
+        if (! $academy->canManageArchive($request->user())) {
+            return response()->json([
+                'success' => false,
+                'message' => 'เฉพาะเจ้าของโรงเรียนหรือผู้ดูแลระบบเท่านั้นที่เก็บถาวรโรงเรียนได้',
+            ], 403);
+        }
+
+        if ($academy->isArchived()) {
+            return response()->json([
+                'success' => false,
+                'code' => 'already_archived',
+                'message' => 'โรงเรียนนี้ถูกเก็บถาวรอยู่แล้ว',
+            ], 409);
+        }
+
+        // เขียนผ่านโมเดล (ไม่ใช่ DB::table) เพื่อให้ trait Auditable บันทึก audit log ให้อัตโนมัติ
+        $academy->archived_at = now();
+        $academy->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'เก็บถาวรโรงเรียนเรียบร้อยแล้ว',
+            'archived_at' => $academy->archived_at,
+        ], 200);
+    }
+
+    /**
+     * SET-S2 — กู้คืนโรงเรียนที่ถูกเก็บถาวร
+     */
+    public function restore(Academy $academy, Request $request)
+    {
+        if (! $academy->canManageArchive($request->user())) {
+            return response()->json([
+                'success' => false,
+                'message' => 'เฉพาะเจ้าของโรงเรียนหรือผู้ดูแลระบบเท่านั้นที่กู้คืนโรงเรียนได้',
+            ], 403);
+        }
+
+        if (! $academy->isArchived()) {
+            return response()->json([
+                'success' => false,
+                'code' => 'not_archived',
+                'message' => 'โรงเรียนนี้ไม่ได้ถูกเก็บถาวร',
+            ], 409);
+        }
+
+        $academy->archived_at = null;
+        $academy->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'กู้คืนโรงเรียนเรียบร้อยแล้ว',
+        ], 200);
+    }
+
+    /**
+     * SET-S2 — รายการโรงเรียนที่ถูกเก็บถาวร
+     *
+     * คืนเฉพาะโรงเรียนที่ผู้เรียก "กู้คืนได้" — คือของตัวเอง
+     * super admin เห็นทั้งหมด (นิยามเดียวกับ Academy::canManageArchive)
+     */
+    public function archivedIndex(Request $request)
+    {
+        $user = $request->user();
+
+        $query = Academy::query()->archived();
+
+        if (! $user->isSuperAdmin()) {
+            $query->where('user_id', $user->id);
+        }
+
+        return response()->json([
+            'success' => true,
+            'academies' => AcademyResource::collection($query->latest('archived_at')->get()),
+        ], 200);
     }
 
     /**
