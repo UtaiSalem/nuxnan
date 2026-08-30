@@ -1,7 +1,7 @@
 # 07 — ตั้งค่าโรงเรียน
 
 > ไฟล์รองของเมนู **#7 ตั้งค่าโรงเรียน** ใน [OVERVIEW.md](OVERVIEW.md)
-> สถานะ: 🔴 **audit เสร็จ 2026-08-28 — พบ gap 12 ข้อ (P0 ด้านความปลอดภัย 2 ข้อ)** ยังไม่ implement
+> สถานะ: 🟢 **ปิดแล้ว 6 step — S1 · S2 · S3 · S4 · S5 (+ เมนู #1 S9)** · เหลือ S6/S7/S8/S9/S10/S11/S13
 
 ---
 
@@ -261,6 +261,7 @@ cache ไม่ค้าง · slug ชนแล้วต่อ `-1`
 **D1 (ปิด Q1 — ปลด SET-S2): "ลบโรงเรียน" → เปลี่ยนเป็น "เก็บถาวร" (soft delete)**
 ไม่ลบข้อมูลจริง · เพิ่ม `archived_at` บน `academies` · โรงเรียนที่เก็บถาวรถูกซ่อนจากทุกจุดที่แสดงรายการ
 แต่ **กู้คืนได้** · ทำได้เฉพาะ **owner** เท่านั้น (admin/director ทำไม่ได้)
+> 📌 **แก้ไขโดย D9 (2026-08-30):** ขยายเป็น **owner + super admin** — admin/director ยังทำไม่ได้ตามเดิม (ดู §5.5)
 เหตุผลที่ไม่เลือกลบจริง: ฐาน dev มีผู้ปกครอง 4,504 · นักเรียน/ผลการเรียน/บัตรนักเรียนผูกกันข้าม 200+ ตาราง
 การลบ cascade ย้อนกลับไม่ได้และเสี่ยงข้อมูลค้างเป็นเศษ
 
@@ -366,12 +367,134 @@ academy 1: join_mode=open · auto_accept_members=true · (auto_accept_members ==
 
 **ลำดับ:** A → C → D → B → E → F (A/C ขนานกับ E ไม่ได้เพราะ E พึ่ง field ใหม่ใน resource)
 
+### 5.5 การตัดสินใจของเจ้าของโปรเจค รอบ SET-S2 (เคาะแล้ว 2026-08-30)
+
+**D8 — ซ่อนด้วยการกรองเฉพาะจุดที่ list + ด่านที่หน้าโรงเรียน (ไม่ใช้ global scope / SoftDeletes)**
+เหตุผล: มี **95 โมเดลที่ `belongsTo(Academy::class)`** และ **93 จุดที่ eager-load `academy`**
+ถ้าใส่ global scope (หรือ `SoftDeletes`) ความสัมพันธ์พวกนี้จะกลายเป็น `null` ทั้งระบบทันทีที่โรงเรียนถูกเก็บถาวร
+— gradebook / transcript / บัตรนักเรียน / บริจาค / คอร์ส จะพังในจุดที่ไม่เกี่ยวกับเมนู #7 เลย
+⇒ ใช้ `scopeNotArchived()` แปะที่ **5 จุด listing ที่นับได้จริง** + ด่าน middleware ที่หน้าโรงเรียน
+(ตรวจครบทุกจุดได้ด้วย grep · ไม่กระทบ relation)
+
+**D9 — เก็บถาวร/กู้คืนได้: เจ้าของ + super admin**
+ต่างจากถ้อยคำเดิมของ D1 ที่เขียนว่า "owner เท่านั้น" — เผื่อกรณีเจ้าของหายไปหรือบัญชีถูกปิด
+ให้ผู้ดูแลระบบกู้คืนแทนได้ · **admin/director ของโรงเรียนยังทำไม่ได้** ตามเดิม
+
+**D10 — เจ้าของกู้คืนจากหน้า `/academies` ส่วน "เก็บถาวรแล้ว"**
+⚠️ **ข้อเท็จจริงที่ต้องรู้:** เจ้าของโรงเรียน **ไม่มีแถวใน `academy_members`** (ยืนยันกับ dev: academy 1
+เจ้าของคือ user 1 · member row = 0) ⇒ แท็บ "โรงเรียนของฉัน" ปัจจุบันที่ยิง `membered-academies`
+**ไม่เคยแสดงโรงเรียนที่ตัวเองเป็นเจ้าของอยู่แล้ว** ⇒ ห้ามต่อยอดจากแท็บนั้น
+ต้องมี **endpoint ใหม่ `GET /api/academies/archived`** แยกต่างหาก
+
+**D11 — คอร์สใต้โรงเรียนที่ถูกเก็บถาวร ไม่ถูกแตะ**
+คอร์สยังเปิดเรียนได้ตามปกติ · ผู้เรียนที่กำลังเรียนอยู่ไม่สะดุด · SET-S2 ซ่อนแค่ "ตัวโรงเรียน"
+
+---
+
+### 5.6 SET-S2 — แผนแตก shard (5 shard)
+
+| shard | สาระ | ไฟล์ | ขึ้นกับ |
+|---|---|---|---|
+| **S2-A** | คอลัมน์ + แกนกลางบนโมเดล | migration ใหม่ 1 ไฟล์, `app/Models/Academy.php`, `app/Http/Middleware/EnsureAcademyVisibility.php` | — |
+| **S2-B** | endpoint เก็บถาวร/กู้คืน/รายการที่เก็บถาวร | `AcademyController.php`, `routes/learn/academy.php` | S2-A |
+| **S2-C** | กรองออกจาก 5 จุด listing + payload | `AcademyController.php`, `CampaignController.php`, `AcademyResource.php` | S2-B |
+| **S2-D** | frontend: แท็บโซนอันตราย + ส่วน "เก็บถาวรแล้ว" + แถบเตือนบนหน้าโรงเรียน | `admin/settings.vue`, `academies/index.vue`, `academies/[name].vue` | S2-C |
+| **S2-E** | เทสต์ `AcademyArchiveTest` | `tests/Feature/Academy/` | S2-A..D |
+
+**ลำดับ:** A → B → C → D → E (B กับ C แตะ `AcademyController` ไฟล์เดียวกัน **ห้ามรันขนาน**)
+
+#### S2-A — คอลัมน์ + แกนกลาง
+
+- migration `add_archived_at_to_academies_table` — `timestamp('archived_at')->nullable()->index()`
+  · `up()` guard ด้วย `Schema::hasColumn` · `down()` drop จริง (ตัดคอลัมน์ทิ้ง ข้อมูล archived_at หายเป็นเรื่องปกติ)
+  · **ไม่ต้องล้างแคช** — `academy_settings_{id}` เก็บแถวของตาราง `academy_settings` ไม่ใช่ `academies`
+    (ต่างจากกับดักของ SET-S5) แต่ให้ยืนยันด้วยการอ่าน `getSettings()` ก่อนสรุป
+- `Academy.php`
+  - `$casts` += `'archived_at' => 'datetime'` · **ห้ามใส่ `$fillable`** (ป้องกัน mass assignment ผ่าน `updateSettings`)
+  - `scopeNotArchived($q)` = `whereNull('archived_at')` · `scopeArchived($q)` = `whereNotNull('archived_at')`
+  - `isArchived(): bool`
+  - `canManageArchive($user): bool` = `$user && ($user->isSuperAdmin() || $this->user_id === $user->id)`
+    **นิยามเดียวเท่านั้น** — ห้ามเขียนเงื่อนไขนี้ซ้ำใน controller/middleware/route (บทเรียนจาก commit `d1b54b29`)
+  - `canViewContent($user)` — เพิ่มด่านแรกสุด: ถ้า `isArchived()` และ `! canManageArchive($user)` ⇒ `false`
+    (ทำให้ `AcademyResource` ตัด payload ให้คนนอกโดยอัตโนมัติ และ 11 route ที่ถือ `academy.visibility:content` ปิดตามทันที)
+- `EnsureAcademyVisibility` — เช็ค `isArchived()` **ก่อน** match aspect แล้วคืน
+  `403 {code: 'academy_archived'}` ข้อความ "โรงเรียนนี้ถูกเก็บถาวรแล้ว" ถ้าผู้เรียกไม่ผ่าน `canManageArchive`
+  (ต้องแยก code จาก `academy_private` ไม่งั้น frontend แยกสองสถานะไม่ออก)
+
+#### S2-B — endpoint
+
+| method | path | handler | สิทธิ์ | ผลลัพธ์ |
+|---|---|---|---|---|
+| `POST` | `/api/academies/{academy}/archive` | `AcademyController::archive` | `canManageArchive` | 200 · ตั้ง `archived_at = now()` · **409 ถ้าเก็บถาวรอยู่แล้ว** |
+| `DELETE` | `/api/academies/{academy}/archive` | `AcademyController::restore` | `canManageArchive` | 200 · `archived_at = null` · **409 ถ้าไม่ได้ถูกเก็บถาวร** |
+| `GET` | `/api/academies/archived` | `AcademyController::archivedIndex` | ผู้ใช้ที่ล็อกอิน | คืนเฉพาะโรงเรียนที่ **ตัวเองเป็นเจ้าของ** และถูกเก็บถาวร · super admin เห็นทั้งหมด |
+
+- 🔴 **`/archived` ต้องประกาศก่อน `Route::get('/{academy:name}')`** ไม่งั้นจะถูก wildcard กลืน
+  — วางไว้กลุ่มเดียวกับ `/all-academies` ที่มีคอมเมนต์ `Specific routes MUST come before wildcard routes` อยู่แล้ว
+- ไม่ต้องเขียน middleware ใหม่ — เรียก `$academy->canManageArchive($request->user())` ในเมธอด แล้ว 403
+- เขียนผ่าน `$academy->update([...])` **ไม่ใช่ `DB::table()`** เพื่อให้ trait `Auditable` (มีอยู่บนโมเดลแล้ว)
+  บันทึก audit log ให้อัตโนมัติ ⇒ SET-S2 ไม่ต้องแตะ `AuditLogService` เอง
+  · หมายเหตุ: `archived_at` ไม่อยู่ใน `$fillable` ⇒ ต้องเซ็ตด้วย `$academy->archived_at = ...; $academy->save();`
+- ลบ `AcademyController::destroy()` (เมธอดว่าง ไม่มี route ชี้มา) ทิ้งไปพร้อมกัน
+
+#### S2-C — 5 จุดที่ต้องกรอง (ครบทั้งหมดที่มีในโค้ด ณ 2026-08-30)
+
+| # | ที่ | เดิม |
+|---|---|---|
+| 1 | `AcademyController::getAllAcademies()` | `Academy::paginate(10)` |
+| 2 | `AcademyController::getAuthMemberedAcademies()` | `Academy::whereIn('id', $academyIds)->paginate(10)` |
+| 3 | `AcademyController::getMyAcademies()` | `auth()->user()->academies()->paginate(10)` |
+| 4 | `AcademyController::searchAcademies()` | `Academy::where('name','like',…)->get()` |
+| 5 | `CampaignController::targetAcademies()` | `Academy::query()->select(…)` |
+
+ทุกจุดเติม `->notArchived()` · `AcademyResource` เพิ่ม 2 คีย์ใน `$base` (ต้องอยู่ใน `$base` ไม่ใช่ท่อนล่าง
+เพราะคนนอกที่เจอโรงเรียนเก็บถาวรจะได้แค่ `$base`): `is_archived`, `archived_at`
+
+#### S2-D — frontend (mobile-first บังคับ)
+
+- `admin/settings.vue` — แท็บ "โซนอันตราย" เปลี่ยนจากลบเป็นเก็บถาวร
+  · หัวข้อ "เก็บถาวรโรงเรียน" · อธิบายว่า **ข้อมูลไม่ถูกลบ กู้คืนได้ทุกเมื่อ** และจะหายจากรายการค้นหา/ไดเรกทอรี
+  · คงขั้นตอนพิมพ์ชื่อยืนยันไว้ (Swal `input` เดิม) แต่เปลี่ยนคำ
+  · `confirmArchiveAcademy()` → `POST /api/academies/{id}/archive` → `navigateTo('/academies?view=archived')`
+  · ถ้า `academy.is_archived` ⇒ แสดงกล่อง "โรงเรียนนี้ถูกเก็บถาวรอยู่" + ปุ่ม **กู้คืน** (`DELETE .../archive`) แทน
+  · ปุ่มยังคง `v-if="isOwner"` เดิม (super admin ที่ไม่ใช่เจ้าของกู้คืนผ่านหน้า `/academies` ได้อยู่แล้ว)
+- `academies/index.vue` — เพิ่ม view ที่สาม `'archived'`
+  · ยิง `GET /api/academies/archived` ตอน mount (เงียบ ๆ) — **โชว์ปุ่มสลับ view นี้ก็ต่อเมื่อผลลัพธ์ > 0**
+    (ไม่งั้นผู้ใช้ทั่วไปเห็นแท็บว่างที่ไม่มีความหมาย)
+  · การ์ดในโหมดนี้ติดป้าย "เก็บถาวรแล้ว" + ปุ่ม "กู้คืน"
+- `academies/[name].vue` — ถ้า `academy.is_archived` และผู้ดูมีสิทธิ์ ⇒ แถบเตือนบนสุด
+  "โรงเรียนนี้ถูกเก็บถาวร — ผู้อื่นมองไม่เห็น" + ลิงก์ไปแท็บโซนอันตราย
+
+> **กติกา mobile-first (บังคับทุกไฟล์ใน `ui/`)** — class ไม่มี prefix = มือถือ แล้วค่อย `sm:`/`md:`
+> · ห้าม `hidden` ซ่อนข้อมูลสำคัญบนมือถือ · touch target ≥ 44px (`min-h-[44px] sm:min-h-0`)
+> · ทุกแถว flex: ฝั่งห้ามบีบ `flex-shrink-0 whitespace-nowrap` / ฝั่งข้อความ `min-w-0 flex-1 break-words`
+> · `p-3 sm:p-6`, `text-sm sm:text-base` · ตรวจจริงที่ 375px ก่อน
+
+#### S2-E — เทสต์ `tests/Feature/Academy/AcademyArchiveTest.php`
+
+1. เจ้าของกดเก็บถาวร ⇒ 200 · `archived_at` ไม่เป็น null
+2. super admin ที่ไม่ใช่เจ้าของ ⇒ 200
+3. สมาชิกที่ถือ role admin ของโรงเรียน ⇒ **403** (เน้นว่า `settings.manage` ไม่พอ)
+4. คนนอก ⇒ 403
+5. กดซ้ำตอนเก็บถาวรอยู่แล้ว ⇒ 409 · กู้คืนตอนไม่ได้ถูกเก็บ ⇒ 409
+6. โรงเรียนที่เก็บถาวรหายจาก `all-academies` · `membered-academies` · `search` ครบทั้งสาม
+7. คนนอกยิง endpoint เนื้อหาของโรงเรียนที่เก็บถาวร ⇒ 403 code `academy_archived` (ไม่ใช่ `academy_private`)
+8. เจ้าของยิง endpoint เดียวกัน ⇒ 200 (เข้าไปกู้คืนได้)
+9. `GET /archived` คืนเฉพาะของตัวเอง — ผู้ใช้อีกคนที่มีโรงเรียนเก็บถาวรของตัวเองต้องไม่เห็นข้ามกัน
+10. กู้คืนแล้วกลับมาโผล่ใน `all-academies` อีกครั้ง
+
+⚠️ **กับดักตอนตรวจใน dev:** user 1 เป็นทั้ง **เจ้าของ academy 1 และ `SUPER_ADMIN`** พร้อมกัน
+⇒ ยิง API ด้วย user 1 พิสูจน์ D9 ไม่ได้เลย ต้องใช้บัญชีที่สามที่เป็น super admin แต่ไม่ใช่เจ้าของ
+(หรือสร้างในเทสต์) และบัญชีที่เป็น admin ของโรงเรียนแต่ไม่ใช่เจ้าของ เพื่อพิสูจน์ข้อ 3
+
+---
+
 ## 6. Implementation Tasks
 
 | Step | Title | Depends on | Deliverable | Status |
 |---|---|---|---|---|
 | **SET-S1** | อุดช่องโหว่สิทธิ์ (G1 + G5) | — | ลบ route+method `PATCH /{academy}/update` · ย้าย `POST /{academy}/settings` ไปใช้ `academy.permission:settings.manage` แล้วถอดด่านที่เขียนเองใน controller | 🟢 **verified** (ยังไม่ commit) |
-| **SET-S2** | เก็บถาวรโรงเรียน แทนการลบ (G2 · D1) | SET-S1 | migration `archived_at` + `POST/DELETE /{academy}/archive` เฉพาะ owner + ซ่อนจากทุก listing + แท็บโซนอันตรายเรียกของจริง | ⚪ pending |
+| **SET-S2** | เก็บถาวรโรงเรียน แทนการลบ (G2 · D1 + D8–D11) | SET-S1 | migration `archived_at` + `POST/DELETE /{academy}/archive` + `GET /academies/archived` (เจ้าของ + super admin ตาม D9) + กรอง 5 จุด listing + แท็บโซนอันตรายเรียกของจริง + ส่วน "เก็บถาวรแล้ว" บน `/academies` | 🟢 **verified + migrate แล้ว** |
 | **SET-S3** | รวมคีย์สิทธิ์ให้เหลือชุดเดียว (§4) | SET-S1 | ถอด `academy.settings.view/edit` ออกจากแคตตาล็อก+SYSTEM_ROLES · ย้าย 6 จุดใน FE มาใช้ `settings.*` · migration ย้ายคีย์ในแถว `academy_roles` จริง | 🟢 **verified + migrate แล้ว** |
 | **SET-S4** | โหมดดูอย่างเดียว (G6) | SET-S3 | `settings.view` เข้าหน้าได้แบบ read-only · ปุ่มบันทึก+ปุ่มอัปโหลดซ่อน · 16 ช่อง disabled · แถบแจ้งเตือน · แท็บโซนอันตรายเฉพาะเจ้าของ · API ยังกัน `settings.manage` | 🟢 **verified** |
 | **SET-S5** | ทำให้สวิตช์มีผลจริง (G3 + G4 · D2 + D3) | SET-S1 | บังคับใช้ `privacy`/`show_member_list`/`show_course_list` · drop `allow_*_registration` 2 คอลัมน์ + ถอดออกจากฟอร์ม · `join_mode` เป็นตัวหลักแทน `auto_accept_members` และ `invite_only` บล็อกการขอเข้าร่วมจริง | 🟢 **verified + migrate แล้ว** |

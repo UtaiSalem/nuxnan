@@ -1,5 +1,113 @@
 # Work Log — nuxnan project
 
+## 2026-08-30 — เมนู #7 SET-S2: เก็บถาวรโรงเรียนแทนการลบ (ยังไม่ commit)
+
+### สถานะ: **SET-S2 ✅ ตรวจครบทุกข้อ** — 12 ไฟล์ (แก้ 10 · ใหม่ 2) · **migrate บน dev แล้ว** · รอคำสั่ง commit
+
+เอกสารหลัก: [`.agents/school-admin/07-settings.md`](school-admin/07-settings.md) §5.5–5.6
+
+### ปัญหาที่ปิด (G2 จาก audit 28 ส.ค.)
+
+ปุ่ม "ลบโรงเรียนนี้" ในแท็บโซนอันตรายเป็น **ปุ่มตาย** — ยิง `DELETE /api/academies/{id}` ที่ไม่มี route (405)
+และ `AcademyController::destroy()` เป็นเมธอดว่างที่ไม่มีใครชี้มา
+ผู้ใช้พิมพ์ชื่อโรงเรียนยืนยันครบทุกขั้น แล้วได้ error ดิบ ๆ
+
+### การตัดสินใจของเจ้าของโปรเจค (D8–D11 เคาะครบ)
+
+- **D8** ซ่อนด้วยการ**กรองเฉพาะจุดที่ list** + ด่านที่หน้าโรงเรียน — **ไม่ใช้ global scope / SoftDeletes**
+- **D9** เก็บถาวร/กู้คืนได้ = **เจ้าของ + super admin** (แก้ถ้อยคำเดิมของ D1 ที่เขียนว่า owner เท่านั้น)
+  · admin/director ของโรงเรียนยังทำไม่ได้
+- **D10** กู้คืนจากหน้า `/academies` ส่วน "เก็บถาวรแล้ว" (endpoint ใหม่ `GET /api/academies/archived`)
+- **D11** คอร์สใต้โรงเรียนที่ถูกเก็บถาวร **ไม่ถูกแตะ** — ผู้เรียนที่กำลังเรียนอยู่ไม่สะดุด
+
+### 🔴 เหตุผลที่ปฏิเสธ SoftDeletes — ตัวเลขที่วัดจากโค้ดจริง
+
+`SoftDeletes` (และ global scope ทุกแบบ) ตัดความสัมพันธ์ `academy` ของทั้งระบบพร้อมกัน:
+
+- **95 โมเดล** ที่ `belongsTo(Academy::class)` · **93 จุด** ที่ eager-load `academy`
+- ⇒ วินาทีที่โรงเรียนถูกเก็บถาวร `$course->academy` / `$student->academy` กลายเป็น `null` ทั้งแอป
+  (gradebook · transcript · บัตรนักเรียน · บริจาค) ทั้งที่ SET-S2 ต้องการซ่อนแค่ "ตัวโรงเรียน"
+
+เลยใช้ `scopeNotArchived()` แปะที่ **5 จุด listing ที่นับได้จริง** แทน — ตรวจครบด้วย grep ได้ ไม่กระทบ relation
+
+### สิ่งที่ทำ (4 shard ผ่าน agy · Claude ตรวจเองทุกบรรทัด)
+
+| shard | สาระ |
+|---|---|
+| A | migration `archived_at` + `Academy` 4 เมธอด (`scopeNotArchived`/`scopeArchived`/`isArchived`/`canManageArchive`) + ด่านใน `canViewContent()` + `EnsureAcademyVisibility` ตอบ code `academy_archived` |
+| B | `archive`/`restore`/`archivedIndex` + 3 route + กรอง 5 จุด listing + 2 คีย์ใน `AcademyResource` + **ลบ `destroy()` ที่ตายแล้ว** |
+| C | frontend: แท็บโซนอันตรายสองสถานะ · ส่วน "เก็บถาวรแล้ว" บน `/academies` + ป้าย/ปุ่มกู้คืนบนการ์ด · แถบเตือนบนหน้าโรงเรียน |
+| D | `AcademyArchiveTest` 12 เคส |
+
+**นิยามเดียวของสิทธิ์:** `Academy::canManageArchive()` — controller/middleware เรียกเมธอดนี้ทั้งคู่
+ไม่มีการเขียนเงื่อนไขซ้ำ (บทเรียนตรงจาก `d1b54b29` ที่มีนิยาม "แอดมินรายวิชา" 3 แบบไม่ตรงกัน)
+
+### จุดที่ agy เขียนหลวม แล้ว Claude แก้เอง
+
+เทสต์ข้อ 9 (โรงเรียนเก็บถาวรหายจาก `membered-academies`) agy เขียน
+`assertStringNotContainsString('"id":1,', $response->getContent())` พร้อมคอมเมนต์ว่า
+*"เราไม่รู้ JSON path ที่แน่นอน"* — เป็นการค้นสตริงดิบทั้งก้อน ซึ่งชนกับ `"id"` ของ user/นักเรียน
+ที่ซ้อนอยู่ใน payload ได้ ⇒ แก้เป็นอ่าน `academies.data` แล้ว `assertNotContains` บน `array_column(...,'id')`
+ให้ตรงกับข้อ 8 · หลังแก้ 12 passed (36 assertions)
+
+### หลักฐานที่ Claude รันเอง (ไม่มีตัวเลขไหนมาจากรายงาน agy)
+
+- `php -l` 8 ไฟล์ · `pint --test` ผ่านทุกไฟล์ · SFC 3 ไฟล์คอมไพล์ผ่าน
+- `migrate` → `rollback` → `migrate` **ครบวงบน MySQL จริง** · คอลัมน์หาย/กลับมาตามคาด
+- `route:list` → `/archived` resolve ไป `archivedIndex` **ไม่ใช่ `show`** (จุดที่พลาดง่ายสุด เพราะ
+  `GET /{academy:name}` เป็น wildcard ที่จะกลืนคำว่า "archived" ถ้าวางลำดับผิด)
+- `php artisan test tests/Feature/Academy tests/Feature/Campaign` ⇒ **140 passed · 0 failed · 2 incomplete**
+  (baseline เดิม 127+13 · ไม่มี regression) · `AcademyArchiveTest` เดี่ยว ⇒ **12 passed · 36 assertions**
+- **mutation check 3 แบบ** — ถอด `notArchived()` ออกจาก `getAllAcademies` / ให้ `canManageArchive`
+  ยอมรับ `isAdmin()` ด้วย / ปิดด่าน archived ใน middleware
+  ⇒ เทสต์ล้ม **ตรงตัวที่ควรล้ม ตัวละ 1 เคส** แล้วคืนไฟล์ครบ (diffstat กลับมาเท่าเดิมเป๊ะ ไม่มี `.bak` ตกค้าง)
+- **ยิง API จริงบน MySQL 13 ขั้น** ด้วย JWT 3 ใบ (เจ้าของ/สมาชิก status 2/คนนอก user 3):
+  archive 200 → หายจาก `all-academies` → คนนอกได้ **403 `academy_archived`** (ไม่ใช่ `academy_private`)
+  → เจ้าของยังเข้าเนื้อหาได้ 200 → คนนอกกด archive 403 → กดซ้ำ 409 `already_archived`
+  → `/archived` เจ้าของเห็น คนนอกได้ `[]` → หายจาก `membered-academies` → restore 200
+  → restore ซ้ำ 409 `not_archived` → กลับมาโผล่ใน `all-academies`
+- **audit log เขียนให้เองจริง** — trait `Auditable` บนโมเดลบันทึก 2 แถว (`action=updated`, `user_id=1`,
+  `url=.../academies/1/archive`) ⇒ SET-S2 ไม่ต้องแตะ `AuditLogService` เลย
+- **เบราว์เซอร์จริงที่ 375px** (ล็อกอินด้วย cookie `token`): การ์ดขึ้นป้าย "เก็บถาวรแล้ว" + ปุ่ม "กู้คืน"
+  แทนลูกศร · หน้าโรงเรียนขึ้นแถบเตือนซ้อนแนวตั้ง ปุ่มเต็มความกว้าง · แท็บโซนอันตรายพลิกเป็นกล่อง
+  "โรงเรียนนี้ถูกเก็บถาวรอยู่" + ปุ่มกู้คืน (ปุ่มเก็บถาวรหายไป) · `document.body.scrollWidth === 375` ทุกหน้า
+- **กู้คืนผ่านปุ่มจริงในหน้าเว็บ** จนได้ Swal "กู้คืนโรงเรียนเรียบร้อยแล้ว"
+  · **ล้างข้อมูลทดสอบครบ** — `archived_at` กลับเป็น NULL, `archived()->count() === 0`
+
+### สิ่งที่ยังไม่ได้ตรวจ (พูดตรง ๆ)
+
+- **ไม่ได้ตรวจ 768/1280px ในสถานะเก็บถาวร** — ตรวจแค่ 375px (จุดที่แตกง่ายสุด) ทั้งสามหน้า
+  class ที่ใช้เป็น `flex-col sm:flex-row` / `w-full sm:w-auto` ตรงตามแพตเทิร์นที่กวาดทั้งแอปไปแล้ว
+- **แยกสองสาขาของ D9 บน MySQL ไม่ได้** — user 1 เป็นทั้งเจ้าของ academy 1 **และ** `SUPER_ADMIN`
+  พร้อมกัน ⇒ การยิง API จริงพิสูจน์ได้แค่ "ผ่าน" รวม ๆ · ที่แยกสองสาขาจริงคือเทสต์ SQLite
+  (เคส `super_admin_who_is_not_owner` และ `academy_admin_cannot_archive`)
+- `npm run build` — **ผู้ใช้รันเอง** (แตะ `ui/` 3 ไฟล์)
+
+### งานที่ค้าง (TODO)
+
+- [ ] **ยังไม่ commit** — 12 ไฟล์รอคำสั่ง · แนะนำแยก 4 commit ตาม shard (A backend core /
+      B endpoint+listing / C frontend / D tests)
+- [ ] **production ยังไม่ได้รัน migration 5 ตัว** — 4 ตัวเดิม + **`2026_08_30_000002` (archived_at)**
+      ตัวใหม่นี้เป็น add-column ล้วน `down()` ย้อนได้จริง ไม่ทำลายข้อมูลเดิม
+- [ ] **UX เล็กที่เจอตอนตรวจ (ยังไม่แก้ · ไม่ใช่บั๊กของสเปค):** ถ้าอยู่บนหน้า `/academies` อยู่แล้ว
+      แล้วเปลี่ยนเป็น `?view=archived` ด้วยการแก้ URL ตรง ๆ component ไม่ re-mount
+      ⇒ `fetchArchivedAcademies()` ไม่ยิงซ้ำ เห็นรายการว่าง (โหลดหน้าใหม่แล้วถูกต้อง)
+      เส้นทางจริงของผู้ใช้ (จากหน้าตั้งค่า → `/academies?view=archived`) เป็นคนละ component จึง mount ใหม่ ปกติดี
+      → ถ้าจะเก็บ ให้ใส่ใน watch ของ `route.query.view` (งานของ SET-S11 UX เก็บตก)
+- [ ] **G18** (ยกมาจากรอบ S5) — `school-attendances` / `emergency-alerts` / `revenue/support-summary`
+      / `my-role` ยังไม่มีด่านสมาชิกภาพ **และตอนนี้ยังไม่มีด่าน archived ด้วย** → งานเมนู #9/#19 หรือ SET-S14
+- [ ] **หนี้ตรวจด้วยตา SET-S4** (ยกมาจากรอบก่อน) — ยังไม่ได้เห็นโหมดอ่านอย่างเดียวบนจอจริง
+- [ ] ตัวถัดไปตามลำดับที่ตกลง: S1→S3→S4→S5→**S2**→S8→S6→S7→S9→S11→S10 ⇒ **SET-S8** (ซ่อม `name_slug` ชื่อไทย)
+
+### Branch / Git State
+
+- Branch: `main`
+- Uncommitted: **12 ไฟล์ของ SET-S2** (10 modified · 2 untracked) + `.agents/school-admin/07-settings.md`
+- Push: **ยังไม่ push**
+
+---
+
+
 ## 2026-08-30 — ปิดงานกำพร้า: ไฟล์ค้าง 1 ไฟล์ที่ไม่มีใครยอมรับเป็นเจ้าของ 4 session — commit `c060cb42` (push แล้ว)
 
 ### สถานะ: **working tree สะอาด 0 ไฟล์ค้าง เป็นครั้งแรกตั้งแต่ 28 ส.ค.** · `main` = `origin/main`
