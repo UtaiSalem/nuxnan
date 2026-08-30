@@ -30,7 +30,6 @@ class AcademySettingsUpdateTest extends TestCase
         $this->academy = Academy::factory()->create([
             'user_id' => $this->owner->id,
             'name' => 'Original Academy Name',
-            'name_slug' => 'original-academy-name',
         ]);
 
         // Create initial setting
@@ -75,7 +74,6 @@ class AcademySettingsUpdateTest extends TestCase
         $this->academy->refresh();
         $this->assertEquals('Updated Academy Name', $this->academy->name);
         $this->assertEquals('Updated Academy Name EN', $this->academy->name_en);
-        $this->assertEquals('updated-academy-name', $this->academy->name_slug);
         $this->assertEquals('This is a description', $this->academy->description);
         $this->assertEquals('This is an EN description', $this->academy->description_en);
         $this->assertEquals('updated@academy.com', $this->academy->email);
@@ -107,13 +105,15 @@ class AcademySettingsUpdateTest extends TestCase
                 'website',
                 'province',
                 'country',
-                'name_slug',
                 'privacy',
                 'join_mode',
                 'show_member_list',
                 'show_course_list',
             ],
         ]);
+
+        // SET-S8 — คอลัมน์ name_slug ถูกลบทิ้ง payload ต้องไม่มีคีย์นี้อีก
+        $response->assertJsonMissingPath('academy.name_slug');
 
         $response->assertJsonPath('academy.privacy', 'private');
         $response->assertJsonPath('academy.join_mode', 'approval');
@@ -171,24 +171,59 @@ class AcademySettingsUpdateTest extends TestCase
         $this->assertEquals('approval', $fresh->getSettings()->join_mode);
     }
 
-    public function test_name_slug_regenerates_and_avoids_collision()
+    /**
+     * SET-S8 — `academies.name` เป็น UNIQUE index ในฐาน
+     *
+     * ก่อนหน้านี้ด่านกันชนไล่หาชนบน `name_slug` (ผิดคอลัมน์) ⇒ ชื่อซ้ำจริงหลุดไปถึง DB
+     * แล้วโยน QueryException ออกมาเป็น 500 พร้อมข้อความ SQL ดิบถึงผู้ใช้
+     */
+    public function test_renaming_to_a_taken_name_is_rejected_with_422()
     {
-        // Create another academy that has a name resolving to 'new-slug'
-        // But names must be unique due to DB unique constraint on name
         Academy::factory()->create([
             'user_id' => $this->owner->id,
-            'name' => 'New Slug!',
-            'name_slug' => 'new-slug',
+            'name' => 'Taken Academy Name',
         ]);
 
-        // Attempt to rename original academy to 'New Slug' (slug would be 'new-slug')
         $response = $this->actingAs($this->owner, 'api')
             ->postJson("/api/academies/{$this->academy->id}/settings", [
-                'name' => 'New Slug',
+                'name' => 'Taken Academy Name',
+            ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('name');
+
+        // ชื่อเดิมต้องไม่ถูกแตะ
+        $this->assertEquals('Original Academy Name', $this->academy->fresh()->name);
+    }
+
+    /**
+     * เปลี่ยนเป็นชื่อเดิมของตัวเอง (ไม่ได้เปลี่ยนอะไร) ต้องไม่โดนกฎ unique เล่นงาน
+     * — นี่คือเหตุผลที่ต้องใช้ Rule::unique()->ignore($academy->id) ไม่ใช่ 'unique:academies,name' เฉย ๆ
+     */
+    public function test_keeping_the_same_name_is_still_allowed()
+    {
+        $response = $this->actingAs($this->owner, 'api')
+            ->postJson("/api/academies/{$this->academy->id}/settings", [
+                'name' => 'Original Academy Name',
             ]);
 
         $response->assertStatus(200);
-        $this->academy->refresh();
-        $this->assertEquals('new-slug-1', $this->academy->name_slug);
+        $this->assertEquals('Original Academy Name', $this->academy->fresh()->name);
+    }
+
+    /**
+     * ชื่อภาษาไทยต้องบันทึกได้ครบถ้วนโดยไม่มีอะไรมาแปลงหรือกลืนตัวอักษรทิ้ง
+     * (เดิม Str::slug จะแปลงชื่อนี้เป็นสตริงว่าง — เป็นที่มาของ SET-S8)
+     */
+    public function test_thai_name_is_saved_verbatim()
+    {
+        $response = $this->actingAs($this->owner, 'api')
+            ->postJson("/api/academies/{$this->academy->id}/settings", [
+                'name' => 'โรงเรียนทดสอบภาษาไทย',
+            ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('academy.name', 'โรงเรียนทดสอบภาษาไทย');
+        $this->assertEquals('โรงเรียนทดสอบภาษาไทย', $this->academy->fresh()->name);
     }
 }
