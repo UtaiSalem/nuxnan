@@ -378,8 +378,14 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // ============================================
     // Member Activity Log Routes (ประวัติกิจกรรม)
     // ============================================
+    // เส้นนี้ไม่มี {academy} ให้ผูก และคืนแค่รายการชื่อ action ที่ระบบรองรับ (ไม่ใช่ข้อมูลของโรงเรียนไหน) จึงคง auth:api ไว้ตามเดิม
     Route::get('activity-log/actions', [MemberActivityLogController::class, 'getAvailableActions'])->name('api.academy.activity-log.actions');
-    Route::prefix('{academy}/activity-log')->group(function () {
+    // G29 — เดิมทุกเส้นมีแค่ auth:api ⇒ ใครล็อกอินก็อ่านประวัติกิจกรรมสมาชิกของโรงเรียนใดก็ได้
+    // (ในนั้นมี guardian_sensitive_view และ old/new values ของสมาชิก) · middleware นี้บังคับ
+    // ทั้งความเป็นสมาชิก APPROVED และสิทธิ์ในคราวเดียว
+    // รับสองคีย์เพราะเมนูในหน้าแอดมินโชว์ลิงก์นี้ด้วย can('reports.view') อยู่แล้ว
+    // (ui/pages/academies/[name]/admin.vue:256) — ถ้าใส่แค่ members.view คนที่เห็นเมนูจะกดแล้วโดน 403
+    Route::prefix('{academy}/activity-log')->middleware('academy.permission:members.view,reports.view')->group(function () {
         Route::get('/', [MemberActivityLogController::class, 'index'])->name('api.academy.activity-log.index');
         Route::get('statistics', [MemberActivityLogController::class, 'getStatistics'])->name('api.academy.activity-log.statistics');
         Route::get('member/{member}', [MemberActivityLogController::class, 'getMemberLogs'])->name('api.academy.activity-log.member');
