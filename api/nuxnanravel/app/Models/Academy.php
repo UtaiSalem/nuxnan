@@ -49,6 +49,31 @@ class Academy extends Model
         'profile_image',
     ];
 
+    /**
+     * SET-S7 — ประเภทของโรงเรียน · **นิยามเดียวของทั้งระบบ**
+     * ค่า null = "ทั่วไป" (ไม่ระบุ) · หน้ารายการโรงเรียนใช้ค่านี้เป็นตัวกรอง
+     * ห้าม hardcode ซ้ำที่อื่น — controller ใช้ validate และ resource ส่งให้ frontend สร้างตัวเลือก
+     */
+    public const ACADEMY_TYPE_CATALOG = [
+        'public',
+        'private',
+        'foundation',
+        'international',
+    ];
+
+    /**
+     * SET-S7 — ช่องทางโซเชียลที่โรงเรียนกรอกได้ · **นิยามเดียวของทั้งระบบ**
+     * เก็บลงคอลัมน์ json `social_media_links` เป็น object คีย์ตามรายการนี้เท่านั้น
+     */
+    public const SOCIAL_LINK_CATALOG = [
+        'facebook',
+        'line',
+        'youtube',
+        'tiktok',
+        'instagram',
+        'x',
+    ];
+
     protected static function boot()
     {
         parent::boot();
@@ -109,6 +134,7 @@ class Academy extends Model
     protected $casts = [
         'donation_enabled' => 'boolean',
         'student_editable_fields' => 'array',
+        'social_media_links' => 'array',
         'archived_at' => 'datetime',
     ];
 

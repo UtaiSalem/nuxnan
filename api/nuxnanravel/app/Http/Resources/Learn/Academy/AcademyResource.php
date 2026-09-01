@@ -62,6 +62,11 @@ class AcademyResource extends JsonResource
             return $base;
         }
 
+        // SET-S7 / G22 — คอลัมน์ director เป็น varchar ที่เก็บ user id
+        // ถ้าค่าไม่ใช่ตัวเลข หรือหา user ไม่เจอ ต้องคืน null เฉย ๆ
+        // ก่อนหน้านี้ new UserResource(null) ทำให้ทั้ง endpoint ตอบ 500 (TypeError ใน method_exists)
+        $director = is_numeric($this->director) ? User::find((int) $this->director) : null;
+
         return array_merge($base, [
             'creater' => new UserResource($this->user),
             'address' => $this->address,
@@ -70,7 +75,7 @@ class AcademyResource extends JsonResource
             'website' => $this->website,
             'province' => $this->province,
             'country' => $this->country,
-            'director' => new UserResource(User::find($this->director)),
+            'director' => $director ? new UserResource($director) : null,
             'established_year' => $this->established_year,
             'type' => $this->type,
             'accreditation' => $this->accreditation,
@@ -86,6 +91,8 @@ class AcademyResource extends JsonResource
             'donation_enabled' => $this->resource->donationEnabled(),
             'student_editable_fields' => $this->student_editable_fields,
             'student_editable_field_catalog' => Academy::STUDENT_EDITABLE_FIELD_CATALOG,
+            'academy_type_catalog' => Academy::ACADEMY_TYPE_CATALOG,
+            'social_link_catalog' => Academy::SOCIAL_LINK_CATALOG,
 
             'setting' => $settings,
         ]);

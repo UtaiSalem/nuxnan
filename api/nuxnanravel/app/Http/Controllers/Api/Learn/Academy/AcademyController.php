@@ -498,7 +498,7 @@ class AcademyController extends Controller
         // สิทธิ์ถูกตรวจที่ middleware `academy.permission:settings.manage` (CheckAcademyPermission)
         // ซึ่งครอบ superadmin, เจ้าของโรงเรียน, สถานะสมาชิก APPROVED และสิทธิ์ที่ได้จากฝ่าย/กลุ่ม
 
-        $request->validate([
+        $rules = [
             // SET-S8 — `academies.name` เป็น UNIQUE index ในฐาน ถ้าไม่กันที่นี่จะได้ 500
             // พร้อม SQL error ดิบแทน 422 (ด่านเดิมไล่หาชนผิดคอลัมน์)
             'name' => ['required', 'string', 'max:255', Rule::unique('academies', 'name')->ignore($academy->id)],
@@ -521,13 +521,50 @@ class AcademyController extends Controller
             'student_editable_fields.mode' => 'required_with:student_editable_fields|string|in:blacklist,whitelist',
             'student_editable_fields.fields' => 'nullable|array',
             'student_editable_fields.fields.*' => ['string', Rule::in(Academy::STUDENT_EDITABLE_FIELD_CATALOG)],
-        ]);
+
+            // SET-S7 — ฟิลด์อัตลักษณ์โรงเรียน (D15–D17)
+            'slogan' => 'nullable|string|max:255',
+            'type' => ['nullable', 'string', Rule::in(Academy::ACADEMY_TYPE_CATALOG)],
+            // D16 — เก็บเป็น พ.ศ. ไม่ใช่ ค.ศ.
+            'established_year' => 'nullable|integer|min:2400|max:'.(now()->year + 543),
+            'director' => ['nullable', 'integer', function ($attribute, $value, $fail) use ($academy) {
+                // D15 — ผอ. ต้องเป็นคนในโรงเรียนนี้จริง
+                // เจ้าของโรงเรียนอาจไม่มีแถวใน academy_members จึงต้องยอมรับ user_id ของเจ้าของด้วย
+                if ((int) $value === (int) $academy->user_id) {
+                    return;
+                }
+
+                $isApprovedMember = AcademyMember::where('academy_id', $academy->id)
+                    ->where('user_id', $value)
+                    ->where('status', AcademyMember::STATUS_APPROVED)
+                    ->exists();
+
+                if (! $isApprovedMember) {
+                    $fail('ผู้อำนวยการต้องเป็นสมาชิกของโรงเรียนนี้ที่ได้รับอนุมัติแล้ว');
+                }
+            }],
+            'social_media_links' => ['nullable', 'array', function ($attribute, $value, $fail) {
+                // D17 — คีย์นอกแคตตาล็อกต้องถูกปฏิเสธ (Laravel ไม่ตัดคีย์ส่วนเกินให้เอง)
+                $unknown = array_diff(array_keys((array) $value), Academy::SOCIAL_LINK_CATALOG);
+                if (! empty($unknown)) {
+                    $fail('ช่องทางโซเชียลที่ไม่รองรับ: '.implode(', ', $unknown));
+                }
+            }],
+        ];
+
+        foreach (Academy::SOCIAL_LINK_CATALOG as $socialKey) {
+            $rules["social_media_links.{$socialKey}"] = 'nullable|url|max:255';
+        }
+
+        $request->validate($rules);
 
         try {
             // Update basic info
             $academy->fill($request->only([
                 'name', 'name_en', 'description', 'description_en',
                 'email', 'phone', 'website', 'address', 'province', 'country',
+                // SET-S7 — ฟิลด์อัตลักษณ์
+                'slogan', 'type', 'established_year', 'director',
             ]));
 
             // SET-S6 — เขียนค่า boolean ลงเสมอ ไม่ปล่อยให้เป็น NULL แล้วไป fallback config ของคอร์ส
@@ -544,6 +581,19 @@ class AcademyController extends Controller
                     'mode' => $editable['mode'],
                     'fields' => array_values($editable['fields'] ?? []),
                 ];
+            }
+
+            // SET-S7 / D17 — เก็บเฉพาะคีย์ในแคตตาล็อกที่มีค่าจริง
+            // ช่องที่ผู้ดูแลล้างทิ้งต้องหายไปจาก json ไม่ใช่ค้างเป็น null
+            if ($request->has('social_media_links')) {
+                $links = [];
+                foreach (Academy::SOCIAL_LINK_CATALOG as $socialKey) {
+                    $url = trim((string) $request->input("social_media_links.{$socialKey}", ''));
+                    if ($url !== '') {
+                        $links[$socialKey] = $url;
+                    }
+                }
+                $academy->social_media_links = $links;
             }
 
             // Handle avatar upload
