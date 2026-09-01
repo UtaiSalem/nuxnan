@@ -279,7 +279,7 @@ class CoursePostShareController extends Controller
             // Get all shares for this course post from Share table
             $shares = Share::where('shareable_type', 'App\\Models\\CoursePost')
                 ->where('shareable_id', $id)
-                ->with('user:id,username,avatar,verified')
+                ->with('user:id,name,username,profile_photo_path,verified')
                 ->orderBy('created_at', 'desc')
                 ->paginate(20);
 

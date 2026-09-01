@@ -95,7 +95,7 @@ class CourseReportController extends Controller
 
         // Get course members with scores
         $query = $course->courseMembers()
-            ->with(['user:id,name,email,avatar', 'group:id,name']);
+            ->with(['user:id,name,email,profile_photo_path', 'group:id,name']);
 
         if ($groupId) {
             $query->where('group_id', $groupId);
@@ -209,7 +209,7 @@ class CourseReportController extends Controller
         $groupId = $request->get('group_id');
 
         $membersQuery = $course->courseMembers()
-            ->with(['user:id,name,email,avatar', 'group:id,name']);
+            ->with(['user:id,name,email,profile_photo_path', 'group:id,name']);
 
         if ($groupId) {
             $membersQuery->where('group_id', $groupId);

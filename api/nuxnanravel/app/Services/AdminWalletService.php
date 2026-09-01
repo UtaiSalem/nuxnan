@@ -129,7 +129,7 @@ class AdminWalletService
     {
         return User::orderByDesc('wallet')
             ->limit($limit)
-            ->get(['id', 'name', 'avatar', 'wallet', 'created_at'])
+            ->get(['id', 'name', 'profile_photo_path', 'wallet', 'created_at'])
             ->toArray();
     }
 
@@ -147,7 +147,7 @@ class AdminWalletService
             ->where('transaction_type', 'withdraw')
             ->where('status', 'completed')
             ->where('created_at', '>=', now()->subDays($days))
-            ->with('user:id,name,avatar')
+            ->with('user:id,name,profile_photo_path')
             ->groupBy('user_id')
             ->orderByDesc('total_withdrawn')
             ->limit($limit)
@@ -381,7 +381,7 @@ class AdminWalletService
      */
     public function getPendingWithdrawalsSummary(): array
     {
-        $withdrawals = WalletTransaction::with(['user:id,name,email,avatar'])
+        $withdrawals = WalletTransaction::with(['user:id,name,email,profile_photo_path'])
             ->where('transaction_type', 'withdraw')
             ->where('status', 'pending')
             ->orderBy('created_at', 'asc')

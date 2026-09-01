@@ -27,7 +27,7 @@ class StaffAttendanceController extends Controller
     {
         $query = StaffAttendance::whereHas('staffProfile', function ($q) use ($academy) {
             $q->where('academy_id', $academy->id);
-        })->with(['staffProfile.user:id,name,avatar']);
+        })->with(['staffProfile.user:id,name,profile_photo_path']);
 
         // Filter by staff
         if ($request->has('staff_profile_id')) {
@@ -62,7 +62,7 @@ class StaffAttendanceController extends Controller
     {
         $this->authorizeAttendance($academy, $attendance);
 
-        $attendance->load(['staffProfile.user:id,name,avatar']);
+        $attendance->load(['staffProfile.user:id,name,profile_photo_path']);
 
         return response()->json([
             'success' => true,
@@ -328,7 +328,7 @@ class StaffAttendanceController extends Controller
 
         $allStaff = StaffProfile::where('academy_id', $academy->id)
             ->active()
-            ->with('user:id,name,avatar')
+            ->with('user:id,name,profile_photo_path')
             ->get();
 
         $attendances = StaffAttendance::whereHas('staffProfile', function ($q) use ($academy) {

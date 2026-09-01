@@ -17,7 +17,7 @@ class GameScoreController extends Controller
         $gameType = $request->query('game_type', 'crossmath');
 
         // Get top 20 unique users with their highest score
-        $leaderboard = GameScore::with('user:id,name,avatar,profile_photo_url')
+        $leaderboard = GameScore::with('user:id,name,profile_photo_path')
             ->where('game_type', $gameType)
             ->select('user_id', 'player_name', \DB::raw('MAX(score) as score'), \DB::raw('MAX(level) as level'))
             ->groupBy('user_id', 'player_name')
