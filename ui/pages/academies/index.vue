@@ -159,6 +159,12 @@ const switchView = (view: 'all' | 'my' | 'archived') => {
   if (view === 'my' && myAcademies.value.length === 0) {
     fetchMyAcademies()
   }
+  // SET-S11 (หนี้จาก SET-S2) — หน้านี้อ่าน ?view=archived ครบทั้ง 3 ทาง (ค่าเริ่มต้นของ ref,
+  // onMounted, watch) แต่ไม่เคย refetch ⇒ ถ้าผู้ใช้อยู่ที่ /academies อยู่แล้วแล้ว query เปลี่ยน
+  // โดยหน้าไม่ remount ลิสต์ที่โชว์คือลิสต์ที่ fetch ไว้ตอน mount — โรงเรียนที่เพิ่งเก็บถาวรจะยังไม่โผล่
+  if (view === 'archived') {
+    fetchArchivedAcademies()
+  }
 }
 
 usePageLayoutWidgets({ left: true, right: true })
