@@ -1,5 +1,82 @@
 # Work Log — nuxnan project
 
+## 2026-09-02 (ต่อ) — เก็บงานค้าง 2 ตัวก่อนไป SET-S11
+
+### สถานะ: **✅ ตรวจครบทุกข้อ** — 4 ไฟล์ (แก้ 2 · เทสต์ใหม่ 2) · commit แล้ว 2 ชุด
+
+### G29 — ประวัติกิจกรรมสมาชิกไม่มีด่านสิทธิ์เลย
+
+ทั้ง 3 เส้นใต้ `{academy}/activity-log` มีแค่ `auth:api` และใน controller ก็ไม่มีการตรวจสิทธิ์
+สักบรรทัด ⇒ ใครล็อกอินก็อ่านประวัติของโรงเรียนใดก็ได้ (มี `guardian_sensitive_view` +
+old/new values ของสมาชิกอยู่ในนั้น)
+
+**แก้:** `academy.permission:members.view,reports.view` ที่ระดับ prefix
+รับสองคีย์เพราะเมนูแอดมินโชว์ลิงก์นี้ด้วย `can('reports.view')` อยู่แล้ว
+(`admin.vue:256`) — ถ้าใส่แค่ `members.view` คนที่เห็นเมนูจะกดแล้วโดน 403 (บทเรียนจาก G21)
+· เส้น `activity-log/actions` ไม่มี `{academy}` ให้ผูกและคืนแค่รายชื่อ action จึงคง `auth:api`
+
+**mutation check:** ถอด middleware ⇒ คนนอกได้ **200** ⇒ รูรั่วมีจริง
+
+### `/api/notifications/recent` 500 ทุกหน้า
+
+`sender:id,name,avatar` — `avatar` เป็น **accessor** ของ User (อ่านจาก `profile_photo_path`)
+ไม่ใช่คอลัมน์ · **ทั้งฐานไม่มีตารางไหนมีคอลัมน์ `avatar` เลย** (`information_schema` ⇒ 0 แถว)
+ในฐาน dev มี notifications 4,642 แถว มี sender 4,622 ⇒ พังแทบทุกครั้งที่โหลดหน้าไหนก็ตาม
+
+**แก้:** select `profile_photo_path` — คีย์ `avatar` และ `profile_photo_url` ยังมาครบจาก
+`$appends` ของ User ⇒ frontend ไม่ต้องแก้ (ยืนยันบน MySQL: `sender.avatar` = URL รูปจริง)
+
+### 🔴 กับดักใหญ่ของรอบนี้ — SQLite ไม่ฟ้องเมื่อ select คอลัมน์ที่ไม่มีอยู่
+
+ใส่ `'avatar'` กลับไปแล้ว `NotificationRecentTest` **ยังเขียว** บน SQLite ทั้งที่ MySQL ตอบ 500
+⇒ การ assert แค่ status code จับ regression คลาสนี้ไม่ได้เลย
+**เทสต์จึง assert ว่า `profile_photo_path` อยู่ใน payload ของ sender** ซึ่งเป็นด่านเดียวที่จับได้
+(mutation check ยืนยันแล้วว่าล้ม) · บันทึกเป็น instance ที่ 8 ใน memory `tests-sqlite-vs-mysql`
+
+### 🔴 บั๊กเดียวกันยังเหลืออีก 34 จุด ใน 15 ไฟล์ (งานแยก ยังไม่แตะ)
+
+สุ่มยิงจริง 4 จุด **พัง 3**: `Photo::with('user:id,name,username,avatar')` ·
+`StaffProfile::with('user:id,name,avatar')` (ทั้งโมดูลบุคลากร) ·
+`WalletTransaction::with('user:id,name,avatar')` (หน้าแอดมินถอนเงิน)
+
+กระจายอยู่ที่ `PhotoController` 6 · `AlbumController` 5 · `TypingRaceController` 4 ·
+`Staff`/`StaffAttendance`/`Payroll` 6 · `InstructorDashboard` 3 · `AdminWalletService` 2 ·
+`AcademyClaimService`/`CourseClaimService` 2 · `GameScore`/`TypingClassroom`/`TypingTournament`/
+`CoursePostShare`/`CourseReport` ที่เหลือ
+· บางจุดยังใส่ `profile_photo_url` (accessor) ลงใน select ด้วย
+
+### หลักฐานที่ Claude รันเอง
+
+- `php -l` 2 ไฟล์ · `pint --test` ผ่านทั้ง 4 ไฟล์ · `grep -c avatar NotificationController` = **0**
+- `route:list --path=activity-log` — 3 เส้นใต้ `{academy}` ติด `members.view,reports.view` ครบ ·
+  เส้น `actions` ยังเป็น `auth:api` ตามตั้งใจ
+- **ยิงจริงบน MySQL:** query ใหม่ผ่าน · `sender.avatar` = URL รูปจริงจาก `$appends`
+- เทสต์ใหม่ **7 passed** (guards 6 + notification 1) · `tests/Feature/Academy` **178 passed ·
+  2 incomplete · 0 failed** (เดิม 172 + ใหม่ 6)
+- **mutation check 2 แบบ ⇒ ล้มตรงเคสที่ควรล้มทั้งคู่** · คืนไฟล์ครบ
+
+### ⚠️ ความผิดพลาดของ Claude ในรอบนี้ (บันทึกไว้ตามจริง)
+
+ตอนจะเช็คว่า schema ฝั่งเทสต์มีคอลัมน์ `avatar` ไหม ผมสั่ง `Artisan::call('migrate', ...)`
+ใน tinker โดยคิดว่า `--database=sqlite` จะเปลี่ยน connection ให้ — **มันยิงไปที่ MySQL**
+แล้วตายที่ `telescope_entries already exists` · ตรวจแล้วว่า **ไม่มี migration ไหนถูกรัน**
+(`max(batch)` ยังเป็น 134 = คู่ของ SET-S7 ไม่มี batch ใหม่) ⇒ ฐานไม่ถูกแตะ
+บทเรียน: อย่าเรียก `migrate` เพื่อสำรวจ schema — เขียนเทสต์ชั่วคราวที่ `Schema::hasColumn()` แทน
+
+### งานที่ค้างหลังรอบนี้
+
+- [x] G29 ✅ · [x] `/notifications/recent` ✅
+- [ ] **กวาด `avatar`/`profile_photo_url` ที่เหลือ 34 จุด ใน 15 ไฟล์** (งานแยก ควรมีรอบตรวจของตัวเอง)
+- [ ] **G18** (ยกมา) · **หนี้ตรวจด้วยตา SET-S4** (ยกมา) · `PublicAcademyController` ตก `pint --test`
+- [ ] ตัวถัดไป: **SET-S11** (UX เก็บตก G12 + `?view=archived` ที่ยกมาจาก S2)
+
+### Branch / Git State
+
+- Branch: `main` · Uncommitted: ไม่มี (clean) · **ยังไม่ push**
+- สะสมบน `main`: 6 commit ของ SET-S7 + 4 ของ SET-S9 + 2 ของรอบเก็บงานนี้
+
+---
+
 ## 2026-09-02 — เมนู #7 SET-S9: ประวัติการแก้ตั้งค่า + ปิดรูรั่ว audit-log ของโรงเรียน
 
 ### สถานะ: **SET-S9 ✅ ตรวจครบทุกข้อ** — 8 ไฟล์ (แก้ 6 · ใหม่ 2) · **ไม่มี migration** · **commit แล้ว 4 ชุด**
@@ -66,7 +143,7 @@
 ### งานที่ค้าง (TODO)
 
 - [x] commit แล้ว 4 ชุด (`SET-S9/1`–`/3` + docs) — **ยังไม่ push**
-- [ ] **G29 (ใหม่)** — `MemberActivityLogController` ทั้ง 4 route มีแค่ `auth:api` ไม่มีด่านสิทธิ์
+- [x] **G29** — ปิดแล้ว (ดูหัวข้อ 2026-09-02 ต่อ) · เดิม: `MemberActivityLogController` ทั้ง 4 route มีแค่ `auth:api`
       และหน้า `admin/activity-log/index.vue` ไม่มี `definePageMeta` กัน ⇒ ใครล็อกอินก็อ่าน
       ประวัติกิจกรรมสมาชิกของโรงเรียนใดก็ได้ (มี `guardian_sensitive_view` อยู่ในนั้น) — ญาติของ G18
 - [ ] **G18** (ยกมา) — `school-attendances` / `emergency-alerts` / `revenue/support-summary` / `my-role`
