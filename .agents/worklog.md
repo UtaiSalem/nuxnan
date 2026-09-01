@@ -1,5 +1,50 @@
 # Work Log — nuxnan project
 
+## 2026-09-02 (ต่อ) — เลิกใช้ FIELD() ใน CourseController
+
+### สถานะ: ✅ 1 ไฟล์แก้ + เทสต์ใหม่ 1 (3 เคส) · commit แล้ว `8189ec82` · **ยังไม่ push**
+
+`getRecentCourses` (`/api/me/recent-courses`) เรียงด้วย
+`orderByRaw('FIELD(id, '.implode(',', $ids).')')` ⇒ ปัญหาสองชั้น:
+
+1. **`FIELD()` มีเฉพาะ MySQL** — endpoint ตอบ 500 บน driver อื่น
+   และ**เทสต์ครอบไม่ได้เลย** (SQLite ตอบ `no such function: FIELD`)
+2. **interpolate id ลง SQL ตรง ๆ ไม่ผ่าน binding** — ค่ามาจาก
+   `recently_viewed_courses.course_id` (`bigint unsigned`) จึงไม่มีทางฉีดจริง
+   แต่เป็นแพตเทิร์นที่ไม่ควรมีในโค้ด
+
+**วิธีแก้:** จำนวนแถวถูกจำกัดที่ 5 อยู่แล้ว ⇒ เรียงฝั่ง PHP (`array_flip` + `sortBy`)
+**ไม่เหลือ raw SQL เลย** · ทั้งเรพไม่มี `FIELD()` ใน SQL แล้ว (เหลือแต่ในคอมเมนต์)
+
+### หลักฐาน
+
+- **พิสูจน์บั๊กก่อนแก้:** เขียนเทสต์ก่อน → ล้ม 2/3 ด้วย `no such function: FIELD`
+- **ยิงจริงบน MySQL เทียบสองวิธี:** ลำดับตรงกันเป๊ะ `16,25,21,23,22` ·
+  `course_lessons_count` เท่ากัน (dev DB user_id=1 มี 24 แถว)
+- **mutation check:** ถอด `sortBy` ออก ⇒ ล้ม 2 เคส
+- `pint` ผ่าน · `tests/Feature/Course` **24 ผ่าน**
+- **ทั้งเรพ: 1,661 เคส · 0 failed** (8 skipped · 3 incomplete)
+
+### ✋ ของที่ตรวจแล้วไม่ใช่ปัญหา (อย่าไปแก้ซ้ำ)
+
+รอบก่อนผมเขียนว่าสงสัย `StaffController:432` (`CAST(SUBSTRING(employee_id, 8) AS UNSIGNED)`)
+ว่าเป็นญาติของบั๊กเดียวกัน — **ทดสอบบน SQLite จริงแล้วผ่านทั้งคู่**
+(`SUBSTRING` เป็น alias ของ `substr` · `CAST(... AS UNSIGNED)` ตกไป NUMERIC affinity)
+⇒ `orderByRaw` อีก 18 จุดในเรพไม่มีอันไหนผูกกับ MySQL
+
+### งานที่ค้างหลังรอบนี้
+
+- [x] กวาด `avatar` ✅ · [x] **G18** ✅ · [x] **pint** ✅ · [x] **FIELD()** ✅
+- [ ] **SET-S12** deferred (ดู `.agents/photo-path-migration-plan.md`)
+- [ ] โค้ดตาย `AuthService::register()` (ยกมาจากรอบ avatar)
+- [ ] สาเหตุที่ `pint --test` จาก root รายงานไม่ครบในรอบแรก (ยกมา)
+
+### Branch / Git State
+
+- Branch: `main` · Uncommitted: ไม่มี · **ยังไม่ push** (`8189ec82`)
+
+---
+
 ## 2026-09-02 (ต่อ) — pint ทั้งเรพผ่านแล้ว
 
 ### สถานะ: ✅ 2 ไฟล์ · **+7 / −6** (จัดรูปแบบล้วน) · commit แล้ว `ff59c04c`
