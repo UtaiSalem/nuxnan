@@ -8,6 +8,7 @@ use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Models\Academy;
 use App\Models\AcademyMember;
 use App\Models\User;
+use App\Services\AcademySettingsAuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -558,6 +559,10 @@ class AcademyController extends Controller
 
         $request->validate($rules);
 
+        // SET-S9 — เก็บค่าก่อนแก้ไว้ทั้งสองตาราง เพื่อเขียน diff ลงประวัติกิจกรรมของโรงเรียน (D19/D20)
+        $settingsAuditLogger = app(AcademySettingsAuditLogger::class);
+        $auditBefore = $settingsAuditLogger->snapshot($academy, $academy->academySetting);
+
         try {
             // Update basic info
             $academy->fill($request->only([
@@ -637,6 +642,9 @@ class AcademyController extends Controller
                 $setting->card_request_flow_enabled = $request->boolean('card_request_flow_enabled');
             }
             $setting->save();
+
+            // SET-S9 — เขียนเฉพาะ diff · ไม่มีช่องไหนเปลี่ยน = ไม่มีแถว · ห้ามทำให้การบันทึกพัง
+            $settingsAuditLogger->record($academy, $setting, $auditBefore);
 
             return response()->json([
                 'success' => true,

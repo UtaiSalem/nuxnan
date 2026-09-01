@@ -158,6 +158,9 @@ class MemberActivityLog extends Model
 
     public const ACTION_GUARDIAN_ACCOUNT_UNLINKED = 'guardian_account_unlinked';
 
+    // SET-S9 — การแก้ตั้งค่าโรงเรียน (ทั้งตาราง academies และ academy_settings)
+    public const ACTION_SETTINGS_UPDATE = 'settings_update';
+
     public static function electionActions(): array
     {
         return [
@@ -182,6 +185,8 @@ class MemberActivityLog extends Model
     public const CATEGORY_ATTENDANCE = 'attendance';
 
     public const CATEGORY_SYSTEM = 'system';
+
+    public const CATEGORY_SETTINGS = 'settings';
 
     /**
      * Relationships
@@ -302,6 +307,7 @@ class MemberActivityLog extends Model
             self::ACTION_GUARDIAN_ACCOUNT_REQUEST => 'ขอผูกบัญชีผู้ปกครอง',
             self::ACTION_GUARDIAN_ACCOUNT_LINKED => 'ผูกบัญชีผู้ปกครองสำเร็จ',
             self::ACTION_GUARDIAN_ACCOUNT_UNLINKED => 'ปลดการผูกบัญชีผู้ปกครอง',
+            self::ACTION_SETTINGS_UPDATE => 'แก้ไขการตั้งค่าโรงเรียน',
         ];
 
         return $descriptions[$action] ?? $action;
@@ -344,6 +350,7 @@ class MemberActivityLog extends Model
             self::ACTION_GUARDIAN_ACCOUNT_REQUEST => 'mdi:account-question',
             self::ACTION_GUARDIAN_ACCOUNT_LINKED => 'mdi:account-check',
             self::ACTION_GUARDIAN_ACCOUNT_UNLINKED => 'mdi:account-remove',
+            self::ACTION_SETTINGS_UPDATE => 'mdi:cog-outline',
         ];
 
         return $icons[$this->action] ?? 'mdi:circle';
@@ -386,6 +393,7 @@ class MemberActivityLog extends Model
             self::ACTION_GUARDIAN_ACCOUNT_REQUEST => 'indigo',
             self::ACTION_GUARDIAN_ACCOUNT_LINKED => 'green',
             self::ACTION_GUARDIAN_ACCOUNT_UNLINKED => 'red',
+            self::ACTION_SETTINGS_UPDATE => 'indigo',
         ];
 
         return $colors[$this->action] ?? 'gray';
