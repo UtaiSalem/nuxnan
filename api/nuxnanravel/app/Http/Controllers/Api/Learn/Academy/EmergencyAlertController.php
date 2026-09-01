@@ -31,7 +31,7 @@ class EmergencyAlertController extends Controller
             ->with(['creator:id,name,profile_photo_path']);
 
         // Filter active only for non-admins
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canViewAlertReports($user, $academy)) {
             $query->where('is_active', true)
                 ->where(function ($q) {
                     $q->whereNull('expires_at')
@@ -93,7 +93,9 @@ class EmergencyAlertController extends Controller
                 $q->whereNull('expires_at')
                     ->orWhere('expires_at', '>', now());
             })
-            ->orderByRaw("FIELD(severity, 'critical', 'high', 'medium', 'low')")
+            // CASE แทน FIELD() — FIELD() มีเฉพาะ MySQL ทำให้ endpoint นี้ 500 บน SQLite
+            // และเทสต์ครอบไม่ได้เลย (แบนเนอร์ฉุกเฉินเป็นเส้นที่ต้องมีเทสต์ที่สุด)
+            ->orderByRaw("CASE \"severity\" WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END")
             ->orderByDesc('created_at')
             ->get(['id', 'title', 'message', 'alert_type', 'severity', 'created_at']);
 
@@ -136,7 +138,7 @@ class EmergencyAlertController extends Controller
         $alert->user_acknowledgement = $acknowledgement;
 
         // Get acknowledgement stats for admins
-        if ($this->isAcademyAdmin($user, $academy)) {
+        if ($this->canViewAlertReports($user, $academy)) {
             $alert->acknowledgement_stats = [
                 'total_acknowledged' => $alert->acknowledgements()->count(),
                 'safe' => $alert->acknowledgements()->where('response', 'safe')->count(),
@@ -157,7 +159,7 @@ class EmergencyAlertController extends Controller
     {
         $user = $request->user();
 
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canManageAlerts($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -246,7 +248,7 @@ class EmergencyAlertController extends Controller
 
         $user = $request->user();
 
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canManageAlerts($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -310,7 +312,7 @@ class EmergencyAlertController extends Controller
 
         $user = $request->user();
 
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canManageAlerts($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -386,7 +388,7 @@ class EmergencyAlertController extends Controller
 
         $user = $request->user();
 
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canViewAlertReports($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -427,7 +429,7 @@ class EmergencyAlertController extends Controller
 
         $user = $request->user();
 
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canViewAlertReports($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -455,7 +457,7 @@ class EmergencyAlertController extends Controller
 
         $user = $request->user();
 
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canManageAlerts($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -478,12 +480,18 @@ class EmergencyAlertController extends Controller
     }
 
     /**
-     * Check if user is academy admin
+     * G18 — สิทธิ์ของประกาศฉุกเฉินมาจากคีย์ `emergency.*` ไม่ใช่ `Academy::isAdmin()` อย่างเดียว
+     *
+     * ลำดับการปล่อยผ่านอยู่ที่ `Academy::userCan()` ที่เดียว — ตรงกับ middleware ของ route
+     * ถ้าที่นี่ตรวจแคบกว่า middleware ครู/ผอ.ที่ถือคีย์จะผ่าน route มาแล้วมาโดน 403 ตรงนี้แทน
      */
-    private function isAcademyAdmin($user, Academy $academy): bool
+    private function canViewAlertReports($user, Academy $academy): bool
     {
-        // Canonical check: owner (user_id/owner_id), academy_admins, or super admin.
-        // The academy_members pivot `role` is not the source of truth for admin rights.
-        return $academy->isAdmin($user);
+        return $academy->userCan($user, 'emergency.view');
+    }
+
+    private function canManageAlerts($user, Academy $academy): bool
+    {
+        return $academy->userCan($user, 'emergency.manage');
     }
 }

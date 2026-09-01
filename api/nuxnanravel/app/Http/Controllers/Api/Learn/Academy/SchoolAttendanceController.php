@@ -15,7 +15,6 @@ use App\Services\Gamification\ClassroomPointsService;
 use App\Services\Gamification\XpService;
 use App\Services\PointsService;
 use App\Services\StudentIdentifierResolver;
-use App\Traits\ManagesEventPermissions;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,8 +24,6 @@ use Illuminate\Validation\Rule;
 
 class SchoolAttendanceController extends Controller
 {
-    use ManagesEventPermissions;
-
     // GET /academies/{academy}/school-attendances
     public function index(Academy $academy, Request $request): JsonResponse
     {
@@ -124,6 +121,13 @@ class SchoolAttendanceController extends Controller
     public function show(Academy $academy, SchoolAttendance $attendance): JsonResponse
     {
         $this->authorizeAttendance($academy, $attendance);
+
+        // G18 — เส้นนี้เคยคืนรายชื่อ+รูป+สถานะมา/ขาด ของนักเรียนทั้งคาบให้ใครก็ได้ที่ล็อกอิน
+        // ตอนนี้ต้องเป็นสมาชิก (ด่านที่ route) และถ้าไม่มีคีย์ `school_attendance.view`
+        // จะเห็นเฉพาะแถวของตัวเอง — นักเรียนยังใช้วิดเจ็ตเช็กชื่อของตัวเองได้เหมือนเดิม
+        if (! $academy->userCan(auth()->user(), 'school_attendance.view')) {
+            return $this->showOwnRecordOnly($attendance);
+        }
 
         $attendance->load([
             'records.student:id,name,profile_photo_path',
@@ -442,8 +446,9 @@ class SchoolAttendanceController extends Controller
     // GET /academies/{academy}/school-attendances/student/{student}
     public function studentHistory(Academy $academy, User $student, Request $request): JsonResponse
     {
+        // ดูประวัติของตัวเองได้เสมอ · ดูของคนอื่นต้องถือคีย์ "อ่าน" (ไม่ใช่คีย์ "จัดการ")
         if ($request->user()->id !== $student->id) {
-            $this->authorizeManager($academy);
+            abort_unless($academy->userCan($request->user(), 'school_attendance.view'), 403, 'Unauthorized');
         }
 
         $request->validate([
@@ -478,14 +483,39 @@ class SchoolAttendanceController extends Controller
         ]);
     }
 
+    /**
+     * มุมมองของสมาชิกที่ไม่ได้ถือคีย์ `school_attendance.view` — เห็นแค่ว่าคาบนี้คืออะไร
+     * และ "ฉันถูกบันทึกไว้ว่าอย่างไร" เท่านั้น ไม่มีรายชื่อคนอื่นและไม่มียอดรวมของคาบ
+     */
+    private function showOwnRecordOnly(SchoolAttendance $attendance): JsonResponse
+    {
+        $attendance->setRelation(
+            'records',
+            $attendance->records()->where('student_id', auth()->id())->get()
+        );
+
+        return response()->json([
+            'success' => true,
+            'data' => $attendance,
+            'summary' => null,
+        ]);
+    }
+
     private function authorizeAttendance(Academy $academy, SchoolAttendance $attendance): void
     {
         abort_if($attendance->academy_id !== $academy->id, 404);
     }
 
+    /**
+     * G18 — คนที่ "จัดการการเช็กชื่อ" ได้ = คนที่ถือคีย์ `school_attendance.manage`
+     *
+     * เดิมตรวจ `Academy::isAdmin()` อย่างเดียว ⇒ ครูซึ่งเป็นคนเช็กชื่อจริงโดน 403
+     * และคีย์ `school_attendance.manage` ที่แจกให้ role ไว้แล้วกลายเป็นสวิตช์หลอก
+     * ลำดับการปล่อยผ่านอยู่ที่ `Academy::userCan()` ที่เดียว — ตรงกับ middleware ของ route
+     */
     private function authorizeManager(Academy $academy): void
     {
-        abort_unless($this->isAcademyAdmin(auth()->user(), $academy), 403, 'Unauthorized');
+        abort_unless($academy->userCan(auth()->user(), 'school_attendance.manage'), 403, 'Unauthorized');
     }
 
     // Enrich a collection of SchoolAttendanceRecord with student_number and classroom_name.

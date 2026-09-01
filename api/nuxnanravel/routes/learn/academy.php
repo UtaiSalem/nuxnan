@@ -839,17 +839,20 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     });
 
     // Emergency Alerts - การแจ้งเตือนฉุกเฉิน
-    Route::prefix('{academy}/emergency-alerts')->group(function () {
-        Route::get('/', [EmergencyAlertController::class, 'index'])->name('api.academy.emergencyAlerts.index');
-        Route::post('/', [EmergencyAlertController::class, 'store'])->name('api.academy.emergencyAlerts.store');
-        Route::get('/active', [EmergencyAlertController::class, 'active'])->name('api.academy.emergencyAlerts.active');
-        Route::get('/{alert}', [EmergencyAlertController::class, 'show'])->name('api.academy.emergencyAlerts.show');
-        Route::patch('/{alert}', [EmergencyAlertController::class, 'update'])->name('api.academy.emergencyAlerts.update');
-        Route::post('/{alert}/deactivate', [EmergencyAlertController::class, 'deactivate'])->name('api.academy.emergencyAlerts.deactivate');
-        Route::post('/{alert}/acknowledge', [EmergencyAlertController::class, 'acknowledge'])->name('api.academy.emergencyAlerts.acknowledge');
-        Route::get('/{alert}/acknowledgements', [EmergencyAlertController::class, 'acknowledgements'])->name('api.academy.emergencyAlerts.acknowledgements');
-        Route::get('/{alert}/need-help', [EmergencyAlertController::class, 'needHelp'])->name('api.academy.emergencyAlerts.needHelp');
-        Route::delete('/{alert}', [EmergencyAlertController::class, 'destroy'])->name('api.academy.emergencyAlerts.destroy');
+    // G18: ทั้งกลุ่มต้องผ่านด่านโรงเรียนถูกเก็บถาวร (academy.visibility) ก่อนเสมอ
+    // อ่าน/ตอบรับ = ด่านสมาชิกภาพล้วน ไม่ผูกกับคีย์ เพราะข้อมูลความปลอดภัยต้องถึง
+    // สมาชิกทุกคนแม้ยังไม่ถูกกำหนด role
+    Route::prefix('{academy}/emergency-alerts')->middleware('academy.visibility:content')->group(function () {
+        Route::get('/', [EmergencyAlertController::class, 'index'])->middleware('academy.permission')->name('api.academy.emergencyAlerts.index');
+        Route::post('/', [EmergencyAlertController::class, 'store'])->middleware('academy.permission:emergency.manage')->name('api.academy.emergencyAlerts.store');
+        Route::get('/active', [EmergencyAlertController::class, 'active'])->middleware('academy.permission')->name('api.academy.emergencyAlerts.active');
+        Route::get('/{alert}', [EmergencyAlertController::class, 'show'])->middleware('academy.permission')->name('api.academy.emergencyAlerts.show');
+        Route::patch('/{alert}', [EmergencyAlertController::class, 'update'])->middleware('academy.permission:emergency.manage')->name('api.academy.emergencyAlerts.update');
+        Route::post('/{alert}/deactivate', [EmergencyAlertController::class, 'deactivate'])->middleware('academy.permission:emergency.manage')->name('api.academy.emergencyAlerts.deactivate');
+        Route::post('/{alert}/acknowledge', [EmergencyAlertController::class, 'acknowledge'])->middleware('academy.permission')->name('api.academy.emergencyAlerts.acknowledge');
+        Route::get('/{alert}/acknowledgements', [EmergencyAlertController::class, 'acknowledgements'])->middleware('academy.permission:emergency.view')->name('api.academy.emergencyAlerts.acknowledgements');
+        Route::get('/{alert}/need-help', [EmergencyAlertController::class, 'needHelp'])->middleware('academy.permission:emergency.view')->name('api.academy.emergencyAlerts.needHelp');
+        Route::delete('/{alert}', [EmergencyAlertController::class, 'destroy'])->middleware('academy.permission:emergency.manage')->name('api.academy.emergencyAlerts.destroy');
     });
 
     // Message Threads - ระบบข้อความ/สนทนา
@@ -1013,16 +1016,24 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // =====================================================
     // School Attendance Routes (session-based, QR check-in)
     // =====================================================
-    Route::prefix('{academy}/school-attendances')->group(function () {
-        Route::get('/', [SchoolAttendanceController::class, 'index'])->name('api.academy.schoolAttendance.index');
-        Route::post('/', [SchoolAttendanceController::class, 'store'])->name('api.academy.schoolAttendance.store');
-        Route::get('/student/{student}', [SchoolAttendanceController::class, 'studentHistory'])->name('api.academy.schoolAttendance.studentHistory');
-        Route::get('/{attendance}', [SchoolAttendanceController::class, 'show'])->name('api.academy.schoolAttendance.show');
-        Route::post('/{attendance}/check-in', [SchoolAttendanceController::class, 'checkIn'])->name('api.academy.schoolAttendance.checkIn');
-        Route::post('/{attendance}/refresh-qr', [SchoolAttendanceController::class, 'refreshQr'])->name('api.academy.schoolAttendance.refreshQr');
-        Route::post('/{attendance}/scan-student', [SchoolAttendanceController::class, 'scanStudent'])->name('api.academy.schoolAttendance.scanStudent');
-        Route::post('/{attendance}/records', [SchoolAttendanceController::class, 'storeRecords'])->name('api.academy.schoolAttendance.storeRecords');
-        Route::post('/{attendance}/close', [SchoolAttendanceController::class, 'close'])->name('api.academy.schoolAttendance.close');
+    // G18: ทั้งกลุ่มต้องผ่านด่านโรงเรียนถูกเก็บถาวร (academy.visibility) ก่อนเสมอ
+    //
+    // เส้นอ่าน (index / show / student-history) และ check-in เป็น **ด่านสมาชิกภาพล้วน**
+    // เพราะนักเรียนต้องใช้ทั้งสามเส้นในวิดเจ็ตเช็กชื่อของตัวเอง และนักเรียนไม่ถือคีย์
+    // `school_attendance.*` — คีย์จึงไปคุม "ความลึกของข้อมูล" ในคอนโทรลเลอร์แทน:
+    //   · show     → ไม่มีคีย์ `.view` เห็นเฉพาะแถวของตัวเอง ไม่ใช่รายชื่อทั้งคาบ
+    //   · history  → ไม่มีคีย์ `.view` ดูได้เฉพาะประวัติของตัวเอง
+    // เส้นที่แก้ข้อมูล (store/records/scan/close/refresh-qr) ใช้คีย์ `.manage` ที่ route ตรง ๆ
+    Route::prefix('{academy}/school-attendances')->middleware('academy.visibility:content')->group(function () {
+        Route::get('/', [SchoolAttendanceController::class, 'index'])->middleware('academy.permission')->name('api.academy.schoolAttendance.index');
+        Route::post('/', [SchoolAttendanceController::class, 'store'])->middleware('academy.permission:school_attendance.manage')->name('api.academy.schoolAttendance.store');
+        Route::get('/student/{student}', [SchoolAttendanceController::class, 'studentHistory'])->middleware('academy.permission')->name('api.academy.schoolAttendance.studentHistory');
+        Route::get('/{attendance}', [SchoolAttendanceController::class, 'show'])->middleware('academy.permission')->name('api.academy.schoolAttendance.show');
+        Route::post('/{attendance}/check-in', [SchoolAttendanceController::class, 'checkIn'])->middleware('academy.permission')->name('api.academy.schoolAttendance.checkIn');
+        Route::post('/{attendance}/refresh-qr', [SchoolAttendanceController::class, 'refreshQr'])->middleware('academy.permission:school_attendance.manage')->name('api.academy.schoolAttendance.refreshQr');
+        Route::post('/{attendance}/scan-student', [SchoolAttendanceController::class, 'scanStudent'])->middleware('academy.permission:school_attendance.manage')->name('api.academy.schoolAttendance.scanStudent');
+        Route::post('/{attendance}/records', [SchoolAttendanceController::class, 'storeRecords'])->middleware('academy.permission:school_attendance.manage')->name('api.academy.schoolAttendance.storeRecords');
+        Route::post('/{attendance}/close', [SchoolAttendanceController::class, 'close'])->middleware('academy.permission:school_attendance.manage')->name('api.academy.schoolAttendance.close');
     });
 
     Route::prefix('{academy}/sports-editions')->group(function () {
@@ -1124,7 +1135,9 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // Academy Revenue Routes (public + admin)
     // ============================================
     Route::prefix('{academy}/revenue')->group(function () {
-        Route::get('/support-summary', [AcademyRevenueController::class, 'supportSummary'])->name('api.academy.revenue.support-summary');
+        // G18: ยอดสนับสนุนของโรงเรียนในแอป ต้องเคารพสวิตช์ความเป็นส่วนตัว + สถานะเก็บถาวร
+        // (เส้นสาธารณะจริงอยู่ที่ /api/public/schools/{academy}/support-summary ต่างหาก)
+        Route::get('/support-summary', [AcademyRevenueController::class, 'supportSummary'])->middleware('academy.visibility:content')->name('api.academy.revenue.support-summary');
         Route::get('/donations', [AcademyRevenueController::class, 'donations'])->middleware('academy.permission:finance.view')->name('api.academy.revenue.donations');
         Route::get('/revenue', [AcademyRevenueController::class, 'revenue'])->middleware('academy.permission:finance.view')->name('api.academy.revenue.dashboard');
         Route::get('/revenue/activity', [AcademyRevenueController::class, 'revenueActivity'])->middleware('academy.permission:finance.view')->name('api.academy.revenue.activity');
