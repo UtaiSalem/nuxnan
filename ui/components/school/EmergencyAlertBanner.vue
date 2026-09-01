@@ -11,16 +11,30 @@ const activeAlerts = ref<any[]>([])
 const isLoading = ref(true)
 let pollInterval: any = null
 
+const stopPolling = () => {
+  if (pollInterval) {
+    clearInterval(pollInterval)
+    pollInterval = null
+  }
+}
+
 const fetchAlerts = async () => {
   if (!props.academyId) return
-  
+
   try {
     const response: any = await api.get(`/api/academies/${props.academyId}/emergency-alerts/active`)
     if (response.success && response.data) {
       activeAlerts.value = response.data
     }
-  } catch (err) {
-    console.error('Failed to fetch emergency alerts', err)
+  } catch (err: any) {
+    // G18: เส้นนี้เป็นของสมาชิกโรงเรียนเท่านั้นแล้ว คนนอกที่เปิดหน้าโรงเรียนสาธารณะจะได้ 403
+    // ซึ่งเป็นสถานะถาวร ไม่ใช่ error ชั่วคราว — หยุด poll ทุก 60 วิ ไม่งั้นยิง 403 ไม่จบ
+    if (err?.status === 403 || err?.statusCode === 403 || err?.response?.status === 403) {
+      activeAlerts.value = []
+      stopPolling()
+    } else {
+      console.error('Failed to fetch emergency alerts', err)
+    }
   } finally {
     isLoading.value = false
   }
@@ -52,9 +66,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  if (pollInterval) {
-    clearInterval(pollInterval)
-  }
+  stopPolling()
 })
 
 const getSeverityColor = (severity: string) => {
