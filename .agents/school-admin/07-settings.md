@@ -898,6 +898,138 @@ resource ส่งแคตตาล็อกให้ UI สร้างตั�
 
 ---
 
+### 5.19 🔴 สิ่งที่เจอตอน audit SET-S9 — G11 เขียนไว้ผิดครึ่งหนึ่ง (ตรวจของจริง 2026-09-02)
+
+> **แก้ข้อสรุปของ G11:** "ไม่มี audit log" **ไม่จริงสำหรับตาราง `academies`**
+> `Academy` ใช้ trait `Auditable` อยู่แล้ว (`app/Models/Academy.php:17`) ⇒ ทุก `$academy->save()`
+> เขียน `audit_logs` พร้อม before/after ครบ · ในฐาน dev มี **25,245 แถว** · entity `Academy` **144 แถว**
+> ทั้งหมด `action=updated` · `url=/api/academies/1/settings` ⇒ **การแก้ตั้งค่าถูกบันทึกมาตลอด**
+> และเมนู #6 ผู้ปกครองไม่ได้ใช้ `AuditLogService` อย่างที่ G11 เขียน — ใช้ `MemberActivityLog`
+> ผ่าน `GuardianAuditLogger`
+
+**G26. `AcademySetting` ไม่ถูก audit เลย — ครึ่งหนึ่งของฟอร์มหายไปจากประวัติ**
+`AcademySetting` ไม่มี trait `Auditable` ⇒ `privacy`, `join_mode`, `show_member_list`,
+`show_course_list`, `card_request_flow_enabled` เปลี่ยนโดยไม่มีร่องรอย
+**พิสูจน์แล้วบน MySQL จริง:** flip `privacy` public→private แล้ว `save()` ⇒ `audit_logs` **delta = 0**
+และเมื่อผู้ดูแลแก้เฉพาะช่องของ `academy_settings` โดยไม่แตะชื่อ ⇒ `$academy->isDirty()` = `false`
+⇒ **ทั้งการกดบันทึกนั้นไม่มี log สักแถว** (ไม่ใช่แค่ขาดบางฟิลด์)
+
+**G27. 🔴 endpoint ที่ใช้ "อ่าน" audit log ตอบ 500 ทั้งระบบ — data ที่เขียนมา 25,245 แถวไม่มีใครอ่านได้**
+`AuditLogController` eager-load ที่อ้างคอลัมน์ที่ไม่มีจริง **5 จุด** (บรรทัด 24, 95, 117, 215 เป็น `user:id,first_name,last_name,avatar` · บรรทัด 238 ใน `export()` เป็น `user:id,first_name,last_name`)
+แต่ตาราง `users` ไม่มีทั้ง `first_name` และ `avatar` (มี `name` กับ `profile_photo_path`)
+⇒ ยิงจริงผ่าน HTTP kernel: `500 SQLSTATE[42S22] Unknown column 'first_name'`
+กระทบ **9 route** (admin audit viewer 7 + academy 2) · **ต้นตอเดียวกับบั๊ก `/api/notifications/recent`**
+ผลพลอยได้: `SchoolAuditLogTab` บนหน้าห้องเรียน (`admin/classrooms/index.vue:1406`) เรียก endpoint นี้
+⇒ ตายเงียบใน `catch` โชว์ "ไม่พบประวัติการแก้ไข" ตลอด ทั้งที่ในฐานมีข้อมูล
+
+**G28. 🔴 `GET /api/academies/{academy}/audit-logs` เป็นรูรั่ว ที่ตอนนี้ถูกบั๊ก G27 บังไว้**
+middleware มีแค่ `api → auth:api` · controller **ไม่แตะพารามิเตอร์ `{academy}` เลย** และไม่มี route-model
+binding (ขอ academy id ที่ไม่มีจริงก็ยังเข้า controller ได้ — ยืนยันด้วยการยิงจริง)
+⇒ **วันที่ซ่อม G27 เสร็จ ผู้ใช้ที่ล็อกอินคนไหนก็ได้จะอ่าน `audit_logs` ทั้งแพลตฟอร์มทันที**
+ในตารางมี `Student` 5,768 · `StudentCard` 3,995 · `WalletTransaction` 505 แถว พร้อม `ip_address`/`user_agent`
+⇒ **ต้องซ่อม G27 กับ G28 ใน commit เดียวกัน ห้ามซ่อมอย่างเดียวแล้วปล่อย**
+ไม่มีหน้าไหนใน `ui/` เรียก `index` นี้ (มีแต่ `/entity` ที่หน้าห้องเรียนใช้ผ่าน `useSchoolManagement.ts:319`)
+
+**G29 (นอกขอบเขต S9 — ญาติของ G18).** `MemberActivityLogController` ทั้ง 4 route ก็มีแค่ `auth:api`
+ไม่มีด่านสิทธิ์ในเมธอดด้วย ⇒ ใครที่ล็อกอินก็อ่านประวัติกิจกรรมสมาชิกของโรงเรียนใดก็ได้
+(ในนั้นมี `guardian_sensitive_view` และ old/new values ของสมาชิก) · หน้า
+`admin/activity-log/index.vue` ก็ไม่มี `definePageMeta` กันไว้ · **เปิดเป็นงานแยก**
+
+### 5.20 การตัดสินใจของเจ้าของโปรเจค รอบ SET-S9 (เคาะแล้ว 2026-09-02)
+
+- **D19** ประวัติการแก้ตั้งค่าเก็บที่ **`member_activity_logs`** (ไม่ใช่ `audit_logs`)
+  เหตุผล: มี `academy_id` scope อยู่แล้ว · มีหน้าจอที่ใช้งานได้จริงที่ `/admin/activity-log` ·
+  เป็นแพตเทิร์นเดียวกับเมนู #6 (`GuardianAuditLogger`) · แถว `audit_logs` ของ `Academy` ยังเขียนตามเดิม
+  จาก trait ไม่ต้องแตะ ⇒ **ไม่เป็น log ที่ไม่มีที่แสดง** (สวิตช์หลอกแบบที่ S5/S6/S7 ไล่ปิดมา)
+- **D20** เก็บ **เฉพาะ diff ของช่องที่เปลี่ยน** ไม่ใช่ทั้งแถว 33 คอลัมน์แบบที่ trait ทำ
+  (แถวปัจจุบันกิน ~3KB ต่อการกดบันทึกหนึ่งครั้ง) · ถ้าไม่มีช่องไหนเปลี่ยน **ห้ามเขียน log**
+- **D21** ซ่อม G27 ทั้ง 4 จุด **ใน SET-S9** พร้อมปิด G28 ใน commit เดียวกัน
+  · ลบ route `index` ที่ไม่มีผู้ใช้ทิ้ง (แพตเทิร์นเดียวกับ SET-S1/SET-S8) · รัด `/entity` ให้ bind `Academy`
+  จริง + บังคับว่า entity ที่ขอต้องอยู่ในโรงเรียนนั้น + ใส่ด่านสิทธิ์
+- **D22** สิทธิ์อ่านประวัติการแก้ตั้งค่า = **`settings.view` ขึ้นไป** (สอดคล้องกับโหมดดูอย่างเดียวของ SET-S4)
+
+### 5.21 SET-S9 — แผนแตก shard (4 shard)
+
+| shard | สาระ | ไฟล์ | ขึ้นกับ |
+|---|---|---|---|
+| **S9-A** | `MemberActivityLog`: เพิ่ม `ACTION_SETTINGS_UPDATE` + `CATEGORY_SETTINGS` + description/icon/color | `app/Models/MemberActivityLog.php` | — |
+| **S9-B** | `AcademySettingsAuditLogger` service (diff-only · ห้าม throw) + เรียกจาก `updateSettings` | `app/Services/AcademySettingsAuditLogger.php` (ใหม่), `AcademyController.php` | S9-A |
+| **S9-C** | ปิด G27 + G28: แก้ eager-load 5 จุด · ลบ route `audit-logs` index · รัด `/entity` (bind + scope + ด่านสิทธิ์) | `AuditLogController.php`, `routes/learn/academy.php` | — |
+| **S9-D** | เทสต์: log เกิด/ไม่เกิดตามเงื่อนไข · diff ถูกช่อง · `/entity` 403/404/200 · viewer ไม่ 500 | `tests/Feature/Academy/` | S9-A..C |
+
+**ลำดับ:** A → B → C → D (C ขนานกับ A/B ได้ — คนละไฟล์ทั้งหมด)
+
+#### S9-A รายละเอียด
+- `ACTION_SETTINGS_UPDATE = 'settings_update'` · `CATEGORY_SETTINGS = 'settings'`
+- `generateDescription()` → `'แก้ไขการตั้งค่าโรงเรียน'` · `getIconAttribute()` → `mdi:cog-outline`
+  · `getColorAttribute()` → **`indigo`** — หน้า `activity-log` map ได้แค่ blue/green/red/orange/purple/indigo/teal/gray (`index.vue:336`) สีนอกนี้จะตกเป็นเทาเงียบ
+- action ใหม่จะโผล่ใน dropdown ตัวกรองของหน้า `/admin/activity-log` เองผ่าน
+  `GET /academies/activity-log/actions` ⇒ **ไม่ต้องแก้ frontend**
+
+#### S9-B รายละเอียด
+- เก็บ snapshot **ก่อน** `fill()`/`save()` ทั้งสองตาราง แล้ว diff หลัง save
+  - จาก `academies`: `name`, `name_en`, `description`, `description_en`, `email`, `phone`, `website`,
+    `address`, `province`, `country`, `slogan`, `type`, `established_year`, `director`,
+    `donation_enabled`, `student_editable_fields`, `social_media_links`, `logo`, `cover`
+  - จาก `academy_settings`: `privacy`, `join_mode`, `show_member_list`, `show_course_list`,
+    `card_request_flow_enabled` — **ใส่ prefix `settings.`** ในคีย์ diff เพื่อไม่ให้ปนกับคอลัมน์ของ `academies`
+- **เทียบด้วยค่าที่ผ่าน cast แล้วทั้งสองฝั่ง** (ห้ามเทียบ `getOriginal()` ดิบกับ `toArray()` —
+  จะได้ diff หลอกจาก `1` vs `true` แบบที่ trait เป็นอยู่)
+- ไม่มีช่องไหนเปลี่ยน ⇒ **ไม่เขียน log** (D20)
+- ห้ามทำให้ request พัง: ครอบ `try/catch` แล้ว `report()` อย่างเดียว ตามแบบ `GuardianAuditLogger`
+- `logo`/`cover` ที่อัปโหลดใหม่ให้ log เป็นการเปลี่ยนค่า URL ตามปกติ (ไม่ใช่ข้อมูลอ่อนไหว)
+
+#### S9-C รายละเอียด
+- 5 จุดใน `AuditLogController` เปลี่ยนเป็น `user:id,name,profile_photo_path`
+  (`AuditLogTab.vue` อ่าน `log.user?.name` อยู่แล้ว ⇒ **ไม่ต้องแก้ frontend**)
+- ลบ `Route::get('/', [AuditLogController::class, 'index'])` ออกจาก prefix `{academy}/audit-logs`
+  · ลบ `getSchoolAuditLogs` ที่ไม่มีผู้เรียกออกจาก `useSchoolManagement.ts` ด้วย
+- `/entity` เปลี่ยน signature เป็น `getEntityLogs(Academy $academy, Request $request)` ·
+  ใส่ `->middleware('academy.permission:students.view')` · และ **บังคับว่า entity ที่ขอต้องอยู่ในโรงเรียนนั้น**
+  ผ่าน whitelist ชนิด entity ที่อนุญาต (วันนี้มีตัวเดียวคือ `Classroom`) — ชนิดนอก whitelist ตอบ 422
+  · ไม่งั้นยังเปิดให้ไล่ id ข้ามโรงเรียนได้
+  · ⚠️ **จุดที่ยังเปิดไว้ให้เจ้าของโปรเจคเคาะ:** แคตตาล็อกสิทธิ์ไม่มีตระกูล `classrooms.*` เลย
+  จึงเลือก `students.view` เป็นตัวใกล้ที่สุด (หน้าห้องเรียนคือทะเบียนนักเรียน) — เปลี่ยนได้ทีหลังที่บรรทัดเดียว
+
+### 5.22 🔴 กับดักที่เจอตอน implement SET-S9 (Claude แก้เอง 2 จุด — ยืนยันด้วยการรันจริง)
+
+**กับดัก 1 — diff หลอกจาก "สตริงที่มาจากฟอร์ม" เทียบกับ "int ที่มาจากฐาน"**
+
+shard B เวอร์ชันแรกเทียบ snapshot ก่อน/หลังจากอ็อบเจกต์เดียวกันในหน่วยความจำ
+ค่าฝั่ง "ก่อน" มาจากฐาน ส่วนฝั่ง "หลัง" คือค่าที่ `fill()` เพิ่งใส่จาก request
+`established_year` เป็น `smallint unsigned` และ **ไม่มีใน `$casts`** ⇒
+
+```
+from DB:    integer 2510
+after fill: string  '2510'
+PHANTOM DIFF KEYS: ["established_year"]
+```
+
+⇒ ทุกครั้งที่ผู้ดูแลกดบันทึกโดยไม่แตะปี ประวัติจะโกหกว่า "ปีก่อตั้งถูกแก้"
+**แก้:** ให้ snapshot ฝั่ง "หลัง" อ่านกลับจากฐานด้วย `fresh()` ทั้งสองโมเดล
+⇒ ทั้งสองฝั่งผ่านท่อ cast เดียวกันเสมอ · และเพิ่ม `normalize()` ที่เรียงคีย์ array ทุกชั้นก่อนเทียบ
+เพื่อไม่ให้การสลับลำดับช่องใน `student_editable_fields` / `social_media_links` กลายเป็น "การเปลี่ยนแปลง"
+
+> บทเรียนเดียวกับ G21/G22: **สองประตูเขียนคนละชนิดลงคอลัมน์เดียว** — คราวนี้ไม่ใช่ผู้ใช้สองกลุ่ม
+> แต่เป็น "ค่าจากฐาน" กับ "ค่าจาก multipart" ที่ถูกเอามาเทียบกันตรง ๆ
+
+**กับดัก 2 — เมธอดเดียวถูกใช้จากสอง route ที่มีพารามิเตอร์ไม่เท่ากัน**
+
+`AuditLogController::getEntityLogs` ถูกชี้จาก **สอง** route:
+`api/academies/{academy}/audit-logs/entity` และ `api/admin/audit-logs/entity`
+พอ shard C เปลี่ยน signature เป็น `getEntityLogs(Academy $academy, Request $request)`
+เส้นของแอดมิน **ไม่มี `{academy}` ให้ผูก** ⇒ Laravel จะสร้าง `Academy` เปล่าให้
+⇒ `where('academy_id', null)` ⇒ **404 ทุกครั้ง** (เดิม 500 — เปลี่ยนจากพังแบบหนึ่งเป็นพังอีกแบบ)
+
+**แก้:** แยกเป็นคนละเมธอด — `getEntityLogs()` (ผูก academy + whitelist + เช็คความเป็นเจ้าของ)
+สำหรับเส้นของโรงเรียน · `adminEntityLogs()` (พฤติกรรมเดิม กันด้วย middleware `admin` อยู่แล้ว)
+สำหรับ `routes/admin/admin.php` ⇒ ยืนยันด้วย `route:list` ว่าสองเส้นชี้คนละเมธอดจริง
+
+> ก่อนเปลี่ยน signature ของ controller method ต้อง `route:list` หาเส้นที่ชี้มาให้ครบก่อนเสมอ
+> — grep หาชื่อเมธอดในโฟลเดอร์ `routes/` ทั้งหมด ไม่ใช่แค่ไฟล์ที่กำลังแก้
+
+---
+
 ## 6. Implementation Tasks
 
 | Step | Title | Depends on | Deliverable | Status |
@@ -910,7 +1042,7 @@ resource ส่งแคตตาล็อกให้ UI สร้างตั�
 | **SET-S6** | เพิ่มแท็บ "ระบบและนโยบาย" (G9 ข้อ 1–3 · G21 · D13 + D14) | SET-S1 | `card_request_flow_enabled`, `student_editable_fields` (เช็กบ็อกซ์จากแคตตาล็อกปิด 19 รายการ), `donation_enabled` ตั้งค่าได้จากหน้าจอ + resource ส่งค่าบริจาคที่ resolve แล้ว (ปิด G21) | 🟢 **verified** |
 | **SET-S7** | เพิ่มฟิลด์อัตลักษณ์โรงเรียน (G9 ข้อ 4–5 · G22–G25 · D15–D18) | SET-S6 | `slogan`, `established_year` (พ.ศ.), `type` (แคตตาล็อกปิด 4), `director` (เลือกจากสมาชิก), `social_media_links` (JSON 6 ช่อง) เข้าแท็บ "ข้อมูลทั่วไป" + โชว์บนหน้าโรงเรียน · **ปิด G22 (director เขียนได้สองชนิดจากสองประตู)** · drop `approval_flow` | 🟢 **verified + migrate แล้ว** (เทสต์ใหม่ 11 เคส · mutation check 5 แบบ) |
 | **SET-S8** | ลบ `name_slug` ทิ้ง + ซ่อม redirect (G7 · D12) | SET-S1 | migration drop คอลัมน์ `name_slug` · ถอด `Str::slug` ออกจาก `updateSettings` · ย้ายด่านกันชื่อซ้ำไปไว้ที่คอลัมน์ `name` ที่เป็น UNIQUE จริง (ปิด G19 — เดิมได้ 500 พร้อม SQL ดิบ) · redirect หลังเปลี่ยนชื่อใช้ `name` + encodeURIComponent | 🟢 **verified + migrate แล้ว** |
-| **SET-S9** | audit log การแก้ตั้งค่า (G11) | SET-S1 | บันทึกทุกครั้งที่ `updateSettings` เปลี่ยนค่า พร้อม before/after | ⚪ pending |
+| **SET-S9** | audit log การแก้ตั้งค่า (G11 — นิยามใหม่ · G26–G28 · D19–D22) | SET-S1 | เขียน diff ของการแก้ตั้งค่าลง `member_activity_logs` (action `settings_update`) ครอบทั้ง `academies` และ `academy_settings` · **ปิด G27** (audit viewer 500 ทั้ง 9 route) · **ปิด G28** (route `{academy}/audit-logs` คืน `audit_logs` ทั้งแพลตฟอร์มโดยไม่มีด่านสิทธิ์) | 🟢 **verified** (เทสต์ใหม่ 9 เคส · mutation check 5 แบบ) |
 | **SET-S10** | เติมเทสต์ที่ยังขาด (G10) | SET-S1..S6 | ต่อยอด `AcademySettingsUpdateTest` ที่มีอยู่แล้ว (round-trip/validation/cache/slug ครอบแล้ว) — เพิ่ม: role ที่ถือ `settings.manage` ต้องผ่าน · สมาชิกสถานะไม่ใช่ APPROVED ต้องโดนปฏิเสธ · superadmin · สิทธิ์จากฝ่าย/กลุ่ม | ⚪ pending |
 | **SET-S11** | UX เก็บตก (G12) | SET-S4 | เตือนก่อนออกโดยไม่บันทึก · refresh หลังบันทึก · ซ่อนแท็บโซนอันตรายถ้าไม่ใช่ owner | ⚪ pending |
 | **SET-S12** | รูปโลโก้/ปกเป็น relative path (G8) | — | ต่อยอดจาก `.agents/photo-path-migration-plan.md` — **แยกไปทำพร้อมงาน migration รูปทั้งระบบ** | 🔵 deferred |
@@ -1010,3 +1142,26 @@ Report back: git diff --stat + สรุปสิ่งที่ทำจริ�
   อ่านอย่างเดียวต้องล็อกอินเป็นผู้ใช้ที่มีแค่ `settings.view` ซึ่งต้องใช้รหัสผ่านของคนนั้น
   ที่พิสูจน์แล้วคือ **ตรรกะ + สัญญาของ API** ส่วนการเรนเดอร์ (แถบเหลืองขึ้นจริง ช่องเป็นสีจาง
   ปุ่มกล้องหาย) ยังเป็นหนี้ตรวจอยู่ — จุดเดียวกับที่งานเมนู #6 เคยเจอว่าเทสต์จับบั๊ก UI ไม่ได้
+
+- **2026-09-02 SET-S9** — agy ลง 3 shard (A+B ชุดเดียว · C · D) · **Claude ตรวจเองทุกข้อ ไม่มีตัวเลขไหนที่เชื่อรายงาน agy:**
+
+  | ตรวจอะไร | วิธีตรวจ | ผล |
+  |---|---|---|
+  | ขอบเขต diff | `git diff --stat` | 6 ไฟล์แก้ + 2 ไฟล์ใหม่ · deletion 14 บรรทัด ตรงกับที่สั่งทุกบรรทัด (route index 2 + composable 4 + signature/eager-load ที่เหลือ) |
+  | syntax + style | `php -l` × 5 · `pint --test` (รวม `routes/admin/admin.php`) | ผ่านทั้งหมด |
+  | **ยิงจริงบน MySQL** (เรียก controller ตรงพร้อม user resolver) | เปลี่ยนเฉพาะ `privacy` | **1 แถว** `settings_update`/`settings` · `diff keys = ["settings.privacy"]` เป๊ะ · `icon=mdi:cog-outline` `color=indigo` `description=แก้ไขการตั้งค่าโรงเรียน` |
+  | กดบันทึกซ้ำค่าเดิม | ยิงซ้ำ payload เดิม | **0 แถวใหม่** (D20) |
+  | เปลี่ยนทั้งสองตารางพร้อมกัน | slogan + privacy | `diff keys = ["slogan","settings.privacy"]` |
+  | ล้างข้อมูลทดสอบ | ตรวจหลังคืนค่า | `privacy=public` · `established_year=NULL` · slogan เดิม · ลบแถวทดสอบ 3 แถว · `member_activity_logs` ของ academy 1 กลับมาที่ 3 แถวเท่าเดิม |
+  | **G27 ปิดจริง** | eager-load 25,245 แถวด้วยคอลัมน์ใหม่ | โหลดผ่าน คืนชื่อผู้ใช้จริง (เดิม `500 Unknown column 'first_name'`) |
+  | **G28 ปิดจริง** | `route:list --path=audit-logs -v` | เส้น `{academy}/audit-logs` (index) **หายจริง** · `/entity` ติด `academy.permission:students.view` · เส้นแอดมินชี้ `adminEntityLogs` คนละเมธอด |
+  | เทสต์ใหม่ | `artisan test --filter=AcademySettingsAuditLogTest` | **9 passed · 26 assertions** |
+  | ของเดิมไม่พัง | `artisan test tests/Feature/Academy` | **172 passed · 2 incomplete · 0 failed** (เดิม 163 + ใหม่ 9) |
+  | **mutation check 5 แบบ** | ถอดการเก็บค่า `academy_settings` · ถอด `fresh()` · ถอดด่าน diff ว่าง · ถอด middleware · ถอดด่านความเป็นเจ้าของ entity | **ล้มตรงเคสที่ควรล้มทั้ง 5** · คืนไฟล์ครบ `git diff --stat` กลับมาเท่าเดิม แล้วรันซ้ำ 9 passed |
+
+  **Claude แก้เองหลัง agy 2 จุด** (รายละเอียดใน §5.22): diff หลอก int vs string ของ `established_year`
+  · และการที่ `getEntityLogs` ถูกใช้จากสอง route ⇒ แยก `adminEntityLogs()` ให้ฝั่งแอดมิน
+
+  ⚠️ **สิ่งที่ยังไม่ได้ตรวจ:** ยังไม่ได้เปิดหน้า `/admin/activity-log` บนเบราว์เซอร์จริงเพื่อดูว่าแถว
+  `settings_update` เรนเดอร์ออกมาหน้าตาถูก (รอบนี้ไม่มีการแก้ markup — ฝั่ง UI แตะแค่ลบฟังก์ชัน
+  ที่ไม่มีผู้เรียกออกจาก composable) · `npm run build` ผู้ใช้รันเอง
