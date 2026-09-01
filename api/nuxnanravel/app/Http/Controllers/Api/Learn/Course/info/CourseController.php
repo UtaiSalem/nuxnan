@@ -92,12 +92,19 @@ class CourseController extends Controller
             ]);
         }
 
-        // Fetch the course objects, preserving the order
-        // MySQL FIELD() function usage for custom ordering
+        // เรียงตามลำดับ "ดูล่าสุดก่อน" ที่ได้มาจาก $recentCourseIds
+        //
+        // เดิมใช้ orderByRaw('FIELD(id, ...)') ซึ่งเป็นฟังก์ชันของ MySQL เท่านั้น
+        // ⇒ endpoint นี้ตอบ 500 บน driver อื่นและเทสต์ครอบไม่ได้เลย
+        // อีกทั้งยัง interpolate id ลง SQL ตรง ๆ โดยไม่ผ่าน binding
+        // จำนวนแถวถูกจำกัดไว้ที่ 5 อยู่แล้ว เรียงในฝั่ง PHP จึงถูกและไม่ต้องมี raw SQL
+        $order = array_flip($recentCourseIds->all());
+
         $courses = Course::withCount('courseLessons')
             ->whereIn('id', $recentCourseIds)
-            ->orderByRaw('FIELD(id, '.implode(',', $recentCourseIds->toArray()).')')
-            ->get();
+            ->get()
+            ->sortBy(fn (Course $course) => $order[$course->id] ?? PHP_INT_MAX)
+            ->values();
 
         return response()->json([
             'success' => true,
