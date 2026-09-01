@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Learn\Academy\AcademyResource;
-use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Models\Academy;
 use App\Models\AcademyMember;
 use App\Models\User;
@@ -12,7 +11,6 @@ use App\Services\AcademySettingsAuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
-use Intervention\Image\Facades\Image;
 
 class AcademyController extends Controller
 {
@@ -32,17 +30,6 @@ class AcademyController extends Controller
     public function create()
     {
         return response()->json(['success' => true]);
-    }
-
-    public function create_course(Academy $academy)
-    {
-        $isAcademyAdmin = $academy->user_id == auth()->id();
-
-        return response()->json([
-            'academy' => new AcademyResource($academy),
-            'courses' => CourseResource::collection($academy->courses()->paginate()),
-            'isAcademyAdmin' => $isAcademyAdmin,
-        ]);
     }
 
     /**
@@ -176,150 +163,6 @@ class AcademyController extends Controller
             ] : null,
             'myRole' => $myRole,
         ]);
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Academy $academy)
-    {
-        //
-    }
-
-    public function joinAcademy(Academy $academy)
-    {
-        $academy->members()->attach(auth()->id());
-
-        return redirect()->back();
-    }
-
-    public function leaveAcademy(Academy $academy)
-    {
-        $academy->members()->detach(auth()->id());
-
-        return redirect()->back();
-    }
-
-    public function acceptMember(Academy $academy, $memberId)
-    {
-        $academy->members()->updateExistingPivot($memberId, ['status' => 'accepted']);
-
-        return redirect()->back();
-    }
-
-    public function rejectMember(Academy $academy, $memberId)
-    {
-        $academy->members()->updateExistingPivot($memberId, ['status' => 'rejected']);
-
-        return redirect()->back();
-    }
-
-    public function removeMember(Academy $academy, $memberId)
-    {
-        $academy->members()->detach($memberId);
-
-        return redirect()->back();
-    }
-
-    public function updateMembershipFees(Academy $academy, Request $request)
-    {
-        $validated = $request->validate([
-            'membershipFees' => 'required|integer',
-        ]);
-
-        $academy->update([
-            'membership_fees_points' => $validated['membershipFees'],
-        ]);
-
-        return redirect()->back();
-    }
-
-    public function updateAcademyLogo(Academy $academy, Request $request)
-    {
-        $validated = $request->validate([
-            'logo' => 'required|image|mimes:jpg,jpeg,png,gif',
-        ]);
-
-        if ($academy->logo && ($academy->logo !== 'default_logo.png')) {
-            Storage::disk('public')->delete($academy->logo);
-        }
-
-        $logo = $validated['logo'];
-
-        $logo_name = uniqid().'.'.$logo->getClientOriginalExtension();
-        $logo_path = Storage::disk('public')->putFileAs('images/academies/logos', $logo, $logo_name);
-        $academy->logo = $logo_name;
-
-        $academy->update();
-
-        return redirect()->back();
-    }
-
-    public function updateAcademyCover(Academy $academy, Request $request)
-    {
-        $validated = $request->validate([
-            'cover' => 'required|image|mimes:jpg,jpeg,png,gif',
-        ]);
-
-        if ($academy->cover && ($academy->cover !== 'default_cover.png')) {
-            Storage::disk('public')->delete($academy->cover);
-        }
-
-        $cover = $validated['cover'];
-
-        $cover_name = uniqid().'.'.$cover->getClientOriginalExtension();
-        $cover_path = Storage::disk('public')->putFileAs('images/academies/covers', $cover, $cover_name);
-        $academy->cover = $cover_name;
-
-        $academy->update();
-
-        return redirect()->back();
-    }
-
-    public function searchAcademies(Request $request)
-    {
-        // SET-S2 — ซ่อนโรงเรียนที่ถูกเก็บถาวรออกจากรายการ
-        $academies = Academy::notArchived()->where('name', 'like', '%'.$request->search.'%')->get();
-
-        return response()->json([
-            'academies' => AcademyResource::collection($academies),
-        ], 200);
-    }
-
-    public function searchAcademiesMembers(Academy $academy, Request $request)
-    {
-        $members = $academy->members()->where('name', 'like', '%'.$request->search.'%')->get();
-
-        return response()->json([
-            'members' => $members,
-        ], 200);
-    }
-
-    public function searchAcademiesCourses(Academy $academy, Request $request)
-    {
-        $courses = $academy->courses()->where('name', 'like', '%'.$request->search.'%')->get();
-
-        return response()->json([
-            'courses' => CourseResource::collection($courses),
-        ], 200);
-    }
-
-    public function searchAcademiesCourseStudents(Academy $academy, $courseId, Request $request)
-    {
-        $students = $academy->courses()->find($courseId)->students()->where('name', 'like', '%'.$request->search.'%')->get();
-
-        return response()->json([
-            'students' => $students,
-        ], 200);
-    }
-
-    public function searchAcademiesCourseTeachers(Academy $academy, $courseId, Request $request)
-    {
-        $teachers = $academy->courses()->find($courseId)->teachers()->where('name', 'like', '%'.$request->search.'%')->get();
-
-        return response()->json([
-            'teachers' => $teachers,
-        ], 200);
     }
 
     public function getMyAcademies()
