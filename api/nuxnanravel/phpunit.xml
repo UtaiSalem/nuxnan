@@ -18,8 +18,12 @@
         </include>
     </source>
     <php>
-        <!-- เทสต์อัลบั้มภาพกีฬาสีถอดรหัสรูปด้วย GD หลายใบต่อรอบ ค่าเริ่มต้น 128M ของ php.ini ไม่พอ -->
-        <ini name="memory_limit" value="512M"/>
+        <!-- เทสต์อัลบั้มภาพกีฬาสีถอดรหัสรูปด้วย GD หลายใบต่อรอบ ค่าเริ่มต้น 128M ของ php.ini ไม่พอ
+             ขยับจาก 512M เป็น 2G (2026-09-02): ทั้งเรพใช้จริง ~474MB เมื่อ xdebug ปิด — เฉียดเพดานเดิมมาก
+             และถ้า xdebug เปิด (ค่าเริ่มต้นของ WAMP เครื่องนี้) จะทะลุ 512M แล้วตายกลางคัน
+             ที่ `WithdrawalPayoutProofTest` ทั้งที่ไม่มีเทสต์ไหนล้มจริง
+             หมายเหตุ: ค่านี้ชนะ `php -d memory_limit=...` เสมอ ถ้าจะแก้ต้องแก้ที่ไฟล์นี้ -->
+        <ini name="memory_limit" value="2G"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
