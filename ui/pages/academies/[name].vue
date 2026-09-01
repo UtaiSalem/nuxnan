@@ -1112,6 +1112,36 @@ const cancelMembership = async () => {
   }
 }
 
+// SET-S7 / D16 — established_year เก็บเป็น พ.ศ. · แสดง ค.ศ. ในวงเล็บให้อ่านง่าย
+const establishedLabel = computed(() => {
+  const be = Number(academy.value?.established_year)
+  if (! be) return ''
+  return `ก่อตั้ง พ.ศ. ${be} (${be - 543})`
+})
+
+// SET-S7 / D17 — แคตตาล็อกปิด 6 ช่อง · คีย์ที่ไม่ได้กรอกจะไม่มีในอ็อบเจกต์
+const SOCIAL_LINK_META: Record<string, { label: string; icon: string }> = {
+  facebook: { label: 'Facebook', icon: 'fluent:share-24-regular' },
+  line: { label: 'LINE', icon: 'fluent:chat-24-regular' },
+  youtube: { label: 'YouTube', icon: 'fluent:video-24-regular' },
+  tiktok: { label: 'TikTok', icon: 'fluent:music-note-2-24-regular' },
+  instagram: { label: 'Instagram', icon: 'fluent:camera-24-regular' },
+  x: { label: 'X (Twitter)', icon: 'fluent:globe-24-regular' },
+}
+
+const socialLinks = computed(() => {
+  const raw = academy.value?.social_media_links
+  if (! raw || typeof raw !== 'object') return []
+  return Object.keys(SOCIAL_LINK_META)
+    .filter((key) => typeof raw[key] === 'string' && raw[key].trim() !== '')
+    .map((key) => ({
+      key,
+      url: raw[key],
+      label: SOCIAL_LINK_META[key].label,
+      icon: SOCIAL_LINK_META[key].icon,
+    }))
+})
+
 const getAcademyTypeInfo = (type: string | null) => {
   const typeMap: Record<string, { label: string; icon: string; color: string }> = {
     'public': { label: 'รัฐบาล', icon: 'fluent:building-government-24-regular', color: 'text-blue-500' },
@@ -2603,7 +2633,22 @@ watch(() => academy.value?.id, (id) => {
 
                 <div v-if="academy.established_year" class="flex items-center gap-3">
                   <Icon icon="fluent:calendar-24-regular" class="w-5 h-5 text-gray-400" />
-                  <span class="text-gray-600 dark:text-gray-400">Established {{ academy.established_year }}</span>
+                  <span class="text-gray-600 dark:text-gray-400 min-w-0 break-words">{{ establishedLabel }}</span>
+                </div>
+
+                <div v-if="socialLinks.length" class="flex flex-wrap items-center gap-2 pt-1">
+                  <a
+                    v-for="link in socialLinks"
+                    :key="link.key"
+                    :href="link.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    :title="link.label"
+                    :aria-label="link.label"
+                    class="flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-vikinger-dark-100 text-gray-600 dark:text-gray-300 hover:text-vikinger-purple transition-colors"
+                  >
+                    <Icon :icon="link.icon" class="w-5 h-5" />
+                  </a>
                 </div>
               </div>
             </div>
@@ -2611,7 +2656,7 @@ watch(() => academy.value?.id, (id) => {
             <div v-if="academy.director" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-5 shadow-sm">
               <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                 <Icon icon="fluent:person-star-24-regular" class="w-5 h-5 text-vikinger-purple" />
-                Director
+                ผู้อำนวยการ
               </h3>
 
               <div class="flex items-center gap-3">
@@ -2626,7 +2671,7 @@ watch(() => academy.value?.id, (id) => {
                 </div>
                 <div>
                   <h4 class="font-medium text-gray-900 dark:text-white">{{ academy.director.name }}</h4>
-                  <p class="text-sm text-gray-500 dark:text-gray-400">Director</p>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">ผู้อำนวยการโรงเรียน</p>
                 </div>
               </div>
             </div>
@@ -2687,7 +2732,22 @@ watch(() => academy.value?.id, (id) => {
               
               <div v-if="academy.established_year" class="flex items-center gap-3">
                 <Icon icon="fluent:calendar-24-regular" class="w-5 h-5 text-gray-400" />
-                <span class="text-gray-600 dark:text-gray-400">Established {{ academy.established_year }}</span>
+                <span class="text-gray-600 dark:text-gray-400 min-w-0 break-words">{{ establishedLabel }}</span>
+              </div>
+
+              <div v-if="socialLinks.length" class="flex flex-wrap items-center gap-2 pt-1">
+                <a
+                  v-for="link in socialLinks"
+                  :key="link.key"
+                  :href="link.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  :title="link.label"
+                  :aria-label="link.label"
+                  class="flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-vikinger-dark-100 text-gray-600 dark:text-gray-300 hover:text-vikinger-purple transition-colors"
+                >
+                  <Icon :icon="link.icon" class="w-5 h-5" />
+                </a>
               </div>
             </div>
           </div>
@@ -2696,7 +2756,7 @@ watch(() => academy.value?.id, (id) => {
           <div v-if="academy.director" class="bg-white dark:bg-vikinger-dark-200 rounded-xl p-5 shadow-sm">
             <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <Icon icon="fluent:person-star-24-regular" class="w-5 h-5 text-vikinger-purple" />
-              Director
+              ผู้อำนวยการ
             </h3>
             
             <div class="flex items-center gap-3">
@@ -2711,7 +2771,7 @@ watch(() => academy.value?.id, (id) => {
               </div>
               <div>
                 <h4 class="font-medium text-gray-900 dark:text-white">{{ academy.director.name }}</h4>
-                <p class="text-sm text-gray-500 dark:text-gray-400">Director</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">ผู้อำนวยการโรงเรียน</p>
               </div>
             </div>
           </div>
