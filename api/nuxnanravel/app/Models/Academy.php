@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Database\Eloquent\Concerns\HasUlids;
+use App\Services\AcademyGroupPermissionAccessService;
 use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -232,6 +233,52 @@ class Academy extends Model
             ->where('user_id', $user->id)
             ->where('status', 2)
             ->exists();
+    }
+
+    /**
+     * G18 — **นิยามเดียวของทั้งระบบ** ว่าผู้ใช้คนนี้ทำสิ่งที่ต้องใช้สิทธิ์ชุดนี้ในโรงเรียนนี้ได้ไหม
+     *
+     * ลำดับการปล่อยผ่าน: super admin → เจ้าของ/`academy_admins` → ต้องเป็นสมาชิก `status = 2`
+     * → สิทธิ์จาก role → สิทธิ์ที่ฝ่าย/กลุ่มได้รับมอบ
+     *
+     * ไม่ส่งคีย์มาเลย = "ขอแค่เป็นสมาชิก"
+     *
+     * ห้ามเขียนลำดับนี้ซ้ำใน controller/middleware — `CheckAcademyPermission` และ
+     * คอนโทรลเลอร์ที่ตรวจสิทธิ์เองต้องเรียกเมธอดนี้ ไม่งั้น middleware กับ controller
+     * จะให้คำตอบคนละอย่าง (บทเรียนจาก G18: route ปล่อยครูผ่าน แต่ controller ตรวจ
+     * `isAdmin()` แล้วตอบ 403 ⇒ คีย์สิทธิ์กลายเป็นสวิตช์หลอก)
+     */
+    public function userCan($user, string ...$permissions): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        if ($this->isAdmin($user)) {
+            return true;
+        }
+
+        $member = $this->academyMembers()
+            ->where('user_id', $user->id)
+            ->where('status', 2)
+            ->first();
+
+        if (! $member) {
+            return false;
+        }
+
+        if ($permissions === []) {
+            return true;
+        }
+
+        $role = $member->academyRole;
+
+        if ($role && $role->hasAnyPermission($permissions)) {
+            return true;
+        }
+
+        return app(AcademyGroupPermissionAccessService::class)
+            ->hasAnyPermission($user, $this, $permissions);
     }
 
     /**
