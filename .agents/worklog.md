@@ -1,5 +1,83 @@
 # Work Log — nuxnan project
 
+## 2026-09-02 (ต่อ) — กวาดบั๊ก `avatar` ทั้งระบบ · **ปิดครบทั้งคลาสบั๊ก**
+
+### สถานะ: ✅ ตรวจครบทุกข้อ — 19 ไฟล์ (**−45 / +45**) + เทสต์ใหม่ 1 ไฟล์ · **commit แล้ว 2 ชุด**
+
+`f18a8a72` (fix) · `59c6c205` (test)
+
+### ต้นตอ
+
+`avatar` / `profile_photo_url` เป็น **accessor ใน `$appends` ของ `User`** (อ่านจาก
+`profile_photo_path`) ไม่ใช่คอลัมน์ · ยืนยันจาก `Schema::getColumnListing('users')`
+เอาไปใส่ในลิสต์คอลัมน์เมื่อไหร่ MySQL ตอบ `Unknown column` ⇒ **500 ทั้งเส้น**
+
+### 🔴 การนับของรอบก่อนตกไป 2 อย่าง
+
+1. **รูปแบบที่ 2 ที่ไม่เคยถูกนับ** — `->get(['id','name','avatar', ...])`
+   เจอเพิ่ม **4 จุด**: `DepartmentController:96` · `AdminPointsService:109,120` ·
+   `AdminWalletService:132` (grep เดิมมองหาแต่ `with(`/`load(` จึงไม่เห็น)
+2. **`ClassScheduleController` 3 จุดใช้ `teacher:id,first_name,last_name,avatar`**
+   `users` **ไม่มี `first_name`/`last_name`** ด้วย — แพตเทิร์นเดียวกับ G27 เป๊ะ
+   ฝั่ง UI อ่าน `teacher?.name` อยู่แล้ว (`schedule.vue:516`) ⇒ เปลี่ยนเป็น
+   `teacher:id,name,profile_photo_path`
+
+รวมของจริง **45 จุด ใน 19 ไฟล์** (ไม่ใช่ 34 จุด ใน 15 ไฟล์ ตามที่เขียนไว้)
+
+### สิ่งที่ไม่เปลี่ยน
+
+JSON ที่ frontend เห็น **เหมือนเดิมทุกคีย์** — `avatar` / `profile_photo_url`
+ยังมาครบจาก `$appends` ⇒ ไม่ต้องแก้ฝั่ง `ui/` เลย
+(จุดเดียวที่เพิ่มคอลัมน์คือ `CoursePostShareController` ใส่ `name` เพราะ
+`UserResource` ใช้เป็น `display_name` และ accessor `avatar` ใช้เป็น fallback)
+
+### หลักฐานที่ Claude รันเอง
+
+- `git diff --stat` = **19 ไฟล์ · −45 / +45** · อ่าน diff ทุกบรรทัด
+- **ยิงจริงบน MySQL 17 รูปแบบ ⇒ OK ทุกตัว** และ `avatar` คืน URL รูปจริง
+- **mutation check: ย้อนกลับไปใช้ของเดิม 7 รูปแบบ ⇒ `SQLSTATE[42S22]` ทุกตัว**
+  (`avatar` · `first_name` · `profile_photo_url`) ⇒ ยืนยันว่าเป็น 500 จริงทั้งหมด
+- `php -l` 20 ไฟล์ · `pint --test` ผ่าน
+- **`artisan test` ทั้งเรพ: 1,626 passed · 3 incomplete · 8 skipped · 0 failed** (561s)
+  เดิม 1,624 ⇒ +2 คือเทสต์ใหม่ · ไม่มีอะไรถอยหลัง
+
+### เทสต์กันถอยหลัง — `tests/Feature/NoAccessorColumnsInQueriesTest.php`
+
+SQLite **ไม่ฟ้อง**เมื่อ select คอลัมน์ที่ไม่มีอยู่ (บทเรียนเดิมของโปรเจค) ⇒ assert
+status code จับคลาสนี้ไม่ได้ **เทสต์จึงสแกนซอร์สใน `app/`** จับทั้งสองรูปแบบ
+พร้อมชี้ไฟล์:บรรทัด · เคสแรกยืนยันจาก schema ว่าไม่มีตารางไหนมีคอลัมน์ทั้งสองนี้
+**mutation check: ใส่บั๊กกลับไป 2 จุด ⇒ ล้มพร้อมชี้ตำแหน่งครบทั้งคู่ · คืนไฟล์แล้ว**
+
+### สแกนซ้ำแบบครอบทั้งคลาสบั๊ก (ไม่ใช่แค่ `avatar`)
+
+เขียนสคริปต์ไล่ **ทุกโมเดลที่มี `$appends`** เทียบกับคอลัมน์จริงของตารางตัวเอง
+ได้ **37 ชื่อ accessor** ที่ไม่ใช่คอลัมน์ (`full_url` · `qr_code_url` ·
+`available_balance` · `is_liked_by_auth` ฯลฯ) แล้วสแกนหาการเอาไปใส่ในลิสต์คอลัมน์
+⇒ **0 จุด** ⇒ ไม่ใช่แค่ `avatar` ที่หมด แต่**ทั้งคลาสบั๊กนี้สะอาดแล้ว**
+
+### 🟡 ของนอกขอบเขตที่เจอ (ยังไม่แตะ)
+
+`AuthService::register()` (`AuthService.php:35`) ส่ง `avatar` / `referral_code` /
+`referrer_code` / `phone` เข้า `User::create()` ทั้งที่**ไม่มีใน `$fillable`** ⇒
+ถูกทิ้งเงียบ ๆ (ไม่ใช่ 500) · และ**ไม่เซ็ต `name` เลย**
+ตรวจแล้ว **ไม่มีใครเรียกเมธอดนี้** (มีแต่ `assignDefaultRole`) ⇒ เป็นโค้ดตาย
+คนละบั๊ก ควรมีรอบของตัวเอง
+
+### งานที่ค้างหลังรอบนี้
+
+- [x] **กวาด `avatar`/`profile_photo_url`** ✅ ปิดแล้ว
+- [ ] **G18** — `school-attendances` / `emergency-alerts` / `revenue/support-summary` /
+      `my-role` ยังไม่มีด่านสมาชิกภาพและด่าน archived · **น่าจะเป็นตัวถัดไป**
+- [ ] `PublicAcademyController.php` ตก `pint --test` (ของเดิม)
+- [ ] **SET-S12** deferred (ดู `.agents/photo-path-migration-plan.md`)
+- [ ] โค้ดตาย `AuthService::register()` (ดูด้านบน)
+
+### Branch / Git State
+
+- Branch: `main` · Uncommitted: ไม่มี · **commit แล้ว 2 ชุด แต่ยังไม่ push**
+
+---
+
 ## 2026-09-02 (ต่อ) — เมนู #7 SET-S13: ลบเมธอดตายใน AcademyController · **เมนู #7 ปิดครบทุก step แล้ว**
 
 ### สถานะ: **SET-S13 ✅ ตรวจครบทุกข้อ** — 1 ไฟล์ · **−157 / +0** (deletion ล้วน)
