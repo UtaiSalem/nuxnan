@@ -5,6 +5,7 @@
  */
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
+import { onBeforeRouteLeave } from 'vue-router'
 
 definePageMeta({
   layout: 'main'
@@ -212,6 +213,66 @@ onMounted(async () => {
   }
 })
 
+// SET-S11 — สแนปช็อตแบบ canonical: เรียงคีย์ + ตัดลิงก์โซเชียลที่ว่างทิ้ง
+// ถ้าไม่ตัด ผู้ใช้ที่พิมพ์แล้วลบจนว่างจะถูกนับว่า "มีการแก้ไข" ทั้งที่ค่าเท่าเดิม
+const formFingerprint = () => {
+  const data = JSON.parse(JSON.stringify(form.value))
+  
+  if (data.social_media_links) {
+    for (const key of Object.keys(data.social_media_links)) {
+      if (!data.social_media_links[key] || data.social_media_links[key].trim() === '') {
+        delete data.social_media_links[key]
+      }
+    }
+  }
+  
+  if (data.student_editable_fields?.fields) {
+    data.student_editable_fields.fields.sort()
+  }
+  
+  const sortKeys = (obj: any): any => {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj
+    const sorted: any = {}
+    Object.keys(obj).sort().forEach(k => {
+      sorted[k] = sortKeys(obj[k])
+    })
+    return sorted
+  }
+  
+  return JSON.stringify(sortKeys(data))
+}
+
+const pristine = ref('')
+
+const isDirty = computed(() =>
+  ! isSaving.value
+  && (formFingerprint() !== pristine.value || avatarFile.value !== null || coverFile.value !== null)
+)
+
+onBeforeRouteLeave((to, from, next) => {
+  if (isDirty.value) {
+    const confirmed = window.confirm('คุณมีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก ต้องการออกจากหน้านี้หรือไม่?')
+    confirmed ? next() : next(false)
+  } else {
+    next()
+  }
+})
+
+const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+  if (isDirty.value) {
+    e.preventDefault()
+    e.returnValue = ''
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('beforeunload', handleBeforeUnload)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
+})
+
 const populateForm = () => {
   if (!academy.value) return
   
@@ -252,6 +313,7 @@ const populateForm = () => {
 
   avatarPreview.value = academy.value.logo_url || academy.value.logo
   coverPreview.value = academy.value.cover_url || academy.value.cover
+  pristine.value = formFingerprint()
 }
 
 const onAvatarChange = (e: Event) => {
@@ -315,6 +377,17 @@ const saveSettings = async () => {
     if (response.success) {
       Swal.fire('สำเร็จ', 'บันทึกการตั้งค่าเรียบร้อยแล้ว', 'success')
       
+      // SET-S11 — เขียนค่าที่เซิร์ฟเวอร์ normalize แล้วกลับลงฟอร์ม (G12)
+      // เดิมใช้ response.academy แค่เช็คชื่อ ⇒ สิ่งที่ผู้ใช้เห็นค้างที่ค่าที่ตัวเองพิมพ์
+      // ต่างจากของจริงหลายจุด: social_media_links ถูกตัดคีย์ว่างทิ้ง · student_editable_fields
+      // ถูก normalize รูปทรง · established_year เก็บเป็น int · donation_enabled เป็น boolean เสมอ
+      if (response.academy) {
+        academy.value = response.academy
+        avatarFile.value = null
+        coverFile.value = null
+        populateForm()          // รีเซ็ตสแนปช็อตของ SET-S11 ไปในตัว
+      }
+
       // SET-S8 — route param [name] ผูกกับคอลัมน์ `name` ไม่ใช่ slug (คอลัมน์ name_slug ถูกลบทิ้งแล้ว)
       // ถ้าไม่ย้าย URL ตามชื่อใหม่ การ refresh ครั้งถัดไปจะได้ 404 เพราะ URL ยังค้างที่ชื่อเก่า
       if (response.academy?.name && response.academy.name !== academyName.value) {
