@@ -1,5 +1,95 @@
 # Work Log — nuxnan project
 
+## 2026-09-02 (ต่อ) — เมนู #7 SET-S13: ลบเมธอดตายใน AcademyController · **เมนู #7 ปิดครบทุก step แล้ว**
+
+### สถานะ: **SET-S13 ✅ ตรวจครบทุกข้อ** — 1 ไฟล์ · **−157 / +0** (deletion ล้วน)
+
+เอกสารหลัก: [`.agents/school-admin/07-settings.md`](school-admin/07-settings.md) §5.25
+
+### 🔴 ตัวเลขในเอกสารเดิมผิด — แก้ตอนลงมือ
+
+เอกสารเขียนว่า "11 เมธอดที่ไม่มี route ชี้มา" พร้อมไล่ชื่อ `updateAcademySetting` ไว้ด้วย
+**ตรวจของจริงแล้วผิดทั้งจำนวนและชื่อ:**
+- คลาสนี้มี public method **26 ตัว** · มี route ชี้ถึงจริง **11 ตัว** ⇒ **ตายจริง 15 ตัว**
+- `updateAcademySetting` **ไม่มีอยู่จริง** — ตัวจริงคือ `updateSettings` ซึ่ง **มี route**
+  และเป็น endpoint ที่ SET-S1..S11 ทำงานอยู่บนนั้นทั้งหมด
+  ⇒ **ถ้าเชื่อเอกสารแล้วลบตามชื่อ จะลบหัวใจของเมนูนี้ทิ้ง**
+- เอกสารตกกลุ่ม `searchAcademies*` ไปทั้ง 5 ตัว
+
+**วิธีที่ใช้หาให้ถูก:** `route:list --json` แล้วกรองด้วย **ชื่อคลาสเต็ม**
+— ไม่ใช่ grep จากตาราง `route:list` เพราะคอลัมน์ action ถูกตัดท้ายด้วย `…`
+(grep แบบนั้นได้ชื่อครึ่ง ๆ อย่าง `getAllAca` และดึงเมธอดของ `AcademyController` คนละคลาสมาปน)
+
+### 15 เมธอดที่ลบ + ทำไมมันอันตรายถ้าปล่อยไว้
+
+`create_course` · `edit` · `joinAcademy` · `leaveAcademy` · `acceptMember` · `rejectMember` ·
+`removeMember` · `updateMembershipFees` · `updateAcademyLogo` · `updateAcademyCover` ·
+`searchAcademies` · `searchAcademiesMembers` · `searchAcademiesCourses` ·
+`searchAcademiesCourseStudents` · `searchAcademiesCourseTeachers`
+
+- ทั้งหมดเป็นสไตล์ web เก่า (`redirect()->back()`) และ **ไม่มีการตรวจสิทธิ์เลยสักตัว**
+- `joinAcademy` / `acceptMember` / `removeMember` แก้สมาชิกภาพผ่าน pivot ด้วยสถานะสตริง
+  `'accepted'/'rejected'` ⇒ **ขัดกับ convention จริง** (`academy_members.status` เป็น int · 2 = APPROVED)
+- `updateAcademyLogo` เขียนคอลัมน์ `logo` เป็น **ชื่อไฟล์เปล่า** ขณะที่ `updateSettings` เขียนเป็น
+  **URL เต็ม** ⇒ สองนิยามในคอลัมน์เดียว **แพตเทิร์นเดียวกับ G22 ที่ SET-S7 เพิ่งปิด**
+
+### หลักฐานที่ Claude รันเอง
+
+- `git diff --stat` = **1 ไฟล์ · −157 / +0** · อ่าน diff ทุกบรรทัด ตรงสเปคเป๊ะ
+- นับเมธอดที่เหลือ = **11 พอดี** · 15 ชื่อหายครบ · 11 ชื่อที่ต้องอยู่ครบทุกตัว
+- import: `CourseResource` = 0 · `Intervention` = 0 · `Storage`/`User` ยังอยู่และยังมีผู้ใช้จริง
+  (`Storage::` 6 จุด · `User` เป็น type hint ของ `getAuthMemberedAcademies`)
+  · บรรทัดคอมเมนต์ `Image::make` ใน `store()` คงไว้ตามตั้งใจ
+- `php -l` · `pint --test` ผ่าน · `route:list` build ได้ครบ **844 routes**
+- `tests/Feature/Academy` **186 passed · 2 incomplete · 0 failed** (เท่าเดิม)
+- **`artisan test` ทั้งเรพ: 1,624 passed · 3 incomplete · 8 skipped · 0 failed** (556s)
+
+### สิ่งที่จงใจไม่แตะ
+
+ทางลัด `isSuperAdmin()` ใน `CheckAcademyPermission` ที่ mutation check ของ SET-S10 พบว่าซ้ำกับ
+`Academy::isAdmin()` — **เก็บไว้เป็น defense in depth** การตัดออกจะทำให้ middleware ด้านสิทธิ์
+ไปพึ่ง internals ของเมธอดอื่นเพียงทางเดียว แลกไม่คุ้มกับการลดโค้ด 3 บรรทัด
+
+---
+
+## 🎉 เมนู #7 (ตั้งค่าโรงเรียน) — ปิดครบทุก step แล้ว
+
+| step | สาระ | สถานะ |
+|---|---|---|
+| S1 | อุดช่องโหว่สิทธิ์ (G1+G5) | 🟢 |
+| S2 | เก็บถาวรแทนการลบ | 🟢 + migrate |
+| S3 | รวมคีย์สิทธิ์ให้เหลือชุดเดียว | 🟢 + migrate |
+| S4 | โหมดดูอย่างเดียว | 🟢 |
+| S5 | ทำให้สวิตช์มีผลจริง | 🟢 + migrate |
+| S6 | แท็บระบบและนโยบาย (ปิด G21) | 🟢 |
+| S7 | ฟิลด์อัตลักษณ์ (ปิด G22) | 🟢 + migrate |
+| S8 | ลบ `name_slug` + ซ่อม redirect | 🟢 + migrate |
+| S9 | audit log การแก้ตั้งค่า (ปิด G26–G28) | 🟢 |
+| S10 | เทสต์เส้นทางสิทธิ์ | 🟢 |
+| S11 | UX เก็บตก + หนี้ `?view=archived` | 🟢 |
+| S13 | ล้างเมธอดตาย | 🟢 |
+| S12 | รูปเป็น relative path | 🔵 deferred — รอทำพร้อม migration รูปทั้งระบบ |
+
+**เทสต์ของเมนูนี้:** 4 ไฟล์ 35 เคส (`AcademySettingsUpdateTest` 7 · `AcademyIdentityFieldsTest` 11
+· `AcademySettingsAuditLogTest` 9 · `AcademySettingsPermissionPathsTest` 8)
+
+### งานที่ค้างหลังปิดเมนู #7
+
+- [ ] **กวาด `avatar`/`profile_photo_url` ที่เหลือ 34 จุด ใน 15 ไฟล์** — สุ่มยิงจริง 4 จุด พัง 3
+      (PhotoController · โมดูลบุคลากรทั้งโมดูล · หน้าแอดมินถอนเงิน) · **น่าจะเป็นตัวถัดไป**
+- [ ] **G18** — `school-attendances` / `emergency-alerts` / `revenue/support-summary` / `my-role`
+      ยังไม่มีด่านสมาชิกภาพและด่าน archived
+- [ ] `PublicAcademyController.php` ตก `pint --test` (ของเดิม)
+- [ ] **SET-S12** deferred (ดู `.agents/photo-path-migration-plan.md`)
+- [ ] **ยังไม่ push เลย** — สะสม 22 commit บน `main`
+
+### Branch / Git State
+
+- Branch: `main` · Uncommitted: ไม่มี (clean) · **ยังไม่ push**
+- สะสมบน `main`: SET-S7 6 · SET-S9 4 · รอบเก็บงาน 3 · SET-S11 3 · SET-S10 2 · SET-S13 2
+
+---
+
 ## 2026-09-02 (ต่อ) — เมนู #7 SET-S10: เทสต์เส้นทางสิทธิ์ของหน้าตั้งค่า
 
 ### สถานะ: **SET-S10 ✅ ตรวจครบทุกข้อ** — 1 ไฟล์ (เทสต์ใหม่ล้วน · **ไม่แตะโค้ดโปรดักชันเลย**)

@@ -1077,6 +1077,46 @@ PHANTOM DIFF KEYS: ["established_year"]
 - `switchView('archived')` → `fetchArchivedAcademies()` เสมอ (คิวรีเล็ก และความถูกต้องสำคัญกว่า)
 - ห้ามแตะเงื่อนไข `v-if="archivedAcademies.length > 0"` ของปุ่มสลับ view (D9 ของ SET-S2)
 
+### 5.25 SET-S13 — ตัวเลขในเอกสารเดิมผิด (แก้ตอนลงมือ 2026-09-02)
+
+> **แก้ข้อสรุปของ G10b:** เอกสารเขียนว่า "11 เมธอดที่ไม่มี route ชี้มา" พร้อมไล่ชื่อไว้ชุดหนึ่ง
+> **ตรวจของจริงแล้วไม่ตรงทั้งจำนวนและชื่อ** — `AcademyController` มี public method **26 ตัว**
+> มี route ชี้ถึงจริง **11 ตัว** ⇒ **ตายจริง 15 ตัว**
+> และชื่อ `updateAcademySetting` ที่เอกสารไล่ไว้ **ไม่มีอยู่จริงในไฟล์** — ตัวจริงคือ `updateSettings`
+> ซึ่ง **มี route** และเป็นหัวใจของเมนูนี้ทั้งหมด (S1–S11 ทำงานบนเมธอดนี้)
+> ⇒ ถ้าเชื่อเอกสารแล้วลบตามชื่อ จะลบ endpoint ที่ใช้งานจริงทิ้ง
+> เอกสารยังตกกลุ่ม `searchAcademies*` ไปทั้ง 5 ตัว
+>
+> **วิธีที่ใช้หาให้ถูก:** `php artisan route:list --json` แล้วกรองด้วย **ชื่อคลาสเต็ม**
+> — ไม่ใช่ grep จาก `route:list` แบบตาราง เพราะคอลัมน์ action ถูกตัดท้ายด้วย `…`
+> (grep แบบนั้นให้ชื่อครึ่ง ๆ อย่าง `getAllAca` และดึงเมธอดของ `AcademyController` คนละคลาสมาปนด้วย)
+
+**15 เมธอดที่ลบ** — ยืนยันแล้วว่าไม่มีใครอ้างถึงนอกไฟล์นี้ (`grep -rn` ทั้ง `routes/` และ `app/`
+ทีละชื่อ · ชื่อที่ชนกันอย่าง `edit` / `removeMember` / `rejectMember` เป็นของคอนโทรลเลอร์ตัวอื่นทั้งหมด
+· ไม่มี `Route::resource` ชี้มา):
+
+`create_course` · `edit` · `joinAcademy` · `leaveAcademy` · `acceptMember` · `rejectMember` ·
+`removeMember` · `updateMembershipFees` · `updateAcademyLogo` · `updateAcademyCover` ·
+`searchAcademies` · `searchAcademiesMembers` · `searchAcademiesCourses` ·
+`searchAcademiesCourseStudents` · `searchAcademiesCourseTeachers`
+
+**ทำไมต้องลบ ไม่ใช่ปล่อยไว้ให้เป็นระเบิดเวลา:**
+ทั้งหมดเป็นสไตล์ web เก่า (`redirect()->back()`) และ **ไม่มีการตรวจสิทธิ์เลยสักตัว**
+· `joinAcademy` / `acceptMember` / `removeMember` แก้สมาชิกภาพตรง ๆ ผ่าน pivot `members()`
+ด้วยสถานะสตริง `'accepted'` / `'rejected'` ซึ่ง **ขัดกับ convention จริงของระบบ**
+(`academy_members.status` เป็น int · 2 = APPROVED)
+· `updateAcademyLogo` เขียนคอลัมน์ `logo` เป็น **ชื่อไฟล์เปล่า** ขณะที่ `updateSettings` เขียนเป็น
+**URL เต็ม** ⇒ สองนิยามในคอลัมน์เดียว **แพตเทิร์นเดียวกับ G22 ที่ SET-S7 เพิ่งปิดไป**
+
+**import ที่เก็บไปด้วย:** `CourseResource` (ผู้ใช้ทั้ง 2 จุดอยู่ในเมธอดที่ลบ) และ
+`Intervention\Image\Facades\Image` (ไม่มีผู้ใช้ที่เป็นโค้ดจริงอยู่แล้ว — เหลือแค่บรรทัดคอมเมนต์
+ใน `store()` ซึ่งคงไว้)
+
+**สิ่งที่จงใจไม่แตะ:** ทางลัด `isSuperAdmin()` ใน `CheckAcademyPermission` ที่ mutation check
+ของ SET-S10 พบว่าซ้ำกับ `Academy::isAdmin()` — **เก็บไว้เป็น defense in depth**
+การตัดออกจะทำให้ middleware ด้านสิทธิ์ไปพึ่ง internals ของเมธอดอื่นเพียงทางเดียว
+ซึ่งแลกไม่คุ้มกับการลดโค้ด 3 บรรทัด
+
 ---
 
 ## 6. Implementation Tasks
@@ -1095,7 +1135,7 @@ PHANTOM DIFF KEYS: ["established_year"]
 | **SET-S10** | เติมเทสต์ที่ยังขาด (G10) | SET-S1..S6 | ต่อยอด `AcademySettingsUpdateTest` ที่มีอยู่แล้ว (round-trip/validation/cache/slug ครอบแล้ว) — เพิ่ม: role ที่ถือ `settings.manage` ต้องผ่าน · สมาชิกสถานะไม่ใช่ APPROVED ต้องโดนปฏิเสธ · superadmin · สิทธิ์จากฝ่าย/กลุ่ม | 🟢 **verified** (8 เคส · mutation check 6 แบบ) |
 | **SET-S11** | UX เก็บตก (G12) + หนี้ `?view=archived` จาก SET-S2 | SET-S4 | เตือนก่อนออกโดยไม่บันทึก (สแนปช็อต canonical + `onBeforeRouteLeave` + `beforeunload`) · refresh ค่าที่เซิร์ฟเวอร์ normalize หลังบันทึก · `switchView('archived')` refetch จริง · (ข้อซ่อนแท็บโซนอันตรายทำไปแล้วตั้งแต่ SET-S4) | 🟢 **verified** (ตรวจบนเบราว์เซอร์จริงที่ 375px) |
 | **SET-S12** | รูปโลโก้/ปกเป็น relative path (G8) | — | ต่อยอดจาก `.agents/photo-path-migration-plan.md` — **แยกไปทำพร้อมงาน migration รูปทั้งระบบ** | 🔵 deferred |
-| **SET-S13** | ล้างเมธอดตายใน `AcademyController` (G10b) | SET-S1 | ลบ 11 เมธอดที่ไม่มี route ชี้มา + ตรวจว่าไม่มี import ไหนหลุดค้าง | ⚪ pending |
+| **SET-S13** | ล้างเมธอดตายใน `AcademyController` (G10b — จำนวนในเอกสารเดิมผิด ดู §5.25) | SET-S1 | ลบ **15 เมธอดที่ไม่มี route ชี้มา** (ไม่ใช่ 11) + เก็บ import `CourseResource` / `Intervention\Image` · เหลือ 11 เมธอดที่มี route จริง | 🟢 **verified** (−157 บรรทัด · 0 insertion) |
 
 **ลำดับที่ตกลง (Q1–Q3 เคาะครบแล้ว ไม่มี step ไหน blocked):**
 SET-S1 → S3 → S4 → S5 → S2 → S8 → S6 → S7 → S9 → S11 → S10
@@ -1261,3 +1301,16 @@ Report back: git diff --stat + สรุปสิ่งที่ทำจริ�
   **Claude แก้เองหลัง agy 1 จุด:** เคส `settings.view` และเคส group เดิม assert แค่ status 403
   ซึ่งเขียวได้ด้วยเหตุผลผิด ๆ (ตกที่ด่านสมาชิกภาพแทนด่านสิทธิ์) จึงเพิ่ม assert ข้อความ
   `Insufficient permissions` ให้ทั้งสองเคส แยกจาก `Not a member of this academy`
+
+- **2026-09-02 SET-S13** — agy ลบ 15 เมธอด + 2 import · **Claude ตรวจเองทุกข้อ:**
+
+  | ตรวจอะไร | วิธีตรวจ | ผล |
+  |---|---|---|
+  | ขอบเขต diff | `git diff --stat` | 1 ไฟล์ · **−157 / +0** deletion ล้วน |
+  | นับเมธอดที่เหลือ | `grep -c 'public function'` | **11 พอดี** |
+  | 15 ชื่อที่ต้องหาย / 11 ชื่อที่ต้องอยู่ | `grep -c "function <ชื่อ>("` ทีละชื่อ | หายครบ / อยู่ครบ |
+  | import ที่ค้าง | `grep -c` | `CourseResource` 0 · `Intervention` 0 · `Storage`/`User` ยังอยู่และมีผู้ใช้จริง |
+  | syntax + style | `php -l` · `pint --test` | ผ่าน |
+  | route ไม่พัง | `route:list --path=academies` | build ได้ครบ **844 routes** |
+  | เทสต์โฟลเดอร์ Academy | `artisan test tests/Feature/Academy` | **186 passed · 2 incomplete · 0 failed** |
+  | **เทสต์ทั้งเรพ** | `artisan test` | **1,624 passed · 3 incomplete · 8 skipped · 0 failed** (556s) |
