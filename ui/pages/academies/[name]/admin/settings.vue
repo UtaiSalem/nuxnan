@@ -32,6 +32,11 @@ const form = ref({
   name_en: '',
   description: '',
   description_en: '',
+  slogan: '',
+  type: '' as string,
+  established_year: '' as string | number,
+  director: '' as string | number,
+  social_media_links: {} as Record<string, string>,
   email: '',
   phone: '',
   website: '',
@@ -52,6 +57,66 @@ const form = ref({
 
 // SET-S6 — แคตตาล็อกมาจาก backend (Academy::STUDENT_EDITABLE_FIELD_CATALOG) ห้าม hardcode ซ้ำ
 const editableFieldCatalog = ref<string[]>([])
+
+const academyTypeCatalog = ref<string[]>([])
+const socialLinkCatalog = ref<string[]>([])
+
+const ACADEMY_TYPE_LABELS: Record<string, string> = {
+  public: 'รัฐบาล',
+  private: 'เอกชน',
+  foundation: 'มูลนิธิ',
+  international: 'นานาชาติ',
+}
+
+const SOCIAL_LABELS: Record<string, { label: string; icon: string; placeholder: string }> = {
+  facebook:  { label: 'Facebook',  icon: 'fluent:share-24-regular', placeholder: 'https://facebook.com/...' },
+  line:      { label: 'LINE',      icon: 'fluent:chat-24-regular',  placeholder: 'https://line.me/R/ti/p/@...' },
+  youtube:   { label: 'YouTube',   icon: 'fluent:video-24-regular', placeholder: 'https://youtube.com/@...' },
+  tiktok:    { label: 'TikTok',    icon: 'fluent:music-note-2-24-regular', placeholder: 'https://tiktok.com/@...' },
+  instagram: { label: 'Instagram', icon: 'fluent:camera-24-regular', placeholder: 'https://instagram.com/...' },
+  x:         { label: 'X (Twitter)', icon: 'fluent:globe-24-regular', placeholder: 'https://x.com/...' },
+}
+
+const directorQuery = ref('')
+const directorResults = ref<any[]>([])
+const isSearchingDirector = ref(false)
+const selectedDirector = ref<any>(null)
+let directorSearchTimer: any = null
+
+const searchDirector = () => {
+  clearTimeout(directorSearchTimer)
+  const term = directorQuery.value.trim()
+  if (term.length < 2) { directorResults.value = []; return }
+  directorSearchTimer = setTimeout(async () => {
+    if (! academyId.value) return
+    isSearchingDirector.value = true
+    try {
+      const res: any = await api.get(
+        `/api/academies/${academyId.value}/members/search?search=${encodeURIComponent(term)}&status=2&per_page=10`
+      )
+      directorResults.value = (res?.members ?? []).filter((m: any) => m?.user?.id)
+    } catch (e) {
+      directorResults.value = []
+    } finally {
+      isSearchingDirector.value = false
+    }
+  }, 350)
+}
+
+const pickDirector = (member: any) => {
+  // AcademyMemberResource ส่งรูปมาในคีย์ profile_photo_url (คนละคีย์กับ UserResource ที่ใช้คำว่า avatar)
+  selectedDirector.value = { id: member.user.id, name: member.user.name, avatar: member.user.profile_photo_url ?? member.user.avatar ?? null }
+  form.value.director = member.user.id
+  directorQuery.value = ''
+  directorResults.value = []
+}
+
+const clearDirector = () => {
+  selectedDirector.value = null
+  form.value.director = ''
+}
+
+const maxEstablishedYear = computed(() => new Date().getFullYear() + 543)
 
 const FIELD_LABELS: Record<string, string> = {
   academic: 'ข้อมูลการศึกษา (ทั้งกลุ่ม)',
@@ -155,6 +220,11 @@ const populateForm = () => {
     name_en: academy.value.name_en || '',
     description: academy.value.description || '',
     description_en: academy.value.description_en || '',
+    slogan: academy.value.slogan || '',
+    type: academy.value.type || '',
+    established_year: academy.value.established_year ?? '',
+    director: academy.value.director?.id ?? '',
+    social_media_links: { ...(academy.value.social_media_links ?? {}) },
     email: academy.value.email || '',
     phone: academy.value.phone || '',
     website: academy.value.website || '',
@@ -174,6 +244,11 @@ const populateForm = () => {
   }
   
   editableFieldCatalog.value = academy.value.student_editable_field_catalog ?? []
+  academyTypeCatalog.value = academy.value.academy_type_catalog ?? []
+  socialLinkCatalog.value = academy.value.social_link_catalog ?? []
+  selectedDirector.value = academy.value.director?.id
+    ? { id: academy.value.director.id, name: academy.value.director.name, avatar: academy.value.director.avatar ?? null }
+    : null
 
   avatarPreview.value = academy.value.logo_url || academy.value.logo
   coverPreview.value = academy.value.cover_url || academy.value.cover
@@ -208,6 +283,8 @@ const saveSettings = async () => {
     // ต้องส่งเป็นคีย์ซ้อนแบบที่ Laravel แปลงกลับเป็นอาเรย์ได้
     Object.entries(form.value).forEach(([key, value]) => {
       if (key === 'student_editable_fields') return
+      // SET-S7 — social_media_links เป็นอ็อบเจกต์ String(value) จะได้ "[object Object]"
+      if (key === 'social_media_links') return
       // multipart ส่งได้แต่สตริง และกฎ `boolean` ของ Laravel ไม่รับ "true"/"false" — รับแค่ "1"/"0"
       // (สวิตช์เดิมอย่าง show_member_list รอดมาได้เพราะไม่มีกฎ validate คุมอยู่เลย
       //  อ่านผ่าน $request->boolean() ตรง ๆ ซึ่งรับสตริง "true" ได้)
@@ -217,6 +294,12 @@ const saveSettings = async () => {
     formData.append('student_editable_fields[mode]', form.value.student_editable_fields.mode)
     form.value.student_editable_fields.fields.forEach((field) => {
       formData.append('student_editable_fields[fields][]', field)
+    })
+
+    // SET-S7 — ส่งทุกคีย์ในแคตตาล็อกเสมอ (ช่องที่ถูกล้างต้องส่งค่าว่างไปด้วย
+    // ไม่งั้น backend จะไม่รู้ว่าผู้ดูแลตั้งใจลบลิงก์นั้นทิ้ง)
+    socialLinkCatalog.value.forEach((key) => {
+      formData.append(`social_media_links[${key}]`, (form.value.social_media_links?.[key] ?? '').trim())
     })
     
     // Add files if changed
@@ -466,6 +549,136 @@ const joinModeOptions = [
                   class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white disabled:cursor-not-allowed disabled:opacity-60"
                   placeholder="Describe your academy..."
                 />
+              </div>
+            </div>
+
+            <!-- Slogan -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                คำขวัญโรงเรียน
+              </label>
+              <input
+                v-model="form.slogan"
+                :disabled="isReadOnly"
+                type="text"
+                maxlength="255"
+                class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white disabled:cursor-not-allowed disabled:opacity-60"
+              />
+              <p class="text-sm text-gray-500 mt-1">แสดงบนการ์ดโรงเรียนและหน้าโปรไฟล์</p>
+            </div>
+
+            <!-- Type and Year -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  ประเภทโรงเรียน
+                </label>
+                <select
+                  v-model="form.type"
+                  :disabled="isReadOnly"
+                  class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <option value="">ไม่ระบุ</option>
+                  <option v-for="t in academyTypeCatalog" :key="t" :value="t">{{ ACADEMY_TYPE_LABELS[t] || t }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  ปีที่ก่อตั้ง
+                </label>
+                <input
+                  v-model="form.established_year"
+                  :disabled="isReadOnly"
+                  type="number"
+                  min="2400"
+                  :max="maxEstablishedYear"
+                  placeholder="เช่น 2510"
+                  class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                />
+                <p class="text-sm text-gray-500 mt-1">ระบุเป็น พ.ศ.</p>
+              </div>
+            </div>
+
+            <!-- Director -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                ผู้อำนวยการโรงเรียน
+              </label>
+              
+              <div v-if="selectedDirector" class="flex items-center p-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700">
+                <img v-if="selectedDirector.avatar" :src="selectedDirector.avatar" class="w-8 h-8 rounded-full mr-3 object-cover" />
+                <div v-else class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 mr-3 flex items-center justify-center shrink-0">
+                  <Icon icon="fluent:person-24-regular" class="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                </div>
+                <div class="min-w-0 flex-1 break-words">
+                  <span class="text-gray-900 dark:text-white font-medium">{{ selectedDirector.name }}</span>
+                </div>
+                <button
+                  v-if="!isReadOnly"
+                  @click="clearDirector"
+                  type="button"
+                  class="flex-shrink-0 min-h-[44px] px-3 text-red-500 hover:text-red-700 transition-colors flex items-center"
+                >
+                  <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 mr-1" />
+                  เอาออก
+                </button>
+              </div>
+
+              <div v-else class="relative">
+                <input
+                  v-model="directorQuery"
+                  @input="searchDirector"
+                  :disabled="isReadOnly"
+                  type="text"
+                  placeholder="พิมพ์ชื่อสมาชิกอย่างน้อย 2 ตัวอักษร"
+                  class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                />
+                
+                <ul v-if="directorResults.length || isSearchingDirector" class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  <li v-if="isSearchingDirector" class="p-4 text-center text-gray-500">
+                    กำลังค้นหา...
+                  </li>
+                  <li v-else v-for="m in directorResults" :key="m.user.id">
+                    <button
+                      type="button"
+                      @click="pickDirector(m)"
+                      class="w-full text-left min-h-[44px] px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
+                    >
+                      <img v-if="m.user.profile_photo_url" :src="m.user.profile_photo_url" class="w-8 h-8 rounded-full object-cover" />
+                      <div v-else class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center shrink-0">
+                        <Icon icon="fluent:person-24-regular" class="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                      </div>
+                      <div class="min-w-0 flex-1 overflow-hidden">
+                        <div class="truncate text-gray-900 dark:text-white">{{ m.user.name }}</div>
+                        <div v-if="m.user.email" class="truncate text-sm text-gray-500">{{ m.user.email }}</div>
+                      </div>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+              <p class="text-sm text-gray-500 mt-1">เลือกได้เฉพาะสมาชิกของโรงเรียนที่ได้รับอนุมัติแล้ว</p>
+            </div>
+
+            <!-- Social Media Channels -->
+            <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
+              <h3 class="font-medium text-gray-900 dark:text-white mb-1">ช่องทางโซเชียล</h3>
+              <p class="text-sm text-gray-500 mb-4">ลิงก์ที่กรอกจะแสดงบนหน้าโรงเรียน</p>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div v-for="key in socialLinkCatalog" :key="key">
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
+                    <Icon :icon="SOCIAL_LABELS[key]?.icon || 'fluent:link-24-regular'" class="w-4 h-4" />
+                    {{ SOCIAL_LABELS[key]?.label || key }}
+                  </label>
+                  <input
+                    type="url"
+                    :disabled="isReadOnly"
+                    :placeholder="SOCIAL_LABELS[key]?.placeholder"
+                    :value="form.social_media_links[key] || ''"
+                    @input="form.social_media_links[key] = ($event.target as HTMLInputElement).value"
+                    class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                </div>
               </div>
             </div>
           </div>
