@@ -1,5 +1,67 @@
 # Work Log — nuxnan project
 
+## 2026-09-02 (ต่อ) — เมนู #7 SET-S10: เทสต์เส้นทางสิทธิ์ของหน้าตั้งค่า
+
+### สถานะ: **SET-S10 ✅ ตรวจครบทุกข้อ** — 1 ไฟล์ (เทสต์ใหม่ล้วน · **ไม่แตะโค้ดโปรดักชันเลย**)
+
+เอกสารหลัก: [`.agents/school-admin/07-settings.md`](school-admin/07-settings.md) §6 + §8
+
+### ทำไมต้องมี — middleware มีทางปล่อยผ่าน 5 ทาง แต่เทสต์เดิมครอบแค่ 2
+
+`CheckAcademyPermission` ปล่อยผ่านตามลำดับ: superadmin → `Academy::isAdmin()` (เจ้าของ **หรือ**
+แถวใน `academy_admins`) → ต้องเป็นสมาชิก `status = 2` → สิทธิ์จาก role → สิทธิ์จากฝ่าย/กลุ่ม
+เทสต์เดิม 7 เคสครอบแค่ "เจ้าของแก้ได้" กับ "คนนอกโดน 403"
+
+### 8 เคสใหม่
+
+| เคส | ผลที่คาด |
+|---|---|
+| role ถือ `settings.manage` (ไม่ใช่เจ้าของ) | 200 + ค่าลงฐานจริง |
+| role ถือแค่ `settings.view` | 403 `Insufficient permissions` |
+| ถือ `settings.manage` แต่ `status = 1` | 403 `Not a member of this academy` |
+| superadmin ที่ไม่มีแถวสมาชิก | 200 |
+| แถวใน `academy_admins` โดยไม่มีแถวสมาชิก | 200 |
+| **เปิด `settings.manage` ให้ฝ่าย/กลุ่ม** | **403** (settings ไม่อยู่ใน `DEPARTMENT_DELEGABLE_FAMILIES`) |
+| **คู่เทียบ: เปิด `students.view` ให้กลุ่มเดียวกัน** | **404** (ผ่านด่านสิทธิ์แล้ว) |
+| ไม่มีแถวสมาชิกเลย | 403 `Not a member of this academy` |
+
+คู่ `group settings.manage` ⇒ 403 กับ `group students.view` ⇒ 404 คือหัวใจของรอบนี้ —
+ถ้ามีแค่เคสแรกแล้วเขียว จะแยกไม่ออกว่าเขียวเพราะกฎ non-delegable ทำงาน หรือเพราะ
+เส้นทางสิทธิ์จากกลุ่มพังทั้งเส้น
+
+### หลักฐานที่ Claude รันเอง
+
+- `php -l` · `pint --test` ผ่าน · `git status` ยืนยันว่า **ไม่มีไฟล์ใน `app/` `routes/` `ui/` ถูกแตะ**
+- เทสต์ใหม่ **8 passed · 13 assertions**
+- `tests/Feature/Academy` ทั้งโฟลเดอร์ **186 passed · 2 incomplete · 0 failed** (เดิม 178 + ใหม่ 8)
+- **mutation check 6 แบบ ⇒ ล้มตรงเคสที่ควรล้ม 5 ใน 6** (คืนไฟล์ครบทุกครั้ง)
+
+### ⚠️ สิ่งที่ mutation check เปิดเผย — โค้ดซ้ำซ้อนของทางลัด superadmin
+
+ถอดทางลัด `isSuperAdmin()` ออกจาก middleware **อย่างเดียวแล้วเทสต์ยังเขียว**
+เพราะ `Academy::isAdmin()` เช็ค `isSuperAdmin()` ซ้ำอยู่แล้ว (`Academy.php:175`)
+ต้องถอดทั้งสองที่พร้อมกันถึงล้ม ⇒ เทสต์พิสูจน์ได้แค่ "superadmin เข้าได้" ไม่ได้พิสูจน์ว่าเข้าทางไหน
+**บันทึกไว้ตามจริง ไม่ได้แก้ในรอบนี้** (S10 คือรอบเติมเทสต์ ไม่ใช่รอบแก้โค้ด) — เป็นของกินคู่กับ SET-S13
+
+**Claude แก้เองหลัง agy 1 จุด:** เคส `settings.view` กับเคส group เดิม assert แค่ status 403
+ซึ่งเขียวได้ด้วยเหตุผลผิด ๆ (ตกที่ด่านสมาชิกภาพแทนด่านสิทธิ์) จึงเพิ่ม assert ข้อความให้ทั้งคู่
+
+### งานที่ค้าง
+
+- [x] commit แล้ว 2 ชุด (`SET-S10` test + docs) — **ยังไม่ push**
+- [ ] **SET-S13** (ตัวสุดท้ายของเมนู #7) — ลบ 11 เมธอดตายใน `AcademyController` +
+      พิจารณาทางลัด superadmin ที่ซ้ำซ้อนใน `CheckAcademyPermission` ไปพร้อมกัน
+- [ ] **กวาด `avatar`/`profile_photo_url` ที่เหลือ 34 จุด ใน 15 ไฟล์** (งานแยก)
+- [ ] **G18** (ยกมา) · `PublicAcademyController` ตก `pint --test` (ของเดิม)
+- [ ] **SET-S12** ยัง deferred (รูปโลโก้/ปกเป็น relative path — รอทำพร้อม migration รูปทั้งระบบ)
+
+### Branch / Git State
+
+- Branch: `main` · Uncommitted: ไม่มี (clean) · **ยังไม่ push**
+- สะสมบน `main`: SET-S7 6 · SET-S9 4 · รอบเก็บงาน 3 · SET-S11 3 · SET-S10 2
+
+---
+
 ## 2026-09-02 (ต่อ) — เมนู #7 SET-S11: UX เก็บตกของหน้าตั้งค่า + หนี้ `?view=archived`
 
 ### สถานะ: **SET-S11 ✅ ตรวจครบทุกข้อ รวมตรวจด้วยตาบนเบราว์เซอร์จริงที่ 375px** — 2 ไฟล์ · **+128 / −0**

@@ -109,7 +109,7 @@
 | 12 | โหมดดูอย่างเดียว (`settings.view`) | ❌ | เข้าหน้าไม่ได้เลยถ้าไม่มี `settings.manage` (G6) |
 | 13 | บันทึก audit log เมื่อแก้ตั้งค่า | ❌ | G11 |
 | 14 | เตือนเมื่อออกจากหน้าโดยยังไม่บันทึก | ✅ | ปิดใน SET-S11 |
-| 15 | Tests | ❌ | 0 ไฟล์ (G10) |
+| 15 | Tests | ✅ | `AcademySettingsUpdateTest` 7 + `AcademyIdentityFieldsTest` 11 + `AcademySettingsAuditLogTest` 9 + `AcademySettingsPermissionPathsTest` 8 |
 
 ---
 
@@ -1092,7 +1092,7 @@ PHANTOM DIFF KEYS: ["established_year"]
 | **SET-S7** | เพิ่มฟิลด์อัตลักษณ์โรงเรียน (G9 ข้อ 4–5 · G22–G25 · D15–D18) | SET-S6 | `slogan`, `established_year` (พ.ศ.), `type` (แคตตาล็อกปิด 4), `director` (เลือกจากสมาชิก), `social_media_links` (JSON 6 ช่อง) เข้าแท็บ "ข้อมูลทั่วไป" + โชว์บนหน้าโรงเรียน · **ปิด G22 (director เขียนได้สองชนิดจากสองประตู)** · drop `approval_flow` | 🟢 **verified + migrate แล้ว** (เทสต์ใหม่ 11 เคส · mutation check 5 แบบ) |
 | **SET-S8** | ลบ `name_slug` ทิ้ง + ซ่อม redirect (G7 · D12) | SET-S1 | migration drop คอลัมน์ `name_slug` · ถอด `Str::slug` ออกจาก `updateSettings` · ย้ายด่านกันชื่อซ้ำไปไว้ที่คอลัมน์ `name` ที่เป็น UNIQUE จริง (ปิด G19 — เดิมได้ 500 พร้อม SQL ดิบ) · redirect หลังเปลี่ยนชื่อใช้ `name` + encodeURIComponent | 🟢 **verified + migrate แล้ว** |
 | **SET-S9** | audit log การแก้ตั้งค่า (G11 — นิยามใหม่ · G26–G28 · D19–D22) | SET-S1 | เขียน diff ของการแก้ตั้งค่าลง `member_activity_logs` (action `settings_update`) ครอบทั้ง `academies` และ `academy_settings` · **ปิด G27** (audit viewer 500 ทั้ง 9 route) · **ปิด G28** (route `{academy}/audit-logs` คืน `audit_logs` ทั้งแพลตฟอร์มโดยไม่มีด่านสิทธิ์) | 🟢 **verified** (เทสต์ใหม่ 9 เคส · mutation check 5 แบบ) |
-| **SET-S10** | เติมเทสต์ที่ยังขาด (G10) | SET-S1..S6 | ต่อยอด `AcademySettingsUpdateTest` ที่มีอยู่แล้ว (round-trip/validation/cache/slug ครอบแล้ว) — เพิ่ม: role ที่ถือ `settings.manage` ต้องผ่าน · สมาชิกสถานะไม่ใช่ APPROVED ต้องโดนปฏิเสธ · superadmin · สิทธิ์จากฝ่าย/กลุ่ม | ⚪ pending |
+| **SET-S10** | เติมเทสต์ที่ยังขาด (G10) | SET-S1..S6 | ต่อยอด `AcademySettingsUpdateTest` ที่มีอยู่แล้ว (round-trip/validation/cache/slug ครอบแล้ว) — เพิ่ม: role ที่ถือ `settings.manage` ต้องผ่าน · สมาชิกสถานะไม่ใช่ APPROVED ต้องโดนปฏิเสธ · superadmin · สิทธิ์จากฝ่าย/กลุ่ม | 🟢 **verified** (8 เคส · mutation check 6 แบบ) |
 | **SET-S11** | UX เก็บตก (G12) + หนี้ `?view=archived` จาก SET-S2 | SET-S4 | เตือนก่อนออกโดยไม่บันทึก (สแนปช็อต canonical + `onBeforeRouteLeave` + `beforeunload`) · refresh ค่าที่เซิร์ฟเวอร์ normalize หลังบันทึก · `switchView('archived')` refetch จริง · (ข้อซ่อนแท็บโซนอันตรายทำไปแล้วตั้งแต่ SET-S4) | 🟢 **verified** (ตรวจบนเบราว์เซอร์จริงที่ 375px) |
 | **SET-S12** | รูปโลโก้/ปกเป็น relative path (G8) | — | ต่อยอดจาก `.agents/photo-path-migration-plan.md` — **แยกไปทำพร้อมงาน migration รูปทั้งระบบ** | 🔵 deferred |
 | **SET-S13** | ล้างเมธอดตายใน `AcademyController` (G10b) | SET-S1 | ลบ 11 เมธอดที่ไม่มี route ชี้มา + ตรวจว่าไม่มี import ไหนหลุดค้าง | ⚪ pending |
@@ -1233,3 +1233,31 @@ Report back: git diff --stat + สรุปสิ่งที่ทำจริ�
 
   **หมายเหตุ:** ข้อ "ซ่อนแท็บโซนอันตรายถ้าไม่ใช่ owner" ของ G12 **ทำไปแล้วตั้งแต่ SET-S4**
   (`settings.vue:179`) จึงไม่ได้แตะซ้ำ — บันทึกไว้ตามจริงว่าเป็น 2 ใน 3 ข้อที่ทำรอบนี้
+
+- **2026-09-02 SET-S10** — agy เขียนเทสต์ 1 ไฟล์ (ไม่แตะโค้ดโปรดักชันเลย) · **Claude ตรวจเองทุกข้อ:**
+
+  | ตรวจอะไร | วิธีตรวจ | ผล |
+  |---|---|---|
+  | ขอบเขต diff | `git status --short` + `git diff --stat` | มีแค่ไฟล์เทสต์ใหม่ 1 ไฟล์ · **ไม่มีไฟล์ใน `app/` `routes/` `ui/` ถูกแตะเลย** |
+  | syntax + style | `php -l` · `pint --test` | ผ่าน (pint จัดลำดับ import ให้ 1 จุด) |
+  | เทสต์ใหม่ | `artisan test --filter=AcademySettingsPermissionPathsTest` | **8 passed · 13 assertions** |
+  | ของเดิมไม่พัง | `artisan test tests/Feature/Academy` | **186 passed · 2 incomplete · 0 failed** (เดิม 178 + ใหม่ 8) |
+  | **mutation check 6 แบบ** | ดูตารางด้านล่าง | ล้มตรงเคสที่ควรล้ม **5 ใน 6** · คืนไฟล์ครบทุกครั้ง |
+
+  | mutation | เทสต์ที่ควรล้ม | ผล |
+  |---|---|---|
+  | เพิ่ม `settings` เข้า `DEPARTMENT_DELEGABLE_FAMILIES` | group ต้องให้สิทธิ์ settings ไม่ได้ | ล้ม (403 → 200) ✅ |
+  | ถอดด่าน `status = 2` ของสมาชิก | สมาชิกที่ยังไม่ APPROVED | ล้ม (403 → 200) ✅ |
+  | ถอดการเช็คคีย์ของ role (`hasAnyPermission`) | role ที่มีแค่ `settings.view` | ล้ม (403 → 200) ✅ |
+  | ถอดทางลัด `Academy::isAdmin()` ใน middleware | แถว `academy_admins` | ล้ม (200 → 403) ✅ |
+  | ถอดทางลัด `isSuperAdmin()` **ใน middleware อย่างเดียว** | superadmin | **ยังเขียว** ⚠️ |
+  | ถอดทางลัด superadmin **ทั้งสองที่** (middleware + `Academy::isAdmin`) | superadmin | ล้ม (200 → 403) ✅ |
+
+  ⚠️ **สิ่งที่ mutation check เปิดเผย:** `Academy::isAdmin()` เช็ค `isSuperAdmin()` ซ้ำกับ
+  ด่านแรกของ middleware อยู่แล้ว ⇒ ทางลัด superadmin ใน middleware เป็น **โค้ดซ้ำซ้อน**
+  เทสต์จึงพิสูจน์ได้แค่ว่า "superadmin เข้าได้" ไม่ได้พิสูจน์ว่าเข้าได้ทางไหน — บันทึกไว้ตามจริง
+  (ไม่ได้แก้ในรอบนี้ เพราะ SET-S10 คือรอบเติมเทสต์ ไม่ใช่รอบแก้โค้ด)
+
+  **Claude แก้เองหลัง agy 1 จุด:** เคส `settings.view` และเคส group เดิม assert แค่ status 403
+  ซึ่งเขียวได้ด้วยเหตุผลผิด ๆ (ตกที่ด่านสมาชิกภาพแทนด่านสิทธิ์) จึงเพิ่ม assert ข้อความ
+  `Insufficient permissions` ให้ทั้งสองเคส แยกจาก `Not a member of this academy`
