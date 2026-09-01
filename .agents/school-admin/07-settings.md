@@ -1,7 +1,7 @@
 # 07 — ตั้งค่าโรงเรียน
 
 > ไฟล์รองของเมนู **#7 ตั้งค่าโรงเรียน** ใน [OVERVIEW.md](OVERVIEW.md)
-> สถานะ: 🟢 **ปิดแล้ว 6 step — S1 · S2 · S3 · S4 · S5 (+ เมนู #1 S9)** · เหลือ S6/S7/S8/S9/S10/S11/S13
+> สถานะ: 🟢 **ปิดแล้ว 8 step — S1 · S2 · S3 · S4 · S5 · S6 · S7 · S8** · เหลือ S9/S10/S11/S13
 
 ---
 
@@ -727,6 +727,177 @@ formData.append(key, typeof value === 'boolean' ? (value ? '1' : '0') : String(v
 
 ---
 
+### 5.15 การตัดสินใจของเจ้าของโปรเจค รอบ SET-S7 (เคาะแล้ว 2026-09-01)
+
+**D15 — `director` = "เลือกจากสมาชิกโรงเรียน" (user id) ไม่ใช่ช่องพิมพ์ชื่อ**
+คงนิยามที่ `store():99` (`director = auth()->id()`) และ `AcademyResource:73` ใช้อยู่แล้ว
+⇒ ฟอร์มเป็น **ช่องค้นหาสมาชิก** (ไม่ใช่ dropdown — โรงเรียนเดียวมีสมาชิก **3,063 แถว / APPROVED 2,614**
+ส่วนใหญ่เป็นนักเรียน) · backend validate `integer` + `exists` + **ต้องเป็นสมาชิกของโรงเรียนนี้ที่ status=2**
+· และต้องปิด G22 (ล่าง) ไปพร้อมกัน ไม่งั้นเปิดให้ตั้งค่าโดยที่คอลัมน์ยังรับสตริงอะไรก็ได้จากประตูหลัง
+
+**D16 — `established_year` เก็บเป็น พ.ศ.** (`min:2400` ถึง `ปีปัจจุบัน + 543` คำนวณจาก `now()->year`)
+หน้าโรงเรียนแสดง **"ก่อตั้ง พ.ศ. 2510 (1967)"** — ค.ศ. ในวงเล็บคือ `พ.ศ. − 543`
+⇒ ต้องแก้ `UpdateAcademyRequest` ที่บังคับ `min:1800|max:2200` (= ค.ศ.) ให้ตรงกัน
+ไม่งั้นสองประตูเขียนคนละหน่วยลงคอลัมน์เดียวกัน (แพตเทิร์นเดียวกับ G21/G22 — สองนิยามในคอลัมน์เดียว)
+**ไม่มีข้อมูลเก่าต้องแปลง** — ทั้งตารางเป็น NULL
+
+**D17 — `social_media_links` เป็น JSON แคตตาล็อกปิด 6 ช่อง + โชว์บนหน้าโรงเรียน**
+`facebook` · `line` · `youtube` · `tiktok` · `instagram` · `x` — คีย์นอกแคตตาล็อกต้อง 422
+เหตุผลที่ต้องโชว์ด้วย: ถ้าตั้งค่าได้แต่ไม่มีที่แสดง มันคือ **สวิตช์หลอกอีกตัว** แบบเดียวกับที่ S5/S6 เพิ่งไล่ปิด
+
+**D18 — `approval_flow` ลบทิ้ง** (migration drop + `down()` คืนคอลัมน์ได้จริง)
+ไม่มีผู้อ่านทั้ง `app/` และ `ui/` (grep ยืนยัน 0) เกิดมาจาก migration `2026_06_18_013944` แล้วไม่เคยถูกต่อ
+ตัดหนี้แบบเดียวกับ S5 (drop `allow_*_registration`) และ S8 (drop `name_slug`)
+วันหน้าถ้าต้องการอนุมัติ 2 ชั้นจริง ค่อยออกแบบใหม่พร้อมคนที่อ่านค่า
+
+---
+
+### 5.16 🔴 บั๊กที่เจอตอน audit SET-S7 (G22 มีการแก้ข้อมูลย้อนหลัง — อ่านกรอบเตือนด้านล่าง)
+
+**G22. ฟิลด์ `director` มีสองนิยามในคอลัมน์เดียว — และประตูหลังเขียนอะไรลงไปก็ได้**
+
+`AcademyResource:73` เขียนว่า `new UserResource(User::find($this->director))` ⇒ ตีความ `director` เป็น **user id**
+(`store():99` ก็เซ็ต `director = auth()->id()`) และหน้าโรงเรียนอ่านเป็นอ็อบเจกต์ (`director.name`, `director.avatar`)
+แต่คอลัมน์จริงเป็น **varchar(255)** และมีอีกประตูหนึ่งที่ยิงสตริงอะไรก็ได้เข้ามา:
+`PUT /api/admin/academies/{id}` ([routes/admin/admin.php:379](../../api/nuxnanravel/routes/admin/admin.php)) ใช้
+`UpdateAcademyRequest` ที่ validate ว่า `'director' => nullable|string|max:255`
+⇒ **แอดมินแพลตฟอร์มพิมพ์ "นายสมชาย" ลงไปได้วันนี้เลย** แล้วการ์ดผู้อำนวยการจะหายไปเงียบ ๆ
+(และ `User::find('นายสมชาย')` คือ query สตริงเทียบ primary key ที่เป็น int — เปลืองเปล่าและไม่มีวันเจอ)
+
+> ⚠️ **แก้ข้อมูลของตัวเอง (2026-09-01):** ตอน audit ผมสรุปว่าเคสนี้ทำให้ `GET /api/academies/{name}`
+> ตอบ **500** โดยอ้าง TypeError จาก `method_exists(null, ...)` ใน `UserResource:113`
+> — **ผิด** · TypeError นั้นเกิดตอนผมเรียก `(new UserResource(null))->toArray()` **ตรง ๆ** ใน tinker เท่านั้น
+> เมื่อ resource ตัวนี้ถูกซ้อนอยู่ใน `AcademyResource` แล้วให้ framework serialize จริง
+> Laravel แปลง resource ที่ห่อ null ให้เป็น `null` ให้เอง — **ทดสอบซ้ำบน MySQL ด้วยโค้ดเวอร์ชันก่อนแก้**
+> ทั้งค่า `'999999'`, `'ผอ.สมชาย'` และ `''` ⇒ ได้ HTTP ปกติ คีย์ `director` = `null` ทั้งสามเคส ไม่มี exception
+> ยืนยันซ้ำด้วย **mutation check**: ถอด null-guard ออกแล้ว **ไม่มีเทสต์ไหนล้มเลย**
+> ⇒ null-guard ใน resource เป็นการ**กันไว้** (และตัด query ที่ไม่มีประโยชน์ทิ้ง) ไม่ใช่การปิดช่อง 500
+> สิ่งที่เป็นบั๊กจริงคือ **สองประตูเขียนคนละชนิดลงคอลัมน์เดียว** ซึ่ง S7 ปิดที่ประตูทั้งสองบานแล้ว
+
+**สิ่งที่ S7 ทำ:** validate ที่ประตูหน้า (ต้องเป็นสมาชิก APPROVED หรือเจ้าของ) · ที่ประตูหลังเปลี่ยนเป็น
+`integer|exists:users,id` · และ resource ใช้ `is_numeric` ก่อน `User::find` แล้วคืน `null` เมื่อหาไม่เจอ
+
+**G23. `social_media_links` กฎ `max:500` แต่คอลัมน์กว้าง 255**
+`UpdateAcademyRequest:41` ยอมให้ยาว 500 · MySQL strict mode จะโยน `1406 Data too long` ⇒ 500 ไม่ใช่ 422
+D17 แก้ทั้งคู่อยู่แล้ว (คอลัมน์เป็น json + validate ทีละคีย์)
+
+**G24. `type` ไม่มีแคตตาล็อกที่ backend เลย และ FE hardcode ซ้ำ 3 ที่**
+`ui/pages/academies/index.vue:147` · `ui/pages/academies/[name].vue:1115` · `ui/components/widgets/AllAcademiesWidget.vue:43`
+เก็บ map เดียวกันคนละก๊อบปี้ (`public`/`private`/`foundation`/`international`) และ `index.vue:59` ใช้เป็น
+**ตัวกรองรายการโรงเรียน** ⇒ ถ้าเปิดให้พิมพ์อิสระ โรงเรียนจะหลุดจากตัวกรองเงียบ ๆ
+⇒ ทำแบบเดียวกับ D13: `Academy::ACADEMY_TYPE_CATALOG` เป็นนิยามเดียว · controller `Rule::in` ·
+resource ส่งแคตตาล็อกให้ UI สร้างตัวเลือก (ห้าม hardcode ซ้ำในหน้าตั้งค่า)
+
+**G25 (เล็ก). การ์ด About ใน `[name].vue` มีสองชุด** (ราว ๆ บรรทัด 2581–2640 และ 2665–2725 — มือถือ/เดสก์ท็อป)
+อะไรที่เพิ่มต้องเพิ่ม **ทั้งสองที่** ไม่งั้นจอหนึ่งเห็นอีกจอไม่เห็น · และตอนนี้ทั้งสองชุด
+**ไม่แสดง `website` เลย** ทั้งที่แก้ได้จากแท็บข้อมูลติดต่อ
+
+---
+
+### 5.17 SET-S7 — แผนแตก shard (5 shard)
+
+| shard | สาระ | ไฟล์ | ขึ้นกับ |
+|---|---|---|---|
+| **S7-A** | migration 2 ตัว: `social_media_links` varchar→json · drop `approval_flow` (D17 + D18) | `database/migrations/` × 2 | — |
+| **S7-B** | backend: แคตตาล็อก 2 ชุด + validate/เขียน 5 ฟิลด์ + **ปิด G22** + ซ่อม `UpdateAcademyRequest` | `Academy.php`, `AcademyController.php`, `AcademyResource.php`, `Admin/UpdateAcademyRequest.php` | S7-A |
+| **S7-C** | frontend: 5 ฟิลด์เข้าแท็บ "ข้อมูลทั่วไป" (ช่องค้นหาผอ. + select ประเภท + ปี พ.ศ. + 6 ช่องโซเชียล) | `admin/settings.vue` | S7-B |
+| **S7-D** | frontend: หน้าโรงเรียนแสดงปีก่อตั้งเป็นไทย + แถวไอคอนโซเชียล **ทั้ง 2 ชุดการ์ด** | `[name].vue` | S7-B |
+| **S7-E** | เทสต์: round-trip 5 ฟิลด์ · ค่านอกแคตตาล็อก 422 · ผอ.ที่ไม่ใช่สมาชิก 422 · **director ชี้ user ที่ไม่มี ⇒ resource ต้องไม่ 500** · multipart จริง | `tests/Feature/Academy/` | S7-A..D |
+
+**ลำดับ:** A → B → C → D → E
+
+#### S7-A รายละเอียด
+- `social_media_links`: `$table->json('social_media_links')->nullable()->change()` · `down()` คืนเป็น
+  `string(255)->nullable()->change()` · **ทั้งตารางเป็น NULL อยู่แล้ว** จึงไม่มีข้อมูลเก่าให้แปลง (ยืนยันด้วย query)
+- `approval_flow`: `dropColumn` · `down()` คืน `string('approval_flow', 191)->default('single')`
+- ⚠️ migration เก่า `2026_06_18_013944` มี `dropColumn(['student_editable_fields','approval_flow'])` ใน `down()`
+  ⇒ ต้อง rollback ของเราก่อนเสมอ (ลำดับปกติของ `migrate:rollback` ถูกอยู่แล้ว) แต่อย่าไปแก้ไฟล์เก่า
+- ⚠️ **เทสต์ผ่านบน SQLite ไม่ได้แปลว่า migration รันบน MySQL ได้** — ต้อง `php artisan migrate` บน dev จริง
+  แล้ว `SHOW COLUMNS` ยืนยันชนิดคอลัมน์ด้วยตา
+
+#### S7-B รายละเอียด
+- `Academy::ACADEMY_TYPE_CATALOG = ['public','private','foundation','international']` (null = "ทั่วไป")
+- `Academy::SOCIAL_LINK_CATALOG = ['facebook','line','youtube','tiktok','instagram','x']`
+- `$casts` เพิ่ม `'social_media_links' => 'array'`
+- `updateSettings()` เพิ่มกฎ:
+  - `slogan` → `nullable|string|max:255`
+  - `type` → `nullable|string` + `Rule::in(ACADEMY_TYPE_CATALOG)`
+  - `established_year` → `nullable|integer|min:2400|max:` + `(now()->year + 543)` **(พ.ศ. ตาม D16)**
+  - `director` → `nullable|integer` + rule ที่บังคับว่า **เป็นสมาชิก APPROVED (status=2) ของโรงเรียนนี้**
+    (`Rule::exists('academy_members','user_id')->where('academy_id',$academy->id)->where('status',2)`)
+    — เจ้าของโรงเรียนอาจไม่มีแถวสมาชิก (ดู memory "Academy membership facts") ⇒ ต้องยอมรับ `$academy->user_id` ด้วย
+  - `social_media_links` → `nullable|array` · `social_media_links.<คีย์>` → `nullable|url|max:255` ต่อคีย์
+    · **ห้ามใช้ `.*` เฉย ๆ** ต้องล็อกคีย์ตามแคตตาล็อก ไม่งั้นคีย์มั่วเข้าฐานได้
+  - ทั้ง 5 ฟิลด์อยู่ใน `$fillable` แล้ว ยกเว้นต้องเช็กว่า `fill()` ครอบคีย์ใหม่ครบ
+  - normalize: ตัดคีย์ที่ว่างออกก่อนเก็บ ⇒ เก็บ `{}` ไม่ใช่ `{"facebook":null,...}`
+- `AcademyResource`:
+  - **ปิด G22:** `$director = $this->director ? User::find($this->director) : null;`
+    `'director' => $director ? new UserResource($director) : null`
+  - เพิ่ม `'academy_type_catalog' => Academy::ACADEMY_TYPE_CATALOG`
+    และ `'social_link_catalog' => Academy::SOCIAL_LINK_CATALOG`
+- `Admin/UpdateAcademyRequest`: `director` → `nullable|integer|exists:users,id` ·
+  `established_year` → `min:2400|max:<ปีปัจจุบัน+543>` · `social_media_links` → `nullable|array` + คีย์ตามแคตตาล็อก
+  · `type` → `Rule::in(ACADEMY_TYPE_CATALOG)` (ปิด G23 + G24 ที่ประตูหลัง)
+
+#### S7-C รายละเอียด
+- ฟิลด์ใหม่ทั้งหมดอยู่ในแท็บ **"ข้อมูลทั่วไป"** (ไม่เปิดแท็บใหม่)
+- ประเภทโรงเรียน: `<select>` สร้างจาก `academy.academy_type_catalog` + map ป้ายไทยในหน้า
+  (แพตเทิร์นเดียวกับ `FIELD_LABELS` ของ S6) + ตัวเลือก "ไม่ระบุ" = `null`
+- ผอ.: **ช่องค้นหา** ยิง `GET /api/academies/{id}/members/search?search=&status=2&per_page=10` (debounce ≥300ms
+  · เริ่มค้นเมื่อพิมพ์ ≥ 2 ตัว) แสดงผลลัพธ์เป็นรายการกดเลือก · ผอ.ปัจจุบันแสดงเป็นชิปพร้อมปุ่มเอาออก
+  (ค่าเริ่มต้นอ่านจาก `academy.director` ที่เป็นอ็อบเจกต์อยู่แล้ว)
+- ปีก่อตั้ง: `type="number"` + placeholder `เช่น 2510` + ข้อความช่วย "ระบุเป็น พ.ศ."
+- โซเชียล 6 ช่อง: `type="url"` ต่อช่อง สร้างจาก `academy.social_link_catalog`
+- ⚠️ **multipart:** `Object.entries(form.value)` เดิมยิง `String(value)` ⇒ อ็อบเจกต์จะกลายเป็น `[object Object]`
+  ต้อง `return` ข้าม `social_media_links` แล้ว append เป็น `social_media_links[facebook]` ทีละคีย์
+  (แพตเทิร์นเดียวกับ `student_editable_fields` ใน S6) · `director` ว่าง = ส่งสตริงว่าง ซึ่ง
+  `ConvertEmptyStringsToNull` แปลงเป็น `null` ให้แล้ว (กฎ `nullable` จึงผ่าน) — แต่ให้ยืนยันด้วยการยิงจริง
+- ทุก input ต้องมี `:disabled="isReadOnly"` ตามแพตเทิร์นของ S4
+
+#### S7-D รายละเอียด
+- ปีก่อตั้ง: เปลี่ยน `Established {{ academy.established_year }}` เป็น
+  `ก่อตั้ง พ.ศ. {{ y }} ({{ y - 543 }})` — **แก้ทั้ง 2 ชุดการ์ด** (G25)
+- แถวไอคอนโซเชียล: วนจากคีย์ที่มีค่าเท่านั้น · `target="_blank" rel="noopener noreferrer"` ·
+  touch target ≥ 44px · ซ่อนทั้งบล็อกเมื่อไม่มีลิงก์เลย
+- mobile-first: แถวไอคอนต้อง `flex-wrap` + `flex-shrink-0` และตรวจที่ 375px
+
+#### S7-E รายละเอียด
+- round-trip 5 ฟิลด์ผ่าน `postJson` (owner)
+- `type` นอกแคตตาล็อก ⇒ 422 · `established_year` = 1967 (ค.ศ.) ⇒ 422 · ปีอนาคต ⇒ 422
+- `director` = user ที่ไม่ได้เป็นสมาชิก ⇒ 422 · `director` = สมาชิก status≠2 ⇒ 422
+- **เคส G22:** ตั้ง `director` เป็น id ที่ไม่มีในตาราง `users` และเป็นสตริงไทย ผ่าน DB ตรง ๆ
+  แล้วยิง `GET /api/academies/{name}` ⇒ ต้องได้ **200 พร้อม `director: null`**
+  (เป็นเทสต์ characterization — mutation check พิสูจน์แล้วว่าโค้ดเวอร์ชันก่อนแก้ก็ผ่านเคสนี้)
+- `social_media_links` คีย์นอกแคตตาล็อก ⇒ 422 · ค่าไม่ใช่ URL ⇒ 422 · ส่งช่องว่างทั้งหมด ⇒ เก็บเป็นอาเรย์ว่าง `[]`
+  (cast `array` ของ Laravel serialize อาเรย์ว่างเป็น `[]` ไม่ใช่ `{}` — อ่านกลับมาได้ `[]` เหมือนกัน)
+- **1 เคสยิง multipart จริงด้วย `->post()`** (บทเรียนจาก §5.14) ครอบทั้ง `social_media_links[...]` และ `director`
+
+---
+
+### 5.18 🔴 กับดักที่เจอตอน implement SET-S7 — "รูปโปรไฟล์" มีสองชื่อคีย์ในระบบเดียวกัน
+
+สเปคของ shard C สั่งให้ช่องค้นหาผอ. อ่านรูปจาก `m.user.avatar` เพราะการ์ดผอ.บนหน้าโรงเรียน
+ใช้ `academy.director.avatar` อยู่แล้ว — **แต่คนละ resource คนละชื่อคีย์**:
+
+| แหล่ง | resource | คีย์รูป |
+|---|---|---|
+| `academy.director` | `UserResource` | `avatar` **และ** `profile_photo_url` (ส่งทั้งคู่) |
+| ผลลัพธ์จาก `/members/search` | `AcademyMemberResource` → บล็อก `'user' =>` | **`profile_photo_url` เท่านั้น** (ไม่มีคีย์ `avatar`) |
+
+⇒ ถ้าปล่อยตามสเปค รายการผลค้นหาและชิปผอ.จะขึ้นไอคอนสำรองตลอด ไม่มีวันแสดงรูปจริง
+**Claude แก้เอง** ที่ `settings.vue` ให้อ่าน `profile_photo_url` ก่อน แล้วค่อย fallback ไป `avatar`
+(ยืนยันคีย์ด้วยการยิง `/api/academies/1/members/search` จริงแล้วพิมพ์ `array_keys($first['user'])` ออกมาดู)
+
+**บทเรียน:** ก่อนเขียนสเปคที่อ้างคีย์ของ payload — ต้องยิง endpoint นั้นดูของจริงก่อน
+อย่าเดาจากหน้าอื่นที่ใช้คนละ resource แม้จะเป็น "ผู้ใช้" เหมือนกัน
+
+**ของแถมที่เจอระหว่างตรวจ (ไม่ใช่ของ S7):** `GET /api/notifications/recent?limit=10` ตอบ **500 ทุกครั้ง**
+ที่โหลดหน้าไหนก็ตาม — `SQLSTATE[42S22] Unknown column 'avatar' in 'field list'`
+(query เลือก `select id, name, avatar from users` ทั้งที่ตาราง `users` ไม่มีคอลัมน์ `avatar` —
+รูปมาจาก accessor `profile_photo_url`) · **ต้นตอเดียวกับกับดักข้างบนเป๊ะ ๆ** · เปิดเป็นงานแยกไว้แล้ว
+
+---
+
 ## 6. Implementation Tasks
 
 | Step | Title | Depends on | Deliverable | Status |
@@ -737,7 +908,7 @@ formData.append(key, typeof value === 'boolean' ? (value ? '1' : '0') : String(v
 | **SET-S4** | โหมดดูอย่างเดียว (G6) | SET-S3 | `settings.view` เข้าหน้าได้แบบ read-only · ปุ่มบันทึก+ปุ่มอัปโหลดซ่อน · 16 ช่อง disabled · แถบแจ้งเตือน · แท็บโซนอันตรายเฉพาะเจ้าของ · API ยังกัน `settings.manage` | 🟢 **verified** |
 | **SET-S5** | ทำให้สวิตช์มีผลจริง (G3 + G4 · D2 + D3) | SET-S1 | บังคับใช้ `privacy`/`show_member_list`/`show_course_list` · drop `allow_*_registration` 2 คอลัมน์ + ถอดออกจากฟอร์ม · `join_mode` เป็นตัวหลักแทน `auto_accept_members` และ `invite_only` บล็อกการขอเข้าร่วมจริง | 🟢 **verified + migrate แล้ว** |
 | **SET-S6** | เพิ่มแท็บ "ระบบและนโยบาย" (G9 ข้อ 1–3 · G21 · D13 + D14) | SET-S1 | `card_request_flow_enabled`, `student_editable_fields` (เช็กบ็อกซ์จากแคตตาล็อกปิด 19 รายการ), `donation_enabled` ตั้งค่าได้จากหน้าจอ + resource ส่งค่าบริจาคที่ resolve แล้ว (ปิด G21) | 🟢 **verified** |
-| **SET-S7** | เพิ่มฟิลด์อัตลักษณ์โรงเรียน (G9 ข้อ 4–5) | SET-S6 | `slogan`, `established_year`, `type`, `director`, `social_media_links` เข้าแท็บ "ข้อมูลทั่วไป" · ตัดสินใจเรื่อง `approval_flow` | ⚪ pending |
+| **SET-S7** | เพิ่มฟิลด์อัตลักษณ์โรงเรียน (G9 ข้อ 4–5 · G22–G25 · D15–D18) | SET-S6 | `slogan`, `established_year` (พ.ศ.), `type` (แคตตาล็อกปิด 4), `director` (เลือกจากสมาชิก), `social_media_links` (JSON 6 ช่อง) เข้าแท็บ "ข้อมูลทั่วไป" + โชว์บนหน้าโรงเรียน · **ปิด G22 (director เขียนได้สองชนิดจากสองประตู)** · drop `approval_flow` | 🟢 **verified + migrate แล้ว** (เทสต์ใหม่ 11 เคส · mutation check 5 แบบ) |
 | **SET-S8** | ลบ `name_slug` ทิ้ง + ซ่อม redirect (G7 · D12) | SET-S1 | migration drop คอลัมน์ `name_slug` · ถอด `Str::slug` ออกจาก `updateSettings` · ย้ายด่านกันชื่อซ้ำไปไว้ที่คอลัมน์ `name` ที่เป็น UNIQUE จริง (ปิด G19 — เดิมได้ 500 พร้อม SQL ดิบ) · redirect หลังเปลี่ยนชื่อใช้ `name` + encodeURIComponent | 🟢 **verified + migrate แล้ว** |
 | **SET-S9** | audit log การแก้ตั้งค่า (G11) | SET-S1 | บันทึกทุกครั้งที่ `updateSettings` เปลี่ยนค่า พร้อม before/after | ⚪ pending |
 | **SET-S10** | เติมเทสต์ที่ยังขาด (G10) | SET-S1..S6 | ต่อยอด `AcademySettingsUpdateTest` ที่มีอยู่แล้ว (round-trip/validation/cache/slug ครอบแล้ว) — เพิ่ม: role ที่ถือ `settings.manage` ต้องผ่าน · สมาชิกสถานะไม่ใช่ APPROVED ต้องโดนปฏิเสธ · superadmin · สิทธิ์จากฝ่าย/กลุ่ม | ⚪ pending |
