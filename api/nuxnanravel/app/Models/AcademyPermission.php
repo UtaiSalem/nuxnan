@@ -194,6 +194,10 @@ class AcademyPermission extends Model
             ['name' => 'school_attendance.view', 'display_name' => 'ดูการเข้าเรียนของโรงเรียน'],
             ['name' => 'school_attendance.manage', 'display_name' => 'จัดการการเข้าเรียนของโรงเรียน'],
         ],
+        'emergency' => [
+            ['name' => 'emergency.view', 'display_name' => 'ดูรายงานการตอบรับประกาศฉุกเฉิน: ใครปลอดภัย/ใครขอความช่วยเหลือ'],
+            ['name' => 'emergency.manage', 'display_name' => 'จัดการประกาศฉุกเฉิน: ประกาศ/แก้ไข/ยุติ/ลบ'],
+        ],
     ];
 
     /**

@@ -67,6 +67,7 @@ class AcademyRole extends Model
                 'school_attendance.view', 'school_attendance.manage', 'courses.manage',
                 'elections.view', 'elections.manage', 'elections.station',
                 'guardians.view', 'guardians.manage', 'guardians.sensitive.view', 'guardians.sensitive.manage', 'guardians.appoint',
+                'emergency.view', 'emergency.manage',
             ],
         ],
         'admin' => [
@@ -93,6 +94,7 @@ class AcademyRole extends Model
                 'school_attendance.view', 'school_attendance.manage', 'courses.manage',
                 'elections.view', 'elections.manage', 'elections.station',
                 'guardians.view', 'guardians.manage', 'guardians.sensitive.view', 'guardians.sensitive.manage', 'guardians.appoint',
+                'emergency.view', 'emergency.manage',
             ],
         ],
         'teacher' => [
@@ -112,7 +114,7 @@ class AcademyRole extends Model
                 'home_visits.view', 'home_visits.create',
                 'behavior.view', 'behavior.record',
                 'grades.view', 'schedule.view', 'groups.view', 'staff.view', 'events.view',
-                'school_attendance.view',
+                'school_attendance.view', 'school_attendance.manage',
                 'elections.view', 'elections.station',
             ],
         ],
