@@ -1,5 +1,44 @@
 # Work Log — nuxnan project
 
+## 2026-09-02 (ต่อ) — pint ทั้งเรพผ่านแล้ว
+
+### สถานะ: ✅ 2 ไฟล์ · **+7 / −6** (จัดรูปแบบล้วน) · commit แล้ว `ff59c04c`
+
+| ไฟล์ | fixer |
+|---|---|
+| `PublicAcademyController.php` | `statement_indentation` — `return` ที่ไม่ย่อหน้าใน `index()` (หนี้เดิม) |
+| `AcademySettingsAuditLogTest.php` | `ordered_imports` · `fully_qualified_strict_types` (`\App\Models\AcademicYear` เรียกแบบ FQN กลางไฟล์) · `no_whitespace_in_blank_line` |
+
+### ⚠️ ข้อสังเกตที่ยังอธิบายไม่ได้ (อย่าเพิ่งเชื่อ)
+
+รอบแรกที่รัน `pint --test` จาก root มัน **รายงานแค่ไฟล์เทสต์ ไม่รายงาน `PublicAcademyController`**
+ทั้งที่ไฟล์นั้นตกจริง (`pint --test app/` เห็น) · ผมตั้งสมมติฐานว่า root scan ข้ามโฟลเดอร์
+`Api/Public/` แล้ว **ทดสอบแล้วพบว่าผิด** — พอทำให้สองไฟล์ตกพร้อมกัน root scan รายงานครบทั้งคู่
+ไม่มีไฟล์แคชของ pint ในเรพด้วย ⇒ **ยังไม่รู้สาเหตุ**
+
+**ข้อควรระวัง:** ถ้า `pint --test` จาก root บอกว่ามีไฟล์ตก 1 ไฟล์ อย่าเพิ่งเชื่อว่ามีแค่นั้น
+ให้รัน `pint --test app/` และ `pint --test tests/` ซ้ำด้วย
+
+### หลักฐาน
+
+- `pint --test` ทั้งเรพ **passed · รันซ้ำ 2 รอบ**
+- `AcademySettingsAuditLogTest` **9 ผ่าน** · `PublicSchoolDiscoveryTest` **8 ผ่าน**
+- `route:list --path=public/schools` ครบ 3 เส้นเหมือนเดิม
+
+### งานที่ค้างหลังรอบนี้
+
+- [x] กวาด `avatar` ✅ · [x] **G18** ✅ · [x] **pint** ✅
+- [ ] **SET-S12** deferred (ดู `.agents/photo-path-migration-plan.md`)
+- [ ] `CourseController:99` ยังใช้ `FIELD()` ของ MySQL (ญาติของบั๊กที่เจอรอบ G18)
+- [ ] โค้ดตาย `AuthService::register()` (ยกมาจากรอบ avatar)
+- [ ] สาเหตุที่ `pint --test` จาก root รายงานไม่ครบในรอบแรก
+
+### Branch / Git State
+
+- Branch: `main` · Uncommitted: ไม่มี · **ยังไม่ push** (`ff59c04c`)
+
+---
+
 ## 2026-09-02 (ต่อ) — G18: ปิดรูรั่ว endpoint โรงเรียน 4 กลุ่ม
 
 ### สถานะ: **G18 ✅ ตรวจครบทุกข้อ** — 9 ไฟล์ + migration 1 + เทสต์ใหม่ 1 · **ยังไม่ push**
