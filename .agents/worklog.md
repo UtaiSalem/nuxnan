@@ -81,12 +81,13 @@
       ยังไม่มีด่านสมาชิกภาพและด่าน archived
 - [ ] `PublicAcademyController.php` ตก `pint --test` (ของเดิม)
 - [ ] **SET-S12** deferred (ดู `.agents/photo-path-migration-plan.md`)
-- [ ] **ยังไม่ push เลย** — สะสม 22 commit บน `main`
+- [x] **push แล้ว** — `origin/main` = `9624b92f` · local กับ remote ตรงกัน (0/0)
 
 ### Branch / Git State
 
-- Branch: `main` · Uncommitted: ไม่มี (clean) · **ยังไม่ push**
-- สะสมบน `main`: SET-S7 6 · SET-S9 4 · รอบเก็บงาน 3 · SET-S11 3 · SET-S10 2 · SET-S13 2
+- Branch: `main` · Uncommitted: ไม่มี (clean) · **push แล้ว**
+- ตอนเริ่ม push `origin/main` อยู่ที่ `0f108b46` (docs ของ SET-S11) อยู่ก่อนแล้ว
+  ⇒ รอบนี้ push จริงแค่ 4 commit ท้าย (SET-S10 2 · SET-S13 2) · ไม่มี commit ของใครค้างอยู่ฝั่ง remote (behind = 0)
 
 ---
 
