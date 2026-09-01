@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Academy;
 
+use App\Models\AcademicYear;
 use App\Models\Academy;
 use App\Models\AcademyMember;
 use App\Models\AcademyRole;
@@ -135,7 +136,7 @@ class AcademySettingsAuditLogTest extends TestCase
         );
 
         $response->assertStatus(200);
-        
+
         $this->academy->refresh();
         $this->assertEquals('private', $this->academy->academySetting->privacy);
     }
@@ -189,15 +190,15 @@ class AcademySettingsAuditLogTest extends TestCase
     public function test_entity_audit_logs_404_for_entity_of_another_academy()
     {
         $academyB = Academy::factory()->create();
-        
-        $academicYearA = \App\Models\AcademicYear::create([
+
+        $academicYearA = AcademicYear::create([
             'academy_id' => $this->academy->id,
             'name' => '2569',
             'start_date' => '2026-05-01',
             'end_date' => '2027-03-31',
         ]);
-        
-        $academicYearB = \App\Models\AcademicYear::create([
+
+        $academicYearB = AcademicYear::create([
             'academy_id' => $academyB->id,
             'name' => '2569',
             'start_date' => '2026-05-01',
