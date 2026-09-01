@@ -85,7 +85,7 @@
 
 ### งานที่ค้าง (TODO)
 
-- [ ] **ยังไม่ commit** — 9 ไฟล์ของ S7 + เอกสาร 2 ไฟล์
+- [x] commit แล้ว 6 ชุด (`SET-S7/1`–`/5` + docs) — **ยังไม่ push**
 - [ ] **G18** (ยกมา) — `school-attendances` / `emergency-alerts` / `revenue/support-summary` / `my-role`
       ยังไม่มีด่านสมาชิกภาพและด่าน archived
 - [ ] **หนี้ตรวจด้วยตา SET-S4** (ยกมา) · **UX `?view=archived` ของ SET-S2** (ยกมา → SET-S11)
@@ -95,8 +95,8 @@
 
 ### Branch / Git State
 
-- Branch: `main` · Uncommitted: 9 ไฟล์ของ S7 + `.agents/school-admin/07-settings.md` + worklog
-- Push: ตามรอบก่อนหน้า push ครบแล้ว รอบนี้ยังไม่ commit
+- Branch: `main` · Uncommitted: ไม่มี (clean)
+- Push: **ยังไม่ push** — สะสม 6 commit ของ SET-S7 บน `main`
 
 ---
 
