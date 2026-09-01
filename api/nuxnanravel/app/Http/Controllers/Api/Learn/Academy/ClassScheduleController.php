@@ -32,7 +32,7 @@ class ClassScheduleController extends Controller
 
         $query = ClassSchedule::with([
             'subject:id,subject_code,name_th,name_en',
-            'teacher:id,first_name,last_name,avatar',
+            'teacher:id,name,profile_photo_path',
             'classroom:id,name,grade_level,section',
         ])
             ->byAcademy($academy->id)
@@ -115,7 +115,7 @@ class ClassScheduleController extends Controller
 
         $query = ClassSchedule::with([
             'subject:id,subject_code,name_th,name_en',
-            'teacher:id,first_name,last_name,avatar',
+            'teacher:id,name,profile_photo_path',
             'classroom:id,name,grade_level,section',
         ])
             ->byAcademy($academy->id)
@@ -520,7 +520,7 @@ class ClassScheduleController extends Controller
 
         $query = ClassSchedule::with([
             'subject:id,subject_code,name_th',
-            'teacher:id,first_name,last_name,avatar',
+            'teacher:id,name,profile_photo_path',
             'classroom:id,name,grade_level,section',
         ])
             ->byAcademy($academy->id)

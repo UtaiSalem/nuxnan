@@ -54,7 +54,7 @@ class TypingTournament extends Model
     public function topEntries(int $limit = 10): HasMany
     {
         return $this->entries()
-            ->with('user:id,name,avatar,profile_photo_url')
+            ->with('user:id,name,profile_photo_path')
             ->orderByDesc('best_score')
             ->limit($limit);
     }

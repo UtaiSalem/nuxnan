@@ -84,7 +84,7 @@ class TypingRaceController extends Controller
         return response()->json([
             'success' => true,
             'room_code' => $room->room_code,
-            'room' => $room->load('participants.user:id,name,profile_photo_url,avatar'),
+            'room' => $room->load('participants.user:id,name,profile_photo_path'),
         ]);
     }
 
@@ -110,7 +110,7 @@ class TypingRaceController extends Controller
 
         return response()->json([
             'success' => true,
-            'room' => $room->load('participants.user:id,name,profile_photo_url,avatar'),
+            'room' => $room->load('participants.user:id,name,profile_photo_path'),
         ]);
     }
 
@@ -256,7 +256,7 @@ class TypingRaceController extends Controller
         $room->update(['status' => 'finished', 'finished_at' => now()]);
 
         $rankings = $room->participants()
-            ->with('user:id,name,profile_photo_url,avatar')
+            ->with('user:id,name,profile_photo_path')
             ->orderBy('score', 'desc')
             ->get()
             ->map(fn ($p, $i) => [
@@ -278,7 +278,7 @@ class TypingRaceController extends Controller
     public function roomStatus(string $roomCode): JsonResponse
     {
         $room = TypingRaceRoom::where('room_code', strtoupper($roomCode))
-            ->with(['participants.user:id,name,profile_photo_url,avatar'])
+            ->with(['participants.user:id,name,profile_photo_path'])
             ->firstOrFail();
 
         return response()->json([

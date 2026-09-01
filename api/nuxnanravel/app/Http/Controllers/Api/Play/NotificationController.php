@@ -15,7 +15,7 @@ class NotificationController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Notification::forUser($request->user()->id)
-            ->with('sender:id,name,avatar')
+            ->with('sender:id,name,profile_photo_path')
             ->orderBy('created_at', 'desc');
 
         // Filter by read status
@@ -73,7 +73,7 @@ class NotificationController extends Controller
     public function recent(Request $request): JsonResponse
     {
         $notifications = Notification::forUser($request->user()->id)
-            ->with('sender:id,name,avatar')
+            ->with('sender:id,name,profile_photo_path')
             ->orderBy('created_at', 'desc')
             ->limit($request->limit ?? 10)
             ->get();

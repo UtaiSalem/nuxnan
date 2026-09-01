@@ -31,7 +31,7 @@ class AlbumController extends Controller
             $albums = Album::query()
                 ->where('user_id', $user->id)
                 ->public()
-                ->with(['user:id,name,username,avatar'])
+                ->with(['user:id,name,username,profile_photo_path'])
                 ->withCount('photos')
                 ->orderBy('created_at', 'desc')
                 ->get();
@@ -39,7 +39,7 @@ class AlbumController extends Controller
             // Get albums for authenticated user
             $albums = Album::query()
                 ->where('user_id', auth()->id())
-                ->with(['user:id,name,username,avatar'])
+                ->with(['user:id,name,username,profile_photo_path'])
                 ->withCount('photos')
                 ->orderBy('created_at', 'desc')
                 ->get();
@@ -56,7 +56,7 @@ class AlbumController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $album = Album::with(['user:id,name,username,avatar', 'photos'])
+        $album = Album::with(['user:id,name,username,profile_photo_path', 'photos'])
             ->withCount('photos')
             ->find($id);
 
@@ -110,7 +110,7 @@ class AlbumController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Album created successfully',
-            'data' => $album->load('user:id,name,username,avatar'),
+            'data' => $album->load('user:id,name,username,profile_photo_path'),
         ], 201);
     }
 
@@ -156,7 +156,7 @@ class AlbumController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Album updated successfully',
-            'data' => $album->load('user:id,name,username,avatar'),
+            'data' => $album->load('user:id,name,username,profile_photo_path'),
         ]);
     }
 

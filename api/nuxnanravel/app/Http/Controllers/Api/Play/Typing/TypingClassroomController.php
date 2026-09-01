@@ -39,7 +39,7 @@ class TypingClassroomController extends Controller
                 MAX(created_at) as last_played
             ')
             ->groupBy('user_id')
-            ->with('user:id,name,avatar,profile_photo_url')
+            ->with('user:id,name,profile_photo_path')
             ->get();
 
         // WPM trend (7 วันย้อนหลัง)

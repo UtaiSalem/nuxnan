@@ -35,12 +35,12 @@ class PhotoController extends Controller
             $query = Photo::query()
                 ->forUser($user->id)
                 ->where('is_public', true)
-                ->with(['user:id,name,username,avatar']);
+                ->with(['user:id,name,username,profile_photo_path']);
         } else {
             // Get photos for authenticated user
             $query = Photo::query()
                 ->forUser(auth()->id())
-                ->with(['user:id,name,username,avatar']);
+                ->with(['user:id,name,username,profile_photo_path']);
         }
 
         $photos = $query->orderBy('created_at', 'desc')
@@ -85,7 +85,7 @@ class PhotoController extends Controller
 
         $photos = Photo::query()
             ->inAlbum($albumId)
-            ->with(['user:id,name,username,avatar'])
+            ->with(['user:id,name,username,profile_photo_path'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage, ['*'], 'page', $page);
 
@@ -143,7 +143,7 @@ class PhotoController extends Controller
                     'is_public' => true,
                 ]);
 
-                $uploadedPhotos[] = $photo->load('user:id,name,username,avatar');
+                $uploadedPhotos[] = $photo->load('user:id,name,username,profile_photo_path');
             }
 
             return response()->json([
@@ -165,7 +165,7 @@ class PhotoController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $photo = Photo::with(['user:id,name,username,avatar', 'album'])
+        $photo = Photo::with(['user:id,name,username,profile_photo_path', 'album'])
             ->find($id);
 
         if (! $photo) {
@@ -230,7 +230,7 @@ class PhotoController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Photo updated successfully',
-            'data' => $photo->load('user:id,name,username,avatar'),
+            'data' => $photo->load('user:id,name,username,profile_photo_path'),
         ]);
     }
 

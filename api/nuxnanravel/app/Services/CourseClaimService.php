@@ -126,7 +126,7 @@ class CourseClaimService
         $this->assertMember($user, $course);
 
         $claims = CourseDonateClaim::where('course_id', $course->id)
-            ->with(['claimer:id,name,avatar,personal_code', 'donation:id,anonymous,donor_display_name'])
+            ->with(['claimer:id,name,profile_photo_path,personal_code', 'donation:id,anonymous,donor_display_name'])
             ->orderByDesc('claimed_at')
             ->paginate(min(max($perPage, 1), 50), ['*'], 'page', max($page, 1));
         $items = $claims->map(fn (CourseDonateClaim $claim) => [

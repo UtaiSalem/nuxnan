@@ -25,7 +25,7 @@ class StaffController extends Controller
     public function index(Request $request, Academy $academy): JsonResponse
     {
         $query = StaffProfile::where('academy_id', $academy->id)
-            ->with(['user:id,name,avatar', 'position:id,name', 'department:id,name']);
+            ->with(['user:id,name,profile_photo_path', 'position:id,name', 'department:id,name']);
 
         // Filter by status
         if ($request->has('status')) {
@@ -75,7 +75,7 @@ class StaffController extends Controller
         $this->authorizeStaff($academy, $staff);
 
         $staff->load([
-            'user:id,name,email,avatar',
+            'user:id,name,email,profile_photo_path',
             'position',
             'department',
             'supervisor.user:id,name',
@@ -365,7 +365,7 @@ class StaffController extends Controller
     {
         $staff = StaffProfile::where('academy_id', $academy->id)
             ->active()
-            ->with(['user:id,name,avatar', 'position:id,name', 'department:id,name'])
+            ->with(['user:id,name,profile_photo_path', 'position:id,name', 'department:id,name'])
             ->select(['id', 'user_id', 'employee_id', 'position_id', 'department_id', 'phone_extension', 'work_location'])
             ->orderBy('employee_id')
             ->get();

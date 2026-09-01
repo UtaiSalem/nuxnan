@@ -49,7 +49,7 @@ class InstructorDashboardController extends Controller
 
         // Get members with their progress
         $members = $course->courseMembers()
-            ->with('user:id,name,avatar')
+            ->with('user:id,name,profile_photo_path')
             ->get();
 
         // Calculate grade statistics using existing service
@@ -186,7 +186,7 @@ class InstructorDashboardController extends Controller
         $threshold = $request->get('threshold', 50); // Below 50% is at-risk
 
         $members = $course->courseMembers()
-            ->with('user:id,name,email,avatar')
+            ->with('user:id,name,email,profile_photo_path')
             ->get();
 
         $atRisk = collect();
@@ -276,7 +276,7 @@ class InstructorDashboardController extends Controller
         $limit = $request->get('limit', 10);
 
         $members = $course->courseMembers()
-            ->with('user:id,name,email,avatar')
+            ->with('user:id,name,email,profile_photo_path')
             ->orderByDesc('achieved_score')
             ->limit($limit)
             ->get();

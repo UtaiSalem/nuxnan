@@ -77,4 +77,60 @@ class NotificationControllerTest extends TestCase
             Notification::TYPE_ROLLOVER_COMMITTED,
         ], $types);
     }
+
+    public function test_recent_loads_sender_with_avatar(): void
+    {
+        $user = User::factory()->create();
+        $sender = User::factory()->create([
+            'name' => 'ผู้ส่งแจ้งเตือน',
+            'profile_photo_path' => 'profile-photos/sender.jpg',
+        ]);
+
+        Notification::create([
+            'user_id' => $user->id,
+            'sender_id' => $sender->id,
+            'content' => 'มีคนส่งแจ้งเตือนถึงคุณ',
+            'type' => Notification::TYPE_STUDENT_PROMOTED,
+        ]);
+
+        $response = $this->actingAs($user, 'api')
+            ->getJson('/api/notifications/recent?limit=10');
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data.notifications')
+            ->assertJsonPath('data.notifications.0.sender.id', $sender->id)
+            ->assertJsonPath('data.notifications.0.sender.name', 'ผู้ส่งแจ้งเตือน');
+
+        // avatar/profile_photo_url เป็น accessor ที่คำนวณจาก profile_photo_path
+        $avatar = $response->json('data.notifications.0.sender.avatar');
+        $this->assertNotNull($avatar);
+        $this->assertStringContainsString('profile-photos/sender.jpg', $avatar);
+        $this->assertSame($avatar, $response->json('data.notifications.0.sender.profile_photo_url'));
+    }
+
+    public function test_index_loads_sender_with_avatar(): void
+    {
+        $user = User::factory()->create();
+        $sender = User::factory()->create([
+            'profile_photo_path' => 'profile-photos/sender.jpg',
+        ]);
+
+        Notification::create([
+            'user_id' => $user->id,
+            'sender_id' => $sender->id,
+            'content' => 'แจ้งเตือนพร้อมผู้ส่ง',
+            'type' => Notification::TYPE_STUDENT_PROMOTED,
+        ]);
+
+        $response = $this->actingAs($user, 'api')
+            ->getJson('/api/notifications');
+
+        $response->assertOk()
+            ->assertJsonPath('data.data.0.sender.id', $sender->id);
+
+        $this->assertStringContainsString(
+            'profile-photos/sender.jpg',
+            $response->json('data.data.0.sender.avatar')
+        );
+    }
 }

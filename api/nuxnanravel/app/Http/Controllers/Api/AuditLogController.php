@@ -21,7 +21,7 @@ class AuditLogController extends Controller
      */
     public function index(Request $request)
     {
-        $query = AuditLog::with('user:id,first_name,last_name,avatar');
+        $query = AuditLog::with('user:id,name,profile_photo_path');
 
         // Filter by user
         if ($request->filled('user_id')) {
@@ -92,7 +92,7 @@ class AuditLogController extends Controller
      */
     public function show(AuditLog $auditLog)
     {
-        $auditLog->load('user:id,first_name,last_name,avatar');
+        $auditLog->load('user:id,name,profile_photo_path');
 
         return response()->json([
             'success' => true,
@@ -114,7 +114,7 @@ class AuditLogController extends Controller
             'entity_id' => 'required|integer',
         ]);
 
-        $logs = AuditLog::with('user:id,first_name,last_name,avatar')
+        $logs = AuditLog::with('user:id,name,profile_photo_path')
             ->where('entity_type', 'App\\Models\\'.$request->entity_type)
             ->where('entity_id', $request->entity_id)
             ->orderBy('created_at', 'desc')
@@ -212,7 +212,7 @@ class AuditLogController extends Controller
             ->groupBy('user_id')
             ->orderBy('action_count', 'desc')
             ->limit(10)
-            ->with('user:id,first_name,last_name,avatar')
+            ->with('user:id,name,profile_photo_path')
             ->get();
 
         return response()->json([
@@ -235,7 +235,7 @@ class AuditLogController extends Controller
      */
     public function export(Request $request)
     {
-        $query = AuditLog::with('user:id,first_name,last_name');
+        $query = AuditLog::with('user:id,name');
 
         // Apply same filters as index
         if ($request->filled('user_id')) {

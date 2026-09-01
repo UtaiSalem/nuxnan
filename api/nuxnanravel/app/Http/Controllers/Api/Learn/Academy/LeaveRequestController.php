@@ -29,7 +29,7 @@ class LeaveRequestController extends Controller
         $query = LeaveRequest::whereHas('staffProfile', function ($q) use ($academy) {
             $q->where('academy_id', $academy->id);
         })->with([
-            'staffProfile.user:id,name,avatar',
+            'staffProfile.user:id,name,profile_photo_path',
             'leaveType:id,name,code',
             'approver:id,name',
         ]);
@@ -76,7 +76,7 @@ class LeaveRequestController extends Controller
         $this->authorizeLeave($academy, $leave);
 
         $leave->load([
-            'staffProfile.user:id,name,email,avatar',
+            'staffProfile.user:id,name,email,profile_photo_path',
             'leaveType',
             'approver:id,name',
         ]);

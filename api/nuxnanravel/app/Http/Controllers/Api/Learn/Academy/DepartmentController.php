@@ -93,7 +93,7 @@ class DepartmentController extends Controller
         $headUsers = $headUserIds->isNotEmpty()
             ? User::query()
                 ->whereIn('id', $headUserIds)
-                ->get(['id', 'name', 'email', 'avatar', 'profile_photo_path'])
+                ->get(['id', 'name', 'email', 'profile_photo_path'])
                 ->keyBy('id')
             : collect();
 

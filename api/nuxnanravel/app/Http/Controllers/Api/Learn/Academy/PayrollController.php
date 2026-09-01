@@ -28,7 +28,7 @@ class PayrollController extends Controller
     {
         $query = Payroll::whereHas('staffProfile', function ($q) use ($academy) {
             $q->where('academy_id', $academy->id);
-        })->with(['staffProfile.user:id,name,avatar']);
+        })->with(['staffProfile.user:id,name,profile_photo_path']);
 
         // Filter by staff
         if ($request->has('staff_profile_id')) {
@@ -73,7 +73,7 @@ class PayrollController extends Controller
         $this->authorizePayroll($academy, $payroll);
 
         $payroll->load([
-            'staffProfile.user:id,name,email,avatar',
+            'staffProfile.user:id,name,email,profile_photo_path',
             'staffProfile.position:id,name',
             'items' => fn ($q) => $q->ordered(),
             'approver:id,name',

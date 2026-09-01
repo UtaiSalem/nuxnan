@@ -106,7 +106,7 @@ class AdminPointsService
     {
         return User::orderByDesc('total_points_earned')
             ->limit($limit)
-            ->get(['id', 'name', 'avatar', 'pp', 'total_points_earned', 'level', 'created_at'])
+            ->get(['id', 'name', 'profile_photo_path', 'pp', 'total_points_earned', 'level', 'created_at'])
             ->toArray();
     }
 
@@ -117,7 +117,7 @@ class AdminPointsService
     {
         return User::orderByDesc('total_points_spent')
             ->limit($limit)
-            ->get(['id', 'name', 'avatar', 'pp', 'total_points_spent', 'level', 'created_at'])
+            ->get(['id', 'name', 'profile_photo_path', 'pp', 'total_points_spent', 'level', 'created_at'])
             ->toArray();
     }
 

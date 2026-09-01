@@ -37,7 +37,7 @@ class AcademyClaimService
     public function listClaims(User $user, Academy $academy, int $page = 1, int $perPage = 15): array
     {
         $claims = AcademyDonateClaim::where('academy_id', $academy->id)
-            ->with(['claimer:id,name,avatar,personal_code', 'donation:id,anonymous,donor_display_name'])
+            ->with(['claimer:id,name,profile_photo_path,personal_code', 'donation:id,anonymous,donor_display_name'])
             ->orderByDesc('claimed_at')
             ->paginate(min(max($perPage, 1), 50), ['*'], 'page', max($page, 1));
         $items = $claims->map(fn (AcademyDonateClaim $claim) => [
