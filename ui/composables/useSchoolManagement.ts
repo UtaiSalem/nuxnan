@@ -313,9 +313,6 @@ export const useSchoolManagement = () => {
     api.call(`/api/academies/${academyId}/analytics/teacher-pending-assignments`)
 
   // Audit Logs
-  const getSchoolAuditLogs = (academyId: number, params?: Record<string, any>) => 
-    api.call(`/api/academies/${academyId}/audit-logs`, { params })
-
   const getEntityAuditLogs = (academyId: number, entityType: string, entityId: number) => 
     api.call(`/api/academies/${academyId}/audit-logs/entity`, { 
       params: { entity_type: entityType, entity_id: entityId } 
@@ -526,7 +523,6 @@ export const useSchoolManagement = () => {
     getDashboardStats,
     getStudentDashboardStats,
     getTeacherPendingAssignments,
-    getSchoolAuditLogs,
     getEntityAuditLogs,
     getAtRiskStudents,
     getAnalyticsOverview,

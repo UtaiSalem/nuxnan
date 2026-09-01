@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Academy;
 use App\Models\AuditLog;
+use App\Models\Classroom;
 use App\Services\AuditLogService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AuditLogController extends Controller
 {
@@ -21,7 +24,7 @@ class AuditLogController extends Controller
      */
     public function index(Request $request)
     {
-        $query = AuditLog::with('user:id,first_name,last_name,avatar');
+        $query = AuditLog::with('user:id,name,profile_photo_path');
 
         // Filter by user
         if ($request->filled('user_id')) {
@@ -92,7 +95,7 @@ class AuditLogController extends Controller
      */
     public function show(AuditLog $auditLog)
     {
-        $auditLog->load('user:id,first_name,last_name,avatar');
+        $auditLog->load('user:id,name,profile_photo_path');
 
         return response()->json([
             'success' => true,
@@ -105,16 +108,69 @@ class AuditLogController extends Controller
     }
 
     /**
+     * SET-S9 / G28 — audit_logs ไม่มีคอลัมน์ academy_id จึงต้องผูกความเป็นเจ้าของผ่านตัว entity เอง
+     * ชนิดที่ไม่อยู่ในลิสต์นี้ = ไม่มีใครพิสูจน์ได้ว่าเป็นของโรงเรียนไหน ⇒ ปฏิเสธ
+     */
+    private const ACADEMY_SCOPED_ENTITIES = [
+        'Classroom' => Classroom::class,
+    ];
+
+    /**
      * Get audit logs for a specific entity.
      */
-    public function getEntityLogs(Request $request)
+    public function getEntityLogs(Academy $academy, Request $request)
+    {
+        $request->validate([
+            'entity_type' => ['required', 'string', Rule::in(array_keys(self::ACADEMY_SCOPED_ENTITIES))],
+            'entity_id' => 'required|integer',
+        ]);
+
+        $modelClass = self::ACADEMY_SCOPED_ENTITIES[$request->entity_type];
+
+        $belongsToAcademy = $modelClass::query()
+            ->whereKey($request->integer('entity_id'))
+            ->where('academy_id', $academy->id)
+            ->exists();
+
+        if (! $belongsToAcademy) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่พบข้อมูลที่ร้องขอในโรงเรียนนี้',
+            ], 404);
+        }
+
+        $logs = AuditLog::with('user:id,name,profile_photo_path')
+            ->where('entity_type', $modelClass)
+            ->where('entity_id', $request->entity_id)
+            ->orderBy('created_at', 'desc')
+            ->limit($request->get('limit', 50))
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $logs->map(function ($log) {
+                return [
+                    ...$log->toArray(),
+                    'description' => $log->description,
+                ];
+            }),
+        ]);
+    }
+
+    /**
+     * Get audit logs for a specific entity (ฝั่งแอดมินแพลตฟอร์ม).
+     *
+     * SET-S9 — route ของแอดมินไม่มี {academy} ให้ผูก จึงแยกมาจาก getEntityLogs()
+     * ที่บังคับ scope ตามโรงเรียน · เส้นนี้กันด้วย middleware `admin` อยู่แล้ว
+     */
+    public function adminEntityLogs(Request $request)
     {
         $request->validate([
             'entity_type' => 'required|string',
             'entity_id' => 'required|integer',
         ]);
 
-        $logs = AuditLog::with('user:id,first_name,last_name,avatar')
+        $logs = AuditLog::with('user:id,name,profile_photo_path')
             ->where('entity_type', 'App\\Models\\'.$request->entity_type)
             ->where('entity_id', $request->entity_id)
             ->orderBy('created_at', 'desc')
@@ -212,7 +268,7 @@ class AuditLogController extends Controller
             ->groupBy('user_id')
             ->orderBy('action_count', 'desc')
             ->limit(10)
-            ->with('user:id,first_name,last_name,avatar')
+            ->with('user:id,name,profile_photo_path')
             ->get();
 
         return response()->json([
@@ -235,7 +291,7 @@ class AuditLogController extends Controller
      */
     public function export(Request $request)
     {
-        $query = AuditLog::with('user:id,first_name,last_name');
+        $query = AuditLog::with('user:id,name,profile_photo_path');
 
         // Apply same filters as index
         if ($request->filled('user_id')) {

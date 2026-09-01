@@ -1073,10 +1073,13 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
 
     // ============================================
     // Audit Log Routes (ประวัติการแก้ไข)
+    // SET-S9 / G28 — route index เดิมคืน audit_logs ทั้งแพลตฟอร์มโดยไม่แตะ {academy}
+    // และไม่มีด่านสิทธิ์ · ไม่มีหน้าไหนใน ui/ เรียกใช้ ⇒ ลบทิ้ง
     // ============================================
     Route::prefix('{academy}/audit-logs')->group(function () {
-        Route::get('/', [AuditLogController::class, 'index'])->name('api.academy.audit-logs.index');
-        Route::get('/entity', [AuditLogController::class, 'getEntityLogs'])->name('api.academy.audit-logs.entity');
+        Route::get('/entity', [AuditLogController::class, 'getEntityLogs'])
+            ->middleware('academy.permission:students.view')
+            ->name('api.academy.audit-logs.entity');
     });
 
     // ============================================================

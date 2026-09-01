@@ -562,7 +562,7 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
         Route::get('/actions', [AuditLogController::class, 'getActions'])->name('admin.audit-logs.actions');
         Route::get('/modules', [AuditLogController::class, 'getModules'])->name('admin.audit-logs.modules');
         Route::get('/summary', [AuditLogController::class, 'summary'])->name('admin.audit-logs.summary');
-        Route::get('/entity', [AuditLogController::class, 'getEntityLogs'])->name('admin.audit-logs.entity');
+        Route::get('/entity', [AuditLogController::class, 'adminEntityLogs'])->name('admin.audit-logs.entity');
         Route::get('/my-logs', [AuditLogController::class, 'myLogs'])->name('admin.audit-logs.my-logs');
         Route::get('/export', [AuditLogController::class, 'export'])->name('admin.audit-logs.export');
         Route::get('/{auditLog}', [AuditLogController::class, 'show'])->name('admin.audit-logs.show');
