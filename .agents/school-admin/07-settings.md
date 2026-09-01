@@ -108,7 +108,7 @@
 | 11 | เปิด/ปิดการรับบริจาคของโรงเรียน | ❌ | ไม่มี UI (G9) |
 | 12 | โหมดดูอย่างเดียว (`settings.view`) | ❌ | เข้าหน้าไม่ได้เลยถ้าไม่มี `settings.manage` (G6) |
 | 13 | บันทึก audit log เมื่อแก้ตั้งค่า | ❌ | G11 |
-| 14 | เตือนเมื่อออกจากหน้าโดยยังไม่บันทึก | ❌ | G12 |
+| 14 | เตือนเมื่อออกจากหน้าโดยยังไม่บันทึก | ✅ | ปิดใน SET-S11 |
 | 15 | Tests | ❌ | 0 ไฟล์ (G10) |
 
 ---
@@ -1028,6 +1028,55 @@ PHANTOM DIFF KEYS: ["established_year"]
 > ก่อนเปลี่ยน signature ของ controller method ต้อง `route:list` หาเส้นที่ชี้มาให้ครบก่อนเสมอ
 > — grep หาชื่อเมธอดในโฟลเดอร์ `routes/` ทั้งหมด ไม่ใช่แค่ไฟล์ที่กำลังแก้
 
+### 5.23 SET-S11 — สำรวจของจริงก่อนลงมือ (2026-09-02)
+
+**หนึ่งในสามข้อของ G12 ทำไปแล้วตั้งแต่ SET-S4 — ไม่ต้องทำซ้ำ**
+`admin/settings.vue:179` มี `if (isOwner.value) base.push({ id: 'danger', ... })` อยู่แล้ว
+และ `watch(tabs)` เด้ง `activeTab` กลับแท็บแรกถ้าแท็บที่เปิดอยู่หายไป
+⇒ เหลือของจริงที่ต้องทำ 2 ข้อ + หนี้ที่ยกมาจาก SET-S2 อีก 1
+
+**ข้อ 1 — ไม่เตือนตอนออกจากหน้าโดยยังไม่บันทึก**
+หน้านี้ไม่มีทั้ง `onBeforeRouteLeave` และ `beforeunload` ⇒ กรอกฟอร์มยาว ๆ แล้วกดเมนูอื่นทีเดียวหาย
+มีแพตเทิร์นที่ใช้ในเรพอยู่แล้วที่ `ui/pages/profile/[id]/settings.vue:61–79`
+(`onBeforeRouteLeave` + `window.confirm` + `beforeunload`) — ใช้ตัวนั้นเป็นต้นแบบ ไม่ต้องคิดใหม่
+
+**ข้อ 2 — บันทึกแล้วไม่ refresh `academy.value`**
+`saveSettings()` ได้ `response.academy` (AcademyResource ที่ผ่าน `$academy->fresh()` มาแล้ว)
+แต่ใช้แค่เช็คว่าชื่อเปลี่ยนไหมเพื่อ redirect · **ไม่เคยเขียนกลับลง `academy.value` และไม่เรียก
+`populateForm()` ซ้ำ** ⇒ สิ่งที่ผู้ใช้เห็นค้างอยู่ที่ค่าที่ตัวเองพิมพ์ ไม่ใช่ค่าที่เซิร์ฟเวอร์ normalize แล้ว
+ตัวอย่างที่ต่างกันจริง (ทั้งหมดเป็นของที่ S6/S7 เพิ่งเพิ่มเข้ามา):
+`social_media_links` เซิร์ฟเวอร์ตัดคีย์ที่ว่างทิ้ง · `student_editable_fields` ถูก normalize รูปทรง ·
+`established_year` เก็บเป็น int · `donation_enabled` เขียนเป็น boolean เสมอ
+⇒ กดบันทึกแล้วดูเหมือนยังมีลิงก์โซเชียลว่างค้างอยู่ในฟอร์ม ทั้งที่ฐานไม่มีแล้ว
+
+**ข้อ 3 (ยกมาจาก SET-S2) — `?view=archived` เปลี่ยน query อย่างเดียวไม่ refetch**
+`academies/index.vue` อ่าน query ครบทั้ง 3 ทาง (ค่าเริ่มต้นของ ref · `onMounted` · `watch`)
+แต่ `switchView('archived')` **ไม่ยิง `fetchArchivedAcademies()`** (สาขา `'my'` ยิงเมื่อลิสต์ว่าง)
+⇒ ถ้าผู้ใช้อยู่ที่ `/academies` อยู่แล้วแล้ว query เปลี่ยนเป็น `?view=archived` โดยหน้าไม่ remount
+ลิสต์ที่โชว์คือลิสต์ที่ fetch ไว้ตั้งแต่ mount — โรงเรียนที่เพิ่งเก็บถาวรจะยังไม่โผล่
+
+### 5.24 SET-S11 — แผนแตก shard (2 shard)
+
+| shard | สาระ | ไฟล์ | ขึ้นกับ |
+|---|---|---|---|
+| **S11-A** | เตือนก่อนออกโดยไม่บันทึก + refresh หลังบันทึก | `admin/settings.vue` | — |
+| **S11-B** | `switchView('archived')` ต้อง refetch | `academies/index.vue` | — |
+
+**ลำดับ:** ขนานกันได้ (คนละไฟล์)
+
+#### S11-A รายละเอียด
+- `isDirty` คำนวณจาก **สแนปช็อตของฟอร์ม** ไม่ใช่ `markDirty()` ที่ต้องไปแปะทุกช่อง
+  (หน้านี้ใช้ `v-model` ทั้งหมด 16 ช่อง การแปะมือจะพลาดแน่)
+- สแนปช็อตต้อง **canonical**: เรียงคีย์ + ตัดคีย์ของ `social_media_links` ที่เป็นสตริงว่างทิ้ง
+  ไม่งั้นผู้ใช้พิมพ์แล้วลบจนว่าง จะกลายเป็น "มีการแก้ไข" ทั้งที่ค่าเท่าเดิม
+- ไฟล์รูปที่เพิ่งเลือก (`avatarFile` / `coverFile`) นับเป็น dirty ด้วย
+- หลังบันทึกสำเร็จต้อง **รีเซ็ตสแนปช็อต** ไม่งั้นจะเตือนทันทีที่กดออกหลังเพิ่งบันทึก
+- ระหว่าง `isSaving` ห้ามเตือน (การ redirect หลังเปลี่ยนชื่อของ SET-S8 จะโดนบล็อก)
+
+#### S11-B รายละเอียด
+- `switchView('archived')` → `fetchArchivedAcademies()` เสมอ (คิวรีเล็ก และความถูกต้องสำคัญกว่า)
+- ห้ามแตะเงื่อนไข `v-if="archivedAcademies.length > 0"` ของปุ่มสลับ view (D9 ของ SET-S2)
+
 ---
 
 ## 6. Implementation Tasks
@@ -1044,7 +1093,7 @@ PHANTOM DIFF KEYS: ["established_year"]
 | **SET-S8** | ลบ `name_slug` ทิ้ง + ซ่อม redirect (G7 · D12) | SET-S1 | migration drop คอลัมน์ `name_slug` · ถอด `Str::slug` ออกจาก `updateSettings` · ย้ายด่านกันชื่อซ้ำไปไว้ที่คอลัมน์ `name` ที่เป็น UNIQUE จริง (ปิด G19 — เดิมได้ 500 พร้อม SQL ดิบ) · redirect หลังเปลี่ยนชื่อใช้ `name` + encodeURIComponent | 🟢 **verified + migrate แล้ว** |
 | **SET-S9** | audit log การแก้ตั้งค่า (G11 — นิยามใหม่ · G26–G28 · D19–D22) | SET-S1 | เขียน diff ของการแก้ตั้งค่าลง `member_activity_logs` (action `settings_update`) ครอบทั้ง `academies` และ `academy_settings` · **ปิด G27** (audit viewer 500 ทั้ง 9 route) · **ปิด G28** (route `{academy}/audit-logs` คืน `audit_logs` ทั้งแพลตฟอร์มโดยไม่มีด่านสิทธิ์) | 🟢 **verified** (เทสต์ใหม่ 9 เคส · mutation check 5 แบบ) |
 | **SET-S10** | เติมเทสต์ที่ยังขาด (G10) | SET-S1..S6 | ต่อยอด `AcademySettingsUpdateTest` ที่มีอยู่แล้ว (round-trip/validation/cache/slug ครอบแล้ว) — เพิ่ม: role ที่ถือ `settings.manage` ต้องผ่าน · สมาชิกสถานะไม่ใช่ APPROVED ต้องโดนปฏิเสธ · superadmin · สิทธิ์จากฝ่าย/กลุ่ม | ⚪ pending |
-| **SET-S11** | UX เก็บตก (G12) | SET-S4 | เตือนก่อนออกโดยไม่บันทึก · refresh หลังบันทึก · ซ่อนแท็บโซนอันตรายถ้าไม่ใช่ owner | ⚪ pending |
+| **SET-S11** | UX เก็บตก (G12) + หนี้ `?view=archived` จาก SET-S2 | SET-S4 | เตือนก่อนออกโดยไม่บันทึก (สแนปช็อต canonical + `onBeforeRouteLeave` + `beforeunload`) · refresh ค่าที่เซิร์ฟเวอร์ normalize หลังบันทึก · `switchView('archived')` refetch จริง · (ข้อซ่อนแท็บโซนอันตรายทำไปแล้วตั้งแต่ SET-S4) | 🟢 **verified** (ตรวจบนเบราว์เซอร์จริงที่ 375px) |
 | **SET-S12** | รูปโลโก้/ปกเป็น relative path (G8) | — | ต่อยอดจาก `.agents/photo-path-migration-plan.md` — **แยกไปทำพร้อมงาน migration รูปทั้งระบบ** | 🔵 deferred |
 | **SET-S13** | ล้างเมธอดตายใน `AcademyController` (G10b) | SET-S1 | ลบ 11 เมธอดที่ไม่มี route ชี้มา + ตรวจว่าไม่มี import ไหนหลุดค้าง | ⚪ pending |
 
@@ -1165,3 +1214,22 @@ Report back: git diff --stat + สรุปสิ่งที่ทำจริ�
   ⚠️ **สิ่งที่ยังไม่ได้ตรวจ:** ยังไม่ได้เปิดหน้า `/admin/activity-log` บนเบราว์เซอร์จริงเพื่อดูว่าแถว
   `settings_update` เรนเดอร์ออกมาหน้าตาถูก (รอบนี้ไม่มีการแก้ markup — ฝั่ง UI แตะแค่ลบฟังก์ชัน
   ที่ไม่มีผู้เรียกออกจาก composable) · `npm run build` ผู้ใช้รันเอง
+
+- **2026-09-02 SET-S11** — agy ลง 1 shard (2 ไฟล์ frontend) · **Claude ตรวจเองทุกข้อ รวม "ตรวจด้วยตา"
+  บนเบราว์เซอร์จริงที่ 375px ซึ่งเป็นหนี้ค้างมาตั้งแต่ SET-S4:**
+
+  | ตรวจอะไร | วิธีตรวจ | ผล |
+  |---|---|---|
+  | ขอบเขต diff | `git diff --stat` | 2 ไฟล์ · **+128 / −0** ไม่มีบรรทัด `-` เลย |
+  | SFC compile | `@vue/compiler-sfc` 2 ไฟล์ | OK ทั้งคู่ |
+  | ของเดิมไม่หาย | `grep -c` | แท็บโซนอันตราย `if (isOwner.value)` = 1 · redirect ของ SET-S8 = 1 |
+  | **A. พิมพ์แล้วลบจนว่าง ไม่ควรนับว่าแก้** | พิมพ์ลิงก์ facebook แล้วลบ → กดออกจากหน้า | **confirm 0 ครั้ง** · ออกจากหน้าได้ ⇒ สแนปช็อต canonical ทำงาน |
+  | **B. `?view=archived` refetch** | เปลี่ยน query ผ่าน router โดยหน้าไม่ remount + ดัก `fetch` | ยิง `GET /api/academies/archived` **1 ครั้งพอดี** (เดิมไม่ยิงเลย) |
+  | **C. แก้แล้วกดออก ต้องเตือน** | แก้ `slogan` → `router.push('/academies')` (ดัก `window.confirm` ให้คืน false) | เรียก confirm ด้วยข้อความ **"คุณมีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก ต้องการออกจากหน้านี้หรือไม่?"** และ **ค้างอยู่หน้าเดิมจริง** |
+  | **D. เพิ่งบันทึกเสร็จ ต้องไม่เตือน** | กด "บันทึก" บนฟอร์มจริง → กดออกทันที | **confirm 0 ครั้ง** ⇒ `populateForm()` รีเซ็ตสแนปช็อตให้แล้ว |
+  | **E. (ของแถม) พิสูจน์ SET-S9 ผ่าน UI จริง** | กดบันทึกจริงโดยใส่ลิงก์ facebook | ได้ log **1 แถวพอดี** `settings_update` · `user_id=1` · diff คีย์เดียว `social_media_links` · `old=null` ⇒ ยืนยันว่า `user_id=NULL` ที่เจอตอน S9 เป็นข้อจำกัดของ harness ไม่ใช่บั๊ก |
+  | mobile 375px | `document.scrollWidth` + screenshot | **375 = innerWidth ไม่มีล้นแนวนอน** · แท็บครบ 6 ตัว · ปุ่มบันทึกเต็มความกว้าง |
+  | ล้างข้อมูลทดสอบ | ตรวจหลังคืนค่า | `social_media_links` กลับเป็น NULL · slogan เดิม · ลบ log ทดสอบ 1 แถว · `member_activity_logs` ของ academy 1 กลับมาที่ 3 แถว · `privacy=public` |
+
+  **หมายเหตุ:** ข้อ "ซ่อนแท็บโซนอันตรายถ้าไม่ใช่ owner" ของ G12 **ทำไปแล้วตั้งแต่ SET-S4**
+  (`settings.vue:179`) จึงไม่ได้แตะซ้ำ — บันทึกไว้ตามจริงว่าเป็น 2 ใน 3 ข้อที่ทำรอบนี้
