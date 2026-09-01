@@ -1,5 +1,125 @@
 # Work Log — nuxnan project
 
+## 2026-09-02 (ต่อ) — G18: ปิดรูรั่ว endpoint โรงเรียน 4 กลุ่ม
+
+### สถานะ: **G18 ✅ ตรวจครบทุกข้อ** — 9 ไฟล์ + migration 1 + เทสต์ใหม่ 1 · **ยังไม่ push**
+
+เอกสารหลัก: [`.agents/school-admin/07-settings.md`](school-admin/07-settings.md) §G18 (D23–D26)
+
+### 🔴 ของจริงร้ายแรงกว่าที่บันทึกไว้ 2 จุด
+
+เอกสารเดิมเขียนว่า "รอบนี้ยังไม่รั่วข้อมูล" — มาจากการตรวจแค่ `index` ตอนที่ยังไม่มีคาบเช็กชื่อเปิด
+พออ่านโค้ดจริง:
+
+| จุด | ความเสียหายจริง |
+|---|---|
+| `school-attendances/{attendance}` (`show`) | คนนอกอ่าน **ชื่อ + รูป + สถานะมา/ขาด/สาย ของนักเรียนทั้งคาบ** ⇒ PII รั่ว |
+| `school-attendances/{attendance}/check-in` | คนล็อกอินคนไหนก็ได้ที่มี `qr_token` (QR ขึ้นจอหน้าโรงเรียน ถ่ายส่งต่อได้) **สร้างแถวเช็กชื่อ + รับ points/XP** ⇒ ข้อมูลขยะ + โกงแต้ม |
+| `emergency-alerts` 4 เมธอด | คนนอกอ่านประกาศฉุกเฉินและกดตอบรับได้ |
+
+### 🟡 ของแถม: คีย์สิทธิ์ที่แจกไปแล้วแต่ไม่มีใครอ่าน
+
+`school_attendance.view` / `school_attendance.manage` **มีในคาตาล็อกและถูกแจกให้ role แล้ว
+แต่ไม่มีโค้ดไหนอ่าน** — `authorizeManager()` ตรวจ `Academy::isAdmin()` อย่างเดียว
+⇒ **ครูซึ่งเป็นคนเช็กชื่อจริงโดน 403 มาตลอด** · แพตเทิร์นเดียวกับ G21/G22 ที่ S6/S7 ปิดไป
+
+### การตัดสินใจของเจ้าของโปรเจค (เคาะระหว่างรอบ)
+
+- **D23** เอาคีย์ `school_attendance.*` มาใช้จริง + แจก `.manage` ให้ role `teacher`
+- **D24** เพิ่มคีย์ใหม่ `emergency.view` / `emergency.manage` แจกให้ `director`/`admin`
+  · **จงใจไม่ delegable ให้ฝ่าย/แผนก**
+
+### 🔴 กับดักที่เจอตอนลงมือ — ติดคีย์ที่ route แล้ววิดเจ็ตนักเรียนพัง
+
+ติด `school_attendance.view` ที่ `index`/`show` ครั้งแรก แล้วพบว่า `SchoolAttendanceWidget`
+ของนักเรียนเรียกทั้งสองเส้น (หาคาบที่เปิดวันนี้ → เช็กว่าตัวเองเช็กชื่อหรือยัง)
+⇒ **เส้นทางเช็กชื่อของนักเรียนพังทั้งเส้น** · แก้เป็น **D25**:
+
+- อ่าน + `check-in` = **ด่านสมาชิกภาพล้วน** (`academy.permission` ไม่ใส่คีย์)
+- คีย์ `.view` ไปคุม **ความลึกของข้อมูล** ในคอนโทรลเลอร์: `show` ไม่มีคีย์ ⇒ เห็นเฉพาะแถวตัวเอง
+  ไม่มีรายชื่อคนอื่น ไม่มี summary · `student-history` ไม่มีคีย์ ⇒ ดูได้เฉพาะของตัวเอง
+- เส้นที่แก้ข้อมูลใช้ `.manage` ที่ route ตรง ๆ
+
+**บทเรียน:** ก่อนติดคีย์ที่ route ต้องไล่ก่อนว่า **หน้าไหนของนักเรียน/ผู้ปกครองเรียกเส้นนั้น**
+— ด่านที่ถูกต้องเชิงความปลอดภัยอาจตัดเส้นทางของผู้ใช้ที่ถูกต้องทิ้งไปด้วย
+
+### `Academy::userCan()` — รวมลำดับสิทธิ์ให้เหลือที่เดียว
+
+`CheckAcademyPermission` เคยถือลำดับไว้คนเดียว ส่วนคอนโทรลเลอร์ตรวจ `isAdmin()` เอง
+⇒ **middleware ปล่อยผ่าน แต่ controller ตอบ 403** ย้ายลำดับทั้งหมด (superadmin → เจ้าของ/
+`academy_admins` → สมาชิก `status=2` → role → ฝ่าย/กลุ่ม) ไปที่ `Academy::userCan()`
+middleware เหลือหน้าที่แปลงผลเป็น HTTP response · ยังแยก `Not a member` กับ
+`Insufficient permissions` เหมือนเดิม
+
+### 🟡 บั๊กที่เจอระหว่างเขียนเทสต์
+
+`EmergencyAlertController::active()` ใช้ `orderByRaw("FIELD(severity, ...)")` — `FIELD()`
+มีเฉพาะ MySQL ⇒ **แบนเนอร์ฉุกเฉิน 500 บน SQLite และเทสต์ครอบไม่ได้เลย** เปลี่ยนเป็น `CASE`
+· ยังเหลืออีกจุดที่ `CourseController:99` (คนละโดเมน ยังไม่แตะ)
+
+### หลักฐานที่ Claude รันเอง
+
+- `route:list --json` — ตรวจ middleware ทีละเส้นครบ 21 เส้น ตรงตารางที่ออกแบบไว้
+  · `my-role` ว่างตามตั้งใจ · เส้นสาธารณะ `/api/public/schools/{academy}/support-summary` ไม่ถูกแตะ
+- **mutation check 6 แบบ ⇒ ล้มตรงเคสที่ควรล้มทุกครั้ง · คืนไฟล์ครบทุกรอบ**
+  1. ถอด `academy.visibility` ⇒ ล้ม 4 (archived x2 + private + archived support-summary)
+  2. ถอด `academy.permission*` ⇒ ล้ม 5 (คนนอก x4 + สมาชิกธรรมดา)
+  3. `authorizeManager` กลับเป็น `isAdmin` ⇒ ล้ม "ครูเปิดคาบได้"
+  4. `canManageAlerts` กลับเป็น `isAdmin` ⇒ ล้ม "ผอ.ประกาศฉุกเฉินได้"
+  5. ถอดการหั่น payload ของ `show` ⇒ ล้ม "นักเรียนเห็นเฉพาะแถวตัวเอง"
+  6. ถอดด่าน `student-history` ⇒ ล้ม "นักเรียนอ่านประวัติเพื่อนไม่ได้"
+- **migration รันจริงบน MySQL + ทดสอบ `down()` ครบรอบ**
+  director 50→52→50→52 · admin 46→48→46→48 · teacher 23→24→23→24
+  · `academy_permissions` 0→2→0→2 ⇒ `down()` ใช้ได้จริง ไม่ใช่ stub
+- `php -l` ทุกไฟล์ · `pint --test` ผ่าน
+- เทสต์ใหม่ `AcademyEndpointGuardsG18Test` **21 เคส ผ่านหมด**
+- **`artisan test` ทั้งเรพ: **1,647 passed · 3 incomplete · 8 skipped · 0 failed** (563s) — 1,626 เดิม + 21 ใหม่**
+
+### 🔴 เทสต์ทั้งเรพตายกลางคันด้วย OOM — ไม่ใช่เทสต์ล้ม และไม่ใช่เพราะโค้ดรอบนี้
+
+รันทั้งเรพแล้วได้ `EXIT=255` จบด้วย stack trace ยาวเหยียดที่ `finfo->file()` ใน
+`WithdrawalPayoutProofTest` ซึ่ง**ไม่เกี่ยวกับ G18 เลย** · ขุดจริงเจอ:
+
+- ข้อความจริงคือ `Allowed memory size of 536870912 bytes exhausted`
+- `memory_limit` ถูกตั้งไว้ที่ **512M ใน `phpunit.xml`** ⇒ **`php -d memory_limit=...` ไม่มีผล
+  เพราะ `<ini>` ของ phpunit ชนะเสมอ** (เสียเวลาไปสองรอบกว่าจะรู้)
+- peak จริงของทั้งเรพเมื่อ **ปิด xdebug = 474MB** ⇒ เฉียดเพดาน 512M อยู่แล้วมาก่อนหน้านี้
+  พอ xdebug เปิด (ค่าเริ่มต้นของ WAMP เครื่องนี้) overhead ดันทะลุ
+- **ขยับ `phpunit.xml` เป็น 2G** ⇒ `php artisan test` แบบปกติกลับมาเขียวทั้งเรพ
+
+⇒ เพดานนี้เป็นหนี้ที่มีอยู่ก่อนแล้ว เทสต์ใหม่ 21 เคสแค่เป็นฟางเส้นสุดท้าย
+
+### ⚠️ ความผิดพลาดของ Claude ในรอบนี้ (บันทึกไว้ตามจริง)
+
+เทสต์ "นักเรียนเห็นเฉพาะแถวตัวเอง" ที่ผมเขียนครั้งแรกใช้
+`assertStringNotContainsString((string) $classmate->id, json_encode(...))`
+— ค้นหา **เลขหลักเดียว** ในก้อน JSON ⇒ ไปแมตช์เลข `3` ใน timestamp `23:13:25`
+**ผ่านตอนรันแยก แต่ล้มตอนรันทั้งเรพ** เพราะเวลาเปลี่ยน · เป็นเทสต์ flaky ที่ผมสร้างเอง
+แก้เป็นการเทียบ `array_column($records,'student_id')` กับ `[$student->id]` ตรง ๆ
+แล้วรันซ้ำ 3 รอบยืนยัน
+
+**บทเรียน:** ห้าม assert ด้วย substring บนก้อน JSON ที่มี timestamp — ให้ดึงฟิลด์ออกมาเทียบ
+
+### สิ่งที่แก้ฝั่ง `ui/`
+
+`EmergencyAlertBanner.vue` — เดิม poll ทุก 60 วิ และ log error ทิ้ง · ตอนนี้คนนอกได้ 403
+ซึ่งเป็นสถานะ**ถาวร** ⇒ หยุด poll ทันทีที่เจอ 403 (ไม่งั้นยิง 403 ไม่จบ) · ไม่มีการแก้ UI อื่น
+เพราะ `$appends`/response shape ไม่เปลี่ยน
+
+### งานที่ค้างหลังรอบนี้
+
+- [x] กวาด `avatar` ✅ · [x] **G18** ✅
+- [ ] `PublicAcademyController.php` ตก `pint --test` (ของเดิม)
+- [ ] **SET-S12** deferred (ดู `.agents/photo-path-migration-plan.md`)
+- [ ] `CourseController:99` ยังใช้ `FIELD()` ของ MySQL (ญาติของบั๊กที่เจอรอบนี้)
+- [ ] โค้ดตาย `AuthService::register()` (ยกมาจากรอบ avatar)
+
+### Branch / Git State
+
+- Branch: `main` · **ยังไม่ push** · migration รันบน dev DB แล้ว (batch ใหม่)
+
+---
+
 ## 2026-09-02 (ต่อ) — กวาดบั๊ก `avatar` ทั้งระบบ · **ปิดครบทั้งคลาสบั๊ก**
 
 ### สถานะ: ✅ ตรวจครบทุกข้อ — 19 ไฟล์ (**−45 / +45**) + เทสต์ใหม่ 1 ไฟล์ · **commit แล้ว 2 ชุด**
