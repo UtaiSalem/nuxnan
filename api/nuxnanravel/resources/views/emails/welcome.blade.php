@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Vikinger</title>
+    <title>ยินดีต้อนรับสู่ {{ $appName }}</title>
     <style>
         body {
             margin: 0;
@@ -12,6 +12,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: #ffffff;
         }
+        .wrap { padding: 24px 12px; }
         .container {
             max-width: 600px;
             margin: 0 auto;
@@ -22,116 +23,94 @@
         }
         .header {
             background: linear-gradient(90deg, #615dfa 0%, #23d2e2 100%);
-            padding: 40px 20px;
+            padding: 32px 20px;
             text-align: center;
         }
         .header h1 {
             margin: 0;
-            font-size: 28px;
-            text-transform: uppercase;
+            font-size: 26px;
             letter-spacing: 2px;
             color: #ffffff;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
-        .content {
-            padding: 40px 30px;
-            text-align: center;
-        }
+        .content { padding: 32px 24px; text-align: center; }
         .avatar {
-            width: 100px;
-            height: 100px;
+            width: 88px;
+            height: 88px;
+            line-height: 88px;
             background-color: #21283b;
             border-radius: 50%;
-            margin: -90px auto 20px;
+            margin: -76px auto 20px;
             border: 6px solid #1d2333;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
+            font-size: 36px;
             color: #615dfa;
             font-weight: bold;
         }
-        .welcome-text {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 10px;
-            color: #ffffff;
-        }
-        .sub-text {
-            font-size: 16px;
-            color: #8f91ac;
-            line-height: 1.6;
-            margin-bottom: 30px;
-        }
-        .btn {
+        .badge {
             display: inline-block;
-            background-color: #615dfa;
-            color: #ffffff;
-            text-decoration: none;
-            padding: 14px 32px;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 14px;
-            text-transform: uppercase;
-            box-shadow: 0 4px 12px rgba(97, 93, 250, 0.4);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .btn:hover {
-            background-color: #504ccb;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(97, 93, 250, 0.5);
-        }
-        .footer {
-            background-color: #15171a;
-            padding: 20px;
-            text-align: center;
-            font-size: 12px;
-            color: #5c5e6e;
-        }
-        .level-badge {
-            display: inline-block;
-            background-color: #23d2e2;
-            color: #fff;
-            padding: 4px 10px;
+            background-color: #f0a640;
+            color: #1d2333;
+            padding: 5px 12px;
             border-radius: 6px;
             font-size: 12px;
             font-weight: bold;
-            margin-bottom: 20px;
-            text-transform: uppercase;
+            margin-bottom: 18px;
+        }
+        .welcome-text { font-size: 22px; font-weight: 700; margin: 0 0 6px; color: #ffffff; }
+        .sub-text { font-size: 15px; color: #8f91ac; line-height: 1.7; margin: 0 0 18px; }
+        .panel {
+            background-color: #21283b;
+            border-radius: 10px;
+            padding: 18px 20px;
+            text-align: left;
+            margin: 24px 0 8px;
+        }
+        .panel h3 { margin: 0 0 10px; font-size: 15px; color: #ffffff; }
+        .panel ol { margin: 0; padding-left: 20px; color: #8f91ac; font-size: 14px; line-height: 1.9; }
+        .footer {
+            background-color: #15171a;
+            padding: 18px;
+            text-align: center;
+            font-size: 12px;
+            color: #5c5e6e;
+            line-height: 1.7;
         }
     </style>
 </head>
 <body>
-    <div style="padding: 40px 0;">
+    <div class="wrap">
         <div class="container">
             <div class="header">
-                <h1>Vikinger</h1>
+                <h1>{{ $appName }}</h1>
             </div>
             <div class="content">
-                <div class="avatar">
-                    {{ strtoupper(substr($user->username, 0, 1)) }}
-                </div>
-                <div class="level-badge">New Recruit / สมาชิกใหม่</div>
-                <h2 class="welcome-text">Welcome, {{ $user->profile->display_name ?? $user->username }}!</h2>
-                <h3 class="welcome-text" style="font-size: 20px; margin-top: 0;">ยินดีต้อนรับ, {{ $user->profile->display_name ?? $user->username }}!</h3>
-                
+                <div class="avatar">{{ mb_strtoupper(mb_substr($displayName, 0, 1)) }}</div>
+
+                <div class="badge">รอผู้ดูแลอนุมัติ</div>
+
+                <h2 class="welcome-text">ยินดีต้อนรับ, {{ $displayName }}</h2>
+
                 <p class="sub-text">
-                    You've successfully joined the ranks. To unlock your full potential and start earning XP, verify your email address below.
-                </p>
-                <p class="sub-text" style="margin-top: -20px;">
-                    คุณได้เข้าร่วมกองทัพเรียบร้อยแล้ว เพื่อปลดล็อกศักยภาพสูงสุดและเริ่มสะสม XP โปรดยืนยันอีเมลของคุณด้านล่าง
+                    เราได้รับการสมัครของคุณเรียบร้อยแล้ว บัญชีนี้กำลังรอผู้ดูแลระบบตรวจสอบและอนุมัติ
+                    <strong style="color:#ffffff;">คุณยังไม่ต้องทำอะไรเพิ่ม</strong>
                 </p>
 
-                <a href="{{ $verificationUrl }}" class="btn">Verify Account / ยืนยันบัญชี</a>
-                
-                <p class="sub-text" style="margin-top: 30px; font-size: 14px;">
-                    Or copy this link / หรือคัดลอกลิงก์นี้: <br>
-                    <a href="{{ $verificationUrl }}" style="color: #23d2e2; word-break: break-all;">{{ $verificationUrl }}</a>
+                <div class="panel">
+                    <h3>ขั้นตอนต่อไป</h3>
+                    <ol>
+                        <li>ผู้ดูแลระบบตรวจสอบบัญชีของคุณ</li>
+                        <li>เมื่ออนุมัติแล้ว คุณจะเข้าสู่ระบบด้วยอีเมลและรหัสผ่านที่สมัครไว้ได้ทันที</li>
+                        <li>ระหว่างนี้หากเข้าสู่ระบบ จะพบข้อความแจ้งว่ายังรอการอนุมัติ ซึ่งเป็นเรื่องปกติ</li>
+                    </ol>
+                </div>
+
+                <p class="sub-text" style="margin-top: 20px; font-size: 13px;">
+                    หากคุณไม่ได้เป็นผู้สมัครบัญชีนี้ ไม่ต้องดำเนินการใด ๆ บัญชีจะไม่ถูกอนุมัติ
                 </p>
             </div>
             <div class="footer">
-                &copy; {{ date('Y') }} Vikinger. All rights reserved.<br>
-                Quest complete: Registration / ภารกิจเสร็จสิ้น: การลงทะเบียน
+                &copy; {{ date('Y') }} {{ $appName }}<br>
+                อีเมลฉบับนี้ส่งอัตโนมัติ กรุณาอย่าตอบกลับ
             </div>
         </div>
     </div>

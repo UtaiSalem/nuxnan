@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Auth;
 use App\Enums\UsageEventType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
+use App\Mail\WelcomeEmail;
 use App\Models\User;
 use App\Services\AuthService;
 use App\Services\UsageEventService;
@@ -13,6 +14,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -162,6 +165,8 @@ class AuthController extends Controller
                 return $user;
             });
 
+            $this->sendWelcomeEmail($user);
+
             $token = auth('api')->login($user);
 
             return $this->respondWithToken($token);
@@ -277,6 +282,25 @@ class AuthController extends Controller
             'success' => false,
             'message' => 'Invalid referral code. Please check and try again.',
         ], 422);
+    }
+
+    /**
+     * อีเมลตอบรับการสมัคร — ส่งหลัง transaction commit แล้วเท่านั้น
+     *
+     * ส่งแบบ sync ไม่ใช่ queue: ฐานนี้มี job ค้างในตาราง `jobs` ตั้งแต่ 2026-05-25
+     * โดย `failed_jobs` เป็น 0 ⇒ ไม่มี worker รันอยู่จริง ถ้า queue อีเมลจะไม่มีวันถูกส่ง
+     *
+     * ห้ามให้ความล้มเหลวของเมลล้มการสมัคร — บัญชีถูกสร้างไปแล้ว ผู้ใช้ต้องได้ token
+     */
+    protected function sendWelcomeEmail(User $user): void
+    {
+        try {
+            Mail::to($user->email)->send(new WelcomeEmail($user));
+        } catch (\Throwable $e) {
+            Log::error('ส่งอีเมลต้อนรับไม่สำเร็จ (การสมัครยังสำเร็จตามปกติ): '.$e->getMessage(), [
+                'user_id' => $user->id,
+            ]);
+        }
     }
 
     /**
