@@ -1,5 +1,49 @@
 # Work Log — nuxnan project
 
+## 2026-09-03 (ต่อ) — เปิด queue worker แล้ว (ชั่วคราว)
+
+### สถานะ: ✅ worker เดินอยู่ · ⚠️ **ผูกกับ session ของ Claude — ปิด session แล้วตาย**
+
+คำสั่งที่รัน (จาก `api/nuxnanravel/`):
+
+```
+php artisan queue:work --queue=default --tries=3 --timeout=120
+```
+
+### พิสูจน์ว่ากินงานจริง
+
+dispatch `UpdateActivitySummary` (งานคำนวณสรุปรายวันใหม่จากข้อมูลต้นทาง — idempotent
+ไม่แจกแต้ม/XP ให้ใคร) แล้ว worker หยิบไปทำสำเร็จ:
+
+```
+2026-09-03 02:44:30 App\Jobs\UpdateActivitySummary ... RUNNING
+2026-09-03 02:44:30 App\Jobs\UpdateActivitySummary ... 113.09ms DONE
+```
+
+หลังจบ: `jobs` = 0 · `failed_jobs` = 0
+
+**ไม่ได้ใช้ `RefreshLeaderboardCache` เป็นตัวทดสอบ** เพราะมันยังล้มจากบั๊ก
+`GamificationService.php:281` (leaderboard streak) ที่ยังไม่ถูก merge เข้า main
+
+### 🔴 ต้องทำให้ถาวรเอง — worker ตัวนี้ไม่รอด
+
+worker ที่ Claude เปิดให้เป็น background process ของ session **ปิด session เมื่อไหร่ก็ตาย**
+ทางที่อยู่ถาวรจริง เลือกอย่างใดอย่างหนึ่ง:
+
+1. **เทอร์มินัลของตัวเอง** (ง่ายสุด) เปิดค้างไว้คู่กับ `php artisan serve`
+2. **Task Scheduler ของ Windows** ตั้ง trigger "At log on" ชี้ไปที่ `php.exe` พร้อม args
+3. **NSSM** ทำเป็น Windows service (`nssm install nuxnan-queue`)
+
+ข้อ 2 และ 3 เป็นการแก้ system setting — Claude ทำให้ไม่ได้ ต้องลงมือเอง
+
+### ⚠️ กติกาที่ต้องจำเมื่อมี worker แล้ว
+
+`queue:work` **แคชโค้ดไว้ตอนบูต** — แก้โค้ด backend เมื่อไหร่ต้องรีสตาร์ท worker
+(`php artisan queue:restart` แล้วมันจะจบตัวเองรอบถัดไป หรือ Ctrl+C แล้วเปิดใหม่)
+ไม่งั้นจะไล่บั๊กผี ๆ ที่โค้ดใหม่แล้วแต่ worker ยังรันของเก่า
+
+---
+
 ## 2026-09-03 (ต่อ) — แก้แบนเนอร์รหัสผู้แนะนำตัดคำที่ 375px
 
 ### สถานะ: ✅ 1 ไฟล์ · `ui/components/molecules/RegisterForm.vue` · เฉพาะ class ไม่แตะ logic
