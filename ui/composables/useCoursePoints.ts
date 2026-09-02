@@ -5,14 +5,16 @@ export function useCoursePoints(courseId: Ref<string | number> | string | number
   const id = computed(() => unref(courseId))
 
   // State
+  // field ที่ผู้ใช้ทั่วไปได้รับมีแค่ 2 ตัวแรก — ที่เหลือ backend ส่งมาให้เฉพาะแอดมินรายวิชา
+  // (ดู CoursePointAccountController::show) จึงต้องเป็น optional ทั้งหมด
   const account = ref<{
     balance: number
-    reserved_balance: number
-    available_balance: number
-    total_earned: number
-    total_withdrawn: number
     total_distributed: number
-    minimum_withdrawal: number
+    reserved_balance?: number
+    available_balance?: number
+    total_earned?: number
+    total_withdrawn?: number
+    minimum_withdrawal?: number
   } | null>(null)
 
   const transactions = ref<any[]>([])

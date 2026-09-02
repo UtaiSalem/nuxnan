@@ -17,14 +17,27 @@ class CoursePointAccountController extends Controller
     // GET /courses/{course}/points/account
     public function show(Course $course)
     {
-        $this->authorizeCourseAdmin($course);
         $account = $this->service->getAccount($course->id);
 
+        // แอดมินรายวิชาเห็นทั้งก้อนเหมือนเดิม — shape เดิมห้ามเปลี่ยน
+        // (หน้าตั้งค่ารายวิชา / LessonForm / QuizRewardForm / CampaignCreateModal
+        //  อ่าน available_balance, total_earned, total_withdrawn, minimum_withdrawal อยู่)
+        if ($course->isAdmin(auth()->user())) {
+            return response()->json([
+                'data' => $account ?? [
+                    'balance' => 0, 'total_earned' => 0,
+                    'total_withdrawn' => 0, 'total_distributed' => 0,
+                    'minimum_withdrawal' => 24000,
+                ],
+            ]);
+        }
+
+        // ผู้ใช้ทั่วไปเห็นเฉพาะตัวเลข "ยอดกองทุน" ที่ UI แสดงต่อสาธารณะอยู่แล้ว
+        // (CourseHero, CourseSupportWidget, CourseSupportPanel) — ตัวเลขคลังเงินไม่หลุด
         return response()->json([
-            'data' => $account ?? [
-                'balance' => 0, 'total_earned' => 0,
-                'total_withdrawn' => 0, 'total_distributed' => 0,
-                'minimum_withdrawal' => 24000,
+            'data' => [
+                'balance' => (int) ($account->balance ?? 0),
+                'total_distributed' => (int) ($account->total_distributed ?? 0),
             ],
         ]);
     }
