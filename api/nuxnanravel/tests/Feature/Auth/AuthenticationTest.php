@@ -22,17 +22,20 @@ class AuthenticationTest extends TestCase
         ]);
 
         $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'status' => 'pending_approval',
+            ])
             ->assertJsonStructure([
-                'access_token',
-                'token_type',
-                'expires_in',
+                'status',
+                'message',
                 'user' => [
                     'id',
                     'username',
                     'email',
-                    'created_at',
                 ],
-            ]);
+            ])
+            ->assertJsonMissing(['access_token']);
 
         $this->assertDatabaseHas('users', [
             'username' => 'testuser',

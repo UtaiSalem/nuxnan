@@ -148,13 +148,25 @@
       />
 
 
-      <div v-if="success" class="text-green-500 text-sm text-center font-medium">{{ success }}</div>
+      <div
+        v-if="success"
+        class="rounded-lg border border-green-200 bg-green-50 p-3 text-center sm:p-4"
+      >
+        <p class="text-sm font-medium text-green-700 break-words sm:text-base">{{ success }}</p>
+        <NuxtLink
+          v-if="registered"
+          to="/auth?tab=login"
+          class="mt-2 inline-flex min-h-[44px] items-center justify-center px-3 text-sm font-semibold text-green-800 underline sm:mt-3"
+        >
+          ไปหน้าเข้าสู่ระบบ
+        </NuxtLink>
+      </div>
 
       <AppButton
         type="submit"
         :text="loading ? $t('common.loading') : $t('auth.registerTitle')"
         variant="gradient"
-        :disabled="loading"
+        :disabled="loading || registered"
       />
 
       <div class="relative my-4">
@@ -239,6 +251,7 @@ const form = reactive({
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
+const registered = ref(false)
 
 // Watch referral code input - auto-validate when 8 digits entered
 watch(referralCode, (newValue) => {
@@ -382,7 +395,7 @@ const handleSubmit = async () => {
 
   try {
     // Register with the new JWT auth system including reference_code
-    await authStore.register({
+    const response = await authStore.register({
       username: form.username,
       email: form.email,
       password: form.password,
@@ -390,9 +403,11 @@ const handleSubmit = async () => {
       reference_code: referralCode.value,
     })
 
-    // Enable app-level transition overlay
-    authStore.isLoginTransitioning = true
-    await navigateTo('/play/newsfeed')
+    // บัญชีใหม่ต้องรอผู้ดูแลอนุมัติก่อน จึงไม่มี token และไม่พาเข้าแอป
+    // (ถ้าพาเข้าไปจะเจอ 403 จาก middleware `verified` เกือบทุกหน้า)
+    success.value = response?.message || 'สมัครสมาชิกสำเร็จ บัญชีของคุณรอการอนุมัติจากผู้ดูแล'
+    registered.value = true
+    loading.value = false
   } catch (e: any) {
     console.error('Registration failed', e)
     error.value = e.message || e.data?.message || 'Registration failed. Please try again.'

@@ -143,24 +143,12 @@ export const useAuthStore = defineStore('auth', () => {
         }
       }
 
-      // Backend may return direct JWT fields or a nested data payload.
-      if (response.success) {
-        const accessToken = response.access_token || response.data?.accessToken
-        const responseUser = response.user || response.data?.user
-        
-        if (accessToken) {
-          token.value = accessToken
-          user.value = responseUser
-          if (response.expires_in) {
-            tokenExpiresIn.value = response.expires_in
-          }
-        } else {
-          throw new Error('Invalid response from server')
-        }
-      } else {
+      if (!response.success) {
         throw new Error('Invalid response from server')
       }
 
+      // การสมัครไม่คืน JWT อีกต่อไป — บัญชีต้องรอผู้ดูแลอนุมัติก่อนถึงจะเข้าสู่ระบบได้
+      // จึงไม่เซ็ต token/user ที่นี่ ผู้ใช้ต้องไป login เองหลังได้รับอนุมัติ
       return response
     } catch (e: any) {
       console.error('Registration error:', e)

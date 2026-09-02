@@ -1,5 +1,81 @@
 # Work Log — nuxnan project
 
+## 2026-09-03 (ต่อ) — งาน D: register() ห้ามคืน JWT ให้บัญชีที่ยังไม่ถูกอนุมัติ
+
+### สถานะ: ✅ 5 ไฟล์ (backend 3 + frontend 2) · เทสต์ใหม่ 2 เคส · **+95 / −35**
+
+### บั๊กที่แก้ (ไล่จนจบสาย ยืนยันทุกข้อด้วยการรันจริง)
+
+`register()` สร้างบัญชีที่ `email_verified_at = null` แล้ว **ออก JWT ให้ทันที**
+แต่ `login()` บล็อกบัญชีแบบเดียวกันด้วย 403 `AccountPending` ⇒ สองเส้นทางพูดคนละเรื่อง
+
+| ข้อเท็จจริง | หลักฐาน |
+|---|---|
+| `User implements JWTSubject, **MustVerifyEmail**` | `app/Models/User.php:28` |
+| alias `verified` มาจาก framework default → `EnsureEmailIsVerified` → `abort(403)` | `vendor/laravel/framework/.../Configuration/Middleware.php:794` |
+| **457 route อยู่หลัง `verified`** | `route:list -v \| grep -c "⇂ verified"` = **457** |
+| UI พาเข้า `/play/newsfeed` ทันทีหลังสมัคร | `RegisterForm.vue:394` (เดิม) |
+| store โยน error ถ้าไม่มี token | `ui/stores/auth.ts:155` (เดิม) |
+
+⇒ ผู้ใช้ใหม่ได้ token แล้วเดินเข้าแอปที่ยิงอะไรก็ได้ **403 `"Your email address is not verified."`**
+(ข้อความอังกฤษของ framework) ขณะที่อีเมลต้อนรับ (D27) บอกให้รอผู้ดูแลอนุมัติ — สามทางไม่ตรงกัน
+
+### แก้อะไร
+
+- `register()` **ไม่ออก token** คืน `success + status: 'pending_approval'` + ข้อความไทยชุดเดียวกับ `login()`
+- `ui/stores/auth.ts` เลิกบังคับว่าต้องมี `access_token` (ไม่เซ็ต token/user)
+- `RegisterForm.vue` ขึ้นกล่อง "สมัครสำเร็จ รอผู้ดูแลอนุมัติ" + ลิงก์ `/auth?tab=login`
+  ปุ่ม submit disable หลังสมัครสำเร็จ · **ไม่ `navigateTo` เข้าแอปอีก**
+- เทสต์: แก้ assertion เดิม 2 ไฟล์ + เพิ่มเคสใหม่ 2 เคส
+
+### 🔴 การตัดสินใจกลางทาง: คง HTTP 200 ไม่เปลี่ยนเป็น 201
+
+สเปคแรกผมสั่ง 201 (Created) — agy ทำตามแล้วรายงานตรงว่า **เทสต์ 5 เคสใน 3 ไฟล์ที่ห้ามแตะพัง**
+ด้วย `Expected 200 but received 201` (`RegistrationReferenceCodeTest`, `RoleAssignmentTest`,
+`WelcomeEmailTest` ซึ่งเรียก register เป็นขั้น setup แล้ว assert 200)
+
+ผมรันเองยืนยันตรงกัน แล้ว**เปลี่ยนกลับเป็น 200 เอง** เหตุผล: บั๊กคือ "ออก token ให้บัญชีที่ยังไม่อนุมัติ"
+ไม่ใช่ HTTP status การดัน 201 จะลากไฟล์เทสต์อีก 3 ไฟล์เข้ามาโดยไม่ได้อะไรเพิ่ม
+(client แยกด้วย `status: 'pending_approval'` ในบอดี้อยู่แล้ว · frontend เช็ค `res.ok` = 2xx)
+ถ้าวันหน้าจะเอา 201 จริง ต้องแก้ assertion 5 จุดในไฟล์เหล่านั้นด้วย
+
+### หลักฐานที่ Claude รันเอง
+
+- **mutation check:** เอา `auth('api')->login($user)` + `respondWithToken()` กลับมา
+  ⇒ ล้ม **3 เคส** พอดี รวมเคสใหม่ `register_does_not_issue_a_token_and_account_stays_pending`
+  · คืนไฟล์แล้วเขียวกลับ
+- `php -l` ✅ · `pint --test` ✅
+- **`php artisan test tests/Feature/Auth/` ทั้งโฟลเดอร์: 16 ผ่าน · 70 assertions**
+  (3 ไฟล์ที่ห้ามแตะ **ไม่ถูกแตะจริง** — `git diff --stat` ของสามไฟล์นั้นว่างเปล่า)
+- **SFC compile ผ่าน** (`@vue/compiler-sfc` parse + compileScript + compileTemplate)
+- **ตรวจจอจริงที่ 375px:** กล่อง success กว้าง 263px · padding 12px (`p-3`) ·
+  **ลิงก์สูง 44px พอดีตามกติกา touch target** · `scrollWidth 375 = clientWidth 375`
+  ⇒ **หน้าไม่เลื่อนแนวนอน** · ข้อความไทยตัดบรรทัดด้วย `break-words` ไม่ล้นกล่อง
+
+  *วิธีตรวจ:* ฉีด DOM node ที่ใช้ class ชุดเดียวกันเข้าไปวัดแล้วลบออก
+  **ไม่ได้ยิงสมัครจริง** เพราะการสมัครจะส่งอีเมลต้อนรับออกทาง SMTP จริง (`MAIL_MAILER=smtp`)
+  ซึ่งเป็นการกระทำที่ส่งออกนอกระบบ ต้องขออนุญาตก่อน
+
+### 🟡 บั๊ก mobile ของเดิมที่เห็นระหว่างตรวจ (ไม่ใช่ของรอบนี้ ยังไม่แก้)
+
+แบนเนอร์ "✓ Admin Referral Code Verified" ในหน้าสมัคร ปุ่ม **"Change" ตัดคำเสียที่ 375px**
+(ขึ้นเป็น "Chang" / "e" คนละบรรทัด) — ขาด `flex-shrink-0 whitespace-nowrap` ตามกติกา mobile-first
+
+### งานที่ค้างหลังรอบนี้
+
+- [x] **A / B / C** ✅ · [x] **D — register ไม่คืน token** ✅
+- [ ] 🔴 **เปิด queue worker ค้างไว้จริง ๆ** — งานของคน ถ้าไม่ทำ งาน A/B/C เป็นหมัน
+- [ ] **บั๊ก leaderboard streak** — `GamificationService.php:281` (session แยกยังทำอยู่ main ยังมีบั๊ก)
+- [ ] ปุ่ม "Change" ตัดคำที่ 375px ใน `RegisterForm.vue`
+- [ ] **SET-S12** deferred (ดู `.agents/photo-path-migration-plan.md`)
+- [ ] สาเหตุที่ `pint --test` จาก root รายงานไม่ครบในรอบแรก (ยกมา)
+
+### Branch / Git State
+
+- Branch: `main`
+
+---
+
 ## 2026-09-03 (ต่อ) — ตรวจ base_amount = 0 ของ point_rules: ไม่ใช่บั๊ก ปิดเคส
 
 ### สถานะ: ✅ ตรวจแล้ว **ไม่แก้อะไร** (ไม่มีไฟล์โค้ดเปลี่ยน)

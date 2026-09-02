@@ -167,9 +167,20 @@ class AuthController extends Controller
 
             $this->sendWelcomeEmail($user);
 
-            $token = auth('api')->login($user);
-
-            return $this->respondWithToken($token);
+            // ไม่ออก JWT ให้บัญชีที่ยังไม่ถูกอนุมัติ — email_verified_at ในโปรเจคนี้แปลว่า
+            // "ผู้ดูแลอนุมัติแล้ว" และมี 457 route อยู่หลัง middleware `verified`
+            // ถ้าคืน token ไป ผู้ใช้จะได้ 403 ภาษาอังกฤษของ framework รัวๆ แทนข้อความที่ตั้งใจเขียน
+            // ให้ตอบแบบเดียวกับที่ login() บล็อกบัญชีที่ยังไม่อนุมัติ
+            return response()->json([
+                'success' => true,
+                'status' => 'pending_approval',
+                'message' => 'สมัครสมาชิกสำเร็จ บัญชีของคุณรอการอนุมัติจากผู้ดูแล กรุณารอการตรวจสอบ',
+                'user' => [
+                    'id' => $user->id,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                ],
+            ]);
         } catch (ValidationException $e) {
             throw $e;
         } catch (\Exception $e) {
