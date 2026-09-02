@@ -17,26 +17,34 @@ class AssignmentAnswerResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        // assignmentable เป็น morphTo — บทเรียน/รายวิชาปลายทางอาจถูกลบไปแล้ว
+        // และ user() คืน null ได้เพราะ App\Models\User ใช้ SoftDeletes
+        // ทั้งสองทางเคยทำ endpoint นี้พัง 500 ทั้งเส้น จึงต้อง null-safe ทุกจุด
+        $assignment = $this->assignment;
+        $answerUser = $this->user;
+
         // Resolve Course ID based on assignmentable type
         $courseId = null;
-        if ($this->assignment->assignmentable_type === 'App\Models\Lesson') {
-            $courseId = $this->assignment->assignmentable->course_id;
-        } elseif ($this->assignment->assignmentable_type === 'App\Models\Course') {
-            $courseId = $this->assignment->assignmentable->id;
+        if ($assignment?->assignmentable_type === 'App\Models\Lesson') {
+            $courseId = $assignment->assignmentable?->course_id;
+        } elseif ($assignment?->assignmentable_type === 'App\Models\Course') {
+            $courseId = $assignment->assignmentable?->id;
         }
 
-        $course_member = $courseId ? CourseMember::where('user_id', $this->user->id)->where('course_id', $courseId)->first() : null;
+        // ใช้คอลัมน์ user_id ตรง ๆ ไม่ต้องผ่าน relation — กัน null และไม่ lazy load เพิ่ม
+        $course_member = ($courseId && $this->user_id)
+            ? CourseMember::where('user_id', $this->user_id)->where('course_id', $courseId)->first()
+            : null;
 
         return [
             'id' => $this->id,
-            // 'assignment'        => new AssignmentResource($this->assignment),
-            // 'assignment'        => $this->assignment->assignmentable,
             'assignment_id' => $this->assignment_id,
-            'student' => new UserResource($this->user),
+            'student' => $answerUser ? new UserResource($answerUser) : null,
             'user_id' => $this->user_id,
-            'user' => $this->user->id,
-            'member_name' => $course_member ? $course_member->member_name : ($this->user->firstname.' '.$this->user->lastname),
-            // 'course_group'      => CourseMember::where('user_id', $this->user->id)->where('course_id', $this->assignment->assignmentable->id)->pluck('group_id')->first(),
+            'user' => $answerUser?->id,
+            // เดิม fallback เป็น $this->user->firstname.' '.$this->user->lastname
+            // ซึ่งเป็นโค้ดตาย: ตาราง users ไม่มีคอลัมน์ firstname/lastname ได้ " " เสมอ
+            'member_name' => $course_member ? $course_member->member_name : ($answerUser?->name ?? 'ผู้ใช้ที่ถูกลบ'),
             'course_group' => $course_member ? $course_member->group_id : null,
             'submission_date' => $this->submission_date,
             'content' => $this->content,

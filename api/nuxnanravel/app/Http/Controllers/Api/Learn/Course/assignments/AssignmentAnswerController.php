@@ -60,7 +60,7 @@ class AssignmentAnswerController extends Controller
             $this->visibility->assertVisibleOrFail($assignment, $user, 404);
         }
 
-        $query = $assignment->answers()->with('user', 'images', 'attachments')->latest();
+        $query = $assignment->answers()->with('user', 'images', 'attachments', 'assignment.assignmentable')->latest();
 
         // Students may only ever see their own submission, never a classmate's.
         // AssignmentResource already scopes answers this way; this endpoint did not.
@@ -238,7 +238,7 @@ class AssignmentAnswerController extends Controller
             }
         }
 
-        $answer->load('images', 'attachments');
+        $answer->load('user', 'images', 'attachments', 'assignment.assignmentable');
 
         return response()->json([
             'success' => true,
