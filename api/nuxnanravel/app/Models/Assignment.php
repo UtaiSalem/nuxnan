@@ -51,6 +51,11 @@ class Assignment extends Model
 
     /**
      * Resolve the lesson this assignment belongs to (directly or through topic)
+     *
+     * assignmentable เป็น morphTo — บทเรียน/หัวข้อปลายทางอาจถูกลบไปแล้ว
+     * ก่อนหน้านี้สาขา Topic เรียก ->lesson บน null ตรง ๆ ทำให้ทุก endpoint
+     * ที่เรียกเมธอดนี้ตอบ 500 (resolveCourse, ContentVisibilityService ฯลฯ)
+     * ผู้เรียกทั้ง 9 จุดรับ null ได้อยู่แล้ว จึงคืน null แทนการระเบิด
      */
     public function getLesson(): ?Lesson
     {
@@ -59,7 +64,7 @@ class Assignment extends Model
         }
 
         if ($this->assignmentable_type === Topic::class) {
-            return $this->assignmentable->lesson;
+            return $this->assignmentable?->lesson;
         }
 
         return null;
