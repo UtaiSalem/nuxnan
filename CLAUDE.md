@@ -106,7 +106,7 @@ php artisan route:list               # ดู routes ทั้งหมด
 php artisan test                     # PHPUnit tests
 ./vendor/bin/pint                    # format โค้ด
 php artisan reverb:start             # websocket server
-php artisan queue:work --queue=default   # queue worker (ต้องมี --queue=default เสมอ)
+php artisan queue:work --queue=default --timeout=60   # queue worker (--timeout ต้อง < retry_after 90)
 php artisan schedule:work                # scheduler (job ตามเวลาใน routes/console.php)
 ```
 

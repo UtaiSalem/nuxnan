@@ -1,5 +1,61 @@
 # Work Log — nuxnan project
 
+## 2026-09-03 (ต่อ) — สคริปต์ติดตั้ง queue worker เป็น Windows service (NSSM)
+
+### สถานะ: ✅ 3 ไฟล์ใหม่ใน `api/nuxnanravel/scripts/queue-worker/` · 🔴 แก้บั๊ก `--timeout` ที่ผมเขียนผิดเองในงาน A
+
+### ไฟล์
+
+- `install-service.ps1` · `uninstall-service.ps1` · `README.md`
+- NSSM **ยังไม่ได้ติดตั้งบนเครื่องนี้** — สคริปต์เช็คให้แล้วและบอกวิธี (`winget install NSSM.NSSM`)
+
+### 🔴 บั๊กที่เจอในเอกสารของตัวเอง: `--timeout=120` > `retry_after=90`
+
+`config/queue.php` ตั้ง `retry_after` = **90** วินาที
+Laravel ถือว่า job ที่ค้างเกิน `retry_after` เป็นงานตาย แล้วปล่อยกลับเข้าคิว
+⇒ ถ้า `--timeout` **มากกว่าหรือเท่ากับ** `retry_after` job เดียวกันจะถูกหยิบไปทำซ้ำพร้อมกัน 2 ตัว
+
+**งาน A ผมเขียน `--timeout=120` ลงทั้ง `CLAUDE.md` และ `run-server.md` ซึ่งผิด** แก้แล้วเป็น **60**
+ทั้ง 2 ไฟล์ + ใส่คำเตือนไว้ใน `run-server.md` · สคริปต์ติดตั้งมี guard `throw` ถ้า
+`$JobTimeout >= 90` และ worker ที่รันอยู่ก็รีสตาร์ตด้วยค่าใหม่แล้ว
+
+### 🔴 บั๊กที่ 2: ไฟล์ .ps1 ที่มีข้อความไทยต้องเป็น UTF-8 **with BOM**
+
+เขียนครั้งแรกเป็น UTF-8 ไม่มี BOM ⇒ **Windows PowerShell 5.1 อ่านเป็น ANSI**
+ข้อความไทยกลายเป็น mojibake แล้ว **parse ไม่ผ่านเลย** (`ParseFile` คืน error เพียบ)
+เขียนใหม่พร้อม BOM (`EF BB BF`) ⇒ parse ผ่านทั้ง 2 ไฟล์
+
+**บทเรียน: .ps1 ที่มีอักษรไทยในเรพนี้ ต้องบันทึกเป็น UTF-8 with BOM เสมอ**
+
+### ค่าที่ตั้งใน service และเหตุผล (ตรวจจากเครื่องจริงทั้งหมด)
+
+| ค่า | เหตุผล |
+|---|---|
+| `--timeout=60` | ต้อง < `retry_after` 90 |
+| `--max-time=3600` | จบเองทุก ชม. กัน memory รั่ว + โหลดโค้ดใหม่ |
+| `-d memory_limit=512M` | php.ini ของ CLI เครื่องนี้ตั้งไว้แค่ **128M** |
+| `XDEBUG_MODE=off` | CLI เครื่องนี้**โหลด Xdebug อยู่** ทำให้ worker ที่รันยาวช้ามาก |
+| `Start = DELAYED_AUTO` + `AppExit Restart` | WAMP ตั้ง `wampmysqld64` เป็น **Manual** ผูก `DependOnService` ตรง ๆ จะไม่ยอมสตาร์ต จึงพึ่ง restart แทน |
+| `AppStopMethodConsole` = timeout+30 วิ | ส่ง Ctrl+C ให้งานที่ค้างจบก่อน |
+| `AppRotate*` 10 MB | log ไม่บวมเต็มดิสก์ |
+
+### หลักฐานที่ Claude รันเอง
+
+- `ParseFile` ทั้ง 2 สคริปต์ ⇒ **parse OK** (หลังแก้ BOM) · BOM = `239,187,191`
+- `php.exe` = `C:\wamp64\bin\php\php8.4.15\php.exe` (PHP 8.4.15 ตรงกับที่โปรเจคต้องการ)
+- `retry_after` = 90 · `queue.default` = database · `database.queue` = default (อ่านจาก config จริง)
+- Xdebug โหลดอยู่ใน CLI · `memory_limit` = 128M (ยืนยันด้วย `php -i`)
+- WAMP services: `wampapache64` / `wampmariadb64` / `wampmysqld64` — **Manual ทั้งหมด**
+- `queue:restart` ⇒ worker เก่าจบด้วย exit 0 · เปิดตัวใหม่ `--timeout=60` แล้วกินงานสำเร็จ
+  `UpdateActivitySummary ... 96.14ms DONE` · `jobs = 0` · `failed_jobs = 0`
+
+### ยังต้องทำเอง
+
+ติดตั้ง NSSM แล้วรัน `install-service.ps1` ใน PowerShell แบบ Administrator
+(Claude แก้ system setting ให้ไม่ได้) จนกว่าจะทำ worker ที่รันอยู่ตอนนี้ยังผูกกับ session ของ Claude
+
+---
+
 ## 2026-09-03 (ต่อ) — เปิด queue worker แล้ว (ชั่วคราว)
 
 ### สถานะ: ✅ worker เดินอยู่ · ⚠️ **ผูกกับ session ของ Claude — ปิด session แล้วตาย**
