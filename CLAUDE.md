@@ -106,6 +106,8 @@ php artisan route:list               # ดู routes ทั้งหมด
 php artisan test                     # PHPUnit tests
 ./vendor/bin/pint                    # format โค้ด
 php artisan reverb:start             # websocket server
+php artisan queue:work --queue=default   # queue worker (ต้องมี --queue=default เสมอ)
+php artisan schedule:work                # scheduler (job ตามเวลาใน routes/console.php)
 ```
 
 ### Local environment
@@ -113,6 +115,10 @@ php artisan reverb:start             # websocket server
 - DB name: `nuxnan` (mysql, port 3306)
 - Frontend: `npm run dev` ที่ `ui/`
 - Backend: `php artisan serve` ที่ `api/nuxnanravel/`
+- Queue worker: `php artisan queue:work --queue=default` ที่ `api/nuxnanravel/` — **ต้องรันคู่กับ backend เสมอ**
+  ถ้าไม่รัน: แต้ม/gamification, นำเข้านักเรียน, โคลนคอร์สหลังซื้อ จะค้างเงียบ ๆ ไม่ error
+  🔴 ห้ามรัน `php artisan queue:work` เปล่า ๆ — คิว `backlog` คือที่พัก job เก่า ~15,869 งาน
+  (สะสมตั้งแต่ 2026-05-25 ตอนไม่มี worker) การระบายมันต้องรอเจ้าของโปรเจคเคาะก่อน
 
 ## Conventions ของโปรเจคนี้
 

@@ -1,5 +1,79 @@
 # Work Log — nuxnan project
 
+## 2026-09-02 (ต่อ) — งาน A: เปิด queue worker + พัก backlog ไว้บนคิว `backlog`
+
+### สถานะ: ✅ migration ใหม่ 1 · CLAUDE.md +6/−0 · run-server.md แก้ · **migration รันแล้ว** · ยังไม่ commit
+
+### ทำอะไร
+
+ปัญหา: พอเปิด worker ครั้งแรก มันจะกิน job เก่าที่ค้างมา 3 เดือนรวดเดียวทันที
+ซึ่งเท่ากับ**แจกแต้ม/quest ย้อนหลัง** โดยที่เจ้าของโปรเจคยังไม่ได้เคาะ
+
+ทางออก: migration `2026_09_02_120000_park_legacy_jobs_on_backlog_queue`
+ย้าย job ที่ค้างอยู่ ณ ตอนรันทั้งหมดจากคิว `default` → `backlog`
+**ไม่ลบ ไม่ประมวลผล** ย้อนกลับได้ด้วย `down()` แล้วให้ worker รันเฉพาะ `--queue=default`
+⇒ งานใหม่ไหลได้ทันที · งานเก่ายังนอนครบรอการตัดสินใจ
+
+### ตัวเลขจริงที่รันเอง
+
+| จุด | ผล |
+|---|---|
+| ก่อน migrate | `default` = **16,404** · `backlog` = 0 · `failed_jobs` = 0 |
+| หลัง migrate | `default` = **0** · `backlog` = **16,404** · total เท่าเดิม ไม่หายสักแถว |
+| `user_usage_events` ที่ยังไม่ประมวลผล | 11,944 — **ไม่เปลี่ยน** ตลอดทั้งรอบ (ยืนยันว่าไม่มี job เก่าถูกรัน) |
+| `failed_jobs` ตอนจบ | **0** |
+
+⚠️ ตัวเลขโตจาก 15,869 → 16,404 ระหว่าง session (แอปยังเดินอยู่ ยังมี event ไหลเข้าตลอด)
+
+### พิสูจน์ว่า worker ทำงานจริง (ไม่ใช่เชื่อรายงาน)
+
+รัน `php artisan queue:work --queue=default --tries=3 --timeout=120 --stop-when-empty` เอง 2 รอบ
+⇒ หยิบงานจาก `default` ได้จริง · **`backlog` คงที่ 16,404 ทุกรอบ ไม่ถูกแตะเลย**
+
+### 🔴 บั๊กจริงที่เจอเพราะเพิ่งมี worker ครั้งแรก (นอกขอบเขต A — ยังไม่แก้)
+
+`GamificationService::getLeaderboard()` เคส `'streak'` (`app/Services/GamificationService.php:281-284`):
+
+```php
+$query->with('pointStreak')                       // eager load = คนละ query
+    ->orderByDesc('point_streaks.current_streak'); // แต่ order ด้วยคอลัมน์ของตารางที่ไม่เคย join
+```
+
+⇒ `SQLSTATE[42S22] Unknown column 'point_streaks.current_streak' in 'order clause'`
+(คอลัมน์มีจริงในตาราง `point_streaks` — ปัญหาคือ**ไม่มี join** ต้องใช้ `leftJoin` แบบเคส weekly/monthly)
+
+**ไม่ได้พังเฉพาะตอนมี worker** — `GET /api/gamification/leaderboard/streak` เป็น route ที่มีอยู่จริง
+⇒ ตอนนี้ยิงแล้ว **500 ทันที** และ `RefreshLeaderboardCache` (schedule 03:00) จะล้มทุกคืนเมื่อเปิด worker
+ไม่มีใครเห็นมาก่อนเพราะไม่เคยมี worker รัน
+
+(failed_jobs ที่เกิดจากการทดสอบนี้ ลบทิ้งแล้วด้วย `queue:forget` — กลับเป็น 0)
+
+### 🟡 run-server.md ไม่ถูก sync ข้ามเครื่อง
+
+`.gitignore:22` = `/.claude/*` และ un-ignore เฉพาะ `/.claude/skills/**`
+⇒ `.claude/commands/run-server.md` **ไม่ถูก track** การแก้จึงอยู่แค่เครื่องนี้
+คำเตือนตัวสำคัญจึงถูกใส่ไว้ใน `CLAUDE.md` ด้วย (ไฟล์นั้น track อยู่)
+
+### 🟡 DB name ใน CLAUDE.md ไม่ตรงของจริง
+
+CLAUDE.md เขียนว่า DB คือ `nuxnan` — ของจริงคือ **`nuxnan_nuxnan_db`** (ยังไม่แก้)
+
+### งานที่ค้างหลังรอบนี้
+
+- [x] **A — เปิด worker + พัก backlog** ✅
+- [ ] **B** — `canEarnFromRule()` / cooldown เช็คด้วย `now()` แทน `occurred_at` ⇒ ถ้าระบาย backlog ตอนนี้จะโดน skip ทิ้งเกือบหมด **ต้องแก้ก่อน C**
+- [ ] **C** — ตัดสินใจกับคิว `backlog` 16,404 งาน: แจกย้อนหลัง / ทิ้ง / ระบายแบบ throttle (รอเจ้าของเคาะ)
+- [ ] **บั๊ก leaderboard streak** — `GamificationService.php:281`
+- [ ] **SET-S12** deferred (ดู `.agents/photo-path-migration-plan.md`)
+- [ ] `register()` คืน token ให้บัญชีที่ยังไม่ถูกอนุมัติ (ไม่ตรงกับ `login()`)
+- [ ] สาเหตุที่ `pint --test` จาก root รายงานไม่ครบในรอบแรก (ยกมา)
+
+### Branch / Git State
+
+- Branch: `main` · Uncommitted: `CLAUDE.md` + migration ใหม่ (run-server.md ไม่ถูก track)
+
+---
+
 ## 2026-09-02 (ต่อ) — ต่ออีเมลตอบรับการสมัครเข้ากับทางสมัครจริง
 
 ### สถานะ: ✅ 3 ไฟล์แก้ + เทสต์ใหม่ 1 (4 เคส) · commit แล้ว `1ae6fb14`
