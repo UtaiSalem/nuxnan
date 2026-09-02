@@ -72,23 +72,23 @@
     <div v-else class="space-y-4">
       <!-- Display referrer information in registration form -->
       <div v-if="referrerInfo" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-3">
-            <img 
-              :src="getAvatarUrl(referrerInfo?.avatar)" 
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex min-w-0 flex-1 items-center space-x-3">
+            <img
+              :src="getAvatarUrl(referrerInfo?.avatar)"
               :alt="referrerInfo?.username"
-              class="w-12 h-12 rounded-full object-cover"
+              class="w-12 h-12 flex-shrink-0 rounded-full object-cover"
             />
-            <div class="flex-1">
+            <div class="min-w-0 flex-1">
               <p class="text-sm font-bold text-gray-800">Referrer Found!</p>
-              <p class="text-sm text-gray-600">{{ referrerInfo.username }}</p>
-              <p class="text-xs text-gray-500">Code: {{ referrerInfo.personal_code }}</p>
+              <p class="text-sm text-gray-600 break-words">{{ referrerInfo.username }}</p>
+              <p class="text-xs text-gray-500 break-words">Code: {{ referrerInfo.personal_code }}</p>
             </div>
           </div>
           <button
             type="button"
             @click="resetReferralCode"
-            class="text-xs text-blue-600 hover:text-blue-800 underline whitespace-nowrap"
+            class="inline-flex min-h-[44px] flex-shrink-0 items-center whitespace-nowrap px-2 text-xs text-blue-600 underline hover:text-blue-800 sm:min-h-0 sm:px-0"
           >
             {{ $t('common.edit') }}
           </button>
@@ -97,14 +97,14 @@
       
       <!-- Admin code verified message (when no referrer info) -->
       <div v-else class="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
-        <div class="flex items-center justify-between">
-          <p class="text-sm text-green-800">
+        <div class="flex items-center justify-between gap-2">
+          <p class="min-w-0 flex-1 text-sm text-green-800 break-words">
             <span class="font-bold">✓ Admin Referral Code Verified</span>
           </p>
           <button
             type="button"
             @click="resetReferralCode"
-            class="text-xs text-green-600 hover:text-green-800 underline"
+            class="inline-flex min-h-[44px] flex-shrink-0 items-center whitespace-nowrap px-2 text-xs text-green-600 underline hover:text-green-800 sm:min-h-0 sm:px-0"
           >
             Change
           </button>
