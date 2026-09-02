@@ -6,6 +6,8 @@ use App\Models\LevelDefinition;
 use App\Models\PointRule;
 use App\Models\PointsTransaction;
 use App\Models\User;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -439,11 +441,19 @@ class PointsService
     }
 
     /**
-     * Check if user can earn points from a rule
+     * Check if user can earn points from a rule at a given moment.
+     *
+     * $at คือเวลาที่ event เกิดจริง (UserUsageEvent::occurred_at) ไม่ใช่เวลาที่ประมวลผล
+     * เพราะ job อาจถูกประมวลผลช้ากว่าเวลาที่ event เกิดหลายเดือน
+     * ไม่ส่งมา = ตัดสินด้วยเวลาปัจจุบัน (พฤติกรรมเดิม)
      */
-    public function canEarnFromRule(User $user, PointRule $rule): bool
+    public function canEarnFromRule(User $user, PointRule $rule, ?CarbonInterface $at = null): bool
     {
-        if (! $rule->isActiveNow()) {
+        // ต้องเป็น immutable — ไม่งั้น startOfDay()/startOfMonth() จะไปกลายพันธุ์ $at
+        // แล้วการเช็ค cooldown ข้างล่างจะใช้เวลาที่ผิด
+        $at = $at ? CarbonImmutable::parse($at) : CarbonImmutable::now();
+
+        if (! $rule->isActiveAt($at)) {
             return false;
         }
 
@@ -451,11 +461,10 @@ class PointsService
         // monthly check below — the aggregate dailyPointLimits.points_earned
         // would otherwise let PP earned from unrelated sources block this rule).
         if ($rule->max_daily_earnings) {
-            $startOfDay = now()->startOfDay();
             $dailyEarned = PointsTransaction::where('user_id', $user->id)
                 ->where('source_type', $rule->source_type)
                 ->where('transaction_type', 'earn')
-                ->where('created_at', '>=', $startOfDay)
+                ->whereBetween('created_at', [$at->startOfDay(), $at->endOfDay()])
                 ->sum('amount');
 
             if ($dailyEarned >= $rule->max_daily_earnings) {
@@ -465,11 +474,10 @@ class PointsService
 
         // Check monthly limits
         if ($rule->max_monthly_earnings) {
-            $thisMonth = now()->startOfMonth();
             $monthlyEarned = PointsTransaction::where('user_id', $user->id)
                 ->where('source_type', $rule->source_type)
                 ->where('transaction_type', 'earn')
-                ->where('created_at', '>=', $thisMonth)
+                ->whereBetween('created_at', [$at->startOfMonth(), $at->endOfMonth()])
                 ->sum('amount');
 
             if ($monthlyEarned >= $rule->max_monthly_earnings) {
@@ -482,11 +490,13 @@ class PointsService
             $lastTransaction = PointsTransaction::where('user_id', $user->id)
                 ->where('source_type', $rule->source_type)
                 ->where('transaction_type', 'earn')
-                ->latest()
+                ->where('created_at', '<=', $at)
+                ->latest('created_at')
                 ->first();
 
             if ($lastTransaction) {
-                $minutesSinceLast = now()->diffInMinutes($lastTransaction->created_at);
+                // Carbon 3 คืนค่ามีเครื่องหมาย ต้องนับจากรายการเก่า -> $at ให้ได้ค่าบวก
+                $minutesSinceLast = $lastTransaction->created_at->diffInMinutes($at);
                 if ($minutesSinceLast < $rule->cooldown_minutes) {
                     return false;
                 }

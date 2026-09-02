@@ -60,7 +60,7 @@ class GamificationRuleEngine
         $pointsService = app(PointsService::class);
 
         // Check eligibility (daily limits, cooldown, etc.)
-        if (! $pointsService->canEarnFromRule($user, $rule)) {
+        if (! $pointsService->canEarnFromRule($user, $rule, $event->occurred_at)) {
             $this->logResult($user, $event, $rule->rule_key, 'skipped', 0, 0, 'Eligibility check failed (limits or cooldown)');
 
             return;

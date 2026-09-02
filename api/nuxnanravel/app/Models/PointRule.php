@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -68,25 +69,30 @@ class PointRule extends Model
     }
 
     /**
-     * Check if rule is currently active
+     * กฎนี้ใช้ได้ ณ เวลาที่กำหนดหรือไม่ (ค่าเริ่มต้น = ตอนนี้)
      */
-    public function isActiveNow(): bool
+    public function isActiveAt(?CarbonInterface $at = null): bool
     {
         if (! $this->is_active) {
             return false;
         }
 
-        $now = now();
+        $at ??= now();
 
-        if ($this->effective_date && $this->effective_date > $now) {
+        if ($this->effective_date && $this->effective_date > $at) {
             return false;
         }
 
-        if ($this->expiry_date && $this->expiry_date <= $now) {
+        if ($this->expiry_date && $this->expiry_date <= $at) {
             return false;
         }
 
         return true;
+    }
+
+    public function isActiveNow(): bool
+    {
+        return $this->isActiveAt(now());
     }
 
     /**
