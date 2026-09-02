@@ -1,5 +1,58 @@
 # Work Log — nuxnan project
 
+## 2026-09-03 (ต่อ) — ตรวจ base_amount = 0 ของ point_rules: ไม่ใช่บั๊ก ปิดเคส
+
+### สถานะ: ✅ ตรวจแล้ว **ไม่แก้อะไร** (ไม่มีไฟล์โค้ดเปลี่ยน)
+
+### ที่มา
+
+รอบก่อนผมตั้งข้อสังเกตว่า point_rules ที่ active ทั้ง 5 ตัวมี `base_amount = 0.00`
+แล้วถามว่า "ตั้งใจหรือลืมตั้งค่า" — **ผมถามผิด หลักฐานอยู่ในเรพชัดเจนอยู่แล้วว่าตั้งใจ**
+
+### หลักฐาน 3 ชั้นว่าเป็นการตัดสินใจ ไม่ใช่ของหลุด
+
+1. **migration ที่ทำเรื่องนี้โดยเฉพาะ** — `2026_07_24_000001_make_gamification_rules_xp_only.php`
+   `up()` เซ็ต `base_amount = 0` + `xp_amount = login 10 / lesson_complete 100 / quiz_pass 500`
+   `down()` เผยค่าเดิม: `login 1 / lesson_complete 10 / quiz_pass 50` PP
+2. **เทสต์ล็อกไว้** — `test_gamification_quiz_pass_awards_xp_without_platform_pp`
+   assert `pp === 0.0` และ `xp === 500` ตรง ๆ (ชื่อเทสต์บอกเจตนาเอง)
+3. **ข้อมูลในฐานยืนยัน** — `points_transactions` จาก 3 source นี้มีรายการเดียว:
+   `login = 1.00 PP` เมื่อ 2026-05-22 (ตรงกับ base_amount เดิม = 1 เป๊ะ)
+   หลัง 2026-07-24 ไม่มีการจ่าย PP จาก gamification อีกเลย
+
+### การตัดสินใจของเจ้าของโปรเจค (เคาะ 2026-09-03)
+
+- **D30** คงไว้อย่างเดิม — **gamification เป็น XP-only** (10/100/500)
+  PP มาจากทางอื่น **ห้ามเสนอให้กลับไปตั้ง base_amount อีก**
+  ถ้าวันหน้าจะกลับจริง ค่าเดิมอยู่ใน `down()` ของ migration 2026_07_24_000001
+
+### อีก 2 rule (typing) — คนละกลไก base_amount ไม่มีผล
+
+`typing_daily_challenge` / `typing_tournament_prize` **ไม่เคยอ่าน `base_amount`**
+จำนวน PP ส่งเข้า `awardGoverned()` ตรง ๆ จาก config ของแต่ละรายการ:
+
+| ทาง | PP | XP | เพดาน/เดือน | idempotency key |
+|---|---|---|---|---|
+| daily challenge | `typing_daily_challenges.pp_reward` (default **10**) | `xp_reward` (default 50) | 200 | `daily_challenge:{id}:{user}` |
+| tournament ที่ 1 | `prize_1st_pp` (default **100**) | 500 | 500 | `tournament_prize:{id}:{user}` |
+| tournament ที่ 2 | `prize_2nd_pp` (default **50**) | 300 | 500 | เดียวกัน |
+| tournament ที่ 3 | `prize_3rd_pp` (default **25**) | 150 | 500 | เดียวกัน |
+| tournament ที่เหลือ | **0** | `prize_all_xp` (default 20) | — | เดียวกัน |
+
+⇒ แถว rule 2 ตัวนี้มีไว้ถือ `max_monthly_earnings` เป็นเพดานเท่านั้น
+
+### 🟡 ทาง PP ของ typing ยัง "หลับ" อยู่
+
+`typing_tournaments` = **0 แถว** · `typing_daily_challenges` = **0 แถว**
+ทั้งที่ `typing_sessions` มี **1,181 แถว** (คนเล่นจริง)
+⇒ ไม่เคยมีการจ่าย PP จาก typing เลยสักบาท (`points_transactions` จาก 2 source นี้ = 0 รายการ)
+
+**สรุปสถานะเศรษฐกิจแต้มตอนนี้: gamification แจก XP อย่างเดียวโดยตั้งใจ ·
+ทาง PP ที่เหลืออยู่ (typing) ยังไม่ถูกเปิดใช้เพราะไม่มีข้อมูล challenge/tournament**
+ถ้าอยากให้ typing จ่าย PP จริง ต้องสร้างแถว challenge/tournament ก่อน (คนละงาน)
+
+---
+
 ## 2026-09-03 — งาน C: ทิ้งคิว backlog แล้วเริ่มนับใหม่จากวันนี้
 
 ### สถานะ: ✅ migration ใหม่ 1 · **รันแล้ว + ทดสอบ rollback ไป-กลับแล้ว**
