@@ -2,78 +2,30 @@
 
 namespace App\Services;
 
-use App\Http\Resources\UserResource;
-use App\Mail\WelcomeEmail;
 use App\Models\Role;
 use App\Models\User;
-use App\Models\UserProfile;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
+/**
+ * สิ่งเดียวที่คลาสนี้ทำจริงคือ "แจก role เริ่มต้นให้บัญชีที่เพิ่งสร้าง"
+ * ซึ่งเป็นจุดร่วมของสองทางสมัคร: `AuthController::register()` และ `SocialAuthController`
+ *
+ * เดิมคลาสนี้มีอีก 4 เมธอดที่ **ไม่มีใครเรียกเลย** และลบทิ้งไปแล้ว (2026-09-02):
+ *
+ * - `register()` — ทางสมัครคู่ขนานที่ **ทำงานไม่ได้ตั้งแต่แรก** ยิงจริงบน MySQL แล้ว
+ *   ตายที่ INSERT แรกด้วย `Field 'name' doesn't have a default value` เพราะไม่เคยเซ็ต `name`
+ *   (และไม่เซ็ต `personal_code`/`reference_code` ซึ่งก็ NOT NULL เหมือนกัน)
+ *   ยังส่ง `referral_code`/`referrer_code`/`phone`/`avatar` ที่ไม่มีใน `$fillable`
+ *   ⇒ ถ้าซ่อมคอลัมน์ที่ขาดแล้วปล่อยผ่าน มันจะสร้างบัญชีที่หลุดระบบผู้แนะนำทั้งหมด
+ * - `createUserProfile()` — ใช้โดย `register()` เท่านั้น
+ * - `generateTokenResponse()` — ซ้ำกับ `AuthController::respondWithToken()` แต่คีย์ตอบกลับ
+ *   คนละแบบ (`accessToken`/`tokenType`/`expiresIn` แทน `access_token`/`token_type`/`expires_in`)
+ *   ⇒ ถ้ามีใครหยิบไปใช้ frontend จะพังเงียบ ๆ
+ * - `getAuthenticatedUser()` — ซ้ำกับ `AuthController::me()`
+ *
+ * ทางสมัครจริงอยู่ที่ `AuthController::register()` ที่เดียว — ห้ามสร้างทางคู่ขนานขึ้นมาอีก
+ */
 class AuthService
 {
-    /**
-     * Register a new user with profile and default role.
-     *
-     * @throws \Exception
-     */
-    public function register(array $data): User
-    {
-        try {
-            DB::beginTransaction();
-
-            // Create user
-            $user = User::create([
-                'email' => $data['email'],
-                'username' => User::generateUniqueUsername($data['name'] ?? $data['email']),
-                'referral_code' => User::generateReferralCode(),
-                'referrer_code' => $data['referral_code'] ?? null,
-                'password' => Hash::make($data['password']),
-                'phone' => $data['phone'] ?? null,
-                'avatar' => $data['profile_image_url'] ?? null,
-                'verified' => false,
-            ]);
-
-            // Create user profile
-            $this->createUserProfile($user, $data);
-
-            // Assign default role (STUDENT)
-            $this->assignDefaultRole($user);
-
-            DB::commit();
-
-            // Load relationships
-            $user->load(['profile', 'roles']);
-
-            // Send welcome email
-            try {
-                Mail::to($user->email)->send(new WelcomeEmail($user));
-            } catch (\Exception $e) {
-                // Log error but don't fail registration
-                Log::error('Failed to send welcome email: '.$e->getMessage());
-            }
-
-            return $user;
-        } catch (\Exception $e) {
-            DB::rollBack();
-            throw $e;
-        }
-    }
-
-    /**
-     * Create user profile.
-     */
-    protected function createUserProfile(User $user, array $data): UserProfile
-    {
-        return $user->profile()->create([
-            'first_name' => $data['first_name'] ?? null,
-            'last_name' => $data['last_name'] ?? null,
-            'bio' => $data['bio'] ?? null,
-        ]);
-    }
-
     /**
      * Assign default role to user.
      */
@@ -84,37 +36,5 @@ class AuthService
         if ($studentRole) {
             $user->roles()->attach($studentRole->id);
         }
-    }
-
-    /**
-     * Generate token response with user data.
-     */
-    public function generateTokenResponse(string $token, User $user): array
-    {
-        // Load relationships if not already loaded
-        if (! $user->relationLoaded('profile')) {
-            $user->load('profile');
-        }
-        if (! $user->relationLoaded('roles')) {
-            $user->load('roles');
-        }
-
-        return [
-            'user' => new UserResource($user),
-            'accessToken' => $token,
-            'tokenType' => 'bearer',
-            'expiresIn' => auth('api')->factory()->getTTL() * 60, // Convert to seconds
-        ];
-    }
-
-    /**
-     * Get authenticated user with relationships.
-     */
-    public function getAuthenticatedUser(): User
-    {
-        $user = auth('api')->user();
-        $user->load(['profile', 'roles']);
-
-        return $user;
     }
 }
