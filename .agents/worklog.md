@@ -1,5 +1,64 @@
 # Work Log — nuxnan project
 
+## 2026-09-02 (ต่อ) — ลบเมธอดตายใน AuthService
+
+### สถานะ: ✅ 1 ไฟล์ · **−99 / +19** · commit แล้ว `82cf5fd2` · **ยังไม่ push**
+
+คลาสนี้มี 5 เมธอด **มีคนเรียกจริงแค่ 1** คือ `assignDefaultRole`
+(จุดร่วมของสองทางสมัคร: `AuthController::register` + `SocialAuthController`)
+
+### 🔴 `register()` ไม่ใช่แค่โค้ดตาย — มันทำงานไม่ได้ตั้งแต่แรก
+
+รอบก่อนผมเขียนไว้ว่า "ถูกทิ้งเงียบ ๆ ไม่ใช่ 500" — **ยิงจริงบน MySQL แล้วผิด**:
+
+```
+SQLSTATE[HY000]: General error: 1364 Field 'name' doesn't have a default value
+```
+
+ตายที่ **INSERT แรก** เพราะไม่เคยเซ็ต `name` ซึ่งเป็น `NOT NULL` ไม่มี default
+(`personal_code` / `reference_code` ก็เหมือนกัน) ⇒ **เมธอดนี้ไม่เคยสำเร็จได้เลย**
+· ตรวจแล้วไม่มีแถวค้างในฐาน (3,313 → 3,313)
+
+ที่เขียนไว้เดิมว่าฟิลด์ถูกทิ้งเงียบ ๆ นั้นถูกครึ่งเดียว — `referral_code` /
+`referrer_code` / `phone` / `avatar` **ไม่มีใน `$fillable`** จริง แต่ INSERT ตายก่อน
+⇒ ถ้าใครไปเติมคอลัมน์ที่ขาดแล้วปล่อยผ่าน จะได้บัญชีที่**หลุดระบบผู้แนะนำทั้งหมด**
+(ไม่มี `personal_code`/`suggester_code` และไม่ `increment` ให้ผู้แนะนำ)
+
+### อีก 3 เมธอดที่ลบ
+
+| เมธอด | เหตุผล |
+|---|---|
+| `generateTokenResponse()` | ซ้ำกับ `AuthController::respondWithToken()` แต่**คีย์ตอบกลับคนละแบบ** (`accessToken`/`tokenType`/`expiresIn` แทน `access_token`/`token_type`/`expires_in`) ⇒ ถ้ามีใครหยิบไปใช้ frontend พังเงียบ |
+| `getAuthenticatedUser()` | ซ้ำกับ `AuthController::me()` |
+| `createUserProfile()` | `protected` ใช้โดย `register()` เท่านั้น |
+
+### หลักฐาน
+
+- `grep` ทั้ง `app/` `routes/` `tests/` `database/` — มีแค่ `assignDefaultRole` ที่ถูกเรียก 2 จุด
+- **ยิง `register()` จริงบน MySQL ใน transaction ที่ rollback** ⇒ throw ตามข้างบน ไม่มีแถวค้าง
+- **mutation check:** ถอดไส้ `assignDefaultRole` ⇒ `tests/Feature/Auth` ล้ม 1 เคส (มีเทสต์คุมจริง)
+- `php -l` · `pint` ผ่าน · `route:list` build ได้
+- `tests/Feature/Auth` **10 ผ่าน** · **ทั้งเรพ 1,661 เคส · 0 failed**
+
+### 🟡 ของกำพร้าที่เกิดจาก commit นี้ (ยังไม่ลบ รอเจ้าของตัดสิน)
+
+`App\Mail\WelcomeEmail` + `resources/views/emails/welcome.blade.php` —
+`register()` เป็นผู้ใช้รายเดียว ตอนนี้ไม่มีใครส่งอีเมลต้อนรับเลย
+**สองทางเลือก:** ต่อเข้ากับ `AuthController::register()` (น่าจะเป็นเจตนาเดิม) หรือลบทิ้ง
+
+### งานที่ค้างหลังรอบนี้
+
+- [x] `avatar` ✅ · [x] **G18** ✅ · [x] **pint** ✅ · [x] **FIELD()** ✅ · [x] **AuthService** ✅
+- [ ] **SET-S12** deferred (ดู `.agents/photo-path-migration-plan.md`)
+- [ ] ตัดสินใจเรื่อง `WelcomeEmail` ที่กลายเป็นของกำพร้า
+- [ ] สาเหตุที่ `pint --test` จาก root รายงานไม่ครบในรอบแรก (ยกมา)
+
+### Branch / Git State
+
+- Branch: `main` · Uncommitted: ไม่มี · **ยังไม่ push** (`82cf5fd2`)
+
+---
+
 ## 2026-09-02 (ต่อ) — เลิกใช้ FIELD() ใน CourseController
 
 ### สถานะ: ✅ 1 ไฟล์แก้ + เทสต์ใหม่ 1 (3 เคส) · commit แล้ว `8189ec82` · **ยังไม่ push**
