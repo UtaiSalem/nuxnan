@@ -1,5 +1,98 @@
 # Work Log — nuxnan project
 
+## 2026-09-03 (ต่อ) — ปิด 500 ของ answers endpoint + getLesson + แยกสิทธิ์ points/account
+
+### สถานะ: ✅ 3 commits (`74663f4f`, `839c9c85`, `37ddf11f`) · 🔴 **deploy prod ยังค้าง** · 🟡 บั๊กอัปโหลดไฟล์ยังไม่ปิด
+
+จุดตั้งต้น: เจ้าของโปรเจคแปะ console error จากหน้าจริงมาชุดใหญ่ แล้วให้ไล่หาสาเหตุ
+งาน implement ทั้งหมดส่งให้ **agy** (3 shard ขนาน) · Claude เขียนสเปค + ตรวจ diff + รันเกณฑ์เอง
+
+### สิ่งที่ปิดไปแล้ว
+
+**1. `GET /api/assignments/{id}/answers` ตอบ 500** — `AssignmentAnswerResource::toArray()` deref null 2 ทาง
+- `$this->user->id` — `App\Models\User` ใช้ `SoftDeletes` ⇒ relation `user()` คืน null
+  **นักเรียนที่ถูกลบไปแค่ 1 คน ทำให้ list คำตอบของทั้งห้องพัง 500**
+- `$this->assignment->assignmentable->course_id` — morphTo ที่ปลายทางถูกลบ
+- ลบโค้ดตายทิ้ง: fallback `$this->user->firstname.' '.$this->user->lastname`
+  **ตาราง `users` ไม่มีคอลัมน์ `firstname`/`lastname` เลย** (ตรวจ migration ทั้งโฟลเดอร์) ได้ `" "` เสมอ
+- เพิ่ม eager load `assignment.assignmentable` ตัด N+1 ใน `index()` + `store()`
+
+**2. `Assignment::getLesson()` ระเบิดเมื่อ Topic ถูกลบ** — `$this->assignmentable->lesson` ไม่ null-safe
+ถูกเรียกจาก **9 จุด** และหลายจุดอยู่ต้นทาง request (`resolveCourse()`,
+`ContentVisibilityService::canStudentViewAssignment()`) ⇒ พังตั้งแต่ด่านตรวจสิทธิ์
+ตรวจผู้เรียกครบทั้ง 9 จุดแล้ว รับ null ได้อยู่แล้วทุกจุด
+
+**3. `GET /courses/{course}/points/account` ตอบ 403 ให้นักเรียนทุกคน**
+endpoint เป็น admin-only แต่ frontend เรียกโดยไม่เช็คสิทธิ์ และเอา `balance` ไปแสดง
+ให้ทุกคนเห็นอยู่แล้ว 3 จุด (CourseHero:300, CourseSupportWidget:41, CourseSupportPanel:15)
+
+> 🔒 **การตัดสินใจของเจ้าของโปรเจค (เคาะแล้ว อย่ารื้อ):** แยก field สาธารณะ/แอดมิน
+> ผู้ใช้ทั่วไปได้ `balance` + `total_distributed` เท่านั้น · แอดมินได้ response เหมือนเดิมทุกประการ
+> ตัวเลขคลังเงินไม่หลุด: `available_balance`, `reserved_balance`, `total_withdrawn`,
+> `total_earned`, `minimum_withdrawal`, `commission_rate`, `platform_earned`
+> ทางเลือกที่**ไม่**เอาคือ gate ฝั่ง frontend (ยอดกองทุนจะหายไปจากสายตานักเรียน)
+
+### หลักฐานที่ Claude รันเอง (ไม่ได้เอาตัวเลขจากรายงาน agy มาใช้เลย)
+
+**mutation check 4 ครั้ง — ทุกครั้งพิสูจน์ว่าเทสต์จับของจริง:**
+
+| ถอดอะไรออก | ผล |
+|---|---|
+| `?->` ที่ `$answerUser->id` | **500 จริง** `Attempt to read property "id" on null` |
+| `?->` ที่ `assignmentable->course_id` | **500 จริง** `Attempt to read property "course_id" on null` |
+| `?->lesson` → `->lesson` | ล้ม 2/3 เคส `Attempt to read property "lesson" on null` |
+| บังคับให้ทุกคนได้ points ก้อนเต็ม | เคส `non_admin_sees_only_public_fund_fields` ล้ม |
+
+- `pint --test` ผ่านทั้ง 7 ไฟล์
+- `php artisan test` 4 ชุดรวมกัน ⇒ **23 passed / 71 assertions** ไม่มี skipped ไม่มี incomplete
+  (3 shard ใหม่ + `AssignmentAnswerAttachmentTest` ของเดิมเป็น regression guard)
+- md5 checksum ของ 6 ไฟล์ที่ยังไม่ commit ก่อน/หลังรัน shard C ⇒ ตรงทุกตัว
+  (agy รันขนานกันในเรพเดียว ต้องกันมัน revert งานกันเอง — สเปคเตือนเรื่องนี้เป็นหัวข้อแรก)
+
+### ⚠️ สิ่งที่ผมเคยพูดผิดแล้วแก้แล้ว
+
+เคยสรุปว่า `new UserResource($this->user)` จะ fatal เมื่อ user เป็น null — **ผิด**
+mutate บรรทัดนั้นทิ้งแล้วเทสต์ยังเขียว Laravel serialize resource ที่ resource เป็น null ได้เอง
+ตัวที่ทำให้ 500 จริงคือ `'user' => $this->user->id` บรรทัดเดียว
+(การ์ดที่ใส่ให้ `student` ยังถูกต้อง แต่ไม่ใช่ต้นเหตุ)
+
+### งานที่ค้างอยู่ (TODO ต่อ)
+
+- [ ] 🔴 **deploy `api.nuxnan.com`** — prod ยังตอบ 500 ที่ `/api/notifications/recent`
+      ทั้งที่แก้ไปตั้งแต่ `dd4bce18` (2026-09-02) แล้ว พร้อมกับ `f18a8a72` ที่กวาด
+      select คอลัมน์ accessor อีก 49 จุด · **นี่คือของฟรี แค่ deploy ก็หายไปครึ่งหนึ่งของ error ที่แปะมา**
+- [ ] 🟡 **`POST /api/assignments/{id}/answers` ตอบ 422 ที่ `attachments.0`**
+      เทียบกฎสองฝั่งแล้ว**ตรงกันเป๊ะ**: `AnswerAttachmentPicker.vue:111` (5 ไฟล์ / 20MB / นามสกุลชุดเดียวกัน)
+      กับ `mimes:` ใน `AssignmentAnswerController.php:131` ⇒ ไฟล์ผ่าน client แล้วมาตกที่ server
+      **ผู้ต้องสงสัยอันดับ 1: `upload_max_filesize` / `post_max_size` ของ PHP บน prod ต่ำกว่า 20MB**
+      ทำให้ `UploadedFile::isValid()` เป็น false แล้ว rule `file` ตก
+      ต้องขอ **ข้อความ error เต็ม ๆ ใน `errors["attachments.0"][0]`** จาก prod ถึงจะฟันธงได้
+- [ ] 🟡 **`POST /api/courses/{id}/assignments/{id}` ได้ `status: undefined`** — ไม่ได้รับ HTTP response เลย
+      (`classifyError` ได้ networkError) เป็น multipart เหมือนข้อบน น่าจะสาเหตุเดียวกัน (body limit ของ Apache/proxy)
+- [ ] 🟢 **N+1 ของ `CourseMember` ใน `AssignmentAnswerResource`** ยังอยู่ — ยิง query ทีละแถว
+      (15 ครั้งต่อหน้า) eager load ที่เพิ่มไปแก้แค่ `assignment` + `assignmentable`
+- [ ] 🟢 **สาขา `'ผู้ใช้ที่ถูกลบ'` ยังไม่มีเทสต์คลุม** — กรณี user เป็น null **และ** ไม่มีแถว `course_members`
+      (ความเสี่ยงต่ำ เป็น string literal เฉย ๆ)
+
+### Context สำคัญ
+
+- error ที่แปะมาบางส่วน**ไม่ใช่บั๊ก**: `A listener indicated an asynchronous response...`
+  เป็น Chrome extension ไม่เกี่ยวกับแอป · `404 "No query results for model [Assignment] 31"`
+  คือ assignment 31 ไม่มีบน prod จริง ๆ
+- `Failed to fetch recent/favorite/my courses` + `Error fetching lessons in store` ล้มพร้อมกันตอนโหลดหน้า
+  แต่ `console.error` ของ widget ทั้ง 3 ตัว**ไม่ได้ log status** เลยฟันธงไม่ได้ น่าจะ token หมดอายุ
+  ถ้าเจอซ้ำ ให้เติม status ลง console.error ก่อน (`RecentlyViewedCoursesWidget.vue:18`,
+  `FavoriteCoursesWidget.vue:18`, `MyCoursesWidget.vue:90`)
+- `/api/me/recent-courses` ตรวจแล้วมี guard `isEmpty()` อยู่ก่อน `whereIn` ไม่ได้ 500 จาก `FIELD()` บน MySQL
+
+### Branch / Git State
+
+- Branch: `main`
+- Uncommitted: no (working tree สะอาด)
+- Push status: pushed
+
+---
+
 ## 2026-09-03 (ต่อ) — สคริปต์ติดตั้ง queue worker เป็น Windows service (NSSM)
 
 ### สถานะ: ✅ 3 ไฟล์ใหม่ใน `api/nuxnanravel/scripts/queue-worker/` · 🔴 แก้บั๊ก `--timeout` ที่ผมเขียนผิดเองในงาน A
