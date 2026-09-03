@@ -15,17 +15,26 @@ interface TopicSummary {
   progress_percentage: number
 }
 
+interface ReadTime {
+  required_seconds: number
+  spent_seconds: number
+  remaining_seconds: number
+  satisfied: boolean
+}
+
 interface Props {
   lesson: any
   isAdmin?: boolean
   canMarkComplete?: boolean
   topicSummary?: TopicSummary
+  readTime?: ReadTime
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isAdmin: false,
   canMarkComplete: true,
-  topicSummary: () => ({ total_topics: 0, completed_topics: 0, progress_percentage: 0 })
+  topicSummary: () => ({ total_topics: 0, completed_topics: 0, progress_percentage: 0 }),
+  readTime: () => ({ required_seconds: 0, spent_seconds: 0, remaining_seconds: 0, satisfied: true })
 })
 
 const emit = defineEmits<{
@@ -95,6 +104,34 @@ const remainingTopics = computed(() =>
 
 const topicProgressLabel = computed(() =>
   `${props.topicSummary?.completed_topics || 0}/${props.topicSummary?.total_topics || 0} หัวข้อ`
+)
+
+// ยังอ่านหัวข้อย่อยไม่ครบหรือเปล่า (เฟส 1)
+const topicsUnmet = computed(() =>
+  (props.topicSummary?.total_topics || 0) > 0 &&
+  (props.topicSummary?.completed_topics || 0) < (props.topicSummary?.total_topics || 0)
+)
+
+// นาที:วินาที ที่ยังต้องอ่านเนื้อหาบทเรียนอีก (เฟส 2)
+const readTimeRemainingLabel = computed(() => {
+  const total = Math.max(0, props.readTime?.remaining_seconds || 0)
+  const m = Math.floor(total / 60)
+  const s = total % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+})
+
+// ข้อความสั้นบนปุ่มเมื่อถูกล็อก — หัวข้อย่อยมาก่อน แล้วค่อยเวลาอ่าน
+const markCompleteLockLabel = computed(() =>
+  topicsUnmet.value
+    ? `อ่านหัวข้อย่อยให้ครบก่อน (${topicProgressLabel.value})`
+    : `อ่านเนื้อหาอีก ${readTimeRemainingLabel.value} นาที`
+)
+
+// ข้อความอธิบายใต้ปุ่ม
+const markCompleteLockHint = computed(() =>
+  topicsUnmet.value
+    ? `เหลืออีก ${remainingTopics.value} หัวข้อย่อยที่ต้องอ่านให้จบ ระบบจะทำเครื่องหมาย "อ่านแล้ว" ให้อัตโนมัติเมื่ออ่านครบ`
+    : `บทเรียนนี้กำหนดเวลาอ่านขั้นต่ำไว้ ระบบจะนับเวลาเฉพาะตอนที่บทเรียนนี้อยู่บนจอ เมื่อครบแล้วปุ่มจะกดได้`
 )
 
 const openAddAssignment = () => {
@@ -426,9 +463,13 @@ const handleShare = () => {
 const toggleProgress = async () => {
   if (isTogglingProgress.value) return
 
-  // ยังอ่านหัวข้อย่อยไม่ครบ -> ห้ามมาร์ค (ยกเลิกอ่านแล้วยังทำได้)
+  // ยังไม่ผ่านเงื่อนไขการอ่าน -> ห้ามมาร์ค (ยกเลิกอ่านแล้วยังทำได้)
   if (markCompleteLocked.value) {
-    swal.error(`กรุณาอ่านหัวข้อย่อยให้ครบก่อน (อ่านแล้ว ${topicProgressLabel.value})`)
+    swal.error(
+      topicsUnmet.value
+        ? `กรุณาอ่านหัวข้อย่อยให้ครบก่อน (อ่านแล้ว ${topicProgressLabel.value})`
+        : `กรุณาอ่านเนื้อหาบทเรียนอีก ${readTimeRemainingLabel.value} นาที`
+    )
     return
   }
 
@@ -447,8 +488,8 @@ const toggleProgress = async () => {
     }
   } catch (error: any) {
     console.error('Failed to toggle progress:', error)
-    if (error?.data?.code === 'topics_incomplete') {
-      swal.error(error.data.message || 'กรุณาอ่านหัวข้อย่อยให้ครบทุกหัวข้อก่อน')
+    if (error?.data?.code === 'topics_incomplete' || error?.data?.code === 'lesson_read_too_short') {
+      swal.error(error.data.message || 'ยังอ่านไม่ครบเงื่อนไขของบทเรียนนี้')
     } else {
       swal.error(error?.data?.message || 'ไม่สามารถอัพเดทสถานะได้')
     }
@@ -758,7 +799,7 @@ const submitReply = async (parentComment: any) => {
         />
         <template v-else-if="markCompleteLocked">
           <Icon icon="fluent:lock-closed-24-filled" class="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />
-          <span class="min-w-0 flex-1 text-center break-words">อ่านหัวข้อย่อยให้ครบก่อน ({{ topicProgressLabel }})</span>
+          <span class="min-w-0 flex-1 text-center break-words">{{ markCompleteLockLabel }}</span>
         </template>
         <template v-else>
           <Icon
@@ -769,7 +810,7 @@ const submitReply = async (parentComment: any) => {
         </template>
       </button>
       <p v-if="markCompleteLocked" class="mt-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400 text-center break-words">
-        เหลืออีก {{ remainingTopics }} หัวข้อย่อยที่ต้องอ่านให้จบ ระบบจะทำเครื่องหมาย "อ่านแล้ว" ให้อัตโนมัติเมื่ออ่านครบ
+        {{ markCompleteLockHint }}
       </p>
     </div>
 
@@ -1196,8 +1237,8 @@ const submitReply = async (parentComment: any) => {
           <h4 class="text-lg font-bold text-amber-800 dark:text-amber-400 mb-1">ส่วนนี้ถูกล็อกอยู่</h4>
           <p class="text-amber-700 dark:text-amber-500 text-sm mb-4">คุณต้องทำเครื่องหมายว่า "อ่านแล้ว" ในหน้าบทเรียนก่อน จึงจะสามารถทำแบบฝึกหัดได้</p>
           <div v-if="markCompleteLocked" class="text-amber-700 dark:text-amber-500 text-sm break-words">
-            <p class="font-semibold">เหลืออีก {{ remainingTopics }} หัวข้อย่อย (อ่านแล้ว {{ topicProgressLabel }})</p>
-            <p class="mt-1">กรุณาเลื่อนขึ้นไปอ่านหัวข้อย่อยให้ครบ ระบบจะทำเครื่องหมาย "อ่านแล้ว" ให้อัตโนมัติ</p>
+            <p class="font-semibold">{{ markCompleteLockLabel }}</p>
+            <p class="mt-1">{{ markCompleteLockHint }}</p>
           </div>
           <button
             v-else
@@ -1250,8 +1291,8 @@ const submitReply = async (parentComment: any) => {
           <h4 class="text-lg font-bold text-amber-800 dark:text-amber-400 mb-1">แบบทดสอบถูกล็อกอยู่</h4>
           <p class="text-amber-700 dark:text-amber-500 text-sm mb-4">คุณต้องทำเครื่องหมายว่า "อ่านแล้ว" ในหน้าบทเรียนก่อน จึงจะสามารถทำแบบทดสอบได้</p>
           <div v-if="markCompleteLocked" class="text-amber-700 dark:text-amber-500 text-sm break-words">
-            <p class="font-semibold">เหลืออีก {{ remainingTopics }} หัวข้อย่อย (อ่านแล้ว {{ topicProgressLabel }})</p>
-            <p class="mt-1">กรุณาเลื่อนขึ้นไปอ่านหัวข้อย่อยให้ครบ ระบบจะทำเครื่องหมาย "อ่านแล้ว" ให้อัตโนมัติ</p>
+            <p class="font-semibold">{{ markCompleteLockLabel }}</p>
+            <p class="mt-1">{{ markCompleteLockHint }}</p>
           </div>
           <button
             v-else

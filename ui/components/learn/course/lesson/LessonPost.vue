@@ -140,13 +140,23 @@ onMounted(async () => {
 // ref ไปยัง LessonInteractionTabs เพื่อ sync สถานะหลัง auto-complete
 const interactionTabsRef = ref<any>(null)
 
-// มาร์ค "อ่านแล้ว" ได้ไหม: admin ได้เสมอ · บทเรียนไม่มีหัวข้อย่อย = ได้ · มีหัวข้อย่อย = ต้องอ่านครบ
-// total_topics === 0 = ยังโหลด progress ไม่เสร็จ หรือหัวข้อย่อยยังไม่ published — ต้องไม่ล็อก
-// (ให้ตรงกับ backend Lesson::canBeMarkedCompletedBy ที่นับเฉพาะหัวข้อ status=published)
+// เฟส 2: จับเวลาอ่านเนื้อหาบทเรียน — มีผลเฉพาะบทเรียนที่ไม่มีหัวข้อย่อย
+// (บทเรียนที่มีหัวข้อย่อย: อ่านหัวข้อครบ = ผ่านเลย ตามที่เจ้าของโปรเจคเคาะ)
+const readTimerEnabled = computed(() => !props.isAdmin && !hasTopics.value)
+const {
+  targetEl: readTimerTarget,
+  readTime,
+  satisfied: readTimeSatisfied,
+} = useLessonReadTimer(lessonIdRef, readTimerEnabled)
+
+// มาร์ค "อ่านแล้ว" ได้ไหม: admin ได้เสมอ
+// มีหัวข้อย่อย = ต้องอ่านครบ (total_topics === 0 = ยังโหลดไม่เสร็จ/ยังไม่ published จึงไม่ล็อก)
+// ไม่มีหัวข้อย่อย = ต้องอ่านเนื้อหาครบเวลาที่กำหนด
+// ตรงกับ backend Lesson::canBeMarkedCompletedBy ทุกกิ่ง
 const canMarkComplete = computed(() => {
   if (props.isAdmin) return true
-  if (!hasTopics.value) return true
-  return summary.value.total_topics === 0 || allTopicsCompleted.value
+  if (hasTopics.value) return summary.value.total_topics === 0 || allTopicsCompleted.value
+  return readTimeSatisfied.value
 })
 
 // Topic Management
@@ -510,6 +520,7 @@ const publicationStatusColor = computed(() => {
 <template>
   <article
     :id="`lesson-${lesson.id}`"
+    ref="readTimerTarget"
     class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden mb-6 border border-gray-200 dark:border-gray-700"
   >
     <!-- Header Section -->
@@ -951,6 +962,7 @@ const publicationStatusColor = computed(() => {
           :isAdmin="isAdmin"
           :can-mark-complete="canMarkComplete"
           :topic-summary="summary"
+          :read-time="readTime"
           @like="$emit('like', lesson.id)"
           @dislike="$emit('dislike', lesson.id)"
           @bookmark="$emit('bookmark', lesson.id)"
