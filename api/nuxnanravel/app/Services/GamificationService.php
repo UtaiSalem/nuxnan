@@ -279,8 +279,9 @@ class GamificationService
                         ->orderByDesc('monthly_points');
                     break;
                 case 'streak':
-                    $query->with('pointStreak')
-                        ->orderByDesc('point_streaks.current_streak');
+                    $query->selectRaw('users.*, COALESCE(point_streaks.current_streak, 0) as streak_days')
+                        ->leftJoin('point_streaks', 'users.id', '=', 'point_streaks.user_id')
+                        ->orderByDesc('streak_days');
                     break;
                 case 'achievements':
                     $query->withCount(['userAchievements' => function ($query) {
@@ -308,7 +309,7 @@ class GamificationService
                         'points' => (float) $userItem->pp,
                         'weekly' => (float) ($userItem->weekly_points ?? 0),
                         'monthly' => (float) ($userItem->monthly_points ?? 0),
-                        'streak' => (int) ($userItem->pointStreak->current_streak ?? 0),
+                        'streak' => (int) ($userItem->streak_days ?? 0),
                         'achievements' => (int) ($userItem->user_achievements_count ?? 0),
                         default => (float) $userItem->pp,
                     },

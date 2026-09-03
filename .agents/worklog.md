@@ -1,5 +1,72 @@
 # Work Log — nuxnan project
 
+## 2026-09-03 (ต่อ) — แก้บั๊ก leaderboard streak (order ด้วยคอลัมน์ที่ไม่ได้ join)
+
+### สถานะ: ✅ 1 ไฟล์แก้ (**+4 / −3**) + เทสต์ใหม่ 1 ไฟล์ (5 เคส)
+
+### 🔴 แก้คำอ้างที่ผมเขียนผิดไว้เองในรอบก่อน
+
+รอบก่อนผมเขียนไว้ในบันทึกและ commit `a42f03c7` ว่า
+*"`GET /api/gamification/leaderboard/streak` 500 อยู่ตอนนี้"* — **ผิด**
+ยิงจริงแล้วได้ **HTTP 200**
+
+`GET /api/gamification/leaderboard/streak` → `Api\GamificationController@getStreakLeaderboard`
+ซึ่ง **query `PointStreak` ตรง ๆ ไม่ได้เรียก `getLeaderboard()` เลย** จึงไม่เคยมีบั๊กนี้
+
+### ผู้เรียก `GamificationService::getLeaderboard()` มีแค่ 2 จุด (grep ทั้ง app/ routes/ tests/)
+
+| ผู้เรียก | สถานะจริง |
+|---|---|
+| `Api\GamificationController@leaderboard` (บรรทัด 82) | **ไม่มี route ชี้มา = โค้ดตาย** — route `academies/{academy}/gamification/leaderboard` ใช้ `Api\Learn\Academy\GamificationController` ซึ่งเป็นคนละคลาส |
+| `App\Jobs\RefreshLeaderboardCache` (บรรทัด 38) | **ของจริง** — `Schedule::job(...)->dailyAt('03:00')` และล้มจริง (เคยรัน worker แล้วเห็น FAIL 3 ครั้ง + SQL 1054) |
+
+⇒ **ผลกระทบจริงคือ job รายคืนล้ม ไม่ใช่ 500 ที่คนนอกยิงได้** ระดับความรุนแรงต่ำกว่าที่เคยบันทึกไว้มาก
+แต่ยังต้องแก้ เพราะพอเปิด worker ถาวรแล้วมันจะล้มทุกคืน
+
+### บั๊กและการแก้
+
+    // เดิม — with() เป็น eager load คนละ query ตัว query หลักไม่เคย join point_streaks
+    $query->with('pointStreak')->orderByDesc('point_streaks.current_streak');
+
+    // ใหม่ — เลียนแบบเคส weekly/monthly ในเมธอดเดียวกัน
+    $query->selectRaw('users.*, COALESCE(point_streaks.current_streak, 0) as streak_days')
+        ->leftJoin('point_streaks', 'users.id', '=', 'point_streaks.user_id')
+        ->orderByDesc('streak_days');
+
+และเปลี่ยน mapping `'streak' => (int) ($userItem->streak_days ?? 0)`
+
+ใช้ `leftJoin` ไม่ใช่ `join` เพื่อให้ user ที่ยังไม่มีแถวใน `point_streaks` ติดมาด้วยโดยได้ 0
+(`point_streaks.user_id` เป็น **UNIQUE** · 1,035 แถว / 1,035 user ⇒ join ไม่ทำให้แถวงอก)
+
+### หลักฐานที่ Claude รันเอง
+
+**mutation check 2 แบบ:**
+
+1. เอา query เดิม (ไม่มี join) กลับมา ⇒ **ล้มทั้ง 5 เคส** ด้วย
+   `no such column: point_streaks.current_streak` และ SQL ที่พิมพ์ออกมายืนยันว่า
+   `from "users" ... order by "point_streaks"."current_streak"` **ไม่มี join จริง**
+2. เอา mapping เดิม (`$userItem->pointStreak->current_streak`) กลับมา
+   ⇒ **รอบแรกไม่ล้ม** เพราะ Eloquent lazy-load ให้เอง ค่ายังถูก
+   ⇒ **จึงเขียนเคสใหม่ที่วัดจำนวน query แทนค่าที่ได้** แล้ว mutation นี้ล้มถูกจุด:
+   **7 → 12 query เมื่อผู้ใช้ 5 → 10 คน** (เพิ่มพอดี 1 ต่อคน = N+1)
+   ⇒ การเปลี่ยน mapping เป็นเรื่อง **N+1 ไม่ใช่ความถูกต้อง** — บันทึกไว้ให้ชัด
+
+**เทสต์ใหม่ 5 เคส** `tests/Feature/Gamification/StreakLeaderboardTest.php`
+- pagination total ไม่เพี้ยนจาก join (คุมความเสี่ยงของ join โดยตรง)
+- เรียงจากมากไปน้อยถูกต้อง + rank ไล่ถูก
+- user ที่ไม่มีแถว streak ต้องติดมาด้วยและได้ 0 (พิสูจน์ว่าใช้ `leftJoin` ไม่ใช่ `join`)
+- จำนวน query ไม่โตตามจำนวนผู้ใช้
+- `RefreshLeaderboardCache::handle()` รันจบโดยไม่ throw
+
+**เคสที่ agy เขียนมาแล้วผมทิ้ง:** "endpoint ตอบ 200" — ผ่านทั้งก่อนและหลังแก้ จับบั๊กไม่ได้เลย
+(เป็นผลจากที่ผมเขียนสเปคด้วยข้อมูลผิด)
+
+`php -l` ✅ · `pint --test` ✅ ·
+**Gamification/ + GamificationTest + SchoolGamificationTest = 24 ผ่าน · 81 assertions**
+· ยิง endpoint สาธารณะซ้ำหลังแก้ ยังได้ 200 (ไม่ได้แตะเส้นทางนั้น)
+
+---
+
 ## 2026-09-03 — 🅿️ พักงาน (สรุปส่งต่อ)
 
 ### รอบนี้ทำอะไรไป — 8 commit เรื่องคิวและ auth
