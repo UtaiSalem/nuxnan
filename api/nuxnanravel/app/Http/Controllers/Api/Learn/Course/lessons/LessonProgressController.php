@@ -10,6 +10,7 @@ use App\Services\ContentVisibilityService;
 use App\Services\CoursePointAccountService;
 use App\Services\LessonCompletionService;
 use App\Services\UsageEventService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class LessonProgressController extends Controller
@@ -44,6 +45,8 @@ class LessonProgressController extends Controller
                 'is_completed' => $progress->isCompleted(),
                 'is_in_progress' => $progress->isInProgress(),
             ] : null,
+            'topic_summary' => $lesson->topicReadSummaryFor($user),
+            'can_complete' => $lesson->course->isAdmin($user) || $lesson->canBeMarkedCompletedBy($user),
         ]);
     }
 
@@ -90,6 +93,10 @@ class LessonProgressController extends Controller
             $this->visibility->assertVisibleOrFail($lesson, $user, 403);
         }
 
+        if ($gate = $this->topicGateResponse($lesson, $user)) {
+            return $gate;
+        }
+
         $result = $this->lessonCompletionService->completeLessonForUser($lesson, $user);
 
         return response()->json($result);
@@ -125,6 +132,10 @@ class LessonProgressController extends Controller
                 ],
             ]);
         } else {
+            if ($gate = $this->topicGateResponse($lesson, $user)) {
+                return $gate;
+            }
+
             // Complete using service
             $result = $this->lessonCompletionService->completeLessonForUser($lesson, $user);
 
@@ -204,5 +215,29 @@ class LessonProgressController extends Controller
                 ];
             }),
         ]);
+    }
+
+    /**
+     * สร้าง response 422 เมื่อยังอ่านหัวข้อย่อยไม่ครบ — คืน null ถ้าผ่านด่าน
+     */
+    private function topicGateResponse(Lesson $lesson, $user): ?JsonResponse
+    {
+        if ($lesson->course->isAdmin($user)) {
+            return null;
+        }
+
+        if ($lesson->canBeMarkedCompletedBy($user)) {
+            return null;
+        }
+
+        $summary = $lesson->topicReadSummaryFor($user);
+
+        return response()->json([
+            'success' => false,
+            'completed' => false,
+            'code' => 'topics_incomplete',
+            'message' => "กรุณาอ่านหัวข้อย่อยให้ครบทุกหัวข้อก่อน (อ่านแล้ว {$summary['completed_topics']}/{$summary['total_topics']} หัวข้อ)",
+            'topic_summary' => $summary,
+        ], 422);
     }
 }

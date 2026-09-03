@@ -243,4 +243,43 @@ class Lesson extends Model
 
         return $completedCount >= $publishedTopicIds->count();
     }
+
+    /**
+     * สรุปความคืบหน้าการอ่านหัวข้อย่อยของ user คนนี้ในบทเรียนนี้
+     *
+     * @return array{total_topics:int,completed_topics:int,remaining_topics:int,progress_percentage:int}
+     */
+    public function topicReadSummaryFor(User $user): array
+    {
+        $publishedTopicIds = $this->topics()
+            ->where('status', 'published')
+            ->pluck('id');
+
+        $total = $publishedTopicIds->count();
+
+        $completed = $total === 0 ? 0 : TopicReadProgress::where('user_id', $user->id)
+            ->where('lesson_id', $this->id)
+            ->where('status', TopicReadProgress::STATUS_COMPLETED)
+            ->whereIn('topic_id', $publishedTopicIds)
+            ->count();
+
+        return [
+            'total_topics' => $total,
+            'completed_topics' => $completed,
+            'remaining_topics' => max(0, $total - $completed),
+            'progress_percentage' => $total > 0 ? (int) round($completed / $total * 100) : 100,
+        ];
+    }
+
+    /**
+     * มาร์คบทเรียนนี้ว่า "อ่านแล้ว" ได้หรือยัง
+     * ไม่มีหัวข้อย่อย = มาร์คได้เลย · มีหัวข้อย่อย = ต้องอ่านครบทุกหัวข้อ
+     */
+    public function canBeMarkedCompletedBy(User $user): bool
+    {
+        $summary = $this->topicReadSummaryFor($user);
+
+        return $summary['total_topics'] === 0
+            || $summary['completed_topics'] >= $summary['total_topics'];
+    }
 }
