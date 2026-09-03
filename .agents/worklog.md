@@ -1,5 +1,98 @@
 # Work Log — nuxnan project
 
+## 2026-09-04 (ต่อ) — เฟส 2: บังคับเวลาอ่านเนื้อหาบทเรียน
+
+### สถานะ: ✅ 2 commit — backend `983b86e5` (+268/−9) · frontend `b13f1372` (+167/−16)
+
+ต่อจากเฟส 1 (`c301854b` / `f7d5d6b7`) ที่ทำด่าน "ต้องอ่านหัวข้อย่อยครบ"
+รอบนี้เอาคอลัมน์ `lessons.min_read` ที่มีอยู่แล้วมาใช้เป็นด่านจริง
+และปลุก endpoint `POST /progress/time-spent` ที่มีมานานแต่ **ไม่เคยถูกเรียกจาก UI เลย**
+
+### 🔴 3 กติกาที่เจ้าของโปรเจคเคาะ — อย่าเปลี่ยนเองในรอบหน้า
+
+1. **`min_read = 0` = ปิดด่าน ไม่บังคับเวลา**
+   **ตั้งใจไม่ลอกสูตรของ Topic** (`Topic::getRequiredReadSeconds()` คือ `min_read>0 ? min_read*60 : 30`)
+   เพราะ DB dev มีบทเรียน **22 บทที่ตั้ง 0 ไว้** ถ้าใช้สูตร 30 วินาทีจะโดนล็อกย้อนหลังทั้งหมด
+2. **อ่านหัวข้อย่อยครบ = ผ่านเลย ไม่ต้องดูเวลาอ่านเนื้อหา**
+   ⇒ **ด่านเวลามีผลจริงเฉพาะบทเรียนที่ไม่มีหัวข้อย่อย published**
+   ⇒ `TopicReadProgressController` **ไม่ถูกแตะแม้แต่บรรทัดเดียว** auto-complete เดิมยังเหมือนเดิม
+3. **ไม่ auto-มาร์ค "อ่านแล้ว" เมื่อเวลาครบ** — แค่ปลดล็อกปุ่มให้กดเอง
+   (มาร์คให้เพราะการ์ดค้างบนจอครบนาทีแล้วแจกแต้มด้วย = แรงเกินไป)
+
+### ข้อมูลจริงที่ควรรู้ก่อนแตะเรื่องนี้
+
+`lessons.min_read` **แก้ได้จากฟอร์มบทเรียน** (ช่อง "เวลาอ่าน (นาที)" ใน `LessonForm.vue`)
+ค่าใน DB dev กระจายตั้งแต่ 0 ถึง **31 นาที** — เปลี่ยนความหมายของคอลัมน์นี้เมื่อไหร่
+กระทบข้อมูลจริงทันที (`Topic.min_read` ก็ใช้เป็นด่านอยู่แล้วเช่นกัน จึงถือว่ามี precedent)
+
+### สิ่งที่แก้ — Backend
+
+- `Lesson::getRequiredReadSeconds()` = `min_read > 0 ? min_read*60 : 0`
+- `Lesson::readTimeSummaryFor()` -> `{required_seconds, spent_seconds, remaining_seconds, satisfied}`
+- `Lesson::canBeMarkedCompletedBy()` แตกเป็น 3 กิ่ง:
+  หัวข้อย่อยไม่ครบ -> false · หัวข้อย่อยครบ -> true ทันที · ไม่มีหัวข้อย่อย -> ตัดสินด้วยเวลาอ่าน
+- gate เพิ่ม `code = lesson_read_too_short` (ของเดิม `topics_incomplete` ยังอยู่) + `read_time` ใน payload
+- `GET /progress` คืน `read_time` เพิ่ม
+- **`updateTimeSpent()` clamp กันโกง**: ยิงตรง `seconds=3600` ได้เครดิตแค่ 60 วินาทีในครั้งแรก
+  และไม่เกิน (เวลาจริงที่ผ่านไปตั้งแต่ `updated_at` ครั้งก่อน + grace 5 วินาที) ในครั้งถัด ๆ ไป
+  ต้อง `$progress->refresh()` ก่อนอ่านค่ากลับ เพราะ `addTimeSpent()` ใช้ `increment()`
+
+### สิ่งที่แก้ — Frontend
+
+composable ใหม่ `ui/composables/useLessonReadTimer.ts`
+
+🔴 **เหตุผลที่ต้องใช้ IntersectionObserver ไม่ใช่นับตั้งแต่ mount:**
+หน้า `/Learn/Courses/{id}/lessons` render `LessonPost` **ทุกบทเรียนพร้อมกัน**
+ถ้านับแบบ mount-based เปิดหน้าทิ้งไว้ = ทุกบทได้เวลาอ่านฟรีหมด ด่านไร้ความหมายทันที
+จึงนับเฉพาะตอน "การ์ดอยู่บนจอ (`IntersectionObserver`) และแท็บไม่ได้ถูกซ่อน (`document.visibilityState`)"
+
+🔴 **ตั้งใจไม่เรียก `POST /progress/start`** — endpoint นั้นยิง gamification event `LESSON_START`
+ถ้าเรียกจากหน้า list จะยิงรัวทุกบทเรียน · `/progress/time-spent` auto-start ให้อยู่แล้ว
+
+- `LessonPost`: `readTimerEnabled = !isAdmin && !hasTopics`, ผูก observer ที่ `<article>` ราก,
+  ส่ง `:read-time` ลง tabs, `canMarkComplete` แตก 3 กิ่งให้ตรง backend
+- `LessonInteractionTabs`: prop `readTime`, ป้ายบนปุ่มเลือกเหตุผลที่ล็อกเอง
+  (หัวข้อย่อยมาก่อน แล้วค่อยเวลาอ่าน), จับ error code `lesson_read_too_short`
+
+### บั๊กที่ Claude เจอเองตอนตรวจ diff แล้วแก้เอง
+
+1. `useLessonReadTimer.satisfied` ดูแค่ค่าที่ backend ตอบ ⇒ ตัวนับฝั่ง client เดินถึง 0 แล้ว
+   **ปุ่มยังล็อกค้างโชว์ "อีก 0:00" นานได้ถึง 15 วินาที** (รอบ flush ถัดไป)
+   แก้ให้ `remaining_seconds <= 0` นับว่าครบด้วย -> flush ที่ค้าง + หยุดนับ + ปลดล็อกทันที
+2. docblock ของ `canBeMarkedCompletedBy` ยังเขียนว่า "ไม่มีหัวข้อย่อย = มาร์คได้เลย" ซึ่งเฟส 2
+   ทำให้ไม่จริงแล้ว แก้ให้ตรงพฤติกรรม
+
+### หลักฐานที่ Claude รันเอง
+
+- `./vendor/bin/pint --test` -> passed
+- `php artisan test --filter="LessonReadTimeGateTest|LessonTopicGatedCompletionTest|LessonProgressRefactorTest|TopicReadProgressTest|LessonCompletionRequirementTest"`
+  -> **32 passed (78 assertions)**
+- **revert-check**: `git checkout --` กลับไปเป็นโค้ดเฟส 1 -> `LessonReadTimeGateTest` **แดง 4 เคส**
+  (ก่อนครบเวลา · clamp ครั้งแรก · clamp ตามเวลาจริง · `show` คืน `read_time`) แล้ว restore -> เขียว 8/8
+- SFC compile ผ่านทั้ง 2 ไฟล์ · `tsc` บน composable เหลือ error เดียวคือ
+  `Cannot find name 'useApi'` (Nuxt auto-import ตามคาด)
+- grep ยืนยัน: ไม่มี `<Icon name=`, ไม่มี `/progress/start`, ไม่มี `$fetch`/`axios` ใน composable
+
+### เทสต์เดิม 2 ไฟล์ที่ต้องแก้ (ไฟล์ละ 1 บรรทัด ไม่แตะ assertion)
+
+`Lesson::factory()` **ไม่ได้ set `min_read`** เลยตกไปใช้ DB default = **1 นาที**
+บทเรียนใน `LessonProgressRefactorTest` และเคส `lesson_without_topics_can_still_be_marked_read`
+จึงกลายเป็น "ต้องอ่าน 60 วินาที" โดยไม่ตั้งใจ -> เติม `'min_read' => 0` พร้อมคอมเมนต์
+ถ้ารอบหน้าเห็นเทสต์พวกนี้แดงเพราะเวลาอ่าน ให้ดูตรงนี้ก่อน
+
+### ⚠️ ค้างอยู่ — ยังไม่ได้ตรวจสายตาที่ 375px (เหมือนเฟส 1)
+
+ต้องล็อกอินเป็นนักเรียนแล้วเปิด **บทเรียนที่ไม่มีหัวข้อย่อยและตั้ง `min_read` > 0**:
+1. ปุ่มเป็นเทาพร้อมนับถอยหลัง `M:SS`
+2. เลื่อนการ์ดออกนอกจอ หรือสลับแท็บเบราว์เซอร์ -> **เวลาต้องหยุดเดิน**
+3. ถึง 0:00 -> ปุ่มกดได้ทันที (ไม่ต้องรอ 15 วินาที — จุดที่เพิ่งแก้)
+
+หมายเหตุที่ทราบอยู่แล้ว: ช่วง ~200ms แรกก่อน `GET /progress` ตอบ ปุ่มจะยังไม่ล็อก
+เพราะ `readTime` ตั้งต้นเป็น `satisfied: true` — เลือกให้พลาดทางนี้ดีกว่าล็อกผิด
+เพราะ backend เป็นคนตัดสินจริงและจะตอบ 422 พร้อมเวลาที่เหลือ
+
+---
+
 ## 2026-09-04 — บังคับอ่านหัวข้อย่อยให้ครบก่อนมาร์คบทเรียนว่า "อ่านแล้ว"
 
 ### สถานะ: ✅ 2 commit — backend `c301854b` (+262/−0) · frontend `f7d5d6b7` (+90/−12)
