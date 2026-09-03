@@ -1,5 +1,106 @@
 # Work Log — nuxnan project
 
+## 2026-09-04 — บังคับอ่านหัวข้อย่อยให้ครบก่อนมาร์คบทเรียนว่า "อ่านแล้ว"
+
+### สถานะ: ✅ 2 commit — backend `c301854b` (+262/−0) · frontend `f7d5d6b7` (+90/−12)
+
+### อาการที่ผู้ใช้รายงาน
+
+หน้า `/Learn/Courses/25/lessons` — นักเรียนที่ยังอ่านหัวข้อย่อยไม่ครบ พอคลิกแท็บแบบทดสอบ
+จะเจอปุ่ม "ทำเครื่องหมายว่าอ่านแล้ว" ให้กดผ่านได้เลย ทั้งที่การมาร์คอ่านแล้วเป็นเงื่อนไข
+ปลดล็อกแบบฝึกหัด/แบบทดสอบ (`require_completion_before_exercises`)
+
+### สิ่งที่มีอยู่แล้วก่อนรอบนี้ (ไม่ได้สร้างใหม่ — สำคัญ อย่าไปทำซ้ำ)
+
+| ของ | ที่อยู่ |
+|---|---|
+| ติดตามการอ่านหัวข้อย่อย + anti-cheat เวลาอ่านขั้นต่ำ | `TopicReadProgress` / `TopicReadProgressController` |
+| **auto-complete บทเรียนเมื่ออ่านหัวข้อครบ** | `TopicReadProgressController::complete()` — ทำงานถูกอยู่แล้ว |
+| composable ฝั่ง UI | `ui/composables/useTopicReadProgress.ts` |
+
+⇒ ข้อที่ผู้ใช้ขอว่า "อ่านครบแล้วให้มาร์คอัตโนมัติ" **มีอยู่แล้ว** รอบนี้แค่ทำให้ UI รับรู้ผลของมัน
+
+### บั๊กจริง 3 จุด
+
+1. `LessonProgressController::complete()` / `toggleComplete()` เรียก `LessonCompletionService`
+   ทันที **ไม่เคยตรวจ `TopicReadProgress` เลย** — ยิง API ตรงก็ผ่าน
+2. ปุ่มมาร์ค "อ่านแล้ว" กดได้เสมอ **3 จุด** ใน `LessonInteractionTabs.vue`
+   (ปุ่มหลัก + แบนเนอร์ล็อกแท็บแบบฝึกหัด + แบนเนอร์ล็อกแท็บแบบทดสอบ)
+3. `LessonInteractionTabs` เก็บ `isCompleted` เป็น ref ของตัวเอง fetch แค่ตอน `onMounted`
+   พอ backend auto-complete ให้ `LessonPost` แค่ `emit('refresh')` ซึ่ง
+   **หน้า `pages/Learn/Courses/[id]/lessons.vue` ไม่ได้ดัก `@refresh` ไว้เลย**
+   ⇒ ปุ่มค้างเป็น "ยังไม่อ่าน" ทั้งที่หลังบ้าน completed แล้ว
+
+### การตัดสินใจที่เจ้าของโปรเจคเคาะ (เฟส 1)
+
+- บังคับ **แค่หัวข้อย่อย** ยังไม่บังคับเวลาอ่านตัวเนื้อหาบทเรียนเอง
+- **บทเรียนที่ไม่มีหัวข้อย่อย published = มาร์คเองได้** (ถ้าห้าม จะมีบทเรียนที่จบไม่ได้ตลอดกาล
+  และเทสต์เดิม `LessonProgressRefactorTest` 2 เคสจะแดง)
+- **ยกเลิก "อ่านแล้ว" ทำได้เสมอ** ไม่ติดด่าน
+
+### 🔴 กับดักที่ต้องจำ: ด่านต้องอยู่ที่ controller ห้ามอยู่ที่ service
+
+`TopicReadProgressController::complete()` (path auto-complete) เรียก
+`LessonCompletionService::completeLessonForUser()` **ตัวเดียวกัน** กับปุ่มมาร์คเอง
+ถ้าเอาด่านไปใส่ใน service มันจะล็อกตัวเอง → auto-complete พังทันที
+และ `Lesson::areAllTopicsCompletedBy()` เดิม **ห้ามแก้** เพราะ auto-complete พึ่ง
+semantic "ไม่มีหัวข้อย่อย = return false" ของมัน — จึงเขียน `canBeMarkedCompletedBy()`
+เป็นเมธอดใหม่ที่ semantic ตรงข้าม (ไม่มีหัวข้อย่อย = true) แทนที่จะไปแก้ของเดิม
+
+### สิ่งที่แก้
+
+**Backend** — ด่าน 422 `code=topics_incomplete` พร้อม `topic_summary`
+- `Lesson::topicReadSummaryFor()` + `Lesson::canBeMarkedCompletedBy()`
+- ใส่ด่านใน `complete()` และ **กิ่ง complete ของ `toggleComplete()` เท่านั้น**
+- course admin ข้ามด่านได้ (สอดคล้อง bypass ของ anti-cheat หัวข้อย่อย)
+- `GET /api/lessons/{id}/progress` คืน `can_complete` + `topic_summary` เพิ่ม
+
+**Frontend**
+- `useTopicReadProgress`: เพิ่ม `allTopicsCompleted`
+- `LessonPost`: `canMarkComplete` ส่งลงเป็น prop + `interactionTabsRef.syncProgress()`
+  ก่อน `emit('refresh')` ใน `handleTopicComplete` (แก้บั๊กข้อ 3)
+- `LessonInteractionTabs`: `defineExpose({ syncProgress: fetchProgress })`,
+  guard ใน `toggleProgress`, จับ `topics_incomplete`, ปุ่มล็อกสีเทาพร้อมป้าย `x/y หัวข้อ`,
+  แบนเนอร์ 2 จุดเปลี่ยนจากปุ่มลัด → บอกจำนวนหัวข้อที่เหลือ
+
+### บั๊กที่ Claude เจอเองตอนตรวจ diff (สเปคที่ Claude เขียนให้ agy ผิดเอง)
+
+`canMarkComplete` เวอร์ชันแรกใช้ `allTopicsCompleted` ตรง ๆ ซึ่งบังคับ `total_topics > 0`
+⇒ ปุ่มล็อกค้างเป็น **"(0/0 หัวข้อ)"** 2 กรณี: (ก) ช่วงยังโหลด `reading-progress` ไม่เสร็จ
+(แว้บบนทุกการ์ดในหน้า list) (ข) บทเรียนที่หัวข้อย่อยเป็น draft ทั้งหมด — ซึ่ง
+**backend อนุญาต แต่ UI ล็อก = ไม่ตรงกัน** แก้เป็น `total_topics === 0 || allTopicsCompleted`
+ให้มิเรอร์ `Lesson::canBeMarkedCompletedBy()` เป๊ะ
+
+### หลักฐานที่ Claude รันเอง (ไม่ได้ใช้ตัวเลขจากรายงาน agy)
+
+- `./vendor/bin/pint --test` → passed
+- `php artisan test --filter="LessonTopicGatedCompletionTest|TopicReadProgressTest|LessonProgressRefactorTest|LessonCompletionRequirementTest"`
+  → **24 passed (57 assertions)** — เทสต์เดิม 17 เคสไม่ได้ถูกแก้แม้แต่บรรทัดเดียว
+- **revert-check**: สำรองไฟล์แล้ว `git checkout --` ทั้ง `Lesson.php` + `LessonProgressController.php`
+  ⇒ เทสต์ใหม่ **แดง 3 เคส** (`no_topic_read`, `partially_read`, `complete_endpoint_is_gated_too`)
+  แล้ว restore ⇒ เขียว 7/7 อีกครั้ง
+- SFC compile check ทั้ง `LessonPost.vue` + `LessonInteractionTabs.vue` → OK
+- `git diff --stat` ฝั่ง ui: deletion 12 บรรทัด = บรรทัดที่สเปคสั่งให้แทนที่พอดี
+  ไม่มีข้อความไทยเดิมถูกเขียนใหม่ ไม่มี `<Icon name=` หลุด
+
+### ⚠️ ค้างอยู่ — ยังไม่ได้ตรวจสายตาที่ 375px
+
+หน้า `/Learn/Courses/25/lessons` เด้งไป login และ Claude กรอกรหัสผ่านแทนผู้ใช้ไม่ได้
+**ต้องล็อกอินเป็นนักเรียนแล้วตรวจ 3 จุด:**
+1. ปุ่มหลักเป็นสีเทามีแม่กุญแจ + ป้าย `(0/N หัวข้อ)`
+2. แท็บแบบทดสอบ/แบบฝึกหัดไม่มีปุ่มลัด "ทำเครื่องหมายว่าอ่านแล้ว" อีกแล้ว
+3. อ่านหัวข้อสุดท้ายจบ ⇒ ปุ่มเด้งเป็นเขียว "✓ อ่านแล้ว" เองโดยไม่ต้อง refresh
+   (จุดนี้คือส่วนที่แก้ผ่าน `syncProgress` — เป็นจุดที่เสี่ยงพลาดที่สุดในรอบนี้)
+
+### เฟสถัดไปที่ยังไม่ทำ
+
+บังคับ **เวลาอ่านตัวเนื้อหาบทเรียนเอง** — ตอนนี้ยังไม่มีการติดตามเลย:
+`POST /api/lessons/{id}/progress/start` **ไม่เคยถูกเรียกจาก UI สักที่**
+และคอลัมน์ `lessons.min_read` ไม่ถูกใช้งาน ถ้าจะทำต้องเรียก `/progress/start` ตอน mount
+แล้วเทียบ `started_at + min_read*60` (โครงเดียวกับ `Topic::getRequiredReadSeconds()`)
+
+---
+
 ## 2026-09-03 (ต่อ) — แก้บั๊ก leaderboard streak (order ด้วยคอลัมน์ที่ไม่ได้ join)
 
 ### สถานะ: ✅ 1 ไฟล์แก้ (**+4 / −3**) + เทสต์ใหม่ 1 ไฟล์ (5 เคส)
