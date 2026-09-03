@@ -9,13 +9,23 @@ import AssignmentGradingModal from './AssignmentGradingModal.vue'
 import LessonQuizSection from './LessonQuizSection.vue'
 import QuestionFormModal from './QuestionFormModal.vue'
 
+interface TopicSummary {
+  total_topics: number
+  completed_topics: number
+  progress_percentage: number
+}
+
 interface Props {
   lesson: any
   isAdmin?: boolean
+  canMarkComplete?: boolean
+  topicSummary?: TopicSummary
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  isAdmin: false
+  isAdmin: false,
+  canMarkComplete: true,
+  topicSummary: () => ({ total_topics: 0, completed_topics: 0, progress_percentage: 0 })
 })
 
 const emit = defineEmits<{
@@ -75,6 +85,17 @@ const exercisesLocked = computed(() => {
   if (!props.lesson.require_completion_before_exercises) return false
   return !isCompleted.value
 })
+
+// ปุ่มมาร์ค "อ่านแล้ว" ถูกล็อกเพราะยังอ่านหัวข้อย่อยไม่ครบ (ยกเลิกอ่านแล้วยังทำได้เสมอ)
+const markCompleteLocked = computed(() => !isCompleted.value && !props.canMarkComplete)
+
+const remainingTopics = computed(() =>
+  Math.max(0, (props.topicSummary?.total_topics || 0) - (props.topicSummary?.completed_topics || 0))
+)
+
+const topicProgressLabel = computed(() =>
+  `${props.topicSummary?.completed_topics || 0}/${props.topicSummary?.total_topics || 0} หัวข้อ`
+)
 
 const openAddAssignment = () => {
   editingAssignment.value = null
@@ -404,8 +425,15 @@ const handleShare = () => {
 // Toggle lesson complete
 const toggleProgress = async () => {
   if (isTogglingProgress.value) return
+
+  // ยังอ่านหัวข้อย่อยไม่ครบ -> ห้ามมาร์ค (ยกเลิกอ่านแล้วยังทำได้)
+  if (markCompleteLocked.value) {
+    swal.error(`กรุณาอ่านหัวข้อย่อยให้ครบก่อน (อ่านแล้ว ${topicProgressLabel.value})`)
+    return
+  }
+
   isTogglingProgress.value = true
-  
+
   try {
     const response = await api.post(`/api/lessons/${props.lesson.id}/progress/toggle`) as any
     if (response.success) {
@@ -419,7 +447,11 @@ const toggleProgress = async () => {
     }
   } catch (error: any) {
     console.error('Failed to toggle progress:', error)
-    swal.error(error?.data?.message || 'ไม่สามารถอัพเดทสถานะได้')
+    if (error?.data?.code === 'topics_incomplete') {
+      swal.error(error.data.message || 'กรุณาอ่านหัวข้อย่อยให้ครบทุกหัวข้อก่อน')
+    } else {
+      swal.error(error?.data?.message || 'ไม่สามารถอัพเดทสถานะได้')
+    }
   } finally {
     isTogglingProgress.value = false
   }
@@ -440,6 +472,9 @@ const fetchProgress = async () => {
 onMounted(() => {
   fetchProgress()
 })
+
+// ให้ LessonPost สั่ง refetch ได้หลัง backend auto-complete บทเรียนจากการอ่านหัวข้อย่อยครบ
+defineExpose({ syncProgress: fetchProgress })
 
 const handleComment = () => {
   emit('comment', '')
@@ -708,17 +743,23 @@ const submitReply = async (parentComment: any) => {
     <div class="mb-4">
       <button
         @click="toggleProgress"
-        :disabled="isTogglingProgress"
-        class="w-full min-h-[44px] flex items-center justify-center gap-2 sm:gap-3 py-3 px-4 sm:px-6 rounded-xl font-semibold text-sm sm:text-base transition-all duration-300 transform hover:scale-[1.02]"
-        :class="isCompleted
-          ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30'
-          : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 hover:from-blue-600 hover:to-blue-700'"
+        :disabled="isTogglingProgress || markCompleteLocked"
+        class="w-full min-h-[44px] flex items-center justify-center gap-2 sm:gap-3 py-3 px-4 sm:px-6 rounded-xl font-semibold text-sm sm:text-base transition-all duration-300"
+        :class="markCompleteLocked
+          ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+          : isCompleted
+            ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30 transform hover:scale-[1.02]'
+            : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30 hover:from-blue-600 hover:to-blue-700 transform hover:scale-[1.02]'"
       >
         <Icon
           v-if="isTogglingProgress"
           icon="eos-icons:bubble-loading"
           class="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0"
         />
+        <template v-else-if="markCompleteLocked">
+          <Icon icon="fluent:lock-closed-24-filled" class="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />
+          <span class="min-w-0 flex-1 text-center break-words">อ่านหัวข้อย่อยให้ครบก่อน ({{ topicProgressLabel }})</span>
+        </template>
         <template v-else>
           <Icon
             :icon="isCompleted ? 'fluent:checkmark-circle-24-filled' : 'fluent:checkbox-unchecked-24-regular'"
@@ -727,6 +768,9 @@ const submitReply = async (parentComment: any) => {
           <span class="whitespace-nowrap">{{ isCompleted ? '✓ อ่านแล้ว' : 'ทำเครื่องหมายว่าอ่านแล้ว' }}</span>
         </template>
       </button>
+      <p v-if="markCompleteLocked" class="mt-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400 text-center break-words">
+        เหลืออีก {{ remainingTopics }} หัวข้อย่อยที่ต้องอ่านให้จบ ระบบจะทำเครื่องหมาย "อ่านแล้ว" ให้อัตโนมัติเมื่ออ่านครบ
+      </p>
     </div>
 
     <!-- Tab Navigation -->
@@ -1151,7 +1195,12 @@ const submitReply = async (parentComment: any) => {
           <Icon icon="fluent:lock-closed-24-filled" class="w-12 h-12 text-amber-500 mx-auto mb-3" />
           <h4 class="text-lg font-bold text-amber-800 dark:text-amber-400 mb-1">ส่วนนี้ถูกล็อกอยู่</h4>
           <p class="text-amber-700 dark:text-amber-500 text-sm mb-4">คุณต้องทำเครื่องหมายว่า "อ่านแล้ว" ในหน้าบทเรียนก่อน จึงจะสามารถทำแบบฝึกหัดได้</p>
-          <button 
+          <div v-if="markCompleteLocked" class="text-amber-700 dark:text-amber-500 text-sm break-words">
+            <p class="font-semibold">เหลืออีก {{ remainingTopics }} หัวข้อย่อย (อ่านแล้ว {{ topicProgressLabel }})</p>
+            <p class="mt-1">กรุณาเลื่อนขึ้นไปอ่านหัวข้อย่อยให้ครบ ระบบจะทำเครื่องหมาย "อ่านแล้ว" ให้อัตโนมัติ</p>
+          </div>
+          <button
+            v-else
             @click="toggleProgress"
             :disabled="isTogglingProgress"
             class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
@@ -1200,7 +1249,12 @@ const submitReply = async (parentComment: any) => {
           <Icon icon="fluent:lock-closed-24-filled" class="w-12 h-12 text-amber-500 mx-auto mb-3" />
           <h4 class="text-lg font-bold text-amber-800 dark:text-amber-400 mb-1">แบบทดสอบถูกล็อกอยู่</h4>
           <p class="text-amber-700 dark:text-amber-500 text-sm mb-4">คุณต้องทำเครื่องหมายว่า "อ่านแล้ว" ในหน้าบทเรียนก่อน จึงจะสามารถทำแบบทดสอบได้</p>
-          <button 
+          <div v-if="markCompleteLocked" class="text-amber-700 dark:text-amber-500 text-sm break-words">
+            <p class="font-semibold">เหลืออีก {{ remainingTopics }} หัวข้อย่อย (อ่านแล้ว {{ topicProgressLabel }})</p>
+            <p class="mt-1">กรุณาเลื่อนขึ้นไปอ่านหัวข้อย่อยให้ครบ ระบบจะทำเครื่องหมาย "อ่านแล้ว" ให้อัตโนมัติ</p>
+          </div>
+          <button
+            v-else
             @click="toggleProgress"
             :disabled="isTogglingProgress"
             class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"

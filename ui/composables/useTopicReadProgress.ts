@@ -127,6 +127,11 @@ export function useTopicReadProgress(lessonId: Ref<number>) {
     return topicProgress.value[topicId]?.status || 'not_started'
   }
 
+  const allTopicsCompleted = computed(() =>
+    summary.value.total_topics > 0 &&
+    summary.value.completed_topics >= summary.value.total_topics
+  )
+
   return {
     topicProgress,
     summary,
@@ -135,6 +140,7 @@ export function useTopicReadProgress(lessonId: Ref<number>) {
     startReading,
     completeReading,
     isTopicCompleted,
-    getTopicStatus
+    getTopicStatus,
+    allTopicsCompleted
   }
 }

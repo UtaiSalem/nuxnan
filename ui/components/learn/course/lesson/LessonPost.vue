@@ -127,13 +127,26 @@ const {
   startReading, 
   completeReading, 
   isTopicCompleted, 
-  getTopicStatus 
+  getTopicStatus,
+  allTopicsCompleted
 } = useTopicReadProgress(lessonIdRef)
 
 onMounted(async () => {
   if (hasTopics.value && !props.isAdmin) {
     await loadProgress()
   }
+})
+
+// ref ไปยัง LessonInteractionTabs เพื่อ sync สถานะหลัง auto-complete
+const interactionTabsRef = ref<any>(null)
+
+// มาร์ค "อ่านแล้ว" ได้ไหม: admin ได้เสมอ · บทเรียนไม่มีหัวข้อย่อย = ได้ · มีหัวข้อย่อย = ต้องอ่านครบ
+// total_topics === 0 = ยังโหลด progress ไม่เสร็จ หรือหัวข้อย่อยยังไม่ published — ต้องไม่ล็อก
+// (ให้ตรงกับ backend Lesson::canBeMarkedCompletedBy ที่นับเฉพาะหัวข้อ status=published)
+const canMarkComplete = computed(() => {
+  if (props.isAdmin) return true
+  if (!hasTopics.value) return true
+  return summary.value.total_topics === 0 || allTopicsCompleted.value
 })
 
 // Topic Management
@@ -437,6 +450,8 @@ const handleTopicComplete = async (topicId: number) => {
   }
 
   if (result.lesson_completed) {
+    // หน้า lessons list ไม่ได้ดัก @refresh — ต้องสั่ง sync ตรงเข้าไปที่ tabs เอง
+    interactionTabsRef.value?.syncProgress?.()
     emit('refresh')
     if (result.reward?.rewarded) {
       rewardResult.value = result.reward
@@ -931,8 +946,11 @@ const publicationStatusColor = computed(() => {
 
         <!-- Interaction Tabs (Reaction / Assignment / Quiz) -->
         <LessonInteractionTabs
+          ref="interactionTabsRef"
           :lesson="lesson"
           :isAdmin="isAdmin"
+          :can-mark-complete="canMarkComplete"
+          :topic-summary="summary"
           @like="$emit('like', lesson.id)"
           @dislike="$emit('dislike', lesson.id)"
           @bookmark="$emit('bookmark', lesson.id)"
