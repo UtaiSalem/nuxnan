@@ -1,5 +1,73 @@
 # Work Log — nuxnan project
 
+## 2026-09-03 — 🅿️ พักงาน (สรุปส่งต่อ)
+
+### รอบนี้ทำอะไรไป — 8 commit เรื่องคิวและ auth
+
+| commit | เรื่อง |
+|---|---|
+| `0cc1bba4` | พัก job ค้าง 16,404 งานไปคิว `backlog` + เขียนเอกสารว่า worker เป็นขั้นตอนบังคับ |
+| `d0814aed` | เช็คสิทธิ์รับแต้มด้วย `occurred_at` แทน `now()` + แก้บั๊ก Carbon 3 ของ cooldown |
+| `ce4a787a` | **ทิ้งคิว backlog** + ปิดบัญชี usage event 11,944 แถว (ตัดสินใจ D28/D29) |
+| `8baa5fec` | ปิดเคส `base_amount = 0` — เป็นการตัดสินใจ XP-only (D30) ไม่ใช่บั๊ก |
+| `c39670cf` | `register()` ไม่คืน JWT ให้บัญชีที่ยังไม่ถูกอนุมัติอีกต่อไป |
+| `1dbea99c` | แบนเนอร์รหัสผู้แนะนำตัดคำ + touch target ต่ำเกินที่ 375px |
+| `501a938b` | บันทึกการเปิด queue worker + ข้อจำกัด |
+| `9a1f3903` | สคริปต์ NSSM + **แก้ `--timeout=120` → `60` ที่เขียนผิดไว้เองใน `0cc1bba4`** |
+
+### สถานะ git ตอนพัก
+
+- Branch `main` · **ตรงกับ `origin/main` พอดี (0 ahead, 0 behind)** · working tree สะอาด
+- ระหว่างที่ทำรอบนี้ **มี session อื่น push ทับมาอีก 3 commit** (`839c9c85`, `37ddf11f`, `3c40403e`
+  เรื่อง answers endpoint 500 / `Assignment::getLesson()` / แยกสิทธิ์ `points/account`)
+  ⇒ commit ของรอบนี้ทั้ง 8 ตัวยังอยู่ในสาย history ครบ ตรวจด้วย `git merge-base --is-ancestor` แล้ว
+
+### 🔴 สิ่งแรกที่ต้องทำเมื่อกลับมา
+
+**queue worker ไม่มีอะไรรันอยู่แล้ว** — ตัวที่เปิดไว้ผูกกับ session ของ Claude และตายไปพร้อมกัน
+ระหว่างที่ไม่มี worker งานในคิวจะกองอีกเงียบ ๆ เหมือนเดิม (นี่คือสาเหตุที่เคยค้าง 16,404 งาน)
+
+เลือกอย่างใดอย่างหนึ่ง:
+
+```powershell
+# ชั่วคราว — เทอร์มินัลของตัวเอง เปิดค้างคู่กับ php artisan serve
+cd C:\wamp64\www\nuxnan\api\nuxnanravel
+php artisan queue:work --queue=default --tries=3 --timeout=60
+```
+
+```powershell
+# ถาวร — ติดตั้งเป็น Windows service (ต้องเปิด PowerShell แบบ Administrator)
+winget install NSSM.NSSM
+cd C:\wamp64\www\nuxnan\api\nuxnanravel\scripts\queue-worker
+.\install-service.ps1
+```
+
+รายละเอียดค่าที่ตั้งและเหตุผลอยู่ใน `api/nuxnanravel/scripts/queue-worker/README.md`
+
+### กติกาที่ต้องจำเมื่อมี worker แล้ว
+
+- `--timeout` **ต้องน้อยกว่า `retry_after` = 90** ไม่งั้น job เดียวกันถูกทำซ้ำ (ใช้ 60)
+- `queue:work` แคชโค้ดตอนบูต — **แก้ backend แล้วต้อง `php artisan queue:restart`**
+- `.ps1` ที่มีอักษรไทยในเรพนี้ **ต้องบันทึกเป็น UTF-8 with BOM** ไม่งั้น PowerShell 5.1 parse ไม่ผ่าน
+
+### งานที่ค้างไว้ (เรียงตามที่ควรหยิบ)
+
+1. **บั๊ก leaderboard streak** — `app/Services/GamificationService.php:283`
+   `->with('pointStreak')` เป็น eager load แต่ `->orderByDesc('point_streaks.current_streak')`
+   สั่งเรียงด้วยคอลัมน์ของตารางที่ไม่เคย join ⇒ `GET /api/gamification/leaderboard/streak` **500 อยู่ตอนนี้**
+   และ `RefreshLeaderboardCache` (schedule 03:00) จะล้มทุกคืนเมื่อมี worker
+   **ตรวจแล้วว่ายังไม่ถูกแก้** (session ที่แยกไปทำ push มา 3 commit แต่ไม่ใช่เรื่องนี้)
+   วิธีแก้: `leftJoin('point_streaks', ...)` แบบเดียวกับเคส weekly/monthly ในเมธอดเดียวกัน
+2. **SET-S12** deferred (ดู `.agents/photo-path-migration-plan.md`)
+3. สาเหตุที่ `pint --test` จาก root รายงานไม่ครบในรอบแรก (ยกมาหลายรอบแล้ว)
+
+### หมายเหตุเรื่องเทสต์
+
+`tests/Feature/Auth/` 16 ผ่าน · เทสต์ที่แตะ points 8 ไฟล์ 51 ผ่าน · `EventTimeEligibilityTest` 6 เคส
+ยังไม่เคยรันทั้ง suite ในรอบนี้ (ตามบันทึกเก่า suite เต็มเคย OOM) ถ้าจะรันเต็มให้เผื่อเวลา
+
+---
+
 ## 2026-09-03 (ต่อ) — ปิด 500 ของ answers endpoint + getLesson + แยกสิทธิ์ points/account
 
 ### สถานะ: ✅ 3 commits (`74663f4f`, `839c9c85`, `37ddf11f`) · 🔴 **deploy prod ยังค้าง** · 🟡 บั๊กอัปโหลดไฟล์ยังไม่ปิด
