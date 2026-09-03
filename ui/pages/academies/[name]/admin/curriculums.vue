@@ -953,7 +953,7 @@ const getStatusBadge = (status: string) => {
                 class="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl"
               >
                 <img
-                  :src="cc.course?.cover || '/images/default-course.png'"
+                  :src="cc.course?.cover || '/images/placeholders/cover.svg'"
                   :alt="cc.course?.name"
                   class="w-16 h-12 rounded-lg object-cover"
                 />
@@ -1049,7 +1049,7 @@ const getStatusBadge = (status: string) => {
                   class="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
                 <img
-                  :src="course.cover || '/images/default-course.png'"
+                  :src="course.cover || '/images/placeholders/cover.svg'"
                   :alt="course.name"
                   class="w-12 h-9 rounded-lg object-cover"
                 />

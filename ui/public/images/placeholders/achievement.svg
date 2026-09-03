@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Achievement">
+  <style>
+    .bg { fill: #eef1f5 }
+    .fg { fill: #9aa5b4 }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #232a35 }
+      .fg { fill: #5b6674 }
+    }
+  </style>
+  <rect class="bg" width="128" height="128"/>
+  <g class="fg">
+    <path d="M40 24h48v32c0 13.3-10.7 24-24 24S40 69.3 40 56z"/>
+    <path d="M40 32H30c-6 0-10 5-10 12s5 18 20 20v-9c-8-2-11-7-11-11s2-4 5-4h6zM88 32h10c6 0 10 5 10 12s-5 18-20 20v-9c8-2 11-7 11-11s-2-4-5-4h-6z"/>
+    <rect x="58" y="80" width="12" height="14"/>
+    <rect x="42" y="94" width="44" height="11" rx="3"/>
+  </g>
+</svg>

@@ -324,7 +324,7 @@ export const usePoints = () => {
         title: '🎉 บรรลุความสำเร็จ!',
         html: `
           <div style="text-align: center;">
-            <img src="${achievement.icon || '/icons/achievement.png'}" style="width: 64px; height: 64px; margin-bottom: 10px;">
+            <img src="${achievement.icon || '/images/placeholders/achievement.svg'}" style="width: 64px; height: 64px; margin-bottom: 10px;">
             <h3 style="margin: 0 0 10px 0;">${achievement.name}</h3>
             <p style="margin: 0 0 10px 0; color: #666;">${achievement.description || ''}</p>
             ${achievement.points_reward ? `<p style="margin: 0; font-weight: bold; color: #10b981;">+${achievement.points_reward} แต้ม</p>` : ''}

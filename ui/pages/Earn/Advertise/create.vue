@@ -757,7 +757,7 @@ watch(() => authStore.user?.id, async (id) => {
 
                 <div class="p-4">
                   <div class="flex items-center gap-2.5 mb-3">
-                    <img :src="authStore.user?.profile_photo_url || '/storage/images/avatar/default.png'" class="w-7 h-7 rounded-full border" />
+                    <img :src="authStore.user?.profile_photo_url || '/images/default-avatar.png'" class="w-7 h-7 rounded-full border" />
                     <span class="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate max-w-[120px]">{{ authStore.user?.name }}</span>
                     <span class="text-[10px] px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 rounded-full ml-auto">โฆษณา</span>
                   </div>

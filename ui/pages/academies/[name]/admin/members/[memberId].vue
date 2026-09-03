@@ -357,7 +357,7 @@ const goBack = () => {
               class="flex items-center gap-4 p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
             >
               <img 
-                :src="course.cover_image || '/images/default-course.png'"
+                :src="course.cover_image || '/images/placeholders/cover.svg'"
                 :alt="course.name"
                 class="w-16 h-16 rounded-lg object-cover"
               />

@@ -67,7 +67,7 @@ const printCard = () => {
 const academyLogo = computed(() => {
   return academy.value?.logo
     ? `/storage/${academy.value.logo}`
-    : '/images/default-school-logo.png'
+    : '/images/placeholders/academy-logo.svg'
 })
 
 const academyAddress = computed(() => {

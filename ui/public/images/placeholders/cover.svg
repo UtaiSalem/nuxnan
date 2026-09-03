@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120" preserveAspectRatio="xMidYMid slice" role="img" aria-label="No cover image">
+  <style>
+    .bg { fill: #eef1f5 }
+    .fg { fill: #9aa5b4 }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #232a35 }
+      .fg { fill: #5b6674 }
+    }
+  </style>
+  <rect class="bg" width="160" height="120"/>
+  <g class="fg">
+    <circle cx="110" cy="38" r="11"/>
+    <path d="M20 94 L60 48 L86 76 L104 58 L140 94 Z"/>
+  </g>
+</svg>

@@ -54,7 +54,7 @@
         >
           <div class="aspect-[3/4] bg-gray-100 dark:bg-gray-900 relative overflow-hidden">
             <img 
-              :src="book.cover_image || '/images/book-placeholder.png'" 
+              :src="book.cover_image || '/images/placeholders/book.svg'" 
               :alt="book.title"
               class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
             />

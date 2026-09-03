@@ -45,7 +45,7 @@ const containerRef = ref<HTMLElement | null>(null)
 useIntersectionLoad(containerRef, loadDepartments)
 
 const getAvatarUrl = (url: string | null) => {
-  return url || '/images/default_avatar.png'
+  return url || '/images/default-avatar.png'
 }
 </script>
 

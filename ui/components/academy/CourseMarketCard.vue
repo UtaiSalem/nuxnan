@@ -57,7 +57,7 @@
       <!-- Instructor -->
       <div class="flex items-center gap-2 mb-2">
         <img
-          :src="course.user?.profile_photo_url || '/images/avatar-placeholder.png'"
+          :src="course.user?.profile_photo_url || '/images/default-avatar.png'"
           class="w-6 h-6 rounded-full object-cover shrink-0 border border-slate-200 dark:border-slate-700"
         />
         <div class="min-w-0">

@@ -88,7 +88,7 @@ onMounted(() => {
         >
           <div class="flex items-start gap-4">
             <img
-              :src="academy.logo || '/storage/images/default-academy.jpg'"
+              :src="academy.logo || '/images/placeholders/academy-logo.svg'"
               :alt="academy.name"
               class="w-16 h-16 rounded-xl object-cover"
             />

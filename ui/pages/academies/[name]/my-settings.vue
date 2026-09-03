@@ -149,7 +149,7 @@ onMounted(() => {
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-4">
               <img 
-                :src="academy?.logo || '/images/default-academy.png'" 
+                :src="academy?.logo || '/images/placeholders/academy-logo.svg'" 
                 :alt="academy?.title"
                 class="w-16 h-16 rounded-xl object-cover border border-gray-200 dark:border-gray-700"
               />

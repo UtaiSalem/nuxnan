@@ -306,7 +306,7 @@ const quickActions = computed(() => [
                 <NuxtLink :to="`/courses/${course.name}`" class="block">
                   <div class="flex items-start gap-3">
                     <img 
-                      :src="course.logo || '/images/default-course.png'" 
+                      :src="course.logo || '/images/placeholders/cover.svg'" 
                       class="w-16 h-16 rounded-lg object-cover"
                       alt=""
                     />

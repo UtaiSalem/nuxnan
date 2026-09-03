@@ -69,7 +69,7 @@ watch(() => props.studentCard, () => {
 })
 
 const academyDisplayName = computed(() => props.academy?.name || 'โรงเรียน')
-const academyLogo = computed(() => props.academy?.logo || '/images/default-school-logo.png')
+const academyLogo = computed(() => props.academy?.logo || '/images/placeholders/academy-logo.svg')
 const academyAddress = computed(() => props.academy?.address || '')
 
 // Map studentCard / student data to StudentCardFront props format

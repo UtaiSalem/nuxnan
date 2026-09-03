@@ -36,7 +36,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   academyName: 'โรงเรียน',
-  academyLogo: '/images/default-school-logo.png',
+  academyLogo: '/images/placeholders/academy-logo.svg',
   academyAddress: '',
   editable: false,
   showQrCode: true,

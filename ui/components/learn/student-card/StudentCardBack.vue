@@ -15,7 +15,7 @@ interface Props {
 
 withDefaults(defineProps<Props>(), {
   academyName: 'โรงเรียน',
-  academyLogo: '/images/default-school-logo.png',
+  academyLogo: '/images/placeholders/academy-logo.svg',
   academyAddress: '',
   directorName: '',
   directorSignature: '',

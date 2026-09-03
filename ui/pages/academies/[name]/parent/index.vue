@@ -77,7 +77,7 @@
               <div class="flex items-center space-x-4">
                 <div class="relative">
                   <img
-                    :src="child.photo || '/images/default-student.png'"
+                    :src="child.photo || '/images/default-avatar.png'"
                     :alt="child.name"
                     class="w-16 h-16 rounded-2xl object-cover border-2 border-gray-100 dark:border-gray-700 group-hover:scale-105 transition-transform"
                   />

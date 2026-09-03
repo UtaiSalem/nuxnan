@@ -101,7 +101,7 @@ onMounted(() => {
       >
         <div class="flex items-center gap-3 mb-3">
           <img
-            :src="invitation.academy?.logo || '/images/default-academy.png'"
+            :src="invitation.academy?.logo || '/images/placeholders/academy-logo.svg'"
             :alt="invitation.academy?.name"
             class="w-10 h-10 rounded-full object-cover ring-2 ring-vikinger-purple/20"
           />

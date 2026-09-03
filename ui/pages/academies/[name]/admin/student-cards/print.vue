@@ -132,7 +132,7 @@ const studentsToPrint = computed(() => {
 })
 
 const academyLogo = computed(() => {
-  return academy.value?.logo ? `/storage/${academy.value.logo}` : '/images/default-school-logo.png'
+  return academy.value?.logo ? `/storage/${academy.value.logo}` : '/images/placeholders/academy-logo.svg'
 })
 
 const academyAddress = computed(() => academy.value?.address || '')

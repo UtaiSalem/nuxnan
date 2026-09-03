@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" preserveAspectRatio="xMidYMid slice" role="img" aria-label="No academy logo">
+  <style>
+    .bg { fill: #eef1f5 }
+    .fg { fill: #9aa5b4 }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #232a35 }
+      .fg { fill: #5b6674 }
+    }
+  </style>
+  <rect class="bg" width="128" height="128"/>
+  <g class="fg">
+    <polygon points="64,24 118,56 10,56"/>
+    <rect x="20" y="60" width="88" height="8" rx="2"/>
+    <rect x="29" y="72" width="11" height="20" rx="2"/>
+    <rect x="49" y="72" width="11" height="20" rx="2"/>
+    <rect x="69" y="72" width="11" height="20" rx="2"/>
+    <rect x="88" y="72" width="11" height="20" rx="2"/>
+    <rect x="16" y="96" width="96" height="10" rx="3"/>
+  </g>
+</svg>

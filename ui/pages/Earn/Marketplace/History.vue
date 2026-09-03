@@ -92,7 +92,7 @@ const formatDate = (date: string) => {
 
     <div v-else class="space-y-3">
       <div v-for="item in history" :key="item.id" class="bg-white dark:bg-vikinger-dark-200 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-vikinger-dark-100 flex items-center gap-4 transition-all hover:shadow-md hover:-translate-y-0.5">
-        <img :src="item.course?.cover || '/images/course-placeholder.jpg'" class="w-16 h-16 rounded-xl object-cover border border-gray-100 dark:border-vikinger-dark-50" />
+        <img :src="item.course?.cover || '/images/placeholders/cover.svg'" class="w-16 h-16 rounded-xl object-cover border border-gray-100 dark:border-vikinger-dark-50" />
         <div class="flex-1 min-w-0">
           <h4 class="font-black text-gray-800 dark:text-white text-sm md:text-base line-clamp-1">{{ item.course?.name }}</h4>
           <div class="flex items-center gap-3 mt-1.5">

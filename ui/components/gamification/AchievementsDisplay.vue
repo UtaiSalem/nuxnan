@@ -63,7 +63,7 @@
           class="achievement-card unlocked"
         >
           <div class="achievement-badge">
-            <img :src="achievement.icon || '/icons/achievement.png'" :alt="achievement.name">
+            <img :src="achievement.icon || '/images/placeholders/achievement.svg'" :alt="achievement.name">
           </div>
           <div class="achievement-details">
             <h4 class="achievement-name">{{ achievement.name }}</h4>
@@ -93,7 +93,7 @@
           class="achievement-card locked"
         >
           <div class="achievement-badge">
-            <img :src="achievement.icon || '/icons/achievement-locked.png'" :alt="achievement.name">
+            <img :src="achievement.icon || '/images/placeholders/achievement-locked.svg'" :alt="achievement.name">
           </div>
           <div class="achievement-details">
             <h4 class="achievement-name">{{ achievement.name }}</h4>

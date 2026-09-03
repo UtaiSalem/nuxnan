@@ -31,7 +31,7 @@
           class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden group cursor-pointer hover:shadow-xl transition-all hover:-translate-y-1"
         >
           <div class="relative h-40 overflow-hidden">
-            <img :src="course.cover_url || '/images/course-placeholder.jpg'" class="w-full h-full object-cover transition-transform group-hover:scale-110" />
+            <img :src="course.cover_url || '/images/placeholders/cover.svg'" class="w-full h-full object-cover transition-transform group-hover:scale-110" />
             <div class="absolute top-2 right-2">
               <span class="bg-emerald-500 text-white text-[10px] px-2 py-0.5 rounded font-bold">PURCHASED</span>
             </div>

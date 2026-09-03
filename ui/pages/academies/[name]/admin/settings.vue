@@ -558,7 +558,7 @@ const joinModeOptions = [
                 <div class="flex items-center gap-4">
                   <div class="relative w-20 h-20">
                     <img 
-                      :src="avatarPreview || '/images/default-academy.png'"
+                      :src="avatarPreview || '/images/placeholders/academy-logo.svg'"
                       class="w-20 h-20 rounded-xl object-cover"
                     />
                     <label v-if="canManage" class="absolute inset-0 flex items-center justify-center cursor-pointer rounded-xl hover:bg-black/20 transition-colors">

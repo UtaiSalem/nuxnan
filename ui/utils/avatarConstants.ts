@@ -7,7 +7,7 @@
 export const DEFAULT_AVATAR = '/images/default-avatar.png'
 
 // Default cover image
-export const DEFAULT_COVER = '/images/default-cover.jpg'
+export const DEFAULT_COVER = '/images/placeholders/cover.svg'
 
 // Avatar sizes in pixels
 export const AVATAR_SIZES = {
