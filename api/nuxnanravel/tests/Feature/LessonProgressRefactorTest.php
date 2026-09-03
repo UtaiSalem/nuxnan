@@ -34,6 +34,7 @@ class LessonProgressRefactorTest extends TestCase
             'course_id' => $this->course->id,
             'publication_status' => 'published',
             'access_type' => 'free',
+            'min_read' => 0, // เฟส 2: ปิดด่านเวลาอ่าน เทสต์ชุดนี้ทดสอบ endpoint ไม่ใช่ด่าน
         ]);
 
         CourseMember::create([

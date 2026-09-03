@@ -272,14 +272,52 @@ class Lesson extends Model
     }
 
     /**
+     * เวลาอ่านเนื้อหาบทเรียนขั้นต่ำ (วินาที) — min_read หน่วยเป็นนาที
+     * min_read = 0 / null คือ "ไม่บังคับเวลา" (ต่างจาก Topic ที่ 0 = 30 วินาที)
+     */
+    public function getRequiredReadSeconds(): int
+    {
+        return $this->min_read > 0 ? (int) $this->min_read * 60 : 0;
+    }
+
+    /**
+     * สรุปเวลาอ่านเนื้อหาบทเรียนของ user คนนี้
+     *
+     * @return array{required_seconds:int,spent_seconds:int,remaining_seconds:int,satisfied:bool}
+     */
+    public function readTimeSummaryFor(User $user): array
+    {
+        $required = $this->getRequiredReadSeconds();
+        $spent = (int) ($this->userProgress($user)?->time_spent_seconds ?? 0);
+
+        return [
+            'required_seconds' => $required,
+            'spent_seconds' => $spent,
+            'remaining_seconds' => max(0, $required - $spent),
+            'satisfied' => $required <= 0 || $spent >= $required,
+        ];
+    }
+
+    /**
      * มาร์คบทเรียนนี้ว่า "อ่านแล้ว" ได้หรือยัง
-     * ไม่มีหัวข้อย่อย = มาร์คได้เลย · มีหัวข้อย่อย = ต้องอ่านครบทุกหัวข้อ
+     * มีหัวข้อย่อย = ต้องอ่านครบทุกหัวข้อ (ครบแล้วผ่านเลย ไม่ดูเวลาอ่านเนื้อหา)
+     * ไม่มีหัวข้อย่อย = ตัดสินด้วยเวลาอ่านเนื้อหาบทเรียน (min_read = 0 คือไม่บังคับ)
      */
     public function canBeMarkedCompletedBy(User $user): bool
     {
-        $summary = $this->topicReadSummaryFor($user);
+        $topics = $this->topicReadSummaryFor($user);
 
-        return $summary['total_topics'] === 0
-            || $summary['completed_topics'] >= $summary['total_topics'];
+        // ยังอ่านหัวข้อย่อยไม่ครบ = ไม่ผ่าน
+        if ($topics['total_topics'] > 0 && $topics['completed_topics'] < $topics['total_topics']) {
+            return false;
+        }
+
+        // อ่านหัวข้อย่อยครบแล้ว = ผ่านเลย ไม่ต้องดูเวลาอ่านเนื้อหา (เจ้าของโปรเจคเคาะ)
+        if ($topics['total_topics'] > 0) {
+            return true;
+        }
+
+        // ไม่มีหัวข้อย่อย = ตัดสินด้วยเวลาอ่านเนื้อหาบทเรียน
+        return $this->readTimeSummaryFor($user)['satisfied'];
     }
 }

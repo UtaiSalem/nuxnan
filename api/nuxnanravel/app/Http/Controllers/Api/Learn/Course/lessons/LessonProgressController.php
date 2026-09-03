@@ -46,6 +46,7 @@ class LessonProgressController extends Controller
                 'is_in_progress' => $progress->isInProgress(),
             ] : null,
             'topic_summary' => $lesson->topicReadSummaryFor($user),
+            'read_time' => $lesson->readTimeSummaryFor($user),
             'can_complete' => $lesson->course->isAdmin($user) || $lesson->canBeMarkedCompletedBy($user),
         ]);
     }
@@ -161,16 +162,33 @@ class LessonProgressController extends Controller
 
         $progress = $lesson->getOrCreateProgress($user);
 
+        // clamp กันยิงตรงเอาเวลาฟรี: ให้เครดิตไม่เกินเวลาจริงที่ผ่านไปตั้งแต่ update ครั้งก่อน
+        $previousUpdatedAt = $progress->updated_at;
+        $isFirstUpdate = $progress->wasRecentlyCreated
+            || $progress->status === LessonProgress::STATUS_NOT_STARTED
+            || ! $progress->started_at;
+
         // Auto-start if not started
         if ($progress->status === LessonProgress::STATUS_NOT_STARTED) {
             $progress->markAsStarted();
         }
 
-        $progress->addTimeSpent($request->seconds);
+        $requested = (int) $request->seconds;
+        $granted = $isFirstUpdate
+            ? min($requested, 60)
+            : min($requested, max(0, now()->timestamp - $previousUpdatedAt->timestamp) + 5);
+
+        if ($granted > 0) {
+            $progress->addTimeSpent($granted);
+        }
+
+        $progress->refresh();
 
         return response()->json([
             'success' => true,
+            'granted_seconds' => $granted,
             'time_spent_seconds' => $progress->time_spent_seconds,
+            'read_time' => $lesson->readTimeSummaryFor($user),
         ]);
     }
 
@@ -230,14 +248,23 @@ class LessonProgressController extends Controller
             return null;
         }
 
-        $summary = $lesson->topicReadSummaryFor($user);
+        $topicSummary = $lesson->topicReadSummaryFor($user);
+        $readTime = $lesson->readTimeSummaryFor($user);
+
+        $topicsIncomplete = $topicSummary['total_topics'] > 0
+            && $topicSummary['completed_topics'] < $topicSummary['total_topics'];
+
+        $message = $topicsIncomplete
+            ? "กรุณาอ่านหัวข้อย่อยให้ครบทุกหัวข้อก่อน (อ่านแล้ว {$topicSummary['completed_topics']}/{$topicSummary['total_topics']} หัวข้อ)"
+            : 'กรุณาอ่านเนื้อหาบทเรียนให้ครบเวลาที่กำหนดก่อน (เหลืออีก '.ceil($readTime['remaining_seconds'] / 60).' นาที)';
 
         return response()->json([
             'success' => false,
             'completed' => false,
-            'code' => 'topics_incomplete',
-            'message' => "กรุณาอ่านหัวข้อย่อยให้ครบทุกหัวข้อก่อน (อ่านแล้ว {$summary['completed_topics']}/{$summary['total_topics']} หัวข้อ)",
-            'topic_summary' => $summary,
+            'code' => $topicsIncomplete ? 'topics_incomplete' : 'lesson_read_too_short',
+            'message' => $message,
+            'topic_summary' => $topicSummary,
+            'read_time' => $readTime,
         ], 422);
     }
 }

@@ -124,6 +124,7 @@ class LessonTopicGatedCompletionTest extends TestCase
             'course_id' => $this->course->id,
             'publication_status' => 'published',
             'access_type' => 'free',
+            'min_read' => 0, // เฟส 2: บทเรียนไม่มีหัวข้อย่อยและไม่บังคับเวลา = มาร์คได้
         ]);
 
         $response = $this->actingAs($this->student, 'api')
