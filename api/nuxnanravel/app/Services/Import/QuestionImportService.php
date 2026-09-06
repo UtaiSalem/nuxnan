@@ -15,13 +15,20 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 
 class QuestionImportService
 {
+    /**
+     * หัวคอลัมน์ของแบบฟอร์มข้อสอบ — ใช้ร่วมกันระหว่างแบบฟอร์มเปล่า (buildTemplate)
+     * และไฟล์ที่ export ออกไป (QuestionExportService) ห้ามแก้ลำดับหรือข้อความ
+     * เพราะ parse() แมตช์หัวคอลัมน์เหล่านี้ตอนอ่านไฟล์กลับเข้ามา
+     */
+    public const HEADERS = ['ข้อที่', 'คำถาม', 'ตัวเลือก1', 'ตัวเลือก2', 'ตัวเลือก3', 'ตัวเลือก4', 'ตัวเลือก5', 'ตัวเลือก6', 'เฉลย', 'คะแนน', 'คำอธิบายเฉลย', 'หักคะแนนเมื่อตอบผิด'];
+
     public function buildTemplate(): string
     {
         $spreadsheet = new Spreadsheet;
         $sheet1 = $spreadsheet->getActiveSheet();
         $sheet1->setTitle('คำถาม');
 
-        $headers = ['ข้อที่', 'คำถาม', 'ตัวเลือก1', 'ตัวเลือก2', 'ตัวเลือก3', 'ตัวเลือก4', 'ตัวเลือก5', 'ตัวเลือก6', 'เฉลย', 'คะแนน', 'คำอธิบายเฉลย', 'หักคะแนนเมื่อตอบผิด'];
+        $headers = self::HEADERS;
         $sheet1->fromArray($headers, null, 'A1');
 
         $examples = [

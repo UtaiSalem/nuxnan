@@ -5,6 +5,7 @@ import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
 import QuizRewardForm from '~/components/learn/course/points/QuizRewardForm.vue'
 import QuestionImportModal from '~/components/learn/course/questions/QuestionImportModal.vue'
+import { useQuestionImportService } from '~/services/questionImportService'
 
 const route = useRoute()
 const courseId = route.params.id
@@ -18,6 +19,20 @@ const onQuestionsImported = async (count: number) => {
   showImportModal.value = false
   await fetchData()
   Swal.fire('สำเร็จ', `นำเข้าข้อสอบ ${count} ข้อเรียบร้อยแล้ว`, 'success')
+}
+
+const questionExportService = useQuestionImportService()
+const isExporting = ref(false)
+const exportQuestions = async () => {
+  if (isExporting.value) return
+  isExporting.value = true
+  try {
+    await questionExportService.exportQuestions(importScope.value)
+  } catch (err: any) {
+    Swal.fire('ผิดพลาด', err?.data?.message || 'ดาวน์โหลดข้อสอบไม่สำเร็จ', 'error')
+  } finally {
+    isExporting.value = false
+  }
 }
 
 definePageMeta({
@@ -656,20 +671,28 @@ const deleteQuestion = async (qId: number) => {
             <!-- หัวข้อ + ปุ่ม: mobile ซ้อนกันและปุ่มเต็มความกว้าง, sm+ อยู่แถวเดียวกัน -->
             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4 sm:mb-6">
                 <h3 class="font-bold text-gray-900 dark:text-white">รายการคำถาม</h3>
-                <div class="grid grid-cols-2 sm:flex sm:items-center gap-2">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-2">
                   <button
                     @click="showImportModal = true"
                     class="w-full sm:w-auto min-h-[44px] px-3 sm:px-4 py-2 rounded-lg border border-purple-200 text-purple-600 hover:bg-purple-50 dark:border-purple-800 dark:text-purple-400 dark:hover:bg-purple-900/30 transition-colors flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
                   >
                     <Icon icon="fluent:arrow-upload-24-regular" class="w-5 h-5 flex-shrink-0" />
-                    อัปโหลดข้อสอบ
+                    <span class="whitespace-nowrap">อัปโหลดข้อสอบ</span>
+                  </button>
+                  <button
+                    @click="exportQuestions"
+                    :disabled="isExporting || questions.length === 0"
+                    class="w-full sm:w-auto min-h-[44px] px-3 sm:px-4 py-2 rounded-lg border border-purple-200 text-purple-600 hover:bg-purple-50 dark:border-purple-800 dark:text-purple-400 dark:hover:bg-purple-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
+                  >
+                    <Icon :icon="isExporting ? 'svg-spinners:180-ring-with-bg' : 'fluent:arrow-download-24-regular'" class="w-5 h-5 flex-shrink-0" />
+                    <span class="whitespace-nowrap">{{ isExporting ? 'กำลังดาวน์โหลด...' : 'ดาวน์โหลดข้อสอบ' }}</span>
                   </button>
                   <button
                     @click="openAddQuestion"
                     class="w-full sm:w-auto min-h-[44px] px-3 sm:px-4 py-2 rounded-lg bg-purple-100 text-purple-600 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50 transition-colors flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
                   >
                     <Icon icon="fluent:add-circle-24-regular" class="w-5 h-5 flex-shrink-0" />
-                    เพิ่มข้อสอบ
+                    <span class="whitespace-nowrap">เพิ่มข้อสอบ</span>
                   </button>
                 </div>
             </div>

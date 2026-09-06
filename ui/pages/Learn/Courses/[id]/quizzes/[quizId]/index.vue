@@ -137,6 +137,28 @@ const formatDate = (date: string) => {
   })
 }
 
+/**
+ * วันที่แบบตัวเลขล้วน สำหรับตาราง/รายการผลการสอบ — 13/08/2569 08:53
+ * ชื่อเดือนไทยแบบยาวกินความกว้างคอลัมน์มากเกินไป
+ * locale th-TH ใช้ปฏิทินพุทธเป็นค่าเริ่มต้น ปีจึงออกมาเป็น พ.ศ. เหมือน formatDate เดิม
+ */
+const formatDateNumeric = (date: string) => {
+  if (!date) return '-'
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return '-'
+  const day = d.toLocaleDateString('th-TH', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+  const time = d.toLocaleTimeString('th-TH', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+  return `${day} ${time}`
+}
+
 const getStatusBadge = computed(() => {
   if (!quiz.value) return {}
   if (quiz.value.is_active) {
@@ -263,7 +285,7 @@ const getStatusBadge = computed(() => {
         </div>
 
         <!-- Action Area -->
-        <div class="p-8 text-center">
+        <div class="p-4 sm:p-6 lg:p-8 text-center">
           <div v-if="!isCourseAdmin">
              <!-- Eligibility Panel / Retake Grant -->
              <div v-if="(!canTakeExam && eligibility) || retakeStatus?.can_retake" class="mb-8 text-left">
@@ -421,60 +443,102 @@ const getStatusBadge = computed(() => {
               </div>
             </div>
 
-            <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 sm:p-6">
-                <h3 class="text-lg font-semibold mb-4">
+            <!-- ผลการสอบ: มือถือแสดงเป็นแถวรายชื่อ, sm+ แสดงเป็นตารางที่เลื่อนแนวนอนได้เอง
+                 จงใจไม่ครอบพื้นหลัง/ขอบเป็นการ์ดอีกชั้น เพราะอยู่ในการ์ดขาวใบนอกอยู่แล้ว -->
+            <div class="text-left">
+                <h3 class="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-white">
                   ผลการสอบของนักเรียน
                   <span v-if="selectedGroupId" class="text-sm font-normal text-gray-500 ml-2">
                     ({{ filteredStudentResults.length }} คน)
                   </span>
                 </h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-left">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-100 dark:bg-gray-700 dark:text-gray-400">
-                            <tr>
-                                <th class="px-6 py-3 rounded-l-lg">นักเรียน</th>
-                                <th class="px-6 py-3">วันที่สอบ</th>
-                                <th class="px-6 py-3">คะแนน</th>
-                                <th class="px-6 py-3">เปอร์เซ็นต์</th>
-                                <th class="px-6 py-3 rounded-r-lg">สถานะ</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="result in filteredStudentResults" :key="result.id" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-                                <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white flex items-center gap-2">
-                                    <div class="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
-                                        <img v-if="result.user?.avatar" :src="result.user.avatar" class="w-full h-full object-cover">
-                                        <Icon v-else icon="fluent:person-24-filled" class="w-full h-full p-1 text-gray-400" />
-                                    </div>
-                                    {{ result.user?.name || 'Unknown' }}
-                                </td>
-                                <td class="px-6 py-4">
-                                    {{ result.completed_at ? formatDate(result.completed_at) : (result.started_at ? 'กำลังทำข้อสอบ' : '-') }}
-                                </td>
-                                <td class="px-6 py-4">
-                                    {{ result.score }} / {{ quiz.total_score }}
-                                </td>
-                                <td class="px-6 py-4">
-                                    {{ parseFloat(result.percentage).toFixed(1) }}%
-                                </td>
-                                <td class="px-6 py-4">
-                                    <span v-if="result.completed_at" 
-                                        class="px-2 py-1 rounded text-xs font-bold"
-                                        :class="result.status === 3 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
-                                    >
-                                        {{ result.status === 3 ? 'ผ่าน' : 'ไม่ผ่าน' }}
-                                    </span>
-                                    <span v-else class="text-gray-500 italic">...</span>
-                                </td>
-                            </tr>
-                            <tr v-if="filteredStudentResults.length === 0">
-                                <td colspan="5" class="px-6 py-4 text-center text-gray-500">
-                                    {{ selectedGroupId ? 'ไม่มีนักเรียนในกลุ่มนี้ที่ทำแบบทดสอบ' : 'ยังไม่มีใครทำแบบทดสอบนี้นะ' }}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+
+                <div v-if="filteredStudentResults.length === 0" class="py-8 text-center text-sm text-gray-500 border-t border-gray-200 dark:border-gray-700">
+                    {{ selectedGroupId ? 'ไม่มีนักเรียนในกลุ่มนี้ที่ทำแบบทดสอบ' : 'ยังไม่มีใครทำแบบทดสอบนี้นะ' }}
                 </div>
+
+                <template v-else>
+                    <!-- มือถือ: แถวรายชื่อซ้อนลงล่าง -->
+                    <ul class="sm:hidden divide-y divide-gray-200 dark:divide-gray-700 border-t border-gray-200 dark:border-gray-700">
+                        <li v-for="result in filteredStudentResults" :key="result.id" class="py-3">
+                            <div class="flex items-start gap-3">
+                                <div class="w-9 h-9 flex-shrink-0 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                                    <img v-if="result.user?.avatar" :src="result.user.avatar" class="w-full h-full object-cover">
+                                    <Icon v-else icon="fluent:person-24-filled" class="w-full h-full p-1 text-gray-400" />
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white break-words">
+                                        {{ result.user?.name || 'Unknown' }}
+                                    </p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 break-words mt-0.5">
+                                        {{ result.completed_at ? formatDateNumeric(result.completed_at) : (result.started_at ? 'กำลังทำข้อสอบ' : '-') }}
+                                    </p>
+                                    <div class="flex items-center gap-2 mt-1.5">
+                                        <span class="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">
+                                            {{ result.score }} / {{ quiz.total_score }}
+                                        </span>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                            ({{ parseFloat(result.percentage).toFixed(1) }}%)
+                                        </span>
+                                    </div>
+                                </div>
+                                <span v-if="result.completed_at"
+                                    class="flex-shrink-0 whitespace-nowrap px-2 py-1 rounded text-xs font-bold"
+                                    :class="result.status === 3 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'"
+                                >
+                                    {{ result.status === 3 ? 'ผ่าน' : 'ไม่ผ่าน' }}
+                                </span>
+                                <span v-else class="flex-shrink-0 whitespace-nowrap text-xs text-gray-500 italic">รอผล</span>
+                            </div>
+                        </li>
+                    </ul>
+
+                    <!-- sm ขึ้นไป: ตาราง เลื่อนแนวนอนในกล่องตัวเองเมื่อจอแคบ -->
+                    <div class="hidden sm:block overflow-x-auto">
+                        <table class="min-w-full text-sm text-left">
+                            <thead class="text-xs text-gray-500 dark:text-gray-400 uppercase border-b border-gray-200 dark:border-gray-700">
+                                <tr>
+                                    <th class="px-4 py-3 font-medium whitespace-nowrap">นักเรียน</th>
+                                    <th class="px-4 py-3 font-medium whitespace-nowrap">วันที่สอบ</th>
+                                    <th class="px-4 py-3 font-medium whitespace-nowrap">คะแนน</th>
+                                    <th class="px-4 py-3 font-medium whitespace-nowrap">เปอร์เซ็นต์</th>
+                                    <th class="px-4 py-3 font-medium whitespace-nowrap">สถานะ</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                <tr v-for="result in filteredStudentResults" :key="result.id">
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-8 h-8 flex-shrink-0 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                                                <img v-if="result.user?.avatar" :src="result.user.avatar" class="w-full h-full object-cover">
+                                                <Icon v-else icon="fluent:person-24-filled" class="w-full h-full p-1 text-gray-400" />
+                                            </div>
+                                            <span class="font-medium text-gray-900 dark:text-white">{{ result.user?.name || 'Unknown' }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-400">
+                                        {{ result.completed_at ? formatDateNumeric(result.completed_at) : (result.started_at ? 'กำลังทำข้อสอบ' : '-') }}
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap font-medium text-gray-900 dark:text-white">
+                                        {{ result.score }} / {{ quiz.total_score }}
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-400">
+                                        {{ parseFloat(result.percentage).toFixed(1) }}%
+                                    </td>
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <span v-if="result.completed_at"
+                                            class="px-2 py-1 rounded text-xs font-bold"
+                                            :class="result.status === 3 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'"
+                                        >
+                                            {{ result.status === 3 ? 'ผ่าน' : 'ไม่ผ่าน' }}
+                                        </span>
+                                        <span v-else class="text-gray-500 italic">...</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </template>
             </div>
             
             <div class="mt-4 flex justify-end gap-2">

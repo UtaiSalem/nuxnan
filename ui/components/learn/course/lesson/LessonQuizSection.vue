@@ -6,6 +6,7 @@ import { useSweetAlert } from '@/composables/useSweetAlert'
 import ImageLightbox from '~/components/play/feed/ImageLightbox.vue'
 import LessonQuizCompletionCard from './LessonQuizCompletionCard.vue'
 import QuestionImportModal from '~/components/learn/course/questions/QuestionImportModal.vue'
+import { useQuestionImportService } from '~/services/questionImportService'
 
 interface NextLesson {
   id: number
@@ -57,6 +58,20 @@ const onQuestionsImported = async () => {
   showImportModal.value = false
   const res: any = await api.get(`/api/lessons/${props.lessonId}/questions`)
   emit('update:questions', res?.data ?? res ?? [])
+}
+
+const questionExportService = useQuestionImportService()
+const isExporting = ref(false)
+const exportQuestions = async () => {
+  if (isExporting.value) return
+  isExporting.value = true
+  try {
+    await questionExportService.exportQuestions(importScope.value)
+  } catch (err: any) {
+    swal.toast(err?.data?.message || 'ดาวน์โหลดข้อสอบไม่สำเร็จ', 'error')
+  } finally {
+    isExporting.value = false
+  }
 }
 
 const hasQuestions = computed(() => props.questions && props.questions.length > 0)
@@ -444,20 +459,28 @@ onUnmounted(() => {
         </h3>
 
         <!-- Admin Actions -->
-        <div v-if="isCreator" class="grid grid-cols-2 sm:flex sm:items-center gap-2">
+        <div v-if="isCreator" class="flex flex-col sm:flex-row sm:items-center gap-2">
             <button
                 @click="showImportModal = true"
-                class="flex items-center justify-center gap-2 min-h-[44px] px-3 sm:px-4 py-2 border border-orange-300 text-orange-600 rounded-lg hover:bg-orange-50 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-900/30 transition-colors text-sm font-medium"
+                class="w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px] px-3 sm:px-4 py-2 border border-orange-300 text-orange-600 rounded-lg hover:bg-orange-50 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-900/30 transition-colors text-sm font-medium"
             >
                 <Icon icon="fluent:arrow-upload-24-regular" class="w-4 h-4 flex-shrink-0" />
-                อัปโหลดข้อสอบ
+                <span class="whitespace-nowrap">อัปโหลดข้อสอบ</span>
+            </button>
+            <button
+                @click="exportQuestions"
+                :disabled="isExporting || questions.length === 0"
+                class="w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px] px-3 sm:px-4 py-2 border border-orange-300 text-orange-600 rounded-lg hover:bg-orange-50 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+            >
+                <Icon :icon="isExporting ? 'svg-spinners:180-ring-with-bg' : 'fluent:arrow-download-24-regular'" class="w-4 h-4 flex-shrink-0" />
+                <span class="whitespace-nowrap">{{ isExporting ? 'กำลังดาวน์โหลด...' : 'ดาวน์โหลดข้อสอบ' }}</span>
             </button>
             <button
                 @click="emit('create')"
-                class="flex items-center justify-center gap-2 min-h-[44px] px-3 sm:px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
+                class="w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px] px-3 sm:px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
             >
                 <Icon icon="fluent:add-24-filled" class="w-4 h-4 flex-shrink-0" />
-                เพิ่มคำถาม
+                <span class="whitespace-nowrap">เพิ่มคำถาม</span>
             </button>
         </div>
       </div>

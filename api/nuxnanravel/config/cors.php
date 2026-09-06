@@ -46,7 +46,10 @@ return [
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => [],
+    // เบราว์เซอร์อ่าน response header ข้าม origin ได้แค่ CORS-safelisted 7 ตัว
+    // ต้องประกาศ Content-Disposition ตรงนี้ ไม่งั้น api.getBlob() อ่านชื่อไฟล์ไม่ได้
+    // แล้วไฟล์ที่ดาวน์โหลดจะชื่อ "download" ไม่มีนามสกุล
+    'exposed_headers' => ['Content-Disposition'],
 
     'max_age' => 0,
 

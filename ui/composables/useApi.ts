@@ -734,15 +734,31 @@ export const useApi = () => {
 
       const blob = await response.blob();
       
-      // Get filename from Content-Disposition header if available
+      // อ่านชื่อไฟล์จาก Content-Disposition
+      // ต้องอ่าน `filename*=UTF-8''...` (RFC 5987) ก่อนเสมอ เพราะ Laravel ใส่ชื่อจริงไว้ตรงนั้น
+      // ส่วน `filename=` เป็น ASCII fallback ที่ Str::ascii() โยนตัวอักษรไทยทิ้งไปหมดแล้ว
+      // (ชื่อ "ความรู้พื้นฐาน..." จะเหลือแค่ "--20260907.xlsx")
       const contentDisposition = response.headers.get('Content-Disposition');
       let filename = 'download';
       if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-        if (filenameMatch) {
-          filename = filenameMatch[1].replace(/['"]/g, '');
+        const extendedMatch = contentDisposition.match(/filename\*\s*=\s*([^;\n]*)/i);
+        if (extendedMatch) {
+          const raw = extendedMatch[1].trim().replace(/^["']|["']$/g, '');
+          const encoded = raw.replace(/^[^']*'[^']*'/, '');
+          try {
+            filename = decodeURIComponent(encoded);
+          } catch {
+            filename = '';
+          }
+        }
+        if (!filename || filename === 'download') {
+          const filenameMatch = contentDisposition.match(/filename[^*;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (filenameMatch) {
+            filename = filenameMatch[1].replace(/['"]/g, '');
+          }
         }
       }
+      filename = filename.replace(/[\\/]/g, '_').trim() || 'download';
 
        if (debug || process.env.NODE_ENV === 'development') {
          // Dev-only logging

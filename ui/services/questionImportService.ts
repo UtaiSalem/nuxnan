@@ -10,16 +10,30 @@ export const useQuestionImportService = () => {
       ? `/api/lessons/${scope.lessonId}/questions/import`
       : `/api/courses/${scope.courseId}/quizzes/${scope.quizId}/questions/import`
 
-  const downloadTemplate = async (scope: QuestionImportScope): Promise<void> => {
-    const { blob, filename } = await api.getBlob(`${baseUrl(scope)}/template`)
+  const exportUrl = (scope: QuestionImportScope) =>
+    scope.type === 'lesson'
+      ? `/api/lessons/${scope.lessonId}/questions/export`
+      : `/api/courses/${scope.courseId}/quizzes/${scope.quizId}/questions/export`
+
+  const saveBlob = (blob: Blob, filename: string) => {
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.setAttribute('download', filename || 'question-import-template.xlsx')
+    link.setAttribute('download', filename)
     document.body.appendChild(link)
     link.click()
     link.remove()
     window.URL.revokeObjectURL(url)
+  }
+
+  const downloadTemplate = async (scope: QuestionImportScope): Promise<void> => {
+    const { blob, filename } = await api.getBlob(`${baseUrl(scope)}/template`)
+    saveBlob(blob, filename || 'question-import-template.xlsx')
+  }
+
+  const exportQuestions = async (scope: QuestionImportScope): Promise<void> => {
+    const { blob, filename } = await api.getBlob(exportUrl(scope))
+    saveBlob(blob, filename || 'questions.xlsx')
   }
 
   const previewImport = async (scope: QuestionImportScope, file: File): Promise<QuestionImportPreview> => {
@@ -34,5 +48,5 @@ export const useQuestionImportService = () => {
     return res?.data ?? res
   }
 
-  return { downloadTemplate, previewImport, commitImport }
+  return { downloadTemplate, exportQuestions, previewImport, commitImport }
 }
