@@ -493,21 +493,22 @@ const getStatusBadge = computed(() => {
                         </li>
                     </ul>
 
-                    <!-- sm ขึ้นไป: ตาราง เลื่อนแนวนอนในกล่องตัวเองเมื่อจอแคบ -->
+                    <!-- sm ขึ้นไป: ตาราง เลื่อนแนวนอนในกล่องตัวเองเมื่อจอแคบ
+                         รวมคะแนนกับเปอร์เซ็นต์เป็นคอลัมน์เดียว (รูปแบบเดียวกับโหมดมือถือ)
+                         เพราะคอลัมน์เนื้อหาของ layout กว้าง 460-620px ตาราง 5 คอลัมน์ลงไม่พอดี -->
                     <div class="hidden sm:block overflow-x-auto">
                         <table class="min-w-full text-sm text-left">
                             <thead class="text-xs text-gray-500 dark:text-gray-400 uppercase border-b border-gray-200 dark:border-gray-700">
                                 <tr>
-                                    <th class="px-4 py-3 font-medium whitespace-nowrap">นักเรียน</th>
-                                    <th class="px-4 py-3 font-medium whitespace-nowrap">วันที่สอบ</th>
-                                    <th class="px-4 py-3 font-medium whitespace-nowrap">คะแนน</th>
-                                    <th class="px-4 py-3 font-medium whitespace-nowrap">เปอร์เซ็นต์</th>
-                                    <th class="px-4 py-3 font-medium whitespace-nowrap">สถานะ</th>
+                                    <th class="px-3 py-3 font-medium whitespace-nowrap">นักเรียน</th>
+                                    <th class="px-3 py-3 font-medium whitespace-nowrap">วันที่สอบ</th>
+                                    <th class="px-3 py-3 font-medium whitespace-nowrap">คะแนน</th>
+                                    <th class="px-3 py-3 font-medium whitespace-nowrap">สถานะ</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                                 <tr v-for="result in filteredStudentResults" :key="result.id">
-                                    <td class="px-4 py-3 whitespace-nowrap">
+                                    <td class="px-3 py-3 whitespace-nowrap">
                                         <div class="flex items-center gap-2">
                                             <div class="w-8 h-8 flex-shrink-0 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                                                 <img v-if="result.user?.avatar" :src="result.user.avatar" class="w-full h-full object-cover">
@@ -516,16 +517,14 @@ const getStatusBadge = computed(() => {
                                             <span class="font-medium text-gray-900 dark:text-white">{{ result.user?.name || 'Unknown' }}</span>
                                         </div>
                                     </td>
-                                    <td class="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-400">
+                                    <td class="px-3 py-3 whitespace-nowrap text-gray-600 dark:text-gray-400">
                                         {{ result.completed_at ? formatDateNumeric(result.completed_at) : (result.started_at ? 'กำลังทำข้อสอบ' : '-') }}
                                     </td>
-                                    <td class="px-4 py-3 whitespace-nowrap font-medium text-gray-900 dark:text-white">
-                                        {{ result.score }} / {{ quiz.total_score }}
+                                    <td class="px-3 py-3 whitespace-nowrap">
+                                        <span class="font-medium text-gray-900 dark:text-white">{{ result.score }} / {{ quiz.total_score }}</span>
+                                        <span class="ml-1 text-xs text-gray-500 dark:text-gray-400">({{ parseFloat(result.percentage).toFixed(1) }}%)</span>
                                     </td>
-                                    <td class="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-400">
-                                        {{ parseFloat(result.percentage).toFixed(1) }}%
-                                    </td>
-                                    <td class="px-4 py-3 whitespace-nowrap">
+                                    <td class="px-3 py-3 whitespace-nowrap">
                                         <span v-if="result.completed_at"
                                             class="px-2 py-1 rounded text-xs font-bold"
                                             :class="result.status === 3 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'"

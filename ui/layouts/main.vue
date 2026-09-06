@@ -376,9 +376,11 @@ const hasRight = computed(() => layoutWidgets.value.hasRightWidgets || !!slots.r
 const centerGridClass = computed(() => {
   // Case: Both exist
   if (hasLeft.value && hasRight.value) {
-    // lg: left(3) + center(9). Right is slide-out.
-    // xl: left(3) + center(6) + right(3).
-    return 'lg:col-span-9 xl:col-span-6'
+    // lg/xl: left(3) + center(9). Right is slide-out.
+    // 2xl: left(3) + center(6) + right(3).
+    // rail ขวาโผล่ที่ 2xl ไม่ใช่ xl เพราะที่ 1280px กริดกว้างแค่ 888px
+    // (โดน drawer ซ้าย/ขวา กินไป 160px) center 6 ช่องจะเหลือ 432px ซึ่งแคบกว่าตอนจอ 768px
+    return 'lg:col-span-9 2xl:col-span-6'
   }
 
   // Case: Only Left exists
@@ -389,9 +391,9 @@ const centerGridClass = computed(() => {
 
   // Case: Only Right exists
   if (hasRight.value) {
-    // lg: center(12). Right is slide-out.
-    // xl: center(9) + right(3).
-    return 'lg:col-span-12 xl:col-span-9'
+    // lg/xl: center(12). Right is slide-out.
+    // 2xl: center(9) + right(3).
+    return 'lg:col-span-12 2xl:col-span-9'
   }
 
   // Case: No widgets
@@ -1308,7 +1310,7 @@ const onQRActionComplete = (result) => {
         :class="[
           'flex-1 min-w-0 min-h-screen transition-all duration-300 overflow-x-hidden',
           isLeftDrawerOpen ? 'lg:pl-80' : 'lg:pl-20',
-          hasRight ? 'lg:pr-14 xl:pr-0' : '',
+          hasRight ? 'lg:pr-14 2xl:pr-0' : '',
           enableRightSidebar && isRightDrawerOpen ? 'lg:pr-80' : 'lg:pr-20',
         ]"
       >
@@ -1355,18 +1357,18 @@ const onQRActionComplete = (result) => {
               </div>
             </div>
 
-            <!-- Right Widgets (3/12) - visible xl+, slide-out on tablet/mobile -->
+            <!-- Right Widgets (3/12) - visible 2xl+, slide-out ต่ำกว่านั้น -->
             <div
               v-show="hasRight"
               :class="[
-                'min-w-0 xl:col-span-3 transition-all duration-300',
+                'min-w-0 2xl:col-span-3 transition-all duration-300',
                 'fixed top-16 bottom-0 right-0 w-80 max-w-[85vw] z-40 p-6 bg-white dark:bg-vikinger-dark-100 shadow-xl overflow-y-auto transform',
-                'xl:relative xl:top-auto xl:bottom-auto xl:right-auto xl:w-auto xl:max-w-none xl:z-0 xl:p-0 xl:bg-transparent xl:dark:bg-transparent xl:shadow-none xl:overflow-visible xl:translate-x-0',
-                layoutWidgets.isRightPanelOpen ? 'translate-x-0' : 'translate-x-full xl:translate-x-0'
+                '2xl:relative 2xl:top-auto 2xl:bottom-auto 2xl:right-auto 2xl:w-auto 2xl:max-w-none 2xl:z-0 2xl:p-0 2xl:bg-transparent 2xl:dark:bg-transparent 2xl:shadow-none 2xl:overflow-visible 2xl:translate-x-0',
+                layoutWidgets.isRightPanelOpen ? 'translate-x-0' : 'translate-x-full 2xl:translate-x-0'
               ]"
             >
-              <!-- Close button for mobile/tablet -->
-              <div class="xl:hidden flex justify-end mb-4">
+              <!-- Close button for mobile/tablet/laptop -->
+              <div class="2xl:hidden flex justify-end mb-4">
                 <button @click="layoutWidgets.isRightPanelOpen = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 rounded-full hover:bg-gray-100 dark:hover:bg-vikinger-dark-200">
                   <Icon icon="mdi:close" class="w-6 h-6 text-gray-500" />
                 </button>
@@ -1806,14 +1808,14 @@ const onQRActionComplete = (result) => {
       </button>
     </div>
 
-    <!-- Right Panel Toggle (visible < xl when right widgets exist) -->
+    <!-- Right Panel Toggle (visible < 2xl when right widgets exist) -->
     <div
       class="fixed right-0 top-1/2 -translate-y-1/2 z-30 transition-all duration-300"
       :class="hasRight && !layoutWidgets.isRightPanelOpen ? 'translate-x-0' : 'translate-x-full'"
     >
       <button
         @click="layoutWidgets.isRightPanelOpen = true"
-        class="xl:hidden min-h-[44px] flex items-center bg-gradient-vikinger text-white px-1.5 py-3 sm:px-2 sm:py-3.5 rounded-l-xl shadow-vikinger opacity-60 hover:opacity-100 focus-visible:opacity-100 hover:scale-105 active:scale-95 active:opacity-100 transition-all"
+        class="2xl:hidden min-h-[44px] flex items-center bg-gradient-vikinger text-white px-1.5 py-3 sm:px-2 sm:py-3.5 rounded-l-xl shadow-vikinger opacity-60 hover:opacity-100 focus-visible:opacity-100 hover:scale-105 active:scale-95 active:opacity-100 transition-all"
         title="เปิดแถบเครื่องมือด้านขวา"
         aria-label="เปิดแถบเครื่องมือด้านขวา"
       >
