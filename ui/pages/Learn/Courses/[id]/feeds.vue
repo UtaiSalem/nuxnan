@@ -10,25 +10,6 @@ const injectedIsCourseAdmin = inject<Ref<boolean>>('isCourseAdmin')
 const course = computed(() => injectedCourse?.value)
 const isCourseAdmin = computed(() => injectedIsCourseAdmin?.value)
 
-const showScrollButton = ref(false)
-
-const scrollToTop = () => {
-  window.scrollTo({ top: 0, behavior: 'smooth' })
-}
-
-const handleScroll = () => {
-  showScrollButton.value = window.scrollY > 300
-}
-
-onMounted(() => {
-  window.addEventListener('scroll', handleScroll, { passive: true })
-  handleScroll()
-})
-
-onUnmounted(() => {
-  window.removeEventListener('scroll', handleScroll)
-})
-
 useHead({
   title: computed(() => course.value?.name ? `ฟีด - ${course.value.name}` : 'ฟีดรายวิชา')
 })
@@ -47,24 +28,5 @@ useHead({
       <p class="text-gray-500 dark:text-gray-400">กำลังโหลดข้อมูลรายวิชา...</p>
     </div>
 
-    <!-- Scroll to Top Button -->
-    <transition
-      enter-active-class="transition ease-out duration-300"
-      enter-from-class="opacity-0 translate-y-10"
-      enter-to-class="opacity-100 translate-y-0"
-      leave-active-class="transition ease-in duration-300"
-      leave-from-class="opacity-100 translate-y-0"
-      leave-to-class="opacity-0 translate-y-10"
-    >
-      <button
-        v-if="showScrollButton"
-        @click="scrollToTop"
-        class="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-[999] p-3 min-h-[44px] min-w-[44px] flex items-center justify-center bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-full shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-xl hover:-translate-y-1 transition-all"
-        title="เลื่อนขึ้นด้านบน"
-        aria-label="เลื่อนขึ้นด้านบน"
-      >
-        <Icon icon="fluent:arrow-up-24-filled" class="w-6 h-6" />
-      </button>
-    </transition>
   </div>
 </template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import ImageGalleryModal from '~/components/ImageGalleryModal.vue'
 import { stripHtml } from '~/utils/textUtils'
@@ -273,23 +273,7 @@ const getAnswerCardClass = (answer: any) => {
 onMounted(() => {
     fetchGroups()
     fetchAllAnswers(1, true)
-    window.addEventListener('scroll', checkScroll)
 })
-
-onUnmounted(() => {
-    window.removeEventListener('scroll', checkScroll)
-})
-
-// Back to Top
-const showBackToTop = ref(false)
-
-const checkScroll = () => {
-    showBackToTop.value = window.scrollY > 300
-}
-
-const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-}
 </script>
 
 <template>
@@ -510,24 +494,6 @@ const scrollToTop = () => {
             </div>
         </div>
 
-        <!-- Back to Top Button -->
-        <transition 
-           enter-active-class="transition ease-out duration-300"
-           enter-from-class="opacity-0 translate-y-10"
-           enter-to-class="opacity-100 translate-y-0"
-           leave-active-class="transition ease-in duration-300"
-           leave-from-class="opacity-100 translate-y-0"
-           leave-to-class="opacity-0 translate-y-10"
-        >
-             <button 
-               v-show="showBackToTop"
-               @click="scrollToTop"
-               class="fixed bottom-6 right-6 p-3 bg-orange-500 text-white rounded-full shadow-lg hover:bg-orange-600 transition-all z-50 animate-bounce-slow"
-               title="Back to Top"
-             >
-               <Icon icon="fluent:arrow-up-24-filled" class="w-6 h-6" />
-             </button>
-        </transition>
     </div>
 
     <ImageGalleryModal 

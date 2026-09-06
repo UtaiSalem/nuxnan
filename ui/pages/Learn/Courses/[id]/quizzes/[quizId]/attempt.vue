@@ -127,16 +127,6 @@ const startTimer = () => {
     }, 1000)
 }
 
-const showBackToTop = ref(false)
-
-const checkScroll = () => {
-    showBackToTop.value = window.scrollY > 300
-}
-
-const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-}
-
 // Heartbeat & Warning
 const updateDuration = async () => {
     if (!quizResult.value || !quizResult.value.id || isSubmitting.value) return
@@ -166,7 +156,6 @@ const confirmLeave = (e: BeforeUnloadEvent) => {
 
 onMounted(() => {
     initQuiz()
-    window.addEventListener('scroll', checkScroll)
     window.addEventListener('beforeunload', confirmLeave)
     
     // Auto save duration every 10 seconds
@@ -176,7 +165,6 @@ onMounted(() => {
 onUnmounted(() => {
      if (timerInterval.value) clearInterval(timerInterval.value)
      if (durationInterval.value) clearInterval(durationInterval.value)
-     window.removeEventListener('scroll', checkScroll)
      window.removeEventListener('beforeunload', confirmLeave)
 })
 
@@ -344,23 +332,5 @@ const finishAttempt = async () => {
           </div>
       </div>
        
-       <!-- Back to Top Button -->
-       <transition 
-           enter-active-class="transition ease-out duration-300"
-           enter-from-class="opacity-0 translate-y-10"
-           enter-to-class="opacity-100 translate-y-0"
-           leave-active-class="transition ease-in duration-300"
-           leave-from-class="opacity-100 translate-y-0"
-           leave-to-class="opacity-0 translate-y-10"
-        >
-             <button 
-               v-show="showBackToTop"
-               @click="scrollToTop"
-               class="fixed bottom-6 right-6 p-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all z-50"
-               title="Back to Top"
-             >
-               <Icon icon="fluent:arrow-up-24-filled" class="w-6 h-6" />
-             </button>
-        </transition>
   </div>
 </template>

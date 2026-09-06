@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CommonBackToTop from '~/components/Common/BackToTop.vue'
 const colorMode = useColorMode()
 const authStore = useAuthStore()
 
@@ -41,6 +42,9 @@ const isLoginTransitioning = computed(() => authStore.isLoginTransitioning)
         <NotificationsToastNotification />
       </div>
     </NuxtLayout>
+
+    <!-- ปุ่มเลื่อนขึ้นบนสุด — อยู่นอก NuxtLayout จึงขึ้นได้ทุกหน้า/ทุก layout -->
+    <CommonBackToTop />
   </div>
 </template>
 
