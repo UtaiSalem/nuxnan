@@ -508,13 +508,13 @@ const getStatusBadge = computed(() => {
                             </thead>
                             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                                 <tr v-for="result in filteredStudentResults" :key="result.id">
-                                    <td class="px-3 py-3 whitespace-nowrap">
+                                    <td class="px-3 py-3 min-w-[9rem]">
                                         <div class="flex items-center gap-2">
                                             <div class="w-8 h-8 flex-shrink-0 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                                                 <img v-if="result.user?.avatar" :src="result.user.avatar" class="w-full h-full object-cover">
                                                 <Icon v-else icon="fluent:person-24-filled" class="w-full h-full p-1 text-gray-400" />
                                             </div>
-                                            <span class="font-medium text-gray-900 dark:text-white">{{ result.user?.name || 'Unknown' }}</span>
+                                            <span class="min-w-0 font-medium text-gray-900 dark:text-white break-words">{{ result.user?.name || 'Unknown' }}</span>
                                         </div>
                                     </td>
                                     <td class="px-3 py-3 whitespace-nowrap text-gray-600 dark:text-gray-400">
