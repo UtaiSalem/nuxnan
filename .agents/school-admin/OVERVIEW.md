@@ -52,8 +52,8 @@ Legend: 🟢 พร้อมใช้งาน (ผ่านการตรว�
 | 4 | ลิงก์เชิญสมาชิก | `admin/invite-links/` | `members.manage` | [04-invite-links.md](04-invite-links.md) | 🟢 L-S1–S3 done · deferred: L-S4 edit/filter, L-S5 usage history, L-S6 QR |
 | 5 | แท็กสมาชิก | `admin/member-tags/` | `members.manage` | [05-member-tags.md](05-member-tags.md) | 🟢 T-S1–S3 done · deferred: T-S4 tag members page, T-S5 reorder |
 | **6** | **ผู้ปกครอง** | `admin/guardians/` | `guardians.*` | [06-guardians.md](06-guardians.md) | 🟢 **เฟส A + B เสร็จครบ verified 2026-08-26** — G-S0–G-S5 ✅ · **G-S3 ครบทุกจุดอ่าน** ✅ · **G-S6 drop `student_guardians` แล้ว** ✅ (dev · production ยังไม่ได้รัน) · G-S7–G-S11 ✅ → **เฟส C เริ่มแล้ว 2026-08-28** — O1 ตัดสินแล้ว (ผูกกับบัญชีที่มีอยู่ + ยินยอมสองทาง ดู §0 D7–D12) · แตกเป็น G-S12a–e + G-S13 · แดชบอร์ดผู้ปกครองยังใช้งานไม่ได้จนกว่าจะจบเฟสนี้ |
-| **7** | **ตั้งค่าโรงเรียน** | `admin/settings.vue` | `settings.manage` | [07-settings.md](07-settings.md) | 🔴 **audit เสร็จ 2026-08-28 — พบ gap 12 ข้อ** · P0: `PATCH /{academy}/update` ไม่ตรวจสิทธิ์เลย (G1) · ปุ่มลบโรงเรียนเป็นปุ่มตาย ไม่มี route (G2) · สวิตช์ความเป็นส่วนตัว/การลงทะเบียน 5 ตัวบันทึกได้แต่ไม่มีใครอ่าน (G3) · แตกเป็น SET-S1–S12 · **รอเคาะ Q1–Q3 ก่อนเริ่ม S2/S5** |
-| 8 | ระบบบริหารโรงเรียน | `admin/school-management.vue` | `settings.manage` | 08-school-management.md | ⚪ |
+| **7** | **ตั้งค่าโรงเรียน** | `admin/settings.vue` | `settings.manage` | [07-settings.md](07-settings.md) | 🟢 **ปิดครบทุก step แล้ว 2026-09-02** — SET-S1–S11 + S13 ✅ (gap 12 ข้อปิดหมด · เทสต์ 4 ไฟล์ 35 เคส) · เหลือ SET-S12 🔵 deferred (รูปเป็น relative path — รอทำพร้อม migration รูปทั้งระบบ ดู `.agents/photo-path-migration-plan.md`) |
+| **8** | **ระบบบริหารโรงเรียน** | `admin/school-management.vue` | `settings.manage` | [08-school-management.md](08-school-management.md) | 🔴 **audit เสร็จ 2026-09-07 — พบ gap 14 ข้อ** · P0: **203 จาก 204 route ไม่มีด่านสิทธิ์เลย** พิสูจน์แล้วว่า user ที่ไม่ใช่สมาชิกอ่านเงินเดือน/ค่าเทอม/รายจ่าย/แฟ้มบุคลากรของโรงเรียนไหนก็ได้ (G1) · UI เรียกฟังก์ชันที่ไม่มีจริง 4 จุด (G5) · endpoint ชี้ผิด path/verb 4 เส้น (G6) · แท็บที่เขียนเสร็จแต่เข้าไม่ถึง 791 บรรทัด (G7) · แตกเป็น SM-S1–S10 · **SM-S1 ทำได้ทันที ไม่ต้องรอเคาะ** ส่วน S2/S5/S7/S9 รอ Q1–Q3 |
 | **9** | **ฝ่าย/แผนก** | `admin/departments/` | `departments.*` | [09-departments.md](09-departments.md) | 🟢 **ปิดครบ D-S1–D-S7** (2026-08-24) — ช่องโหว่ route อุดแล้ว · สิทธิ์ระดับฝ่ายมีผลจริง · หน้ารายละเอียดฝ่ายยกเครื่องแล้ว · **เหลืองานป้อนข้อมูล: จัดครู 120 คนเข้าฝ่าย (รอรายชื่อจากโรงเรียน)** |
 | 10 | ห้องเรียน | `admin/classrooms/` | `groups.view` / `groups.manage` | 10-classrooms.md | 🟡 มีงานเก็บค้าง |
 | 11 | ตารางเรียน | `admin/schedule.vue` | `schedule.view` / `schedule.manage` | 11-schedule.md | ⚪ |
@@ -102,9 +102,13 @@ Legend: 🟢 พร้อมใช้งาน (ผ่านการตรว�
    ลำดับในเมนูนี้: ~~G-S7~~ → ~~G-S8~~ → ~~G-S9~~ → ~~G-S10~~ → ~~G-S11 (FE)~~ → ~~G-S3 ที่เหลือ~~ → ~~G-S6 (drop ตารางเก่า)~~ — **ครบแล้ว 2026-08-26** เหลือเฟส C (G-S12)
    หลังจบ #6 ค่อยไป #7 ตั้งค่าโรงเรียน → #8 → #10
 
-→ **#7 ตั้งค่าโรงเรียน เริ่มแล้ว 2026-08-28** — ขั้น [1] สแกนโค้ด + [2] เขียนไฟล์รอง **เสร็จแล้ว**
-   ([07-settings.md](07-settings.md)) · ยังไม่ส่ง step ไหนให้ codex — **SET-S1 (อุดช่องโหว่สิทธิ์) ทำได้ทันที
-   ไม่ต้องรอใคร** ส่วน SET-S2/S5 ติด Q1–Q3 ที่ต้องให้เจ้าของโปรเจคเคาะ (ดู §5.1)
+→ **#7 ตั้งค่าโรงเรียน ปิดครบทุก step แล้ว 2026-09-02** (SET-S1–S11 + S13 · เหลือ S12 deferred)
+
+→ **#8 ระบบบริหารโรงเรียน เริ่มแล้ว 2026-09-07** — ขั้น [1] สแกนโค้ด + [2] เขียนไฟล์รอง **เสร็จแล้ว**
+   ([08-school-management.md](08-school-management.md)) · ยังไม่ส่ง step ไหนให้ codex/agy
+   🔴 **SM-S1 (ปิดช่องโหว่สิทธิ์ 203 route) ทำได้ทันที ไม่ต้องรอใคร — และควรทำก่อนอย่างอื่นทั้งหมด**
+   ส่วน SM-S2/S5/S7/S9 ติด Q1–Q3 ที่ต้องให้เจ้าของโปรเจคเคาะ (ดู [08-school-management.md](08-school-management.md) §5.1)
+   หลัง #8 ค่อยไป #10 ห้องเรียน
 
 ✅ **backfill รันจริงแล้ว (2026-08-25) และ G-S6 drop ตารางเก่าแล้ว (2026-08-26)** — ฐาน dev มี
    `guardians` 4,504 · `student_guardian_links` 4,999 · `guardian_contacts` 4,853 · **`student_guardians` ไม่มีแล้ว**
