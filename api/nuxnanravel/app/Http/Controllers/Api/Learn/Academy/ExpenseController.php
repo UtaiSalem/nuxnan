@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
-use App\Models\Budget;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Services\AuditLogService;
@@ -29,11 +28,11 @@ class ExpenseController extends Controller
     public function index(Request $request, Academy $academy): JsonResponse
     {
         $query = Expense::where('academy_id', $academy->id)
-            ->with(['category:id,name', 'creator:id,name', 'budget:id,name']);
+            ->with(['category:id,name', 'creator:id,name']);
 
         // Filters
-        if ($request->filled('category_id')) {
-            $query->where('category_id', $request->category_id);
+        if ($request->filled('expense_category_id')) {
+            $query->where('expense_category_id', $request->expense_category_id);
         }
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -44,8 +43,7 @@ class ExpenseController extends Controller
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('title', 'like', "%{$request->search}%")
-                    ->orWhere('expense_number', 'like', "%{$request->search}%")
-                    ->orWhere('vendor_name', 'like', "%{$request->search}%");
+                    ->orWhere('vendor', 'like', "%{$request->search}%");
             });
         }
 
@@ -72,7 +70,7 @@ class ExpenseController extends Controller
      */
     public function show(Academy $academy, Expense $expense): JsonResponse
     {
-        $expense->load(['category', 'creator:id,name', 'approver:id,name', 'budget']);
+        $expense->load(['category', 'creator:id,name', 'approver:id,name']);
 
         $this->auditService->logView($expense, request());
 
@@ -88,46 +86,30 @@ class ExpenseController extends Controller
     public function store(Request $request, Academy $academy): JsonResponse
     {
         $validated = $request->validate([
-            'category_id' => 'required|exists:expense_categories,id',
-            'budget_id' => 'nullable|exists:budgets,id',
+            'expense_category_id' => 'required|exists:expense_categories,id',
+            'academic_year_id' => 'nullable|exists:academic_years,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'amount' => 'required|numeric|min:0.01',
             'expense_date' => 'required|date',
-            'payment_method' => 'nullable|string|max:50',
-            'vendor_name' => 'nullable|string|max:255',
-            'receipt_number' => 'nullable|string|max:100',
+            'vendor' => 'nullable|string|max:255',
+            'reference_number' => 'nullable|string|max:100',
             'receipt_image' => 'nullable|string',
-            'notes' => 'nullable|string',
         ]);
-
-        // Check budget availability if linked
-        if (! empty($validated['budget_id'])) {
-            $budget = Budget::find($validated['budget_id']);
-            if ($budget && ! $budget->canSpend($validated['amount'])) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'งบประมาณไม่เพียงพอ (เหลือ '.number_format($budget->remaining_amount, 2).' บาท)',
-                ], 400);
-            }
-        }
 
         $expense = Expense::create([
             'academy_id' => $academy->id,
-            'category_id' => $validated['category_id'],
-            'budget_id' => $validated['budget_id'] ?? null,
-            'expense_number' => Expense::generateExpenseNumber($academy->id),
+            'expense_category_id' => $validated['expense_category_id'],
+            'academic_year_id' => $validated['academic_year_id'] ?? null,
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
             'amount' => $validated['amount'],
             'expense_date' => $validated['expense_date'],
-            'payment_method' => $validated['payment_method'] ?? null,
-            'vendor_name' => $validated['vendor_name'] ?? null,
-            'receipt_number' => $validated['receipt_number'] ?? null,
+            'vendor' => $validated['vendor'] ?? null,
+            'reference_number' => $validated['reference_number'] ?? null,
             'receipt_image' => $validated['receipt_image'] ?? null,
             'status' => Expense::STATUS_PENDING,
-            'notes' => $validated['notes'] ?? null,
-            'created_by' => auth()->id(),
+            'requested_by' => auth()->id(),
         ]);
 
         $this->auditService->logCreate($expense, request());
@@ -135,7 +117,7 @@ class ExpenseController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'บันทึกรายจ่ายสำเร็จ',
-            'data' => $expense->fresh(['category', 'budget']),
+            'data' => $expense->fresh(['category']),
         ], 201);
     }
 
@@ -152,17 +134,15 @@ class ExpenseController extends Controller
         }
 
         $validated = $request->validate([
-            'category_id' => 'sometimes|exists:expense_categories,id',
-            'budget_id' => 'nullable|exists:budgets,id',
+            'expense_category_id' => 'sometimes|exists:expense_categories,id',
+            'academic_year_id' => 'nullable|exists:academic_years,id',
             'title' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
             'amount' => 'sometimes|numeric|min:0.01',
             'expense_date' => 'sometimes|date',
-            'payment_method' => 'nullable|string|max:50',
-            'vendor_name' => 'nullable|string|max:255',
-            'receipt_number' => 'nullable|string|max:100',
+            'vendor' => 'nullable|string|max:255',
+            'reference_number' => 'nullable|string|max:100',
             'receipt_image' => 'nullable|string',
-            'notes' => 'nullable|string',
         ]);
 
         $oldData = $expense->toArray();
@@ -173,7 +153,7 @@ class ExpenseController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'อัพเดทรายจ่ายสำเร็จ',
-            'data' => $expense->fresh(['category', 'budget']),
+            'data' => $expense->fresh(['category']),
         ]);
     }
 
@@ -197,7 +177,7 @@ class ExpenseController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'อนุมัติรายจ่ายสำเร็จ',
-            'data' => $expense->fresh(['budget']),
+            'data' => $expense->fresh(['category']),
         ]);
     }
 
@@ -291,9 +271,9 @@ class ExpenseController extends Controller
             'pending_approval' => (clone $query)->where('status', Expense::STATUS_PENDING)->count(),
             'pending_amount' => (clone $query)->where('status', Expense::STATUS_PENDING)->sum('amount'),
             'by_category' => (clone $approved)
-                ->selectRaw('category_id, SUM(amount) as total')
+                ->selectRaw('expense_category_id, SUM(amount) as total')
                 ->with('category:id,name')
-                ->groupBy('category_id')
+                ->groupBy('expense_category_id')
                 ->get()
                 ->map(fn ($item) => [
                     'category' => $item->category?->name ?? 'ไม่ระบุ',
@@ -345,7 +325,6 @@ class ExpenseController extends Controller
             'code' => 'nullable|string|max:50',
             'description' => 'nullable|string',
             'parent_id' => 'nullable|exists:expense_categories,id',
-            'display_order' => 'nullable|integer',
         ]);
 
         $category = ExpenseCategory::create([
@@ -354,7 +333,6 @@ class ExpenseController extends Controller
             'code' => $validated['code'] ?? null,
             'description' => $validated['description'] ?? null,
             'parent_id' => $validated['parent_id'] ?? null,
-            'display_order' => $validated['display_order'] ?? 0,
             'is_active' => true,
         ]);
 
@@ -375,7 +353,6 @@ class ExpenseController extends Controller
             'code' => 'nullable|string|max:50',
             'description' => 'nullable|string',
             'parent_id' => 'nullable|exists:expense_categories,id',
-            'display_order' => 'nullable|integer',
             'is_active' => 'boolean',
         ]);
 

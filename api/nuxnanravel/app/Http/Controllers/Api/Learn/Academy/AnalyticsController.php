@@ -389,13 +389,13 @@ class AnalyticsController extends Controller
         ]);
 
         $validated['academy_id'] = $academy->id;
+        $validated['calculation'] = $validated['calculation'] ?? [];
 
         $kpi = KpiDefinition::create($validated);
 
-        $this->auditLog->log(
+        $this->auditLog->logCustom(
             'kpi_created',
-            KpiDefinition::class,
-            $kpi->id,
+            $kpi,
             ['name' => $kpi->name, 'code' => $kpi->code]
         );
 

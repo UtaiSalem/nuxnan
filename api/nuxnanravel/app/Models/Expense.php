@@ -16,22 +16,20 @@ class Expense extends Model
 
     protected $fillable = [
         'academy_id',
-        'category_id',
-        'budget_id',
-        'expense_number',
+        'expense_category_id',
+        'academic_year_id',
         'title',
         'description',
         'amount',
         'expense_date',
-        'payment_method',
-        'vendor_name',
-        'receipt_number',
+        'vendor',
+        'reference_number',
         'receipt_image',
         'status',
-        'notes',
-        'created_by',
+        'requested_by',
         'approved_by',
         'approved_at',
+        'approval_notes',
     ];
 
     protected $casts = [
@@ -64,17 +62,12 @@ class Expense extends Model
 
     public function category(): BelongsTo
     {
-        return $this->belongsTo(ExpenseCategory::class, 'category_id');
-    }
-
-    public function budget(): BelongsTo
-    {
-        return $this->belongsTo(Budget::class);
+        return $this->belongsTo(ExpenseCategory::class, 'expense_category_id');
     }
 
     public function creator(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(User::class, 'requested_by');
     }
 
     public function approver(): BelongsTo
@@ -96,11 +89,6 @@ class Expense extends Model
             'approved_by' => $userId,
             'approved_at' => now(),
         ]);
-
-        // Update budget spent if linked
-        if ($this->budget) {
-            $this->budget->updateSpent();
-        }
     }
 
     public function reject(int $userId, ?string $reason = null): void
@@ -109,34 +97,13 @@ class Expense extends Model
             'status' => self::STATUS_REJECTED,
             'approved_by' => $userId,
             'approved_at' => now(),
-            'notes' => $reason,
+            'approval_notes' => $reason,
         ]);
     }
 
     public function markAsPaid(): void
     {
         $this->update(['status' => self::STATUS_PAID]);
-    }
-
-    public static function generateExpenseNumber(int $academyId): string
-    {
-        $prefix = 'EXP';
-        $year = date('Y');
-        $month = date('m');
-
-        $lastExpense = static::where('academy_id', $academyId)
-            ->where('expense_number', 'like', "{$prefix}{$year}{$month}%")
-            ->orderBy('expense_number', 'desc')
-            ->first();
-
-        if ($lastExpense) {
-            $lastNumber = (int) substr($lastExpense->expense_number, -5);
-            $newNumber = $lastNumber + 1;
-        } else {
-            $newNumber = 1;
-        }
-
-        return $prefix.$year.$month.str_pad($newNumber, 5, '0', STR_PAD_LEFT);
     }
 
     // Scopes
@@ -152,7 +119,7 @@ class Expense extends Model
 
     public function scopeByCategory($query, $categoryId)
     {
-        return $query->where('category_id', $categoryId);
+        return $query->where('expense_category_id', $categoryId);
     }
 
     public function scopeBetweenDates($query, $startDate, $endDate)
