@@ -28,7 +28,9 @@ class UserResource extends JsonResource
             'avatar' => $avatarUrl,
             'profile_photo_url' => $this->profile_photo_url,
             'profile_photo_path' => $this->profile_photo_path,
-            'points' => $this->pp,
+            // User::$casts มี 'pp' => 'decimal:2' ซึ่งคืนเป็น string "1132298.00"
+            // frontend รับเป็น prop ชนิด number จึงต้องแปลงที่จุดเดียวตรงนี้
+            'points' => (float) $this->pp,
             'wallet' => $this->wallet,
             'xp' => (int) ($this->xp ?? 0),
             'xp_level' => (int) ($this->xp_level ?? $this->level ?? 1),
