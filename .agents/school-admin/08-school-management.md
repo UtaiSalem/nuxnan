@@ -311,7 +311,7 @@ academic-years 200 · library/books 200 · assets 200
 | **SM-S1** | 🔴 ปิดช่องโหว่ G1+G2 ให้ครบ 204 route | — | middleware บนทุก group + เทสต์ 403 ของ non-member | 🟢 **done 2026-09-09** (agy เขียน · Claude ตรวจ) |
 | SM-S2 | แยก view/manage ให้ตรง Permission Matrix §4 | S1, Q3 | ปรับคีย์รายเส้น + เทสต์เคสยกเว้น (ใบลา/นัดพบ/ลงเวลา) | ⚪ blocked by Q3 |
 | SM-S3 | แก้ G5+G6 — ชื่อฟังก์ชันและ path ที่ชี้ผิด 8 จุด | — | UI เรียกได้จริงทุกปุ่ม | 🟢 **7/8 done 2026-09-09** · จุดที่ 8 (bookMeetingSlot) แยกไป SM-S7 |
-| SM-S4 | แก้ G8 — 3 endpoint ที่ 500 ถาวร | — | patch + migration (ถ้าต้อง) + เทสต์ | ⚪ pending |
+| SM-S4 | แก้ G8 — endpoint ที่ 500/พังถาวร | — | patch + เทสต์ (ไม่ต้อง migration) | 🟢 **done 2026-09-09** — Expense ทั้งโมดูล + KPI 2 บั๊ก |
 | SM-S5 | G3 — โหมดดูอย่างเดียวบนหน้า + ซ่อนปุ่มตามสิทธิ์จริง | S2 | ใช้ `can()` ที่ดึงมาแล้วแต่ไม่ได้ใช้ | ⚪ blocked by S2 |
 | SM-S6 | G9+G10 — สถิติหัวหน้าหน้าให้ถูก + ผูกแท็บกับ `?tab=` | — | ตัวเลขตรง · แชร์ลิงก์แท็บได้ | ⚪ pending |
 | SM-S7 | G7 — ตัดสินชะตา 4 ไฟล์ที่เข้าถึงไม่ได้ | Q2 | ขึ้นหน้าจริง หรือลบ 791 บรรทัด | ⚪ blocked by Q2 |
@@ -352,6 +352,25 @@ Report back: diff --stat + ผลรันเกณฑ์แบบดิบ
 ---
 
 ## 8. Review Log
+
+- **2026-09-09 SM-S4 ✅** — แก้ G8 · ผู้เขียนโค้ด **agy** · Claude ตรวจ · **ไม่ต้อง migration**
+  (เจ้าของโปรเจคเคาะ: ปรับ backend ให้ตรง schema จริง ตัดฟีเจอร์ที่ไม่มีคอลัมน์ทิ้ง)
+  ไฟล์: `app/Models/Expense.php` · `ExpenseController.php` · `AnalyticsController.php` (เฉพาะ createKpi) ·
+  เทสต์ใหม่ `tests/Feature/SchoolExpenseSchemaFixTest.php` (4 เคส)
+  - **ที่จริงใหญ่กว่า audit** — ไม่ใช่ 3 บรรทัด แต่ทั้งโมดูล Expense เขียนคนละ schema กับตารางจริง:
+    `category_id→expense_category_id` · `vendor_name→vendor` · `receipt_number→reference_number` ·
+    `created_by→requested_by` · `notes→approval_notes` · ตัด `budget_id`/`expense_number`/`payment_method`
+    (ไม่มีคอลัมน์) ⇒ store/update/show/summary เคยพังหมด ตอนนี้ตรง schema แล้ว (FE ส่งชื่อจริงอยู่แล้ว)
+  - G8.2: ตัด `display_order` จาก storeCategory/updateCategory (ไม่มีคอลัมน์ใน expense_categories)
+  - G8.3: createKpi 2 บั๊ก — (ก) `calculation` NOT NULL default `[]` · (ข) **agy เจอเพิ่ม** `auditLog->log()`
+    ส่ง class-string เข้า arg ที่รับ `?Model` → TypeError · agy แก้เป็น `logCustom($kpi, ...)`
+    Claude ยืนยัน `logCustom(string,?Model,?array,?string)` มีจริง signature ตรง
+  **หลักฐานที่ Claude รันเอง:** `pint --test` passed · เทสต์ 4/4 เขียว 11 assertions ·
+  **revert-check** stash โค้ด 3 ไฟล์ → แดง 4 เคส · restore → เขียว · guard test 8/8 ยังผ่าน ·
+  grep ยืนยันไม่มี test/factory อื่นพึ่ง Expense คีย์เก่า
+  **Claude ทำเอง:** ลบไฟล์ขยะ `kpi_error.txt` ที่ agy ทิ้งไว้ · format ไฟล์เทสต์ด้วย pint
+  **ยังไม่ตรวจบนจอจริง** · budget-linkage + expense numbering ถูกตัดเป็น dead code — ถ้าจะใช้จริง
+    เป็นงานสร้างใหม่ตอน finance buildout (Q3/Q4)
 
 - **2026-09-09 SM-S3 (7/8) ✅** — แก้ชื่อฟังก์ชัน/path ที่ UI เรียกผิด · ผู้เขียนโค้ด **agy** · Claude ตรวจ
   ไฟล์ที่แตะ: `ui/composables/useSchoolManagement.ts` (+15/−5) · `ui/components/school/SchoolStaffTab.vue` (+4/−3)

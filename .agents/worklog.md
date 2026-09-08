@@ -6955,3 +6955,30 @@ grep ชื่อเก่า 0 นัด · bulkGeneratePayroll มีทั้
 · template ไม่ถูกแตะ · **ยังไม่ตรวจบนจอจริง**
 
 ### คิวถัดไปเมนู #8: SM-S4 (3 endpoint 500 ถาวร — G8) → SM-S6 · ส่วน S2/S5/S7/S9 รอ Q1–Q3
+
+---
+
+## 2026-09-09 (ต่อ) — เมนู #8: SM-S4 แก้ G8 endpoint พังถาวร (Expense ทั้งโมดูล + KPI)
+
+### สถานะ: ✅ เสร็จ+ตรวจ+revert-check แล้ว · ผู้เขียนโค้ด agy · ไม่ต้อง migration
+
+**ใหญ่กว่า audit มาก** — audit เขียนว่า "3 endpoint 500" แต่จริง ๆ ทั้งโมดูล Expense
+(model+controller) ถูกเขียนคนละ schema กับตารางจริง ⇒ store/update/show/summary พังหมด
+เจ้าของโปรเจคเคาะ: **ปรับ backend ให้ตรง schema จริง + ตัดฟีเจอร์ไม่มีคอลัมน์ทิ้ง**
+
+ไฟล์: Expense.php · ExpenseController.php · AnalyticsController.php(createKpi) · เทสต์ใหม่ 4 เคส
+- คอลัมน์: category_id→expense_category_id · vendor_name→vendor · receipt_number→reference_number ·
+  created_by→requested_by · notes→approval_notes · ตัด budget_id/expense_number/payment_method
+- G8.2 ตัด display_order (storeCategory/updateCategory)
+- G8.3 createKpi 2 บั๊ก: calculation NOT NULL default [] · auditLog->log() ส่ง class-string→TypeError
+  (agy เจอเองแล้วแก้เป็น logCustom — Claude ยืนยัน signature ตรง)
+
+### 🔴 บทเรียน: finance module มี schema-drift แบบเดียวกันทั้งหมวด
+Expense เป็นแค่ตัวแรกที่แตะ · Payment/TuitionFee/Budget/Payroll controller อาจมี drift แบบเดียวกัน
+ถ้าจะเปิดใช้ finance ต้องไล่ audit ทุก controller เทียบ migration ก่อน (ผูกกับ Q3)
+
+### หลักฐาน Claude รันเอง
+pint passed · เทสต์ 4/4 (11 assertions) · revert-check stash→แดง4 restore→เขียว · guard 8/8 ยังผ่าน
+Claude ลบไฟล์ขยะ kpi_error.txt ที่ agy ทิ้ง + format เทสต์ · ยังไม่ตรวจบนจอจริง
+
+### คิวถัดไปเมนู #8: SM-S6 (สถิติหัวหน้าหน้า G9 + ผูกแท็บ ?tab= G10) · S2/S5/S7/S9 รอ Q1–Q3
