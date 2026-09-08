@@ -12,7 +12,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  saved: []
+  saved: [topics: any[]]
 }>()
 
 const courseStore = useCourseStore()
@@ -41,9 +41,12 @@ const save = async () => {
   try {
     const topicIds = localList.value.map(t => t.id)
     await courseStore.reorderTopics(props.lessonId, topicIds)
+    // อัพเดท sort_order ให้ตรงตำแหน่งจริง แล้วส่งลำดับใหม่ขึ้นไปให้ parent ใช้ทันที (optimistic)
+    const reordered = localList.value.map((t, i) => ({ ...t, sort_order: i + 1 }))
+    localList.value = reordered
     isDirty.value = false
     swal.success('บันทึกลำดับหัวข้อสำเร็จ')
-    emit('saved')
+    emit('saved', reordered)
   } catch (err: any) {
     swal.error(err.data?.message || 'ไม่สามารถบันทึกลำดับได้')
   } finally {

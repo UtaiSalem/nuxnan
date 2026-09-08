@@ -49,6 +49,7 @@ const emit = defineEmits<{
   'topic-created': [topic: any]
   'topic-updated': [topic: any]
   'topic-deleted': [topicId: number]
+  'topics-reordered': [topics: any[]]
 }>()
 
 const api = useApi()
@@ -918,7 +919,7 @@ const publicationStatusColor = computed(() => {
                 <TopicOrderWidget 
                   :topics="lesson.topics" 
                   :lesson-id="lesson.id" 
-                  @saved="emit('refresh')"
+                  @saved="(topics) => emit('topics-reordered', topics)"
                 />
               </div>
             </details>

@@ -198,6 +198,13 @@ const handleTopicDeleted = (topicId: number) => {
   }
 }
 
+// Handle topics reordered - apply new order immediately (ไม่ต้อง refetch / ไม่แฟลช skeleton)
+const handleTopicsReordered = (topics: any[]) => {
+  if (lesson.value) {
+    lesson.value.topics = topics
+  }
+}
+
 // Load data on mount
 onMounted(async () => {
   await ensureCourseLoaded()
@@ -283,6 +290,7 @@ watch(lesson, (newLesson) => {
           @topic-created="handleTopicCreated"
           @topic-updated="handleTopicUpdated"
           @topic-deleted="handleTopicDeleted"
+          @topics-reordered="handleTopicsReordered"
         />
       </div>
     </template>

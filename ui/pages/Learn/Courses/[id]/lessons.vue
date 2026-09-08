@@ -125,6 +125,14 @@ const handleTopicDeleted = (lessonId: number, topicId: number) => {
   }
 }
 
+// Handle topics reordered - apply new order immediately (ไม่ต้อง refetch)
+const handleTopicsReordered = (lessonId: number, topics: any[]) => {
+  const lesson = lessons.value.find(l => l.id === lessonId)
+  if (lesson) {
+    lesson.topics = topics
+  }
+}
+
 onMounted(() => {
   fetchLessons()
 })
@@ -244,6 +252,7 @@ watch(isRoot, async (newVal) => {
               @topic-created="(topic) => handleTopicCreated(lesson.id, topic)"
               @topic-updated="(topic) => handleTopicUpdated(lesson.id, topic)"
               @topic-deleted="(topicId) => handleTopicDeleted(lesson.id, topicId)"
+              @topics-reordered="(topics) => handleTopicsReordered(lesson.id, topics)"
             />
           </div>
         </div>
