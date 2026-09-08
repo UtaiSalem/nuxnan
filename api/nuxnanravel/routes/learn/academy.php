@@ -454,24 +454,24 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // ============================================
 
     // Academic Years & Semesters
-    Route::prefix('{academy}/academic-years')->group(function () {
+    Route::prefix('{academy}/academic-years')->middleware(['academy.visibility:content', 'academy.permission'])->group(function () {
         Route::get('/', [AcademicYearController::class, 'index'])->name('api.academy.academic-years.index');
-        Route::post('/', [AcademicYearController::class, 'store'])->name('api.academy.academic-years.store');
+        Route::post('/', [AcademicYearController::class, 'store'])->middleware('academy.permission:courses.manage')->name('api.academy.academic-years.store');
         Route::get('/current', [AcademicYearController::class, 'getCurrent'])->name('api.academy.academic-years.current');
-        Route::put('/{academicYear}', [AcademicYearController::class, 'update'])->name('api.academy.academic-years.update');
-        Route::delete('/{academicYear}', [AcademicYearController::class, 'destroy'])->name('api.academy.academic-years.destroy');
-        Route::post('/{academicYear}/semesters', [AcademicYearController::class, 'storeSemester'])->name('api.academy.semesters.store');
-        Route::put('/{academicYear}/semesters/{semester}', [AcademicYearController::class, 'updateSemester'])->name('api.academy.semesters.update');
+        Route::put('/{academicYear}', [AcademicYearController::class, 'update'])->middleware('academy.permission:courses.manage')->name('api.academy.academic-years.update');
+        Route::delete('/{academicYear}', [AcademicYearController::class, 'destroy'])->middleware('academy.permission:courses.manage')->name('api.academy.academic-years.destroy');
+        Route::post('/{academicYear}/semesters', [AcademicYearController::class, 'storeSemester'])->middleware('academy.permission:courses.manage')->name('api.academy.semesters.store');
+        Route::put('/{academicYear}/semesters/{semester}', [AcademicYearController::class, 'updateSemester'])->middleware('academy.permission:courses.manage')->name('api.academy.semesters.update');
     });
 
     // Subjects
-    Route::prefix('{academy}/subjects')->group(function () {
+    Route::prefix('{academy}/subjects')->middleware(['academy.visibility:content', 'academy.permission'])->group(function () {
         Route::get('/', [SubjectController::class, 'index'])->name('api.academy.subjects.index');
-        Route::post('/', [SubjectController::class, 'store'])->name('api.academy.subjects.store');
+        Route::post('/', [SubjectController::class, 'store'])->middleware('academy.permission:courses.manage')->name('api.academy.subjects.store');
         Route::get('/groups', [SubjectController::class, 'getGroups'])->name('api.academy.subjects.groups');
         Route::get('/{subject}', [SubjectController::class, 'show'])->name('api.academy.subjects.show');
-        Route::put('/{subject}', [SubjectController::class, 'update'])->name('api.academy.subjects.update');
-        Route::delete('/{subject}', [SubjectController::class, 'destroy'])->name('api.academy.subjects.destroy');
+        Route::put('/{subject}', [SubjectController::class, 'update'])->middleware('academy.permission:courses.manage')->name('api.academy.subjects.update');
+        Route::delete('/{subject}', [SubjectController::class, 'destroy'])->middleware('academy.permission:courses.manage')->name('api.academy.subjects.destroy');
     });
 
     // Grade Scales & Assessment Categories
@@ -636,15 +636,15 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // Class Schedule Routes - ระบบตารางเรียน
     // =====================================================
 
-    Route::prefix('{academy}/schedules')->group(function () {
+    Route::prefix('{academy}/schedules')->middleware(['academy.visibility:content', 'academy.permission'])->group(function () {
         Route::get('/', [ClassScheduleController::class, 'index'])->name('api.academy.schedules.index');
         Route::get('/timetable', [ClassScheduleController::class, 'timetable'])->name('api.academy.schedules.timetable');
         Route::get('/today', [ClassScheduleController::class, 'today'])->name('api.academy.schedules.today');
         Route::get('/check-availability', [ClassScheduleController::class, 'checkAvailability'])->name('api.academy.schedules.checkAvailability');
-        Route::post('/', [ClassScheduleController::class, 'store'])->name('api.academy.schedules.store');
-        Route::post('/bulk', [ClassScheduleController::class, 'bulkStore'])->name('api.academy.schedules.bulkStore');
-        Route::patch('/{id}', [ClassScheduleController::class, 'update'])->name('api.academy.schedules.update');
-        Route::delete('/{id}', [ClassScheduleController::class, 'destroy'])->name('api.academy.schedules.destroy');
+        Route::post('/', [ClassScheduleController::class, 'store'])->middleware('academy.permission:schedule.manage')->name('api.academy.schedules.store');
+        Route::post('/bulk', [ClassScheduleController::class, 'bulkStore'])->middleware('academy.permission:schedule.manage')->name('api.academy.schedules.bulkStore');
+        Route::patch('/{id}', [ClassScheduleController::class, 'update'])->middleware('academy.permission:schedule.manage')->name('api.academy.schedules.update');
+        Route::delete('/{id}', [ClassScheduleController::class, 'destroy'])->middleware('academy.permission:schedule.manage')->name('api.academy.schedules.destroy');
     });
 
     // =====================================================
@@ -652,7 +652,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // =====================================================
 
     // Fee Structure - โครงสร้างค่าธรรมเนียม
-    Route::prefix('{academy}/fee-structures')->group(function () {
+    Route::prefix('{academy}/fee-structures')->middleware(['academy.visibility:content', 'academy.permission:finance.view'])->group(function () {
         Route::get('/', [FeeStructureController::class, 'index'])->name('api.academy.feeStructures.index');
         Route::post('/', [FeeStructureController::class, 'store'])->name('api.academy.feeStructures.store');
         Route::get('/fee-types', [FeeStructureController::class, 'feeTypes'])->name('api.academy.feeStructures.feeTypes');
@@ -666,7 +666,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     });
 
     // Tuition Fee - ใบแจ้งหนี้ค่าเล่าเรียน
-    Route::prefix('{academy}/tuition-fees')->group(function () {
+    Route::prefix('{academy}/tuition-fees')->middleware(['academy.visibility:content', 'academy.permission:finance.view'])->group(function () {
         Route::get('/', [TuitionFeeController::class, 'index'])->name('api.academy.tuitionFees.index');
         Route::post('/', [TuitionFeeController::class, 'store'])->name('api.academy.tuitionFees.store');
         Route::post('/bulk-generate', [TuitionFeeController::class, 'bulkGenerate'])->name('api.academy.tuitionFees.bulkGenerate');
@@ -679,7 +679,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     });
 
     // Payments - การชำระเงิน
-    Route::prefix('{academy}/payments')->group(function () {
+    Route::prefix('{academy}/payments')->middleware(['academy.visibility:content', 'academy.permission:finance.view'])->group(function () {
         Route::get('/', [PaymentController::class, 'index'])->name('api.academy.payments.index');
         Route::post('/', [PaymentController::class, 'store'])->name('api.academy.payments.store');
         Route::get('/summary', [PaymentController::class, 'summary'])->name('api.academy.payments.summary');
@@ -691,7 +691,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     });
 
     // Expenses - รายจ่าย
-    Route::prefix('{academy}/expenses')->group(function () {
+    Route::prefix('{academy}/expenses')->middleware(['academy.visibility:content', 'academy.permission:finance.view'])->group(function () {
         Route::get('/', [ExpenseController::class, 'index'])->name('api.academy.expenses.index');
         Route::post('/', [ExpenseController::class, 'store'])->name('api.academy.expenses.store');
         Route::get('/summary', [ExpenseController::class, 'summary'])->name('api.academy.expenses.summary');
@@ -708,7 +708,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     });
 
     // Budgets - งบประมาณ
-    Route::prefix('{academy}/budgets')->group(function () {
+    Route::prefix('{academy}/budgets')->middleware(['academy.visibility:content', 'academy.permission:finance.view'])->group(function () {
         Route::get('/', [BudgetController::class, 'index'])->name('api.academy.budgets.index');
         Route::post('/', [BudgetController::class, 'store'])->name('api.academy.budgets.store');
         Route::get('/summary', [BudgetController::class, 'summary'])->name('api.academy.budgets.summary');
@@ -727,7 +727,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // =====================================================
 
     // Staff - บุคลากร
-    Route::prefix('{academy}/staff')->group(function () {
+    Route::prefix('{academy}/staff')->middleware(['academy.visibility:content', 'academy.permission:staff.view'])->group(function () {
         Route::get('/', [StaffController::class, 'index'])->name('api.academy.staff.index');
         Route::post('/', [StaffController::class, 'store'])->name('api.academy.staff.store');
         Route::get('/directory', [StaffController::class, 'directory'])->name('api.academy.staff.directory');
@@ -743,35 +743,35 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     });
 
     // Staff Attendance - การลงเวลาทำงาน
-    Route::prefix('{academy}/staff-attendance')->group(function () {
-        Route::get('/', [StaffAttendanceController::class, 'index'])->name('api.academy.staffAttendance.index');
-        Route::post('/', [StaffAttendanceController::class, 'store'])->name('api.academy.staffAttendance.store');
-        Route::post('/check-in', [StaffAttendanceController::class, 'checkIn'])->name('api.academy.staffAttendance.checkIn');
-        Route::post('/check-out', [StaffAttendanceController::class, 'checkOut'])->name('api.academy.staffAttendance.checkOut');
-        Route::get('/daily-report', [StaffAttendanceController::class, 'dailyReport'])->name('api.academy.staffAttendance.dailyReport');
-        Route::get('/staff/{staff}', [StaffAttendanceController::class, 'staffReport'])->name('api.academy.staffAttendance.staffReport');
-        Route::get('/{attendance}', [StaffAttendanceController::class, 'show'])->name('api.academy.staffAttendance.show');
-        Route::patch('/{attendance}', [StaffAttendanceController::class, 'update'])->name('api.academy.staffAttendance.update');
-        Route::delete('/{attendance}', [StaffAttendanceController::class, 'destroy'])->name('api.academy.staffAttendance.destroy');
+    Route::prefix('{academy}/staff-attendance')->middleware('academy.visibility:content')->group(function () {
+        Route::get('/', [StaffAttendanceController::class, 'index'])->middleware('academy.permission:staff.view')->name('api.academy.staffAttendance.index');
+        Route::post('/', [StaffAttendanceController::class, 'store'])->middleware('academy.permission:staff.view')->name('api.academy.staffAttendance.store');
+        Route::post('/check-in', [StaffAttendanceController::class, 'checkIn'])->middleware('academy.permission')->name('api.academy.staffAttendance.checkIn');
+        Route::post('/check-out', [StaffAttendanceController::class, 'checkOut'])->middleware('academy.permission')->name('api.academy.staffAttendance.checkOut');
+        Route::get('/daily-report', [StaffAttendanceController::class, 'dailyReport'])->middleware('academy.permission:staff.view')->name('api.academy.staffAttendance.dailyReport');
+        Route::get('/staff/{staff}', [StaffAttendanceController::class, 'staffReport'])->middleware('academy.permission:staff.view')->name('api.academy.staffAttendance.staffReport');
+        Route::get('/{attendance}', [StaffAttendanceController::class, 'show'])->middleware('academy.permission:staff.view')->name('api.academy.staffAttendance.show');
+        Route::patch('/{attendance}', [StaffAttendanceController::class, 'update'])->middleware('academy.permission:staff.view')->name('api.academy.staffAttendance.update');
+        Route::delete('/{attendance}', [StaffAttendanceController::class, 'destroy'])->middleware('academy.permission:staff.view')->name('api.academy.staffAttendance.destroy');
     });
 
     // Leave Requests - การลา
-    Route::prefix('{academy}/leave-requests')->group(function () {
-        Route::get('/', [LeaveRequestController::class, 'index'])->name('api.academy.leaveRequests.index');
-        Route::post('/', [LeaveRequestController::class, 'store'])->name('api.academy.leaveRequests.store');
-        Route::get('/summary', [LeaveRequestController::class, 'summary'])->name('api.academy.leaveRequests.summary');
-        Route::get('/leave-types', [LeaveRequestController::class, 'leaveTypes'])->name('api.academy.leaveRequests.leaveTypes');
-        Route::post('/leave-types', [LeaveRequestController::class, 'storeLeaveType'])->name('api.academy.leaveRequests.leaveTypes.store');
-        Route::patch('/leave-types/{leaveType}', [LeaveRequestController::class, 'updateLeaveType'])->name('api.academy.leaveRequests.leaveTypes.update');
-        Route::get('/staff/{staff}/balance', [LeaveRequestController::class, 'staffLeaveBalance'])->name('api.academy.leaveRequests.staffBalance');
-        Route::get('/{leave}', [LeaveRequestController::class, 'show'])->name('api.academy.leaveRequests.show');
-        Route::post('/{leave}/approve', [LeaveRequestController::class, 'approve'])->name('api.academy.leaveRequests.approve');
-        Route::post('/{leave}/reject', [LeaveRequestController::class, 'reject'])->name('api.academy.leaveRequests.reject');
-        Route::post('/{leave}/cancel', [LeaveRequestController::class, 'cancel'])->name('api.academy.leaveRequests.cancel');
+    Route::prefix('{academy}/leave-requests')->middleware('academy.visibility:content')->group(function () {
+        Route::get('/', [LeaveRequestController::class, 'index'])->middleware('academy.permission:staff.view')->name('api.academy.leaveRequests.index');
+        Route::post('/', [LeaveRequestController::class, 'store'])->middleware('academy.permission')->name('api.academy.leaveRequests.store');
+        Route::get('/summary', [LeaveRequestController::class, 'summary'])->middleware('academy.permission:staff.view')->name('api.academy.leaveRequests.summary');
+        Route::get('/leave-types', [LeaveRequestController::class, 'leaveTypes'])->middleware('academy.permission')->name('api.academy.leaveRequests.leaveTypes');
+        Route::post('/leave-types', [LeaveRequestController::class, 'storeLeaveType'])->middleware('academy.permission:staff.view')->name('api.academy.leaveRequests.leaveTypes.store');
+        Route::patch('/leave-types/{leaveType}', [LeaveRequestController::class, 'updateLeaveType'])->middleware('academy.permission:staff.view')->name('api.academy.leaveRequests.leaveTypes.update');
+        Route::get('/staff/{staff}/balance', [LeaveRequestController::class, 'staffLeaveBalance'])->middleware('academy.permission:staff.view')->name('api.academy.leaveRequests.staffBalance');
+        Route::get('/{leave}', [LeaveRequestController::class, 'show'])->middleware('academy.permission:staff.view')->name('api.academy.leaveRequests.show');
+        Route::post('/{leave}/approve', [LeaveRequestController::class, 'approve'])->middleware('academy.permission:staff.view')->name('api.academy.leaveRequests.approve');
+        Route::post('/{leave}/reject', [LeaveRequestController::class, 'reject'])->middleware('academy.permission:staff.view')->name('api.academy.leaveRequests.reject');
+        Route::post('/{leave}/cancel', [LeaveRequestController::class, 'cancel'])->middleware('academy.permission')->name('api.academy.leaveRequests.cancel');
     });
 
     // Payroll - เงินเดือน
-    Route::prefix('{academy}/payroll')->group(function () {
+    Route::prefix('{academy}/payroll')->middleware(['academy.visibility:content', 'academy.permission:staff.view'])->group(function () {
         Route::get('/', [PayrollController::class, 'index'])->name('api.academy.payroll.index');
         Route::post('/', [PayrollController::class, 'store'])->name('api.academy.payroll.store');
         Route::post('/bulk-generate', [PayrollController::class, 'bulkGenerate'])->name('api.academy.payroll.bulkGenerate');
@@ -792,15 +792,15 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // =====================================================
 
     // Announcements - ประกาศ
-    Route::prefix('{academy}/announcements')->group(function () {
+    Route::prefix('{academy}/announcements')->middleware(['academy.visibility:content', 'academy.permission'])->group(function () {
         Route::get('/', [AnnouncementController::class, 'index'])->middleware('academy.visibility:content')->name('api.academy.announcements.index');
-        Route::post('/', [AnnouncementController::class, 'store'])->name('api.academy.announcements.store');
-        Route::get('/stats', [AnnouncementController::class, 'stats'])->name('api.academy.announcements.stats');
+        Route::post('/', [AnnouncementController::class, 'store'])->middleware('academy.permission:announcements.manage')->name('api.academy.announcements.store');
+        Route::get('/stats', [AnnouncementController::class, 'stats'])->middleware('academy.permission:announcements.manage')->name('api.academy.announcements.stats');
         Route::get('/{announcement}', [AnnouncementController::class, 'show'])->name('api.academy.announcements.show');
-        Route::patch('/{announcement}', [AnnouncementController::class, 'update'])->name('api.academy.announcements.update');
-        Route::post('/{announcement}/publish', [AnnouncementController::class, 'publish'])->name('api.academy.announcements.publish');
-        Route::post('/{announcement}/unpublish', [AnnouncementController::class, 'unpublish'])->name('api.academy.announcements.unpublish');
-        Route::delete('/{announcement}', [AnnouncementController::class, 'destroy'])->name('api.academy.announcements.destroy');
+        Route::patch('/{announcement}', [AnnouncementController::class, 'update'])->middleware('academy.permission:announcements.manage')->name('api.academy.announcements.update');
+        Route::post('/{announcement}/publish', [AnnouncementController::class, 'publish'])->middleware('academy.permission:announcements.manage')->name('api.academy.announcements.publish');
+        Route::post('/{announcement}/unpublish', [AnnouncementController::class, 'unpublish'])->middleware('academy.permission:announcements.manage')->name('api.academy.announcements.unpublish');
+        Route::delete('/{announcement}', [AnnouncementController::class, 'destroy'])->middleware('academy.permission:announcements.manage')->name('api.academy.announcements.destroy');
     });
 
     // School Events - กิจกรรมโรงเรียน
@@ -874,7 +874,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     });
 
     // Parent-Teacher Meetings - การนัดพบผู้ปกครอง
-    Route::prefix('{academy}/meetings')->group(function () {
+    Route::prefix('{academy}/meetings')->middleware(['academy.visibility:content', 'academy.permission'])->group(function () {
         Route::get('/slots', [MeetingController::class, 'slots'])->name('api.academy.meetings.slots');
         Route::get('/slots/available', [MeetingController::class, 'available'])->name('api.academy.meetings.available');
         Route::post('/slots', [MeetingController::class, 'createSlots'])->name('api.academy.meetings.createSlots');
@@ -893,7 +893,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // ==================== PHASE 5: REPORTS & ANALYTICS ====================
 
     // Report Definitions
-    Route::prefix('/{academy}/reports')->group(function () {
+    Route::prefix('/{academy}/reports')->middleware(['academy.visibility:content', 'academy.permission:reports.view'])->group(function () {
         // Report Definitions
         Route::get('/definitions', [ReportController::class, 'listDefinitions'])->name('api.academy.reports.definitions');
         Route::post('/definitions', [ReportController::class, 'createDefinition'])->name('api.academy.reports.definitions.create');
@@ -925,28 +925,28 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     });
 
     // Dashboard Widgets
-    Route::prefix('/{academy}/dashboard')->group(function () {
+    Route::prefix('/{academy}/dashboard')->middleware('academy.visibility:content')->group(function () {
         // Widgets Management
-        Route::get('/widgets', [DashboardWidgetController::class, 'listWidgets'])->name('api.academy.dashboard.widgets');
-        Route::post('/widgets', [DashboardWidgetController::class, 'createWidget'])->name('api.academy.dashboard.widgets.create');
-        Route::get('/widgets/{widget}', [DashboardWidgetController::class, 'showWidget'])->name('api.academy.dashboard.widgets.show');
-        Route::patch('/widgets/{widget}', [DashboardWidgetController::class, 'updateWidget'])->name('api.academy.dashboard.widgets.update');
-        Route::delete('/widgets/{widget}', [DashboardWidgetController::class, 'deleteWidget'])->name('api.academy.dashboard.widgets.delete');
-        Route::post('/widgets/{widget}/toggle-status', [DashboardWidgetController::class, 'toggleWidgetStatus'])->name('api.academy.dashboard.widgets.toggleStatus');
+        Route::get('/widgets', [DashboardWidgetController::class, 'listWidgets'])->middleware('academy.permission:settings.manage')->name('api.academy.dashboard.widgets');
+        Route::post('/widgets', [DashboardWidgetController::class, 'createWidget'])->middleware('academy.permission:settings.manage')->name('api.academy.dashboard.widgets.create');
+        Route::get('/widgets/{widget}', [DashboardWidgetController::class, 'showWidget'])->middleware('academy.permission:settings.manage')->name('api.academy.dashboard.widgets.show');
+        Route::patch('/widgets/{widget}', [DashboardWidgetController::class, 'updateWidget'])->middleware('academy.permission:settings.manage')->name('api.academy.dashboard.widgets.update');
+        Route::delete('/widgets/{widget}', [DashboardWidgetController::class, 'deleteWidget'])->middleware('academy.permission:settings.manage')->name('api.academy.dashboard.widgets.delete');
+        Route::post('/widgets/{widget}/toggle-status', [DashboardWidgetController::class, 'toggleWidgetStatus'])->middleware('academy.permission:settings.manage')->name('api.academy.dashboard.widgets.toggleStatus');
 
         // User Dashboard Layouts
-        Route::get('/layout', [DashboardWidgetController::class, 'getLayout'])->name('api.academy.dashboard.layout');
-        Route::post('/layout', [DashboardWidgetController::class, 'saveLayout'])->name('api.academy.dashboard.layout.save');
-        Route::post('/layout/add-widget', [DashboardWidgetController::class, 'addWidgetToLayout'])->name('api.academy.dashboard.layout.addWidget');
-        Route::post('/layout/remove-widget', [DashboardWidgetController::class, 'removeWidgetFromLayout'])->name('api.academy.dashboard.layout.removeWidget');
-        Route::post('/layout/update-position', [DashboardWidgetController::class, 'updateWidgetPosition'])->name('api.academy.dashboard.layout.updatePosition');
-        Route::post('/layout/reset', [DashboardWidgetController::class, 'resetLayout'])->name('api.academy.dashboard.layout.reset');
+        Route::get('/layout', [DashboardWidgetController::class, 'getLayout'])->middleware('academy.permission')->name('api.academy.dashboard.layout');
+        Route::post('/layout', [DashboardWidgetController::class, 'saveLayout'])->middleware('academy.permission')->name('api.academy.dashboard.layout.save');
+        Route::post('/layout/add-widget', [DashboardWidgetController::class, 'addWidgetToLayout'])->middleware('academy.permission')->name('api.academy.dashboard.layout.addWidget');
+        Route::post('/layout/remove-widget', [DashboardWidgetController::class, 'removeWidgetFromLayout'])->middleware('academy.permission')->name('api.academy.dashboard.layout.removeWidget');
+        Route::post('/layout/update-position', [DashboardWidgetController::class, 'updateWidgetPosition'])->middleware('academy.permission')->name('api.academy.dashboard.layout.updatePosition');
+        Route::post('/layout/reset', [DashboardWidgetController::class, 'resetLayout'])->middleware('academy.permission')->name('api.academy.dashboard.layout.reset');
     });
 
     // Extended Modules (Phase 6)
     Route::prefix('{academy}')->group(function () {
         // Library
-        Route::prefix('library')->group(function () {
+        Route::prefix('library')->middleware(['academy.visibility:content', 'academy.permission:settings.manage'])->group(function () {
             Route::get('/books', [LibraryController::class, 'index'])->name('api.academy.library.books.index');
             Route::post('/books', [LibraryController::class, 'store'])->name('api.academy.library.books.store');
             Route::post('/borrow', [LibraryController::class, 'borrow'])->name('api.academy.library.borrow');
@@ -954,7 +954,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         });
 
         // Assets
-        Route::prefix('assets')->group(function () {
+        Route::prefix('assets')->middleware(['academy.visibility:content', 'academy.permission:settings.manage'])->group(function () {
             Route::get('/', [AssetController::class, 'index'])->name('api.academy.assets.index');
             Route::post('/', [AssetController::class, 'store'])->name('api.academy.assets.store');
             Route::post('/{asset}/maintenance', [AssetController::class, 'requestMaintenance'])->name('api.academy.assets.maintenance');
@@ -973,44 +973,44 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     });
 
     // Analytics
-    Route::prefix('/{academy}/analytics')->group(function () {
+    Route::prefix('/{academy}/analytics')->middleware('academy.visibility:content')->group(function () {
         // Overview & Snapshots
-        Route::get('/dashboard-stats', [AnalyticsController::class, 'dashboardStats'])->name('api.academy.analytics.dashboardStats');
-        Route::get('/student-stats', [AnalyticsController::class, 'studentStats'])->name('api.academy.analytics.studentStats');
-        Route::get('/teacher-pending-assignments', [AnalyticsController::class, 'teacherPendingAssignments'])->name('api.academy.analytics.teacherPendingAssignments');
-        Route::get('/at-risk', [AnalyticsController::class, 'getAtRiskStudents'])->name('api.academy.analytics.atRisk');
-        Route::get('/overview', [AnalyticsController::class, 'overview'])->name('api.academy.analytics.overview');
-        Route::get('/snapshots', [AnalyticsController::class, 'getSnapshots'])->name('api.academy.analytics.snapshots');
+        Route::get('/dashboard-stats', [AnalyticsController::class, 'dashboardStats'])->middleware('academy.permission')->name('api.academy.analytics.dashboardStats');
+        Route::get('/student-stats', [AnalyticsController::class, 'studentStats'])->middleware('academy.permission')->name('api.academy.analytics.studentStats');
+        Route::get('/teacher-pending-assignments', [AnalyticsController::class, 'teacherPendingAssignments'])->middleware('academy.permission')->name('api.academy.analytics.teacherPendingAssignments');
+        Route::get('/at-risk', [AnalyticsController::class, 'getAtRiskStudents'])->middleware('academy.permission:students.view')->name('api.academy.analytics.atRisk');
+        Route::get('/overview', [AnalyticsController::class, 'overview'])->middleware('academy.permission:reports.view')->name('api.academy.analytics.overview');
+        Route::get('/snapshots', [AnalyticsController::class, 'getSnapshots'])->middleware('academy.permission:reports.view')->name('api.academy.analytics.snapshots');
 
         // KPI Management
-        Route::get('/kpis', [AnalyticsController::class, 'listKpis'])->name('api.academy.analytics.kpis');
-        Route::post('/kpis', [AnalyticsController::class, 'createKpi'])->name('api.academy.analytics.kpis.create');
-        Route::get('/kpis/{kpi}', [AnalyticsController::class, 'showKpi'])->name('api.academy.analytics.kpis.show');
-        Route::patch('/kpis/{kpi}', [AnalyticsController::class, 'updateKpi'])->name('api.academy.analytics.kpis.update');
-        Route::delete('/kpis/{kpi}', [AnalyticsController::class, 'deleteKpi'])->name('api.academy.analytics.kpis.delete');
-        Route::get('/kpis/{kpi}/values', [AnalyticsController::class, 'getKpiValues'])->name('api.academy.analytics.kpis.values');
-        Route::post('/kpis/{kpi}/values', [AnalyticsController::class, 'recordKpiValue'])->name('api.academy.analytics.kpis.recordValue');
+        Route::get('/kpis', [AnalyticsController::class, 'listKpis'])->middleware('academy.permission:reports.view')->name('api.academy.analytics.kpis');
+        Route::post('/kpis', [AnalyticsController::class, 'createKpi'])->middleware('academy.permission:reports.view')->name('api.academy.analytics.kpis.create');
+        Route::get('/kpis/{kpi}', [AnalyticsController::class, 'showKpi'])->middleware('academy.permission:reports.view')->name('api.academy.analytics.kpis.show');
+        Route::patch('/kpis/{kpi}', [AnalyticsController::class, 'updateKpi'])->middleware('academy.permission:reports.view')->name('api.academy.analytics.kpis.update');
+        Route::delete('/kpis/{kpi}', [AnalyticsController::class, 'deleteKpi'])->middleware('academy.permission:reports.view')->name('api.academy.analytics.kpis.delete');
+        Route::get('/kpis/{kpi}/values', [AnalyticsController::class, 'getKpiValues'])->middleware('academy.permission:reports.view')->name('api.academy.analytics.kpis.values');
+        Route::post('/kpis/{kpi}/values', [AnalyticsController::class, 'recordKpiValue'])->middleware('academy.permission:reports.view')->name('api.academy.analytics.kpis.recordValue');
 
         // Comparative Analytics
-        Route::get('/comparisons', [AnalyticsController::class, 'getComparisons'])->name('api.academy.analytics.comparisons');
-        Route::post('/comparisons', [AnalyticsController::class, 'generateComparison'])->name('api.academy.analytics.comparisons.generate');
+        Route::get('/comparisons', [AnalyticsController::class, 'getComparisons'])->middleware('academy.permission:reports.view')->name('api.academy.analytics.comparisons');
+        Route::post('/comparisons', [AnalyticsController::class, 'generateComparison'])->middleware('academy.permission:reports.view')->name('api.academy.analytics.comparisons.generate');
 
         // Trend Analysis
-        Route::get('/trends', [AnalyticsController::class, 'getTrends'])->name('api.academy.analytics.trends');
-        Route::post('/trends', [AnalyticsController::class, 'generateTrend'])->name('api.academy.analytics.trends.generate');
+        Route::get('/trends', [AnalyticsController::class, 'getTrends'])->middleware('academy.permission:reports.view')->name('api.academy.analytics.trends');
+        Route::post('/trends', [AnalyticsController::class, 'generateTrend'])->middleware('academy.permission:reports.view')->name('api.academy.analytics.trends.generate');
 
         // Alert Rules
-        Route::get('/alert-rules', [AnalyticsController::class, 'listAlertRules'])->name('api.academy.analytics.alertRules');
-        Route::post('/alert-rules', [AnalyticsController::class, 'createAlertRule'])->name('api.academy.analytics.alertRules.create');
-        Route::patch('/alert-rules/{rule}', [AnalyticsController::class, 'updateAlertRule'])->name('api.academy.analytics.alertRules.update');
-        Route::delete('/alert-rules/{rule}', [AnalyticsController::class, 'deleteAlertRule'])->name('api.academy.analytics.alertRules.delete');
-        Route::post('/alert-rules/{rule}/toggle-status', [AnalyticsController::class, 'toggleAlertRuleStatus'])->name('api.academy.analytics.alertRules.toggleStatus');
+        Route::get('/alert-rules', [AnalyticsController::class, 'listAlertRules'])->middleware('academy.permission:reports.view')->name('api.academy.analytics.alertRules');
+        Route::post('/alert-rules', [AnalyticsController::class, 'createAlertRule'])->middleware('academy.permission:reports.view')->name('api.academy.analytics.alertRules.create');
+        Route::patch('/alert-rules/{rule}', [AnalyticsController::class, 'updateAlertRule'])->middleware('academy.permission:reports.view')->name('api.academy.analytics.alertRules.update');
+        Route::delete('/alert-rules/{rule}', [AnalyticsController::class, 'deleteAlertRule'])->middleware('academy.permission:reports.view')->name('api.academy.analytics.alertRules.delete');
+        Route::post('/alert-rules/{rule}/toggle-status', [AnalyticsController::class, 'toggleAlertRuleStatus'])->middleware('academy.permission:reports.view')->name('api.academy.analytics.alertRules.toggleStatus');
 
         // Alert History
-        Route::get('/alerts/history', [AnalyticsController::class, 'getAlertHistory'])->name('api.academy.analytics.alerts.history');
-        Route::get('/alerts/unacknowledged-count', [AnalyticsController::class, 'getUnacknowledgedCount'])->name('api.academy.analytics.alerts.unacknowledgedCount');
-        Route::post('/alerts/{alert}/acknowledge', [AnalyticsController::class, 'acknowledgeAlert'])->name('api.academy.analytics.alerts.acknowledge');
-        Route::post('/alerts/bulk-acknowledge', [AnalyticsController::class, 'bulkAcknowledge'])->name('api.academy.analytics.alerts.bulkAcknowledge');
+        Route::get('/alerts/history', [AnalyticsController::class, 'getAlertHistory'])->middleware('academy.permission:reports.view')->name('api.academy.analytics.alerts.history');
+        Route::get('/alerts/unacknowledged-count', [AnalyticsController::class, 'getUnacknowledgedCount'])->middleware('academy.permission:reports.view')->name('api.academy.analytics.alerts.unacknowledgedCount');
+        Route::post('/alerts/{alert}/acknowledge', [AnalyticsController::class, 'acknowledgeAlert'])->middleware('academy.permission:reports.view')->name('api.academy.analytics.alerts.acknowledge');
+        Route::post('/alerts/bulk-acknowledge', [AnalyticsController::class, 'bulkAcknowledge'])->middleware('academy.permission:reports.view')->name('api.academy.analytics.alerts.bulkAcknowledge');
     });
 
     // =====================================================
