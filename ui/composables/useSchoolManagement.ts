@@ -48,7 +48,7 @@ export const useSchoolManagement = () => {
     api.call(`/api/academies/${academyId}/subjects`, { method: 'POST', body: data })
 
   const updateSubject = (academyId: number, subjectId: number, data: Record<string, any>) => 
-    api.call(`/api/academies/${academyId}/subjects/${subjectId}`, { method: 'PATCH', body: data })
+    api.call(`/api/academies/${academyId}/subjects/${subjectId}`, { method: 'PUT', body: data })
 
   const deleteSubject = (academyId: number, subjectId: number) => 
     api.call(`/api/academies/${academyId}/subjects/${subjectId}`, { method: 'DELETE' })
@@ -70,8 +70,14 @@ export const useSchoolManagement = () => {
   const getAcademicYears = (academyId: number) =>
     api.call(`/api/academies/${academyId}/academic-years`)
 
-  const getSemesters = (academyId: number, yearId: number) =>
-    api.call(`/api/academies/${academyId}/academic-years/${yearId}/semesters`)
+  const getSemesters = async (academyId: number, yearId: number) => {
+    const res: any = await api.call(`/api/academies/${academyId}/academic-years`)
+    const years: any[] = Array.isArray(res?.academicYears) ? res.academicYears
+      : Array.isArray(res?.data) ? res.data
+      : Array.isArray(res) ? res : []
+    const year = years.find((y: any) => y.id === yearId)
+    return { data: year?.semesters ?? [] }
+  }
 
   const getCurrentAcademicYear = (academyId: number) =>
     api.call(`/api/academies/${academyId}/academic-years/current`)
@@ -181,7 +187,7 @@ export const useSchoolManagement = () => {
 
   // Leave Types
   const getLeaveTypes = (academyId: number) => 
-    api.call(`/api/academies/${academyId}/leave-types`)
+    api.call(`/api/academies/${academyId}/leave-requests/leave-types`)
 
   // Payroll
   const getPayrolls = (academyId: number, params?: Record<string, any>) => 
@@ -195,6 +201,9 @@ export const useSchoolManagement = () => {
 
   const approvePayroll = (academyId: number, payrollId: number) => 
     api.call(`/api/academies/${academyId}/payroll/${payrollId}/approve`, { method: 'POST' })
+
+  const bulkGeneratePayroll = (academyId: number, data: Record<string, any>) =>
+    api.call(`/api/academies/${academyId}/payroll/bulk-generate`, { method: 'POST', body: data })
 
   // ============================================================
   // PHASE 4: GAMIFICATION & ECONOMY
@@ -287,7 +296,7 @@ export const useSchoolManagement = () => {
     api.call(`/api/academies/${academyId}/reports/definitions`)
 
   const generateReport = (academyId: number, definitionId: number, params?: Record<string, any>) => 
-    api.call(`/api/academies/${academyId}/reports/definitions/${definitionId}/generate`, { method: 'POST', body: params })
+    api.call(`/api/academies/${academyId}/reports/generate`, { method: 'POST', body: { definition_id: definitionId, ...(params || {}) } })
 
   const getSavedReports = (academyId: number) => 
     api.call(`/api/academies/${academyId}/reports/saved`)
@@ -485,6 +494,7 @@ export const useSchoolManagement = () => {
     getPayroll,
     createPayroll,
     approvePayroll,
+    bulkGeneratePayroll,
     
     // Points & Gamification
     getPointRules,

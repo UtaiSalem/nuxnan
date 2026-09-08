@@ -538,7 +538,7 @@ const extractArray = (response: any): any[] => {
 const loadStaffProfiles = async () => {
   loadingStaff.value = true
   try {
-    const response = await schoolApi.getStaffProfiles(props.academyId)
+    const response = await schoolApi.getStaffList(props.academyId)
     staffProfiles.value = extractArray(response)
   } catch (error) {
     console.error('Failed to load staff profiles:', error)
@@ -605,7 +605,7 @@ const editStaff = (staff: any) => {
 const saveStaff = async () => {
   savingStaff.value = true
   try {
-    await schoolApi.createStaffProfile(props.academyId, staffForm.value)
+    await schoolApi.createStaff(props.academyId, staffForm.value)
     showStaffModal.value = false
     staffForm.value = { user_id: null, position: '', department: '', hire_date: '', salary: 0 }
     await loadStaffProfiles()
@@ -661,7 +661,8 @@ const processPayroll = async () => {
   if (confirm('ประมวลผลเงินเดือนประจำเดือนนี้?')) {
     try {
       const year = new Date().getFullYear()
-      await schoolApi.processPayroll(props.academyId, payrollMonth.value, year)
+      const payPeriod = `${year}-${String(payrollMonth.value).padStart(2, '0')}`
+      await schoolApi.bulkGeneratePayroll(props.academyId, { pay_period: payPeriod })
       await loadPayroll()
     } catch (error) {
       console.error('Failed to process payroll:', error)
