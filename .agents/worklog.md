@@ -6929,3 +6929,29 @@ shard A2 แก้ 4 กลุ่มนี้: `staff-attendance` · `leave-requ
   **ไม่เคยถูกรันเลย** (เจอระหว่างทาง ไม่ได้แก้ในรอบนี้)
 - SM-S2 (แยก view/manage ตาม matrix §4) ยังติด **Q3** · SM-S3/S4/S6 ทำได้ทันทีไม่ต้องรอใคร
 - `at-risk` ตอนนี้ต้องมีคีย์ `students.view` — ถ้าโรงเรียนให้ครูที่ปรึกษาดูหน้านี้ ต้องแจกคีย์นี้ให้ role ครู
+
+---
+
+## 2026-09-09 (ต่อ) — เมนู #8: SM-S3 แก้ UI เรียกฟังก์ชัน/path ผิด (G5+G6) 7/8
+
+### สถานะ: ✅ 7 จุดเสร็จ+ตรวจแล้ว · จุดที่ 8 กันไว้รอเคาะ · ผู้เขียนโค้ด agy
+
+ไฟล์: `ui/composables/useSchoolManagement.ts` · `ui/components/school/SchoolStaffTab.vue`
+
+- G5 (ฟังก์ชันไม่มีจริง→TypeError): getStaffProfiles→getStaffList · createStaffProfile→createStaff ·
+  processPayroll→bulkGeneratePayroll (เพิ่มเมธอดใหม่ยิง POST /payroll/bulk-generate + pay_period 'Y-m')
+- G6 (path/verb ผิด): updateSubject PATCH→PUT · getLeaveTypes →/leave-requests/leave-types ·
+  generateReport →POST /reports/generate body {definition_id,name,parameters} ·
+  getSemesters (ไม่มี GET route) → ดึงจาก academic-years index คืน {data:[]}
+
+### 🅿️ จุดที่ 8 `bookMeetingSlot` — กันไว้ ไม่ทำในรอบนี้
+endpoint `POST /meetings/slots/{slot}/book` เป็นของ **ผู้ปกครอง** (ตั้ง parent_id=ผู้เรียก,
+บังคับ student_id+purpose) แต่ปุ่มอยู่ในแท็บสื่อสารของ admin ส่งแค่ slot.id
+⇒ เปลี่ยนชื่อเฉย ๆ จะกลายเป็น 422 · เป็นปัญหา "วางฟีเจอร์ผิดที่" ไม่ใช่ rename
+รวมไปตัดสินที่ SM-S7 — **ความเห็น Claude: เอาปุ่มจองออกจากแท็บ admin** (admin ควรแค่สร้าง/ลบ slot)
+
+### หลักฐานที่ Claude รันเอง
+grep ชื่อเก่า 0 นัด · bulkGeneratePayroll มีทั้งนิยาม+return · SFC compile OK · tsc composable clean
+· template ไม่ถูกแตะ · **ยังไม่ตรวจบนจอจริง**
+
+### คิวถัดไปเมนู #8: SM-S4 (3 endpoint 500 ถาวร — G8) → SM-S6 · ส่วน S2/S5/S7/S9 รอ Q1–Q3

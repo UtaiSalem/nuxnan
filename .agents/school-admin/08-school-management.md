@@ -310,7 +310,7 @@ academic-years 200 · library/books 200 · assets 200
 |---|---|---|---|---|
 | **SM-S1** | 🔴 ปิดช่องโหว่ G1+G2 ให้ครบ 204 route | — | middleware บนทุก group + เทสต์ 403 ของ non-member | 🟢 **done 2026-09-09** (agy เขียน · Claude ตรวจ) |
 | SM-S2 | แยก view/manage ให้ตรง Permission Matrix §4 | S1, Q3 | ปรับคีย์รายเส้น + เทสต์เคสยกเว้น (ใบลา/นัดพบ/ลงเวลา) | ⚪ blocked by Q3 |
-| SM-S3 | แก้ G5+G6 — ชื่อฟังก์ชันและ path ที่ชี้ผิด 8 จุด | — | UI เรียกได้จริงทุกปุ่ม | ⚪ pending |
+| SM-S3 | แก้ G5+G6 — ชื่อฟังก์ชันและ path ที่ชี้ผิด 8 จุด | — | UI เรียกได้จริงทุกปุ่ม | 🟢 **7/8 done 2026-09-09** · จุดที่ 8 (bookMeetingSlot) แยกไป SM-S7 |
 | SM-S4 | แก้ G8 — 3 endpoint ที่ 500 ถาวร | — | patch + migration (ถ้าต้อง) + เทสต์ | ⚪ pending |
 | SM-S5 | G3 — โหมดดูอย่างเดียวบนหน้า + ซ่อนปุ่มตามสิทธิ์จริง | S2 | ใช้ `can()` ที่ดึงมาแล้วแต่ไม่ได้ใช้ | ⚪ blocked by S2 |
 | SM-S6 | G9+G10 — สถิติหัวหน้าหน้าให้ถูก + ผูกแท็บกับ `?tab=` | — | ตัวเลขตรง · แชร์ลิงก์แท็บได้ | ⚪ pending |
@@ -352,6 +352,20 @@ Report back: diff --stat + ผลรันเกณฑ์แบบดิบ
 ---
 
 ## 8. Review Log
+
+- **2026-09-09 SM-S3 (7/8) ✅** — แก้ชื่อฟังก์ชัน/path ที่ UI เรียกผิด · ผู้เขียนโค้ด **agy** · Claude ตรวจ
+  ไฟล์ที่แตะ: `ui/composables/useSchoolManagement.ts` (+15/−5) · `ui/components/school/SchoolStaffTab.vue` (+4/−3)
+  - G5: `getStaffProfiles→getStaffList` · `createStaffProfile→createStaff` · `processPayroll→bulkGeneratePayroll`
+    (เพิ่มเมธอด `bulkGeneratePayroll` ยิง `POST /payroll/bulk-generate` + สร้าง `pay_period='Y-m'` จากเลขเดือน)
+  - G6: `updateSubject` PATCH→PUT · `getLeaveTypes` path→`/leave-requests/leave-types` ·
+    `generateReport` →`POST /reports/generate` body `{definition_id,name,parameters}` ·
+    `getSemesters` ไม่มี GET route → ดึงจาก `academic-years` index (eager-load semesters) คืน `{data:[]}`
+  **หลักฐานที่ Claude รันเอง:** grep ชื่อเก่าหายหมด 0 นัด · `bulkGeneratePayroll` มีทั้งนิยาม+ใน return ·
+  SFC compile `SchoolStaffTab.vue` OK · `tsc` composable clean (เหลือ auto-import noise) · template ไม่ถูกแตะ
+  **ยังไม่ตรวจบนจอจริง** (ต้อง login admin เปิด 6 แท็บ)
+  - 🅿️ **จุดที่ 8 `bookMeetingSlot` กันไว้:** endpoint จองนัดเป็นของผู้ปกครอง (ตั้ง `parent_id=ผู้เรียก`
+    บังคับ `student_id`+`purpose`) แต่ปุ่มอยู่ในแท็บ admin ส่งแค่ slot.id → เปลี่ยนชื่อเฉย ๆ = 422
+    เป็นปัญหาวางฟีเจอร์ผิดที่ ไม่ใช่ rename → รวมไปตัดสินที่ SM-S7 (แนะนำเอาปุ่มออก)
 
 - **2026-09-09 SM-S1 ✅** — ปิด G1 + G2 ครบ **204/204 route** · ผู้เขียนโค้ด **agy** 2 shard
   (A ใส่ด่าน · A2 แก้จุดที่คีย์ระดับกลุ่มทับข้อยกเว้น) + shard B เขียนเทสต์
