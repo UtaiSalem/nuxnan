@@ -6864,3 +6864,68 @@ php artisan guardians:verify                      # invariant: legacy id 5045 di
 
 เจ้าของโปรเจคสั่ง **ยังไม่เริ่ม SM-S1 ในรอบนี้** — จบที่ audit ก่อน แล้วค่อยตัดสินใจทีหลัง
 เมื่อถึงเวลาลงมือ: **ส่งงานเขียนโค้ดให้ `agy`** (Claude เขียนสเปค + แตก shard + ตรวจ diff/รันเกณฑ์เอง)
+
+---
+
+## 2026-09-09 — เมนู #8: SM-S1 ปิดช่องโหว่สิทธิ์ 204 route (G1 + G2)
+
+### สถานะ: ✅ ตรวจครบแล้ว ยังไม่ commit (รอเจ้าของโปรเจคเคาะ)
+
+ต่อจาก audit 2026-09-07 ที่พบว่า **203 จาก 204 route ของเมนูนี้มีแค่ `auth:api`**
+รอบนี้ลงมือปิดจริง · **ผู้เขียนโค้ดคือ agy** (2 shard) · Claude เขียนสเปค + ตรวจผลเอง
+
+### สิ่งที่แก้
+
+- `routes/learn/academy.php` — 95 บรรทัด (แก้บรรทัดเดิมล้วน ไม่มีของหาย: +95/−95)
+  ทุกกลุ่มของเมนูนี้ได้ `academy.visibility:content` (ปิด G2) + `academy.permission[:key]` (ปิด G1)
+- เทสต์ใหม่ `tests/Feature/SchoolManagementRouteGuardTest.php` — 8 เคส 59 assertions
+
+### 🔴 กับดักที่เจอกลางทาง — อย่าลืมเมื่อทำ SM-S2
+
+**middleware ของ group กับของ route มัน "ซ้อนกัน" ไม่ใช่ "แทนที่กัน"**
+shard A แรกใส่ `academy.permission:staff.view` ที่ระดับกลุ่ม แล้วใส่ `academy.permission` เปล่า
+ที่เส้น check-in หวังว่าจะผ่อนให้ครูลงเวลาได้ — **ไม่ได้ผล** เพราะ `route:list -v` โชว์ว่า
+เส้นนั้นวิ่งผ่านทั้ง `staff.view` แล้วค่อยถึงตัวเปล่า ⇒ ครูยังโดนบล็อกเหมือนเดิม
+
+⇒ **กลุ่มที่มีข้อยกเว้น ห้ามใส่คีย์ที่ระดับกลุ่ม** ให้เหลือแค่ `academy.visibility:content`
+แล้วย้ายคีย์ไปแขวนรายเส้น (แบบเดียวกับกลุ่ม `{academy}/school-attendances` ที่ทำไว้ถูกอยู่แล้ว)
+shard A2 แก้ 4 กลุ่มนี้: `staff-attendance` · `leave-requests` · `analytics` · `dashboard`
+
+### สรุปด่านที่ได้ (นับจาก `route:list --json` จริง)
+
+| ระดับ | จำนวน | ตัวอย่าง |
+|---|---:|---|
+| ไม่มีด่าน | **0** (เดิม 203) | — |
+| ไม่มี `academy.visibility` | **0** | — |
+| ด่านสมาชิกเปล่า (ตั้งใจ) | 38 | ลงเวลา · ยื่น/ยกเลิกใบลา · dashboard ครู-นักเรียน · layout ส่วนตัว · นัดพบผู้ปกครอง · อ่านประกาศ/ตารางสอน/รายวิชา |
+| คีย์ `finance.view` | กลุ่ม fee-structures · tuition-fees · payments · expenses · budgets |
+| คีย์ `staff.view` | staff · payroll + รายเส้นใน staff-attendance/leave-requests |
+| คีย์ `reports.view` | reports + analytics (ยกเว้น 4 เส้น) |
+| คีย์ `settings.manage` | dashboard/widgets · library · assets |
+| คีย์ `*.manage` รายเส้น | academic-years/subjects (`courses.manage`) · schedules (`schedule.manage`) · announcements (`announcements.manage`) |
+
+### หลักฐานที่ Claude รันเอง (ไม่ได้ลอกจากรายงาน agy)
+
+- สคริปต์นับจาก `php artisan route:list --json`: **204 เส้นในขอบเขต · unguarded 0 · ไม่มี visibility 0**
+- `./vendor/bin/pint --test` → passed
+- `php artisan test --filter=SchoolManagementRouteGuardTest` → **8 passed (59 assertions)**
+- **revert-check**: `git checkout --` เฉพาะไฟล์ route แล้วรันใหม่ → **แดง 4 เคส** จากนั้น restore → เขียว 8/8
+- ชุดข้างเคียงไม่พัง: `AcademyScopeFilteringTest|ParentDashboardSectionsTest|TargetAudienceNormalizationTest`
+  → 15 passed
+
+### บั๊กของ agy ที่ Claude แก้เอง (1 จุด)
+
+เทสต์เคสโรงเรียนเก็บถาวรใช้ `$academy->update(['archived_at' => now()])` ซึ่ง **ไม่มีผล**
+เพราะ `archived_at` ไม่ได้อยู่ใน `$fillable` ของ `Academy` (อยู่ใน `$casts` อย่างเดียว)
+⇒ เทสต์ได้ 200 แล้วฟ้องว่าด่านพัง ทั้งที่ด่านถูก · แก้เป็น set property ตรง ๆ แล้ว `save()`
+เหมือนที่ `AcademyController::archive()` ทำ
+
+### ⚠️ ค้าง / ต้องรู้ก่อนทำต่อ
+
+- **ยังไม่ได้ทดสอบบนหน้าจอจริง** — ควรเปิดหน้า `admin/school-management` ด้วยบัญชี admin
+  แล้วเช็คว่า 6 แท็บยังโหลดครบ (admin/owner ผ่าน `isAdmin()` อยู่แล้วจึงคาดว่าไม่กระทบ)
+  และเปิด `dashboard/teacher`, `dashboard/student`, `parent/meetings` ด้วยบัญชีที่ไม่ใช่ admin
+- **`tests/Api/` ไม่ได้อยู่ใน testsuite ของ `phpunit.xml`** ⇒ `tests/Api/SchoolManagementApiTest.php`
+  **ไม่เคยถูกรันเลย** (เจอระหว่างทาง ไม่ได้แก้ในรอบนี้)
+- SM-S2 (แยก view/manage ตาม matrix §4) ยังติด **Q3** · SM-S3/S4/S6 ทำได้ทันทีไม่ต้องรอใคร
+- `at-risk` ตอนนี้ต้องมีคีย์ `students.view` — ถ้าโรงเรียนให้ครูที่ปรึกษาดูหน้านี้ ต้องแจกคีย์นี้ให้ role ครู

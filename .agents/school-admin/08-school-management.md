@@ -308,7 +308,7 @@ academic-years 200 · library/books 200 · assets 200
 
 | Step | Title | Depends on | Deliverable | Status |
 |---|---|---|---|---|
-| **SM-S1** | 🔴 ปิดช่องโหว่ G1+G2 ให้ครบ 204 route | — | middleware บนทุก group + เทสต์ 403 ของ non-member | ⚪ pending |
+| **SM-S1** | 🔴 ปิดช่องโหว่ G1+G2 ให้ครบ 204 route | — | middleware บนทุก group + เทสต์ 403 ของ non-member | 🟢 **done 2026-09-09** (agy เขียน · Claude ตรวจ) |
 | SM-S2 | แยก view/manage ให้ตรง Permission Matrix §4 | S1, Q3 | ปรับคีย์รายเส้น + เทสต์เคสยกเว้น (ใบลา/นัดพบ/ลงเวลา) | ⚪ blocked by Q3 |
 | SM-S3 | แก้ G5+G6 — ชื่อฟังก์ชันและ path ที่ชี้ผิด 8 จุด | — | UI เรียกได้จริงทุกปุ่ม | ⚪ pending |
 | SM-S4 | แก้ G8 — 3 endpoint ที่ 500 ถาวร | — | patch + migration (ถ้าต้อง) + เทสต์ | ⚪ pending |
@@ -322,9 +322,12 @@ academic-years 200 · library/books 200 · assets 200
 **SM-S1 ทำได้ทันที ไม่ต้องรอใครตอบ** — และควรทำก่อนอย่างอื่นทั้งหมด
 เพราะเป็นช่องโหว่จริงที่พิสูจน์แล้ว · ส่วน SM-S3/S4/S6 เป็นบั๊กชัดที่ไม่ขึ้นกับคำตอบ Q1–Q4 เช่นกัน
 
-> 🅿️ **2026-09-07 เจ้าของโปรเจคสั่งพักไว้ก่อน — ยังไม่เริ่ม SM-S1 ในรอบนี้**
-> เมื่อถึงเวลาทำ ให้ **ส่งงานเขียนโค้ดให้ `agy`** ตามสกิล `.agents/skills/agy-delegate/SKILL.md`
-> (Claude = เขียนสเปค + แตก shard + ตรวจ `git diff` และรันเกณฑ์เอง · agy = ผู้เขียนโค้ด)
+> ~~🅿️ 2026-09-07 เจ้าของโปรเจคสั่งพักไว้ก่อน~~ → **ปลดพักแล้ว ทำเสร็จ 2026-09-09** (agy เขียนโค้ด · Claude ตรวจ)
+>
+> 🔴 **บทเรียนจาก SM-S1 ที่ SM-S2 ต้องใช้ต่อ — middleware ของ group กับ route ซ้อนกัน ไม่ได้แทนที่กัน**
+> ถ้ากลุ่มไหนมี "เส้นข้อยกเว้นที่ต้องผ่อน" **ห้ามแขวนคีย์ที่ระดับกลุ่ม** ให้เหลือแค่
+> `academy.visibility:content` แล้วแขวนคีย์รายเส้นแทน (ดูกลุ่ม `school-attendances` เป็นแบบ)
+> พิสูจน์ด้วย `php artisan route:list --path=... -v` ทุกครั้ง อย่าเชื่อว่าเขียนแล้วมีผล
 
 **Rule:** ทุก step ต้องมี verification (test / `route:list` / หน้าจริง) ก่อนขึ้นสถานะ 🟢
 และงานที่แตะ `ui/` ต้องแปะบล็อกกติกา **mobile-first** ลงในสเปคเสมอ
@@ -349,6 +352,17 @@ Report back: diff --stat + ผลรันเกณฑ์แบบดิบ
 ---
 
 ## 8. Review Log
+
+- **2026-09-09 SM-S1 ✅** — ปิด G1 + G2 ครบ **204/204 route** · ผู้เขียนโค้ด **agy** 2 shard
+  (A ใส่ด่าน · A2 แก้จุดที่คีย์ระดับกลุ่มทับข้อยกเว้น) + shard B เขียนเทสต์
+  ไฟล์ที่แตะ: `routes/learn/academy.php` (+95/−95 แก้บรรทัดเดิมล้วน) ·
+  `tests/Feature/SchoolManagementRouteGuardTest.php` (ใหม่ 8 เคส 59 assertions)
+  **หลักฐานที่ Claude รันเอง:** สคริปต์นับจาก `route:list --json` → unguarded 0, ไม่มี visibility 0 ·
+  `pint --test` passed · เทสต์ 8/8 เขียว · **revert-check** เอาไฟล์ route กลับ → แดง 4 เคส ·
+  ชุดข้างเคียง 15 เคสไม่พัง
+  **Claude แก้เอง 1 จุด:** เทสต์เคสโรงเรียนเก็บถาวรใช้ `update(['archived_at'=>...])` ซึ่งไร้ผล
+  เพราะไม่ได้อยู่ใน `$fillable` → เปลี่ยนเป็น set property + `save()`
+  **ยังไม่ตรวจบนจอจริง** และ `tests/Api/` ไม่ได้อยู่ใน testsuite ของ `phpunit.xml` (เจอระหว่างทาง)
 
 - **2026-09-07 [1]+[2]** — สแกนโค้ดจริงครบทั้งเมนู + เขียนไฟล์รองนี้ (Claude ทำเอง ไม่ได้ delegate)
   หลักฐานที่รันจริง: `php artisan route:list --json` (204 เส้นในขอบเขต · 203 มีแค่ `auth:api`) ·
