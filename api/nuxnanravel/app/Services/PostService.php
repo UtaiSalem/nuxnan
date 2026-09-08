@@ -392,7 +392,9 @@ class PostService
         $activity = new Activity;
         $activity->user_id = $post->user_id;
         $activity->activity_type = $type->value;
-        $activity->privacy_settings = $post->privacy_settings; // Sync privacy_settings from post
+        // 3 = สาธารณะ ใช้เป็นค่าปลอดภัยเมื่อโพสต์ไม่มีค่า
+        // activities.privacy_settings เป็น NOT NULL การส่ง null จะทำให้ทั้ง transaction ล้ม
+        $activity->privacy_settings = $post->privacy_settings ?? 3;
         $activity->activityable()->associate($post);
         $activity->save();
 

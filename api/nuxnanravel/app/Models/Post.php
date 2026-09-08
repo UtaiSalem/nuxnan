@@ -46,10 +46,45 @@ class Post extends Model
         'user_id',
         'content',
         'status',
-        'public',
         'meta',
         'post_type', // added
         'price', // added for Marketplace
+
+        // Privacy (ตัดหายก่อนหน้านี้ = ต้นเหตุ 500 ตอน insert activities)
+        'privacy_settings',
+
+        // Content metadata
+        'hashtags',
+        'location',
+
+        // Feeling / activity
+        'feeling',
+        'feeling_icon',
+        'activity_type',
+        'activity_text',
+
+        // Background / theme (โพสต์แบบข้อความมีพื้นหลัง)
+        'background_color',
+        'background_gradient',
+        'background_image',
+        'text_color',
+        'font_size',
+
+        // Scheduling
+        'scheduled_at',
+        'is_scheduled',
+        'is_published',
+
+        // Options
+        'is_pinned',
+        'comments_disabled',
+
+        // Edit tracking
+        'is_edited',
+        'edited_at',
+
+        // Poll reference
+        'poll_id',
     ];
 
     // protected $guarded = [];
@@ -70,6 +105,8 @@ class Post extends Model
         'comments_disabled' => 'boolean',
         'is_edited' => 'boolean',
         'is_live_location' => 'boolean',
+        'privacy_settings' => 'integer',
+        'poll_id' => 'integer',
     ];
 
     public function author(): BelongsTo
