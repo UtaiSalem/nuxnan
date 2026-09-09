@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { Icon } from '@iconify/vue'
+import RichTextEditor from '~/components/RichTextEditor.vue'
 
 const formatDate = (date: string) => {
   if (!date) return ''
@@ -221,12 +222,12 @@ watch(() => props.show, (val) => {
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               คำอธิบาย / โจทย์
             </label>
-            <textarea
+            <!-- rich text — โจทย์/คำอธิบายงานถูกแสดงผ่าน RichTextViewer จึงต้องเก็บเป็น HTML ให้ตรงกัน -->
+            <RichTextEditor
               v-model="form.description"
-              rows="4"
-              class="w-full px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all resize-none"
               placeholder="ระบุรายละเอียดของงาน..."
-            ></textarea>
+              class="w-full"
+            />
           </div>
 
           <div class="grid grid-cols-2 gap-4">

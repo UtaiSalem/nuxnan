@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
 import { Icon } from '@iconify/vue';
+import RichTextEditor from '~/components/Common/RichTextEditor.vue';
 import { VueDatePicker } from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
 
@@ -222,9 +223,13 @@ const netPrice = computed(() => {
                    <!-- Description -->
                    <div>
                       <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">คำอธิบายรายวิชา</label>
-                      <textarea v-model="form.description" rows="3"
-                          class="block w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:outline-none"
-                      ></textarea>
+                      <!-- rich text — คำอธิบายรายวิชาแสดงผ่าน RichTextViewer จึงเก็บเป็น HTML -->
+                      <RichTextEditor
+                          v-model="form.description"
+                          placeholder="รายละเอียดเกี่ยวกับรายวิชา..."
+                          class="w-full"
+                          min-height="150px"
+                      />
                    </div>
               </div>
           </div>

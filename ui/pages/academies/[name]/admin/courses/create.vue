@@ -4,6 +4,7 @@
  * หน้าสร้างรายวิชาใหม่
  */
 import { Icon } from '@iconify/vue'
+import RichTextEditor from '~/components/Common/RichTextEditor.vue'
 
 definePageMeta({
   layout: 'main',
@@ -177,13 +178,14 @@ onMounted(async () => {
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           คำอธิบาย <span class="text-red-500">*</span>
         </label>
-        <textarea
+        <!-- rich text — ให้ตรงกับหน้าแสดงผล (RichTextViewer) และหน้าตั้งค่ารายวิชา -->
+        <RichTextEditor
           v-model="form.description"
-          rows="4"
-          class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
-          :class="{ 'border-red-500': errors.description }"
           placeholder="รายละเอียดรายวิชา..."
-        ></textarea>
+          class="w-full"
+          :class="{ 'ring-2 ring-red-500 rounded-lg': errors.description }"
+          min-height="150px"
+        />
         <p v-if="errors.description" class="mt-1 text-sm text-red-500">{{ errors.description }}</p>
       </div>
 

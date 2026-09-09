@@ -4,6 +4,7 @@ import { Icon } from '@iconify/vue';
 import Swal from 'sweetalert2';
 
 import CoursesLayout from '~/layouts/CoursesLayout.vue';
+import RichTextEditor from '~/components/Common/RichTextEditor.vue';
 
 // VueDatePicker is imported as a global plugin (Backup: local import)
 import { VueDatePicker } from '@vuepic/vue-datepicker';
@@ -381,10 +382,13 @@ async function handleSubmitForm(){
                         <!-- Description -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">คำอธิบายรายวิชา</label>
-                            <textarea v-model="form.description" rows="5"
-                                class="block w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:bg-white dark:focus:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all"
+                            <!-- rich text — คำอธิบายรายวิชาถูกแสดงผ่าน RichTextViewer จึงต้องเก็บเป็น HTML ให้ตรงกัน -->
+                            <RichTextEditor
+                                v-model="form.description"
                                 placeholder="รายละเอียดเกี่ยวกับสิ่งที่ผู้เรียนจะได้เรียนรู้..."
-                            ></textarea>
+                                class="w-full"
+                                min-height="150px"
+                            />
                         </div>
                     </div>
                 </section>
