@@ -313,7 +313,7 @@ academic-years 200 · library/books 200 · assets 200
 | SM-S3 | แก้ G5+G6 — ชื่อฟังก์ชันและ path ที่ชี้ผิด 8 จุด | — | UI เรียกได้จริงทุกปุ่ม | 🟢 **7/8 done 2026-09-09** · จุดที่ 8 (bookMeetingSlot) แยกไป SM-S7 |
 | SM-S4 | แก้ G8 — endpoint ที่ 500/พังถาวร | — | patch + เทสต์ (ไม่ต้อง migration) | 🟢 **done 2026-09-09** — Expense ทั้งโมดูล + KPI 2 บั๊ก |
 | SM-S5 | G3 — โหมดดูอย่างเดียวบนหน้า + ซ่อนปุ่มตามสิทธิ์จริง | S2 | ใช้ `can()` ที่ดึงมาแล้วแต่ไม่ได้ใช้ | ⚪ blocked by S2 |
-| SM-S6 | G9+G10 — สถิติหัวหน้าหน้าให้ถูก + ผูกแท็บกับ `?tab=` | — | ตัวเลขตรง · แชร์ลิงก์แท็บได้ | ⚪ pending |
+| SM-S6 | G9+G10 — สถิติหัวหน้าหน้าให้ถูก + ผูกแท็บกับ `?tab=` | — | ตัวเลขตรง · แชร์ลิงก์แท็บได้ | 🟢 **done 2026-09-09** |
 | SM-S7 | G7 — ตัดสินชะตา 4 ไฟล์ที่เข้าถึงไม่ได้ | Q2 | ขึ้นหน้าจริง หรือลบ 791 บรรทัด | ⚪ blocked by Q2 |
 | SM-S8 | G11 — audit log การเงิน/เงินเดือน | S1 | ใช้ระบบเดียวกับ SET-S9 | ⚪ pending |
 | SM-S9 | G14/Q1 — จัดโครงเมนูใหม่ | Q1 | ตามคำตอบ Q1 | ⚪ blocked by Q1 |
@@ -352,6 +352,17 @@ Report back: diff --stat + ผลรันเกณฑ์แบบดิบ
 ---
 
 ## 8. Review Log
+
+- **2026-09-09 SM-S6 ✅** — G9+G10 · ผู้เขียนโค้ด **agy** · Claude ตรวจ · frontend ไฟล์เดียว
+  ไฟล์: `ui/pages/academies/[name]/admin/school-management.vue` (+13/−4)
+  - G9: `fetchStats` เดิมเอา `stats.approved` (สมาชิกอนุมัติทั้งหมด) ไปใส่การ์ด "นักเรียน" ผิด
+    และ `totalTeachers`/`totalStaff` ไม่เคยถูกเซ็ต → แก้ให้ดึงจาก `role_distribution.{student,teacher,staff}`
+    ที่ endpoint `members/stats` คืนมาอยู่แล้ว (ไม่ต้องแตะ backend · role จริงใน DB = student/teacher)
+  - G10: `activeTab` เดิม `ref('members')` → เปลี่ยนเป็น `computed` get/set ผูกกับ `?tab=`
+    (แพทเทิร์นเดียวกับ `elections/[id].vue`) · refresh/แชร์ลิงก์/back คงแท็บได้แล้ว
+  **หลักฐานที่ Claude รันเอง:** grep ยืนยัน role_distribution map + computed แทน ref (ref เหลือ 0) +
+  useRouter 1 นัด · SFC compile OK · template ไม่ถูกแตะ · diff ไฟล์เดียวตรงสเปค
+  **ยังไม่ตรวจบนจอจริง** (ต้อง login admin ดูการ์ดสถิติ + สลับแท็บเช็ค URL)
 
 - **2026-09-09 SM-S4 ✅** — แก้ G8 · ผู้เขียนโค้ด **agy** · Claude ตรวจ · **ไม่ต้อง migration**
   (เจ้าของโปรเจคเคาะ: ปรับ backend ให้ตรง schema จริง ตัดฟีเจอร์ที่ไม่มีคอลัมน์ทิ้ง)

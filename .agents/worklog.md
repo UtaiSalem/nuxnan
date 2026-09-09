@@ -6982,3 +6982,26 @@ pint passed · เทสต์ 4/4 (11 assertions) · revert-check stash→แ�
 Claude ลบไฟล์ขยะ kpi_error.txt ที่ agy ทิ้ง + format เทสต์ · ยังไม่ตรวจบนจอจริง
 
 ### คิวถัดไปเมนู #8: SM-S6 (สถิติหัวหน้าหน้า G9 + ผูกแท็บ ?tab= G10) · S2/S5/S7/S9 รอ Q1–Q3
+
+---
+
+## 2026-09-09 (ต่อ) — เมนู #8: SM-S6 สถิติหัวหน้าหน้า (G9) + ผูกแท็บ ?tab= (G10)
+
+### สถานะ: ✅ เสร็จ+ตรวจ · ผู้เขียนโค้ด agy · frontend ไฟล์เดียว
+
+ไฟล์: `ui/pages/academies/[name]/admin/school-management.vue`
+- G9: fetchStats เดิมเอา stats.approved ไปใส่การ์ด "นักเรียน" ผิด + totalTeachers/totalStaff ไม่เคยเซ็ต
+  → ดึงจาก role_distribution.{student,teacher,staff} ที่ members/stats คืนมาอยู่แล้ว (ไม่แตะ backend)
+- G10: activeTab ref('members') → computed get/set ผูก ?tab= (แพทเทิร์นเดียวกับ elections/[id].vue)
+
+หมายเหตุ: audit เขียนว่า "เมนู #7 แก้เรื่องนี้ด้วย ?view=" — จริง ๆ #7 ไม่ได้ผูกแท็บกับ URL
+(?view= เป็นของลิงก์ไป archived list) แพทเทิร์นที่มีจริงอยู่ที่ elections/[id].vue + departments/[id].vue
+
+### หลักฐาน Claude รันเอง
+grep role_distribution map + computed แทน ref (ref=0) + useRouter=1 · SFC compile OK · template ไม่แตะ
+ยังไม่ตรวจบนจอจริง
+
+### สถานะเมนู #8 หลัง SM-S6
+✅ ปิดแล้ว: S1 (สิทธิ์ 204 route) · S3 7/8 · S4 (Expense schema + KPI) · S6 (สถิติ+แท็บ)
+🟢 ทำได้ต่อ (ไม่ติด Q): **S8** (audit log finance/payroll — dep S1 ✅) · **S10** (ชุดเทสต์ — dep S1–S4 ✅)
+🔵 ยังติด Q1–Q3: S2 (แยก view/manage) · S5 (โหมด view-only) · S7 (ชะตา 4 ไฟล์ orphan + bookMeeting) · S9 (โครงเมนู)
