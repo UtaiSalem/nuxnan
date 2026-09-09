@@ -556,7 +556,7 @@ const formatDate = (dateString: string) => {
                   {{ announcement.title }}
                 </h3>
                 <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
-                  {{ announcement.content.replace(/<[^>]*>/g, '').substring(0, 150) }}...
+                  {{ (announcement.content || '').substring(0, 150) }}...
                 </p>
                 
                 <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
@@ -892,7 +892,9 @@ const formatDate = (dateString: string) => {
           
           <div class="p-5">
             <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">{{ selectedAnnouncement.title }}</h2>
-            <div class="prose dark:prose-invert max-w-none" v-html="selectedAnnouncement.content"></div>
+            <!-- ประกาศกรอกผ่าน <textarea> = plain text ต้องแสดงตรง ๆ ไม่ใช้ v-html
+                 (v-html จะกลืนขึ้นบรรทัดใหม่ + ตีความ <...> เป็น HTML + เปิดช่อง XSS) -->
+            <div class="max-w-none text-gray-700 dark:text-gray-300 whitespace-pre-line break-words [overflow-wrap:anywhere]">{{ selectedAnnouncement.content }}</div>
             
             <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
               <div class="flex items-center gap-4">

@@ -64,7 +64,8 @@
               </button>
             </div>
           </div>
-          <div class="prose dark:prose-invert max-w-none text-sm text-gray-600 dark:text-gray-400 line-clamp-3" v-html="announcement.content"></div>
+          <!-- ประกาศเป็น plain text (textarea) — แสดงตรง ๆ ไม่ผ่าน v-html -->
+          <div class="max-w-none text-sm text-gray-600 dark:text-gray-400 line-clamp-3 whitespace-pre-line break-words [overflow-wrap:anywhere]">{{ announcement.content }}</div>
           <div v-if="announcement.target_audience" class="mt-3 flex items-center gap-2 text-sm text-gray-500">
             <Icon icon="heroicons:user-group" class="h-4 w-4" />
             <span>กลุ่มเป้าหมาย: {{ getAudienceLabel(announcement.target_audience) }}</span>

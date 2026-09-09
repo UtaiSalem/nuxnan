@@ -394,10 +394,23 @@ function changeSearchType(type) {
     }
 }
 
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 function highlightMatch(text, query) {
-    if (!text || !query) return text;
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    return text.replace(regex, '<mark class="bg-yellow-200 dark:bg-yellow-800 px-0.5 rounded">$1</mark>');
+    // escape ตัวข้อความก่อนเสมอ ให้เหลือ HTML จริงแค่ <mark> ที่เราใส่เอง
+    // (ค่าที่ส่งเข้ามาเป็น name/email/phone = plain text ถ้าไม่ escape ตัว < จะเพี้ยน + เป็นช่อง XSS)
+    const safe = escapeHtml(text);
+    if (!query) return safe;
+    const safeQuery = escapeHtml(query).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${safeQuery})`, 'gi');
+    return safe.replace(regex, '<mark class="bg-yellow-200 dark:bg-yellow-800 px-0.5 rounded">$1</mark>');
 }
 </script>
 
