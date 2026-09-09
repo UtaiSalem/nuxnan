@@ -283,26 +283,19 @@ class AcademyCourseController extends Controller
             $status = (string) $request->input('status');
 
             match ($status) {
+                // courses.status เป็น tinyint: 1=published, 2=draft, 3=archived
                 'published' => $query
-                    ->where(function (Builder $builder) {
-                        $builder
-                            ->where('status', 1)
-                            ->orWhere('status', 'published');
-                    })
+                    ->where('status', Course::STATUS_PUBLISHED)
                     ->where(function (Builder $builder) {
                         $builder
                             ->whereNull('finalization_status')
                             ->orWhere('finalization_status', '!=', 'archived');
                     }),
-                'draft' => $query->where(function (Builder $builder) {
-                    $builder
-                        ->whereIn('status', [0, 2])
-                        ->orWhereIn('status', ['draft', 'pending']);
-                }),
+                'draft' => $query->whereIn('status', [0, Course::STATUS_DRAFT]),
                 'archived' => $query->where(function (Builder $builder) {
                     $builder
-                        ->where('finalization_status', 'archived')
-                        ->orWhere('status', 'archived');
+                        ->where('status', Course::STATUS_ARCHIVED)
+                        ->orWhere('finalization_status', 'archived');
                 }),
                 default => null,
             };

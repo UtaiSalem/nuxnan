@@ -95,31 +95,40 @@ const handleSearch = () => {
   fetchCourses()
 }
 
-const getStatusBadge = (status: string) => {
+// courses.status มาเป็น tinyint (1=published, 2=draft, 3=archived) — map เป็น key ก่อนเสมอ
+const statusKey = (status: any): string => {
+  const n = Number(status)
+  if (n === 1) return 'published'
+  if (n === 2) return 'draft'
+  if (n === 3) return 'archived'
+  return typeof status === 'string' ? status : 'published'
+}
+
+const getStatusBadge = (status: any) => {
   const badges: Record<string, string> = {
     published: 'bg-green-500/90 text-white',
     draft: 'bg-yellow-500/90 text-white',
     archived: 'bg-slate-500/90 text-white'
   }
-  return badges[status] || 'bg-slate-400/90 text-white'
+  return badges[statusKey(status)] || 'bg-slate-400/90 text-white'
 }
 
-const getStatusChip = (status: string) => {
+const getStatusChip = (status: any) => {
   const chips: Record<string, string> = {
     published: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
     draft: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
     archived: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
   }
-  return chips[status] || 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+  return chips[statusKey(status)] || 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
 }
 
-const getStatusLabel = (status: string) => {
+const getStatusLabel = (status: any) => {
   const labels: Record<string, string> = {
     published: 'เผยแพร่',
     draft: 'ฉบับร่าง',
     archived: 'เก็บถาวร'
   }
-  return labels[status] || 'ไม่ระบุสถานะ'
+  return labels[statusKey(status)] || 'ไม่ระบุสถานะ'
 }
 
 // Strip HTML tags + decode entities + collapse whitespace so course descriptions

@@ -47,10 +47,11 @@ const statuses = [
 ]
 
 // status ที่โหลดมาจาก API เป็น int (tinyint) — map กลับเป็น string ให้ตรงกับ select
+// 1=published, 2=draft, 3=archived
 const normalizeStatus = (status: any): string => {
   const n = Number(status)
   if (n === 1) return 'published'
-  if (n === 2) return 'archived'
+  if (n === 3) return 'archived'
   if (typeof status === 'string' && statuses.some(o => o.value === status)) return status
   return 'draft'
 }

@@ -215,10 +215,10 @@ const selectedEducationLevelOption = computed(() =>
 // Initialize form with course data
 watch(() => course?.value, (newCourse) => {
   if (newCourse) {
-    // Map numeric status to string for UI
+    // Map numeric status to string for UI (courses.status tinyint: 1=published, 2=draft, 3=archived)
     let statusStr: CourseStatus = 'draft'
     if (newCourse.status === 1 || newCourse.status === 'published') statusStr = 'published'
-    else if (newCourse.status === 2 || newCourse.status === 'archived') statusStr = 'archived'
+    else if (newCourse.status === 3 || newCourse.status === 'archived') statusStr = 'archived'
     else statusStr = 'draft'
 
     const data = {

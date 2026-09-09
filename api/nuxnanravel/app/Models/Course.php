@@ -159,13 +159,32 @@ class Course extends Model
     ];
 
     /**
+     * courses.status (tinyint) — นิยามเดียวทั้งระบบ
+     *   1 = published (เผยแพร่ / เปิดเรียน)
+     *   2 = draft (ฉบับร่าง — เฉพาะผู้ดูแลเห็น)
+     *   3 = archived (เก็บถาวร — ซ่อน + read-only)
+     * ใช้ร่วมกับ setStatusAttribute() และ lifecycleState() ให้ตรงกับ UI (settings.vue)
+     */
+    public const STATUS_PUBLISHED = 1;
+
+    public const STATUS_DRAFT = 2;
+
+    public const STATUS_ARCHIVED = 3;
+
+    /** map string จาก UI -> ค่า tinyint ในฐานข้อมูล */
+    public const STATUS_MAP = [
+        'published' => self::STATUS_PUBLISHED,
+        'active' => self::STATUS_PUBLISHED,
+        'draft' => self::STATUS_DRAFT,
+        'archived' => self::STATUS_ARCHIVED,
+    ];
+
+    /**
      * courses.status เป็น tinyint — normalize ค่าที่รับเข้ามาให้เป็น int เสมอ
      *
-     * รองรับทั้ง string จาก UI (published/archived/draft) และ int ที่ถูก set มาตรง ๆ
-     * mapping อ้างอิงจากหน้า Course Settings ที่เป็นตัวแก้ status จริง:
-     *   1 = published, 2 = archived, 3 = draft
+     * รองรับทั้ง string จาก UI (published/draft/archived) และ int ที่ถูก set มาตรง ๆ
      * ป้องกันบั๊ก "1366 Incorrect integer value" เวลา controller/route เขียน status
-     * เป็น string ลง column ที่เป็น tinyint (เกิดที่ทั้ง /api/courses/{id} และ admin route)
+     * เป็น string ลง column tinyint (เกิดที่ทั้ง /api/courses/{id} และ admin route)
      */
     public function setStatusAttribute($value): void
     {
@@ -181,14 +200,7 @@ class Course extends Model
             return;
         }
 
-        $map = [
-            'published' => 1,
-            'archived' => 2,
-            'draft' => 3,
-            'pending' => 3,
-        ];
-
-        $this->attributes['status'] = $map[strtolower((string) $value)] ?? 3;
+        $this->attributes['status'] = self::STATUS_MAP[strtolower((string) $value)] ?? self::STATUS_PUBLISHED;
     }
 
     public function donationEnabled(): bool
@@ -208,13 +220,14 @@ class Course extends Model
      *   2. finalization_status = finalized -> Finalized
      *   3. finalization_status = published -> Published
      *   4. finalization_status = grading   -> Grading
-     *   5. status = 2 (Draft)              -> Draft
-     *   6. status = 4 (Closed) OR end_date in past -> EnrollmentClosed
-     *   7. otherwise                       -> Active
+     *   5. status = 2 (draft)              -> Draft
+     *   6. status = 3 (archived)           -> Archived
+     *   7. end_date in past                -> EnrollmentClosed
+     *   8. otherwise (status = 1 published) -> Active
      *
-     * Note: finalization_status is source-of-truth; courses.status is a manual
-     * instructor override that only takes effect when finalization_status is
-     * not_started.
+     * Note: finalization_status is source-of-truth; courses.status (1=published,
+     * 2=draft, 3=archived) is a manual instructor override that takes effect when
+     * finalization_status has not moved into a post-teaching state.
      */
     public function lifecycleState(): CourseLifecycleState
     {
@@ -233,11 +246,15 @@ class Course extends Model
             return CourseLifecycleState::Grading;
         }
 
-        if ((int) $this->status === 2) {
+        if ((int) $this->status === self::STATUS_DRAFT) {
             return CourseLifecycleState::Draft;
         }
 
-        if ((int) $this->status === 4 || ($this->end_date && $this->end_date->isPast())) {
+        if ((int) $this->status === self::STATUS_ARCHIVED) {
+            return CourseLifecycleState::Archived;
+        }
+
+        if ($this->end_date && $this->end_date->isPast()) {
             return CourseLifecycleState::EnrollmentClosed;
         }
 
