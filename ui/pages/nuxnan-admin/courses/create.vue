@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { Icon } from '@iconify/vue'
+import RichTextEditor from '~/components/Common/RichTextEditor.vue'
 
 definePageMeta({
   layout: 'nuxnan-admin-layout',
@@ -177,13 +178,15 @@ const handleSubmit = async () => {
         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
           คำอธิบาย <span class="text-red-500">*</span>
         </label>
-        <textarea
+        <!-- rich text — course.description แสดงผ่าน RichTextViewer และการ์ดใน index ก็ stripHtml
+             ถือว่าเป็น HTML จึงต้องเก็บเป็น HTML ให้ตรงกัน -->
+        <RichTextEditor
           v-model="form.description"
-          rows="4"
-          class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent resize-none"
-          :class="{ 'border-red-500': errors.description }"
           placeholder="รายละเอียดคอร์ส..."
-        ></textarea>
+          class="w-full"
+          :class="{ 'ring-2 ring-red-500 rounded-lg': errors.description }"
+          min-height="150px"
+        />
         <p v-if="errors.description" class="mt-1 text-sm text-red-500">{{ errors.description }}</p>
       </div>
 
