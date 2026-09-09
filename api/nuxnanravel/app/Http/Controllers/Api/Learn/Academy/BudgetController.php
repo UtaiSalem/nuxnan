@@ -61,7 +61,7 @@ class BudgetController extends Controller
             },
         ]);
 
-        $this->auditService->logView($budget, request());
+        $this->auditService->logView($budget);
 
         return response()->json([
             'success' => true,
@@ -99,7 +99,7 @@ class BudgetController extends Controller
             'created_by' => auth()->id(),
         ]);
 
-        $this->auditService->logCreate($budget, request());
+        $this->auditService->logCreate($budget);
 
         return response()->json([
             'success' => true,
@@ -138,7 +138,7 @@ class BudgetController extends Controller
 
         $budget->update($validated);
 
-        $this->auditService->logUpdate($budget, $oldData, request());
+        $this->auditService->logUpdate($budget, $oldData);
 
         return response()->json([
             'success' => true,
@@ -162,7 +162,7 @@ class BudgetController extends Controller
         $oldData = $budget->toArray();
         $budget->activate();
 
-        $this->auditService->logUpdate($budget, $oldData, request());
+        $this->auditService->logUpdate($budget, $oldData);
 
         return response()->json([
             'success' => true,
@@ -178,7 +178,7 @@ class BudgetController extends Controller
         $oldData = $budget->toArray();
         $budget->close();
 
-        $this->auditService->logUpdate($budget, $oldData, request());
+        $this->auditService->logUpdate($budget, $oldData);
 
         return response()->json([
             'success' => true,
@@ -199,7 +199,7 @@ class BudgetController extends Controller
             ], 400);
         }
 
-        $this->auditService->logDelete($budget, request());
+        $this->auditService->logDelete($budget);
         $budget->delete();
 
         return response()->json([
@@ -303,8 +303,8 @@ class BudgetController extends Controller
         $this->auditService->log(
             action: 'add_funds',
             entity: $budget,
-            metadata: ['amount' => $validated['amount'], 'notes' => $validated['notes'] ?? ''],
-            request: request()
+            module: 'finance',
+            metadata: ['amount' => $validated['amount'], 'notes' => $validated['notes'] ?? '']
         );
 
         return response()->json([
@@ -347,13 +347,13 @@ class BudgetController extends Controller
         $this->auditService->log(
             action: 'transfer_budget',
             entity: $fromBudget,
+            module: 'finance',
             metadata: [
                 'amount' => $validated['amount'],
                 'to_budget_id' => $toBudget->id,
                 'to_budget_name' => $toBudget->name,
                 'notes' => $validated['notes'] ?? '',
-            ],
-            request: request()
+            ]
         );
 
         return response()->json([

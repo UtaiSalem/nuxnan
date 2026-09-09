@@ -114,7 +114,7 @@ class FeeStructureController extends Controller
 
             DB::commit();
 
-            $this->auditService->logCreate($feeStructure, request());
+            $this->auditService->logCreate($feeStructure);
 
             return response()->json([
                 'success' => true,
@@ -148,7 +148,7 @@ class FeeStructureController extends Controller
         $oldData = $feeStructure->toArray();
         $feeStructure->update($validated);
 
-        $this->auditService->logUpdate($feeStructure, $oldData, request());
+        $this->auditService->logUpdate($feeStructure, $oldData);
 
         return response()->json([
             'success' => true,
@@ -249,7 +249,7 @@ class FeeStructureController extends Controller
             ], 400);
         }
 
-        $this->auditService->logDelete($feeStructure, request());
+        $this->auditService->logDelete($feeStructure);
 
         $feeStructure->items()->delete();
         $feeStructure->delete();
@@ -286,7 +286,7 @@ class FeeStructureController extends Controller
 
             DB::commit();
 
-            $this->auditService->logCreate($newStructure, request());
+            $this->auditService->logCreate($newStructure);
 
             return response()->json([
                 'success' => true,

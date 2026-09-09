@@ -84,7 +84,7 @@ class PaymentController extends Controller
             'confirmedBy:id,name',
         ]);
 
-        $this->auditService->logView($payment, request());
+        $this->auditService->logView($payment);
 
         return response()->json([
             'success' => true,
@@ -146,7 +146,7 @@ class PaymentController extends Controller
 
             DB::commit();
 
-            $this->auditService->logCreate($payment, request());
+            $this->auditService->logCreate($payment);
 
             return response()->json([
                 'success' => true,
@@ -193,7 +193,7 @@ class PaymentController extends Controller
 
             DB::commit();
 
-            $this->auditService->logUpdate($payment, $oldData, request());
+            $this->auditService->logUpdate($payment, $oldData);
 
             return response()->json([
                 'success' => true,
@@ -231,7 +231,7 @@ class PaymentController extends Controller
         $oldData = $payment->toArray();
         $payment->reject(auth()->id(), $validated['reason']);
 
-        $this->auditService->logUpdate($payment, $oldData, request());
+        $this->auditService->logUpdate($payment, $oldData);
 
         return response()->json([
             'success' => true,

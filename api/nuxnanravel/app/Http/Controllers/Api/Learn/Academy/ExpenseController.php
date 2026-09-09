@@ -72,7 +72,7 @@ class ExpenseController extends Controller
     {
         $expense->load(['category', 'creator:id,name', 'approver:id,name']);
 
-        $this->auditService->logView($expense, request());
+        $this->auditService->logView($expense);
 
         return response()->json([
             'success' => true,
@@ -112,7 +112,7 @@ class ExpenseController extends Controller
             'requested_by' => auth()->id(),
         ]);
 
-        $this->auditService->logCreate($expense, request());
+        $this->auditService->logCreate($expense);
 
         return response()->json([
             'success' => true,
@@ -148,7 +148,7 @@ class ExpenseController extends Controller
         $oldData = $expense->toArray();
         $expense->update($validated);
 
-        $this->auditService->logUpdate($expense, $oldData, request());
+        $this->auditService->logUpdate($expense, $oldData);
 
         return response()->json([
             'success' => true,
@@ -172,7 +172,7 @@ class ExpenseController extends Controller
         $oldData = $expense->toArray();
         $expense->approve(auth()->id());
 
-        $this->auditService->logApproval($expense, true, request());
+        $this->auditService->logApproval($expense, true);
 
         return response()->json([
             'success' => true,
@@ -200,7 +200,7 @@ class ExpenseController extends Controller
         $oldData = $expense->toArray();
         $expense->reject(auth()->id(), $validated['reason']);
 
-        $this->auditService->logApproval($expense, false, request(), ['reason' => $validated['reason']]);
+        $this->auditService->logApproval($expense, false, $validated['reason']);
 
         return response()->json([
             'success' => true,
@@ -223,7 +223,7 @@ class ExpenseController extends Controller
         $oldData = $expense->toArray();
         $expense->markAsPaid();
 
-        $this->auditService->logUpdate($expense, $oldData, request());
+        $this->auditService->logUpdate($expense, $oldData);
 
         return response()->json([
             'success' => true,
@@ -243,7 +243,7 @@ class ExpenseController extends Controller
             ], 400);
         }
 
-        $this->auditService->logDelete($expense, request());
+        $this->auditService->logDelete($expense);
         $expense->delete();
 
         return response()->json([

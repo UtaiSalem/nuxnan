@@ -86,7 +86,7 @@ class TuitionFeeController extends Controller
             'payments',
         ]);
 
-        $this->auditService->logView($tuitionFee, request());
+        $this->auditService->logView($tuitionFee);
 
         return response()->json([
             'success' => true,
@@ -165,7 +165,7 @@ class TuitionFeeController extends Controller
 
             DB::commit();
 
-            $this->auditService->logCreate($tuitionFee, request());
+            $this->auditService->logCreate($tuitionFee);
 
             return response()->json([
                 'success' => true,
@@ -279,8 +279,8 @@ class TuitionFeeController extends Controller
             $this->auditService->log(
                 action: 'bulk_generate',
                 entity: $feeStructure,
-                metadata: ['created' => $created, 'skipped' => $skipped],
-                request: request()
+                module: 'finance',
+                metadata: ['created' => $created, 'skipped' => $skipped]
             );
 
             return response()->json([
@@ -325,7 +325,7 @@ class TuitionFeeController extends Controller
         $oldData = $tuitionFee->toArray();
         $tuitionFee->update($validated);
 
-        $this->auditService->logUpdate($tuitionFee, $oldData, request());
+        $this->auditService->logUpdate($tuitionFee, $oldData);
 
         return response()->json([
             'success' => true,
@@ -439,7 +439,7 @@ class TuitionFeeController extends Controller
         $oldData = $tuitionFee->toArray();
         $tuitionFee->update(['status' => TuitionFee::STATUS_CANCELLED]);
 
-        $this->auditService->logUpdate($tuitionFee, $oldData, request());
+        $this->auditService->logUpdate($tuitionFee, $oldData);
 
         return response()->json([
             'success' => true,

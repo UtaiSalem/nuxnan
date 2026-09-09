@@ -206,11 +206,10 @@ class PayrollController extends Controller
         }
 
         $this->auditLogService->log(
-            'payroll.create',
-            $payroll,
-            $academy->id,
-            'academy',
-            [
+            action: 'payroll.create',
+            entity: $payroll,
+            module: 'academy',
+            metadata: [
                 'pay_period' => $payroll->pay_period,
                 'net_salary' => $payroll->net_salary,
             ]
@@ -348,11 +347,10 @@ class PayrollController extends Controller
         $payroll->approve(auth()->id());
 
         $this->auditLogService->log(
-            'payroll.approve',
-            $payroll,
-            $academy->id,
-            'academy',
-            ['net_salary' => $payroll->net_salary]
+            action: 'payroll.approve',
+            entity: $payroll,
+            module: 'academy',
+            metadata: ['net_salary' => $payroll->net_salary]
         );
 
         return response()->json([
@@ -389,11 +387,10 @@ class PayrollController extends Controller
         );
 
         $this->auditLogService->log(
-            'payroll.paid',
-            $payroll,
-            $academy->id,
-            'academy',
-            [
+            action: 'payroll.paid',
+            entity: $payroll,
+            module: 'academy',
+            metadata: [
                 'net_salary' => $payroll->net_salary,
                 'payment_date' => $payroll->payment_date,
             ]
@@ -506,11 +503,10 @@ class PayrollController extends Controller
         }
 
         $this->auditLogService->log(
-            'payroll.bulk_generate',
-            null,
-            $academy->id,
-            'academy',
-            [
+            action: 'payroll.bulk_generate',
+            entity: null,
+            module: 'academy',
+            metadata: [
                 'pay_period' => $validated['pay_period'],
                 'created' => $created,
                 'skipped' => $skipped,
