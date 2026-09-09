@@ -11,13 +11,20 @@ definePageMeta({
 })
 
 const route = useRoute()
+const router = useRouter()
 const api = useApi()
 const academyName = computed(() => route.params.name as string)
 
 // State
 const academy = ref<any>(null)
 const isLoading = ref(true)
-const activeTab = ref('members')
+const activeTab = computed({
+  get: () => {
+    const q = String(route.query.tab || 'members')
+    return tabs.some(t => t.id === q) ? q : 'members'
+  },
+  set: (value: string) => router.replace({ query: { ...route.query, tab: value } }),
+})
 
 // Academy Role
 const academyId = ref<number | null>(null)
@@ -174,9 +181,11 @@ const fetchStats = async () => {
   try {
     const response: any = await api.get(`/api/academies/${academyId.value}/members/stats`)
     if (response.success) {
-      stats.value.totalMembers = response.stats.total || 0
-      stats.value.totalStudents = response.stats.approved || 0
-      stats.value.pendingRequests = response.stats.pending || 0
+      stats.value.totalMembers = response.stats?.total || 0
+      stats.value.pendingRequests = response.stats?.pending || 0
+      stats.value.totalStudents = response.role_distribution?.student || 0
+      stats.value.totalTeachers = response.role_distribution?.teacher || 0
+      stats.value.totalStaff = response.role_distribution?.staff || 0
     }
   } catch (err) {
     console.error('Failed to fetch stats:', err)
