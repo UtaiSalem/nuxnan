@@ -158,6 +158,39 @@ class Course extends Model
         'donation_enabled' => 'boolean',
     ];
 
+    /**
+     * courses.status เป็น tinyint — normalize ค่าที่รับเข้ามาให้เป็น int เสมอ
+     *
+     * รองรับทั้ง string จาก UI (published/archived/draft) และ int ที่ถูก set มาตรง ๆ
+     * mapping อ้างอิงจากหน้า Course Settings ที่เป็นตัวแก้ status จริง:
+     *   1 = published, 2 = archived, 3 = draft
+     * ป้องกันบั๊ก "1366 Incorrect integer value" เวลา controller/route เขียน status
+     * เป็น string ลง column ที่เป็น tinyint (เกิดที่ทั้ง /api/courses/{id} และ admin route)
+     */
+    public function setStatusAttribute($value): void
+    {
+        if ($value === null) {
+            $this->attributes['status'] = null;
+
+            return;
+        }
+
+        if (is_numeric($value)) {
+            $this->attributes['status'] = (int) $value;
+
+            return;
+        }
+
+        $map = [
+            'published' => 1,
+            'archived' => 2,
+            'draft' => 3,
+            'pending' => 3,
+        ];
+
+        $this->attributes['status'] = $map[strtolower((string) $value)] ?? 3;
+    }
+
     public function donationEnabled(): bool
     {
         if ($this->donation_enabled !== null) {

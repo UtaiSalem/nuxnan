@@ -26,7 +26,7 @@ const coverUrl = ref<string | null>(null)
 const form = reactive({
   title: '',
   description: '',
-  status: 3 as number,
+  status: 'draft' as string,
   price: 0 as number,
   education_level: '' as string,
   education_year: null as number | null,
@@ -38,19 +38,21 @@ const form = reactive({
 // ตรงกับ Rule::in ของ UpdateCourseRequest.education_level
 const educationLevels = ['ประถมศึกษา', 'มัธยมศึกษา', 'ปวช.', 'ปวส.', 'อุดมศึกษา', 'อื่นๆ']
 
-// courses.status เป็น tinyint (ไม่ใช่ string) — ส่ง string จะ 500 (1366 Incorrect integer value)
-// mapping อ้างอิงจากหน้า Course Settings ที่เป็นตัวแก้ status จริง:
-//   1 = เผยแพร่ (published), 2 = เก็บถาวร (archived), else = ฉบับร่าง (draft)
-// ใช้ int ให้ round-trip กับ settings.vue ได้โดยไม่ทำค่าที่มีอยู่เพี้ยน
+// ส่ง status เป็น string ให้ backend (Course::setStatusAttribute) แปลงเป็น int เอง
+// courses.status เป็น tinyint: 1=published, 2=archived, else=draft (ตามหน้า Course Settings)
 const statuses = [
-  { value: 1, label: 'เผยแพร่' },
-  { value: 3, label: 'ฉบับร่าง' },
-  { value: 2, label: 'เก็บถาวร' }
+  { value: 'published', label: 'เผยแพร่' },
+  { value: 'draft', label: 'ฉบับร่าง' },
+  { value: 'archived', label: 'เก็บถาวร' }
 ]
 
-const normalizeStatus = (status: any): number => {
+// status ที่โหลดมาจาก API เป็น int (tinyint) — map กลับเป็น string ให้ตรงกับ select
+const normalizeStatus = (status: any): string => {
   const n = Number(status)
-  return [1, 2, 3].includes(n) ? n : 3
+  if (n === 1) return 'published'
+  if (n === 2) return 'archived'
+  if (typeof status === 'string' && statuses.some(o => o.value === status)) return status
+  return 'draft'
 }
 
 const fetchCourse = async () => {
