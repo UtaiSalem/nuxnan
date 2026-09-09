@@ -7,9 +7,10 @@
                   <!-- Header: Text & Badges -->
                   <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-4 mb-3 sm:mb-4">
                       <!-- Question Text -->
-                      <div class="prose dark:prose-invert max-w-none text-gray-800 dark:text-gray-100 flex-grow">
-                        <CommonRichTextViewer :content="q.text" :can-expand="false" />
-                      </div>
+                      <!-- โจทย์เก็บเป็น plain text (textarea) ไม่ใช่ rich text — ต้องแสดงตัวอักษรตรง ๆ
+                           ถ้าใส่ผ่าน v-html แท็กที่เป็นเนื้อหาโจทย์ เช่น <!DOCTYPE html> / <head> / <a> / <img>
+                           จะถูก browser ตีความเป็น HTML จริงแล้วหายไป (เหมือนแบบทดสอบของบทเรียนที่ใช้ {{ }}) -->
+                      <div class="min-w-0 flex-grow font-medium text-gray-800 dark:text-gray-100 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{{ q.text }}</div>
 
                       <!-- Badges (Flex Item) -->
                       <div class="flex items-center gap-2 flex-shrink-0">
@@ -66,10 +67,10 @@
                                   class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600 disabled:text-gray-400"
                               />
                           </div>
-                          <div class="ml-3 text-sm flex-grow">
-                              <span class="font-medium text-gray-900 dark:text-gray-100">
-                                <CommonRichTextViewer :content="opt.text" :can-expand="false" />
-                              </span>
+                          <div class="ml-3 text-sm min-w-0 flex-grow">
+                              <!-- ตัวเลือกก็เป็น plain text เช่นกัน — แสดงตรง ๆ ไม่ผ่าน v-html
+                                   (ตัวเลือกอย่าง <head> <body> <title> จะกลายเป็นช่องว่างถ้าถูกตีความเป็น HTML) -->
+                              <span v-if="opt.text" class="font-medium text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{{ opt.text }}</span>
                                <!-- Option Images -->
                                <div v-if="opt.images && opt.images.length > 0" class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     <button 
