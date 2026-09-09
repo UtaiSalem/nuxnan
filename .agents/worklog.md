@@ -7005,3 +7005,27 @@ grep role_distribution map + computed แทน ref (ref=0) + useRouter=1 · SFC
 ✅ ปิดแล้ว: S1 (สิทธิ์ 204 route) · S3 7/8 · S4 (Expense schema + KPI) · S6 (สถิติ+แท็บ)
 🟢 ทำได้ต่อ (ไม่ติด Q): **S8** (audit log finance/payroll — dep S1 ✅) · **S10** (ชุดเทสต์ — dep S1–S4 ✅)
 🔵 ยังติด Q1–Q3: S2 (แยก view/manage) · S5 (โหมด view-only) · S7 (ชะตา 4 ไฟล์ orphan + bookMeeting) · S9 (โครงเมนู)
+
+---
+
+## 2026-09-09 (ต่อ) — เมนู #8: SM-S8 แก้ audit log การเงินที่เรียกพัง (G11)
+
+### สถานะ: ✅ เสร็จ+ตรวจ+revert-check · ผู้เขียนโค้ด agy
+
+**G11 เขียนผิด** — บอก "การเงินไม่มี audit" แต่จริงคือ **มีครบแต่เรียกพังทั้ง 6 controller** (~30 call)
+พิสูจน์ด้วย tinker: ส่ง request() เป็น ?string module → __toString() dump ลง varchar(50) → "Data too long" 500
+
+ไฟล์: Expense/Payroll/TuitionFee/Budget/FeeStructure/PaymentController + เทสต์ใหม่ SchoolFinanceAuditLogTest
+- RULE A (convenience ส่ง request()) → ลบ request() · reject ย้าย reason มา arg3
+- RULE B (Payroll log() positional ผิด) → named args
+- RULE C (TuitionFee/Budget log() named `request:` ไม่มีจริง) → ลบ + module:'finance'
+
+### 🔴 Analytics ยังพังแบบเดียวกัน (นอกขอบเขต SM-S8)
+`AnalyticsController` log() 464/495/637/711/780 ส่ง class-string เป็น ?Model + int เป็น ?array → TypeError
+(SM-S4 แก้ไปแล้ว 1 จุด = 396 createKpi→logCustom) เหลืออีก 5 จุด — เก็บตกตอนแตะเมนูรายงาน หรือทำ quick fix
+
+### หลักฐาน Claude รันเอง
+grep request() ค้าง 0 · pint passed · เทสต์ 2/2 (27 assertions) · revert-check stash→แดง restore→เขียว
+SM-S4 เทสต์ยังผ่านคู่ (6/6) · ยังไม่ตรวจบนจอจริง
+
+### สถานะเมนู #8: ปิด S1/S3(7·8)/S4/S6/S8 · เหลือ **S10 (ชุดเทสต์)** ที่ไม่ติด Q · S2/S5/S7/S9 รอ Q1–Q3

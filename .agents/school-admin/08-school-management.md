@@ -267,9 +267,14 @@ academic-years 200 · library/books 200 · assets 200
 `activeTab` เป็น `ref('members')` เฉย ๆ ⇒ refresh/แชร์ลิงก์/กดย้อนกลับ เด้งกลับแท็บแรกเสมอ
 (เมนู #7 แก้เรื่องเดียวกันไปแล้วด้วย `?view=` — ใช้แพทเทิร์นเดียวกันได้)
 
-### 🟡 G11 — ไม่มี audit log ฝั่งการเงิน/เงินเดือน
-`AnalyticsController` มี `$this->auditLog->log(...)` แต่ Expense/Payroll/TuitionFee/Budget ไม่มีเลย
-ทั้งที่เป็นข้อมูลที่อ่อนไหวกว่ามาก (เมนู #7 SET-S9 วางระบบ audit ไว้ให้แล้ว)
+### 🟡 G11 — audit log ฝั่งการเงิน/เงินเดือน **เรียกพังทั้งหมด** (แก้แล้ว SM-S8)
+⚠️ audit เดิมเขียนว่า "ไม่มี audit เลย" — **ผิด** · จริง ๆ **มี** ครบทุก controller แต่ **เรียกพัง**:
+ส่ง `request()` เข้า arg `?string $module` → Symfony Request::__toString() dump ทั้ง HTTP request
+ลงคอลัมน์ `audit_logs.module` (varchar(50)) → "Data too long" 500 ตอนใช้จริง ·
+Payroll ส่ง positional ผิด (TypeError) · TuitionFee/Budget ใช้ named arg `request:` ที่ไม่มี (Error)
+พิสูจน์ด้วย tinker จริง · แก้แล้ว SM-S8 (6 controller)
+🔴 **Analytics ยังพังแบบเดียวกัน** (log() 464/495/637/711/780 ส่ง class-string เป็น ?Model + int เป็น ?array)
+— อยู่นอกขอบเขต SM-S8 (reports domain) รอทำตอนแตะเมนูรายงาน หรือเก็บตกทีหลัง
 
 ### 🟡 G12 — ไม่มีเทสต์เลยสักไฟล์
 ไม่มีไฟล์เทสต์ใดแตะ `fee_structures` / `payroll` / `leave_request` ⇒ ไม่มีอะไรกันการถอยหลัง
@@ -315,7 +320,7 @@ academic-years 200 · library/books 200 · assets 200
 | SM-S5 | G3 — โหมดดูอย่างเดียวบนหน้า + ซ่อนปุ่มตามสิทธิ์จริง | S2 | ใช้ `can()` ที่ดึงมาแล้วแต่ไม่ได้ใช้ | ⚪ blocked by S2 |
 | SM-S6 | G9+G10 — สถิติหัวหน้าหน้าให้ถูก + ผูกแท็บกับ `?tab=` | — | ตัวเลขตรง · แชร์ลิงก์แท็บได้ | 🟢 **done 2026-09-09** |
 | SM-S7 | G7 — ตัดสินชะตา 4 ไฟล์ที่เข้าถึงไม่ได้ | Q2 | ขึ้นหน้าจริง หรือลบ 791 บรรทัด | ⚪ blocked by Q2 |
-| SM-S8 | G11 — audit log การเงิน/เงินเดือน | S1 | ใช้ระบบเดียวกับ SET-S9 | ⚪ pending |
+| SM-S8 | G11 — audit log การเงิน/เงินเดือน | S1 | ใช้ระบบเดียวกับ SET-S9 | 🟢 **done 2026-09-09** — แก้ audit ที่เรียกพัง 6 controller |
 | SM-S9 | G14/Q1 — จัดโครงเมนูใหม่ | Q1 | ตามคำตอบ Q1 | ⚪ blocked by Q1 |
 | SM-S10 | G12 — ชุดเทสต์ของเมนูนี้ | S1–S4 | เส้นทางสิทธิ์ + happy path ต่อโมดูล | ⚪ pending |
 
@@ -352,6 +357,17 @@ Report back: diff --stat + ผลรันเกณฑ์แบบดิบ
 ---
 
 ## 8. Review Log
+
+- **2026-09-09 SM-S8 ✅** — แก้ audit log การเงิน/เงินเดือนที่เรียกพัง · ผู้เขียนโค้ด **agy** · Claude ตรวจ
+  **ใหญ่กว่า audit** — G11 บอก "ไม่มี audit" แต่จริงคือ **มีแต่เรียกพังทั้ง 6 controller** (~30 call)
+  ไฟล์: Expense/Payroll/TuitionFee/Budget/FeeStructure/PaymentController.php + เทสต์ใหม่ SchoolFinanceAuditLogTest
+  - RULE A: convenience method ส่ง `request()` เป็น `?string module` → ลบ request() (service อ่าน Request::instance() เอง)
+    · logApproval reject ย้าย reason มา arg3
+  - RULE B: Payroll log() positional ผิด (`$academy->id`→?array oldValues ฯลฯ) → named args `action:/entity:/module:/metadata:`
+  - RULE C: TuitionFee/Budget log() ใช้ named `request:` ที่ไม่มีใน signature → ลบทิ้ง + `module:'finance'`
+  **หลักฐานที่ Claude รันเอง:** grep request() ค้าง 0 · pint passed · เทสต์ 2/2 (27 assertions) เขียว ·
+  revert-check stash 6 controller → lifecycle test แดง · restore → เขียว · SM-S4 เทสต์ยังผ่านคู่กัน (6/6)
+  **ยังไม่ตรวจบนจอจริง** · **Analytics audit ยังพังแบบเดียวกัน** (log() 5 จุด — นอกขอบเขต flag ไว้ที่ G11)
 
 - **2026-09-09 SM-S6 ✅** — G9+G10 · ผู้เขียนโค้ด **agy** · Claude ตรวจ · frontend ไฟล์เดียว
   ไฟล์: `ui/pages/academies/[name]/admin/school-management.vue` (+13/−4)
