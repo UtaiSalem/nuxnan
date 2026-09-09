@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import RichTextEditor from '~/components/Common/RichTextEditor.vue'
 
@@ -12,111 +12,80 @@ const config = useRuntimeConfig()
 const apiBase = config.public.apiBase as string
 const router = useRouter()
 
-// Form state
 const isSubmitting = ref(false)
 const errors = ref<Record<string, string>>({})
 const successMessage = ref('')
 
+// เฉพาะฟิลด์ที่ StoreCourseRequest รับจริง — ไม่งั้นถูก drop เงียบ ๆ
+// (รูปหน้าปก/หมวดหมู่ตั้งได้ที่หน้า Course Settings หลังสร้าง)
 const form = reactive({
   title: '',
   description: '',
-  category_id: '',
-  instructor_id: '',
-  price: 0,
-  discount_price: null as number | null,
-  duration: '',
-  level: 'beginner',
-  status: 'draft',
-  is_featured: false,
-  thumbnail: null as File | null
+  price: 0 as number,
+  status: 'draft' as string,
+  education_level: '' as string,
+  education_year: null as number | null
 })
 
-// Levels
-const levels = [
-  { value: 'beginner', label: 'เริ่มต้น' },
-  { value: 'intermediate', label: 'ปานกลาง' },
-  { value: 'advanced', label: 'ขั้นสูง' }
-]
-
-// Statuses
+// status ส่งเป็น string — backend (Course::setStatusAttribute) แปลงเป็น tinyint เอง
 const statuses = [
-  { value: 'draft', label: 'แบบร่าง' },
-  { value: 'pending', label: 'รอตรวจสอบ' },
   { value: 'published', label: 'เผยแพร่' },
+  { value: 'draft', label: 'ฉบับร่าง' },
   { value: 'archived', label: 'เก็บถาวร' }
 ]
 
-// Categories (would be fetched from API)
-const categories = ref([
-  { value: '1', label: 'เทคโนโลยี' },
-  { value: '2', label: 'ภาษา' },
-  { value: '3', label: 'ธุรกิจ' },
-  { value: '4', label: 'สุขภาพ' }
-])
+// ตรงกับ Rule::in ของ StoreCourseRequest.education_level
+const educationLevels = ['ประถมศึกษา', 'มัธยมศึกษา', 'ปวช.', 'ปวส.', 'อุดมศึกษา', 'อื่นๆ']
 
-// Handle file upload
-const handleFileChange = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  if (target.files && target.files[0]) {
-    form.thumbnail = target.files[0]
-  }
-}
-
-// Validate form
 const validateForm = () => {
   errors.value = {}
-  
-  if (!form.title) {
-    errors.value.title = 'กรุณากรอกชื่อคอร์ส'
-  }
-  
-  if (!form.description) {
-    errors.value.description = 'กรุณากรอกคำอธิบาย'
-  }
-  
+  if (!form.title) errors.value.title = 'กรุณากรอกชื่อรายวิชา'
+  if (!form.description) errors.value.description = 'กรุณากรอกคำอธิบาย'
   return Object.keys(errors.value).length === 0
 }
 
-// Submit form
 const handleSubmit = async () => {
   if (!validateForm()) return
-  
+
   isSubmitting.value = true
   successMessage.value = ''
-  
+  errors.value = {}
+
   try {
     const token = useCookie('token')
-    
-    const formData = new FormData()
-    Object.entries(form).forEach(([key, value]) => {
-      if (value !== null && value !== undefined) {
-        if (value instanceof File) {
-          formData.append(key, value)
-        } else {
-          formData.append(key, String(value))
-        }
-      }
-    })
-    
-    const response = await $fetch(`${apiBase}/api/admin/courses`, {
+
+    const payload: Record<string, any> = {
+      title: form.title,
+      description: form.description,
+      price: Number(form.price) || 0,
+      status: form.status
+    }
+    if (form.education_level) payload.education_level = form.education_level
+    if (form.education_year != null && (form.education_year as any) !== '') {
+      payload.education_year = Number(form.education_year)
+    }
+
+    const response = await $fetch<any>(`${apiBase}/api/admin/courses`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${token.value}`
+        Authorization: `Bearer ${token.value}`,
+        Accept: 'application/json'
       },
-      body: formData
+      body: payload
     })
-    
-    if (response.success) {
-      successMessage.value = 'สร้างคอร์สสำเร็จ'
+
+    if (response?.success) {
+      successMessage.value = 'สร้างรายวิชาสำเร็จ'
       setTimeout(() => {
         router.push('/nuxnan-admin/courses')
-      }, 1500)
+      }, 1200)
     }
   } catch (error: any) {
-    if (error.data?.errors) {
-      errors.value = error.data.errors
+    if (error?.data?.errors) {
+      const raw = error.data.errors as Record<string, string[]>
+      errors.value = Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, v?.[0] ?? '']))
     } else {
-      errors.value.general = error.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง'
+      errors.value.general = error?.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง'
     }
   } finally {
     isSubmitting.value = false
@@ -127,16 +96,16 @@ const handleSubmit = async () => {
 <template>
   <div class="space-y-6 max-w-3xl mx-auto">
     <!-- Page Header -->
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-3 sm:gap-4">
       <NuxtLink
         to="/nuxnan-admin/courses"
-        class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+        class="shrink-0 min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
       >
         <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />
       </NuxtLink>
-      <div>
-        <h1 class="text-2xl font-bold text-slate-800 dark:text-white">สร้างคอร์สใหม่</h1>
-        <p class="text-slate-500 dark:text-slate-400 mt-1">กรอกข้อมูลเพื่อสร้างคอร์สเรียน</p>
+      <div class="min-w-0">
+        <h1 class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white break-words">สร้างรายวิชาใหม่</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">กรอกข้อมูลเพื่อสร้างรายวิชา</p>
       </div>
     </div>
 
@@ -161,7 +130,7 @@ const handleSubmit = async () => {
       <!-- Title -->
       <div>
         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-          ชื่อคอร์ส <span class="text-red-500">*</span>
+          ชื่อรายวิชา <span class="text-red-500">*</span>
         </label>
         <input
           v-model="form.title"
@@ -178,11 +147,10 @@ const handleSubmit = async () => {
         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
           คำอธิบาย <span class="text-red-500">*</span>
         </label>
-        <!-- rich text — course.description แสดงผ่าน RichTextViewer และการ์ดใน index ก็ stripHtml
-             ถือว่าเป็น HTML จึงต้องเก็บเป็น HTML ให้ตรงกัน -->
+        <!-- rich text — course.description แสดงผ่าน RichTextViewer จึงเก็บเป็น HTML -->
         <RichTextEditor
           v-model="form.description"
-          placeholder="รายละเอียดคอร์ส..."
+          placeholder="รายละเอียดรายวิชา..."
           class="w-full"
           :class="{ 'ring-2 ring-red-500 rounded-lg': errors.description }"
           min-height="150px"
@@ -190,140 +158,82 @@ const handleSubmit = async () => {
         <p v-if="errors.description" class="mt-1 text-sm text-red-500">{{ errors.description }}</p>
       </div>
 
-      <!-- Category & Level -->
+      <!-- Status & Price -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            หมวดหมู่
-          </label>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">สถานะ</label>
           <select
-            v-model="form.category_id"
+            v-model="form.status"
             class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
           >
-            <option value="">เลือกหมวดหมู่</option>
-            <option v-for="cat in categories" :key="cat.value" :value="cat.value">
-              {{ cat.label }}
-            </option>
+            <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
           </select>
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            ระดับ
-          </label>
-          <select
-            v-model="form.level"
-            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
-          >
-            <option v-for="level in levels" :key="level.value" :value="level.value">
-              {{ level.label }}
-            </option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Price -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            ราคา (บาท)
-          </label>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">ราคา (บาท)</label>
           <input
             v-model.number="form.price"
             type="number"
             min="0"
             class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
+            :class="{ 'border-red-500': errors.price }"
             placeholder="0 = ฟรี"
           />
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            ราคาลด (บาท)
-          </label>
-          <input
-            v-model.number="form.discount_price"
-            type="number"
-            min="0"
-            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
-            placeholder="ไม่มีส่วนลด"
-          />
+          <p v-if="errors.price" class="mt-1 text-sm text-red-500">{{ errors.price }}</p>
         </div>
       </div>
 
-      <!-- Duration & Status -->
+      <!-- Education level & year -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            ระยะเวลา
-          </label>
-          <input
-            v-model="form.duration"
-            type="text"
-            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
-            placeholder="เช่น 10 ชั่วโมง"
-          />
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">ระดับการศึกษา</label>
+          <select
+            v-model="form.education_level"
+            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
+            :class="{ 'border-red-500': errors.education_level }"
+          >
+            <option value="">ไม่ระบุ</option>
+            <option v-for="lv in educationLevels" :key="lv" :value="lv">{{ lv }}</option>
+          </select>
+          <p v-if="errors.education_level" class="mt-1 text-sm text-red-500">{{ errors.education_level }}</p>
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            สถานะ
-          </label>
-          <select
-            v-model="form.status"
-            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
-          >
-            <option v-for="status in statuses" :key="status.value" :value="status.value">
-              {{ status.label }}
-            </option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Thumbnail -->
-      <div>
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-          รูปภาพหน้าปก
-        </label>
-        <div class="flex items-center gap-4">
-          <label class="flex-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl cursor-pointer hover:border-hopeui-primary-500 dark:hover:border-hopeui-primary-400 transition-colors">
-            <Icon icon="fluent:image-add-24-regular" class="w-8 h-8 text-slate-400" />
-            <span class="mt-2 text-sm text-slate-500">คลิกเพื่ออัพโหลด</span>
-            <input type="file" accept="image/*" class="hidden" @change="handleFileChange" />
-          </label>
-          <div v-if="form.thumbnail" class="text-sm text-slate-600 dark:text-slate-400">
-            {{ form.thumbnail.name }}
-          </div>
-        </div>
-      </div>
-
-      <!-- Featured -->
-      <div class="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
-        <label class="flex items-center gap-3 cursor-pointer">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">ชั้นปี (1-6)</label>
           <input
-            v-model="form.is_featured"
-            type="checkbox"
-            class="w-5 h-5 rounded border-slate-300 text-hopeui-primary-600 focus:ring-hopeui-primary-500"
+            v-model.number="form.education_year"
+            type="number"
+            min="1"
+            max="6"
+            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
+            :class="{ 'border-red-500': errors.education_year }"
+            placeholder="ไม่ระบุ"
           />
-          <span class="text-slate-700 dark:text-slate-300">แสดงในหน้าแรก (Featured)</span>
-        </label>
+          <p v-if="errors.education_year" class="mt-1 text-sm text-red-500">{{ errors.education_year }}</p>
+        </div>
       </div>
+
+      <!-- Note about cover/category -->
+      <p class="text-xs text-slate-400">
+        รูปหน้าปก หมวดหมู่ และรายละเอียดอื่น ๆ ปรับได้ที่หน้าตั้งค่ารายวิชา (Course Settings) หลังสร้างเสร็จ
+      </p>
 
       <!-- Actions -->
       <div class="flex flex-col sm:flex-row gap-3 pt-4">
         <button
           type="submit"
           :disabled="isSubmitting"
-          class="flex-1 inline-flex justify-center items-center gap-2 px-6 py-3 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 disabled:bg-hopeui-primary-300 rounded-xl text-white font-medium transition-colors"
+          class="flex-1 min-h-[44px] inline-flex justify-center items-center gap-2 px-6 py-3 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 disabled:bg-hopeui-primary-300 rounded-xl text-white font-medium transition-colors"
         >
           <Icon v-if="isSubmitting" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
           <Icon v-else icon="fluent:save-24-regular" class="w-5 h-5" />
-          {{ isSubmitting ? 'กำลังบันทึก...' : 'สร้างคอร์ส' }}
+          {{ isSubmitting ? 'กำลังบันทึก...' : 'สร้างรายวิชา' }}
         </button>
-        
+
         <NuxtLink
           to="/nuxnan-admin/courses"
-          class="flex-1 inline-flex justify-center items-center gap-2 px-4 sm:px-6 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-300 font-medium transition-colors"
+          class="flex-1 min-h-[44px] inline-flex justify-center items-center gap-2 px-4 sm:px-6 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-300 font-medium transition-colors"
         >
           <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
           ยกเลิก
