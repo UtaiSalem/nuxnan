@@ -19,7 +19,8 @@ class StoreCourseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => ['required', 'string', 'max:255'],
+            // courses มีคอลัมน์ name เท่านั้น (ไม่มี title) — validate/บันทึกด้วย name
+            'name' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'category_id' => ['nullable', 'integer', 'exists:course_categories,id'],
             'price' => ['nullable', 'numeric', 'min:0'],

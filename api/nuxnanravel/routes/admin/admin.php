@@ -319,9 +319,12 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
         })->name('admin.courses.index');
 
         Route::post('/', function (StoreCourseRequest $request) {
+            // เจ้าของคอร์สคือ user_id (ไม่มีคอลัมน์ creator_id ในตาราง courses)
+            // instructor_id เป็น NOT NULL ไม่มี default — ตั้งเป็นผู้สร้างไปก่อน (มอบหมายผู้สอนภายหลังได้)
             $course = Course::create([
                 ...$request->validated(),
-                'creator_id' => auth()->id(),
+                'user_id' => auth()->id(),
+                'instructor_id' => auth()->id(),
             ]);
 
             return response()->json(['success' => true, 'data' => $course], 201);

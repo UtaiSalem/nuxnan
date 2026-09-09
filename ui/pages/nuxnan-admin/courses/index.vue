@@ -290,7 +290,7 @@ onMounted(() => {
                     <img
                       v-if="course.cover_url"
                       :src="course.cover_url"
-                      :alt="course.title"
+                      :alt="course.name"
                       class="w-full h-full object-cover"
                       @error="($event.target as HTMLImageElement).style.display = 'none'"
                     />
@@ -303,7 +303,7 @@ onMounted(() => {
                       :to="`/nuxnan-admin/courses/${course.id}`"
                       class="font-medium text-slate-800 dark:text-white line-clamp-1 hover:text-hopeui-primary-600 dark:hover:text-hopeui-primary-400 transition-colors"
                     >
-                      {{ course.title }}
+                      {{ course.name }}
                     </NuxtLink>
                     <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
                       {{ stripHtml(course.description) || 'ไม่มีคำอธิบาย' }}
@@ -376,7 +376,7 @@ onMounted(() => {
           <img
             v-if="course.cover_url"
             :src="course.cover_url"
-            :alt="course.title"
+            :alt="course.name"
             class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             @error="($event.target as HTMLImageElement).style.display = 'none'"
           />
@@ -403,7 +403,7 @@ onMounted(() => {
             :to="`/nuxnan-admin/courses/${course.id}`"
             class="font-semibold text-slate-800 dark:text-white line-clamp-2 min-h-[3rem] leading-6 hover:text-hopeui-primary-600 dark:hover:text-hopeui-primary-400 transition-colors"
           >
-            {{ course.title }}
+            {{ course.name }}
           </NuxtLink>
 
           <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5 line-clamp-2 min-h-[2.5rem]">

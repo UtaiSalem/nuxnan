@@ -24,7 +24,7 @@ const coverUrl = ref<string | null>(null)
 
 // Form — เฉพาะฟิลด์ที่ UpdateCourseRequest รับจริง (ปก/รูปแก้ที่หน้าตั้งค่ารายวิชา ไม่ใช่ที่นี่)
 const form = reactive({
-  title: '',
+  name: '',
   description: '',
   status: 'draft' as string,
   price: 0 as number,
@@ -69,7 +69,8 @@ const fetchCourse = async () => {
       loadError.value = 'ไม่พบรายวิชานี้'
       return
     }
-    form.title = c.title ?? c.name ?? ''
+    // courses มีคอลัมน์ name เท่านั้น (ไม่มี title) — เผื่อ payload เก่าที่มี title ไว้ fallback
+    form.name = c.name ?? c.title ?? ''
     form.description = c.description ?? ''
     form.status = normalizeStatus(c.status)
     form.price = Number(c.price) || 0
@@ -92,7 +93,7 @@ const fetchCourse = async () => {
 
 const validateForm = () => {
   errors.value = {}
-  if (!form.title) errors.value.title = 'กรุณากรอกชื่อรายวิชา'
+  if (!form.name) errors.value.name = 'กรุณากรอกชื่อรายวิชา'
   if (!form.description) errors.value.description = 'กรุณากรอกคำอธิบาย'
   return Object.keys(errors.value).length === 0
 }
@@ -109,7 +110,7 @@ const handleSubmit = async () => {
 
     // ส่งเฉพาะฟิลด์ที่มีค่า — enum อย่าง education_level ถ้าส่ง '' จะไม่ผ่าน Rule::in
     const payload: Record<string, any> = {
-      title: form.title,
+      name: form.name,
       description: form.description,
       status: form.status,
       price: Number(form.price) || 0
@@ -217,13 +218,13 @@ onMounted(fetchCourse)
             ชื่อรายวิชา <span class="text-red-500">*</span>
           </label>
           <input
-            v-model="form.title"
+            v-model="form.name"
             type="text"
             class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
-            :class="{ 'border-red-500': errors.title }"
+            :class="{ 'border-red-500': errors.name }"
             placeholder="เช่น เรียน Python เบื้องต้น"
           />
-          <p v-if="errors.title" class="mt-1 text-sm text-red-500">{{ errors.title }}</p>
+          <p v-if="errors.name" class="mt-1 text-sm text-red-500">{{ errors.name }}</p>
         </div>
 
         <!-- Description -->

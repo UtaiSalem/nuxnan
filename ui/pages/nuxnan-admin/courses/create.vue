@@ -19,7 +19,7 @@ const successMessage = ref('')
 // เฉพาะฟิลด์ที่ StoreCourseRequest รับจริง — ไม่งั้นถูก drop เงียบ ๆ
 // (รูปหน้าปก/หมวดหมู่ตั้งได้ที่หน้า Course Settings หลังสร้าง)
 const form = reactive({
-  title: '',
+  name: '',
   description: '',
   price: 0 as number,
   status: 'draft' as string,
@@ -39,7 +39,7 @@ const educationLevels = ['ประถมศึกษา', 'มัธยมศ�
 
 const validateForm = () => {
   errors.value = {}
-  if (!form.title) errors.value.title = 'กรุณากรอกชื่อรายวิชา'
+  if (!form.name) errors.value.name = 'กรุณากรอกชื่อรายวิชา'
   if (!form.description) errors.value.description = 'กรุณากรอกคำอธิบาย'
   return Object.keys(errors.value).length === 0
 }
@@ -55,7 +55,7 @@ const handleSubmit = async () => {
     const token = useCookie('token')
 
     const payload: Record<string, any> = {
-      title: form.title,
+      name: form.name,
       description: form.description,
       price: Number(form.price) || 0,
       status: form.status
@@ -133,13 +133,13 @@ const handleSubmit = async () => {
           ชื่อรายวิชา <span class="text-red-500">*</span>
         </label>
         <input
-          v-model="form.title"
+          v-model="form.name"
           type="text"
           class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
-          :class="{ 'border-red-500': errors.title }"
+          :class="{ 'border-red-500': errors.name }"
           placeholder="เช่น เรียน Python เบื้องต้น"
         />
-        <p v-if="errors.title" class="mt-1 text-sm text-red-500">{{ errors.title }}</p>
+        <p v-if="errors.name" class="mt-1 text-sm text-red-500">{{ errors.name }}</p>
       </div>
 
       <!-- Description -->
