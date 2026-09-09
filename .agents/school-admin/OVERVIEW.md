@@ -108,7 +108,7 @@ Legend: 🟢 พร้อมใช้งาน (ผ่านการตรว�
    ([08-school-management.md](08-school-management.md)) · ยังไม่ส่ง step ไหนให้ codex/agy
    ✅ **SM-S1 ปิดช่องโหว่สิทธิ์ครบ 204 route แล้ว 2026-09-09** — ทุกกลุ่มมี `academy.permission` + `academy.visibility:content`
    (38 เส้นเป็นด่านสมาชิกเปล่าโดยตั้งใจ: ลงเวลา · ใบลาของตัวเอง · dashboard ครู-นักเรียน · layout ส่วนตัว · นัดพบผู้ปกครอง)
-   **S1/S3(7·8)/S4/S6/S8 ✅ done 2026-09-09** · **คิวถัดไปที่ไม่ติด Q: S10 (ชุดเทสต์รวม)** · S2/S5/S7/S9 ยังรอ Q1–Q3 · หมายเหตุ: Analytics audit ยังพัง 5 จุด (นอกเมนู #8)
+   **S1/S3(7·8)/S4/S6/S8/S10 ✅ done 2026-09-09** — ปิดครบทุก step ที่ไม่ติด Q (เทสต์ 4 ไฟล์ 18 เคส) · **เหลือ S2/S5/S7/S9 รอ Q1–Q3** · หนี้นอกเมนู: Analytics audit 5 จุด · finance schema-drift ทั้งหมวด (ผูก Q3)
    ส่วน SM-S2/S5/S7/S9 ติด Q1–Q3 ที่ต้องให้เจ้าของโปรเจคเคาะ (ดู [08-school-management.md](08-school-management.md) §5.1)
    หลัง #8 ค่อยไป #10 ห้องเรียน
 

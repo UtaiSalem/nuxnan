@@ -322,7 +322,7 @@ Payroll ส่ง positional ผิด (TypeError) · TuitionFee/Budget ใช�
 | SM-S7 | G7 — ตัดสินชะตา 4 ไฟล์ที่เข้าถึงไม่ได้ | Q2 | ขึ้นหน้าจริง หรือลบ 791 บรรทัด | ⚪ blocked by Q2 |
 | SM-S8 | G11 — audit log การเงิน/เงินเดือน | S1 | ใช้ระบบเดียวกับ SET-S9 | 🟢 **done 2026-09-09** — แก้ audit ที่เรียกพัง 6 controller |
 | SM-S9 | G14/Q1 — จัดโครงเมนูใหม่ | Q1 | ตามคำตอบ Q1 | ⚪ blocked by Q1 |
-| SM-S10 | G12 — ชุดเทสต์ของเมนูนี้ | S1–S4 | เส้นทางสิทธิ์ + happy path ต่อโมดูล | ⚪ pending |
+| SM-S10 | G12 — ชุดเทสต์ของเมนูนี้ | S1–S4 | เส้นทางสิทธิ์ + happy path ต่อโมดูล | 🟢 **done 2026-09-09** — 4 ไฟล์ 18 เคส |
 
 **SM-S1 ทำได้ทันที ไม่ต้องรอใครตอบ** — และควรทำก่อนอย่างอื่นทั้งหมด
 เพราะเป็นช่องโหว่จริงที่พิสูจน์แล้ว · ส่วน SM-S3/S4/S6 เป็นบั๊กชัดที่ไม่ขึ้นกับคำตอบ Q1–Q4 เช่นกัน
@@ -357,6 +357,19 @@ Report back: diff --stat + ผลรันเกณฑ์แบบดิบ
 ---
 
 ## 8. Review Log
+
+- **2026-09-09 SM-S10 ✅** — ชุดเทสต์เมนู #8 · ผู้เขียนโค้ด **agy** · Claude ตรวจ+เลือกขอบเขตหลัง probe schema
+  รวมเมนู #8 ตอนนี้มี **4 ไฟล์เทสต์ 18 เคส 114 assertions**:
+  SchoolManagementRouteGuardTest (S1 สิทธิ์ 204 route) · SchoolExpenseSchemaFixTest (S4 Expense+KPI) ·
+  SchoolFinanceAuditLogTest (S8 audit) · **SchoolAcademicModulesTest ใหม่ (S10)**
+  - ไฟล์ใหม่ครอบ **Subject** (CRUD เต็ม — delete = soft-toggle is_active) + **AcademicYear**
+    (create + auto-semesters) + permission-per-route (plain member สร้างไม่ได้ 403 ยืนยันด่าน courses.manage ของ SM-S1)
+  - **เลือกเฉพาะโมดูลวิชาการที่ schema สะอาด** (Claude probe แล้ว) — ใช้ owner สำหรับ happy-path
+    (ผ่านทั้ง route middleware + controller canManage double-gate)
+  🔴 **โมดูลการเงินที่เหลือ (Budget/Payment/TuitionFee/FeeStructure) เขียน happy-path ไม่ได้ตอนนี้**
+    เพราะมี schema-drift แบบ Expense (เช่น Budget store เขียน `category_id`/`status` ที่ตารางไม่มี —
+    ตารางใช้ `expense_category_id`/`is_active`) ⇒ ต้อง reconcile ทั้งหมวดตอน finance buildout (Q3) ก่อน
+  **หลักฐานที่ Claude รันเอง:** เทสต์ใหม่ 4/4 · รวม 4 ไฟล์ 18/18 (114 assertions) · pint passed
 
 - **2026-09-09 SM-S8 ✅** — แก้ audit log การเงิน/เงินเดือนที่เรียกพัง · ผู้เขียนโค้ด **agy** · Claude ตรวจ
   **ใหญ่กว่า audit** — G11 บอก "ไม่มี audit" แต่จริงคือ **มีแต่เรียกพังทั้ง 6 controller** (~30 call)

@@ -7029,3 +7029,25 @@ grep request() ค้าง 0 · pint passed · เทสต์ 2/2 (27 assertio
 SM-S4 เทสต์ยังผ่านคู่ (6/6) · ยังไม่ตรวจบนจอจริง
 
 ### สถานะเมนู #8: ปิด S1/S3(7·8)/S4/S6/S8 · เหลือ **S10 (ชุดเทสต์)** ที่ไม่ติด Q · S2/S5/S7/S9 รอ Q1–Q3
+
+---
+
+## 2026-09-09 (ต่อ) — เมนู #8: SM-S10 ชุดเทสต์ happy-path ต่อโมดูล (G12)
+
+### สถานะ: ✅ เสร็จ · ผู้เขียนโค้ด agy · Claude probe schema เลือกขอบเขต
+
+ไฟล์ใหม่ `tests/Feature/SchoolAcademicModulesTest.php` (4 เคส) — Subject CRUD + AcademicYear+semesters
++ permission-per-route (plain member สร้างไม่ได้ 403)
+
+**เลือกเฉพาะโมดูลวิชาการที่สะอาด** (Subject/AcademicYear) หลัง probe: Budget/Payment/TuitionFee/FeeStructure
+มี schema-drift แบบ Expense (Budget store เขียน category_id/status ที่ตารางไม่มี) → happy-path ยังเขียนไม่ได้
+จนกว่าจะ reconcile ทั้งหมวดตอน finance buildout (Q3)
+
+รวมเมนู #8 มี 4 ไฟล์เทสต์ 18 เคส 114 assertions
+
+### 🎯 เมนู #8: ปิดครบทุก step ที่ไม่ติด Q แล้ว
+✅ S1 (สิทธิ์ 204 route) · S3 7/8 · S4 (Expense schema+KPI) · S6 (สถิติ+แท็บ) · S8 (audit) · S10 (เทสต์)
+🔵 เหลือรอ **Q1–Q3** จากเจ้าของโปรเจค: S2 (แยก view/manage) · S5 (view-only UI) ·
+   S7 (ชะตา 4 ไฟล์ orphan + bookMeeting) · S9 (โครงเมนู/hub)
+📌 หนี้นอกเมนู #8 ที่ค้าง: (1) Analytics audit ยังพัง 5 จุด · (2) finance module ทั้งหมวด schema-drift
+   ต้อง reconcile ก่อนเปิดใช้ (ผูก Q3) · (3) bookMeetingSlot วางผิดที่ (ยกไป SM-S7)
