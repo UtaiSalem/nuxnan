@@ -29,7 +29,6 @@ class Course extends Model
         'user_id',
         'instructor_id',
         'academy_id',
-        'creator_id',
         'category_id',
 
         // Core info

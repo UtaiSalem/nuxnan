@@ -242,8 +242,7 @@ class CourseLifecycleService
     private function isManager(Course $course, User $user): bool
     {
         if ($user->id === $course->user_id
-            || $user->id === $course->instructor_id
-            || $user->id === $course->creator_id) {
+            || $user->id === $course->instructor_id) {
             return true;
         }
 

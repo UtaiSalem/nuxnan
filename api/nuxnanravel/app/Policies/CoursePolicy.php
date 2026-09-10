@@ -19,8 +19,7 @@ class CoursePolicy
     public function manage(User $user, Course $course): bool
     {
         if ($user->id === $course->user_id
-            || $user->id === $course->instructor_id
-            || $user->id === $course->creator_id) {
+            || $user->id === $course->instructor_id) {
             return true;
         }
 
