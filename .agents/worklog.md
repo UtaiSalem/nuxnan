@@ -7179,3 +7179,29 @@ groups.manage สร้าง 201 · owner 201 · unapproved(status≠2) 403 · 
 ### ✅ agy รอบนี้สะอาด — single shard + รอ task-notification เสร็จก่อน commit (บทเรียนจากรอบก่อน) → ไม่มี race/modify.py
 
 ### เมนู #10: CL-S1–S6 ปิดครบ · เหลือ CL-S5 (happy-path เทสต์ที่เหลือ) · CL-S7 legacy-column deferred · ยังไม่ตรวจจอจริง CL-S3
+
+---
+
+## 2026-09-15 (ต่อ) — เมนู #10: CL-S5 เทสต์ happy-path + แก้ regression CL-S4
+
+### สถานะ: ✅ commit `bad45952` · Claude เขียนเทสต์เอง (test = เครื่องมือ verify)
+
+**สแกนก่อนเขียน:** เทสต์ห้องเรียนเดิมครอบเยอะแล้ว — ClassroomManagementTest 19 (roster add/remove + transfer) ·
+ClassroomRenumberTest 14 (renumber เดี่ยว+bulk + permission) · ⇒ CL-S5 เก็บเฉพาะช่องว่างจริง
+
+### สิ่งที่ทำ
+- **ClassroomFeaturesHappyPathTest ใหม่ (3 เคส):** ClassroomGroup CRUD · Invitation create/cancel ·
+  promoteClassroom (ข้ามปีการศึกษา)
+- **แก้ regression จาก CL-S4:** ClassroomStudentGuardianPayloadTest 2 เคส grant `['classrooms.view']`
+  (permission key ที่ไม่มีจริง) — เดิมผ่านเพราะ member role=admin (canManage ดู role string) · พอ CL-S4
+  ทำ userCan ตรวจ permission จริง → 403 → แก้ fixture เป็น `['groups.view']` (2 บรรทัด)
+
+### 🔴 semantics ที่เทสต์เผยออกมา
+`promoteClassroom` = เลื่อนชั้น **ข้ามปีการศึกษา** เท่านั้น · ปีเดียวกัน service throw "use transferStudent()"
+(เขียนเทสต์ผิดตอนแรก → รันแล้วเจอ → แก้ให้ to-classroom อยู่ปีถัดไป)
+
+### หลักฐาน Claude รันเอง
+pint passed · ClassroomFeaturesHappyPathTest 3/3 (14 assertions) · **full classroom suite 128/128** ไม่มี failure
+(เดิม 125 + ใหม่ 3) · แก้ regression: ก่อนแก้ 2 failure → หลังแก้ 0
+
+### 🎯 เมนู #10: CL-S1–S6 ปิดครบ · เหลือแค่ CL-S7 (drop legacy column) deferred + ตรวจจอจริง CL-S3

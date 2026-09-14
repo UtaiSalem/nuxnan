@@ -171,7 +171,7 @@ protected function canManage(Academy $academy): bool {
 | CL-S2 | G4 — จัดการ command อันตราย | — | guard `app()->isProduction()` ที่หัว handle() ทั้ง `rebuild-from-students` + `merge` | 🟢 **done 2026-09-15** `c8176236` — pint + php -l clean |
 | CL-S3 | G5 — แก้ FE GET ที่พัง | — | ชี้ไป `GET /classrooms/students?classroom_id=` (getAllStudents) shape ตรง | 🟢 **done 2026-09-15** `d358cce0` — ยังไม่ตรวจจอจริง (ต้อง login admin) |
 | CL-S4 | G1/G3 — ยกด่านสิทธิ์เข้าระบบ permission | ~~Q1,Q2,Q3~~ ✅ | ย้าย `canManage`→`userCan('groups.manage')` (write) / `canView`→`userCan('groups.view')` (read) 3 controller · route baseline `academy.permission:groups.view` · index เลิก `visibility:content` | 🟢 **done 2026-09-15** `776258cf` — ClassroomPermissionGuardTest 5/5 · route:list ยืนยัน · ClassroomManagementTest 19/19 ไม่ regression |
-| CL-S5 | เทสต์ happy-path ต่อฟีเจอร์ (ที่เหลือ) | CL-S4 | roster/transfer/promote/renumber/groups/invitations happy-path (permission-matrix + non-approved ปิดใน CL-S4 แล้ว) | 🟡 partial — matrix/negative done ใน CL-S4 · เหลือ happy-path ต่อ feature |
+| CL-S5 | เทสต์ happy-path ต่อฟีเจอร์ (ที่เหลือ) | CL-S4 | group CRUD/invitation/promote (roster/transfer/renumber มีเทสต์เดิมครอบแล้ว) + แก้ regression CL-S4 | 🟢 **done 2026-09-15** `bad45952` — ClassroomFeaturesHappyPathTest 3/3 · full classroom suite 128/128 |
 | CL-S6 | G7 — mobile-first audit 2 หน้า | — | ตรวจ 375/768/1280 | 🟢 **done 2026-09-15 (audit)** — ตรวจ code แล้ว: ตารางกว้างทุกตัวห่อ `overflow-x-auto` · touch 44px · grid responsive → **ไม่พบ violation** (ยังไม่ได้ตรวจจอจริง แต่ static clear) |
 | CL-S7 | G6 — phase-6 legacy column drop | (แยกโปรเจค) | ไล่ readers ~20 ไฟล์ → migration drop + down() | 🔵 deferred |
 
@@ -230,3 +230,10 @@ Report back: diff --stat + ผลเทสต์จริง (Claude ตรว�
     (index เลิก visibility:content) · **ClassroomPermissionGuardTest 5/5 (8 assertions)** — non-member 403 · groups.view อ่านได้เขียนไม่ได้ ·
     groups.manage สร้างได้ · owner สร้างได้ · unapproved 403 · ClassroomManagementTest 19/19 ไม่ regression
   - agy รอบนี้ทำสะอาด (single shard + รอ notification): ไม่มี modify.py, ไม่ revert
+- **2026-09-15 CL-S5** — Claude เขียนเทสต์เอง (test = เครื่องมือ verify · agy ชอบปลอมเลข assertion) · `bad45952`
+  - **สแกนก่อน:** เทสต์เดิมครอบเยอะแล้ว — ClassroomManagementTest 19 (roster/transfer) · ClassroomRenumberTest 14 (renumber เดี่ยว+bulk)
+    → CL-S5 เก็บเฉพาะช่องว่างจริง: ClassroomGroup CRUD · ClassroomInvitation · promoteClassroom
+  - **เจอ regression จาก CL-S4:** ClassroomStudentGuardianPayloadTest 2 เคส grant `['classrooms.view']` (key ไม่มีจริง)
+    เดิมผ่านเพราะ member role=admin (canManage ดู role) · CL-S4 ทำ userCan ตรวจ permission จริง → 403 → แก้เป็น `['groups.view']`
+  - **เรียนรู้ semantics:** `promoteClassroom` = เลื่อนชั้น **ข้ามปีการศึกษา** เท่านั้น (ปีเดียวกัน service reject "use transferStudent")
+  - **หลักฐาน Claude รันเอง:** pint passed · ClassroomFeaturesHappyPathTest 3/3 (14 assertions) · **full classroom suite 128/128** ไม่มี failure
