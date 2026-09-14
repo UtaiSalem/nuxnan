@@ -504,8 +504,8 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // ============================================
     // Classroom Management Routes (ห้องเรียน)
     // ============================================
-    Route::prefix('{academy}/classrooms')->group(function () {
-        Route::get('/', [ClassroomController::class, 'index'])->middleware('academy.visibility:content')->name('api.academy.classrooms.index');
+    Route::prefix('{academy}/classrooms')->middleware('academy.permission:groups.view')->group(function () {
+        Route::get('/', [ClassroomController::class, 'index'])->name('api.academy.classrooms.index');
         Route::post('/', [ClassroomController::class, 'store'])->name('api.academy.classrooms.store');
         Route::get('grade-levels', [ClassroomController::class, 'getGradeLevels'])->name('api.academy.classrooms.gradeLevels');
         Route::get('statistics', [ClassroomController::class, 'getStatistics'])->name('api.academy.classrooms.statistics');
@@ -515,7 +515,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
 
     // {classroom} ต้องเป็นตัวเลขเท่านั้น — controller ในกลุ่มนี้รับ int ทุกตัว ถ้าปล่อยให้ path แปลกๆ
     // (เช่นชื่อ endpoint ที่พิมพ์ผิด) มาชนจะกลายเป็น TypeError 500 แทนที่จะเป็น 404 ตามที่ควร
-    Route::prefix('{academy}/classrooms/{classroom}')->whereNumber(['academy', 'classroom'])->group(function () {
+    Route::prefix('{academy}/classrooms/{classroom}')->whereNumber(['academy', 'classroom'])->middleware('academy.permission:groups.view')->group(function () {
         Route::get('enrollments', [ClassroomController::class, 'listEnrollments'])->name('api.academy.classrooms.enrollments');
         Route::get('/', [ClassroomController::class, 'show'])->name('api.academy.classrooms.show');
         Route::match(['put', 'patch'], '/', [ClassroomController::class, 'update'])->name('api.academy.classrooms.update');
@@ -554,12 +554,12 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     });
 
     // Member transfer between classrooms
-    Route::post('{academy}/classrooms/transfer-member', [ClassroomController::class, 'transferMember'])->name('api.academy.classrooms.transferMember');
+    Route::post('{academy}/classrooms/transfer-member', [ClassroomController::class, 'transferMember'])->middleware('academy.permission:groups.view')->name('api.academy.classrooms.transferMember');
 
     // Student enrollment management (new system)
-    Route::post('{academy}/classrooms/transfer-student', [ClassroomController::class, 'transferStudent'])->name('api.academy.classrooms.transferStudent');
-    Route::post('{academy}/classrooms/promote', [ClassroomController::class, 'promoteClassroom'])->name('api.academy.classrooms.promote');
-    Route::get('{academy}/students/{student}/enrollment-history', [ClassroomController::class, 'getStudentEnrollmentHistory'])->name('api.academy.students.enrollmentHistory');
+    Route::post('{academy}/classrooms/transfer-student', [ClassroomController::class, 'transferStudent'])->middleware('academy.permission:groups.view')->name('api.academy.classrooms.transferStudent');
+    Route::post('{academy}/classrooms/promote', [ClassroomController::class, 'promoteClassroom'])->middleware('academy.permission:groups.view')->name('api.academy.classrooms.promote');
+    Route::get('{academy}/students/{student}/enrollment-history', [ClassroomController::class, 'getStudentEnrollmentHistory'])->middleware('academy.permission:groups.view')->name('api.academy.students.enrollmentHistory');
 
     Route::scopeBindings()->group(function () {
         Route::post('{academy}/students/{student}/graduate', [StudentLifecycleController::class, 'graduate'])

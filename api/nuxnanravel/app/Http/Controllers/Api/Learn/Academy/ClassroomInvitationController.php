@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
-use App\Models\AcademyMember;
 use App\Services\InvitationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -136,19 +135,6 @@ class ClassroomInvitationController extends Controller
 
     protected function canManage(Academy $academy): bool
     {
-        $user = auth()->user();
-        if (! $user) {
-            return false;
-        }
-
-        if ($academy->user_id === $user->id) {
-            return true;
-        }
-
-        return $academy->members()
-            ->where('user_id', $user->id)
-            ->whereIn('role', ['owner', 'director', 'admin'])
-            ->wherePivot('status', AcademyMember::STATUS_APPROVED)
-            ->exists();
+        return $academy->userCan(auth()->user(), 'groups.manage');
     }
 }

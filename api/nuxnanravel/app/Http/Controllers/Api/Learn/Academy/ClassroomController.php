@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Learn\Academy\Enrollment\ClassroomStudentResource;
 use App\Models\AcademicYear;
 use App\Models\Academy;
-use App\Models\AcademyMember;
 use App\Models\AnnualTranscript;
 use App\Models\Classroom;
 use App\Models\ClassroomStudent;
@@ -644,7 +643,7 @@ class ClassroomController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
-        if (! $this->canManage($academy)) {
+        if (! $this->canView($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
         }
 
@@ -688,20 +687,12 @@ class ClassroomController extends Controller
     // Helper Methods
     protected function canManage(Academy $academy): bool
     {
-        $user = auth()->user();
-        if (! $user) {
-            return false;
-        }
+        return $academy->userCan(auth()->user(), 'groups.manage');
+    }
 
-        if ($academy->user_id === $user->id) {
-            return true;
-        }
-
-        return $academy->members()
-            ->where('user_id', $user->id)
-            ->whereIn('role', ['owner', 'director', 'admin'])
-            ->wherePivot('status', AcademyMember::STATUS_APPROVED)
-            ->exists();
+    protected function canView(Academy $academy): bool
+    {
+        return $academy->userCan(auth()->user(), 'groups.view');
     }
 
     /**
@@ -711,7 +702,7 @@ class ClassroomController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
-        if (! $this->canManage($academy)) {
+        if (! $this->canView($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
         }
 
@@ -805,7 +796,7 @@ class ClassroomController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
-        if (! $this->canManage($academy)) {
+        if (! $this->canView($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
         }
 
@@ -924,7 +915,7 @@ class ClassroomController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
-        if (! $this->canManage($academy)) {
+        if (! $this->canView($academy)) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
         }
 
