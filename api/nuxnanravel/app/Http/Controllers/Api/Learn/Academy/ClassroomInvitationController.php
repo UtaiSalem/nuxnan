@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
+use App\Models\AcademyMember;
 use App\Services\InvitationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -147,6 +148,7 @@ class ClassroomInvitationController extends Controller
         return $academy->members()
             ->where('user_id', $user->id)
             ->whereIn('role', ['owner', 'director', 'admin'])
+            ->wherePivot('status', AcademyMember::STATUS_APPROVED)
             ->exists();
     }
 }

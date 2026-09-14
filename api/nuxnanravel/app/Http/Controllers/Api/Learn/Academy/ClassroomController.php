@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Learn\Academy\Enrollment\ClassroomStudentResource;
 use App\Models\AcademicYear;
 use App\Models\Academy;
+use App\Models\AcademyMember;
 use App\Models\AnnualTranscript;
 use App\Models\Classroom;
 use App\Models\ClassroomStudent;
@@ -699,6 +700,7 @@ class ClassroomController extends Controller
         return $academy->members()
             ->where('user_id', $user->id)
             ->whereIn('role', ['owner', 'director', 'admin'])
+            ->wherePivot('status', AcademyMember::STATUS_APPROVED)
             ->exists();
     }
 
