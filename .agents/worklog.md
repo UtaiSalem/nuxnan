@@ -7150,3 +7150,32 @@ reset+commit ใหม่ให้ boundary สะอาด
 
 ### เมนู #10: ปิดครบทุก step ที่ไม่ติด Q · เหลือ CL-S4 (รอ Q1–Q3) + CL-S5 (เทสต์) · CL-S7 deferred
 Q1 key `classrooms.*` แยก หรือใช้ `groups.*` ร่วม #9 · Q2 read tier · Q3 คง canManage หรือย้าย userCan
+
+---
+
+## 2026-09-15 (ต่อ) — เมนู #10: CL-S4 ยกด่านสิทธิ์เข้า Academy::userCan (G18)
+
+### สถานะ: ✅ commit `776258cf` · ผู้เขียนโค้ด agy (1 shard) · Claude ตรวจ+เขียนเทสต์เอง
+
+**Q1–Q3 เคาะแล้ว** (owner): Q1 ใช้ `groups.*` ร่วม (registry นิยาม groups="กลุ่มเรียน/ฝ่าย/แผนก") ·
+Q2 reads=`groups.view` · Q3 ย้าย `canManage`→`Academy::userCan()`
+
+**verify ก่อนทำ (Claude):** V1 `GET .../classrooms` มีแต่หน้า admin เรียก (useSchoolManagement/gradebook/schedule)
+→ ปิด groups.view ปลอดภัย · V2 reconcile migration: director+admin มี groups.manage ครบ · owner ผ่าน isAdmin
+→ ย้าย userCan ไม่ตัดสิทธิ์ใครที่ canManage เคยให้
+
+### สิ่งที่แก้ (4 ไฟล์)
+- `routes/learn/academy.php`: 2 classroom group + transfer-member/transfer-student/promote/enrollment-history
+  ได้ middleware `academy.permission:groups.view` (baseline) · index เลิก `academy.visibility:content`
+- ClassroomController: `canManage`→`userCan('groups.manage')` (write 16 จุด) · เพิ่ม `canView`→`userCan('groups.view')` ·
+  read 4 จุด (enrollment-history/getAllStudents/getStudent/statistics) ใช้ canView · ลบ import AcademyMember
+- ClassroomGroup/Invitation: `canManage`→`userCan('groups.manage')` + ลบ import
+
+### หลักฐาน Claude รันเอง
+git diff 4 ไฟล์ตรงสเปคเป๊ะ ไม่มี stray · pint passed · `route:list` เห็น groups.view ทุก route (index เลิก visibility) ·
+**ClassroomPermissionGuardTest ใหม่ 5/5 (8 assertions)** — non-member 403 · groups.view อ่านได้/เขียน 403 ·
+groups.manage สร้าง 201 · owner 201 · unapproved(status≠2) 403 · ClassroomManagementTest 19/19 ไม่ regression
+
+### ✅ agy รอบนี้สะอาด — single shard + รอ task-notification เสร็จก่อน commit (บทเรียนจากรอบก่อน) → ไม่มี race/modify.py
+
+### เมนู #10: CL-S1–S6 ปิดครบ · เหลือ CL-S5 (happy-path เทสต์ที่เหลือ) · CL-S7 legacy-column deferred · ยังไม่ตรวจจอจริง CL-S3

@@ -170,8 +170,8 @@ protected function canManage(Academy $academy): bool {
 | CL-S1 | G2 — `canManage` กรอง approved status | — | เพิ่ม `wherePivot('status', AcademyMember::STATUS_APPROVED)` ทั้ง 3 controller | 🟢 **done 2026-09-15** `03704c4e` — pint + ClassroomManagementTest 19/19 · **หนี้:** เทสต์ negative (member ไม่อนุมัติ 403) ยังไม่มี → CL-S5 |
 | CL-S2 | G4 — จัดการ command อันตราย | — | guard `app()->isProduction()` ที่หัว handle() ทั้ง `rebuild-from-students` + `merge` | 🟢 **done 2026-09-15** `c8176236` — pint + php -l clean |
 | CL-S3 | G5 — แก้ FE GET ที่พัง | — | ชี้ไป `GET /classrooms/students?classroom_id=` (getAllStudents) shape ตรง | 🟢 **done 2026-09-15** `d358cce0` — ยังไม่ตรวจจอจริง (ต้อง login admin) |
-| CL-S4 | G1/G3 — ยกด่านสิทธิ์เข้าระบบ permission | ~~Q1,Q2,Q3~~ ✅ | ย้าย `canManage` → `userCan('groups.manage')` (write) / `userCan('groups.view')` (read) ที่ 3 controller · index จาก `visibility:content` → `groups.view` · เทสต์ 403 non-member/non-admin + non-approved | 🟡 **unblocked 2026-09-15 — พร้อมทำ** |
-| CL-S5 | เทสต์ happy-path + negative ต่อฟีเจอร์ | CL-S1 | CRUD/roster/transfer/promote/renumber/groups/invitations + เทสต์ member ไม่อนุมัติ 403 | ⚪ pending |
+| CL-S4 | G1/G3 — ยกด่านสิทธิ์เข้าระบบ permission | ~~Q1,Q2,Q3~~ ✅ | ย้าย `canManage`→`userCan('groups.manage')` (write) / `canView`→`userCan('groups.view')` (read) 3 controller · route baseline `academy.permission:groups.view` · index เลิก `visibility:content` | 🟢 **done 2026-09-15** `776258cf` — ClassroomPermissionGuardTest 5/5 · route:list ยืนยัน · ClassroomManagementTest 19/19 ไม่ regression |
+| CL-S5 | เทสต์ happy-path ต่อฟีเจอร์ (ที่เหลือ) | CL-S4 | roster/transfer/promote/renumber/groups/invitations happy-path (permission-matrix + non-approved ปิดใน CL-S4 แล้ว) | 🟡 partial — matrix/negative done ใน CL-S4 · เหลือ happy-path ต่อ feature |
 | CL-S6 | G7 — mobile-first audit 2 หน้า | — | ตรวจ 375/768/1280 | 🟢 **done 2026-09-15 (audit)** — ตรวจ code แล้ว: ตารางกว้างทุกตัวห่อ `overflow-x-auto` · touch 44px · grid responsive → **ไม่พบ violation** (ยังไม่ได้ตรวจจอจริง แต่ static clear) |
 | CL-S7 | G6 — phase-6 legacy column drop | (แยกโปรเจค) | ไล่ readers ~20 ไฟล์ → migration drop + down() | 🔵 deferred |
 
@@ -221,3 +221,12 @@ Report back: diff --stat + ผลเทสต์จริง (Claude ตรว�
   - **เหตุการณ์ agy race** (ดูกล่องเตือน §6): backend shard revert 4/5 ไฟล์ทิ้งระหว่าง commit →
     Claude TaskStop + re-apply เอง · ลบ `modify.py` artifact ทิ้ง
   - **ยังค้าง:** ตรวจจอจริง CL-S3 (login admin) · เทสต์ negative CL-S1 (ยกไป CL-S5)
+- **2026-09-15 CL-S4** — ผู้เขียนโค้ด agy (1 shard · รอ notification เสร็จก่อน commit ตามบทเรียน) · Claude ตรวจ+เขียนเทสต์เอง
+  - `776258cf` — routes (baseline `academy.permission:groups.view` + index เลิก visibility:content) · 3 controller
+    (`canManage`→userCan groups.manage · เพิ่ม `canView`→userCan groups.view · read 4 จุดใช้ canView) · ลบ import AcademyMember
+  - **verify ก่อนทำ:** V1 index มีแต่ admin เรียก · V2 director+admin มี groups.manage ครบ (reconcile migration) → ไม่ตัดสิทธิ์ใคร ·
+    ClassroomManagementTest actor=owner (isAdmin) ไม่กระทบ
+  - **หลักฐาน Claude รันเอง:** git diff 4 ไฟล์ตรงสเปคเป๊ะ ไม่มี stray · pint passed · `route:list` เห็น groups.view ทุก route
+    (index เลิก visibility:content) · **ClassroomPermissionGuardTest 5/5 (8 assertions)** — non-member 403 · groups.view อ่านได้เขียนไม่ได้ ·
+    groups.manage สร้างได้ · owner สร้างได้ · unapproved 403 · ClassroomManagementTest 19/19 ไม่ regression
+  - agy รอบนี้ทำสะอาด (single shard + รอ notification): ไม่มี modify.py, ไม่ revert
