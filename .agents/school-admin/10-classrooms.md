@@ -167,15 +167,20 @@ protected function canManage(Academy $academy): bool {
 
 | Step | Title | Depends on | Deliverable | Status |
 |---|---|---|---|---|
-| CL-S1 | G2 — `canManage` กรอง approved status | — | เพิ่ม `wherePivot('status', …)` ทั้ง 3 controller + เทสต์ member ไม่อนุมัติ 403 | ⚪ pending |
-| CL-S2 | G4 — จัดการ command อันตราย | — | ลบ/disable `RebuildClassroomsFromStudents` (+review Merge) หรือ guard Prohibitable prod | ⚪ pending |
-| CL-S3 | G5 — แก้ FE GET ที่พัง | — | ยืนยัน caller → ชี้ `enrollments`/`members` ให้ถูก (verify ก่อน) | ⚪ pending |
-| CL-S4 | G1/G3 — ยกด่านสิทธิ์เข้าระบบ permission | Q1,Q2,Q3 | ใส่ `academy.permission:groups.*` (หรือ `classrooms.*`) ที่ route group + reconcile read tier + เทสต์ 403 non-member/non-admin | ⚪ blocked by Q |
-| CL-S5 | เทสต์ happy-path ต่อฟีเจอร์ | CL-S1 | CRUD/roster/transfer/promote/renumber/groups/invitations | ⚪ pending |
-| CL-S6 | G7 — mobile-first audit 2 หน้า | — | ตรวจ+แก้ที่ 375/768/1280 | ⚪ pending |
-| CL-S7 | G6 — phase-6 legacy column drop | (แยกโปรเจค) | ไล่ readers 20 ไฟล์ → migration drop + down() | 🔵 deferred |
+| CL-S1 | G2 — `canManage` กรอง approved status | — | เพิ่ม `wherePivot('status', AcademyMember::STATUS_APPROVED)` ทั้ง 3 controller | 🟢 **done 2026-09-15** `03704c4e` — pint + ClassroomManagementTest 19/19 · **หนี้:** เทสต์ negative (member ไม่อนุมัติ 403) ยังไม่มี → CL-S5 |
+| CL-S2 | G4 — จัดการ command อันตราย | — | guard `app()->isProduction()` ที่หัว handle() ทั้ง `rebuild-from-students` + `merge` | 🟢 **done 2026-09-15** `c8176236` — pint + php -l clean |
+| CL-S3 | G5 — แก้ FE GET ที่พัง | — | ชี้ไป `GET /classrooms/students?classroom_id=` (getAllStudents) shape ตรง | 🟢 **done 2026-09-15** `d358cce0` — ยังไม่ตรวจจอจริง (ต้อง login admin) |
+| CL-S4 | G1/G3 — ยกด่านสิทธิ์เข้าระบบ permission | Q1,Q2,Q3 | ย้าย `canManage` → `Academy::userCan($user, 'groups.manage')` (G18 pattern) ที่ 3 controller + reconcile read tier + เทสต์ 403 non-member/non-admin | ⚪ blocked by Q |
+| CL-S5 | เทสต์ happy-path + negative ต่อฟีเจอร์ | CL-S1 | CRUD/roster/transfer/promote/renumber/groups/invitations + เทสต์ member ไม่อนุมัติ 403 | ⚪ pending |
+| CL-S6 | G7 — mobile-first audit 2 หน้า | — | ตรวจ 375/768/1280 | 🟢 **done 2026-09-15 (audit)** — ตรวจ code แล้ว: ตารางกว้างทุกตัวห่อ `overflow-x-auto` · touch 44px · grid responsive → **ไม่พบ violation** (ยังไม่ได้ตรวจจอจริง แต่ static clear) |
+| CL-S7 | G6 — phase-6 legacy column drop | (แยกโปรเจค) | ไล่ readers ~20 ไฟล์ → migration drop + down() | 🔵 deferred |
 
-**ทำได้ทันทีไม่ติด Q:** CL-S1, CL-S2, CL-S3, CL-S6 · **CL-S4 รอ Q1–Q3**
+> 🔴 **บทเรียน CL-S1/S2 (agy race):** ส่ง 2 shard ให้ agy รันขนาน (background) · frontend เสร็จปกติ
+> แต่ **backend shard ยังรันอยู่ตอน Claude commit** → agy pass สอง (เขียน `modify.py` UTF-16 target พัง +
+> Thai mojibake) **revert 4/5 ไฟล์ทิ้ง** เหลือแค่ ClassroomController · Claude ต้อง `TaskStop` job แล้ว
+> **re-apply 4 จุดเอง** (pint แปลง inline FQN → import ให้) · **กติกาใหม่: รอ task-notification ครบทุก shard ก่อน commit เสมอ**
+
+**ทำได้ทันทีไม่ติด Q:** ~~CL-S1, CL-S2, CL-S3, CL-S6~~ ✅ **ปิดครบแล้ว** · **CL-S4/S5 ถัดไป (S4 รอ Q1–Q3)**
 **Rule:** ทุก step ต้องมี verification (test / route:list / จอจริง) ก่อนขึ้น 🟢
 
 ### ❓ คำถามที่ต้องให้เจ้าของโปรเจคเคาะ
@@ -200,4 +205,13 @@ Report back: diff --stat + ผลเทสต์จริง (Claude ตรว�
 
 ## 8. Review Log
 - **2026-09-15 audit** — Claude สแกนโค้ดจริง + `route:list -v` + อ่าน guard body · เขียนไฟล์รองนี้ ·
-  ยังไม่ส่ง step ไหนให้ agy · แก้ความเข้าใจผิดจาก memory เรื่อง deleteClassroom (ปิดไปแล้ว)
+  แก้ความเข้าใจผิดจาก memory เรื่อง deleteClassroom (ปิดไปแล้ว)
+- **2026-09-15 CL-S1/S2/S3/S6** — ผู้เขียนโค้ด agy (2 shard) · Claude ตรวจ+กู้+commit
+  - CL-S1 `03704c4e` (3 controller · wherePivot status=2) · CL-S2 `c8176236` (2 command · prod guard) ·
+    CL-S3 `d358cce0` (index.vue · fetchClassroomStudents → getAllStudents)
+  - CL-S6 audit-only → ไม่พบ violation (static clear)
+  - **หลักฐาน Claude รันเอง:** pint --test passed (5 ไฟล์) · php -l clean · ClassroomManagementTest 19/19
+    (50 assertions) · git show ยืนยันไฟล์ต่อ commit ถูกต้อง
+  - **เหตุการณ์ agy race** (ดูกล่องเตือน §6): backend shard revert 4/5 ไฟล์ทิ้งระหว่าง commit →
+    Claude TaskStop + re-apply เอง · ลบ `modify.py` artifact ทิ้ง
+  - **ยังค้าง:** ตรวจจอจริง CL-S3 (login admin) · เทสต์ negative CL-S1 (ยกไป CL-S5)

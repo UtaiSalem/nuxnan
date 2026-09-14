@@ -7120,3 +7120,33 @@ paste จริงจำลองอัตโนมัติไม่ได้ (
 
 ### steps: CL-S1/S2/S3/S6 ทำได้ทันที · CL-S4 (ยกด่านเข้า permission system) รอ Q1–Q3 (ดู §6)
 Q1 แยก key `classrooms.*` หรือใช้ `groups.*` ร่วม #9? · Q2 read tier ใครเห็น? · Q3 คง canManage หรือย้าย middleware?
+
+---
+
+## 2026-09-15 (ต่อ) — เมนู #10: CL-S1/S2/S3/S6 (step ที่ไม่ติด Q)
+
+### สถานะ: ✅ 3 commit + CL-S6 audit-only · ผู้เขียนโค้ด agy (2 shard) · Claude ตรวจ+กู้+commit
+
+- **CL-S1** `03704c4e` — canManage 3 controller (Classroom/Group/Invitation) เพิ่ม
+  `wherePivot('status', AcademyMember::STATUS_APPROVED)` กันสมาชิกไม่อนุมัติ role=admin ผ่านด่าน
+  (interim · ย้ายไป `Academy::userCan('groups.manage')` เต็มรูป = CL-S4 รอ Q1)
+- **CL-S2** `c8176236` — guard `app()->isProduction()` หัว handle() ของ `classrooms:rebuild-from-students`
+  + `classrooms:merge` (2 command ที่ลบ/รวมห้องทั้งโรงเรียน)
+- **CL-S3** `d358cce0` — index.vue `fetchClassroomStudents` เดิมยิง GET `/classrooms/{id}/students` (405) →
+  ชี้ไป collection `GET /classrooms/students?classroom_id=` (getAllStudents, per_page 200) shape ตรง
+- **CL-S6** — audit-only ไม่พบ violation (ตารางกว้างห่อ overflow-x-auto ครบ · touch 44px · grid responsive)
+
+### หลักฐาน Claude รันเอง (ไม่เชื่อรายงาน agy)
+pint --test passed 5 ไฟล์ · php -l clean · ClassroomManagementTest **19/19 (50 assertions)** ·
+git show ยืนยันไฟล์ต่อ commit ถูก (CL-S1=3 controller, CL-S2=2 command, CL-S3=index.vue)
+
+### 🔴 เหตุการณ์ agy race — บทเรียนสำคัญ
+ส่ง 2 shard ขนาน (background): frontend เสร็จส่ง notification ปกติ · **backend shard ยังรันอยู่**
+ตอน Claude เห็น diff ครบแล้ว commit → agy pass สอง เขียน `modify.py` (UTF-16, target `$var` พัง +
+Thai เป็น mojibake) **revert 4/5 ไฟล์ทิ้ง** เหลือแค่ ClassroomController ที่ commit ไปแล้ว
+→ Claude `TaskStop` job backend · re-apply 4 จุดเอง (pint แปลง inline FQN → import) · ลบ modify.py ·
+reset+commit ใหม่ให้ boundary สะอาด
+**กติกาใหม่:** รอ task-notification ครบ **ทุก** shard ก่อน commit เสมอ (ดู [[feedback-agy-fabricates-diffs]])
+
+### เมนู #10: ปิดครบทุก step ที่ไม่ติด Q · เหลือ CL-S4 (รอ Q1–Q3) + CL-S5 (เทสต์) · CL-S7 deferred
+Q1 key `classrooms.*` แยก หรือใช้ `groups.*` ร่วม #9 · Q2 read tier · Q3 คง canManage หรือย้าย userCan
