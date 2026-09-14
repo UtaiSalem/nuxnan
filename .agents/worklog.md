@@ -7051,3 +7051,41 @@ SM-S4 เทสต์ยังผ่านคู่ (6/6) · ยังไม่�
    S7 (ชะตา 4 ไฟล์ orphan + bookMeeting) · S9 (โครงเมนู/hub)
 📌 หนี้นอกเมนู #8 ที่ค้าง: (1) Analytics audit ยังพัง 5 จุด · (2) finance module ทั้งหมวด schema-drift
    ต้อง reconcile ก่อนเปิดใช้ (ผูก Q3) · (3) bookMeetingSlot วางผิดที่ (ยกไป SM-S7)
+
+---
+
+## 2026-09-15 — RichTextEditor: ล้างสีที่ยึดธีมออกจากเนื้อหา rich text (แก้ dark mode)
+
+### สถานะ: ✅ commit `28e87e71` (+89/−6) · push แล้ว · โค้ดเป็นงานค้างเดิมใน working tree · Claude รีวิว+ตรวจ+commit
+
+**ที่มา:** เปิดเซสชันมาเจอ `ui/components/RichTextEditor.vue` + `ui/composables/useRichText.ts`
+ค้าง uncommitted ใน working tree ~5 วัน (ไม่มีบันทึกใน worklog) — งาน paste-sanitization
+สำหรับ dark mode · เจ้าของโปรเจคสั่งให้ "ปิดงานที่ค้าง" → Claude รีวิว+ตรวจ+commit
+
+**ปัญหาที่แก้:** เนื้อหา paste จาก Gemini/Docs/ChatGPT ติดสีเข้ม + `--tw-*` ฝังใน `style=""`
+inline style ชนะ class ⇒ `dark:prose-invert` ทับไม่ได้ → ตัวหนังสือเข้มบนพื้นเข้ม (contrast 1.00:1)
+
+### สิ่งที่แก้
+- `useRichText.stripThemeLockedStyles()` ใหม่ — ถอด `color/background/border-color/outline/
+  caret/text-decoration/column-rule/fill/stroke/--tw-*` ออกจาก `style=""` แต่**เก็บ** property
+  ที่ไม่เกี่ยวธีมไว้ (`text-align/width/font-size/margin` ฯลฯ)
+- 🔴 **ทำเฉพาะในแท็กจริง** (regex ชั้นนอกจับ `<tag ...>`) จึง**ไม่กิน**ตัวอย่างสอนที่ escape ไว้
+  เช่น `&lt;p style="color:red"&gt;` ในบทเรียนสอน HTML/CSS
+- 🔴 **idempotent** — จำเป็น เพราะ `watch(props.modelValue)` เรียกซ้ำได้ ถ้าไม่ idempotent
+  จะ reset innerHTML วนลูป cursor เด้ง
+- `sanitizeHtml()` เรียก `stripThemeLockedStyles` ต่อท้าย ⇒ **blast radius = RichTextViewer
+  ทั้ง 2 ตัว** (`components/RichTextViewer.vue` + `components/Common/RichTextViewer.vue`)
+  สะอาดทั้งแอป — เป็นผลที่ต้องการ
+- `RichTextEditor.vue`: ล้างตอน init + ใน watch + ดัก `@paste` ให้ผ่าน `sanitizeHtml` ก่อน insert
+  **โบนัสความปลอดภัย:** paste เดิมยัด HTML ดิบลง contenteditable ตรง ๆ ตอนนี้ผ่าน DOMPurify ก่อน
+
+### หลักฐานที่ Claude รันเอง
+- unit test ตรรกะ strip **14 เคส** (theme color · `--tw-` junk · `font-family:&quot;…&quot;`
+  semicolon-safe · escaped teaching example survives · real tag wrapping escaped example ·
+  single+double quote · background gradient · fill/stroke · idempotent · null) → ผ่านครบ
+- grep ยืนยัน blast radius: `sanitizeHtml` ถูกเรียกใน RichTextViewer 2 ตัวเท่านั้น · `<RichTextEditor>`
+  ที่ทุกหน้าใช้ = `components/RichTextEditor.vue` (ตัวที่แก้) ไม่ใช่ `components/Common/RichTextEditor.vue`
+
+### ⚠️ ค้าง — ยังไม่ตรวจบนจอจริง
+paste จริงจำลองอัตโนมัติไม่ได้ (ต้องมี clipboard event จริง) จึงตรวจตรรกะด้วย unit test แทน
+ควรล็อกอินเป็นครู → เปิดฟอร์มบทเรียน/คอร์ส → สลับ dark mode → paste จาก Gemini → ยืนยันอ่านออก
