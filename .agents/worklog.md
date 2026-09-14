@@ -7089,3 +7089,34 @@ inline style ชนะ class ⇒ `dark:prose-invert` ทับไม่ได้
 ### ⚠️ ค้าง — ยังไม่ตรวจบนจอจริง
 paste จริงจำลองอัตโนมัติไม่ได้ (ต้องมี clipboard event จริง) จึงตรวจตรรกะด้วย unit test แทน
 ควรล็อกอินเป็นครู → เปิดฟอร์มบทเรียน/คอร์ส → สลับ dark mode → paste จาก Gemini → ยืนยันอ่านออก
+
+---
+
+## 2026-09-15 (ต่อ) — เมนู #10 ห้องเรียน: audit + เขียนไฟล์รอง (ขั้น [1]+[2])
+
+### สถานะ: ✅ audit เสร็จ · เขียน `.agents/school-admin/10-classrooms.md` · ยังไม่ส่ง step ให้ agy
+
+ต่อจากปิดงาน RichTextEditor → เข้าเมนูถัดในโรดแมป (#8 → #10) · ทำ workflow loop ขั้น [1] สแกนโค้ดจริง
++ ขั้น [2] เขียนไฟล์รอง (Claude วางแผน/ตรวจเท่านั้น ยังไม่แตะโค้ด feature)
+
+### 🔑 ข้อสรุปสำคัญ — เมนู #10 **ไม่ใช่ประตูเปิดโล่งแบบ #8-G1**
+`route:list -v` ยืนยัน: ทุก route `{academy}/classrooms*` resolve = `auth:api` เท่านั้น (index +`visibility:content`)
+**แต่** controller มีด่านในโค้ดจริง `canManage()` = owner หรือ member role∈{owner,director,admin}
+⇒ สุ่ม academy_id เข้ามาลบห้อง/อ่าน roster **ไม่ได้** (ต่างจาก #8 ที่ไม่มี guard เลย)
+
+### gap 7 ข้อ (รายละเอียด+หลักฐานใน 10-classrooms.md §5)
+- **G1** (P1) `canManage` hardcode 3 role · bypass `groups.manage` + สิทธิ์ระดับฝ่าย → หัวหน้าฝ่ายที่ได้สิทธิ์แต่ role ไม่ตรงถูกล็อกออก
+- **G2** `canManage` ไม่กรอง `wherePivot('status', approved)` → member ไม่อนุมัติ role=admin ก็ผ่าน (แก้ได้ทันที)
+- **G3** read gate ไม่สม่ำเสมอ: index=visibility:content vs statistics/getAllStudents/show=canManage
+- **G4** (footgun) `RebuildClassroomsFromStudents.php:72-74` ยังลบ classroom_students+members+classrooms ทั้งโรงเรียน (แค่ confirm กั้น) + `MergeDuplicateClassrooms`
+- **G5** `index.vue:452 fetchClassroomStudents` ยิง `GET /classrooms/{id}/students` ที่ไม่มี route (มีแค่ POST) → น่าจะ 405 (verify caller)
+- **G6** legacy phase-6 columns (`class_level/class_section/level_and_room`) ยังอ่าน ~20 ไฟล์ — cross-cutting
+- **G7** mobile-first 2 หน้าใหญ่ (1625+2360) ยังไม่ตรวจ 375px
+
+### 🔴 memory ล้าสมัยที่แก้แล้ว
+[[project-classroom-source-of-truth]] บอก `deleteClassroom()` เป็น bare `delete()` → **ไม่จริงแล้ว**
+ตอนนี้ guard: มี active student → throw ให้ไป archive · ลบเฉพาะ enrollment ไม่ active ก่อน (ใน transaction)
+⇒ รากปัญหา "ลบห้องเงียบ ๆ" ปิดไปแล้ว · อัพเดต memory แล้ว
+
+### steps: CL-S1/S2/S3/S6 ทำได้ทันที · CL-S4 (ยกด่านเข้า permission system) รอ Q1–Q3 (ดู §6)
+Q1 แยก key `classrooms.*` หรือใช้ `groups.*` ร่วม #9? · Q2 read tier ใครเห็น? · Q3 คง canManage หรือย้าย middleware?
