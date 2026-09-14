@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
+import { useRichText } from '~/composables/useRichText'
 
 interface Props {
   modelValue: string
@@ -19,17 +20,23 @@ const emit = defineEmits<{
   'update:modelValue': [value: string]
 }>()
 
+const { sanitizeHtml, stripThemeLockedStyles } = useRichText()
+
 // Editor state
 const editorRef = ref<HTMLDivElement>()
-const content = ref(props.modelValue || '')
+const content = ref(stripThemeLockedStyles(props.modelValue))
 const isBold = ref(false)
 const isItalic = ref(false)
 const isUnderline = ref(false)
 
 // Update content when modelValue changes
+// เนื้อหาเก่าที่บันทึกไว้ก่อนหน้านี้มีสีเข้มฝังใน style="" ทำให้แก้ไขในโหมดกลางคืน
+// แล้วอ่านไม่ออก (ตัวหนังสือเข้มบนพื้นเข้ม) ⇒ ล้างตั้งแต่ตอนโหลดเข้า editor
+// พอผู้ใช้พิมพ์ต่อแล้วบันทึก ตัวที่สะอาดจะทับของเก่าใน DB ไปเอง
 watch(() => props.modelValue, (newValue) => {
-  if (newValue !== content.value && editorRef.value) {
-    content.value = newValue || ''
+  const clean = stripThemeLockedStyles(newValue)
+  if (clean !== content.value && editorRef.value) {
+    content.value = clean
     editorRef.value.innerHTML = content.value
   }
 })
@@ -40,6 +47,37 @@ onMounted(() => {
     editorRef.value.innerHTML = content.value
   }
 })
+
+/**
+ * กันของสกปรกตั้งแต่ต้นทาง
+ *
+ * editor นี้เป็น contenteditable เปล่า ๆ ไม่มีด่าน paste เลย
+ * HTML ที่ลากมาจาก Gemini / Docs จึงลงตรงทั้งก้อน ทั้งสีที่ยึดพื้นขาว,
+ * --tw-* เป็นพรวน, data-path-to-node, <source-footnote> ของ Angular
+ * ⇒ ต่อให้ล้างเนื้อหาเก่าแล้ว ของใหม่ก็ไหลเข้ามาอีก
+ */
+const handlePaste = (e: ClipboardEvent) => {
+  if (props.disabled) return
+
+  const clipboard = e.clipboardData
+  if (!clipboard) return
+
+  const html = clipboard.getData('text/html')
+  const text = clipboard.getData('text/plain')
+  if (!html && !text) return
+
+  e.preventDefault()
+
+  if (html) {
+    // sanitizeHtml ถอดสี/พื้นหลัง/--tw-* ให้ในตัวแล้ว (ดู useRichText)
+    document.execCommand('insertHTML', false, sanitizeHtml(html))
+  } else {
+    // insertText ให้เบราว์เซอร์ escape ให้เอง ไม่ต้องประกอบ HTML มือ
+    document.execCommand('insertText', false, text)
+  }
+
+  handleInput()
+}
 
 // Handle input
 const handleInput = () => {
@@ -239,6 +277,7 @@ onBeforeUnmount(() => {
       ref="editorRef"
       :contenteditable="!disabled"
       @input="handleInput"
+      @paste="handlePaste"
       :class="[
         'editor-content',
         disabled ? 'min-h-[50px]' : 'min-h-[300px] max-h-[600px] overflow-y-auto',

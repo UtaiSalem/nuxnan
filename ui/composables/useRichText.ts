@@ -56,6 +56,49 @@ export const useRichText = () => {
   }
 
   /**
+   * property ใน inline style ที่ "ยึดธีม" ไว้กับพื้นขาว — ต้องตัดทิ้งเสมอ
+   *
+   * เนื้อหาที่ผู้สอน paste มาจาก Gemini / ChatGPT / Google Docs จะติดสีเข้ม
+   * มาด้วย (เจอจริง: rgb(27,27,28), rgb(55,65,81), rgb(31,41,55), rgb(17,24,39))
+   * inline style ชนะ class เสมอ ⇒ `dark:prose-invert` ทับไม่ได้
+   * ผลคือโหมดกลางคืนได้ตัวหนังสือเข้มบนพื้นเข้ม contrast ต่ำถึง 1.00:1
+   *
+   * รวมถึง --tw-* ที่ติดมาเป็นพรวน (ring/shadow/gradient ฯลฯ) ซึ่งเป็นขยะล้วน
+   * และทับตัวแปรธีมของเราได้ถ้าเผลอมี utility class ไปลงที่ element เดียวกัน
+   */
+  const THEME_LOCKED_DECLARATION =
+    /(?:^|;)\s*(?:--tw-[\w-]*|(?:-(?:webkit|moz|ms|o)-)?(?:background-color|background|border-color|border-(?:top|right|bottom|left)-color|outline-color|text-decoration-color|caret-color|column-rule-color|color|fill|stroke))\s*:[^;]*/gi
+
+  /**
+   * ถอดสี/พื้นหลัง/สีเส้นที่ฝังมาใน style="" ออก แต่เก็บ property อื่นไว้
+   * (เช่น text-align, white-space, width — พวกนี้ไม่เกี่ยวกับธีม)
+   *
+   * ทำเฉพาะ "ในแท็กจริง" เท่านั้น — regex ชั้นนอกจับ `<tag ...>`
+   * เพราะบทเรียนสอน HTML/CSS มีข้อความตัวอย่างอย่าง
+   * `&lt;p style="color:red;"&gt;` ที่ escape `<` `>` ไว้แต่เครื่องหมายคำพูดเป็นตัวจริง
+   * ถ้า replace ทั้งก้อนจะไปกินตัวอย่างสอนของเขาหายไปด้วย
+   */
+  const stripThemeLockedStyles = (html: string | null | undefined): string => {
+    if (!html || !/\sstyle\s*=/i.test(html)) return html || ''
+
+    return html.replace(/<[a-z][a-z0-9-]*\s[^>]*>/gi, (tag) =>
+      tag.replace(/\sstyle\s*=\s*(["'])([\s\S]*?)\1/gi, (_full, quote: string, value: string) => {
+        // ตัด "เฉพาะชิ้นที่ไม่เอา" ออกคาที่ ไม่ได้ split แล้วประกอบใหม่
+        // เพราะค่าที่เก็บไว้อาจมี entity ที่ข้างในมี ; อยู่ เช่น
+        // font-family: &quot;Google Sans Text&quot;, sans-serif
+        // ถ้า split(';') จะพัง — ส่วนที่เก็บไว้ต้องออกมาเหมือนเดิมทุกตัวอักษร
+        const kept = value
+          .replace(THEME_LOCKED_DECLARATION, ';')
+          .replace(/;{2,}/g, ';')
+          .replace(/^\s*;\s*|\s*;\s*$/g, '')
+          .trim()
+
+        return kept ? ` style=${quote}${kept}${quote}` : ''
+      })
+    )
+  }
+
+  /**
    * Sanitize HTML content to prevent XSS
    * Allows specific tags and attributes for TipTap and YouTube
    */
@@ -64,10 +107,10 @@ export const useRichText = () => {
 
     // ไม่มี DOM (SSR) → DOMPurify ทำงานไม่ได้ ใช้ด่านสำรองแทน
     if (!DOMPurify.isSupported) {
-      return stripDangerousMarkup(html)
+      return stripThemeLockedStyles(stripDangerousMarkup(html))
     }
 
-    return DOMPurify.sanitize(html, {
+    return stripThemeLockedStyles(DOMPurify.sanitize(html, {
       ADD_TAGS: ['iframe'],
       ADD_ATTR: [
         'allow', 
@@ -85,7 +128,7 @@ export const useRichText = () => {
       // หมายเหตุ: ห้ามใส่ input/label ในนี้ — TipTap task list ใช้ checkbox จริง
       FORBID_TAGS: ['form', 'style'],
       FORCE_BODY: true
-    })
+    }))
   }
 
   /**
@@ -107,6 +150,7 @@ export const useRichText = () => {
   return {
     convertPlainTextToHtml,
     sanitizeHtml,
+    stripThemeLockedStyles,
     stripDangerousMarkup,
     wrapTablesForScroll
   }
