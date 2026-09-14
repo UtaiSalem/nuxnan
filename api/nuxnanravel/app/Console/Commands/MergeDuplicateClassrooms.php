@@ -29,6 +29,12 @@ class MergeDuplicateClassrooms extends Command
      */
     public function handle()
     {
+        if (app()->isProduction()) {
+            $this->error('คำสั่งนี้ถูกปิดบน production เพราะทำลายข้อมูล (รวม/ลบห้องซ้ำ)');
+
+            return self::FAILURE;
+        }
+
         $commit = $this->option('commit');
         $this->info('Uniqueness Duplicate Classroom Merger');
         $this->info('Mode: '.($commit ? 'COMMIT (Live changes)' : 'DRY-RUN (Simulation)'));

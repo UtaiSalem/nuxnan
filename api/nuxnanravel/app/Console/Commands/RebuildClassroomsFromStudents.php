@@ -15,6 +15,12 @@ class RebuildClassroomsFromStudents extends Command
 
     public function handle()
     {
+        if (app()->isProduction()) {
+            $this->error('คำสั่งนี้ถูกปิดบน production เพราะทำลายข้อมูล (ลบห้อง/นักเรียนทั้งโรงเรียน)');
+
+            return self::FAILURE;
+        }
+
         $dryRun = $this->option('dry-run');
         $academyId = 1;
 
