@@ -449,7 +449,9 @@ const fetchClassroomStudents = async (classroomId: number) => {
   
   isLoadingStudents.value = true
   try {
-    const response: any = await api.get(`/api/academies/${academyId.value}/classrooms/${classroomId}/students`)
+    const response: any = await api.get(`/api/academies/${academyId.value}/classrooms/students`, {
+      query: { classroom_id: classroomId, per_page: 200 }
+    })
     if (response.success) {
       classroomStudents.value = response.students || []
     }
