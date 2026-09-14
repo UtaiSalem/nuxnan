@@ -219,7 +219,7 @@ class ClassroomStudentguardianPayloadTest extends TestCase
     public function test_token_without_permission_does_not_see_sensitive_fields()
     {
         // Case 5: Token without guardians.sensitive.view
-        [$academy, $user] = $this->academyWithMember(['classrooms.view']); // No sensitive view permission
+        [$academy, $user] = $this->academyWithMember(['groups.view']); // No sensitive view permission
 
         [$student, $guardian, $legacyId] = $this->createStudentWithGuardian($academy);
         $classroom = $this->setupClassroom($academy, $student);
@@ -240,7 +240,7 @@ class ClassroomStudentguardianPayloadTest extends TestCase
         // The payload is assembled from an eager-loaded guardianLinks.guardian. Left attached it
         // serializes beside it as guardian_links[].guardian — the entire person row, citizen id
         // and income included — regardless of who is asking.
-        [$academy, $user] = $this->academyWithMember(['classrooms.view']);
+        [$academy, $user] = $this->academyWithMember(['groups.view']);
 
         [$student, $guardian, $legacyId] = $this->createStudentWithGuardian($academy);
         $this->setupClassroom($academy, $student);
