@@ -170,7 +170,7 @@ protected function canManage(Academy $academy): bool {
 | CL-S1 | G2 — `canManage` กรอง approved status | — | เพิ่ม `wherePivot('status', AcademyMember::STATUS_APPROVED)` ทั้ง 3 controller | 🟢 **done 2026-09-15** `03704c4e` — pint + ClassroomManagementTest 19/19 · **หนี้:** เทสต์ negative (member ไม่อนุมัติ 403) ยังไม่มี → CL-S5 |
 | CL-S2 | G4 — จัดการ command อันตราย | — | guard `app()->isProduction()` ที่หัว handle() ทั้ง `rebuild-from-students` + `merge` | 🟢 **done 2026-09-15** `c8176236` — pint + php -l clean |
 | CL-S3 | G5 — แก้ FE GET ที่พัง | — | ชี้ไป `GET /classrooms/students?classroom_id=` (getAllStudents) shape ตรง | 🟢 **done 2026-09-15** `d358cce0` — ยังไม่ตรวจจอจริง (ต้อง login admin) |
-| CL-S4 | G1/G3 — ยกด่านสิทธิ์เข้าระบบ permission | Q1,Q2,Q3 | ย้าย `canManage` → `Academy::userCan($user, 'groups.manage')` (G18 pattern) ที่ 3 controller + reconcile read tier + เทสต์ 403 non-member/non-admin | ⚪ blocked by Q |
+| CL-S4 | G1/G3 — ยกด่านสิทธิ์เข้าระบบ permission | ~~Q1,Q2,Q3~~ ✅ | ย้าย `canManage` → `userCan('groups.manage')` (write) / `userCan('groups.view')` (read) ที่ 3 controller · index จาก `visibility:content` → `groups.view` · เทสต์ 403 non-member/non-admin + non-approved | 🟡 **unblocked 2026-09-15 — พร้อมทำ** |
 | CL-S5 | เทสต์ happy-path + negative ต่อฟีเจอร์ | CL-S1 | CRUD/roster/transfer/promote/renumber/groups/invitations + เทสต์ member ไม่อนุมัติ 403 | ⚪ pending |
 | CL-S6 | G7 — mobile-first audit 2 หน้า | — | ตรวจ 375/768/1280 | 🟢 **done 2026-09-15 (audit)** — ตรวจ code แล้ว: ตารางกว้างทุกตัวห่อ `overflow-x-auto` · touch 44px · grid responsive → **ไม่พบ violation** (ยังไม่ได้ตรวจจอจริง แต่ static clear) |
 | CL-S7 | G6 — phase-6 legacy column drop | (แยกโปรเจค) | ไล่ readers ~20 ไฟล์ → migration drop + down() | 🔵 deferred |
@@ -183,11 +183,17 @@ protected function canManage(Academy $academy): bool {
 **ทำได้ทันทีไม่ติด Q:** ~~CL-S1, CL-S2, CL-S3, CL-S6~~ ✅ **ปิดครบแล้ว** · **CL-S4/S5 ถัดไป (S4 รอ Q1–Q3)**
 **Rule:** ทุก step ต้องมี verification (test / route:list / จอจริง) ก่อนขึ้น 🟢
 
-### ❓ คำถามที่ต้องให้เจ้าของโปรเจคเคาะ
-- **Q1** — permission key ของห้องเรียน: แยก `classrooms.view/manage` ใหม่ หรือใช้ `groups.*` ร่วมกับเมนู #9 ฝ่าย?
-  (ถ้าใช้ร่วม → ให้สิทธิ์จัดการฝ่าย = จัดการห้องด้วย โดยไม่ตั้งใจ)
-- **Q2** — รายการห้อง/สถิติ (read) ให้ใครเห็น: สมาชิกทั่วไป (visibility:content เดิม) หรือ admin เท่านั้น (canManage)?
-- **Q3** — คงด่าน `canManage` hardcode role ไว้ หรือย้ายไป middleware `academy.permission` (แล้วสิทธิ์ระดับฝ่ายจะมีผล)?
+### ✅ คำตอบ Q1–Q3 (เจ้าของโปรเจคเคาะ 2026-09-15)
+- **Q1 = ใช้ `groups.*` ร่วม** — registry `AcademyPermission.php:58-59` นิยาม groups.* = "กลุ่มเรียน/ฝ่าย/แผนก" อยู่แล้ว · ไม่สร้าง key ใหม่
+- **Q2 = reads ทั้งหมด = `groups.view`** — รวม index (เปลี่ยนจาก `visibility:content`)
+- **Q3 = ย้ายไป `Academy::userCan()`** (G18 canonical) · เลิก hardcode role ใน canManage
+
+**หลักฐาน verify ก่อนทำ CL-S4 (Claude รันเอง 2026-09-15):**
+- **V1 index consumers:** `GET .../classrooms` ถูกเรียกจาก **หน้า admin เท่านั้น** (`useSchoolManagement.ts` #8 ·
+  gradebook #19 · schedule #11) — ไม่มี student/member-facing → ปิดเป็น `groups.view` **ปลอดภัย**
+- **V2 role→perm (reconcile migration 2026_08_29):** `director` + `admin` มี `groups.manage` ครบ ·
+  owner ผ่าน `isAdmin` · ⇒ ย้ายไป `userCan('groups.manage')` **ไม่ตัดสิทธิ์ใครที่ canManage เคยให้ผ่าน** ·
+  `teacher`/`registrar` มีแค่ `groups.view` (ดูได้ จัดการไม่ได้ — ตรงกับพฤติกรรมเดิม)
 
 ---
 
