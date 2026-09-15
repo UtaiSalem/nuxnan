@@ -7308,3 +7308,31 @@ pint passed · php -l clean · **suite Classroom|Student|Card 401/401 ไม่�
 - อ่าน `$student->class_level` มาจาก **แหล่งจริง** แล้ว (enrollment) ⇒ ปัญหา data drift หายไป
 - ลบโค้ดตาย 2 จุด + ตัด query ส่วนเกิน
 - คอลัมน์เหลือหน้าที่เดียวที่ชัดเจน = intake staging · ถ้าจะ drop วันหน้าต้องทำ (ข) ฟิลด์ intended_* หรือ (ค) enrollment สถานะ pending ก่อน
+
+---
+
+## 2026-09-16 (ต่อ) — ตรวจ CL-S3 บนจอจริง → เจอบั๊กเดิมที่หลับอยู่
+
+### สถานะ: ✅ CL-S3 ผ่านบนจอจริง · เจอ+แก้บั๊ก 500 เพิ่ม `42b3e0b3`
+
+**วิธีตรวจ:** dev server :60088 (preview) + API :8000 · เจ้าของโปรเจคล็อกอินเอง (Claude ไม่กรอกรหัสผ่าน)
+เป้าหมาย: academy 1 · classroom 85 = ม.3/7 ที่มี active 52 คนใน DB
+
+### 🔴 เจอบั๊กที่เทสต์จับไม่ได้ — ต้องเปิดหน้าจริงถึงเห็น
+CL-S3 ยิง URL ถูกแล้ว (`/classrooms/students?classroom_id=85`) **แต่ได้ 500**
+สาเหตุ: `ClassroomController::getAllStudents` ใช้ `whereHas('classroomStudents', ...)` แต่ `Student`
+ไม่มี relation ชื่อนั้น (มีแต่ `classroomEnrollments`) → BadMethodCallException
+**เป็นบั๊กเดิมที่มีอยู่ก่อน CL ทั้งชุด** (ยืนยันว่าอยู่ใน `3f7e06d1`) แต่ **หลับอยู่** เพราะไม่เคยมีใคร
+ส่ง `classroom_id` เข้ามา — `[id].vue` ส่งแต่ per_page/search · CL-S3 คือ caller แรกที่ใช้ตัวกรองนี้
+⇒ แก้ชื่อ relation + เพิ่มเทสต์กันถอยหลัง (revert-check: ชื่อเดิม→แดง · ชื่อถูก→เขียว)
+
+### ผลตรวจบนจอจริง (หลังแก้)
+- network: `GET /classrooms/students?classroom_id=85&per_page=200` → **200 OK** (เดิม 500/405)
+- modal "นักเรียนในห้อง ม.3/7" ขึ้น **52 แถว** = ตรงยอด active ใน DB เป๊ะ (เดิมว่างเปล่าตลอด)
+- **CL-S4 ผ่านไปในตัว** — หน้าเปิดได้ผ่าน middleware `academy.permission:groups.view` (บัญชีเป็นเจ้าของโรงเรียน)
+- **375px:** ไม่มี horizontal scroll (scrollWidth == clientWidth == 375) · 52 แถวขึ้นครบ ·
+  คอลัมน์รหัสนักเรียนซ่อนบนมือถือตาม `hidden sm:table-cell` (ตั้งใจ) · ชื่อไทยตัดบรรทัดปกติ
+- console: error ที่เหลือเป็นของรอบก่อนแก้ (buffer เก่า) — รอบหลังแก้ network เป็น 200
+
+### บทเรียน: เทสต์ 402 เคสเขียวหมดแต่ไม่เจอบั๊กนี้ เพราะไม่มีเทสต์ไหนยิงตัวกรอง `classroom_id`
+⇒ "เส้นทางที่ไม่มีใครเรียก" คือที่ที่บั๊กหลับได้นาน · การตรวจบนจอจริงคุ้มเสมอ
