@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class ClassScheduleController extends Controller
 {
@@ -26,9 +27,9 @@ class ClassScheduleController extends Controller
     /**
      * Get all schedules for an academy's semester
      */
-    public function index(Request $request, $academyName): JsonResponse
+    public function index(Request $request, $academyId): JsonResponse
     {
-        $academy = Academy::where('name', $academyName)->firstOrFail();
+        $academy = Academy::findOrFail($academyId);
 
         $query = ClassSchedule::with([
             'subject:id,subject_code,name_th,name_en',
@@ -103,12 +104,15 @@ class ClassScheduleController extends Controller
     /**
      * Get timetable view (grouped by day and time)
      */
-    public function timetable(Request $request, $academyName): JsonResponse
+    public function timetable(Request $request, $academyId): JsonResponse
     {
-        $academy = Academy::where('name', $academyName)->firstOrFail();
+        $academy = Academy::findOrFail($academyId);
 
         $request->validate([
-            'classroom_id' => 'required_without:teacher_id|exists:classrooms,id',
+            'classroom_id' => [
+                'required_without:teacher_id',
+                Rule::exists('classrooms', 'id')->where('academy_id', $academy->id),
+            ],
             'teacher_id' => 'required_without:classroom_id|exists:users,id',
             'semester_id' => 'nullable|exists:semesters,id',
         ]);
@@ -204,14 +208,20 @@ class ClassScheduleController extends Controller
     /**
      * Create a new schedule
      */
-    public function store(Request $request, $academyName): JsonResponse
+    public function store(Request $request, $academyId): JsonResponse
     {
-        $academy = Academy::where('name', $academyName)->firstOrFail();
+        $academy = Academy::findOrFail($academyId);
 
         $validator = Validator::make($request->all(), [
             'semester_id' => 'required|exists:semesters,id',
-            'classroom_id' => 'required|exists:classrooms,id',
-            'subject_id' => 'required|exists:subjects,id',
+            'classroom_id' => [
+                'required',
+                Rule::exists('classrooms', 'id')->where('academy_id', $academy->id),
+            ],
+            'subject_id' => [
+                'required',
+                Rule::exists('subjects', 'id')->where('academy_id', $academy->id),
+            ],
             'teacher_id' => 'required|exists:users,id',
             'day_of_week' => 'required|integer|between:1,7',
             'start_time' => 'required|date_format:H:i',
@@ -226,6 +236,24 @@ class ClassScheduleController extends Controller
                 'success' => false,
                 'message' => 'Validation error',
                 'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $semester = Semester::with('academicYear')->find($request->semester_id);
+        if ($semester?->academicYear?->academy_id !== $academy->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => ['semester_id' => ['The selected semester id is invalid.']],
+            ], 422);
+        }
+
+        $teacher = User::find($request->teacher_id);
+        if (! $academy->isApprovedMember($teacher) && ! $academy->isAdmin($teacher)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => ['teacher_id' => ['ครูผู้สอนไม่ได้อยู่ในโรงเรียนนี้']],
             ], 422);
         }
 
@@ -290,13 +318,20 @@ class ClassScheduleController extends Controller
     /**
      * Update a schedule
      */
-    public function update(Request $request, $academyName, $id): JsonResponse
+    public function update(Request $request, $academyId, $id): JsonResponse
     {
-        $academy = Academy::where('name', $academyName)->firstOrFail();
+        $academy = Academy::findOrFail($academyId);
         $schedule = ClassSchedule::where('academy_id', $academy->id)->findOrFail($id);
 
         $validator = Validator::make($request->all(), [
-            'subject_id' => 'sometimes|exists:subjects,id',
+            'classroom_id' => [
+                'sometimes',
+                Rule::exists('classrooms', 'id')->where('academy_id', $academy->id),
+            ],
+            'subject_id' => [
+                'sometimes',
+                Rule::exists('subjects', 'id')->where('academy_id', $academy->id),
+            ],
             'teacher_id' => 'sometimes|exists:users,id',
             'day_of_week' => 'sometimes|integer|between:1,7',
             'start_time' => 'sometimes|date_format:H:i',
@@ -313,6 +348,17 @@ class ClassScheduleController extends Controller
                 'message' => 'Validation error',
                 'errors' => $validator->errors(),
             ], 422);
+        }
+
+        if ($request->has('teacher_id')) {
+            $teacher = User::find($request->teacher_id);
+            if (! $academy->isApprovedMember($teacher) && ! $academy->isAdmin($teacher)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation error',
+                    'errors' => ['teacher_id' => ['ครูผู้สอนไม่ได้อยู่ในโรงเรียนนี้']],
+                ], 422);
+            }
         }
 
         $oldValues = $schedule->toArray();
@@ -357,6 +403,7 @@ class ClassScheduleController extends Controller
         }
 
         $schedule->update($request->only([
+            'classroom_id',
             'subject_id',
             'teacher_id',
             'day_of_week',
@@ -382,9 +429,9 @@ class ClassScheduleController extends Controller
     /**
      * Delete a schedule
      */
-    public function destroy(Request $request, $academyName, $id): JsonResponse
+    public function destroy(Request $request, $academyId, $id): JsonResponse
     {
-        $academy = Academy::where('name', $academyName)->firstOrFail();
+        $academy = Academy::findOrFail($academyId);
         $schedule = ClassSchedule::where('academy_id', $academy->id)->findOrFail($id);
 
         $this->auditLogService->logDelete($schedule, 'schedules');
@@ -400,15 +447,21 @@ class ClassScheduleController extends Controller
     /**
      * Bulk create schedules
      */
-    public function bulkStore(Request $request, $academyName): JsonResponse
+    public function bulkStore(Request $request, $academyId): JsonResponse
     {
-        $academy = Academy::where('name', $academyName)->firstOrFail();
+        $academy = Academy::findOrFail($academyId);
 
         $validator = Validator::make($request->all(), [
             'schedules' => 'required|array|min:1',
             'schedules.*.semester_id' => 'required|exists:semesters,id',
-            'schedules.*.classroom_id' => 'required|exists:classrooms,id',
-            'schedules.*.subject_id' => 'required|exists:subjects,id',
+            'schedules.*.classroom_id' => [
+                'required',
+                Rule::exists('classrooms', 'id')->where('academy_id', $academy->id),
+            ],
+            'schedules.*.subject_id' => [
+                'required',
+                Rule::exists('subjects', 'id')->where('academy_id', $academy->id),
+            ],
             'schedules.*.teacher_id' => 'required|exists:users,id',
             'schedules.*.day_of_week' => 'required|integer|between:1,7',
             'schedules.*.start_time' => 'required|date_format:H:i',
@@ -429,6 +482,26 @@ class ClassScheduleController extends Controller
         DB::beginTransaction();
         try {
             foreach ($request->schedules as $index => $scheduleData) {
+                $semester = Semester::with('academicYear')->find($scheduleData['semester_id']);
+                if ($semester?->academicYear?->academy_id !== $academy->id) {
+                    $errors[] = [
+                        'index' => $index,
+                        'message' => 'The selected semester id is invalid.',
+                    ];
+
+                    continue;
+                }
+
+                $teacher = User::find($scheduleData['teacher_id']);
+                if (! $academy->isApprovedMember($teacher) && ! $academy->isAdmin($teacher)) {
+                    $errors[] = [
+                        'index' => $index,
+                        'message' => 'ครูผู้สอนไม่ได้อยู่ในโรงเรียนนี้',
+                    ];
+
+                    continue;
+                }
+
                 // Check for conflicts
                 if (ClassSchedule::hasTeacherConflict(
                     $scheduleData['teacher_id'],
@@ -514,9 +587,9 @@ class ClassScheduleController extends Controller
     /**
      * Get today's schedule for a classroom or teacher
      */
-    public function today(Request $request, $academyName): JsonResponse
+    public function today(Request $request, $academyId): JsonResponse
     {
-        $academy = Academy::where('name', $academyName)->firstOrFail();
+        $academy = Academy::findOrFail($academyId);
 
         $query = ClassSchedule::with([
             'subject:id,subject_code,name_th',
@@ -556,16 +629,41 @@ class ClassScheduleController extends Controller
     /**
      * Check availability for a specific time slot
      */
-    public function checkAvailability(Request $request, $academyName): JsonResponse
+    public function checkAvailability(Request $request, $academyId): JsonResponse
     {
+        $academy = Academy::findOrFail($academyId);
+
         $request->validate([
             'semester_id' => 'required|exists:semesters,id',
             'day_of_week' => 'required|integer|between:1,7',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
             'teacher_id' => 'nullable|exists:users,id',
-            'classroom_id' => 'nullable|exists:classrooms,id',
+            'classroom_id' => [
+                'nullable',
+                Rule::exists('classrooms', 'id')->where('academy_id', $academy->id),
+            ],
         ]);
+
+        $semester = Semester::with('academicYear')->find($request->semester_id);
+        if ($semester?->academicYear?->academy_id !== $academy->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => ['semester_id' => ['The selected semester id is invalid.']],
+            ], 422);
+        }
+
+        if ($request->filled('teacher_id')) {
+            $teacher = User::find($request->teacher_id);
+            if (! $academy->isApprovedMember($teacher) && ! $academy->isAdmin($teacher)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation error',
+                    'errors' => ['teacher_id' => ['ครูผู้สอนไม่ได้อยู่ในโรงเรียนนี้']],
+                ], 422);
+            }
+        }
 
         $result = [
             'teacher_available' => true,

@@ -636,7 +636,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // Class Schedule Routes - ระบบตารางเรียน
     // =====================================================
 
-    Route::prefix('{academy}/schedules')->middleware(['academy.visibility:content', 'academy.permission'])->group(function () {
+    Route::prefix('{academy}/schedules')->whereNumber('academy')->middleware(['academy.visibility:content', 'academy.permission'])->group(function () {
         Route::get('/', [ClassScheduleController::class, 'index'])->name('api.academy.schedules.index');
         Route::get('/timetable', [ClassScheduleController::class, 'timetable'])->name('api.academy.schedules.timetable');
         Route::get('/today', [ClassScheduleController::class, 'today'])->name('api.academy.schedules.today');
