@@ -71,6 +71,34 @@ class Student extends Model
         return $this->hasOne(ClassroomStudent::class)->where('status', 'active');
     }
 
+    /**
+     * ชั้นเรียนมาจากแหล่งจริง (classroom_students ที่ active → classrooms) ไม่ใช่คอลัมน์ denormalized
+     *
+     * - มี enrollment active → เอา grade_level ของห้องจริง แล้ว normalize เป็นตัวเลข
+     *   ให้ตรงรูปแบบที่ StudentEnrollmentService::normalizeGradeLevel() เขียนลงคอลัมน์เดิม ('ม.2' → '2')
+     * - ไม่มี active (จบ/ลาออก/ถูกนำออก) → คืนค่าคอลัมน์เดิม ซึ่ง service ตั้งใจ set null ไว้แล้ว
+     *   จึงได้ null ตามพฤติกรรมเดิม (ห้าม fallback ไป enrollment ล่าสุด)
+     */
+    public function getClassLevelAttribute($value)
+    {
+        $grade = $this->currentEnrollment?->classroom?->grade_level;
+
+        if ($grade === null) {
+            return $value;
+        }
+
+        // ฝาแฝดของ StudentEnrollmentService::normalizeGradeLevel()
+        return preg_replace('/^[^0-9]+/u', '', trim($grade)) ?: null;
+    }
+
+    /**
+     * ห้องเรียน — คืนค่าดิบตรงกับที่ service เขียนลงคอลัมน์เดิม (ไม่ normalize)
+     */
+    public function getClassSectionAttribute($value)
+    {
+        return $this->currentEnrollment?->classroom?->section ?? $value;
+    }
+
     protected $fillable = [
         'user_id',
         'account_status',

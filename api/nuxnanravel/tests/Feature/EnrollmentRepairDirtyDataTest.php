@@ -155,9 +155,14 @@ class EnrollmentRepairDirtyDataTest extends TestCase
         $this->artisan('enrollment:repair-dirty-data', ['--dry-run' => true])
             ->assertExitCode(0);
 
-        $student->refresh();
-        $this->assertEquals('Grade 11', $student->class_level);
-        $this->assertEquals('B', $student->class_section);
+        // dry-run ต้องไม่เขียนอะไรลงคอลัมน์ — ต้องเช็คที่คอลัมน์ดิบใน DB โดยตรง
+        // (CL-S7 Phase B: `$student->class_level` เป็น accessor ที่อ่านจาก enrollment แล้ว
+        //  จึงมองไม่เห็นค่า drift ที่ยังค้างในคอลัมน์อีกต่อไป)
+        $this->assertDatabaseHas('students', [
+            'id' => $student->id,
+            'class_level' => 'Grade 11',
+            'class_section' => 'B',
+        ]);
 
         // Run default (commit)
         $this->artisan('enrollment:repair-dirty-data')
