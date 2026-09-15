@@ -111,6 +111,16 @@ GET  /api/academies/1/members                          -> 200
 GET  /api/academies/1/subjects                         -> 200  <- path จริงของวิชา
 ```
 
+### 2.6 🔴 กับดักของ DB จริงที่เจอตอนตรวจ SC-S1 (ต้องอ่านก่อนเขียน migration ของ SC-S2)
+
+- **DB dev ไม่มี foreign key เลยแม้แต่ตัวเดียว** — ตรวจ `information_schema.KEY_COLUMN_USAGE` แล้วได้ 0
+  ทั้ง `class_schedules`, `classrooms`, `course_members`, `semesters` (engine เป็น InnoDB ปกติ)
+  ทั้งที่ migration เขียน `->constrained()` ไว้ครบ ⇒ migration ของ SC-S2 **ห้ามสมมติว่า `dropForeign('...')` จะมีของให้ drop**
+  (ต้องเช็คก่อน หรือ wrap ไว้ ไม่งั้น migrate ล้มกลางคัน)
+- **แถวเดโม 5 แถวเป็นแถวกำพร้า** — ทั้ง 5 แถวชี้ `classroom_id=6` ซึ่ง**ไม่มีอยู่แล้ว**
+  (ห้องเรียนในระบบตอนนี้ id 7–111) ⇒ ถ้า SC-S2 จะเพิ่ม FK จริง ต้องล้าง/ย้ายแถวพวกนี้ก่อน
+  และอย่าใช้ `classroom_id=6` เป็นค่าทดสอบอีก (ตอนยิงทดสอบ SC-S1 ครั้งแรกเจอ 422 เพราะเหตุนี้ ซึ่งเป็นพฤติกรรมที่ถูกแล้ว)
+
 ---
 
 ## 3. Feature Checklist (ควรมี vs มี)
@@ -321,8 +331,8 @@ UI bulk (API มีแล้ว) · สอนแทน/งดคาบ · ภา
 
 | Step | Title | Depends on | Deliverable | Status |
 |---|---|---|---|---|
-| **SC-S1** | **ปลดล็อก 404 (backend)** — resolve โรงเรียนด้วย id ทุกเมธอด (D1/G1), ตรวจว่า classroom/teacher/course เป็นของโรงเรียนนี้ (G12), ใส่ `classroom_id` เข้า validator + `only()` ของ `update` (G13) | — | patch controller + เทสต์ 404/403/200 | ⚪ |
-| **SC-S2** | **สลับ schema เป็น courses (D5)** — migration `subject_id` → `course_id` (nullable, FK ใหม่) + เพิ่ม `title`, `entry_type` (course/activity/break/exam) + `period_id` (nullable) · อัปเดต model/validation/response · `down()` คืนสภาพได้จริง | SC-S1 | migration + `ClassSchedule` + controller | ⚪ |
+| **SC-S1** | **ปลดล็อก 404 (backend)** — resolve โรงเรียนด้วย id ทุกเมธอด (D1/G1), ตรวจว่า classroom/teacher/course เป็นของโรงเรียนนี้ (G12), ใส่ `classroom_id` เข้า validator + `only()` ของ `update` (G13) | — | patch controller + เทสต์ 404/403/200 | 🟢 **done 2026-09-16** (agy เขียน · Claude ตรวจเอง ดู §9) |
+| **SC-S2** | **สลับ schema เป็น courses (D5)** — migration `subject_id` → `course_id` (nullable, FK ใหม่) + เพิ่ม `title`, `entry_type` (course/activity/break/exam) + `period_id` (nullable) · อัปเดต model/validation/response · `down()` คืนสภาพได้จริง · ⚠️ ดูกับดัก FK/แถวกำพร้าใน §2.6 | SC-S1 | migration + `ClassSchedule` + controller | ⚪ |
 | **SC-S3** | **ภาคเรียน 2569 (D3)** — migration สร้าง 1/2569 + 2/2569 และย้าย `is_current` · ผูก `Semester::current()` เข้ากับโรงเรียน (G7) · เพิ่ม `GET .../academic-years/{id}/semesters` สำหรับ selector | SC-S1 | migration + endpoint + เทสต์ | ⚪ |
 | **SC-S4** | **เดินสาย frontend ทีเดียวจบ** — ส่ง query ผ่าน `{ params }` (G2), PUT→PATCH (G4), ส่ง `semester_id` (G3), เปลี่ยน dropdown วิชา → ตัวเลือก **คอร์ส** จาก `GET /academies/{id}/courses` (G5/D5), ใช้ `academyId` (D1), กันหน้าด้วย `schedule.view/manage` (G11), selector ปี/ภาคเรียน | SC-S2 · SC-S3 | หน้า admin ดู/สร้าง/แก้/ลบได้จริงครบวง | ⚪ |
 | **SC-S5** | **แก้ตรรกะกันชน** — ขอบเวลาให้คาบติดกันได้ (G6) + กันสถานที่ (`room`) ชน + เทสต์เคสคาบติดกัน/คร่อม/แก้คาบเดิม/ข้ามภาคเรียน | SC-S2 | `ClassSchedule` + เทสต์บน MySQL จริง | ⚪ |
@@ -368,3 +378,17 @@ Report back: diff stat + ผลรันคำสั่ง verification
   แขวนกับ `course_id` ทั้งหมด และ `courses` ถือรหัสวิชา/ระดับชั้น/หน่วยกิต/คาบต่อสัปดาห์ของจริงอยู่แล้ว
   → จัดลำดับ step ใหม่เป็น SC-S1..S11 (เอาการสลับ schema ขึ้นมาก่อนเดินสาย frontend จะได้ทำทีเดียว)
   → **ไม่มีคำถามค้างแล้ว เริ่ม SC-S1 ได้ทันที**
+
+- **2026-09-16 SC-S1 🟢 verified** — agy เขียน (สเปค `agy-sc-s1-schedule-backend.txt`) · Claude ตรวจเองทุกข้อ
+  **diff จริง:** `ClassScheduleController.php` +121/−23 (deletion ทั้ง 23 บรรทัดคือบรรทัดที่ถูกแทนที่ ไม่มีของเดิมหาย) ·
+  `routes/learn/academy.php` แก้บรรทัดเดียวจริงตามสเปค (เติม `->whereNumber('academy')`) ·
+  `tests/Feature/ClassScheduleGuardTest.php` ไฟล์ใหม่ 8 เคส
+  **เกณฑ์ที่ Claude รันเอง:** `grep -c "where('name'"` = 0 (และ `academyName` เหลือ 0) · `pint --test` ผ่าน ·
+  `ClassScheduleGuardTest` 8/8 (14 assertions) · `ClassroomManagementTest` 19/19 (50 assertions) ไม่พัง ·
+  `route:list` ยังเป็น 8 เส้นและ update ยังเป็น PATCH (ไม่มี PUT โผล่)
+  **ยิงเซิร์ฟเวอร์จริง (php artisan serve + JWT):** `/schedules` 200 · `/schedules/today` 200 ·
+  `/timetable?classroom_id=7` 200 (เดิม 404 ทุกเส้น) · เรียกด้วยชื่อโรงเรียน 404 ตามดีไซน์ ·
+  ครูที่เป็นสมาชิกอ่านได้ 200 แต่ POST โดน 403 · owner POST 201 → PATCH ย้ายห้อง 7→8 สำเร็จ (พิสูจน์ G13 บนของจริง)
+  → ลบแถวทดสอบออกแล้ว DB กลับมา 5 แถวเท่าเดิม
+  **2 จุดที่ agy รายงานไม่ตรง (Claude แก้เอง):** (ก) บอกว่า pint ผ่าน แต่จริง ๆ ไฟล์เทสต์ตก `line_ending`
+  → Claude รัน `pint` ซ้ำให้ผ่าน · (ข) ทิ้งไฟล์ `api/nuxnanravel/fix_test.py` ไว้นอกสเปค → Claude ลบทิ้ง
