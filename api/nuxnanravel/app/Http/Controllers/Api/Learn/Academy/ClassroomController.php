@@ -109,22 +109,6 @@ class ClassroomController extends Controller
             ->sortBy('student_number')
             ->values();
 
-        // Fallback: if no pivot records, use legacy direct matching
-        if ($students->isEmpty()) {
-            $students = Student::where('academy_id', $academyId)
-                ->where('class_level', $classroom->grade_level)
-                ->where('class_section', $classroom->section)
-                ->select('id', 'student_id', 'title_prefix_th', 'first_name_th', 'last_name_th',
-                    'nickname', 'gender', 'profile_image', 'status', 'class_level', 'class_section')
-                ->orderBy('first_name_th')
-                ->get()
-                ->map(function ($student) {
-                    $student->profile_image_url = $student->profile_image_url;
-
-                    return $student;
-                });
-        }
-
         // Build classroom data with students and members embedded
         $classroomData = $classroom->toArray();
 

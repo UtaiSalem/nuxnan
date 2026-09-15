@@ -147,27 +147,17 @@ class Classroom extends Model
      * Students enrolled in this classroom via classroom_students pivot table.
      * This is the source of truth for classroom enrollment.
      *
-     * For backward compatibility, also falls back to direct field matching
-     * if no pivot records exist.
+     * เดิมมี fallback จับคู่ students.class_level กับ classrooms.grade_level ตรง ๆ
+     * แต่สองคอลัมน์เก็บคนละรูปแบบ ('1' กับ 'ม.1') จึงไม่เคย match — ลบทิ้งแล้ว
      */
     public function getEnrolledStudentsQuery()
     {
-        $pivotCount = $this->classroomStudents()->active()->count();
-
-        if ($pivotCount > 0) {
-            // Use pivot table (new system — source of truth)
-            return Student::whereIn('id', function ($query) {
-                $query->select('student_id')
-                    ->from('classroom_students')
-                    ->where('classroom_id', $this->id)
-                    ->where('status', 'active');
-            });
-        }
-
-        // Fallback: direct field matching (legacy — will be deprecated)
-        return Student::where('class_level', $this->grade_level)
-            ->where('class_section', $this->section)
-            ->where('academy_id', $this->academy_id);
+        return Student::whereIn('id', function ($query) {
+            $query->select('student_id')
+                ->from('classroom_students')
+                ->where('classroom_id', $this->id)
+                ->where('status', 'active');
+        });
     }
 
     /**
