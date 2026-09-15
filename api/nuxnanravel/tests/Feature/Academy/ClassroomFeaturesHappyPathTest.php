@@ -166,4 +166,31 @@ class ClassroomFeaturesHappyPathTest extends TestCase
             'status' => ClassroomStudent::STATUS_ACTIVE,
         ]);
     }
+
+    /**
+     * ตัวกรอง ?classroom_id= ของ getAllStudents — เดิมเรียก relation ผิดชื่อ
+     * (`classroomStudents` ที่ไม่มีบน Student) ⇒ 500 · ไม่มีใครเรียกเลยไม่มีใครเห็น
+     * จนกระทั่ง CL-S3 ทำให้หน้ารายการห้องเรียนเริ่มใช้ตัวกรองนี้จริง
+     */
+    public function test_get_all_students_can_filter_by_classroom_id(): void
+    {
+        [$academy, $owner, $year] = $this->makeAcademy();
+        $roomA = $this->makeClassroom($academy, $year, 'ม.1', '1');
+        $roomB = $this->makeClassroom($academy, $year, 'ม.1', '2');
+
+        $inA = $this->makeStudent($academy, 'INA');
+        $inB = $this->makeStudent($academy, 'INB');
+        $this->enroll($inA, $roomA, 1);
+        $this->enroll($inB, $roomB, 1);
+
+        $response = $this->actingAs($owner, 'api')->getJson(
+            "/api/academies/{$academy->id}/classrooms/students?classroom_id={$roomA->id}&per_page=200"
+        );
+
+        $response->assertOk();
+
+        $ids = collect($response->json('students'))->pluck('id')->all();
+        $this->assertContains($inA->id, $ids);
+        $this->assertNotContains($inB->id, $ids);
+    }
 }

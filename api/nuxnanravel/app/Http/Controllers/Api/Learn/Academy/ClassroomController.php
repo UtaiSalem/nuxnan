@@ -695,7 +695,7 @@ class ClassroomController extends Controller
 
         // Apply filters
         if ($request->filled('classroom_id')) {
-            $query->whereHas('classroomStudents', function ($q) use ($request) {
+            $query->whereHas('classroomEnrollments', function ($q) use ($request) {
                 $q->where('classroom_id', $request->query('classroom_id'))
                     ->where('status', 'active');
             });
