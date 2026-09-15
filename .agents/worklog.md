@@ -7225,3 +7225,29 @@ attribute read `$x->class_level` (~91, **แก้ด้วย accessor จุ�
 เทสต์ SQLite ไม่พิสูจน์ migration MySQL · ห้ามเอา output key ออก (API contract)
 
 **แนะนำเริ่ม Phase A ก่อน** (Claude ทำได้เลย ไม่แตะโค้ด) แล้วเคาะ fallback (R2) ก่อนลง Phase B
+
+---
+
+## 2026-09-16 — CL-S7 Phase A: categorize คอลัมน์ชั้นเรียน legacy ครบ
+
+### สถานะ: ✅ Phase A เสร็จ (Claude, ไม่แตะโค้ด) · ผลอยู่ใน `.agents/legacy-class-columns-drop-plan.md` §4.5
+
+### 🔴 ค้นพบสำคัญ: `students.*` กับ `student_cards.*` ความหมายต่างกัน → เสนอแยก 2 track
+- `students.class_level/class_section` = denormalize enrollment สด → accessor ครอบได้ (track 1, สะอาด)
+- `student_cards.class_level/class_section/level_and_room` = **snapshot ตอนออกบัตร** (StudentCardRequestService เขียนจาก
+  grade_level_snapshot) · ถ้า drop บัตรที่พิมพ์แล้วจะเปลี่ยนตาม enrollment สด (นักเรียนย้ายห้อง = บัตรเก่าเพี้ยน)
+  → **track 2 ต้องเคาะ Q-A1 ก่อน** (คงเป็น snapshot / derive จาก request snapshot / ยอม live)
+
+### กลุ่ม D จริง (ตัวบล็อก drop) — backend
+- **D1 SQL อ่าน (10 จุด):** ClassroomController getAllStudents orderBy(762-763)+show fallback(115-116) · Classroom.php(168-169) ·
+  AcademyMemberController fallback(394-427)+filter merge(701) · StudentCardController(306,394-395) · StudentController(46,51) ·
+  AcademicYearRolloverService(201-202) · StudentCardAuditService(41,58) · RebuildClassrooms(retire)
+- **D2 เขียน (6 จุด):** Student fillable(96-97) · StudentCard fillable(21-25) · StudentCardController validation(702-837) ·
+  StudentCardRequestService snapshot(220-222) · AcademicYearRolloverService(383-504) · EnrollmentRepairDirtyData(retire)
+
+### กลุ่ม A/B/C (ไม่บล็อก): output key ~53 (เก็บ) · alias ~4 (เก็บ) · attribute-read ~91 (accessor)
+resource ที่ดีอยู่แล้ว: RoomStudentResource + StudentCardResource (enrollment-first)
+
+### FE: จุดเขียนจุดเดียว (student-cards/[id]/edit.vue:302) · types = contract (เก็บ) · ~78 จุดที่เหลือ display ล้วน (คง output key ไม่ต้องแตะ)
+
+### รอเคาะก่อน Phase B: Q-A1 (บัตร snapshot) · R2 (นักเรียนไม่มี active enrollment โชว์อะไร) · R1 (ยอม drift)

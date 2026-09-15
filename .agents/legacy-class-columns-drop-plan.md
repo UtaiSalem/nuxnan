@@ -97,10 +97,67 @@
 - **R5 SQLite vs MySQL:** เทสต์เขียวไม่พิสูจน์ migration รันบน MySQL — ต้องรันจริง
 - **R6 API contract:** ถ้าเผลอเอา output key `class_level` ออก → FE + client ภายนอกพัง · **ต้องคงชื่อ field**
 
+## 4.5 ผล Phase A — categorize จริง (Claude, 2026-09-15) ✅
+
+### 🔴 ค้นพบสำคัญ: `students.*` กับ `student_cards.*` **ความหมายต่างกัน** — ต้องแยกงาน
+- `students.class_level/class_section` = denormalize ของ enrollment สด ⇒ derive จาก currentEnrollment ได้ตรง ๆ (accessor)
+- `student_cards.class_level/class_section/level_and_room` = **snapshot ตอนออกบัตร** (StudentCardRequestService:220-222
+  เขียนจาก `grade_level_snapshot`/`section_snapshot`) · StudentCardResource:40-42 อ่าน enrollment-first **แล้ว fallback snapshot**
+  ⇒ **ถ้า drop คอลัมน์บัตร บัตรที่พิมพ์แล้วจะเปลี่ยนตาม enrollment สด** (นักเรียนย้ายห้องกลางปี บัตรเก่าจะเพี้ยน)
+  ⇒ **ต้องเคาะ (คำถาม Q-A1):** คอลัมน์บัตรควร (ก) คงไว้เป็น snapshot ไม่ drop · หรือ (ข) derive จาก card request snapshot แทน live · หรือ (ค) ยอมให้เป็น live
+  ⇒ **แนะนำ:** แยก CL-S7 เป็น 2 track — track 1 drop `students.*` (สะอาด) · track 2 `student_cards.*` เลื่อน/พิจารณาแยก (semantics loaded)
+
+### กลุ่ม D จริง — backend (ตัวบล็อกการ drop)
+**D1 — SQL อ่านคอลัมน์ (ต้อง reroute เป็น JOIN classrooms / pivot):**
+| ไฟล์ | บรรทัด | อะไร | reroute → |
+|---|---|---|---|
+| `ClassroomController` | 762-763 | `getAllStudents` orderBy class_level/section | JOIN classrooms + cast(int) section |
+| `ClassroomController` | 115-116 | `show()` fallback where class_level | เอา fallback ออก ใช้ pivot อย่างเดียว |
+| `Classroom.php` | 168-169 | `students()` by legacy where | ใช้ classroom_students pivot |
+| `AcademyMemberController` | 394-427 | fallback pluck/orderBy/groupBy | เอา fallback ออก (มี classrooms JOIN + alias อยู่แล้ว 275-294) |
+| `AcademyMemberController` | 701 | `$request->merge(class_level=...)` (ตัวกรอง) | map เป็นตัวกรอง classrooms |
+| `StudentCardController` | 306, 394-395 | pluck sections + orderBy | JOIN classrooms |
+| `StudentController` | 46, 51 | filter where class_level/section | filter ผ่าน classrooms |
+| `AcademicYearRolloverService` | 201-202 | rollover reads | ใช้ enrollment |
+| `StudentCardAuditService` | 41, 58 | where class_level=6 (จบ ป.6/ม.6) | ใช้ classrooms grade |
+| `RebuildClassroomsFromStudents` | 29-126 | console rebuild จาก students | **retire** (Phase G · guard prod แล้ว CL-S2) |
+
+**D2 — เขียนค่า (ต้องเลิกเขียน + ถอด fillable):**
+| ไฟล์ | บรรทัด | หมายเหตุ |
+|---|---|---|
+| `Student.php` | 96-97 | `$fillable` → ถอด |
+| `StudentCard.php` | 21-22, 25 | `$fillable` → ถอด (แต่ดู track 2 / Q-A1) |
+| `StudentCardController` | 702-703, 836-837 | validation รับ input บัตร → เขียน (track 2) |
+| `StudentCardRequestService` | 220-222 | เขียน snapshot ลงบัตร (track 2 — นี่คือแหล่ง snapshot) |
+| `AcademicYearRolloverService` | 383-384, 503-504 | rollover เขียน class_level → เลิกเขียน |
+| `EnrollmentRepairDirtyData` | 163-164 | console repair → retire (Phase G) |
+
+**กลุ่ม A/B/C (ไม่บล็อก — เก็บ/accessor):** output key ~53 · alias ~4 · attribute-read ~91
+- resource ที่ **enrollment-first อยู่แล้ว** (ดีมาก ไม่ต้องแก้): `RoomStudentResource:48-50` (จาก classroom ตรง ๆ) ·
+  `StudentCardResource:40-42` (enrollment-first + snapshot fallback)
+- resource/controller ที่ output `$student->class_level` (accessor ครอบให้): StudentProfileController · AcademyMemberResource ·
+  StudentSummaryResource · StudentResource · Classroom.php:265-266 (จาก grade_level ตรง ๆ)
+
+### กลุ่ม D — frontend
+- **จุดเขียน/input จริงมีจุดเดียว:** `ui/pages/academies/[name]/admin/student-cards/[id]/edit.vue:302` `v-model="form.class_section"` (แก้บัตร — track 2)
+- types = contract: `ui/types/academy.ts:37-38`, `ui/types/enrollment.ts:78-79` — **เก็บ** (field ยังคืนจาก API)
+- ที่เหลือ ~78 จุด = **display ล้วน** อ่าน `response.class_level` ⇒ ถ้าคง output key ไม่ต้องแตะ
+
+### 🎯 คำถามที่ต้องเคาะก่อน Phase B
+- **Q-A1 (บัตร snapshot):** `student_cards.*` คงเป็น snapshot / derive จาก request snapshot / ยอม live? → ตัดสินว่าทำ track 2 ไหม
+- **R2 (ไม่มี active enrollment):** นักเรียนจบ/พัก/ย้ายออก accessor คืน null → โชว์ว่าง / enrollment ล่าสุดทุกสถานะ / snapshot?
+- **R1 (drift):** ยอมรับว่าหน้าที่คอลัมน์ drift ค่าจะเปลี่ยนไปตาม enrollment สด
+
+---
+
 ## 5. ลำดับแนะนำ & ประมาณการ
+**Track 1 (students.*):** A ✅ → B accessor Student → **verify หนัก** → C reroute SQL (10 จุด) → D เลิกเขียน+fillable → **verify** → E drop + MySQL → G cleanup console
+**Track 2 (student_cards.*):** รอเคาะ Q-A1 ก่อน — อาจคงไว้เป็น snapshot (ไม่ drop)
 A (audit) → B (accessor) → **verify หนัก** → C (SQL) → D (write) → **verify** → E (drop+MySQL) → F (FE) → G (cleanup)
 - เป็นงาน **หลาย session** · เฟส B คือจุดเปลี่ยนพฤติกรรม (ต้องเทสต์หนักสุด)
 - แนะนำเริ่ม **Phase A** ก่อน (Claude ทำได้เลย ไม่แตะโค้ด) แล้วค่อยเคาะ R2/R1 ก่อนลง Phase B
 
 ## 6. สถานะ
-- **2026-09-15:** เขียนแผนนี้ (ยังไม่ลงมือ) · เมนู #10 CL-S7 ชี้มาที่ไฟล์นี้ · รอเจ้าของโปรเจคเคาะเริ่ม Phase A
+- **2026-09-15:** เขียนแผน · เมนู #10 CL-S7 ชี้มาที่ไฟล์นี้
+- **2026-09-16 Phase A ✅:** categorize ครบ (ดู §4.5) — พบว่า `students.*` (สะอาด) กับ `student_cards.*` (snapshot) ต่างกัน
+  → เสนอแยก 2 track · กลุ่ม D backend = D1 SQL 10 จุด + D2 write 6 จุด · FE จุดเขียนจุดเดียว · **รอเคาะ Q-A1/R1/R2 ก่อน Phase B**
