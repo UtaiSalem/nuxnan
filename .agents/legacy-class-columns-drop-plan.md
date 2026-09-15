@@ -169,10 +169,39 @@
 
 ---
 
-## 5. ลำดับแนะนำ & ประมาณการ
-**Track 1 (students.*):** A ✅ → B accessor Student → **verify หนัก** → C reroute SQL (10 จุด) → D เลิกเขียน+fillable → **verify** → E drop + MySQL → G cleanup console
-**Track 2 (student_cards.*):** รอเคาะ Q-A1 ก่อน — อาจคงไว้เป็น snapshot (ไม่ drop)
-A (audit) → B (accessor) → **verify หนัก** → C (SQL) → D (write) → **verify** → E (drop+MySQL) → F (FE) → G (cleanup)
+## 4.6 🔴 R4 (เจอตอน Phase C, 2026-09-16) — คอลัมน์มีหน้าที่ที่ 2: **intake staging** ⇒ Phase E ติดบล็อก
+
+`AcademicYearRolloverService:200-245` ใช้ `students.class_level/class_section` เป็น **ที่พักข้อมูล "เด็กใหม่รอเข้าเรียน"**:
+- `pendingStudents` = นักเรียนที่ **มี class_level แต่ยังไม่มี active enrollment**
+- rollover อ่าน `$student->class_level` + `class_section` เพื่อหา target classroom แล้วสร้าง entry `action => 'new_intake'`
+
+⇒ คอลัมน์ตอบคำถามที่ตาราง enrollment **ตอบไม่ได้เชิงโครงสร้าง**: "เด็กคนนี้ควรเข้าห้องไหน ตอนที่ยังไม่มี enrollment"
+⇒ accessor ช่วยไม่ได้ (accessor derive **จาก** enrollment แต่เด็กกลุ่มนี้ยังไม่มี)
+⇒ **ถ้า drop คอลัมน์ตาม Phase E เดิม = พังทางเข้าเด็กใหม่ทั้งเส้น**
+
+**✅ เจ้าของโปรเจคเคาะ 2026-09-16 = (ก) เลิก drop** — ยอมรับว่าคอลัมน์มี 2 หน้าที่
+(cache ที่ accessor คุมแล้ว + intake staging ที่ยังจำเป็น) ⇒ **CL-S7 จบที่ Phase B/C**
+ทางเลือกที่ไม่ได้เลือก (เก็บไว้เผื่ออนาคต):
+- (ข) ย้าย intake ไปฟิลด์ของตัวเอง `students.intended_grade_level/intended_section` แล้วค่อย drop ของเก่า
+- (ค) ทำ intake เป็นแถว `classroom_students` สถานะ `pending` ตอน import (เข้ากับ source-of-truth ที่สุด แต่งานเยอะ)
+
+> หมายเหตุ: ตอนนี้ (หลัง Phase B) เส้น intake **ยังทำงานปกติ** เพราะ pendingStudents ไม่มี active enrollment
+> accessor จึงคืนค่าคอลัมน์เดิม และ `whereNotNull('class_level')` เป็น SQL อ่านคอลัมน์จริง
+
+**ขอบเขต Phase C จึงตัดลง** — ไม่แตะจุด intake ของ rollover (รอเคาะ R4)
+และตัดของ `student_cards` ออกด้วย (track 2): `StudentCardController:306,394-395` + `StudentCardAuditService:41,58`
+ยิงที่ `StudentCard::` ไม่ใช่ `students` ⇒ **ไม่อยู่ในขอบเขต track 1**
+
+---
+
+## 5. ผลสรุปจริง (ปิดงาน 2026-09-16)
+**Track 1 (students.*):** A ✅ → B ✅ accessor → C ✅ ลบ dead fallback → **D/E/F/G ❌ ยกเลิก** (R4: คอลัมน์ยังมีหน้าที่ intake)
+**Track 2 (student_cards.*):** ❌ ไม่ทำ (Q-A1: คงเป็น snapshot ตอนออกบัตร)
+
+### สิ่งที่ได้จริงแม้ไม่ได้ drop
+- การอ่าน `$student->class_level/class_section` **มาจากแหล่งจริงแล้ว** (enrollment) ไม่ใช่คอลัมน์ที่ drift → ปัญหา data drift หายไป
+- ลบ dead fallback 2 จุดที่จับคู่ '1' กับ 'ม.1' (ไม่เคย match) + ตัด COUNT ที่ยิงทุกครั้งใน `getEnrolledStudentsQuery()`
+- คอลัมน์เหลือหน้าที่เดียวที่ชัดเจน: **intake staging** (เด็กใหม่รอเข้าเรียน) — ถ้าจะ drop จริงวันหน้า ต้องทำ (ข) หรือ (ค) ก่อน
 - เป็นงาน **หลาย session** · เฟส B คือจุดเปลี่ยนพฤติกรรม (ต้องเทสต์หนักสุด)
 - แนะนำเริ่ม **Phase A** ก่อน (Claude ทำได้เลย ไม่แตะโค้ด) แล้วค่อยเคาะ R2/R1 ก่อนลง Phase B
 
@@ -181,5 +210,8 @@ A (audit) → B (accessor) → **verify หนัก** → C (SQL) → D (write)
 - **2026-09-16 Phase A ✅:** categorize ครบ (ดู §4.5) — พบว่า `students.*` (สะอาด) กับ `student_cards.*` (snapshot) ต่างกัน
 - **2026-09-16 เคาะ Q-A1/R2:** ทำ **track 1 เท่านั้น** (drop `students.class_level/class_section` · คงบัตรไว้)
 - **2026-09-16 Phase B ✅ `43bdeb69`** — accessor บน Student (currentEnrollment + normalize) · **R2 กลับคำเป็น "ไม่มี active = null"**
-  และเจอ R3 (ต้อง normalize เป็นตัวเลข) ระหว่าง verify · เทสต์ใหม่ StudentClassAccessorTest 4 เคส ·
-  suite Classroom|Student|Card **401/401** ไม่มี failure · **ต่อไป Phase C (reroute SQL ~10 จุด)**
+  และเจอ R3 (ต้อง normalize เป็นตัวเลข) ระหว่าง verify · เทสต์ใหม่ StudentClassAccessorTest 4 เคส · suite **401/401**
+- **2026-09-16 Phase C ✅ + ปิดงาน** — เจอ **R4 (intake staging)** ⇒ เจ้าของเคาะ **เลิก drop** ·
+  Phase C เหลือแค่ลบ dead fallback 2 จุด (พิสูจน์ด้วยข้อมูลจริง: students.class_level มีแต่ '1'–'6' ·
+  classrooms.grade_level มีแต่ 'ม.1'–'ม.6' ⇒ ไม่เคย match) · suite **401/401** ·
+  🎯 **CL-S7 ปิดที่ Phase B/C — D/E/F/G ยกเลิก**

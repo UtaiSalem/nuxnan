@@ -7280,3 +7280,31 @@ null เมื่อไม่มี active (ไม่ปลุกชั้นเ
 ### หมายเหตุ agy: รอบแรก **no-op สนิท** (exit 0, log ว่าง, ไม่แก้อะไร) ต้องสั่งซ้ำถึงทำ · ทิ้ง artifact `test_output.txt` ต้องลบเอง
 
 ### ต่อไป: Phase C — reroute SQL ~10 จุด (fallback/orderBy/filter ที่ยังอ่านคอลัมน์ตรง ๆ)
+
+---
+
+## 2026-09-16 (ต่อ) — CL-S7 Phase C + ปิดงาน CL-S7 ที่ Phase B/C
+
+### สถานะ: ✅ commit `c241af46` · 🎯 **CL-S7 ปิดแล้ว — D/E/F/G ยกเลิก**
+
+### 🔴 R4 — เหตุผลที่ "เลิก drop" (เจอตอนไล่ Phase C)
+`AcademicYearRolloverService:200-245` ใช้ `students.class_level/class_section` เป็น **intake staging**:
+`pendingStudents` = นักเรียนที่ **มี class_level แต่ยังไม่มี active enrollment** → rollover อ่านค่านี้เพื่อจัดเด็กใหม่
+เข้าห้อง (`action => 'new_intake'`) ⇒ คอลัมน์ตอบคำถามที่ตาราง enrollment **ตอบไม่ได้เชิงโครงสร้าง**
+("เด็กคนนี้ควรเข้าห้องไหน ตอนยังไม่มี enrollment") · accessor ช่วยไม่ได้เพราะ derive จาก enrollment
+⇒ ถ้า drop = พังทางเข้าเด็กใหม่ทั้งเส้น → **เจ้าของเคาะ (ก) เลิก drop จบที่ B/C**
+
+### Phase C (ฉบับย่อ) — ลบ dead fallback 2 จุด
+พิสูจน์ด้วยข้อมูลจริงก่อนลบ: `students.class_level` มีแต่ '1'–'6' (+NULL 837) · `classrooms.grade_level`
+มีแต่ 'ม.1'–'ม.6' ⇒ `where('class_level','ม.1')` **ไม่เคย match** = โค้ดตายที่หลอกว่ามีตาข่ายรองรับ
+- `Classroom::getEnrolledStudentsQuery()` เหลือเส้น pivot อย่างเดียว + ตัด COUNT ที่ยิงทุกครั้ง
+- `ClassroomController::show()` ลบบล็อก fallback
+- **ไม่แตะ** AcademicYearRolloverService (intake) · ไม่แตะ StudentCardController/StudentCardAuditService (track 2 — ยิงที่ StudentCard ไม่ใช่ students)
+
+### หลักฐาน Claude รันเอง
+pint passed · php -l clean · **suite Classroom|Student|Card 401/401 ไม่มี failure** · grep ยืนยัน rollover intake ยังอยู่
+
+### 🎯 สรุป CL-S7: ได้ประโยชน์จริงแม้ไม่ได้ drop
+- อ่าน `$student->class_level` มาจาก **แหล่งจริง** แล้ว (enrollment) ⇒ ปัญหา data drift หายไป
+- ลบโค้ดตาย 2 จุด + ตัด query ส่วนเกิน
+- คอลัมน์เหลือหน้าที่เดียวที่ชัดเจน = intake staging · ถ้าจะ drop วันหน้าต้องทำ (ข) ฟิลด์ intended_* หรือ (ค) enrollment สถานะ pending ก่อน
