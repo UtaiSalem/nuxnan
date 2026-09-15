@@ -7251,3 +7251,32 @@ resource ที่ดีอยู่แล้ว: RoomStudentResource + StudentC
 ### FE: จุดเขียนจุดเดียว (student-cards/[id]/edit.vue:302) · types = contract (เก็บ) · ~78 จุดที่เหลือ display ล้วน (คง output key ไม่ต้องแตะ)
 
 ### รอเคาะก่อน Phase B: Q-A1 (บัตร snapshot) · R2 (นักเรียนไม่มี active enrollment โชว์อะไร) · R1 (ยอม drift)
+
+---
+
+## 2026-09-16 (ต่อ) — CL-S7 Phase B: accessor ชั้นเรียนจากแหล่งจริง (track 1)
+
+### สถานะ: ✅ commit `43bdeb69` · ผู้เขียนโค้ด agy (v2) · Claude ออกแบบ/แก้สเปค/เขียนเทสต์/ตรวจ
+
+`Student::class_level/class_section` เป็น accessor อ่านจาก `currentEnrollment->classroom` แทนคอลัมน์ denormalized
+⇒ Phase E ลบคอลัมน์ได้โดยจุดที่อ่านแบบ attribute (~91 จุด) ไม่ต้องแก้
+
+### 🔴 Phase B จับดีไซน์ผิดได้ 2 ข้อ ก่อน commit (เหตุผลที่ต้อง verify หนักตรงนี้)
+รอบแรกทำตามสเปคเดิม → suite แดง **9 เคส** เผยว่า:
+1. **R3 รูปแบบค่าต่างกัน** — `students.class_level` เก็บ **ตัวเลข** ('2') แต่ `classrooms.grade_level` เก็บ 'ม.2' ·
+   service เขียนผ่าน `normalizeGradeLevel()` ⇒ accessor ต้อง normalize ด้วย (ไม่งั้น `where('class_level', 6)` พัง) — แดง 5 เคส
+2. **R2 ที่เคาะไว้ขัดระบบ** — graduate/drop/remove **ตั้งใจ set null** (StudentEnrollmentService 346/400/448)
+   และ `test_graduate_student` assert null ไว้ ⇒ fallback ไป enrollment ล่าสุดทำให้นักเรียนจบโชว์ชั้นเก่าค้าง — แดง 3 เคส
+   → **กลับคำ R2 เป็น "ไม่มี active = null"** (ถามเจ้าของก่อนแก้ ไม่กลับคำเอง) · ความต้องการดูชั้นเก่าไปใช้
+   student_cards snapshot (track 2 ที่เก็บไว้) + ประวัติ enrollment แทน
+3. เคสที่ 9 (`EnrollmentRepairDirtyDataTest` dry-run) = เทสต์อ่านคอลัมน์ผ่าน model ซึ่ง accessor บังไปแล้ว
+   → แก้ให้ assert คอลัมน์ดิบด้วย `assertDatabaseHas` (ตรงเจตนา "dry-run ต้องไม่เขียน" มากกว่าเดิม)
+
+### หลักฐาน Claude รันเอง
+pint passed · git diff Student.php add-only ตรงสเปค ($fillable ไม่ถูกแตะ) · **suite Classroom|Student|Card 401/401 ไม่มี failure**
+(ดีไซน์แรกแดง 9 → หลังแก้ 0) · เทสต์ใหม่ StudentClassAccessorTest 4/4: normalize จากห้องจริงแม้คอลัมน์ drift ·
+null เมื่อไม่มี active (ไม่ปลุกชั้นเก่า) · fallback คอลัมน์เมื่อไม่มี enrollment · N+1 guard (query คงที่)
+
+### หมายเหตุ agy: รอบแรก **no-op สนิท** (exit 0, log ว่าง, ไม่แก้อะไร) ต้องสั่งซ้ำถึงทำ · ทิ้ง artifact `test_output.txt` ต้องลบเอง
+
+### ต่อไป: Phase C — reroute SQL ~10 จุด (fallback/orderBy/filter ที่ยังอ่านคอลัมน์ตรง ๆ)

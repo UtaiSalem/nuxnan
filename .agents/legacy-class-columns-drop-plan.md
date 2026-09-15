@@ -146,8 +146,16 @@
 ### 🎯 คำถามที่เคาะแล้ว (เจ้าของโปรเจค 2026-09-16)
 - **Q-A1 = ทำ track 1 ก่อน · คง `student_cards.*` ไว้เป็น snapshot** (ไม่ drop) → **CL-S7 รอบนี้แตะแค่ `students.class_level/class_section`**
   ⇒ D1/D2 ที่เป็นของบัตร (StudentCardController write, StudentCardRequestService, StudentCard fillable, edit.vue:302) **ไม่ต้องแตะ**
-- **R2 = accessor fallback enrollment ล่าสุดทุกสถานะ** ⇒ ต้องมี relation `latestEnrollment` (hasOne ordered ล่าสุด ไม่กรอง status)
-  accessor: `($this->currentEnrollment ?? $this->latestEnrollment)?->classroom?->grade_level ?? $value` (active ก่อน, ไม่มีค่อยเอาล่าสุด)
+- ~~**R2 = accessor fallback enrollment ล่าสุดทุกสถานะ**~~ 🔴 **กลับคำ 2026-09-16 ตอนทำ Phase B — ทางเลือกนี้ขัดระบบ**
+  หลักฐาน: `StudentEnrollmentService` graduate/drop/remove (บรรทัด 346-347, 400-401, 448-449) **ตั้งใจ set null**
+  และ `test_graduate_student` assert `assertNull($student->class_level)` ⇒ "ไม่มี active = ไม่มีชั้น" เป็นพฤติกรรมที่ตั้งใจ+มีเทสต์คุม
+  ถ้า fallback ไป enrollment ล่าสุด → เทสต์แดง 3 เคส และนักเรียนจบจะโชว์ชั้นเก่าค้าง
+- ✅ **R2 (แก้แล้ว) = ไม่มี enrollment active → คืนค่าคอลัมน์เดิม (ซึ่งเป็น null อยู่แล้ว)** · ไม่มี relation latestEnrollment
+  ความต้องการ "นักเรียนจบยังดูชั้นเก่าได้" ไปใช้ `student_cards` snapshot (track 2 ที่เก็บไว้) + ประวัติ enrollment แทน
+- 🔴 **R3 (เจอตอน Phase B) = รูปแบบค่าต่างกัน:** `students.class_level` เก็บ **ตัวเลข** ('2') แต่ `classrooms.grade_level`
+  เก็บ 'ม.2' · service เขียนผ่าน `normalizeGradeLevel()` (ตัดตัวอักษรนำหน้า) ⇒ **accessor ต้อง normalize ด้วย**
+  ไม่งั้นผู้ใช้ที่เทียบเลขพัง (เช่น `StudentCardAuditService::where('class_level', 6)`) — เทสต์แดง 5 เคสตอนไม่ normalize
+  ส่วน `class_section` เก็บ **ดิบ** ไม่ normalize
 - **R1 (drift): ยอมรับ** — หน้าที่คอลัมน์ drift ค่าจะเปลี่ยนไปตาม enrollment จริง
 
 ### Track 1 scope (หลังเคาะ) — แตะแค่ `students.*`
@@ -171,5 +179,7 @@ A (audit) → B (accessor) → **verify หนัก** → C (SQL) → D (write)
 ## 6. สถานะ
 - **2026-09-15:** เขียนแผน · เมนู #10 CL-S7 ชี้มาที่ไฟล์นี้
 - **2026-09-16 Phase A ✅:** categorize ครบ (ดู §4.5) — พบว่า `students.*` (สะอาด) กับ `student_cards.*` (snapshot) ต่างกัน
-- **2026-09-16 เคาะ Q-A1/R2 แล้ว:** ทำ **track 1 เท่านั้น** (drop `students.class_level/class_section` · คงบัตรไว้) ·
-  accessor fallback enrollment ล่าสุดทุกสถานะ · **พร้อมลง Phase B (track 1)**
+- **2026-09-16 เคาะ Q-A1/R2:** ทำ **track 1 เท่านั้น** (drop `students.class_level/class_section` · คงบัตรไว้)
+- **2026-09-16 Phase B ✅ `43bdeb69`** — accessor บน Student (currentEnrollment + normalize) · **R2 กลับคำเป็น "ไม่มี active = null"**
+  และเจอ R3 (ต้อง normalize เป็นตัวเลข) ระหว่าง verify · เทสต์ใหม่ StudentClassAccessorTest 4 เคส ·
+  suite Classroom|Student|Card **401/401** ไม่มี failure · **ต่อไป Phase C (reroute SQL ~10 จุด)**
