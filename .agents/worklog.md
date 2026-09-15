@@ -7205,3 +7205,23 @@ pint passed · ClassroomFeaturesHappyPathTest 3/3 (14 assertions) · **full clas
 (เดิม 125 + ใหม่ 3) · แก้ regression: ก่อนแก้ 2 failure → หลังแก้ 0
 
 ### 🎯 เมนู #10: CL-S1–S6 ปิดครบ · เหลือแค่ CL-S7 (drop legacy column) deferred + ตรวจจอจริง CL-S3
+
+---
+
+## 2026-09-15 (ต่อ) — เมนู #10 CL-S7: เขียนแผนแบ่งเฟส drop คอลัมน์ชั้นเรียน legacy
+
+### สถานะ: ✅ แผนพร้อม `.agents/legacy-class-columns-drop-plan.md` (ยังไม่ลงมือ) · เจ้าของเลือก "เขียนแผนก่อน"
+
+**สแกน scope จริง:** `class_level`/`class_section`/`level_and_room` ถูกใช้ **~263 จุด / ~56 ไฟล์**
+(BE ~182/27 · FE ~81/29) — คอลัมน์ยัง load-bearing ⇒ ลบดื้อ ๆ ไม่ได้ พังทั้ง members/บัตร/โปรไฟล์/เยี่ยมบ้าน/gradebook
+
+**🔑 กุญแจที่ทำให้เป็นไปได้ — แยก 4 กลุ่ม:** output key (~53, เก็บ) · SQL alias `classrooms.X as class_level` (~4, เก็บ) ·
+attribute read `$x->class_level` (~91, **แก้ด้วย accessor จุดเดียวต่อ model**) · คอลัมน์จริง SQL where/orderBy/select+write (ที่เหลือ = ตัวบล็อกจริง)
+⇒ `Student::currentEnrollment()` มีอยู่แล้วเป็น reroute target · accessor คืน `currentEnrollment?->classroom?->grade_level ?? $value`
+
+**7 เฟส:** A audit/categorize (Claude) → B accessor (Student+StudentCard, eager-load กัน N+1) → C reroute SQL → D เลิกเขียน+fillable → E migration drop (down backfill + STRICT + รัน MySQL จริง) → F FE (คง output key แล้ว FE แทบไม่ต้องแก้) → G cleanup console
+
+**Risk เด่น:** data drift (ค่าที่โชว์เปลี่ยนไปดึง enrollment) · นักเรียนไม่มี active enrollment (accessor null — ต้องเคาะ fallback) ·
+เทสต์ SQLite ไม่พิสูจน์ migration MySQL · ห้ามเอา output key ออก (API contract)
+
+**แนะนำเริ่ม Phase A ก่อน** (Claude ทำได้เลย ไม่แตะโค้ด) แล้วเคาะ fallback (R2) ก่อนลง Phase B
