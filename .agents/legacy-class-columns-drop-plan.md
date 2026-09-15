@@ -143,10 +143,21 @@
 - types = contract: `ui/types/academy.ts:37-38`, `ui/types/enrollment.ts:78-79` — **เก็บ** (field ยังคืนจาก API)
 - ที่เหลือ ~78 จุด = **display ล้วน** อ่าน `response.class_level` ⇒ ถ้าคง output key ไม่ต้องแตะ
 
-### 🎯 คำถามที่ต้องเคาะก่อน Phase B
-- **Q-A1 (บัตร snapshot):** `student_cards.*` คงเป็น snapshot / derive จาก request snapshot / ยอม live? → ตัดสินว่าทำ track 2 ไหม
-- **R2 (ไม่มี active enrollment):** นักเรียนจบ/พัก/ย้ายออก accessor คืน null → โชว์ว่าง / enrollment ล่าสุดทุกสถานะ / snapshot?
-- **R1 (drift):** ยอมรับว่าหน้าที่คอลัมน์ drift ค่าจะเปลี่ยนไปตาม enrollment สด
+### 🎯 คำถามที่เคาะแล้ว (เจ้าของโปรเจค 2026-09-16)
+- **Q-A1 = ทำ track 1 ก่อน · คง `student_cards.*` ไว้เป็น snapshot** (ไม่ drop) → **CL-S7 รอบนี้แตะแค่ `students.class_level/class_section`**
+  ⇒ D1/D2 ที่เป็นของบัตร (StudentCardController write, StudentCardRequestService, StudentCard fillable, edit.vue:302) **ไม่ต้องแตะ**
+- **R2 = accessor fallback enrollment ล่าสุดทุกสถานะ** ⇒ ต้องมี relation `latestEnrollment` (hasOne ordered ล่าสุด ไม่กรอง status)
+  accessor: `($this->currentEnrollment ?? $this->latestEnrollment)?->classroom?->grade_level ?? $value` (active ก่อน, ไม่มีค่อยเอาล่าสุด)
+- **R1 (drift): ยอมรับ** — หน้าที่คอลัมน์ drift ค่าจะเปลี่ยนไปตาม enrollment จริง
+
+### Track 1 scope (หลังเคาะ) — แตะแค่ `students.*`
+- Phase B: relation `latestEnrollment` + accessor 2 ตัวบน Student (eager-load `currentEnrollment.classroom` + `latestEnrollment.classroom`)
+- Phase C: reroute D1 ที่เป็นของ students — ClassroomController(115-116,762-763) · Classroom.php(168-169) ·
+  AcademyMemberController(394-427,701) · StudentController(46,51) · AcademicYearRolloverService(201-202) · StudentCardAuditService(41,58)
+  (StudentCardController 306/394-395 อ่าน student_cards → **ถ้าอ่าน students.class_level ต้อง reroute · ถ้าอ่าน card ปล่อย** — verify Phase C)
+- Phase D: ถอด `students` fillable(96-97) · เลิกเขียน AcademicYearRolloverService(383-384,503-504) · EnrollmentRepairDirtyData retire
+- Phase E: drop เฉพาะ `students.class_level`, `students.class_section` (down backfill จาก enrollment ล่าสุด + STRICT + MySQL จริง)
+- Phase G: retire RebuildClassrooms/EnrollmentRepairDirtyData ที่พึ่ง students.class_level
 
 ---
 
@@ -160,4 +171,5 @@ A (audit) → B (accessor) → **verify หนัก** → C (SQL) → D (write)
 ## 6. สถานะ
 - **2026-09-15:** เขียนแผน · เมนู #10 CL-S7 ชี้มาที่ไฟล์นี้
 - **2026-09-16 Phase A ✅:** categorize ครบ (ดู §4.5) — พบว่า `students.*` (สะอาด) กับ `student_cards.*` (snapshot) ต่างกัน
-  → เสนอแยก 2 track · กลุ่ม D backend = D1 SQL 10 จุด + D2 write 6 จุด · FE จุดเขียนจุดเดียว · **รอเคาะ Q-A1/R1/R2 ก่อน Phase B**
+- **2026-09-16 เคาะ Q-A1/R2 แล้ว:** ทำ **track 1 เท่านั้น** (drop `students.class_level/class_section` · คงบัตรไว้) ·
+  accessor fallback enrollment ล่าสุดทุกสถานะ · **พร้อมลง Phase B (track 1)**
