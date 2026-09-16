@@ -338,7 +338,7 @@ UI bulk (API มีแล้ว) · สอนแทน/งดคาบ · ภา
 |---|---|---|---|---|
 | **SC-S1** | **ปลดล็อก 404 (backend)** — resolve โรงเรียนด้วย id ทุกเมธอด (D1/G1), ตรวจว่า classroom/teacher/course เป็นของโรงเรียนนี้ (G12), ใส่ `classroom_id` เข้า validator + `only()` ของ `update` (G13) | — | patch controller + เทสต์ 404/403/200 | 🟢 **done 2026-09-16** (agy เขียน · Claude ตรวจเอง ดู §9) |
 | **SC-S2** | **สลับ schema เป็น courses (D5)** — migration `subject_id` → `course_id` (nullable) + เพิ่ม `title`, `entry_type` (course/activity/break/exam) + `period_id` (nullable) · อัปเดต model/validation/response · `down()` คืนสภาพได้จริง | SC-S1 | migration + `ClassSchedule` + controller | 🟢 **done 2026-09-16** (รัน migrate + rollback + migrate ซ้ำบน DB dev แล้ว ดู §9) |
-| **SC-S3** | **ภาคเรียน 2569 (D3)** — migration สร้าง 1/2569 + 2/2569 และย้าย `is_current` · ผูก `Semester::current()` เข้ากับโรงเรียน (G7) · เพิ่ม `GET .../academic-years/{id}/semesters` สำหรับ selector | SC-S1 | migration + endpoint + เทสต์ | ⚪ |
+| **SC-S3** | **ภาคเรียน 2569 (D3)** — migration สร้าง 1/2569 + 2/2569 และย้าย `is_current` · `Semester::currentForAcademy()` ผูกโรงเรียน + แก้ `setAsCurrent()` ที่เป็นต้นตอ (G7) · ~~เพิ่ม endpoint list ภาคเรียน~~ **ไม่ต้องทำ — `GET /academies/{id}/academic-years` คืน `semesters[]` มาให้อยู่แล้ว** | SC-S1 | migration + model + เทสต์ | 🟢 **done 2026-09-16** (รัน migrate + rollback + migrate ซ้ำบน DB dev แล้ว ดู §9) |
 | **SC-S4** | **เดินสาย frontend ทีเดียวจบ** — ส่ง query ผ่าน `{ params }` (G2), PUT→PATCH (G4), ส่ง `semester_id` (G3), เปลี่ยน dropdown วิชา → ตัวเลือก **คอร์ส** จาก `GET /academies/{id}/courses` + ช่องกรอกชื่อเองเมื่อไม่มีคอร์ส (G5/D5), ใช้ `academyId` (D1), กันหน้าด้วย `schedule.view/manage` (G11), selector ปี/ภาคเรียน · **ต้องส่ง `title` มาด้วยเสมอเมื่อเคลียร์ `course_id`** (ดู G20) | SC-S2 · SC-S3 | หน้า admin ดู/สร้าง/แก้/ลบได้จริงครบวง | ⚪ |
 | **SC-S5** | **แก้ตรรกะกันชน** — ขอบเวลาให้คาบติดกันได้ (G6) + กันสถานที่ (`room`) ชน + เทสต์เคสคาบติดกัน/คร่อม/แก้คาบเดิม/ข้ามภาคเรียน | SC-S2 | `ClassSchedule` + เทสต์บน MySQL จริง | ⚪ |
 | **SC-S6** | **ชุดโครงคาบที่ตั้งค่าเองได้ (D2)** — migration `schedule_period_sets` + `schedule_periods.set_id` + เงื่อนไขใช้กับวัน/ระดับชั้น · CRUD + หน้าตั้งค่า · กริดวาดจากคาบแทนชั่วโมงฮาร์ดโค้ด (G14) · เลือกวันเปิดสอน 1–7 (G15) | SC-S4 | migration + controller + routes + หน้าตั้งค่า + กริดใหม่ | ⚪ |
@@ -416,3 +416,27 @@ Report back: diff stat + ผลรันคำสั่ง verification
   POST ที่ไม่มีทั้งคอร์สและชื่อ 422 · POST คอร์สนอกโรงเรียน 422 · ลบแถวทดสอบออกแล้ว DB กลับมา 5 แถว
   **agy พลาดซ้ำเรื่องเดิม:** รายงานว่า pint ผ่านทั้งที่ตกจริง 3 ไฟล์ (line_ending + class_definition + single_quote)
   → Claude รัน `pint` เองให้ผ่าน · ส่วนข้อห้ามรัน migrate ครั้งนี้ agy ทำตามถูกต้อง
+
+- **2026-09-16 SC-S3 🟢 verified** — agy เขียน (สเปค `agy-sc-s3-semester-2569.txt`) · Claude ตรวจเองทุกข้อ
+  **ตัดงานออกไป 1 ข้อก่อนส่ง:** สเปคเดิมจะให้เพิ่ม endpoint list ภาคเรียน — ยิงของจริงก่อนแล้วพบว่า
+  `GET /api/academies/{id}/academic-years` **eager load `semesters[]` มาให้ครบทุกปีอยู่แล้ว**
+  จึงสั่งห้ามแตะ `AcademicYearController` และห้ามแตะ routes เลย (SC-S4 ใช้ endpoint เดิมทำ selector ได้)
+  **เจอต้นตอของอาการ "ภาคเรียนค้างปีเก่า":** `Semester::setAsCurrent()` ล้าง `is_current` เฉพาะภาคเรียน
+  ในปีเดียวกัน ⇒ พอขึ้นปีใหม่ ภาคของปีเก่าจึงค้างสถานะปัจจุบันตลอด — แก้ให้ล้างทั้งโรงเรียน (ไม่ข้ามโรงเรียน)
+  **diff จริง:** `Semester.php` +30/−7 (เพิ่ม `scopeForAcademy` + `currentForAcademy` + แก้ `setAsCurrent`
+  · `scopeCurrent` เดิมไม่ถูกแตะเพราะมีที่อื่นใช้) · `ClassScheduleController` แก้ 3 บรรทัดตามสเปคเป๊ะ ·
+  migration ใหม่ 1 ไฟล์ · เทสต์ใหม่ `SemesterCurrentScopeTest` 5 เคส · ไม่มีไฟล์นอกสเปค
+  **2 จุดที่ Claude แก้เองหลังรีวิว** (อธิบายไว้เพราะเป็นทางที่ลบข้อมูลได้): (ก) migration เรียก `DB::table()`
+  โดยไม่ได้ `use Illuminate\Support\Facades\DB` (รอดเพราะ global alias — เปราะ) → เพิ่ม import ·
+  (ข) `down()` เดิมจะลบภาคเรียน **ทุกแถว** ของปีปัจจุบันที่ไม่มีใครอ้างถึง ซึ่งจะกินภาคเรียนที่โรงเรียน
+  สร้างเองไปด้วย → เพิ่มตัวเทียบ `expectedSemesters()` (ชื่อ+ช่วงวันต้องตรงกับที่ `up()` สร้างเท่านั้น)
+  และให้ `up()`/`down()` ใช้สูตรเดียวกันจะได้ไม่หลุดกัน
+  **เกณฑ์ที่ Claude รันเอง:** `grep -c "Semester::current()"` = 0 · `pint --test` ผ่าน ·
+  เทสต์ 19/19 (42 assertions) ทั้ง 3 ไฟล์ของเมนูนี้
+  **รัน migration จริงบน DB dev เอง** (สำรอง `semesters` เป็น JSON ก่อน · agy ไม่ได้รัน ตรวจ status = Pending):
+  `migrate` ✅ ได้ 1/2569 = 2026-05-16..2026-10-15 (`is_current`) และ 2/2569 = 2026-10-16..2027-03-31
+  · `is_current` ของ 1/2568 ถูกปิด · `migrate:rollback` ✅ **คืนสภาพเดิมเป๊ะ** (เหลือภาคเรียนเดียวของ 2568
+  ที่ `is_current=1` · `class_schedules` 5 แถวไม่ถูกแตะ) · `migrate` ซ้ำ ✅ ได้ผลเดิม
+  **ยิงเซิร์ฟเวอร์จริง (หลักฐานว่า G7 ปิดแล้ว):** `GET /schedules` แบบไม่ส่ง `semester_id` คืน **0 แถว**
+  (เดโมปี 2568 ไม่ถูกนับเป็น "ปัจจุบัน" อีกแล้ว) · ส่ง `semester_id=1` ยังได้ 5 แถวเดิม ·
+  POST คาบใหม่ในภาคเรียนปัจจุบัน 201 แล้ว `GET /schedules` เห็นทันทีโดยไม่ต้องระบุภาคเรียน · ลบแถวทดสอบแล้ว
