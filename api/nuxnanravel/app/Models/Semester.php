@@ -69,13 +69,35 @@ class Semester extends Model
         return $query->where('academic_year_id', $academicYearId);
     }
 
+    public function scopeForAcademy($query, $academyId)
+    {
+        return $query->whereHas('academicYear', fn ($q) => $q->where('academy_id', $academyId));
+    }
+
     // Methods
+    public static function currentForAcademy($academyId): ?self
+    {
+        return static::forAcademy($academyId)->where('is_current', true)->first()
+            ?? static::forAcademy($academyId)
+                ->whereHas('academicYear', fn ($q) => $q->where('is_current', true))
+                ->orderBy('semester_number')
+                ->first();
+    }
+
     public function setAsCurrent(): void
     {
-        // Remove current status from other semesters in same academic year
-        self::where('academic_year_id', $this->academic_year_id)
-            ->where('id', '!=', $this->id)
-            ->update(['is_current' => false]);
+        $academyId = $this->academicYear?->academy_id;
+
+        if ($academyId) {
+            self::forAcademy($academyId)
+                ->where('id', '!=', $this->id)
+                ->update(['is_current' => false]);
+        } else {
+            // Remove current status from other semesters in same academic year
+            self::where('academic_year_id', $this->academic_year_id)
+                ->where('id', '!=', $this->id)
+                ->update(['is_current' => false]);
+        }
 
         $this->update(['is_current' => true]);
     }

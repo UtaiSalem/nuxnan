@@ -44,7 +44,7 @@ class ClassScheduleController extends Controller
             $query->bySemester($request->semester_id);
         } else {
             // Default to current semester
-            $currentSemester = Semester::current()->first();
+            $currentSemester = Semester::currentForAcademy($academy->id);
             if ($currentSemester) {
                 $query->bySemester($currentSemester->id);
             }
@@ -135,7 +135,7 @@ class ClassScheduleController extends Controller
         if ($request->filled('semester_id')) {
             $query->bySemester($request->semester_id);
         } else {
-            $currentSemester = Semester::current()->first();
+            $currentSemester = Semester::currentForAcademy($academy->id);
             if ($currentSemester) {
                 $query->bySemester($currentSemester->id);
             }
@@ -633,7 +633,7 @@ class ClassScheduleController extends Controller
             ->today();
 
         // Current semester
-        $currentSemester = Semester::current()->first();
+        $currentSemester = Semester::currentForAcademy($academy->id);
         if ($currentSemester) {
             $query->bySemester($currentSemester->id);
         }
