@@ -191,7 +191,7 @@ GET  /api/academies/1/subjects                         -> 200  <- path จริ
 หน้าเรียก `api.get(url, { classroom_id, per_page, role, status })` → คีย์พวกนี้ถูกโยนเข้า `$fetch` แล้วถูกทิ้ง
 (ต้องเป็น `{ params: {...} }` หรือ `{ query: {...} }`)
 ⇒ `timetable` ไม่มี `classroom_id`/`teacher_id` → validation `required_without` 422 → กริดว่างตลอด
-⇒ `classrooms` ได้แค่ 20 จาก 104 · `members` ได้ 20 แถวแรกของสมาชิกทุกบทบาท
+⇒ `members` ได้ 20 แถวแรกของสมาชิกทุกบทบาท (ส่วน `classrooms` ไม่กระทบ ดู G9 ที่แก้แล้ว)
 
 **G3 · ไม่ได้ส่ง `semester_id` ตอนสร้าง** — `store` validate `required|exists:semesters,id` แต่ฟอร์มไม่มีฟิลด์นี้ → 422 แน่นอน
 
@@ -217,7 +217,10 @@ GET  /api/academies/1/subjects                         -> 200  <- path จริ
 `AcademyMemberController::getAcademyMembers(Academy $academy)` รับแค่ `per_page` — **ไม่อ่าน `role`/`status` เลย**
 ⇒ ช่องเลือกครูคือสมาชิก 20 คนแรกของโรงเรียน (ซึ่งมีนักเรียน 2,481 คนปนอยู่)
 
-**G9 · dropdown "ห้องเรียน" ไม่กรองปีการศึกษา** → ปน 51 ห้องของ 2568 กับ 53 ห้องของ 2569
+**G9 · ~~dropdown "ห้องเรียน" ไม่กรองปีการศึกษา~~ — ❌ ข้อนี้ผมเคลมผิด (แก้ 2026-09-16)**
+ยิง `GET /academies/1/classrooms` จริงแล้วพบว่า `ClassroomController::index` **ตั้งค่าเริ่มต้นเป็นปีการศึกษาปัจจุบันให้เองอยู่แล้ว**
+(และไม่แบ่งหน้า) ⇒ คืน 53 ห้องของ 2569 ครบ ไม่ได้ปนปีเก่าและไม่ได้ถูกตัดเหลือ 20 ตามที่เขียนไว้ตอน audit
+สิ่งที่ยังต้องทำจริงคือ **ส่ง `academic_year_id` เมื่อผู้ใช้เลือกปีอื่น** ซึ่งทำใน SC-S4 แล้ว
 
 **G10 · ด่านสิทธิ์อ่านหลวมและคีย์ที่มีไม่ถูกใช้** — ดู §4 (อ่านได้ทุกคนที่เป็นสมาชิก · `schedule.manage` ไม่อยู่ในบทบาทใด)
 
@@ -339,7 +342,7 @@ UI bulk (API มีแล้ว) · สอนแทน/งดคาบ · ภา
 | **SC-S1** | **ปลดล็อก 404 (backend)** — resolve โรงเรียนด้วย id ทุกเมธอด (D1/G1), ตรวจว่า classroom/teacher/course เป็นของโรงเรียนนี้ (G12), ใส่ `classroom_id` เข้า validator + `only()` ของ `update` (G13) | — | patch controller + เทสต์ 404/403/200 | 🟢 **done 2026-09-16** (agy เขียน · Claude ตรวจเอง ดู §9) |
 | **SC-S2** | **สลับ schema เป็น courses (D5)** — migration `subject_id` → `course_id` (nullable) + เพิ่ม `title`, `entry_type` (course/activity/break/exam) + `period_id` (nullable) · อัปเดต model/validation/response · `down()` คืนสภาพได้จริง | SC-S1 | migration + `ClassSchedule` + controller | 🟢 **done 2026-09-16** (รัน migrate + rollback + migrate ซ้ำบน DB dev แล้ว ดู §9) |
 | **SC-S3** | **ภาคเรียน 2569 (D3)** — migration สร้าง 1/2569 + 2/2569 และย้าย `is_current` · `Semester::currentForAcademy()` ผูกโรงเรียน + แก้ `setAsCurrent()` ที่เป็นต้นตอ (G7) · ~~เพิ่ม endpoint list ภาคเรียน~~ **ไม่ต้องทำ — `GET /academies/{id}/academic-years` คืน `semesters[]` มาให้อยู่แล้ว** | SC-S1 | migration + model + เทสต์ | 🟢 **done 2026-09-16** (รัน migrate + rollback + migrate ซ้ำบน DB dev แล้ว ดู §9) |
-| **SC-S4** | **เดินสาย frontend ทีเดียวจบ** — ส่ง query ผ่าน `{ params }` (G2), PUT→PATCH (G4), ส่ง `semester_id` (G3), เปลี่ยน dropdown วิชา → ตัวเลือก **คอร์ส** จาก `GET /academies/{id}/courses` + ช่องกรอกชื่อเองเมื่อไม่มีคอร์ส (G5/D5), ใช้ `academyId` (D1), กันหน้าด้วย `schedule.view/manage` (G11), selector ปี/ภาคเรียน · **ต้องส่ง `title` มาด้วยเสมอเมื่อเคลียร์ `course_id`** (ดู G20) | SC-S2 · SC-S3 | หน้า admin ดู/สร้าง/แก้/ลบได้จริงครบวง | ⚪ |
+| **SC-S4** | **เดินสาย frontend ทีเดียวจบ** — ส่ง query ผ่าน `{ params }` (G2), PUT→PATCH (G4), ส่ง `semester_id` (G3), เปลี่ยน dropdown วิชา → ตัวเลือก **คอร์ส** จาก `GET /academies/{id}/courses` + ช่องกรอกชื่อเองเมื่อไม่มีคอร์ส (G5/D5), ใช้ `academyId` (D1), กันหน้าด้วย `schedule.view/manage` (G11), selector ปี/ภาคเรียน · **ต้องส่ง `title` มาด้วยเสมอเมื่อเคลียร์ `course_id`** (ดู G20) | SC-S2 · SC-S3 | หน้า admin ดู/สร้าง/แก้/ลบได้จริงครบวง | 🟢 **done 2026-09-16** (ตรวจบนจอจริง 375/768/1280 + สร้าง/แก้/ลบผ่าน UI จริง ดู §9) |
 | **SC-S5** | **แก้ตรรกะกันชน** — ขอบเวลาให้คาบติดกันได้ (G6) + กันสถานที่ (`room`) ชน + เทสต์เคสคาบติดกัน/คร่อม/แก้คาบเดิม/ข้ามภาคเรียน | SC-S2 | `ClassSchedule` + เทสต์บน MySQL จริง | ⚪ |
 | **SC-S6** | **ชุดโครงคาบที่ตั้งค่าเองได้ (D2)** — migration `schedule_period_sets` + `schedule_periods.set_id` + เงื่อนไขใช้กับวัน/ระดับชั้น · CRUD + หน้าตั้งค่า · กริดวาดจากคาบแทนชั่วโมงฮาร์ดโค้ด (G14) · เลือกวันเปิดสอน 1–7 (G15) | SC-S4 | migration + controller + routes + หน้าตั้งค่า + กริดใหม่ | ⚪ |
 | **SC-S7** | **สิทธิ์ (D4)** — เปลี่ยนด่าน GET เป็น `schedule.view` · migration เติม `schedule.view` ให้ teacher/staff/student/parent และ `schedule.manage` ให้ owner/admin + ฝ่ายวิชาการ (G10) · endpoint + หน้า "ตารางสอนของฉัน / ตารางเรียนของฉัน" | SC-S4 | routes + role migration + 2 หน้า + เทสต์สิทธิ์ | ⚪ |
@@ -416,6 +419,39 @@ Report back: diff stat + ผลรันคำสั่ง verification
   POST ที่ไม่มีทั้งคอร์สและชื่อ 422 · POST คอร์สนอกโรงเรียน 422 · ลบแถวทดสอบออกแล้ว DB กลับมา 5 แถว
   **agy พลาดซ้ำเรื่องเดิม:** รายงานว่า pint ผ่านทั้งที่ตกจริง 3 ไฟล์ (line_ending + class_definition + single_quote)
   → Claude รัน `pint` เองให้ผ่าน · ส่วนข้อห้ามรัน migrate ครั้งนี้ agy ทำตามถูกต้อง
+
+- **2026-09-16 SC-S4 🟢 verified** — agy เขียน (สเปค `agy-sc-s4-schedule-frontend.txt`) · Claude ตรวจเองทุกข้อ
+  **ตัดสินใจก่อนส่งงาน 2 เรื่อง:** (ก) **ดึง G8 จาก SC-S8 ขึ้นมาทำในรอบนี้** เพราะไม่มี endpoint ไหน
+  ในระบบ list ครูได้เลย และ `getAcademyMembers` อ่านแค่ `per_page` ⇒ ช่องเลือกครูจะเป็นสมาชิก 20 คนแรก
+  ที่เกือบทั้งหมดเป็นนักเรียน (จาก 3,063 คน เป็นครู 120) · (ข) **ดึง 2 ข้อของ G16 มาทำ**
+  (modal ล้นจอ + ปุ่มลบที่ซ่อนใต้ `group-hover` กดไม่ได้บนจอสัมผัส) เพราะต้องแก้ markup ตรงนั้นอยู่แล้ว
+  **diff จริง:** `schedule.vue` +436/−237 (เขียนใหม่ทั้ง script และครึ่งหนึ่งของ template) ·
+  `AcademyMemberController::getAcademyMembers` +29/−6 (เพิ่ม `role`/`status`/`search` แบบไม่เปลี่ยน
+  พฤติกรรมเดิมเมื่อไม่ส่งพารามิเตอร์ + ครอบ `per_page` ไม่เกิน 200) · เทสต์ใหม่ `AcademyMemberFilterTest`
+  (1 เมธอด 12 assertion ครอบ 5 เคสตามสเปค) · ไม่มีไฟล์นอกสเปคหลุดมา
+  **3 จุดที่ Claude แก้เองหลังรีวิว (บั๊กจริง ถ้าปล่อยไว้หน้าจะพังตอนแก้ไขคาบ):**
+  payload ของ timetable ไม่มี `day` ในตัวรายการ (วันอยู่ที่กลุ่มแม่) และส่ง `classroom` มาเฉพาะมุมมองครู /
+  ส่ง `teacher` มาเฉพาะมุมมองห้องเรียน ⇒ `openEditModal` เดิมจะได้ `day_of_week=1` เสมอ (แก้คาบวันพฤหัสแล้ว
+  เด้งไปวันจันทร์) และส่ง `classroom_id`/`teacher_id` เป็น null ⇒ **PATCH 422 ทุกครั้ง**
+  → รับ `day` จากช่องที่กดมา + เติมอีกฝั่งจากตัวเลือกที่กำลังดูอยู่
+  **1 จุดที่ Claude แก้ที่ backend:** `index`/`timetable` เคยส่ง `title` เป็นค่าที่คำนวณแล้ว (display_title)
+  ⇒ ฟอร์มแก้ไขจะคัดลอกชื่อคอร์สลงคอลัมน์ `title` ทุกครั้งที่กดบันทึก → เปลี่ยนเป็นส่ง `title` ดิบ
+  และเพิ่มคีย์ `display_title` แยกต่างหาก (กริดมี fallback `title || course.name` อยู่แล้ว)
+  **เกณฑ์ที่ Claude รันเอง:** SFC compile ผ่าน · `grep` = 0 ทั้ง `api.put` / `subject` /
+  `curriculums/subjects` / `group-hover:opacity-100` · `pint --test` ผ่าน · เทสต์ 20/20 (54 assertions)
+  **ตรวจบนเบราว์เซอร์จริง (dev server ของ session นี้ + JWT ของเจ้าของโรงเรียน):**
+  · **375px** — ไม่มีการเลื่อนแนวนอนทั้งหน้า (`scrollWidth == clientWidth == 375`) · ตัวเลือกปี/ภาค/มุมมอง/ห้อง
+    เรียงลงล่างเต็มความกว้าง · modal เลื่อนในตัวเองและปุ่มบันทึกกดได้ · ปุ่ม "ลบคาบนี้" อยู่ในโมดัลเต็มความกว้าง
+  · **network ที่ยิงจริง** (หลักฐานว่า G2/G3/D1 ปิดแล้ว): `/academic-years` 200 ·
+    `/classrooms?academic_year_id=2` 200 · `/members?role=teacher&status=2&per_page=200` 200 ·
+    `/courses?per_page=100` 200 · `/schedules/timetable?semester_id=4&classroom_id=58` 200
+  · **ช่องเลือกคอร์ส** มีคอร์สจริง 22 รายการพร้อมรหัสวิชา (ง 20201 ฯลฯ) — เดิมว่างเปล่า
+  · **ช่องเลือกครู** เป็นรายชื่อครูจริง (นายข๊ดดะรี บินดุเหล็ม ฯลฯ) — เดิมเป็นนักเรียนปน
+  · **วงจรเต็ม CRUD ผ่าน UI ที่ 375px**: สร้างคาบผูกคอร์ส ง 20201 → 201 · กริดแสดงชื่อ+รหัสวิชา+ครู ·
+    เปิดแก้ไข → PATCH 200 · ย้ายวันจันทร์→พฤหัสบดี แล้วเปิดใหม่ modal แสดง "พฤหัสบดี" ถูกต้อง ·
+    ลบผ่านปุ่มในโมดัล → "ลบสำเร็จ" · DB กลับมา 5 แถวเท่าเดิม (ไม่มีขยะค้าง)
+  · **768px / 1280px** — ไม่มีการเลื่อนแนวนอนทั้งหน้าทั้งสองขนาด
+  **agy ทำเกินคำสั่งเล็กน้อย:** รัน `git add` ให้ (สเปคห้ามแค่ commit/push) — ไม่กระทบอะไร แต่รอบหน้าจะสั่งห้ามด้วย
 
 - **2026-09-16 SC-S3 🟢 verified** — agy เขียน (สเปค `agy-sc-s3-semester-2569.txt`) · Claude ตรวจเองทุกข้อ
   **ตัดงานออกไป 1 ข้อก่อนส่ง:** สเปคเดิมจะให้เพิ่ม endpoint list ภาคเรียน — ยิงของจริงก่อนแล้วพบว่า
