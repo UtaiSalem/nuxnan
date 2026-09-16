@@ -18,7 +18,10 @@ class ClassSchedule extends Model
         'academic_year_id',
         'semester_id',
         'classroom_id',
-        'subject_id',
+        'course_id',
+        'title',
+        'entry_type',
+        'period_id',
         'teacher_id',
         'day_of_week',
         'start_time',
@@ -51,6 +54,16 @@ class ClassSchedule extends Model
     const SATURDAY = 6;
 
     const SUNDAY = 7;
+
+    const ENTRY_TYPE_COURSE = 'course';
+
+    const ENTRY_TYPE_ACTIVITY = 'activity';
+
+    const ENTRY_TYPE_BREAK = 'break';
+
+    const ENTRY_TYPE_EXAM = 'exam';
+
+    const ENTRY_TYPES = [self::ENTRY_TYPE_COURSE, self::ENTRY_TYPE_ACTIVITY, self::ENTRY_TYPE_BREAK, self::ENTRY_TYPE_EXAM];
 
     const DAYS = [
         1 => 'วันจันทร์',
@@ -99,9 +112,9 @@ class ClassSchedule extends Model
         return $this->belongsTo(Classroom::class);
     }
 
-    public function subject(): BelongsTo
+    public function course(): BelongsTo
     {
-        return $this->belongsTo(Subject::class);
+        return $this->belongsTo(Course::class);
     }
 
     public function teacher(): BelongsTo
@@ -115,6 +128,11 @@ class ClassSchedule extends Model
     }
 
     // Accessors
+    public function getDisplayTitleAttribute(): string
+    {
+        return $this->title ?: ($this->course?->name ?? '');
+    }
+
     public function getDayNameAttribute(): string
     {
         return self::DAYS[$this->day_of_week] ?? '';

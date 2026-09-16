@@ -7,6 +7,7 @@ use App\Models\Academy;
 use App\Models\Budget;
 use App\Models\Classroom;
 use App\Models\ClassSchedule;
+use App\Models\Course;
 use App\Models\DashboardWidget;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
@@ -155,22 +156,29 @@ class SchoolManagementSeeder extends Seeder
         }
         $this->command->info('  ✅ Subjects: '.count($subjects).' records');
 
-        // Class Schedules - columns: academy_id,academic_year_id,semester_id,classroom_id,subject_id,teacher_id,day_of_week,start_time,end_time,period_number,room,status,notes,created_by
+        // Class Schedules
         $classroom = Classroom::where('academy_id', $this->academy->id)->first();
-        $allSubjects = Subject::where('academy_id', $this->academy->id)->get();
+        $allCourses = Course::where('academy_id', $this->academy->id)->take(5)->get();
 
-        if ($classroom && $allSubjects->isNotEmpty()) {
+        if ($classroom) {
             $schedules = [
-                ['day_of_week' => 1, 'start_time' => '08:30', 'end_time' => '09:30', 'period_number' => 1, 'room' => 'ห้อง 101', 'subject_index' => 0],
-                ['day_of_week' => 1, 'start_time' => '09:30', 'end_time' => '10:30', 'period_number' => 2, 'room' => 'ห้อง 101', 'subject_index' => 1],
-                ['day_of_week' => 1, 'start_time' => '10:45', 'end_time' => '11:45', 'period_number' => 3, 'room' => 'ห้อง 102', 'subject_index' => 2],
-                ['day_of_week' => 2, 'start_time' => '08:30', 'end_time' => '09:30', 'period_number' => 1, 'room' => 'ห้อง 101', 'subject_index' => 3],
-                ['day_of_week' => 2, 'start_time' => '09:30', 'end_time' => '10:30', 'period_number' => 2, 'room' => 'ห้อง 102', 'subject_index' => 4],
+                ['day_of_week' => 1, 'start_time' => '08:30', 'end_time' => '09:30', 'period_number' => 1, 'room' => 'ห้อง 101'],
+                ['day_of_week' => 1, 'start_time' => '09:30', 'end_time' => '10:30', 'period_number' => 2, 'room' => 'ห้อง 101'],
+                ['day_of_week' => 1, 'start_time' => '10:45', 'end_time' => '11:45', 'period_number' => 3, 'room' => 'ห้อง 102'],
+                ['day_of_week' => 2, 'start_time' => '08:30', 'end_time' => '09:30', 'period_number' => 1, 'room' => 'ห้อง 101'],
+                ['day_of_week' => 2, 'start_time' => '09:30', 'end_time' => '10:30', 'period_number' => 2, 'room' => 'ห้อง 102'],
             ];
 
-            foreach ($schedules as $data) {
-                $subjectIndex = $data['subject_index'] ?? 0;
-                unset($data['subject_index']);
+            foreach ($schedules as $i => $data) {
+                $courseFields = [];
+                if ($allCourses->isNotEmpty()) {
+                    $courseFields['course_id'] = $allCourses[$i % count($allCourses)]->id;
+                    $courseFields['entry_type'] = 'course';
+                } else {
+                    $courseFields['course_id'] = null;
+                    $courseFields['title'] = 'คาบเรียนตัวอย่าง '.($i + 1);
+                    $courseFields['entry_type'] = 'activity';
+                }
 
                 ClassSchedule::updateOrCreate(
                     [
@@ -179,11 +187,10 @@ class SchoolManagementSeeder extends Seeder
                         'start_time' => $data['start_time'],
                         'classroom_id' => $classroom->id,
                     ],
-                    array_merge($data, [
+                    array_merge($data, $courseFields, [
                         'academy_id' => $this->academy->id,
                         'academic_year_id' => $this->academicYear->id,
                         'semester_id' => $this->semester->id,
-                        'subject_id' => $allSubjects[$subjectIndex % count($allSubjects)]->id,
                         'classroom_id' => $classroom->id,
                         'teacher_id' => $this->users->random()->id,
                         'status' => 'active',

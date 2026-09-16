@@ -32,7 +32,7 @@ class ClassScheduleController extends Controller
         $academy = Academy::findOrFail($academyId);
 
         $query = ClassSchedule::with([
-            'subject:id,subject_code,name_th,name_en',
+            'course:id,name,code,academy_id',
             'teacher:id,name,profile_photo_path',
             'classroom:id,name,grade_level,section',
         ])
@@ -65,9 +65,9 @@ class ClassScheduleController extends Controller
             $query->byDay($request->day_of_week);
         }
 
-        // Filter by subject
-        if ($request->filled('subject_id')) {
-            $query->where('subject_id', $request->subject_id);
+        // Filter by course
+        if ($request->filled('course_id')) {
+            $query->where('course_id', $request->course_id);
         }
 
         $schedules = $query->orderBy('day_of_week')
@@ -85,7 +85,13 @@ class ClassScheduleController extends Controller
                     'period_number' => $schedule->period_number,
                     'room' => $schedule->room,
                     'status' => $schedule->status,
-                    'subject' => $schedule->subject,
+                    'entry_type' => $schedule->entry_type,
+                    'title' => $schedule->display_title,
+                    'course' => $schedule->course ? [
+                        'id' => $schedule->course->id,
+                        'code' => $schedule->course->code,
+                        'name' => $schedule->course->name,
+                    ] : null,
                     'teacher' => $schedule->teacher ? [
                         'id' => $schedule->teacher->id,
                         'name' => $schedule->teacher->name,
@@ -118,7 +124,7 @@ class ClassScheduleController extends Controller
         ]);
 
         $query = ClassSchedule::with([
-            'subject:id,subject_code,name_th,name_en',
+            'course:id,name,code,academy_id',
             'teacher:id,name,profile_photo_path',
             'classroom:id,name,grade_level,section',
         ])
@@ -166,11 +172,13 @@ class ClassScheduleController extends Controller
                             'end_time' => $s->end_time->format('H:i'),
                             'period_number' => $s->period_number,
                             'room' => $s->room,
-                            'subject' => [
-                                'id' => $s->subject->id,
-                                'code' => $s->subject->subject_code,
-                                'name' => $s->subject->name_th,
-                            ],
+                            'entry_type' => $s->entry_type,
+                            'title' => $s->display_title,
+                            'course' => $s->course ? [
+                                'id' => $s->course->id,
+                                'code' => $s->course->code,
+                                'name' => $s->course->name,
+                            ] : null,
                         ];
 
                         // Include teacher or classroom based on view type
@@ -218,10 +226,10 @@ class ClassScheduleController extends Controller
                 'required',
                 Rule::exists('classrooms', 'id')->where('academy_id', $academy->id),
             ],
-            'subject_id' => [
-                'required',
-                Rule::exists('subjects', 'id')->where('academy_id', $academy->id),
-            ],
+            'course_id' => ['nullable', Rule::exists('courses', 'id')->where('academy_id', $academy->id)],
+            'title' => ['nullable', 'string', 'max:255', 'required_without:course_id'],
+            'entry_type' => ['nullable', Rule::in(ClassSchedule::ENTRY_TYPES)],
+            'period_id' => 'nullable|integer|min:1',
             'teacher_id' => 'required|exists:users,id',
             'day_of_week' => 'required|integer|between:1,7',
             'start_time' => 'required|date_format:H:i',
@@ -293,7 +301,10 @@ class ClassScheduleController extends Controller
             'academic_year_id' => $semester->academic_year_id,
             'semester_id' => $request->semester_id,
             'classroom_id' => $request->classroom_id,
-            'subject_id' => $request->subject_id,
+            'course_id' => $request->course_id,
+            'title' => $request->title,
+            'entry_type' => $request->entry_type ?: ClassSchedule::ENTRY_TYPE_COURSE,
+            'period_id' => $request->period_id,
             'teacher_id' => $request->teacher_id,
             'day_of_week' => $request->day_of_week,
             'start_time' => $request->start_time,
@@ -304,7 +315,7 @@ class ClassScheduleController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
-        $schedule->load(['subject', 'teacher', 'classroom']);
+        $schedule->load(['course', 'teacher', 'classroom']);
 
         $this->auditLogService->logCreate($schedule, 'schedules');
 
@@ -328,10 +339,14 @@ class ClassScheduleController extends Controller
                 'sometimes',
                 Rule::exists('classrooms', 'id')->where('academy_id', $academy->id),
             ],
-            'subject_id' => [
+            'course_id' => [
                 'sometimes',
-                Rule::exists('subjects', 'id')->where('academy_id', $academy->id),
+                'nullable',
+                Rule::exists('courses', 'id')->where('academy_id', $academy->id),
             ],
+            'title' => 'sometimes|nullable|string|max:255',
+            'entry_type' => ['sometimes', Rule::in(ClassSchedule::ENTRY_TYPES)],
+            'period_id' => 'nullable|integer|min:1',
             'teacher_id' => 'sometimes|exists:users,id',
             'day_of_week' => 'sometimes|integer|between:1,7',
             'start_time' => 'sometimes|date_format:H:i',
@@ -404,7 +419,10 @@ class ClassScheduleController extends Controller
 
         $schedule->update($request->only([
             'classroom_id',
-            'subject_id',
+            'course_id',
+            'title',
+            'entry_type',
+            'period_id',
             'teacher_id',
             'day_of_week',
             'start_time',
@@ -415,7 +433,7 @@ class ClassScheduleController extends Controller
             'notes',
         ]));
 
-        $schedule->load(['subject', 'teacher', 'classroom']);
+        $schedule->load(['course', 'teacher', 'classroom']);
 
         $this->auditLogService->logUpdate($schedule, $oldValues, 'schedules');
 
@@ -458,10 +476,12 @@ class ClassScheduleController extends Controller
                 'required',
                 Rule::exists('classrooms', 'id')->where('academy_id', $academy->id),
             ],
-            'schedules.*.subject_id' => [
-                'required',
-                Rule::exists('subjects', 'id')->where('academy_id', $academy->id),
+            'schedules.*.course_id' => [
+                'nullable',
+                Rule::exists('courses', 'id')->where('academy_id', $academy->id),
             ],
+            'schedules.*.entry_type' => ['nullable', Rule::in(ClassSchedule::ENTRY_TYPES)],
+            'schedules.*.period_id' => 'nullable|integer|min:1',
             'schedules.*.teacher_id' => 'required|exists:users,id',
             'schedules.*.day_of_week' => 'required|integer|between:1,7',
             'schedules.*.start_time' => 'required|date_format:H:i',
@@ -482,6 +502,15 @@ class ClassScheduleController extends Controller
         DB::beginTransaction();
         try {
             foreach ($request->schedules as $index => $scheduleData) {
+                if (empty($scheduleData['course_id']) && empty($scheduleData['title'])) {
+                    $errors[] = [
+                        'index' => $index,
+                        'message' => 'The title field is required when course id is not present.',
+                    ];
+
+                    continue;
+                }
+
                 $semester = Semester::with('academicYear')->find($scheduleData['semester_id']);
                 if ($semester?->academicYear?->academy_id !== $academy->id) {
                     $errors[] = [
@@ -540,7 +569,10 @@ class ClassScheduleController extends Controller
                     'academic_year_id' => $semester->academic_year_id,
                     'semester_id' => $scheduleData['semester_id'],
                     'classroom_id' => $scheduleData['classroom_id'],
-                    'subject_id' => $scheduleData['subject_id'],
+                    'course_id' => $scheduleData['course_id'] ?? null,
+                    'title' => $scheduleData['title'] ?? null,
+                    'entry_type' => $scheduleData['entry_type'] ?? ClassSchedule::ENTRY_TYPE_COURSE,
+                    'period_id' => $scheduleData['period_id'] ?? null,
                     'teacher_id' => $scheduleData['teacher_id'],
                     'day_of_week' => $scheduleData['day_of_week'],
                     'start_time' => $scheduleData['start_time'],
@@ -592,7 +624,7 @@ class ClassScheduleController extends Controller
         $academy = Academy::findOrFail($academyId);
 
         $query = ClassSchedule::with([
-            'subject:id,subject_code,name_th',
+            'course:id,name,code,academy_id',
             'teacher:id,name,profile_photo_path',
             'classroom:id,name,grade_level,section',
         ])
