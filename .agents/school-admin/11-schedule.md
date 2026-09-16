@@ -247,6 +247,11 @@ validate แค่ `exists:classrooms,id` / `exists:subjects,id` / `exists:users
 **G17 · ฟีเจอร์ที่โรงเรียนใช้จริงแต่ยังไม่มี** — พิมพ์/ส่งออกตารางรายห้อง-รายครู · คัดลอกตารางข้ามภาคเรียน ·
 UI bulk (API มีแล้ว) · สอนแทน/งดคาบ · ภาระงานสอน · ทะเบียนสถานที่ + กันห้องชน
 
+**G20 · (เจอตอนรีวิว SC-S2) `PATCH` เคลียร์คอร์สทิ้งโดยไม่มีชื่อแทนได้**
+`store()` บังคับ `title` เมื่อไม่มี `course_id` แล้ว แต่ `update()` ยังยอมให้ส่ง `{"course_id": null}` เดี่ยว ๆ
+กับคาบที่ไม่มี `title` ⇒ ได้คาบไร้ชื่อ (กริดจะขึ้นช่องว่าง)
+ปิดที่ SC-S5 (รอบแก้ validation/ตรรกะ) หรือให้ SC-S4 บังคับส่ง `title` คู่มาเสมอ — ความเสี่ยงต่ำ ยังไม่มี UI ที่ทำแบบนี้ได้
+
 **G18 · ไม่มีเทสต์ที่รันได้**
 เทสต์เดียวที่แตะเมนูนี้คือ `tests/Api/SchoolManagementApiTest.php::test_can_list_class_schedules`
 ซึ่ง **รันไม่ผ่านตั้งแต่ setUp** (sqlite `:memory:` ไม่มี schema — `no such table: users`) ทั้งไฟล์จึงเป็นเทสต์ตายมานาน
@@ -332,9 +337,9 @@ UI bulk (API มีแล้ว) · สอนแทน/งดคาบ · ภา
 | Step | Title | Depends on | Deliverable | Status |
 |---|---|---|---|---|
 | **SC-S1** | **ปลดล็อก 404 (backend)** — resolve โรงเรียนด้วย id ทุกเมธอด (D1/G1), ตรวจว่า classroom/teacher/course เป็นของโรงเรียนนี้ (G12), ใส่ `classroom_id` เข้า validator + `only()` ของ `update` (G13) | — | patch controller + เทสต์ 404/403/200 | 🟢 **done 2026-09-16** (agy เขียน · Claude ตรวจเอง ดู §9) |
-| **SC-S2** | **สลับ schema เป็น courses (D5)** — migration `subject_id` → `course_id` (nullable, FK ใหม่) + เพิ่ม `title`, `entry_type` (course/activity/break/exam) + `period_id` (nullable) · อัปเดต model/validation/response · `down()` คืนสภาพได้จริง · ⚠️ ดูกับดัก FK/แถวกำพร้าใน §2.6 | SC-S1 | migration + `ClassSchedule` + controller | ⚪ |
+| **SC-S2** | **สลับ schema เป็น courses (D5)** — migration `subject_id` → `course_id` (nullable) + เพิ่ม `title`, `entry_type` (course/activity/break/exam) + `period_id` (nullable) · อัปเดต model/validation/response · `down()` คืนสภาพได้จริง | SC-S1 | migration + `ClassSchedule` + controller | 🟢 **done 2026-09-16** (รัน migrate + rollback + migrate ซ้ำบน DB dev แล้ว ดู §9) |
 | **SC-S3** | **ภาคเรียน 2569 (D3)** — migration สร้าง 1/2569 + 2/2569 และย้าย `is_current` · ผูก `Semester::current()` เข้ากับโรงเรียน (G7) · เพิ่ม `GET .../academic-years/{id}/semesters` สำหรับ selector | SC-S1 | migration + endpoint + เทสต์ | ⚪ |
-| **SC-S4** | **เดินสาย frontend ทีเดียวจบ** — ส่ง query ผ่าน `{ params }` (G2), PUT→PATCH (G4), ส่ง `semester_id` (G3), เปลี่ยน dropdown วิชา → ตัวเลือก **คอร์ส** จาก `GET /academies/{id}/courses` (G5/D5), ใช้ `academyId` (D1), กันหน้าด้วย `schedule.view/manage` (G11), selector ปี/ภาคเรียน | SC-S2 · SC-S3 | หน้า admin ดู/สร้าง/แก้/ลบได้จริงครบวง | ⚪ |
+| **SC-S4** | **เดินสาย frontend ทีเดียวจบ** — ส่ง query ผ่าน `{ params }` (G2), PUT→PATCH (G4), ส่ง `semester_id` (G3), เปลี่ยน dropdown วิชา → ตัวเลือก **คอร์ส** จาก `GET /academies/{id}/courses` + ช่องกรอกชื่อเองเมื่อไม่มีคอร์ส (G5/D5), ใช้ `academyId` (D1), กันหน้าด้วย `schedule.view/manage` (G11), selector ปี/ภาคเรียน · **ต้องส่ง `title` มาด้วยเสมอเมื่อเคลียร์ `course_id`** (ดู G20) | SC-S2 · SC-S3 | หน้า admin ดู/สร้าง/แก้/ลบได้จริงครบวง | ⚪ |
 | **SC-S5** | **แก้ตรรกะกันชน** — ขอบเวลาให้คาบติดกันได้ (G6) + กันสถานที่ (`room`) ชน + เทสต์เคสคาบติดกัน/คร่อม/แก้คาบเดิม/ข้ามภาคเรียน | SC-S2 | `ClassSchedule` + เทสต์บน MySQL จริง | ⚪ |
 | **SC-S6** | **ชุดโครงคาบที่ตั้งค่าเองได้ (D2)** — migration `schedule_period_sets` + `schedule_periods.set_id` + เงื่อนไขใช้กับวัน/ระดับชั้น · CRUD + หน้าตั้งค่า · กริดวาดจากคาบแทนชั่วโมงฮาร์ดโค้ด (G14) · เลือกวันเปิดสอน 1–7 (G15) | SC-S4 | migration + controller + routes + หน้าตั้งค่า + กริดใหม่ | ⚪ |
 | **SC-S7** | **สิทธิ์ (D4)** — เปลี่ยนด่าน GET เป็น `schedule.view` · migration เติม `schedule.view` ให้ teacher/staff/student/parent และ `schedule.manage` ให้ owner/admin + ฝ่ายวิชาการ (G10) · endpoint + หน้า "ตารางสอนของฉัน / ตารางเรียนของฉัน" | SC-S4 | routes + role migration + 2 หน้า + เทสต์สิทธิ์ | ⚪ |
@@ -392,3 +397,22 @@ Report back: diff stat + ผลรันคำสั่ง verification
   → ลบแถวทดสอบออกแล้ว DB กลับมา 5 แถวเท่าเดิม
   **2 จุดที่ agy รายงานไม่ตรง (Claude แก้เอง):** (ก) บอกว่า pint ผ่าน แต่จริง ๆ ไฟล์เทสต์ตก `line_ending`
   → Claude รัน `pint` ซ้ำให้ผ่าน · (ข) ทิ้งไฟล์ `api/nuxnanravel/fix_test.py` ไว้นอกสเปค → Claude ลบทิ้ง
+
+- **2026-09-16 SC-S2 🟢 verified** — agy เขียน (สเปค `agy-sc-s2-schedule-course.txt`) · Claude ตรวจเองทุกข้อ
+  **diff จริง:** migration ใหม่ 1 ไฟล์ · `ClassScheduleController` +84/−36 · `ClassSchedule` +24/−? ·
+  `SchoolManagementSeeder` (เฉพาะบล็อกตารางเรียน) · เทสต์ใหม่ `ClassScheduleCourseEntryTest` 6 เคส ·
+  ไม่มีไฟล์นอกสเปคหลุดมา · สูตรตรวจชนเวลายังไม่ถูกแตะ (สงวนไว้ให้ SC-S5)
+  **schema ใหม่:** `subject_id` หายไป · เพิ่ม `course_id` (null ได้) `title` `entry_type` (default `course`) `period_id` ·
+  index `subject_id+semester_id` → `course_id+semester_id` · **ไม่ใส่ FK ตามที่ตัดสินใจไว้** (DB ทั้งก้อนไม่มี FK)
+  **เกณฑ์ที่ Claude รันเอง:** `grep -c subject` = 0 ทั้ง controller และ model · `pint --test` ผ่าน ·
+  `ClassScheduleGuardTest` + `ClassScheduleCourseEntryTest` = 14/14 (32 assertions)
+  **รัน migration จริงบน DB dev เอง (agy ไม่ได้รัน ตรวจ `migrate:status` = Pending ก่อนรัน):**
+  สำรอง 5 แถวเป็น JSON ก่อน → `migrate` ✅ (คอลัมน์ครบ · **backfill `title` จากชื่อวิชาถูกต้องทั้ง 5 แถว**
+  เทียบกับ subject_id เดิมทีละแถวแล้ว) → `migrate:rollback` ✅ (คืน `subject_id` + index เดิมเป๊ะ ข้อมูล 5 แถวอยู่ครบ)
+  → คืนค่า `subject_id` จากไฟล์สำรอง → `migrate` ซ้ำ ✅ ได้ผลเหมือนเดิมทุกแถว ⇒ **`down()` ใช้ได้จริง ไม่ใช่แค่มีไว้**
+  **ยิงเซิร์ฟเวอร์จริง:** `GET /schedules` คืน `entry_type`/`title`/`course` และ**ไม่มีคีย์ `subject`** แล้ว ·
+  POST ผูกคอร์สจริง `ง 20201` 201 (timetable แสดงชื่อคอร์สและรหัสวิชาถูกต้อง) ·
+  POST คาบ "ชุมนุม" แบบไม่มีคอร์ส 201 (`course: null`, `entry_type: activity`) ·
+  POST ที่ไม่มีทั้งคอร์สและชื่อ 422 · POST คอร์สนอกโรงเรียน 422 · ลบแถวทดสอบออกแล้ว DB กลับมา 5 แถว
+  **agy พลาดซ้ำเรื่องเดิม:** รายงานว่า pint ผ่านทั้งที่ตกจริง 3 ไฟล์ (line_ending + class_definition + single_quote)
+  → Claude รัน `pint` เองให้ผ่าน · ส่วนข้อห้ามรัน migrate ครั้งนี้ agy ทำตามถูกต้อง
