@@ -86,7 +86,10 @@ class ClassScheduleController extends Controller
                     'room' => $schedule->room,
                     'status' => $schedule->status,
                     'entry_type' => $schedule->entry_type,
-                    'title' => $schedule->display_title,
+                    // `title` คือค่าที่เก็บจริงในคอลัมน์ (อาจว่าง) ส่วน `display_title` คือค่าที่พร้อมแสดง
+                    // แยกกันเพื่อไม่ให้ฟอร์มแก้ไขเผลอคัดลอกชื่อคอร์สลงคอลัมน์ title
+                    'title' => $schedule->title,
+                    'display_title' => $schedule->display_title,
                     'course' => $schedule->course ? [
                         'id' => $schedule->course->id,
                         'code' => $schedule->course->code,
@@ -173,7 +176,8 @@ class ClassScheduleController extends Controller
                             'period_number' => $s->period_number,
                             'room' => $s->room,
                             'entry_type' => $s->entry_type,
-                            'title' => $s->display_title,
+                            'title' => $s->title,
+                            'display_title' => $s->display_title,
                             'course' => $s->course ? [
                                 'id' => $s->course->id,
                                 'code' => $s->course->code,

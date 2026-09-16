@@ -471,12 +471,31 @@ class AcademyMemberController extends Controller
         ], 200);
     }
 
-    public function getAcademyMembers(Academy $academy)
+    public function getAcademyMembers(Academy $academy, Request $request)
     {
-        $perPage = request()->get('per_page', 20);
-        $members = $academy->academyMembers()
-            ->with(['user', 'student', 'academyRole'])
-            ->paginate($perPage);
+        $perPage = max(1, min((int) $request->get('per_page', 20), 200));
+
+        $query = $academy->academyMembers()->with(['user', 'student', 'academyRole']);
+
+        if ($request->filled('role')) {
+            $query->where('role', $request->role);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', (int) $request->status);
+        }
+
+        if ($request->filled('search')) {
+            $searchTerm = $request->search;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('member_name', 'like', "%{$searchTerm}%")
+                    ->orWhereHas('user', function ($uq) use ($searchTerm) {
+                        $uq->where('name', 'like', "%{$searchTerm}%");
+                    });
+            });
+        }
+
+        $members = $query->paginate($perPage);
 
         return response()->json([
             'success' => true,
