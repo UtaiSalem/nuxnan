@@ -190,6 +190,64 @@ class ClassSchedule extends Model
     }
 
     // Check for conflicts
+
+    /**
+     * ปรับค่าขอบเวลาที่รับเข้ามา ('8:00' / 'H:i' / 'H:i:s') ให้เป็น 'H:i:s' เสมอก่อนนำไปเทียบ
+     * (ฟังก์ชัน TIME() ของ SQLite ไม่รับชั่วโมงหลักเดียว จึงต้องเติมศูนย์ให้ก่อน)
+     */
+    protected static function normalizeTime(string $time): string
+    {
+        $parts = explode(':', trim($time));
+
+        return sprintf(
+            '%02d:%02d:%02d',
+            (int) ($parts[0] ?? 0),
+            (int) ($parts[1] ?? 0),
+            (int) ($parts[2] ?? 0)
+        );
+    }
+
+    /**
+     * ปรับชื่อสถานที่ให้เทียบกันได้: ตัดช่องว่างหัวท้าย + ยุบช่องว่างซ้ำให้เหลือช่องเดียว
+     * ค่าว่างถือว่า "ไม่ได้ระบุสถานที่" → คืน null (แปลว่าไม่ต้องตรวจการชน)
+     */
+    public static function normalizeRoom(?string $room): ?string
+    {
+        $room = trim(preg_replace('/\s+/u', ' ', (string) $room));
+
+        return $room === '' ? null : $room;
+    }
+
+    /**
+     * คิวรีฐานของการตรวจชนเวลา — ช่วงเวลาแบบ half-open: ชนเมื่อ start < :end และ end > :start
+     * ⇒ คาบที่จบพอดีตอนที่อีกคาบเริ่ม (08:00–09:00 กับ 09:00–10:00) ไม่ถือว่าชนกัน
+     *
+     * 🔴 ต้องหุ้มทั้งสองฝั่งด้วย TIME() ไม่ใช่เทียบสตริงตรง ๆ:
+     * MySQL เก็บคอลัมน์เป็นชนิด TIME (ค่าจริง '09:00:00') แต่ SQLite ที่ใช้ตอนรันเทสต์เก็บเป็นข้อความ
+     * ตามรูปแบบของ cast คือ '09:00' แล้วเทียบแบบสตริง ⇒ '09:00' < '09:00:00' เป็นจริง
+     * ⇒ ถ้าเทียบตรง ๆ คาบที่ "จบพอดีตอนคาบเดิมเริ่ม" จะถูกนับว่าชนบน SQLite ทั้งที่ MySQL บอกว่าไม่ชน
+     * TIME() มีทั้งใน MySQL และ SQLite และคืน 'H:i:s' เหมือนกัน จึงตัดความต่างนี้ทิ้งได้
+     */
+    protected static function overlappingQuery(
+        int $semesterId,
+        int $dayOfWeek,
+        string $startTime,
+        string $endTime,
+        ?int $excludeId = null
+    ) {
+        $query = static::where('semester_id', $semesterId)
+            ->where('day_of_week', $dayOfWeek)
+            ->where('status', self::STATUS_ACTIVE)
+            ->whereRaw('TIME(start_time) < TIME(?)', [static::normalizeTime($endTime)])
+            ->whereRaw('TIME(end_time) > TIME(?)', [static::normalizeTime($startTime)]);
+
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        return $query;
+    }
+
     public static function hasTeacherConflict(
         int $teacherId,
         int $semesterId,
@@ -198,24 +256,9 @@ class ClassSchedule extends Model
         string $endTime,
         ?int $excludeId = null
     ): bool {
-        $query = static::where('teacher_id', $teacherId)
-            ->where('semester_id', $semesterId)
-            ->where('day_of_week', $dayOfWeek)
-            ->where('status', self::STATUS_ACTIVE)
-            ->where(function ($q) use ($startTime, $endTime) {
-                $q->whereBetween('start_time', [$startTime, $endTime])
-                    ->orWhereBetween('end_time', [$startTime, $endTime])
-                    ->orWhere(function ($q2) use ($startTime, $endTime) {
-                        $q2->where('start_time', '<=', $startTime)
-                            ->where('end_time', '>=', $endTime);
-                    });
-            });
-
-        if ($excludeId) {
-            $query->where('id', '!=', $excludeId);
-        }
-
-        return $query->exists();
+        return static::overlappingQuery($semesterId, $dayOfWeek, $startTime, $endTime, $excludeId)
+            ->where('teacher_id', $teacherId)
+            ->exists();
     }
 
     public static function hasClassroomConflict(
@@ -226,23 +269,33 @@ class ClassSchedule extends Model
         string $endTime,
         ?int $excludeId = null
     ): bool {
-        $query = static::where('classroom_id', $classroomId)
-            ->where('semester_id', $semesterId)
-            ->where('day_of_week', $dayOfWeek)
-            ->where('status', self::STATUS_ACTIVE)
-            ->where(function ($q) use ($startTime, $endTime) {
-                $q->whereBetween('start_time', [$startTime, $endTime])
-                    ->orWhereBetween('end_time', [$startTime, $endTime])
-                    ->orWhere(function ($q2) use ($startTime, $endTime) {
-                        $q2->where('start_time', '<=', $startTime)
-                            ->where('end_time', '>=', $endTime);
-                    });
-            });
+        return static::overlappingQuery($semesterId, $dayOfWeek, $startTime, $endTime, $excludeId)
+            ->where('classroom_id', $classroomId)
+            ->exists();
+    }
 
-        if ($excludeId) {
-            $query->where('id', '!=', $excludeId);
+    /**
+     * ชนสถานที่: สถานที่ชื่อเดียวกันในโรงเรียนเดียวกันถูกใช้ซ้อนเวลากัน
+     * ไม่ระบุสถานที่ (null/ว่าง) = ไม่ตรวจ
+     */
+    public static function hasRoomConflict(
+        int $academyId,
+        ?string $room,
+        int $semesterId,
+        int $dayOfWeek,
+        string $startTime,
+        string $endTime,
+        ?int $excludeId = null
+    ): bool {
+        $room = static::normalizeRoom($room);
+
+        if ($room === null) {
+            return false;
         }
 
-        return $query->exists();
+        return static::overlappingQuery($semesterId, $dayOfWeek, $startTime, $endTime, $excludeId)
+            ->where('academy_id', $academyId)
+            ->where('room', $room)
+            ->exists();
     }
 }

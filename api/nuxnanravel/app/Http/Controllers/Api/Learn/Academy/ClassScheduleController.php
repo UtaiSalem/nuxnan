@@ -297,6 +297,21 @@ class ClassScheduleController extends Controller
             ], 422);
         }
 
+        // Check for room (physical location) conflict
+        if (ClassSchedule::hasRoomConflict(
+            $academy->id,
+            $request->room,
+            $request->semester_id,
+            $request->day_of_week,
+            $request->start_time,
+            $request->end_time
+        )) {
+            return response()->json([
+                'success' => false,
+                'message' => 'สถานที่นี้ถูกใช้ในเวลานี้แล้ว',
+            ], 422);
+        }
+
         // Get academic year from semester
         $semester = Semester::find($request->semester_id);
 
@@ -314,7 +329,7 @@ class ClassScheduleController extends Controller
             'start_time' => $request->start_time,
             'end_time' => $request->end_time,
             'period_number' => $request->period_number,
-            'room' => $request->room,
+            'room' => ClassSchedule::normalizeRoom($request->room),
             'notes' => $request->notes,
             'created_by' => $request->user()->id,
         ]);
@@ -380,6 +395,18 @@ class ClassScheduleController extends Controller
             }
         }
 
+        // G20 — ห้ามเคลียร์คอร์สทิ้งจนคาบไม่เหลือชื่อเรียก (store บังคับไว้แล้วด้วย required_without)
+        $effectiveCourseId = $request->has('course_id') ? $request->course_id : $schedule->course_id;
+        $effectiveTitle = $request->has('title') ? trim((string) $request->title) : trim((string) $schedule->title);
+
+        if (empty($effectiveCourseId) && $effectiveTitle === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => ['title' => ['The title field is required when course id is not present.']],
+            ], 422);
+        }
+
         $oldValues = $schedule->toArray();
 
         // Check conflicts if time-related fields are being updated
@@ -388,6 +415,17 @@ class ClassScheduleController extends Controller
         $dayOfWeek = $request->day_of_week ?? $schedule->day_of_week;
         $startTime = $request->start_time ?? $schedule->start_time->format('H:i');
         $endTime = $request->end_time ?? $schedule->end_time->format('H:i');
+
+        $room = $request->has('room') ? ClassSchedule::normalizeRoom($request->room) : $schedule->room;
+
+        // G21 — PATCH ทำให้ช่วงเวลากลับหัวไม่ได้ (ช่วงกลับหัวจะไม่มีวันชนกับใครตามสูตร half-open)
+        if (strtotime($endTime) <= strtotime($startTime)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => ['end_time' => ['The end time field must be a date after start time.']],
+            ], 422);
+        }
 
         if ($request->hasAny(['teacher_id', 'day_of_week', 'start_time', 'end_time'])) {
             if (ClassSchedule::hasTeacherConflict(
@@ -421,7 +459,24 @@ class ClassScheduleController extends Controller
             }
         }
 
-        $schedule->update($request->only([
+        if ($request->hasAny(['room', 'classroom_id', 'day_of_week', 'start_time', 'end_time'])) {
+            if (ClassSchedule::hasRoomConflict(
+                $academy->id,
+                $room,
+                $schedule->semester_id,
+                $dayOfWeek,
+                $startTime,
+                $endTime,
+                $schedule->id
+            )) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'สถานที่นี้ถูกใช้ในเวลานี้แล้ว',
+                ], 422);
+            }
+        }
+
+        $payload = $request->only([
             'classroom_id',
             'course_id',
             'title',
@@ -435,7 +490,13 @@ class ClassScheduleController extends Controller
             'room',
             'status',
             'notes',
-        ]));
+        ]);
+
+        if (array_key_exists('room', $payload)) {
+            $payload['room'] = ClassSchedule::normalizeRoom($payload['room']);
+        }
+
+        $schedule->update($payload);
 
         $schedule->load(['course', 'teacher', 'classroom']);
 
@@ -566,6 +627,22 @@ class ClassScheduleController extends Controller
                     continue;
                 }
 
+                if (ClassSchedule::hasRoomConflict(
+                    $academy->id,
+                    $scheduleData['room'] ?? null,
+                    $scheduleData['semester_id'],
+                    $scheduleData['day_of_week'],
+                    $scheduleData['start_time'],
+                    $scheduleData['end_time']
+                )) {
+                    $errors[] = [
+                        'index' => $index,
+                        'message' => 'สถานที่ถูกใช้ในเวลานี้แล้ว',
+                    ];
+
+                    continue;
+                }
+
                 $semester = Semester::find($scheduleData['semester_id']);
 
                 $schedule = ClassSchedule::create([
@@ -582,7 +659,7 @@ class ClassScheduleController extends Controller
                     'start_time' => $scheduleData['start_time'],
                     'end_time' => $scheduleData['end_time'],
                     'period_number' => $scheduleData['period_number'] ?? null,
-                    'room' => $scheduleData['room'] ?? null,
+                    'room' => ClassSchedule::normalizeRoom($scheduleData['room'] ?? null),
                     'created_by' => $request->user()->id,
                 ]);
 
@@ -679,6 +756,7 @@ class ClassScheduleController extends Controller
                 'nullable',
                 Rule::exists('classrooms', 'id')->where('academy_id', $academy->id),
             ],
+            'room' => 'nullable|string|max:50',
         ]);
 
         $semester = Semester::with('academicYear')->find($request->semester_id);
@@ -704,6 +782,7 @@ class ClassScheduleController extends Controller
         $result = [
             'teacher_available' => true,
             'classroom_available' => true,
+            'room_available' => true,
             'conflicts' => [],
         ];
 
@@ -730,6 +809,20 @@ class ClassScheduleController extends Controller
             )) {
                 $result['classroom_available'] = false;
                 $result['conflicts'][] = 'ห้องเรียนไม่ว่างในเวลานี้';
+            }
+        }
+
+        if ($request->filled('room')) {
+            if (ClassSchedule::hasRoomConflict(
+                $academy->id,
+                $request->room,
+                $request->semester_id,
+                $request->day_of_week,
+                $request->start_time,
+                $request->end_time
+            )) {
+                $result['room_available'] = false;
+                $result['conflicts'][] = 'สถานที่ไม่ว่างในเวลานี้';
             }
         }
 
