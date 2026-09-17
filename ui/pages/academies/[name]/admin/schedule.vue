@@ -616,26 +616,26 @@ const deleteSchedule = async () => {
           
           <!-- Selector -->
           <div class="flex-1 min-w-0">
-            <select
+            <CommonSearchableSelect
               v-if="viewMode === 'classroom'"
               v-model="selectedClassroom"
-              class="w-full sm:w-64 px-4 py-2.5 min-h-[44px] bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white"
-            >
-              <option :value="null" disabled>เลือกห้องเรียน</option>
-              <option v-for="classroom in classrooms" :key="classroom.id" :value="classroom.id">
-                {{ classroom.name }}
-              </option>
-            </select>
-            <select
+              :options="classrooms"
+              option-value="id"
+              option-label="name"
+              placeholder="เลือกห้องเรียน"
+              search-placeholder="ค้นหาห้องเรียน"
+              class="w-full sm:w-64"
+            />
+            <CommonSearchableSelect
               v-else
               v-model="selectedTeacher"
-              class="w-full sm:w-64 px-4 py-2.5 min-h-[44px] bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white"
-            >
-              <option :value="null" disabled>เลือกครูผู้สอน</option>
-              <option v-for="teacher in teachers" :key="teacher.user_id" :value="teacher.user_id">
-                {{ teacher.member_name || teacher.user?.name }}
-              </option>
-            </select>
+              :options="teachers"
+              option-value="user_id"
+              :option-label="(teacher: any) => teacher.member_name || teacher.user?.name || '-'"
+              placeholder="เลือกครูผู้สอน"
+              search-placeholder="ค้นหาชื่อครู"
+              class="w-full sm:w-64"
+            />
           </div>
         </div>
       </div>
@@ -796,15 +796,14 @@ const deleteSchedule = async () => {
               <!-- Course (if course) -->
               <div v-if="scheduleForm.entry_type === 'course'">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">คอร์ส</label>
-                <select
+                <CommonSearchableSelect
                   v-model="scheduleForm.course_id"
-                  class="w-full px-4 py-2.5 min-h-[44px] border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-                >
-                  <option :value="null">เลือกคอร์สเรียน</option>
-                  <option v-for="course in courses" :key="course.id" :value="course.id">
-                    {{ course.code ? `${course.code} - ` : '' }}{{ course.name }}
-                  </option>
-                </select>
+                  :options="courses"
+                  option-value="id"
+                  :option-label="(course: any) => (course.code ? course.code + ' - ' : '') + course.name"
+                  placeholder="เลือกคอร์สเรียน"
+                  search-placeholder="ค้นหาคอร์ส/รหัสวิชา"
+                />
                 <p class="mt-1 text-xs text-gray-500">ปล่อยว่างได้ถ้าต้องการกรอกเฉพาะชื่อคาบ</p>
               </div>
 
@@ -825,31 +824,27 @@ const deleteSchedule = async () => {
               <!-- Classroom (if teacher view) -->
               <div v-if="viewMode === 'teacher'">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">ห้องเรียน *</label>
-                <select
+                <CommonSearchableSelect
                   v-model="scheduleForm.classroom_id"
-                  required
-                  class="w-full px-4 py-2.5 min-h-[44px] border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-                >
-                  <option :value="null" disabled>เลือกห้องเรียน</option>
-                  <option v-for="classroom in classrooms" :key="classroom.id" :value="classroom.id">
-                    {{ classroom.name }}
-                  </option>
-                </select>
+                  :options="classrooms"
+                  option-value="id"
+                  option-label="name"
+                  placeholder="เลือกห้องเรียน"
+                  search-placeholder="ค้นหาห้องเรียน"
+                />
               </div>
               
               <!-- Teacher (if classroom view) -->
               <div v-if="viewMode === 'classroom'">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">ครูผู้สอน *</label>
-                <select
+                <CommonSearchableSelect
                   v-model="scheduleForm.teacher_id"
-                  required
-                  class="w-full px-4 py-2.5 min-h-[44px] border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-                >
-                  <option :value="null" disabled>เลือกครู</option>
-                  <option v-for="teacher in teachers" :key="teacher.user_id" :value="teacher.user_id">
-                    {{ teacher.member_name || teacher.user?.name }}
-                  </option>
-                </select>
+                  :options="teachers"
+                  option-value="user_id"
+                  :option-label="(teacher: any) => teacher.member_name || teacher.user?.name || '-'"
+                  placeholder="เลือกครู"
+                  search-placeholder="ค้นหาชื่อครู"
+                />
               </div>
               
               <!-- Day -->
