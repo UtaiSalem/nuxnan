@@ -37,7 +37,10 @@ const navigation = [
 </script>
 
 <template>
-  <div class="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-vikinger-dark-100 border-t border-gray-200 dark:border-vikinger-dark-50/30 lg:hidden pb-safe">
+  <!-- z-40 ไม่ใช่ z-50: แถบเมนูล่างคือ "โครงของแอป" ต้องอยู่ใต้ overlay ชั่วคราว
+       โมดัลทั้งเรพใช้ `fixed inset-0 z-50` ถ้าแถบนี้เป็น z-50 เท่ากันและถูกวาดทีหลัง
+       ปุ่มท้ายโมดัลบนจอมือถือจะถูกทับจนกดไม่ได้ (แถบข้าง/ลิ้นชักของ layout ก็เป็น z-40 อยู่แล้ว) -->
+  <div class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-vikinger-dark-100 border-t border-gray-200 dark:border-vikinger-dark-50/30 lg:hidden pb-safe">
     <div class="flex items-center justify-around h-16 px-1">
       <NuxtLink
         v-for="item in navigation"
