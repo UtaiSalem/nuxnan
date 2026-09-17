@@ -7,6 +7,7 @@ use App\Models\Academy;
 use App\Models\Classroom;
 use App\Models\ClassSchedule;
 use App\Models\Semester;
+use App\Models\Student;
 use App\Models\User;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
@@ -160,49 +161,7 @@ class ClassScheduleController extends Controller
             ->get();
 
         // Group by day
-        $timetable = [];
-        for ($day = 1; $day <= 7; $day++) {
-            $daySchedules = $schedules->where('day_of_week', $day)->values();
-            if ($daySchedules->isNotEmpty()) {
-                $timetable[$day] = [
-                    'day' => $day,
-                    'day_name' => ClassSchedule::DAYS[$day],
-                    'day_name_short' => ClassSchedule::DAYS_SHORT[$day],
-                    'schedules' => $daySchedules->map(function ($s) use ($viewType) {
-                        $data = [
-                            'id' => $s->id,
-                            'start_time' => $s->start_time->format('H:i'),
-                            'end_time' => $s->end_time->format('H:i'),
-                            'period_number' => $s->period_number,
-                            'room' => $s->room,
-                            'entry_type' => $s->entry_type,
-                            'title' => $s->title,
-                            'display_title' => $s->display_title,
-                            'course' => $s->course ? [
-                                'id' => $s->course->id,
-                                'code' => $s->course->code,
-                                'name' => $s->course->name,
-                            ] : null,
-                        ];
-
-                        // Include teacher or classroom based on view type
-                        if ($viewType === 'classroom') {
-                            $data['teacher'] = $s->teacher ? [
-                                'id' => $s->teacher->id,
-                                'name' => $s->teacher->name,
-                            ] : null;
-                        } else {
-                            $data['classroom'] = $s->classroom ? [
-                                'id' => $s->classroom->id,
-                                'name' => $s->classroom->name,
-                            ] : null;
-                        }
-
-                        return $data;
-                    }),
-                ];
-            }
-        }
+        $timetable = $this->buildTimetable($schedules, $viewType);
 
         return response()->json([
             'success' => true,
@@ -740,6 +699,101 @@ class ClassScheduleController extends Controller
     }
 
     /**
+     * ตารางของฉัน — รวมทุกบทบาทที่ผู้ใช้คนนี้มีในโรงเรียนไว้ในคำขอเดียว
+     *
+     * คืนเป็นรายการ "บริบท" เพราะคนคนเดียวอาจมีทั้งตารางสอน (ครู) และตารางเรียน (นักเรียน)
+     * ผู้ปกครองยังไม่รองรับ: `guardians.user_id` ยังว่างทั้งตาราง (ยังไม่มีระบบบัญชีผู้ปกครอง)
+     */
+    public function my(Request $request, $academyId): JsonResponse
+    {
+        $academy = Academy::findOrFail($academyId);
+        $user = $request->user();
+
+        $request->validate([
+            'semester_id' => 'nullable|exists:semesters,id',
+        ]);
+
+        if ($request->filled('semester_id')) {
+            $semester = Semester::with('academicYear')->find($request->semester_id);
+
+            if ($semester?->academicYear?->academy_id !== $academy->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation error',
+                    'errors' => ['semester_id' => ['The selected semester id is invalid.']],
+                ], 422);
+            }
+        } else {
+            $semester = Semester::currentForAcademy($academy->id);
+        }
+
+        $baseQuery = fn () => ClassSchedule::with([
+            'course:id,name,code,academy_id',
+            'teacher:id,name,profile_photo_path',
+            'classroom:id,name,grade_level,section',
+        ])
+            ->byAcademy($academy->id)
+            ->active()
+            ->when($semester, fn ($q) => $q->bySemester($semester->id))
+            ->orderBy('day_of_week')
+            ->orderBy('start_time');
+
+        $contexts = [];
+
+        // 1) ตารางสอนของฉัน — มีคาบสอนจริง หรือบทบาทในโรงเรียนคือครู (ครูใหม่ที่ยังไม่มีคาบต้องเห็นหน้าว่าง ไม่ใช่ 404)
+        $taught = $baseQuery()->byTeacher($user->id)->get();
+
+        $roleName = $academy->academyMembers()
+            ->where('user_id', $user->id)
+            ->where('status', 2)
+            ->with('academyRole:id,name')
+            ->first()?->academyRole?->name;
+
+        if ($taught->isNotEmpty() || $roleName === 'teacher') {
+            $contexts[] = [
+                'type' => 'teacher',
+                'entity' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                ],
+                'timetable' => array_values($this->buildTimetable($taught, 'teacher')),
+            ];
+        }
+
+        // 2) ตารางเรียนของห้องฉัน — มาจาก enrollment ที่ active เท่านั้น (แหล่งจริงของชั้นเรียน)
+        $student = Student::where('academy_id', $academy->id)
+            ->where('user_id', $user->id)
+            ->with('currentEnrollment.classroom')
+            ->first();
+
+        $classroom = $student?->currentEnrollment?->classroom;
+
+        if ($classroom) {
+            $contexts[] = [
+                'type' => 'classroom',
+                'entity' => [
+                    'id' => $classroom->id,
+                    'name' => $classroom->name,
+                    'grade_level' => $classroom->grade_level,
+                    'section' => $classroom->section,
+                ],
+                'timetable' => array_values($this->buildTimetable($baseQuery()->byClassroom($classroom->id)->get(), 'classroom')),
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'semester' => $semester ? [
+                    'id' => $semester->id,
+                    'name' => $semester->name,
+                ] : null,
+                'contexts' => $contexts,
+            ],
+        ]);
+    }
+
+    /**
      * Check availability for a specific time slot
      */
     public function checkAvailability(Request $request, $academyId): JsonResponse
@@ -830,5 +884,61 @@ class ClassScheduleController extends Controller
             'success' => true,
             'data' => $result,
         ]);
+    }
+
+    /**
+     * จัดคาบเป็นกลุ่มรายวัน (1–7) สำหรับมุมมองห้องเรียนหรือมุมมองครู
+     * เดิมโค้ดชุดนี้อยู่ใน timetable() — ย้ายออกมาเพื่อให้ my() ใช้ร่วมกันได้ ไม่ใช่ก๊อปซ้ำ
+     */
+    private function buildTimetable($schedules, string $viewType): array
+    {
+        $timetable = [];
+
+        for ($day = 1; $day <= 7; $day++) {
+            $daySchedules = $schedules->where('day_of_week', $day)->values();
+
+            if ($daySchedules->isEmpty()) {
+                continue;
+            }
+
+            $timetable[$day] = [
+                'day' => $day,
+                'day_name' => ClassSchedule::DAYS[$day],
+                'day_name_short' => ClassSchedule::DAYS_SHORT[$day],
+                'schedules' => $daySchedules->map(function ($s) use ($viewType) {
+                    $data = [
+                        'id' => $s->id,
+                        'start_time' => $s->start_time->format('H:i'),
+                        'end_time' => $s->end_time->format('H:i'),
+                        'period_number' => $s->period_number,
+                        'room' => $s->room,
+                        'entry_type' => $s->entry_type,
+                        'title' => $s->title,
+                        'display_title' => $s->display_title,
+                        'course' => $s->course ? [
+                            'id' => $s->course->id,
+                            'code' => $s->course->code,
+                            'name' => $s->course->name,
+                        ] : null,
+                    ];
+
+                    if ($viewType === 'classroom') {
+                        $data['teacher'] = $s->teacher ? [
+                            'id' => $s->teacher->id,
+                            'name' => $s->teacher->name,
+                        ] : null;
+                    } else {
+                        $data['classroom'] = $s->classroom ? [
+                            'id' => $s->classroom->id,
+                            'name' => $s->classroom->name,
+                        ] : null;
+                    }
+
+                    return $data;
+                }),
+            ];
+        }
+
+        return $timetable;
     }
 }

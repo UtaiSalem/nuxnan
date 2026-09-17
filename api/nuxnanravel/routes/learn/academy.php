@@ -637,15 +637,26 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // Class Schedule Routes - ระบบตารางเรียน
     // =====================================================
 
-    Route::prefix('{academy}/schedules')->whereNumber('academy')->middleware(['academy.visibility:content', 'academy.permission'])->group(function () {
-        Route::get('/', [ClassScheduleController::class, 'index'])->name('api.academy.schedules.index');
-        Route::get('/timetable', [ClassScheduleController::class, 'timetable'])->name('api.academy.schedules.timetable');
-        Route::get('/today', [ClassScheduleController::class, 'today'])->name('api.academy.schedules.today');
-        Route::get('/check-availability', [ClassScheduleController::class, 'checkAvailability'])->name('api.academy.schedules.checkAvailability');
-        Route::post('/', [ClassScheduleController::class, 'store'])->middleware('academy.permission:schedule.manage')->name('api.academy.schedules.store');
-        Route::post('/bulk', [ClassScheduleController::class, 'bulkStore'])->middleware('academy.permission:schedule.manage')->name('api.academy.schedules.bulkStore');
-        Route::patch('/{id}', [ClassScheduleController::class, 'update'])->middleware('academy.permission:schedule.manage')->name('api.academy.schedules.update');
-        Route::delete('/{id}', [ClassScheduleController::class, 'destroy'])->middleware('academy.permission:schedule.manage')->name('api.academy.schedules.destroy');
+    Route::prefix('{academy}/schedules')->whereNumber('academy')->middleware(['academy.visibility:content'])->group(function () {
+        // ตารางของฉัน — ใช้คีย์ที่อ่อนที่สุด เพราะนักเรียนถือแค่ `schedule.view.own`
+        // (คนที่ถือ `schedule.view` ผ่านด้วยเพราะกฎลำดับชั้นของ AcademyRole::hasPermission)
+        Route::get('/my', [ClassScheduleController::class, 'my'])->middleware('academy.permission:schedule.view.own')->name('api.academy.schedules.my');
+
+        // อ่านตารางของทั้งโรงเรียน (D4: เปิดกว้าง แต่ต้องถือคีย์ `schedule.view` จริง ๆ)
+        Route::middleware('academy.permission:schedule.view')->group(function () {
+            Route::get('/', [ClassScheduleController::class, 'index'])->name('api.academy.schedules.index');
+            Route::get('/timetable', [ClassScheduleController::class, 'timetable'])->name('api.academy.schedules.timetable');
+            Route::get('/today', [ClassScheduleController::class, 'today'])->name('api.academy.schedules.today');
+            Route::get('/check-availability', [ClassScheduleController::class, 'checkAvailability'])->name('api.academy.schedules.checkAvailability');
+        });
+
+        // จัดตาราง
+        Route::middleware('academy.permission:schedule.manage')->group(function () {
+            Route::post('/', [ClassScheduleController::class, 'store'])->name('api.academy.schedules.store');
+            Route::post('/bulk', [ClassScheduleController::class, 'bulkStore'])->name('api.academy.schedules.bulkStore');
+            Route::patch('/{id}', [ClassScheduleController::class, 'update'])->name('api.academy.schedules.update');
+            Route::delete('/{id}', [ClassScheduleController::class, 'destroy'])->name('api.academy.schedules.destroy');
+        });
     });
 
     // =====================================================
