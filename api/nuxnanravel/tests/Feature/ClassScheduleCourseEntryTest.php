@@ -18,7 +18,7 @@ class ClassScheduleCourseEntryTest extends TestCase
 
     private function setupData()
     {
-        $owner = User::create([
+        $owner = User::factory()->create([
             'name' => 'Owner',
             'username' => 'owner_user',
             'email' => 'owner@x.test',

@@ -18,7 +18,7 @@ class ClassScheduleGuardTest extends TestCase
 
     private function setupData()
     {
-        $owner = User::create([
+        $owner = User::factory()->create([
             'name' => 'Owner',
             'username' => 'owner_user',
             'email' => 'owner@x.test',
@@ -77,7 +77,7 @@ class ClassScheduleGuardTest extends TestCase
     {
         [$owner, $academy] = $this->setupData();
 
-        $outsider = User::create([
+        $outsider = User::factory()->create([
             'name' => 'Outsider',
             'username' => 'outsider_'.uniqid(),
             'email' => 'outsider@x.test',
@@ -147,7 +147,7 @@ class ClassScheduleGuardTest extends TestCase
     {
         [$owner, $academy, $academicYear, $semester, $classroom, $course] = $this->setupData();
 
-        $outsider = User::create([
+        $outsider = User::factory()->create([
             'name' => 'Outsider',
             'username' => 'outsider_'.uniqid(),
             'email' => 'outsider@x.test',

@@ -30,7 +30,7 @@ class SchedulePeriodSetTest extends TestCase
 
     private function setupData(): array
     {
-        $owner = User::create([
+        $owner = User::factory()->create([
             'name' => 'Owner',
             'username' => 'owner_user',
             'email' => 'owner@x.test',
@@ -66,7 +66,7 @@ class SchedulePeriodSetTest extends TestCase
             'name' => 'คณิตศาสตร์', 'code' => 'MATH101',
         ]);
 
-        $teacher = User::create([
+        $teacher = User::factory()->create([
             'name' => 'Teacher',
             'username' => 'teacher_one',
             'email' => 'teacher@x.test',
@@ -272,7 +272,7 @@ class SchedulePeriodSetTest extends TestCase
     {
         $c = $this->setupData();
 
-        $outsider = User::create([
+        $outsider = User::factory()->create([
             'name' => 'Outsider',
             'username' => 'outsider_user',
             'email' => 'outsider@x.test',
@@ -290,7 +290,7 @@ class SchedulePeriodSetTest extends TestCase
         $this->createSet();
         $set = SchedulePeriodSet::first();
 
-        $otherOwner = User::create([
+        $otherOwner = User::factory()->create([
             'name' => 'Other',
             'username' => 'other_owner',
             'email' => 'other@x.test',

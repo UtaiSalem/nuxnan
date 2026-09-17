@@ -31,7 +31,7 @@ class SchedulePermissionTest extends TestCase
 
     private function setupData(): array
     {
-        $owner = User::create([
+        $owner = User::factory()->create([
             'name' => 'Owner', 'username' => 'owner_user',
             'email' => 'owner@x.test', 'password' => bcrypt('password'),
         ]);
@@ -95,7 +95,7 @@ class SchedulePermissionTest extends TestCase
             ]
         );
 
-        $user = User::create([
+        $user = User::factory()->create([
             'name' => $username, 'username' => $username,
             'email' => $username.'@x.test', 'password' => bcrypt('password'),
         ]);
@@ -220,7 +220,7 @@ class SchedulePermissionTest extends TestCase
     {
         $c = $this->setupData();
 
-        $outsider = User::create([
+        $outsider = User::factory()->create([
             'name' => 'Outsider', 'username' => 'outsider_user',
             'email' => 'outsider@x.test', 'password' => bcrypt('password'),
         ]);
@@ -395,7 +395,7 @@ class SchedulePermissionTest extends TestCase
         $c = $this->setupData();
         $teacher = $this->memberWithRole('teacher', ['academy.view', 'schedule.view'], 'tenant_teacher');
 
-        $otherOwner = User::create([
+        $otherOwner = User::factory()->create([
             'name' => 'Other', 'username' => 'other_owner',
             'email' => 'other@x.test', 'password' => bcrypt('password'),
         ]);

@@ -33,7 +33,7 @@ class ClassScheduleTodayTest extends TestCase
 
     private function setupData(): array
     {
-        $owner = User::create([
+        $owner = User::factory()->create([
             'name' => 'Owner', 'username' => 'owner_user',
             'email' => 'owner@x.test', 'password' => bcrypt('password'),
         ]);
@@ -68,7 +68,7 @@ class ClassScheduleTodayTest extends TestCase
             'name' => 'คณิตศาสตร์', 'code' => 'MATH101',
         ]);
 
-        $teacher = User::create([
+        $teacher = User::factory()->create([
             'name' => 'ครูสมชาย', 'username' => 'teacher_one',
             'email' => 'teacher@x.test', 'password' => bcrypt('password'),
         ]);

@@ -30,7 +30,7 @@ class ClassScheduleConflictTest extends TestCase
 
     private function setupData(): array
     {
-        $owner = User::create([
+        $owner = User::factory()->create([
             'name' => 'Owner',
             'username' => 'owner_user',
             'email' => 'owner@x.test',
@@ -78,7 +78,7 @@ class ClassScheduleConflictTest extends TestCase
             'name' => 'คณิตศาสตร์', 'code' => 'MATH101',
         ]);
 
-        $teacher2 = User::create([
+        $teacher2 = User::factory()->create([
             'name' => 'Teacher Two',
             'username' => 'teacher_two',
             'email' => 'teacher2@x.test',

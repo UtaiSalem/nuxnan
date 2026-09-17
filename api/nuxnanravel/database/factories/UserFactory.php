@@ -31,6 +31,12 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+
+            // คอลัมน์สองตัวนี้เป็น NOT NULL + UNIQUE บน MySQL จริง (ไม่มีค่าตั้งต้น)
+            // sqlite ของเทสต์ปล่อยผ่านมาตลอด — บน MySQL จะตายด้วย 1364 Field ... doesn't have a default value
+            // ใช้ตัวสร้างชุดเดียวกับทางสมัคร/สร้างผู้ใช้จริง เพื่อให้ข้อมูลเทสต์เหมือนของจริง
+            'personal_code' => User::generateReferralCode(),
+            'reference_code' => User::generateReferenceCode(),
         ];
     }
 
