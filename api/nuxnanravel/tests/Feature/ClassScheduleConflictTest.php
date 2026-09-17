@@ -11,6 +11,7 @@ use App\Models\Semester;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
@@ -241,11 +242,7 @@ class ClassScheduleConflictTest extends TestCase
     }
 
     /**
-     * คาบที่ถูกยกเลิกไม่กันเวลาของคาบใหม่
-     *
-     * 🔴 เวลาเริ่มของคาบใหม่ต้องไม่ตรงกับคาบที่ยกเลิกเป๊ะ ๆ เพราะ DB มี unique index
-     * `unique_teacher_schedule` / `unique_classroom_schedule` = (teacher|classroom, semester, day, start_time)
-     * ซึ่งไม่สนใจ `status` ⇒ เวลาเริ่มตรงกันจะโดน DB ปฏิเสธเป็น 500 ก่อนถึงตรรกะนี้ (ดู G22 ใน 11-schedule.md)
+     * คาบที่ถูกยกเลิกไม่กันเวลาของคาบใหม่ แม้เวลาซ้อนกัน
      */
     public function test_cancelled_period_does_not_block()
     {
@@ -260,6 +257,58 @@ class ClassScheduleConflictTest extends TestCase
 
         $response->assertStatus(201);
         $this->assertSame(2, ClassSchedule::count());
+    }
+
+    /**
+     * G22 — คาบใหม่ที่ "เวลาเริ่มตรงกับคาบที่ยกเลิกไปแล้วเป๊ะ ๆ" ต้องสร้างได้
+     *
+     * เคสนี้เคยได้ 500 (SQLSTATE 23000) เพราะ unique index ระดับ DB
+     * (`unique_teacher_schedule` / `unique_classroom_schedule`) ไม่รู้จัก `status`
+     * จึงยังจองเวลาเริ่มนั้นไว้ให้คาบที่ยกเลิกแล้ว — migration ของ G22 ลบ unique ทั้งคู่ทิ้ง
+     * แล้วให้สูตร half-open ที่ "รู้จัก status" เป็นตัวกันแทน
+     */
+    public function test_replacing_a_cancelled_period_at_the_same_start_time_is_allowed()
+    {
+        $c = $this->setupData();
+        $cancelled = $this->makeSchedule([
+            'start_time' => '08:00',
+            'end_time' => '09:00',
+            'status' => ClassSchedule::STATUS_CANCELLED,
+        ]);
+
+        // ครูคนเดิม ห้องเรียนเดิม วันเดิม และ **เวลาเริ่มเดิมเป๊ะ**
+        $response = $this->postSchedule([
+            'teacher_id' => $c['owner']->id,
+            'classroom_id' => $c['classroom']->id,
+            'day_of_week' => 1,
+            'start_time' => '08:00',
+            'end_time' => '09:00',
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertSame(2, ClassSchedule::count());
+        $this->assertDatabaseHas('class_schedules', [
+            'id' => $cancelled->id,
+            'status' => ClassSchedule::STATUS_CANCELLED,
+        ]);
+    }
+
+    /**
+     * G22 — unique index ที่ไม่รู้จัก `status` ต้องไม่เหลืออยู่ในสคีมาแล้ว
+     */
+    public function test_status_blind_unique_indexes_are_gone()
+    {
+        $names = array_map(
+            fn ($index) => $index['name'],
+            Schema::getIndexes('class_schedules')
+        );
+
+        $this->assertNotContains('unique_teacher_schedule', $names);
+        $this->assertNotContains('unique_classroom_schedule', $names);
+
+        // แต่ index สำหรับค้นหาต้องยังอยู่ (ไม่ได้ทิ้งแผนคิวรีของการตรวจชน)
+        $this->assertContains('sched_teacher_slot_idx', $names);
+        $this->assertContains('sched_classroom_slot_idx', $names);
     }
 
     // ---------------------------------------------------------------
