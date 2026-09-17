@@ -39,7 +39,7 @@
 - **Realtime**: Laravel Reverb (websockets)
 - **Excel/Export**: `maatwebsite/excel`
 - **Image**: `intervention/image`
-- **DB**: MySQL (`nuxnan` database)
+- **DB**: MySQL (ชื่อ DB จริงบนเครื่อง dev = `nuxnan_nuxnan_db` — ดู `.env`)
 - **Datatables**: `yajra/laravel-datatables-oracle`
 - **Tests**: PHPUnit
 - **Code style**: Laravel Pint
@@ -103,7 +103,9 @@ php artisan make:model Foo -mcr      # สร้าง model + migration + contr
 php artisan make:controller Api/Foo/BarController
 php artisan tinker                   # REPL
 php artisan route:list               # ดู routes ทั้งหมด
-php artisan test                     # PHPUnit tests
+php artisan test                     # PHPUnit tests (sqlite :memory:)
+php artisan test:db:rebuild          # คัดลอกโครงตารางจาก DB dev → nuxnan_testing (ทำก่อนรันเทสต์บน MySQL)
+php artisan test -c phpunit.mysql.xml  # รันเทสต์บน **MySQL จริง** — sqlite โกหกได้ (ดู G26 ใน .agents/school-admin/11-schedule.md)
 ./vendor/bin/pint                    # format โค้ด
 php artisan reverb:start             # websocket server
 php artisan queue:work --queue=default --timeout=60   # queue worker (--timeout ต้อง < retry_after 90)
@@ -112,7 +114,7 @@ php artisan schedule:work                # scheduler (job ตามเวลา�
 
 ### Local environment
 - ใช้ **WAMP** ที่ `C:\wamp64\` (Apache + MySQL บน Windows)
-- DB name: `nuxnan` (mysql, port 3306)
+- DB name: `nuxnan_nuxnan_db` (mysql, port 3306) · DB สำหรับเทสต์บน MySQL = `nuxnan_testing` (สร้างด้วย `php artisan test:db:rebuild`)
 - Frontend: `npm run dev` ที่ `ui/`
 - Backend: `php artisan serve` ที่ `api/nuxnanravel/`
 - Queue worker: `php artisan queue:work --queue=default` ที่ `api/nuxnanravel/` — **ต้องรันคู่กับ backend เสมอ**

@@ -311,10 +311,48 @@ validator ของ `update()` มีแค่ `sometimes|date_format:H:i` (ไ�
 `schedule.vue` + หน้าใหม่ของ SC-S6 แก้แล้วเป็น `err.data` (พิสูจน์บนจอจริง: ข้อความไทยขึ้นจริงแล้ว) ·
 ที่เหลือทั้งเรพ ~30 ไฟล์ **ยังผิดอยู่** → แยกเป็นงานต่างหาก (ไม่ใช่ของเมนูนี้อย่างเดียว)
 
-**G18 · ไม่มีเทสต์ที่รันได้**
-เทสต์เดียวที่แตะเมนูนี้คือ `tests/Api/SchoolManagementApiTest.php::test_can_list_class_schedules`
+**G18 · ~~ไม่มีเทสต์ที่รันได้~~ — 🟢 ปิดแล้ว 2026-09-18 (SC-S11)**
+ตอนนี้เมนูนี้มีเทสต์ 7 ไฟล์ **90 เคส** ที่เขียวทั้งบน sqlite และ **MySQL จริง**
+(สะสมมาตั้งแต่ SC-S1 · โปรไฟล์ MySQL เพิ่งทำที่ SC-S11 — ดูวิธีรันที่หัว "รันเทสต์บน MySQL จริง" ข้างล่าง)
+**บันทึกเดิม:** เทสต์เดียวที่แตะเมนูนี้คือ `tests/Api/SchoolManagementApiTest.php::test_can_list_class_schedules`
 ซึ่ง **รันไม่ผ่านตั้งแต่ setUp** (sqlite `:memory:` ไม่มี schema — `no such table: users`) ทั้งไฟล์จึงเป็นเทสต์ตายมานาน
-และมันยัง assert 200 บน URL แบบ id ซึ่งปัจจุบันคือ 404
+⇒ ตอนเปิด SC-S11 ตรวจซ้ำแล้วหนักกว่านั้น: `tests/Api/` **ไม่ได้อยู่ใน testsuite ไหนเลย** ใน `phpunit.xml`
+⇒ `php artisan test` ไม่เคยเรียกไฟล์นี้ตั้งแต่แรก · บังคับรันตรง ๆ = ล้ม 23/23
+และใน 22 endpoint ที่มันยิง มี 4 เส้นที่**ไม่มี route แล้ว** (`curricula`, `fees/structures`, `fees/tuitions`, `messages/threads`)
+**เจ้าของโปรเจคเคาะ: ลบทิ้ง** — ทุกเคสเป็น `assertStatus(200)` เปล่า ๆ ซึ่งชนกับบทเรียนของ SC-S9
+("200 ไม่ได้แปลว่าใช้งานได้") · เมนูอื่นที่อยากได้เทสต์ ให้เขียนแบบมี assertion จริงในเมนูนั้นเอง
+
+**G25 · 🔴 สร้างฐานข้อมูลใหม่จาก migration ทั้งชุดไม่ได้ — หนี้ข้ามเมนู (เจอตอน SC-S11)**
+สร้าง DB เปล่าแล้วสั่ง `migrate` บน MySQL → **ตายที่ migration ตัวที่ 9**
+`2025_06_22_create_academy_invite_links_table` → `SQLSTATE[HY000] 1824 Failed to open the referenced table 'academies'`
+(ตาราง `academies` ถูกสร้างที่ `2025_10_26_070433` ซึ่งเรียงทีหลัง)
+สแกนทั้งชุดแล้วพบ: **FK อ้างตารางที่ยังไม่ถูกสร้าง 14 จุด** และ **ตารางจริง 5 ตัวที่ไม่มี migration สร้างเลย**
+(`adverts`, `advert_viewers`, `course_ratings`, `course_wishlists`, `user_daily_claim_counters`)
+และมี **schema drift**: เช่น `users.personal_code` — migration บอก `varchar(50) NULL` แต่ DB จริงเป็น `varchar(255) NOT NULL`
+สาเหตุ: ตาราง `migrations` มี 585 แถว แต่ไฟล์จริงเหลือ 484 ⇒ DB dev รอดมาได้ด้วยลำดับเชิงประวัติศาสตร์เท่านั้น
+ผล: `RefreshDatabase` บน MySQL (= `migrate:fresh`) ใช้ไม่ได้ · เครื่องใหม่/สภาพแวดล้อมใหม่ตั้งจากศูนย์ไม่ได้
+**ทางอ้อมที่ใช้อยู่ (SC-S11):** `php artisan test:db:rebuild` คัดลอกโครงตารางจาก DB dev ไปใส่ `nuxnan_testing`
+**เจ้าของโปรเจคเคาะ (2026-09-18): ยังไม่ซ่อมรอบนี้** — เก็บเป็นหนี้ข้ามเมนูไว้ก่อน
+
+**G26 · ~~`TIME(?)` บน MySQL ทำให้การตรวจชนเวลาไม่ทำงาน~~ — 🟢 ปิดแล้ว 2026-09-18 (SC-S11) · 🔴 เคยเป็นบั๊กจริงบน production**
+`ClassSchedule::overlappingQuery()` เขียนว่า `whereRaw('TIME(start_time) < TIME(?)', [...])`
+บน **MySQL 8.4 กับ prepared statement จริง** (PDO `ATTR_EMULATE_PREPARES=false` ซึ่งเป็นค่าเริ่มต้นของ Laravel)
+`TIME(?)` คืน **'00:00:00'** เมื่อค่าที่ผูกมามีนาทีเป็น 00 — วัดจริงแล้ว:
+
+| ค่าที่ผูก | `SELECT TIME(?)` |
+|---|---|
+| `'09:00:00'` | **`00:00:00`** ❌ |
+| `'10:00:00'` | **`00:00:00`** ❌ |
+| `'09:15:00'` | `09:15:00` ✅ |
+| `'08:45:00'` | `08:45:00` ✅ |
+| `TIME('09:00:00')` (ลิเทอรัล ไม่ผูก) | `09:00:00` ✅ |
+
+⇒ เงื่อนไข `TIME(start_time) < TIME(:end)` เป็นเท็จตลอดเมื่อคาบจบตรงชั่วโมง
+⇒ **การตรวจชนของครู/ห้องเรียน/สถานที่ ไม่ทำงานเลยบน production** สำหรับคาบที่ตรงชั่วโมง (คือเกือบทุกคาบจริง)
+จองครูซ้อนเวลากันได้เงียบ ๆ · SQLite ไม่มีอาการนี้ เทสต์ 29 เคสของ SC-S5 จึงเขียวมาตลอด
+และ G22 เพิ่งลบ unique index ที่เคยเป็นตาข่ายสุดท้าออกไปเมื่อเช้าวันเดียวกัน ⇒ ช่องโหว่เปิดสุด
+**ทางแก้:** หุ้ม `TIME()` เฉพาะฝั่งคอลัมน์ ส่วน placeholder ส่งสตริง `'H:i:s'` ไปตรง ๆ
+(`TIME(start_time) < ?`) — ถูกทั้ง MySQL และ SQLite · เทสต์เดิม 4 เคสที่ล้มบน MySQL กลับมาเขียวทั้งหมด
 
 ---
 
@@ -405,7 +443,7 @@ validator ของ `update()` มีแค่ `sometimes|date_format:H:i` (ไ�
 | **SC-S8** | **UX/มือถือ (G16)** — ปุ่มลบที่แตะได้จริงบนจอสัมผัส, modal เลื่อนได้, ช่องเลือกครู/ห้องแบบค้นหาได้ + กรองครูจริง (G8) + กรองห้องตามปีการศึกษา (G9) | SC-S4 | ตรวจจริงที่ 375/768/1280 | 🟢 **done 2026-09-17** (G8/G9 ปิดไปแล้วที่ SC-S4 · G16 เหลือแค่ G23 ซึ่งแก้ที่ `BottomNav` จุดเดียวคุ้มทั้งเรพ · เพิ่ม `CommonSearchableSelect` ดู §9) |
 | **SC-S9** | **ซ่อมผู้เรียกอื่น** — แดชบอร์ดครู `/schedules/today` + แท็บตารางเรียนในเมนู #8 (`useSchoolManagement`) ให้เข้ากับ response ใหม่ | SC-S2 | 2 จุดกลับมา 200 พร้อมข้อมูลจริง | 🟢 **done 2026-09-17** (ทั้งสองจุด "ยิงติดแต่อ่านผิด" · `today()` คืนรูปเดียวกับ `index()` แล้ว · เทสต์ใหม่ 5 เคส · เจอปุ่มตายในแท็บ #8 ด้วย ดู §9) |
 | **SC-S10** | **ฟีเจอร์ที่โรงเรียนใช้จริง (G17)** — พิมพ์/ส่งออกตารางรายห้อง-รายครู, UI bulk, คัดลอกตารางข้ามภาคเรียน, สอนแทน/งดคาบ, ภาระงานสอนของครู | SC-S6 · SC-S7 | แตกย่อยอีกทีตอนถึงคิว | ⚪ |
-| **SC-S11** | **เทสต์ (G18)** — ไฟล์เทสต์ของเมนูนี้ที่รันได้จริงบน MySQL + ตัดสินใจเรื่อง `tests/Api/SchoolManagementApiTest.php` ที่ตายอยู่ · ~~+ migration จัดการ unique index (G22)~~ **G22 ปิดแยกไปแล้ว 2026-09-18** | SC-S5 · SC-S7 | เทสต์เขียว | ⚪ |
+| **SC-S11** | **เทสต์ (G18)** — ไฟล์เทสต์ของเมนูนี้ที่รันได้จริงบน MySQL + ตัดสินใจเรื่อง `tests/Api/SchoolManagementApiTest.php` ที่ตายอยู่ · ~~+ migration จัดการ unique index (G22)~~ **G22 ปิดแยกไปแล้ว 2026-09-18** | SC-S5 · SC-S7 | เทสต์เขียว | 🟢 **done 2026-09-18** (โปรไฟล์ `phpunit.mysql.xml` + `test:db:rebuild` · 90 เคสเขียวทั้ง sqlite และ MySQL · เจอบั๊ก production G26 · ลบไฟล์เทสต์ตาย · หนี้ G25 ยกออกไป ดู §9) |
 
 **Rule:** ทุก step ต้องมี verification (build/test/ยิง API จริง/ตรวจบนจอ 375px) ก่อนขึ้นสถานะ 🟢
 
@@ -704,3 +742,34 @@ Report back: diff stat + ผลรันคำสั่ง verification
   (`test_replacing_a_cancelled_period_at_the_same_start_time_is_allowed`) + เพิ่มเคสตรวจสคีมาว่า unique
   ที่ไม่รู้จัก `status` หายไปและ index ค้นหายังอยู่ · `ClassScheduleConflictTest` **29/29** ·
   สวีทตารางเรียนทั้งหมด **110/110**
+
+- **2026-09-18 SC-S11 🟢 verified** — Claude ทำเองทั้ง step (งานสำรวจ ไม่ได้ส่งต่อ agy)
+  **เจ้าของโปรเจคเคาะ 2 ข้อ:** (ก) ทำทางลัดให้เทสต์รันบน MySQL ได้ก่อน แล้วแยกหนี้ migration เป็น G25
+  (ข) ลบ `tests/Api/SchoolManagementApiTest.php` ทิ้ง
+
+  **ของที่เพิ่ม:**
+  · `phpunit.mysql.xml` — โปรไฟล์รันบน MySQL (`DB_DATABASE=nuxnan_testing`, `TEST_DB_PREBUILT=1`) ไม่มีความลับในไฟล์
+  · `tests/TestCase.php` — เมื่อเปิดโหมดนี้ ตั้ง `RefreshDatabaseState::$migrated = true` ⇒ `RefreshDatabase` ข้าม `migrate:fresh`
+    เหลือแค่ transaction + rollback ต่อเทสต์ · มีด่านกันชื่อฐานข้อมูลที่ไม่มีคำว่า "testing" (กันเขียนทับ DB จริง)
+    โหมด sqlite เดิมไม่ถูกแตะเลย
+  · `php artisan test:db:rebuild` — คัดลอกโครงตารางจาก DB dev ไปใส่ `nuxnan_testing` ด้วย `SHOW CREATE TABLE`
+    (ไม่พึ่ง mysqldump/รหัสผ่านบรรทัดคำสั่ง) · ข้ามตาราง `bk_*` · คัดลอกแถวใน `migrations` มาด้วย
+    ⇒ ผล: **378 ตาราง · 1 วิว · 585 แถว migrations**
+
+  **ผลที่ได้ทันทีที่รันบน MySQL จริงครั้งแรก — เทสต์ที่เขียวบน sqlite ล้มทันที 28/29:**
+  1. **เทสต์สร้าง user เองด้วย `User::create()`** → `1364 Field 'personal_code' doesn't have a default value`
+     เพราะ `users.personal_code`/`reference_code` เป็น NOT NULL + UNIQUE บน MySQL จริง (แต่ migration บอกว่า nullable — schema drift, อยู่ใน G25)
+     ⇒ ใส่ค่าให้สองคอลัมน์นี้ใน `UserFactory` ด้วยตัวสร้างชุดเดียวกับทางสมัครจริง + เปลี่ยน `User::create([...])` ในเทสต์ 6 ไฟล์เป็น `User::factory()->create([...])`
+  2. **🔴 G26 — การตรวจชนเวลาไม่ทำงานบน MySQL เลย (บั๊ก production ตัวจริง)**
+     4 เคสที่ต้องเป็น 422 กลับได้ 201/200 — ทั้งหมดคือเคสที่เวลาเริ่ม/จบตรงชั่วโมง
+     ตามรอยจนเจอว่า `TIME(?)` คืน `00:00:00` เมื่อนาทีเป็น 00 (วัดด้วย `SELECT TIME(?)` บน MySQL 8.4.7 จริง)
+     ⇒ แก้เป็น `TIME(start_time) < ?` (หุ้มเฉพาะฝั่งคอลัมน์) · รายละเอียดอยู่ที่ G26 ใน §5
+     สแกนทั้งเรพแล้ว: `TIME(?)` มีอยู่ 2 จุด ทั้งคู่อยู่ใน `ClassSchedule::overlappingQuery()` นี้เท่านั้น
+
+  **เกณฑ์ที่รันเองหลังแก้:**
+  · สวีทตารางเรียน (`ClassSchedule*` + `SchedulePeriodSet` + `SchedulePermission` + `SemesterCurrentScope`)
+    **sqlite 90/90 (279 assertions)** และ **MySQL จริง 90/90 (279 assertions)**
+  · `pint` ผ่านทุกไฟล์ที่แก้
+
+  **ข้อควรระวังต่อไป:** โปรไฟล์ MySQL ใช้สคีมาที่คัดลอกจาก dev ⇒ มันพิสูจน์ "โค้ดทำงานกับ MySQL จริง"
+  แต่**ไม่ได้พิสูจน์ว่า migration สร้างสคีมานั้นขึ้นมาได้** — นั่นคืองานของ G25

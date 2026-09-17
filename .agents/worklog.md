@@ -7525,3 +7525,47 @@ migration จะ **หยุดพร้อมบอกจำนวนกลุ�
 rollback ก็คืน unique เดิมครบทั้งสองตัว
 
 ### ต่อไป: SC-S11 (เทสต์ที่รันได้จริง + ตัดสินใจเรื่อง `tests/Api/SchoolManagementApiTest.php` ที่ตายมานาน)
+
+---
+
+## 2026-09-18 (ต่อ) — SC-S11: รันเทสต์บน MySQL จริงได้แล้ว → เจอบั๊ก production ทันที
+
+### สถานะ: ✅ ปิด SC-S11 · รายละเอียดใน `.agents/school-admin/11-schedule.md` §9
+
+### 🔴 บั๊กที่เจอ (G26) — การตรวจชนเวลาไม่ทำงานบน MySQL มาตลอด
+`ClassSchedule::overlappingQuery()` เขียน `whereRaw('TIME(start_time) < TIME(?)', [...])`
+บน **MySQL 8.4 + prepared statement จริง** `TIME(?)` คืน `00:00:00` เมื่อค่าที่ผูกมามีนาทีเป็น 00
+(`'09:00:00'` → `00:00:00` ❌ · `'09:15:00'` → `09:15:00` ✅ · ลิเทอรัล `TIME('09:00:00')` → ถูกต้อง)
+⇒ เงื่อนไขแรกเท็จตลอด ⇒ **คาบที่ตรงชั่วโมง (คือเกือบทุกคาบจริง) จองซ้อนครู/ห้อง/สถานที่กันได้เงียบ ๆ**
+เทสต์ 29 เคสของ SC-S5 เขียวมาตลอดเพราะ **sqlite ไม่มีอาการนี้**
+แก้เป็น `TIME(start_time) < ?` — หุ้ม `TIME()` เฉพาะฝั่งคอลัมน์ ห้ามหุ้ม placeholder
+
+🔴 **กติกาใหม่สำหรับทั้งเรพ:** ห้ามหุ้ม placeholder ด้วยฟังก์ชันของ SQL (`TIME(?)`, `CAST(? AS TIME)`)
+ให้ส่งค่าเป็นสตริงรูปที่ถูกไปตรง ๆ แล้วหุ้มฝั่งคอลัมน์แทน
+
+### โปรไฟล์รันเทสต์บน MySQL จริง (ของใหม่)
+```bash
+php artisan test:db:rebuild            # คัดลอกโครงตารางจาก DB dev → nuxnan_testing (378 ตาราง)
+php artisan test -c phpunit.mysql.xml  # รันบน MySQL จริง
+```
+· `TEST_DB_PREBUILT=1` ในโปรไฟล์นี้สั่งให้ `RefreshDatabase` ข้าม `migrate:fresh` เหลือแค่ transaction+rollback
+· `tests/TestCase.php` มีด่านกันชื่อ DB ที่ไม่มีคำว่า "testing" — กันเทสต์เขียนทับ DB จริง
+· โหมดเดิม (sqlite `:memory:` ผ่าน `phpunit.xml`) **ไม่ถูกแตะเลย**
+
+### 🔴 G25 — สร้าง DB ใหม่จาก migration ทั้งชุด**ไม่ได้** (หนี้ข้ามเมนู ยังไม่ซ่อม)
+สร้าง DB เปล่าแล้ว `migrate` → ตายที่ตัวที่ 9 (`1824 Failed to open the referenced table 'academies'`)
+· FK อ้างตารางที่ยังไม่ถูกสร้าง **14 จุด**
+· ตารางจริง **5 ตัวไม่มี migration สร้าง** (`adverts`, `advert_viewers`, `course_ratings`, `course_wishlists`, `user_daily_claim_counters`)
+· **schema drift**: `users.personal_code` migration บอก `varchar(50) NULL` แต่ DB จริง `varchar(255) NOT NULL`
+· ตาราง `migrations` มี 585 แถว แต่ไฟล์เหลือ 484
+⇒ เจ้าของโปรเจคเคาะว่า **ยังไม่ซ่อมรอบนี้** — ทำทางลัด (คัดลอกสคีมา) ไปก่อน
+
+### ไฟล์เทสต์ที่ตาย: ลบทิ้งแล้ว
+`tests/Api/SchoolManagementApiTest.php` — `tests/Api/` ไม่ได้อยู่ใน testsuite ไหนเลย
+⇒ `php artisan test` ไม่เคยเรียก · บังคับรัน = ล้ม 23/23 · 4 endpoint ไม่มี route แล้ว
+· ทุกเคสเป็น `assertStatus(200)` เปล่า ๆ (ชนกับบทเรียน SC-S9: "200 ไม่ได้แปลว่าใช้งานได้")
+
+### เกณฑ์ที่รันเอง
+สวีทตารางเรียน 90 เคส — **sqlite 90/90** และ **MySQL จริง 90/90** (279 assertions ทั้งสองฝั่ง)
+
+### ต่อไป: SC-S10 (พิมพ์/ส่งออกตาราง · UI bulk · คัดลอกข้ามภาคเรียน · สอนแทน/งดคาบ · ภาระงานครู) · หนี้ค้าง: G25
