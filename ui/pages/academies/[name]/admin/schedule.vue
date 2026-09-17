@@ -34,20 +34,143 @@ const classrooms = ref<any[]>([])
 const teachers = ref<any[]>([])
 const timetable = ref<any[]>([])
 const courses = ref<any[]>([])
+const periodSets = ref<any[]>([])
 
-// Time slots for the grid
-const timeSlots = [
-  '08:00', '09:00', '10:00', '11:00', '12:00',
-  '13:00', '14:00', '15:00', '16:00'
-]
+const DAY_LABELS: Record<number, { label: string; short: string }> = {
+  1: { label: 'จันทร์', short: 'จ' },
+  2: { label: 'อังคาร', short: 'อ' },
+  3: { label: 'พุธ', short: 'พ' },
+  4: { label: 'พฤหัสบดี', short: 'พฤ' },
+  5: { label: 'ศุกร์', short: 'ศ' },
+  6: { label: 'เสาร์', short: 'ส' },
+  7: { label: 'อาทิตย์', short: 'อา' },
+}
 
-const days = [
-  { value: 1, label: 'จันทร์', short: 'จ' },
-  { value: 2, label: 'อังคาร', short: 'อ' },
-  { value: 3, label: 'พุธ', short: 'พ' },
-  { value: 4, label: 'พฤหัสบดี', short: 'พฤ' },
-  { value: 5, label: 'ศุกร์', short: 'ศ' },
-]
+const allDays = Object.keys(DAY_LABELS).map((k) => ({ value: Number(k), ...DAY_LABELS[Number(k)] }))
+
+const toMinutes = (time: string) => {
+  const [h, m] = String(time || '').split(':')
+  return (Number(h) || 0) * 60 + (Number(m) || 0)
+}
+
+const overlapMinutes = (aStart: string, aEnd: string, bStart: string, bEnd: string) =>
+  Math.min(toMinutes(aEnd), toMinutes(bEnd)) - Math.max(toMinutes(aStart), toMinutes(bStart))
+
+const currentGradeLevel = computed(() => {
+  if (viewMode.value !== 'classroom') return null
+  return classrooms.value.find((c: any) => c.id === selectedClassroom.value)?.grade_level ?? null
+})
+
+const applicableSets = computed(() => {
+  const grade = currentGradeLevel.value
+  if (!grade) return periodSets.value
+  return periodSets.value.filter((s: any) => !s.grade_levels?.length || s.grade_levels.includes(grade))
+})
+
+const gridDays = computed(() => {
+  const days = new Set<number>()
+  let hasUnrestricted = false
+
+  for (const set of applicableSets.value) {
+    if (!set.days?.length) hasUnrestricted = true
+    else set.days.forEach((d: any) => days.add(Number(d)))
+  }
+
+  if (hasUnrestricted || applicableSets.value.length === 0) {
+    [1, 2, 3, 4, 5].forEach((d) => days.add(d))
+  }
+
+  timetable.value.forEach((day: any) => {
+    if ((day.schedules || []).length > 0) days.add(Number(day.day))
+  })
+
+  return [...days].sort((a, b) => a - b).map((value) => ({ value, ...DAY_LABELS[value] }))
+})
+
+const gridRows = computed(() => {
+  const rows: any[] = []
+  const seen = new Set<string>()
+
+  for (const set of applicableSets.value) {
+    for (const period of set.periods || []) {
+      const key = `${period.start_time}-${period.end_time}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      rows.push({
+        key,
+        start: period.start_time,
+        end: period.end_time,
+        label: period.name,
+        type: period.period_type || 'class',
+        periodId: period.id,
+        // วันที่ชุดนี้ใช้ (null = ทุกวัน) — ใช้ตัดสินตอนคาบสอนคาบหนึ่งซ้อนหลายแถวเท่า ๆ กัน
+        days: set.days?.length ? set.days.map((d: any) => Number(d)) : null,
+      })
+    }
+  }
+
+  for (const day of timetable.value) {
+    for (const schedule of day.schedules || []) {
+      const fits = rows.some((row) => overlapMinutes(row.start, row.end, schedule.start_time, schedule.end_time) > 0)
+      if (fits) continue
+      const key = `${schedule.start_time}-${schedule.end_time}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      rows.push({
+        key,
+        start: schedule.start_time,
+        end: schedule.end_time,
+        label: 'นอกโครงคาบ',
+        type: 'outside',
+        periodId: null,
+        days: null,
+      })
+    }
+  }
+
+  return rows.sort((a, b) => toMinutes(a.start) - toMinutes(b.start) || toMinutes(a.end) - toMinutes(b.end))
+})
+
+const scheduleRowMap = computed(() => {
+  const map: Record<string, any[]> = {}
+
+  for (const day of timetable.value) {
+    for (const schedule of day.schedules || []) {
+      let best: any = null
+      let bestOverlap = 0
+
+      for (const row of gridRows.value) {
+        const overlap = overlapMinutes(row.start, row.end, schedule.start_time, schedule.end_time)
+        if (overlap <= 0) continue
+        // แถวที่มาจากชุดที่ใช้กับ "วันนี้" ต้องชนะแถวของชุดวันอื่นเสมอ
+        // (ไม่งั้นคาบวันเสาร์จะไปเกาะแถวของชุด "วันศุกร์เลิกเร็ว" เพราะเวลาซ้อนกันพอดี)
+        const appliesToDay = !row.days || row.days.includes(Number(day.day))
+        const score = overlap + (appliesToDay ? 10000 : 0)
+        if (score > bestOverlap) {
+          bestOverlap = score
+          best = row
+        }
+      }
+
+      if (!best) continue
+      const cellKey = `${day.day}-${best.key}`
+      ;(map[cellKey] ||= []).push(schedule)
+    }
+  }
+
+  return map
+})
+
+const getScheduleCell = (dayValue: number, row: any) => scheduleRowMap.value[`${dayValue}-${row.key}`] || []
+
+const matchedPeriodId = (start: string, end: string) => {
+  for (const set of applicableSets.value) {
+    for (const period of set.periods || []) {
+      if (period.start_time === start && period.end_time === end) return period.id
+    }
+  }
+  return null
+}
 
 // Academy Role
 const academyId = ref<number | null>(null)
@@ -105,6 +228,7 @@ onMounted(async () => {
       await fetchAcademicYears()
       await fetchTeachers()
       await fetchCourses()
+      await fetchPeriodSets()
     }
   } catch (err) {
     console.error('Failed to load:', err)
@@ -112,6 +236,17 @@ onMounted(async () => {
     isLoading.value = false
   }
 })
+
+const fetchPeriodSets = async () => {
+  if (!academyId.value) return
+  try {
+    const response: any = await api.get(`/api/academies/${academyId.value}/schedule-period-sets`)
+    periodSets.value = (response.data || []).filter((s: any) => s.is_active)
+  } catch (err) {
+    console.error('Failed to fetch period sets:', err)
+    periodSets.value = []
+  }
+}
 
 // Fetch academic years
 const fetchAcademicYears = async () => {
@@ -242,18 +377,6 @@ watch([viewMode, selectedClassroom, selectedTeacher, selectedSemester], () => {
   }
 })
 
-// Get schedule for a specific day and time (returns all matching)
-const getScheduleAt = (dayValue: number, time: string) => {
-  const dayData = timetable.value.find((d: any) => d.day === dayValue)
-  if (!dayData?.schedules) return []
-  
-  return dayData.schedules.filter((s: any) => {
-    const startHour = parseInt(s.start_time.split(':')[0])
-    const timeHour = parseInt(time.split(':')[0])
-    return startHour === timeHour
-  })
-}
-
 // Get color
 const getScheduleColor = (schedule: any) => {
   if (schedule.course?.id) {
@@ -277,7 +400,7 @@ const getScheduleColor = (schedule: any) => {
 }
 
 // Open create modal
-const openCreateModal = (day?: number, time?: string) => {
+const openCreateModal = (day?: number, start?: string, end?: string) => {
   if (!canManage.value || !selectedSemester.value) return
   
   scheduleForm.value = {
@@ -287,17 +410,12 @@ const openCreateModal = (day?: number, time?: string) => {
     course_id: null,
     title: '',
     day_of_week: day || 1,
-    start_time: time || '08:00',
-    end_time: getEndTime(time || '08:00'),
+    start_time: start || '08:00',
+    end_time: end || '09:00',
     room: ''
   }
   formErrors.value = {}
   showCreateModal.value = true
-}
-
-const getEndTime = (startTime: string) => {
-  const hour = parseInt(startTime.split(':')[0]) + 1
-  return `${hour.toString().padStart(2, '0')}:00`
 }
 
 // Open edit modal
@@ -367,7 +485,8 @@ const createSchedule = async () => {
       day_of_week: scheduleForm.value.day_of_week,
       start_time: scheduleForm.value.start_time,
       end_time: scheduleForm.value.end_time,
-      room: scheduleForm.value.room || undefined
+      room: scheduleForm.value.room || undefined,
+      period_id: matchedPeriodId(scheduleForm.value.start_time, scheduleForm.value.end_time)
     }
     
     const response: any = await api.post(`/api/academies/${academyId.value}/schedules`, payload)
@@ -384,13 +503,13 @@ const createSchedule = async () => {
       })
     }
   } catch (err: any) {
-    if (err.response?.data?.errors) {
-      formErrors.value = err.response.data.errors
+    if (err.data?.errors) {
+      formErrors.value = err.data.errors
     } else {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถเพิ่มตารางเรียนได้'
+        text: err.data?.message || 'ไม่สามารถเพิ่มตารางเรียนได้'
       })
     }
   } finally {
@@ -434,7 +553,8 @@ const updateSchedule = async () => {
       day_of_week: scheduleForm.value.day_of_week,
       start_time: scheduleForm.value.start_time,
       end_time: scheduleForm.value.end_time,
-      room: scheduleForm.value.room || undefined
+      room: scheduleForm.value.room || undefined,
+      period_id: matchedPeriodId(scheduleForm.value.start_time, scheduleForm.value.end_time)
     }
     
     const response: any = await api.patch(
@@ -454,13 +574,13 @@ const updateSchedule = async () => {
       })
     }
   } catch (err: any) {
-    if (err.response?.data?.errors) {
-      formErrors.value = err.response.data.errors
+    if (err.data?.errors) {
+      formErrors.value = err.data.errors
     } else {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถอัปเดตตารางเรียนได้'
+        text: err.data?.message || 'ไม่สามารถอัปเดตตารางเรียนได้'
       })
     }
   } finally {
@@ -503,7 +623,7 @@ const deleteSchedule = async () => {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถลบได้'
+        text: err.data?.message || 'ไม่สามารถลบได้'
       })
     }
   }
@@ -523,17 +643,44 @@ const deleteSchedule = async () => {
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">ตารางเรียน</h1>
           <p class="text-gray-600 dark:text-gray-400 mt-1">จัดการตารางเรียนของห้องเรียนและครู</p>
         </div>
-        <button
-          v-if="canManage"
-          :disabled="!selectedSemester"
-          @click="openCreateModal()"
-          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
-          <span>เพิ่มตารางเรียน</span>
-        </button>
+        <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <NuxtLink
+            v-if="canManage"
+            :to="`/academies/${academyName}/admin/schedule-periods`"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl font-medium transition-colors"
+          >
+            <Icon icon="fluent:clock-24-regular" class="w-5 h-5" />
+            <span>ตั้งค่าโครงคาบ</span>
+          </NuxtLink>
+          <button
+            v-if="canManage"
+            :disabled="!selectedSemester"
+            @click="openCreateModal()"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
+            <span>เพิ่มตารางเรียน</span>
+          </button>
+        </div>
       </div>
       
+      <div v-if="periodSets.length === 0" class="p-4 bg-orange-50 border border-orange-200 text-orange-800 rounded-xl">
+        <div class="flex items-start gap-3">
+          <Icon icon="fluent:warning-24-regular" class="w-6 h-6 mt-0.5 flex-shrink-0" />
+          <div>
+            <h3 class="font-medium text-orange-900">ยังไม่ได้ตั้งค่าโครงคาบเรียน</h3>
+            <p class="text-sm mt-1">ตอนนี้กริดจะวาดจากคาบที่มีอยู่จริงแทน — ตั้งค่าโครงคาบเพื่อให้ตารางตรงกับคาบของโรงเรียน</p>
+            <NuxtLink
+              v-if="canManage"
+              :to="`/academies/${academyName}/admin/schedule-periods`"
+              class="inline-block mt-2 text-sm font-medium text-orange-700 hover:text-orange-900 underline"
+            >
+              ไปหน้าตั้งค่าโครงคาบ
+            </NuxtLink>
+          </div>
+        </div>
+      </div>
+
       <div v-if="academicYears.length > 0 && availableSemesters.length === 0" class="p-4 bg-orange-50 border border-orange-200 text-orange-800 rounded-xl">
         <div class="flex items-start gap-3">
           <Icon icon="fluent:warning-24-regular" class="w-6 h-6 mt-0.5 flex-shrink-0" />
@@ -634,6 +781,21 @@ const deleteSchedule = async () => {
           <p class="text-gray-500 dark:text-gray-400">กรุณาเลือกครูเพื่อดูตารางสอน</p>
         </div>
         
+        <div v-else-if="gridRows.length === 0" class="p-12 text-center">
+          <Icon icon="fluent:calendar-empty-24-regular" class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">ยังไม่มีคาบในตารางนี้</h3>
+          <p class="text-gray-500 dark:text-gray-400 mb-4">เพิ่มตารางเรียนเพื่อเริ่มต้น</p>
+          <button
+            v-if="canManage"
+            :disabled="!selectedSemester"
+            @click="openCreateModal()"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
+          >
+            <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
+            <span>เพิ่มตารางเรียน</span>
+          </button>
+        </div>
+        
         <div v-else class="overflow-x-auto">
           <table class="w-full min-w-[800px]">
             <thead>
@@ -642,7 +804,7 @@ const deleteSchedule = async () => {
                   เวลา
                 </th>
                 <th
-                  v-for="day in days"
+                  v-for="day in gridDays"
                   :key="day.value"
                   class="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap"
                 >
@@ -651,19 +813,24 @@ const deleteSchedule = async () => {
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-              <tr v-for="time in timeSlots" :key="time">
-                <td class="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 border-r border-gray-100 dark:border-gray-700 whitespace-nowrap">
-                  {{ time }}
+              <tr
+                v-for="row in gridRows"
+                :key="row.key"
+                :class="{'bg-amber-50/60 dark:bg-amber-900/10': row.type === 'break' || row.type === 'lunch'}"
+              >
+                <td class="px-3 py-2 border-r border-gray-100 dark:border-gray-700 align-top whitespace-nowrap">
+                  <p class="text-sm font-medium" :class="row.type === 'outside' ? 'text-orange-600 dark:text-orange-400' : 'text-gray-700 dark:text-gray-300'">{{ row.label }}</p>
+                  <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ row.start }} - {{ row.end }}</p>
                 </td>
                 <td
-                  v-for="day in days"
-                  :key="`${day.value}-${time}`"
+                  v-for="day in gridDays"
+                  :key="`${day.value}-${row.key}`"
                   class="px-2 py-2 min-h-[80px] h-full align-top relative"
-                  @click="canManage && selectedSemester ? openCreateModal(day.value, time) : null"
+                  @click="canManage && selectedSemester && row.type !== 'break' && row.type !== 'lunch' ? openCreateModal(day.value, row.start, row.end) : null"
                 >
-                  <div v-if="getScheduleAt(day.value, time).length > 0" class="flex flex-col gap-2 h-full">
+                  <div v-if="getScheduleCell(day.value, row).length > 0" class="flex flex-col gap-2 h-full">
                     <div
-                      v-for="schedule in getScheduleAt(day.value, time)"
+                      v-for="schedule in getScheduleCell(day.value, row)"
                       :key="schedule.id"
                       :class="[
                         'p-2 rounded-lg border flex flex-col justify-between h-full min-h-[80px]',
@@ -704,10 +871,10 @@ const deleteSchedule = async () => {
                     v-else
                     :class="[
                       'h-full w-full min-h-[80px] rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center',
-                      canManage && selectedSemester ? 'hover:border-primary-400 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors cursor-pointer' : ''
+                      canManage && selectedSemester && row.type !== 'break' && row.type !== 'lunch' ? 'hover:border-primary-400 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors cursor-pointer' : ''
                     ]"
                   >
-                    <Icon v-if="canManage && selectedSemester" icon="fluent:add-24-regular" class="w-4 h-4 text-gray-300 dark:text-gray-600" />
+                    <Icon v-if="canManage && selectedSemester && row.type !== 'break' && row.type !== 'lunch'" icon="fluent:add-24-regular" class="w-4 h-4 text-gray-300 dark:text-gray-600" />
                   </div>
                 </td>
               </tr>
@@ -815,7 +982,7 @@ const deleteSchedule = async () => {
                   v-model="scheduleForm.day_of_week"
                   class="w-full px-4 py-2.5 min-h-[44px] border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                 >
-                  <option v-for="day in days" :key="day.value" :value="day.value">
+                  <option v-for="day in allDays" :key="day.value" :value="day.value">
                     {{ day.label }}
                   </option>
                 </select>

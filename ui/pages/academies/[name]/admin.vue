@@ -132,6 +132,12 @@ const menuItems = computed(() => [
         to: `/academies/${academyName.value}/admin/schedule`,
         show: can('schedule.view') || can('academy.view'),
       },
+      {
+        name: 'โครงคาบเรียน',
+        icon: 'fluent:clock-24-regular',
+        to: `/academies/${academyName.value}/admin/schedule-periods`,
+        show: can('schedule.manage') || can('academy.view'),
+      },
     ]
   },
   {
