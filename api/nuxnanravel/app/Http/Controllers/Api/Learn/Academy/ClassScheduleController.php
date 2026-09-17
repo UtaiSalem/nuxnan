@@ -686,7 +686,35 @@ class ClassScheduleController extends Controller
             $query->byTeacher($request->teacher_id);
         }
 
-        $schedules = $query->orderBy('start_time')->get();
+        $schedules = $query->orderBy('start_time')->get()->map(function ($s) {
+            return [
+                'id' => $s->id,
+                'day_of_week' => $s->day_of_week,
+                'start_time' => $s->start_time->format('H:i'),
+                'end_time' => $s->end_time->format('H:i'),
+                'time_range' => $s->time_range,
+                'period_number' => $s->period_number,
+                'room' => $s->room,
+                'entry_type' => $s->entry_type,
+                'title' => $s->title,
+                'display_title' => $s->display_title,
+                'course' => $s->course ? [
+                    'id' => $s->course->id,
+                    'code' => $s->course->code,
+                    'name' => $s->course->name,
+                ] : null,
+                'teacher' => $s->teacher ? [
+                    'id' => $s->teacher->id,
+                    'name' => $s->teacher->name,
+                ] : null,
+                'classroom' => $s->classroom ? [
+                    'id' => $s->classroom->id,
+                    'name' => $s->classroom->name,
+                    'grade_level' => $s->classroom->grade_level,
+                    'section' => $s->classroom->section,
+                ] : null,
+            ];
+        });
 
         return response()->json([
             'success' => true,
