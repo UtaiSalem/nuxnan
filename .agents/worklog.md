@@ -7569,3 +7569,17 @@ php artisan test -c phpunit.mysql.xml  # รันบน MySQL จริง
 สวีทตารางเรียน 90 เคส — **sqlite 90/90** และ **MySQL จริง 90/90** (279 assertions ทั้งสองฝั่ง)
 
 ### ต่อไป: SC-S10 (พิมพ์/ส่งออกตาราง · UI bulk · คัดลอกข้ามภาคเรียน · สอนแทน/งดคาบ · ภาระงานครู) · หนี้ค้าง: G25
+
+### ผล full suite (sqlite) หลัง SC-S11 — 1811 passed · เหลือ 3 เคสที่ล้มมาก่อนแล้ว
+`CourseLifecycleServiceTest` ×2 + `CourseLifecycleTest` ×1 — ค้างอยู่กับความหมายเก่าของ
+`courses.status = 4` ("ปิดรับสมัคร") ยืนยันแล้วว่าล้มบนโค้ดก่อน SC-S11 ด้วย ⇒ ไม่ใช่ของรอบนี้
+
+**ผลพลอยได้ 1 บั๊กที่ UserFactory เปิดโปง** (`ae9dc66b`)
+`PointsService::updateDailyLimits()` เทียบ `where('date', '2026-09-18')` ตรง ๆ
+แต่ cast `date` เขียนลงเป็น `'Y-m-d H:i:s'` — MySQL ตัดเวลาทิ้งเองเพราะคอลัมน์เป็นชนิด `DATE`
+แต่ SQLite เก็บทั้งสตริง ⇒ หาแถวเดิมไม่เจอ แล้ว insert ซ้ำจนชน `unique(user_id, date)`
+โผล่เมื่อผู้ใช้คนเดียวได้แต้มสองรอบในคำขอเดียว (สาขา fallback ของการรับการสนับสนุน)
+ที่ไม่เคยถูกรันเลย เพราะเดิม `personal_code` ว่าง ⇒ `where('personal_code', null)` กลายเป็น
+`whereNull` แล้วไปแมตช์ผู้ใช้มั่ว ๆ เป็น suggester → แก้เป็น `whereDate()`
+🔴 **บทเรียน:** `where('col', $maybeNull)` ของ Laravel กลายเป็น `whereNull` เงียบ ๆ —
+เทสต์ที่ข้อมูลว่างจึงเดินคนละสาขากับของจริงได้
