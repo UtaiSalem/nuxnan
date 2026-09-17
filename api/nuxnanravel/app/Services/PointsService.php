@@ -416,7 +416,12 @@ class PointsService
     {
         $today = now()->toDateString();
 
-        $dailyLimit = $user->dailyPointLimits()->where('date', $today)->first();
+        // ต้องเทียบด้วย whereDate ไม่ใช่ where ตรง ๆ:
+        // cast `date` เขียนค่าลงเป็น 'Y-m-d H:i:s' ตามรูปแบบของคอนเนกชัน
+        // MySQL ตัดเวลาทิ้งเองเพราะคอลัมน์เป็นชนิด DATE แต่ SQLite เก็บทั้งสตริง
+        // ⇒ where('date', '2026-09-18') หาแถวเดิมไม่เจอบน SQLite แล้วไป insert ซ้ำ
+        //   จนชน unique (user_id, date) — เจอตอน SC-S11 ตอนเทียบผลสองเอนจิน
+        $dailyLimit = $user->dailyPointLimits()->whereDate('date', $today)->first();
 
         if (! $dailyLimit) {
             $dailyLimit = $user->dailyPointLimits()->create([
