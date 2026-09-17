@@ -5,6 +5,7 @@
  */
 
 import { Icon } from '@iconify/vue'
+import { useAuthStore } from '~/stores/auth'
 
 definePageMeta({
   layout: 'main',
@@ -20,7 +21,10 @@ const academyName = computed(() => route.params.name as string)
 const academy = ref<any>(null)
 const myCourses = ref<any[]>([])
 const todaySchedule = ref<any[]>([])
+const todayName = ref('')
 const pendingAssignments = ref<any[]>([])
+
+const authStore = useAuthStore()
 const recentStudentActivities = ref<any[]>([])
 const isLoading = ref(true)
 
@@ -123,15 +127,21 @@ const fetchMyCourses = async () => {
 
 const fetchTodaySchedule = async () => {
   if (!academyId.value) return
-  
+
   try {
-    const response: any = await api.get(`/api/academies/${academyId.value}/schedules/today`)
+    // `data` เป็นอ็อบเจกต์ {date, day_name, schedules} ไม่ใช่อาเรย์ — เคยอ่านผิดจนการ์ดโชว์ขยะ
+    const response: any = await api.get(`/api/academies/${academyId.value}/schedules/today`, {
+      params: authStore.user?.id ? { teacher_id: authStore.user.id } : {},
+    })
+
     if (response.success) {
-      todaySchedule.value = response.data || []
+      todaySchedule.value = response.data?.schedules || []
+      todayName.value = response.data?.day_name || ''
       stats.value.classesToday = todaySchedule.value.length
     }
   } catch (err) {
     console.error('Failed to fetch today schedule:', err)
+    todaySchedule.value = []
   }
 }
 
@@ -349,7 +359,9 @@ const quickActions = computed(() => [
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
           <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">ตารางสอนวันนี้</h2>
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+              ตารางสอนวันนี้<span v-if="todayName" class="text-sm font-normal text-gray-500"> ({{ todayName }})</span>
+            </h2>
             <NuxtLink
               :to="`/academies/${academyName}/my-schedule`"
               class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700"
@@ -361,20 +373,26 @@ const quickActions = computed(() => [
           <div class="p-4">
             <div v-if="todaySchedule.length === 0" class="text-center py-8 text-gray-500">
               <Icon icon="fluent:calendar-empty-24-regular" class="w-12 h-12 mx-auto mb-2" />
-              <p>ไม่มีคาบสอนวันนี้</p>
+              <p>วันนี้ไม่มีคาบสอนของคุณ</p>
             </div>
             <div v-else class="space-y-3">
-              <div 
-                v-for="schedule in todaySchedule" 
+              <div
+                v-for="schedule in todaySchedule"
                 :key="schedule.id"
-                class="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                class="flex items-start gap-3 sm:gap-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
               >
-                <div class="text-center min-w-[60px]">
-                  <p class="text-lg font-bold text-primary-500">{{ schedule.time }}</p>
+                <div class="text-center flex-shrink-0 whitespace-nowrap">
+                  <p class="text-base sm:text-lg font-bold text-primary-500">{{ schedule.start_time }}</p>
+                  <p class="text-xs text-gray-500">{{ schedule.end_time }}</p>
                 </div>
-                <div class="flex-1">
-                  <p class="font-medium text-gray-900 dark:text-white">{{ schedule.subject }}</p>
-                  <p class="text-sm text-gray-500">{{ schedule.room }} • {{ schedule.students }} คน</p>
+                <div class="min-w-0 flex-1">
+                  <p class="font-medium text-gray-900 dark:text-white break-words">{{ schedule.display_title }}</p>
+                  <p class="text-sm text-gray-500 break-words">
+                    <span v-if="schedule.classroom">{{ schedule.classroom.name }}</span>
+                    <span v-if="schedule.classroom && schedule.room"> • </span>
+                    <span v-if="schedule.room">{{ schedule.room }}</span>
+                  </p>
+                  <p v-if="schedule.course?.code" class="text-xs text-gray-400">{{ schedule.course.code }}</p>
                 </div>
               </div>
             </div>

@@ -147,19 +147,19 @@
     <div v-if="activeSection === 'schedules'" class="space-y-4">
       <div class="flex justify-between items-center">
         <h3 class="text-lg font-medium text-gray-900 dark:text-white">ตารางเรียน</h3>
-        <button
-          @click="showScheduleModal = true"
+        <NuxtLink
+          :to="`/academies/${academyName}/admin/schedule`"
           class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
         >
-          <Icon icon="heroicons:plus" class="h-5 w-5" />
-          <span class="hidden sm:inline">เพิ่มตารางเรียน</span>
-        </button>
+          <Icon icon="heroicons:calendar-days" class="h-5 w-5" />
+          <span>จัดตารางเรียน</span>
+        </NuxtLink>
       </div>
 
       <!-- Schedule Grid by Day -->
-      <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div
-          v-for="day in weekDays"
+          v-for="day in visibleDays"
           :key="day.value"
           class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
         >
@@ -172,9 +172,14 @@
               :key="schedule.id"
               class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2 text-sm"
             >
-              <div class="font-medium text-gray-900 dark:text-white">{{ schedule.start_time }} - {{ schedule.end_time }}</div>
-              <div class="text-gray-600 dark:text-gray-400">{{ schedule.room }}</div>
-              <div class="text-xs text-gray-500 mt-1">คาบที่ {{ schedule.period_number }}</div>
+              <div class="font-medium text-gray-900 dark:text-white break-words">{{ schedule.display_title }}</div>
+              <div class="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{{ schedule.start_time }} - {{ schedule.end_time }}</div>
+              <div v-if="schedule.classroom || schedule.room" class="text-xs text-gray-500 break-words">
+                <span v-if="schedule.classroom">{{ schedule.classroom.name }}</span>
+                <span v-if="schedule.classroom && schedule.room"> • </span>
+                <span v-if="schedule.room">{{ schedule.room }}</span>
+              </div>
+              <div v-if="schedule.teacher" class="text-xs text-gray-500 break-words">{{ schedule.teacher.name }}</div>
             </div>
             <div v-if="getSchedulesByDay(day.value).length === 0" class="text-center text-gray-400 text-sm py-4">
               ว่าง
@@ -259,12 +264,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 
 const props = defineProps<{
   academyId: number
 }>()
+
+const route = useRoute()
+const academyName = computed(() => route.params.name as string)
 
 const schoolApi = useSchoolManagement()
 
@@ -314,7 +322,18 @@ const subjectForm = ref({
 
 // Schedules
 const schedules = ref<any[]>([])
-const showScheduleModal = ref(false)
+
+const DAY_NAMES: Record<number, string> = {
+  1: 'จันทร์', 2: 'อังคาร', 3: 'พุธ', 4: 'พฤหัสบดี', 5: 'ศุกร์', 6: 'เสาร์', 7: 'อาทิตย์',
+}
+
+// จ–ศ เสมอ บวกวันเสาร์/อาทิตย์เฉพาะเมื่อมีคาบอยู่จริง (ไม่งั้นคาบวันเสาร์จะมองไม่เห็น)
+const visibleDays = computed(() => {
+  const days = new Set<number>([1, 2, 3, 4, 5])
+  schedules.value.forEach((s: any) => days.add(Number(s.day_of_week)))
+
+  return [...days].sort((a, b) => a - b).map((value) => ({ value, label: DAY_NAMES[value] }))
+})
 
 // Load data
 const loadClassrooms = async () => {
