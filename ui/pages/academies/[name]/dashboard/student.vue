@@ -161,6 +161,12 @@ const quickActions = computed(() => [
     color: 'bg-purple-500',
   },
   {
+    title: 'ตารางเรียนของฉัน',
+    icon: 'fluent:calendar-clock-24-regular',
+    to: `/academies/${academyName.value}/my-schedule`,
+    color: 'bg-teal-500',
+  },
+  {
     title: 'ดูผลการเรียน',
     icon: 'fluent:document-checkmark-24-regular',
     to: `/academies/${academyName.value}/my-transcript`,

@@ -36,141 +36,18 @@ const timetable = ref<any[]>([])
 const courses = ref<any[]>([])
 const periodSets = ref<any[]>([])
 
-const DAY_LABELS: Record<number, { label: string; short: string }> = {
-  1: { label: 'จันทร์', short: 'จ' },
-  2: { label: 'อังคาร', short: 'อ' },
-  3: { label: 'พุธ', short: 'พ' },
-  4: { label: 'พฤหัสบดี', short: 'พฤ' },
-  5: { label: 'ศุกร์', short: 'ศ' },
-  6: { label: 'เสาร์', short: 'ส' },
-  7: { label: 'อาทิตย์', short: 'อา' },
-}
-
-const allDays = Object.keys(DAY_LABELS).map((k) => ({ value: Number(k), ...DAY_LABELS[Number(k)] }))
-
-const toMinutes = (time: string) => {
-  const [h, m] = String(time || '').split(':')
-  return (Number(h) || 0) * 60 + (Number(m) || 0)
-}
-
-const overlapMinutes = (aStart: string, aEnd: string, bStart: string, bEnd: string) =>
-  Math.min(toMinutes(aEnd), toMinutes(bEnd)) - Math.max(toMinutes(aStart), toMinutes(bStart))
+const allDays = ALL_SCHEDULE_DAYS
 
 const currentGradeLevel = computed(() => {
   if (viewMode.value !== 'classroom') return null
   return classrooms.value.find((c: any) => c.id === selectedClassroom.value)?.grade_level ?? null
 })
 
-const applicableSets = computed(() => {
-  const grade = currentGradeLevel.value
-  if (!grade) return periodSets.value
-  return periodSets.value.filter((s: any) => !s.grade_levels?.length || s.grade_levels.includes(grade))
+const { gridDays, gridRows, getScheduleCell, matchedPeriodId, applicableSets } = useScheduleGrid({
+  periodSets,
+  timetable,
+  gradeLevel: currentGradeLevel,
 })
-
-const gridDays = computed(() => {
-  const days = new Set<number>()
-  let hasUnrestricted = false
-
-  for (const set of applicableSets.value) {
-    if (!set.days?.length) hasUnrestricted = true
-    else set.days.forEach((d: any) => days.add(Number(d)))
-  }
-
-  if (hasUnrestricted || applicableSets.value.length === 0) {
-    [1, 2, 3, 4, 5].forEach((d) => days.add(d))
-  }
-
-  timetable.value.forEach((day: any) => {
-    if ((day.schedules || []).length > 0) days.add(Number(day.day))
-  })
-
-  return [...days].sort((a, b) => a - b).map((value) => ({ value, ...DAY_LABELS[value] }))
-})
-
-const gridRows = computed(() => {
-  const rows: any[] = []
-  const seen = new Set<string>()
-
-  for (const set of applicableSets.value) {
-    for (const period of set.periods || []) {
-      const key = `${period.start_time}-${period.end_time}`
-      if (seen.has(key)) continue
-      seen.add(key)
-      rows.push({
-        key,
-        start: period.start_time,
-        end: period.end_time,
-        label: period.name,
-        type: period.period_type || 'class',
-        periodId: period.id,
-        // วันที่ชุดนี้ใช้ (null = ทุกวัน) — ใช้ตัดสินตอนคาบสอนคาบหนึ่งซ้อนหลายแถวเท่า ๆ กัน
-        days: set.days?.length ? set.days.map((d: any) => Number(d)) : null,
-      })
-    }
-  }
-
-  for (const day of timetable.value) {
-    for (const schedule of day.schedules || []) {
-      const fits = rows.some((row) => overlapMinutes(row.start, row.end, schedule.start_time, schedule.end_time) > 0)
-      if (fits) continue
-      const key = `${schedule.start_time}-${schedule.end_time}`
-      if (seen.has(key)) continue
-      seen.add(key)
-      rows.push({
-        key,
-        start: schedule.start_time,
-        end: schedule.end_time,
-        label: 'นอกโครงคาบ',
-        type: 'outside',
-        periodId: null,
-        days: null,
-      })
-    }
-  }
-
-  return rows.sort((a, b) => toMinutes(a.start) - toMinutes(b.start) || toMinutes(a.end) - toMinutes(b.end))
-})
-
-const scheduleRowMap = computed(() => {
-  const map: Record<string, any[]> = {}
-
-  for (const day of timetable.value) {
-    for (const schedule of day.schedules || []) {
-      let best: any = null
-      let bestOverlap = 0
-
-      for (const row of gridRows.value) {
-        const overlap = overlapMinutes(row.start, row.end, schedule.start_time, schedule.end_time)
-        if (overlap <= 0) continue
-        // แถวที่มาจากชุดที่ใช้กับ "วันนี้" ต้องชนะแถวของชุดวันอื่นเสมอ
-        // (ไม่งั้นคาบวันเสาร์จะไปเกาะแถวของชุด "วันศุกร์เลิกเร็ว" เพราะเวลาซ้อนกันพอดี)
-        const appliesToDay = !row.days || row.days.includes(Number(day.day))
-        const score = overlap + (appliesToDay ? 10000 : 0)
-        if (score > bestOverlap) {
-          bestOverlap = score
-          best = row
-        }
-      }
-
-      if (!best) continue
-      const cellKey = `${day.day}-${best.key}`
-      ;(map[cellKey] ||= []).push(schedule)
-    }
-  }
-
-  return map
-})
-
-const getScheduleCell = (dayValue: number, row: any) => scheduleRowMap.value[`${dayValue}-${row.key}`] || []
-
-const matchedPeriodId = (start: string, end: string) => {
-  for (const set of applicableSets.value) {
-    for (const period of set.periods || []) {
-      if (period.start_time === start && period.end_time === end) return period.id
-    }
-  }
-  return null
-}
 
 // Academy Role
 const academyId = ref<number | null>(null)

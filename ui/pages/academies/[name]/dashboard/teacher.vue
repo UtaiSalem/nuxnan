@@ -348,8 +348,15 @@ const quickActions = computed(() => [
       <!-- Today's Schedule -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
-          <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+          <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white">ตารางสอนวันนี้</h2>
+            <NuxtLink
+              :to="`/academies/${academyName}/my-schedule`"
+              class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700"
+            >
+              ดูทั้งสัปดาห์
+              <Icon icon="fluent:chevron-right-24-regular" class="w-4 h-4" />
+            </NuxtLink>
           </div>
           <div class="p-4">
             <div v-if="todaySchedule.length === 0" class="text-center py-8 text-gray-500">
