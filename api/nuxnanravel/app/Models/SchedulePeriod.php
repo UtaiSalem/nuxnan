@@ -15,6 +15,7 @@ class SchedulePeriod extends Model
 
     protected $fillable = [
         'academy_id',
+        'set_id',
         'period_number',
         'name',
         'start_time',
@@ -54,6 +55,11 @@ class SchedulePeriod extends Model
         return $this->belongsTo(Academy::class);
     }
 
+    public function set(): BelongsTo
+    {
+        return $this->belongsTo(SchedulePeriodSet::class, 'set_id');
+    }
+
     // Accessors
     public function getTypeNameAttribute(): string
     {
@@ -79,6 +85,11 @@ class SchedulePeriod extends Model
     public function scopeByAcademy($query, $academyId)
     {
         return $query->where('academy_id', $academyId);
+    }
+
+    public function scopeBySet($query, $setId)
+    {
+        return $query->where('set_id', $setId);
     }
 
     public function scopeClasses($query)

@@ -55,6 +55,7 @@ use App\Http\Controllers\Api\Learn\Academy\PaymentController;
 use App\Http\Controllers\Api\Learn\Academy\PayrollController;
 use App\Http\Controllers\Api\Learn\Academy\ReportController;
 use App\Http\Controllers\Api\Learn\Academy\RolloverController;
+use App\Http\Controllers\Api\Learn\Academy\SchedulePeriodSetController;
 use App\Http\Controllers\Api\Learn\Academy\SchoolAttendanceController;
 use App\Http\Controllers\Api\Learn\Academy\SchoolEventController;
 use App\Http\Controllers\Api\Learn\Academy\SportsAlbumController;
@@ -645,6 +646,17 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::post('/bulk', [ClassScheduleController::class, 'bulkStore'])->middleware('academy.permission:schedule.manage')->name('api.academy.schedules.bulkStore');
         Route::patch('/{id}', [ClassScheduleController::class, 'update'])->middleware('academy.permission:schedule.manage')->name('api.academy.schedules.update');
         Route::delete('/{id}', [ClassScheduleController::class, 'destroy'])->middleware('academy.permission:schedule.manage')->name('api.academy.schedules.destroy');
+    });
+
+    // =====================================================
+    // Schedule Period Sets - ชุดโครงคาบเรียน (SC-S6)
+    // =====================================================
+
+    Route::prefix('{academy}/schedule-period-sets')->whereNumber('academy')->middleware(['academy.visibility:content', 'academy.permission'])->group(function () {
+        Route::get('/', [SchedulePeriodSetController::class, 'index'])->name('api.academy.schedulePeriodSets.index');
+        Route::post('/', [SchedulePeriodSetController::class, 'store'])->middleware('academy.permission:schedule.manage')->name('api.academy.schedulePeriodSets.store');
+        Route::patch('/{id}', [SchedulePeriodSetController::class, 'update'])->middleware('academy.permission:schedule.manage')->name('api.academy.schedulePeriodSets.update');
+        Route::delete('/{id}', [SchedulePeriodSetController::class, 'destroy'])->middleware('academy.permission:schedule.manage')->name('api.academy.schedulePeriodSets.destroy');
     });
 
     // =====================================================
