@@ -222,11 +222,18 @@ class ClassSchedule extends Model
      * คิวรีฐานของการตรวจชนเวลา — ช่วงเวลาแบบ half-open: ชนเมื่อ start < :end และ end > :start
      * ⇒ คาบที่จบพอดีตอนที่อีกคาบเริ่ม (08:00–09:00 กับ 09:00–10:00) ไม่ถือว่าชนกัน
      *
-     * 🔴 ต้องหุ้มทั้งสองฝั่งด้วย TIME() ไม่ใช่เทียบสตริงตรง ๆ:
+     * 🔴 หุ้ม TIME() **เฉพาะฝั่งคอลัมน์** — ห้ามหุ้มฝั่ง placeholder:
      * MySQL เก็บคอลัมน์เป็นชนิด TIME (ค่าจริง '09:00:00') แต่ SQLite ที่ใช้ตอนรันเทสต์เก็บเป็นข้อความ
      * ตามรูปแบบของ cast คือ '09:00' แล้วเทียบแบบสตริง ⇒ '09:00' < '09:00:00' เป็นจริง
      * ⇒ ถ้าเทียบตรง ๆ คาบที่ "จบพอดีตอนคาบเดิมเริ่ม" จะถูกนับว่าชนบน SQLite ทั้งที่ MySQL บอกว่าไม่ชน
      * TIME() มีทั้งใน MySQL และ SQLite และคืน 'H:i:s' เหมือนกัน จึงตัดความต่างนี้ทิ้งได้
+     *
+     * 🔴 แต่ห้ามเขียน `TIME(?)` เด็ดขาด (G26 · เจอตอน SC-S11 ตอนรันเทสต์บน MySQL จริง)
+     * บน MySQL 8.4 กับ prepared statement จริง (PDO ไม่ emulate) `TIME(?)` คืน **'00:00:00'**
+     * เมื่อค่าที่ผูกมามีนาทีเป็น 00 (เช่น '09:00:00' → 00:00:00 แต่ '09:30:00' → 09:30:00 ถูกต้อง)
+     * ⇒ เงื่อนไขแรกเป็นเท็จตลอด ⇒ **คาบที่เริ่ม/จบตรงชั่วโมงจะไม่ถูกนับว่าชนเลย** ซึ่งคือเกือบทุกคาบของโรงเรียนจริง
+     * SQLite ไม่มีอาการนี้ — บั๊กจึงซ่อนอยู่ใต้เทสต์เขียวได้นาน
+     * ทางที่ถูกคือส่งค่าเป็นสตริง 'H:i:s' ไปตรง ๆ — ทั้ง MySQL และ SQLite เทียบกับ TIME(คอลัมน์) ได้ถูกต้อง
      */
     protected static function overlappingQuery(
         int $semesterId,
@@ -238,8 +245,8 @@ class ClassSchedule extends Model
         $query = static::where('semester_id', $semesterId)
             ->where('day_of_week', $dayOfWeek)
             ->where('status', self::STATUS_ACTIVE)
-            ->whereRaw('TIME(start_time) < TIME(?)', [static::normalizeTime($endTime)])
-            ->whereRaw('TIME(end_time) > TIME(?)', [static::normalizeTime($startTime)]);
+            ->whereRaw('TIME(start_time) < ?', [static::normalizeTime($endTime)])
+            ->whereRaw('TIME(end_time) > ?', [static::normalizeTime($startTime)]);
 
         if ($excludeId) {
             $query->where('id', '!=', $excludeId);
