@@ -57,9 +57,20 @@ const canView = computed(() => isAdmin.value || can('schedule.view') || can('aca
 const canManage = computed(() => isAdmin.value || can('schedule.manage'))
 
 const showBulkModal = ref(false)
+const showCopyModal = ref(false)
 
 const bulkPeriodRows = computed(() =>
   gridRows.value.filter((row: any) => row.type !== 'break' && row.type !== 'lunch' && row.type !== 'outside')
+)
+
+const selectedSemesterName = computed(() => {
+  const sem = availableSemesters.value.find((s: any) => s.id === selectedSemester.value)
+  const year = selectedYearData.value
+  return sem ? `${sem.name} ปีการศึกษา ${year?.name || ''}` : ''
+})
+
+const canCopySchedule = computed(() =>
+  canManage.value && !!selectedSemester.value && availableSemesters.value.length > 1
 )
 
 const occupiedSlots = computed(() => {
@@ -571,6 +582,15 @@ const deleteSchedule = async () => {
           </NuxtLink>
           <button
             v-if="canManage"
+            :disabled="!canCopySchedule"
+            @click="showCopyModal = true"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Icon icon="fluent:copy-24-regular" class="w-5 h-5" />
+            <span>คัดลอกจากภาคเรียนอื่น</span>
+          </button>
+          <button
+            v-if="canManage"
             :disabled="!canBulkFill"
             @click="showBulkModal = true"
             class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1004,5 +1024,16 @@ const deleteSchedule = async () => {
     />
     <!-- ชื่อ component ต้องมีคำนำหน้าโฟลเดอร์ (School…) ตาม pathPrefix ที่เป็นค่าเริ่มต้นของ Nuxt
          ใช้ชื่อสั้น <ScheduleBulkFillModal> จะ resolve ไม่เจอแล้วโมดัลไม่ขึ้นแบบเงียบ ๆ -->
+
+    <SchoolScheduleCopyModal
+      v-if="showCopyModal && selectedSemester && academyId"
+      :academy-id="academyId"
+      :target-semester-id="selectedSemester"
+      :target-semester-name="selectedSemesterName"
+      :semesters="availableSemesters"
+      :classrooms="classrooms"
+      @close="showCopyModal = false"
+      @copied="fetchTimetable"
+    />
   </div>
 </template>
