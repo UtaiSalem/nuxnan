@@ -56,6 +56,39 @@ const { can, isAdmin, fetchMyRole } = useAcademyRole(academyId)
 const canView = computed(() => isAdmin.value || can('schedule.view') || can('academy.view'))
 const canManage = computed(() => isAdmin.value || can('schedule.manage'))
 
+const showBulkModal = ref(false)
+
+const bulkPeriodRows = computed(() =>
+  gridRows.value.filter((row: any) => row.type !== 'break' && row.type !== 'lunch' && row.type !== 'outside')
+)
+
+const occupiedSlots = computed(() => {
+  const slots: any[] = []
+  for (const day of timetable.value) {
+    for (const s of day.schedules || []) {
+      slots.push({
+        day: Number(day.day),
+        start_time: s.start_time,
+        end_time: s.end_time,
+        label: s.display_title || s.title || s.course?.name || 'คาบที่มีอยู่',
+      })
+    }
+  }
+  return slots
+})
+
+const selectedClassroomData = computed(() =>
+  classrooms.value.find((c: any) => c.id === selectedClassroom.value) || null
+)
+
+const canBulkFill = computed(() =>
+  canManage.value
+  && viewMode.value === 'classroom'
+  && !!selectedClassroom.value
+  && !!selectedSemester.value
+  && bulkPeriodRows.value.length > 0
+)
+
 // Modal
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
@@ -531,6 +564,15 @@ const deleteSchedule = async () => {
           </NuxtLink>
           <button
             v-if="canManage"
+            :disabled="!canBulkFill"
+            @click="showBulkModal = true"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Icon icon="fluent:table-add-24-filled" class="w-5 h-5" />
+            <span>เติมหลายคาบ</span>
+          </button>
+          <button
+            v-if="canManage"
             :disabled="!selectedSemester"
             @click="openCreateModal()"
             class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -549,6 +591,22 @@ const deleteSchedule = async () => {
             <p class="text-sm mt-1">ตอนนี้กริดจะวาดจากคาบที่มีอยู่จริงแทน — ตั้งค่าโครงคาบเพื่อให้ตารางตรงกับคาบของโรงเรียน</p>
             <NuxtLink
               v-if="canManage"
+              :to="`/academies/${academyName}/admin/schedule-periods`"
+              class="inline-block mt-2 text-sm font-medium text-orange-700 hover:text-orange-900 underline"
+            >
+              ไปหน้าตั้งค่าโครงคาบ
+            </NuxtLink>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="canManage && viewMode === 'classroom' && selectedClassroom && selectedSemester && bulkPeriodRows.length === 0" class="p-4 bg-orange-50 border border-orange-200 text-orange-800 rounded-xl mt-4">
+        <div class="flex items-start gap-3">
+          <Icon icon="fluent:warning-24-regular" class="w-6 h-6 mt-0.5 flex-shrink-0" />
+          <div>
+            <h3 class="font-medium text-orange-900">ไม่สามารถเติมหลายคาบได้</h3>
+            <p class="text-sm mt-1">เติมหลายคาบต้องมีชุดโครงคาบก่อน — ตั้งค่าคาบเรียนของโรงเรียนแล้วปุ่มจะใช้งานได้</p>
+            <NuxtLink
               :to="`/academies/${academyName}/admin/schedule-periods`"
               class="inline-block mt-2 text-sm font-medium text-orange-700 hover:text-orange-900 underline"
             >
@@ -923,5 +981,21 @@ const deleteSchedule = async () => {
         </div>
       </div>
     </Teleport>
+
+    <SchoolScheduleBulkFillModal
+      v-if="showBulkModal && selectedClassroomData && selectedSemester"
+      :academy-id="academyId!"
+      :semester-id="selectedSemester"
+      :classroom="selectedClassroomData"
+      :period-rows="bulkPeriodRows"
+      :courses="courses"
+      :teachers="teachers"
+      :occupied-slots="occupiedSlots"
+      :day-options="gridDays"
+      @close="showBulkModal = false"
+      @created="fetchTimetable"
+    />
+    <!-- ชื่อ component ต้องมีคำนำหน้าโฟลเดอร์ (School…) ตาม pathPrefix ที่เป็นค่าเริ่มต้นของ Nuxt
+         ใช้ชื่อสั้น <ScheduleBulkFillModal> จะ resolve ไม่เจอแล้วโมดัลไม่ขึ้นแบบเงียบ ๆ -->
   </div>
 </template>
