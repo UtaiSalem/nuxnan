@@ -656,6 +656,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::middleware('academy.permission:schedule.manage')->group(function () {
             Route::post('/', [ClassScheduleController::class, 'store'])->name('api.academy.schedules.store');
             Route::post('/bulk', [ClassScheduleController::class, 'bulkStore'])->name('api.academy.schedules.bulkStore');
+            Route::post('/copy', [ClassScheduleController::class, 'copy'])->name('api.academy.schedules.copy');
             Route::patch('/{id}', [ClassScheduleController::class, 'update'])->name('api.academy.schedules.update');
             Route::delete('/{id}', [ClassScheduleController::class, 'destroy'])->name('api.academy.schedules.destroy');
         });

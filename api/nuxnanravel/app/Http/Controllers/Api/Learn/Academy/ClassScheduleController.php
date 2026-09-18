@@ -1044,6 +1044,146 @@ class ClassScheduleController extends Controller
     }
 
     /**
+     * คัดลอกตารางเรียนจากภาคเรียนหนึ่งไปอีกภาคเรียนหนึ่ง — แบบ merge (D7)
+     *
+     * ไม่ลบของเดิมที่ปลายทาง · คาบไหนชนก็ข้ามคาบนั้นแล้วรายงานเหตุผล · ไม่ปฏิเสธทั้งคำขอ
+     */
+    public function copy(Request $request, $academyId): JsonResponse
+    {
+        $academy = Academy::findOrFail($academyId);
+
+        $validator = Validator::make($request->all(), [
+            'source_semester_id' => 'required|exists:semesters,id',
+            'target_semester_id' => 'required|exists:semesters,id|different:source_semester_id',
+            'classroom_ids' => 'nullable|array|max:200',
+            'classroom_ids.*' => [Rule::exists('classrooms', 'id')->where('academy_id', $academy->id)],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $source = Semester::with('academicYear')->find($request->source_semester_id);
+        $target = Semester::with('academicYear')->find($request->target_semester_id);
+
+        if ($source?->academicYear?->academy_id !== $academy->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => ['source_semester_id' => ['The selected source semester id is invalid.']],
+            ], 422);
+        }
+        if ($target?->academicYear?->academy_id !== $academy->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => ['target_semester_id' => ['The selected target semester id is invalid.']],
+            ], 422);
+        }
+
+        if ($source->academic_year_id !== $target->academic_year_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => ['target_semester_id' => ['ตอนนี้คัดลอกได้เฉพาะภายในปีการศึกษาเดียวกัน — ห้องเรียนของคนละปีเป็นคนละรายการ']],
+            ], 422);
+        }
+
+        $sources = ClassSchedule::with(['course:id,name,code,academy_id,semester,academic_year', 'classroom:id,name'])
+            ->byAcademy($academy->id)
+            ->bySemester($source->id)
+            ->active()
+            ->when($request->filled('classroom_ids'), fn ($q) => $q->whereIn('classroom_id', $request->classroom_ids))
+            ->orderBy('day_of_week')
+            ->orderBy('start_time')
+            ->get();
+
+        if ($sources->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => ['source_semester_id' => ['ภาคเรียนต้นทางไม่มีคาบให้คัดลอก']],
+            ], 422);
+        }
+
+        $skipped = [];
+        $created = [];
+        $mismatch = 0;
+
+        DB::transaction(function () use ($academy, $target, $request, $sources, &$skipped, &$created, &$mismatch) {
+            foreach ($sources as $s) {
+                $start = $s->start_time->format('H:i');
+                $end = $s->end_time->format('H:i');
+
+                $conflictReason = null;
+                if (ClassSchedule::hasTeacherConflict($s->teacher_id, $target->id, $s->day_of_week, $start, $end)) {
+                    $conflictReason = 'ครูผู้สอนมีตารางสอนซ้ำซ้อน';
+                } elseif (ClassSchedule::hasClassroomConflict($s->classroom_id, $target->id, $s->day_of_week, $start, $end)) {
+                    $conflictReason = 'ห้องเรียนมีตารางเรียนซ้ำซ้อน';
+                } elseif (ClassSchedule::hasRoomConflict($academy->id, $s->room, $target->id, $s->day_of_week, $start, $end)) {
+                    $conflictReason = 'สถานที่ถูกใช้ในเวลานี้แล้ว';
+                }
+
+                if ($conflictReason) {
+                    $skipped[] = [
+                        'source_id' => $s->id,
+                        'classroom' => $s->classroom?->name ?? '-',
+                        'day' => $s->day_name,
+                        'time' => $start.'-'.$end,
+                        'title' => $s->display_title ?: '-',
+                        'reason' => $conflictReason,
+                    ];
+
+                    continue;
+                }
+
+                $schedule = ClassSchedule::create([
+                    'academy_id' => $academy->id,
+                    'academic_year_id' => $target->academic_year_id,
+                    'semester_id' => $target->id,
+                    'classroom_id' => $s->classroom_id,
+                    'course_id' => $s->course_id,
+                    'title' => $s->title,
+                    'entry_type' => $s->entry_type,
+                    'period_id' => $s->period_id,
+                    'teacher_id' => $s->teacher_id,
+                    'day_of_week' => $s->day_of_week,
+                    'start_time' => $start,
+                    'end_time' => $end,
+                    'period_number' => $s->period_number,
+                    'room' => $s->room,
+                    'notes' => $s->notes,
+                    'created_by' => $request->user()->id,
+                ]);
+
+                $this->auditLogService->logCreate($schedule, 'schedules');
+                $created[] = $schedule;
+
+                if ($s->course && $s->course->semester !== null && $s->course->academic_year !== null) {
+                    if ($s->course->semester !== (string) $target->semester_number || $s->course->academic_year !== $target->academicYear->name) {
+                        $mismatch++;
+                    }
+                }
+            }
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'คัดลอกตารางเรียนสำเร็จ '.count($created).' คาบ',
+            'data' => [
+                'copied_count' => count($created),
+                'skipped_count' => count($skipped),
+                'skipped' => $skipped,
+                'course_semester_mismatch_count' => $mismatch,
+            ],
+        ]);
+    }
+
+    /**
      * จัดคาบเป็นกลุ่มรายวัน (1–7) สำหรับมุมมองห้องเรียนหรือมุมมองครู
 
      * เดิมโค้ดชุดนี้อยู่ใน timetable() — ย้ายออกมาเพื่อให้ my() ใช้ร่วมกันได้ ไม่ใช่ก๊อปซ้ำ
