@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api\Learn\Academy;
 
+use App\Exports\ClassScheduleExport;
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\Classroom;
 use App\Models\ClassSchedule;
+use App\Models\SchedulePeriod;
 use App\Models\Semester;
 use App\Models\Student;
 use App\Models\User;
@@ -15,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ClassScheduleController extends Controller
 {
@@ -944,7 +947,105 @@ class ClassScheduleController extends Controller
     }
 
     /**
+     * ส่งออกตารางเรียนเป็น Excel — 1 แถว = 1 คาบ
+     *
+     * กรองได้ด้วย semester_id / classroom_id / teacher_id / grade_level / day_of_week
+     * ไม่ส่ง semester_id มา = ใช้ภาคเรียนปัจจุบันของโรงเรียนนี้
+     */
+    public function export(Request $request, $academyId)
+    {
+        $academy = Academy::findOrFail($academyId);
+
+        $request->validate([
+            'semester_id' => 'nullable|exists:semesters,id',
+            'classroom_id' => ['nullable', Rule::exists('classrooms', 'id')->where('academy_id', $academy->id)],
+            'teacher_id' => 'nullable|exists:users,id',
+            'grade_level' => 'nullable|string|max:50',
+            'day_of_week' => 'nullable|integer|between:1,7',
+        ]);
+
+        $query = ClassSchedule::with(['course:id,name,code,academy_id', 'teacher:id,name', 'classroom:id,name,grade_level,section'])
+            ->byAcademy($academy->id)
+            ->active();
+
+        if ($request->filled('semester_id')) {
+            $query->bySemester($request->semester_id);
+        } else {
+            $currentSemester = Semester::currentForAcademy($academy->id);
+            if ($currentSemester) {
+                $query->bySemester($currentSemester->id);
+            }
+        }
+
+        if ($request->filled('classroom_id')) {
+            $query->byClassroom($request->classroom_id);
+        }
+
+        if ($request->filled('teacher_id')) {
+            $query->byTeacher($request->teacher_id);
+        }
+
+        if ($request->filled('day_of_week')) {
+            $query->byDay($request->day_of_week);
+        }
+
+        if ($request->filled('grade_level')) {
+            $query->whereHas('classroom', fn ($q) => $q->where('grade_level', $request->grade_level));
+        }
+
+        $schedules = $query->orderBy('day_of_week')->orderBy('start_time')->get();
+
+        if (! $request->filled('classroom_id')) {
+            $schedules = $schedules->sortBy(fn ($s) => [
+                $s->classroom?->name ?? '',
+                $s->day_of_week,
+                $s->start_time->format('H:i:s'),
+            ])->values();
+        }
+
+        // ชื่อคาบ: แถวที่สร้างจากโมดัล "เติมหลายคาบ" ผูกคาบไว้ที่ `period_id` แต่ไม่ได้เขียน
+        // `period_number` ⇒ ถ้าอ่านแค่ `period_number` คอลัมน์ "คาบ" จะเป็น "-" ทุกแถว
+        // ดึงชื่อคาบจากชุดโครงคาบมาเติมให้ (คิวรีเดียว ไม่ยิงทีละแถว)
+        $periodNames = SchedulePeriod::whereIn('id', $schedules->pluck('period_id')->filter()->unique())
+            ->pluck('name', 'id');
+
+        $rows = $schedules->map(function ($s) use ($periodNames) {
+            $entryTypeLabel = match ($s->entry_type) {
+                'course' => 'คอร์สเรียน',
+                'activity' => 'กิจกรรม',
+                'break' => 'พัก',
+                'exam' => 'สอบ',
+                default => $s->entry_type,
+            };
+
+            return [
+                'classroom' => $s->classroom?->name ?? '-',
+                'grade_level' => $s->classroom?->grade_level ?? '-',
+                'day_name' => $s->day_name,
+                'period_label' => $s->period_number ? 'คาบ '.$s->period_number : ($periodNames[$s->period_id] ?? '-'),
+                'start_time' => $s->start_time->format('H:i'),
+                'end_time' => $s->end_time->format('H:i'),
+                'course_code' => $s->course?->code ?? '-',
+                'title' => $s->display_title ?: '-',
+                'teacher_name' => $s->teacher?->name ?? '-',
+                'room' => $s->room ?? '-',
+                'entry_type_label' => $entryTypeLabel,
+            ];
+        })->toArray();
+
+        $this->auditLogService->logExport('class_schedules', $request->only([
+            'semester_id', 'classroom_id', 'teacher_id', 'grade_level', 'day_of_week',
+        ]), 'schedules');
+
+        return Excel::download(
+            new ClassScheduleExport($rows, 'ตารางเรียน'),
+            'class-schedules-'.now()->format('Ymd-His').'.xlsx'
+        );
+    }
+
+    /**
      * จัดคาบเป็นกลุ่มรายวัน (1–7) สำหรับมุมมองห้องเรียนหรือมุมมองครู
+
      * เดิมโค้ดชุดนี้อยู่ใน timetable() — ย้ายออกมาเพื่อให้ my() ใช้ร่วมกันได้ ไม่ใช่ก๊อปซ้ำ
      */
     private function buildTimetable($schedules, string $viewType): array
