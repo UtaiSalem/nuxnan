@@ -7,10 +7,11 @@ export default defineEventHandler(async (event) => {
   }
 
   // Forward to Laravel backend
-  const backendUrl = `http://localhost:8000${path}`
+  const apiBase = useRuntimeConfig(event).public.apiBase || 'http://localhost:8000'
+  const backendUrl = `${String(apiBase).replace(/\/$/, '')}${path}`
   
   try {
-    const response = await $fetch(backendUrl, {
+    const response = await $fetch.raw(backendUrl, {
       method: 'GET',
       responseType: 'arrayBuffer',
     })
@@ -26,12 +27,15 @@ export default defineEventHandler(async (event) => {
       'svg': 'image/svg+xml',
     }
     
-    const contentType = contentTypes[ext || ''] || 'application/octet-stream'
+    const contentType = response.headers.get('content-type') || contentTypes[ext || ''] || 'application/octet-stream'
+    
+    const buffer = Buffer.from(response._data as ArrayBuffer)
     
     event.node.res.setHeader('Content-Type', contentType)
+    event.node.res.setHeader('Content-Length', String(buffer.byteLength))
     event.node.res.setHeader('Cache-Control', 'public, max-age=31536000')
     
-    return response
+    return send(event, buffer)
   } catch (error) {
     console.error('Error proxying storage request:', error)
     throw createError({
