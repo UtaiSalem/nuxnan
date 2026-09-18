@@ -494,7 +494,7 @@ class ClassScheduleController extends Controller
         $academy = Academy::findOrFail($academyId);
 
         $validator = Validator::make($request->all(), [
-            'schedules' => 'required|array|min:1',
+            'schedules' => 'required|array|min:1|max:300',
             'schedules.*.semester_id' => 'required|exists:semesters,id',
             'schedules.*.classroom_id' => [
                 'required',
@@ -504,12 +504,16 @@ class ClassScheduleController extends Controller
                 'nullable',
                 Rule::exists('courses', 'id')->where('academy_id', $academy->id),
             ],
+            'schedules.*.title' => 'nullable|string|max:255',
             'schedules.*.entry_type' => ['nullable', Rule::in(ClassSchedule::ENTRY_TYPES)],
             'schedules.*.period_id' => 'nullable|integer|min:1',
             'schedules.*.teacher_id' => 'required|exists:users,id',
             'schedules.*.day_of_week' => 'required|integer|between:1,7',
             'schedules.*.start_time' => 'required|date_format:H:i',
             'schedules.*.end_time' => 'required|date_format:H:i|after:schedules.*.start_time',
+            'schedules.*.period_number' => 'nullable|integer|min:1|max:30',
+            'schedules.*.room' => 'nullable|string|max:50',
+            'schedules.*.notes' => 'nullable|string|max:500',
         ]);
 
         if ($validator->fails()) {
@@ -622,6 +626,7 @@ class ClassScheduleController extends Controller
                     'created_by' => $request->user()->id,
                 ]);
 
+                $this->auditLogService->logCreate($schedule, 'schedules');
                 $created[] = $schedule;
             }
 
@@ -911,6 +916,30 @@ class ClassScheduleController extends Controller
         return response()->json([
             'success' => true,
             'data' => $result,
+        ]);
+    }
+
+    /**
+     * รายชื่อสถานที่ (`room`) ที่โรงเรียนนี้เคยใช้จริง — ไว้ทำ datalist ในฟอร์ม
+     *
+     * ยังไม่มีทะเบียนสถานที่ในระบบ (เคาะไว้ที่ D8 ว่าเป็นเมนูของตัวเองในอนาคต)
+     * ระหว่างนี้ช่อง "สถานที่" ยังเป็นข้อความพิมพ์เอง — endpoint นี้แค่ช่วยให้พิมพ์ซ้ำได้ตรงกัน
+     */
+    public function rooms(Request $request, $academyId): JsonResponse
+    {
+        $academy = Academy::findOrFail($academyId);
+
+        $rooms = ClassSchedule::byAcademy($academy->id)
+            ->whereNotNull('room')
+            ->where('room', '!=', '')
+            ->distinct()
+            ->orderBy('room')
+            ->pluck('room')
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $rooms,
         ]);
     }
 

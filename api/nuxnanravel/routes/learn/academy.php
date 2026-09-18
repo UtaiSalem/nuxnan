@@ -648,6 +648,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
             Route::get('/timetable', [ClassScheduleController::class, 'timetable'])->name('api.academy.schedules.timetable');
             Route::get('/today', [ClassScheduleController::class, 'today'])->name('api.academy.schedules.today');
             Route::get('/check-availability', [ClassScheduleController::class, 'checkAvailability'])->name('api.academy.schedules.checkAvailability');
+            Route::get('/rooms', [ClassScheduleController::class, 'rooms'])->name('api.academy.schedules.rooms');
         });
 
         // จัดตาราง
