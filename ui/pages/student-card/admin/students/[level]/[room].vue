@@ -84,8 +84,19 @@ const fetchStudents = async () => {
 
 onMounted(fetchStudents)
 
+// รูปบนบัตรต้องเป็น same-origin ทั้งหมด ไม่งั้น html2canvas จะข้ามไปเงียบ ๆ ตอนดาวน์โหลด
+// (/storage/** ถูก proxy ไป backend โดย ui/server/middleware/storage-proxy.ts)
+const sameOriginStorage = (url) => {
+    if (!url) return ''
+    if (url.startsWith('/')) return url
+    if (apiBase && url.startsWith(apiBase)) return url.slice(apiBase.length)
+    return url
+}
+
+const logoUrl = '/storage/jsm_logo.png'
+
 const cardBgStyle = computed(() => ({
-    background: `url('${apiBase}/storage/images/std_card_bg2.png') center center / 1400px no-repeat`
+    background: `url('/storage/images/std_card_bg2.png') center center / 1400px no-repeat`
 }))
 
 const formattedIdNumber = (idNumber) => {
@@ -139,7 +150,7 @@ const downloadCard = async (index, studentNumber) => {
     const el = document.getElementById(`card-${index}`)
     if (!el) return
     try {
-        const canvas = await html2canvas(el, { backgroundColor: null, scale: 6 })
+        const canvas = await html2canvas(el, { backgroundColor: '#ffffff', scale: 6, useCORS: true, imageTimeout: 20000 })
         const link = document.createElement('a')
         link.href = canvas.toDataURL('image/png')
         link.download = `student_card_${level.value}_${room.value}_${studentNumber}.png`
@@ -254,26 +265,26 @@ const downloadCard = async (index, studentNumber) => {
                             <div class="h-[20%] -ml-8 flex items-center relative"
                                 style="background: linear-gradient(135deg, transparent 45%, #4a90e2 0%);">
                                 <div class="w-[22%] aspect-square flex items-center justify-center">
-                                    <img :src="`${apiBase}/storage/jsm_logo.png`" alt="School Logo"
-                                        class="w-[56%] h-[56%] mt-10 object-cover rounded-full">
+                                    <img :src="logoUrl" alt="School Logo"
+                                        class="w-[56%] h-[56%] mt-[34px] object-cover rounded-full">
                                 </div>
-                                <div class="-ml-10 -mt-2">
+                                <div class="-ml-10 -mt-[14px]">
                                     <div class="text-6xl font-semibold text-gray-800">โรงเรียนจริยธรรมศึกษามูลนิธิ</div>
                                     <div class="text-[34px] mt-2 font-semibold text-gray-800">CHARIYATHAMSUKSA FOUNDATION SCHOOL</div>
                                     <div class="text-3xl -mt-1.5 text-gray-800">148 ม.8 ต.สะกอม อ.จะนะ จ.สงขลา 90130 โทร.081-5412281</div>
                                 </div>
-                                <div class="absolute -top-8 right-4 mt-[148px] text-white bg-blue-700 px-4 pb-2 text-end rounded-md">
-                                    <div class="text-3xl -mt-1.5 font-semibold">บัตรประจำตัวนักเรียน</div>
-                                    <div class="text-2xl">STUDENT CARD</div>
+                                <div class="absolute z-10 top-[120px] right-[20px] text-white bg-blue-700 px-[14px] pt-0 pb-[14px] text-end rounded-md">
+                                    <div class="text-[26px] leading-tight font-semibold">บัตรประจำตัวนักเรียน</div>
+                                    <div class="text-[18px] leading-tight opacity-90">STUDENT CARD</div>
                                 </div>
                             </div>
 
                             <!-- Main Content -->
-                            <div class="flex p-[2%] gap-[2%] h-[80%]">
+                            <div class="flex px-[2%] pt-[2.45%] pb-[2%] gap-[2%] h-[80%]">
                                 <!-- Photo -->
-                                <div class="w-[30%] h-[80%] rounded-xl overflow-hidden flex-shrink-0 mt-4">
+                                <div class="w-[30%] h-[80%] rounded-xl overflow-hidden flex-shrink-0">
                                     <img v-if="student.profile_image_url"
-                                        :src="student.profile_image_url"
+                                        :src="sameOriginStorage(student.profile_image_url)"
                                         alt="Student Photo" class="w-full h-full object-fill rounded-xl" />
                                     <div v-else class="w-full h-full flex items-center justify-center bg-gray-300">
                                         <Icon icon="tabler:photo-plus" class="w-10 h-10 text-gray-600/60" />
@@ -302,7 +313,7 @@ const downloadCard = async (index, studentNumber) => {
                                         </div>
                                     </div>
                                     <!-- Student ID -->
-                                    <div>
+                                    <div class="-mt-2">
                                         <div class="flex items-center">
                                             <div class="w-[284px] text-[38px] font-bold text-gray-600 leading-tight">รหัสประจำตัว</div>
                                             <div class="text-[42px] font-bold text-gray-700 leading-tight mr-3">:</div>
@@ -314,7 +325,7 @@ const downloadCard = async (index, studentNumber) => {
                                         </div>
                                     </div>
                                     <!-- ID Card -->
-                                    <div>
+                                    <div class="-mt-2">
                                         <div class="flex">
                                             <div class="w-[284px] text-[38px] font-bold text-gray-600 leading-tight">เลขบัตรประชาชน</div>
                                             <div class="text-[42px] font-bold text-gray-700 leading-tight mr-3">:</div>
@@ -326,7 +337,7 @@ const downloadCard = async (index, studentNumber) => {
                                         </div>
                                     </div>
                                     <!-- Level -->
-                                    <div>
+                                    <div class="-mt-2">
                                         <div class="flex">
                                             <div class="w-[284px] text-[38px] font-bold text-gray-600 leading-tight">ระดับ</div>
                                             <div class="text-[42px] font-bold text-gray-700 leading-tight mr-3">:</div>
@@ -343,7 +354,7 @@ const downloadCard = async (index, studentNumber) => {
                                         </div>
                                     </div>
                                     <!-- Date of Birth -->
-                                    <div>
+                                    <div class="-mt-2">
                                         <div class="flex">
                                             <div class="w-[284px] text-[38px] font-bold text-gray-600 leading-tight">วัน/เดือน/ปี เกิด</div>
                                             <div class="text-[42px] font-bold text-gray-700 leading-tight mr-3">:</div>
@@ -356,7 +367,7 @@ const downloadCard = async (index, studentNumber) => {
                                         </div>
                                     </div>
                                     <!-- Expiry Date -->
-                                    <div class="-mt-1">
+                                    <div class="-mt-2">
                                         <div class="flex">
                                             <div class="w-[284px] text-[38px] font-bold text-gray-600 leading-tight">วันหมดอายุบัตร</div>
                                             <div class="text-[42px] font-bold text-gray-700 leading-tight mr-3">:</div>
