@@ -84,6 +84,44 @@ const fetchStudents = async () => {
 
 onMounted(fetchStudents)
 
+// การ์ดเลย์เอาต์ที่ 1248x768 เสมอ แล้วย่อทั้งใบด้วย transform ให้พอดีที่ว่าง
+// (ขนาดข้างในเป็น px ตายตัวทั้งหมด ถ้าปล่อยให้กล่องหดตาม % ทุกอย่างจะชนกัน)
+const CARD_W = 1248
+const CARD_H = 768
+const cardsWrap = ref(null)
+const cardScale = ref(1)
+let cardScaleObserver = null
+
+const measureCardScale = () => {
+    const el = cardsWrap.value
+    if (!el) return
+    const width = el.clientWidth
+    if (width > 0) cardScale.value = width / CARD_W
+}
+
+watch(cardsWrap, (el) => {
+    cardScaleObserver?.disconnect()
+    cardScaleObserver = null
+    if (!el || typeof ResizeObserver === 'undefined') return
+    cardScaleObserver = new ResizeObserver(measureCardScale)
+    cardScaleObserver.observe(el)
+    measureCardScale()
+})
+
+onBeforeUnmount(() => {
+    cardScaleObserver?.disconnect()
+    cardScaleObserver = null
+})
+
+const cardScaleWrapStyle = computed(() => ({ height: `${CARD_H * cardScale.value}px` }))
+
+const cardScaleStyle = computed(() => ({
+    width: `${CARD_W}px`,
+    height: `${CARD_H}px`,
+    transform: `scale(${cardScale.value})`,
+    transformOrigin: 'top left',
+}))
+
 // รูปบนบัตรต้องเป็น same-origin ทั้งหมด ไม่งั้น html2canvas จะข้ามไปเงียบ ๆ ตอนดาวน์โหลด
 // (/storage/** ถูก proxy ไป backend โดย ui/server/middleware/storage-proxy.ts)
 const sameOriginStorage = (url) => {
@@ -150,7 +188,20 @@ const downloadCard = async (index, studentNumber) => {
     const el = document.getElementById(`card-${index}`)
     if (!el) return
     try {
-        const canvas = await html2canvas(el, { backgroundColor: '#ffffff', scale: 6, useCORS: true, imageTimeout: 20000 })
+        const canvas = await html2canvas(el, {
+            backgroundColor: '#ffffff',
+            scale: 2,
+            useCORS: true,
+            imageTimeout: 20000,
+            // การ์ดบนจอถูกย่อด้วย transform ต้องล้างบนสำเนาที่ html2canvas โคลนไป
+            // ไม่งั้นไฟล์ที่ได้จะเล็กตามจอ (บนจอจริงไม่กระพริบ เพราะแก้แค่สำเนา)
+            width: CARD_W,
+            height: CARD_H,
+            onclone: (clonedDoc) => {
+                const clonedCard = clonedDoc.getElementById(`card-${index}`)
+                if (clonedCard) clonedCard.style.transform = 'none'
+            },
+        })
         const link = document.createElement('a')
         link.href = canvas.toDataURL('image/png')
         link.download = `student_card_${level.value}_${room.value}_${studentNumber}.png`
@@ -242,7 +293,7 @@ const downloadCard = async (index, studentNumber) => {
                 <Icon icon="fluent:filter-24-regular" class="w-16 h-16 text-gray-300" />
                 <p class="mt-4 text-gray-500 text-lg">ไม่มีนักเรียนตรงตามตัวกรอง</p>
             </div>
-            <div v-else class="grid grid-cols-1 gap-4">
+            <div v-else ref="cardsWrap" class="grid grid-cols-1 gap-4">
                 <div v-for="(student, index) in filteredStudents" :key="student.uid">
                     <div v-if="student.active_card_request" class="mb-2 flex items-center justify-center gap-2">
                         <span :class="requestStatusMeta(student.active_card_request.status).cls"
@@ -257,9 +308,9 @@ const downloadCard = async (index, studentNumber) => {
                         <button v-else-if="student.active_card_request.status === 'approved'" @click="reviewRequest(student, 'start')" class="min-h-[44px] sm:min-h-0 px-3 py-1 bg-violet-600 text-white rounded-lg text-sm hover:bg-violet-700">เริ่มจัดทำบัตร</button>
                         <button v-else-if="student.active_card_request.status === 'in_progress'" @click="reviewRequest(student, 'complete')" class="min-h-[44px] sm:min-h-0 px-3 py-1 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700">ทำเสร็จ/ส่งมอบแล้ว</button>
                     </div>
-                    <div class="flex justify-center items-center">
-                        <div :id="`card-${index}`" :style="cardBgStyle"
-                            class="w-full aspect-[1.95/1.20] relative overflow-hidden rounded-2xl shadow-lg border border-gray-300">
+                    <div class="w-full overflow-hidden" :style="cardScaleWrapStyle">
+                        <div :id="`card-${index}`" :style="[cardBgStyle, cardScaleStyle]"
+                            class="relative overflow-hidden rounded-2xl shadow-lg border border-gray-300">
 
                             <!-- Top Section -->
                             <div class="h-[20%] -ml-8 flex items-center relative"
@@ -273,8 +324,8 @@ const downloadCard = async (index, studentNumber) => {
                                     <div class="text-[34px] mt-2 font-semibold text-gray-800">CHARIYATHAMSUKSA FOUNDATION SCHOOL</div>
                                     <div class="text-3xl -mt-1.5 text-gray-800">148 ม.8 ต.สะกอม อ.จะนะ จ.สงขลา 90130 โทร.081-5412281</div>
                                 </div>
-                                <div class="absolute z-10 top-[120px] right-[20px] text-white bg-blue-700 px-[14px] pt-0 pb-[14px] text-end rounded-md">
-                                    <div class="text-[26px] leading-tight font-semibold">บัตรประจำตัวนักเรียน</div>
+                                <div class="absolute z-10 top-[113px] right-[20px] text-white bg-blue-700 px-[14px] pt-0 pb-[19.5px] text-end rounded-md">
+                                    <div class="text-[26px] leading-tight font-semibold -mt-[1.5px]">บัตรประจำตัวนักเรียน</div>
                                     <div class="text-[18px] leading-tight opacity-90">STUDENT CARD</div>
                                 </div>
                             </div>
