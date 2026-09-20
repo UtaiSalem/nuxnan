@@ -84,6 +84,10 @@ const fetchStudents = async () => {
 
 onMounted(fetchStudents)
 
+onMounted(() => {
+    document.fonts?.ready?.then(() => { fontsReady.value = true })
+})
+
 // การ์ดเลย์เอาต์ที่ 1248x768 เสมอ แล้วย่อทั้งใบด้วย transform ให้พอดีที่ว่าง
 // (ขนาดข้างในเป็น px ตายตัวทั้งหมด ถ้าปล่อยให้กล่องหดตาม % ทุกอย่างจะชนกัน)
 const CARD_W = 1248
@@ -144,31 +148,85 @@ const formattedIdNumber = (idNumber) => {
     return s.replace(/(\d)(\d{4})(\d{5})(\d{2})(\d{1})/, '$1-$2-$3-$4-$5')
 }
 
-const studentPrefixName = (student) => {
-    if (!student.first_name_english) return ''
-    if (student.title_name === 'เด็กหญิง' || student.title_name === 'นางสาว') return 'Ms.'
-    if (student.title_name === 'เด็กชาย' || student.title_name === 'นาย') return 'Mr.'
-    return ''
+// ---- คำนำหน้าชื่อ: สลับเป็น นาย/นางสาว เองเมื่ออายุครบ 15 ปี ----
+const TITLE_GENDER = {
+    'เด็กชาย': 'male', 'ด.ช.': 'male', 'นาย': 'male',
+    'เด็กหญิง': 'female', 'ด.ญ.': 'female', 'นางสาว': 'female', 'น.ส.': 'female', 'นาง': 'female',
 }
 
-const studentThaiPrefixName = (student) => {
-    if (!student?.first_name_thai) return { prefix: '', txtSize: 'text-[46px]' }
-    const fullLength = (student.first_name_thai?.length || 0) + (student.last_name_thai?.length || 0)
-    const isGirl = student.title_name === 'เด็กหญิง'
-    const isBoy = student.title_name === 'เด็กชาย'
-    const isMiss = student.title_name === 'นางสาว'
+const studentAge = (student) => {
+    if (!student?.birth_date) return null
+    const birth = new Date(student.birth_date)
+    if (isNaN(birth.getTime())) return null
+    const now = new Date()
+    let age = now.getFullYear() - birth.getFullYear()
+    const monthDiff = now.getMonth() - birth.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) age--
+    return age
+}
 
-    if (fullLength < 15) return { prefix: student.title_name, txtSize: 'text-[46px]' }
-    if (fullLength > 20) {
-        if (isGirl) return { prefix: 'ด.ญ.', txtSize: 'text-[42px]' }
-        if (isBoy) return { prefix: 'ด.ช.', txtSize: 'text-[42px]' }
-        if (isMiss) return { prefix: 'น.ส.', txtSize: 'text-[42px]' }
-        return { prefix: '', txtSize: 'text-[42px]' }
+// gender จาก DB เชื่อได้กว่าคำนำหน้า (1 = ชาย, 0 = หญิง · ตรวจแล้วไม่ขัดกับคำนำหน้าเลยสักเคสใน 2,222 คน)
+const studentGender = (student) => {
+    const g = student?.gender
+    if (g === 1 || g === '1') return 'male'
+    if (g === 0 || g === '0') return 'female'
+    return TITLE_GENDER[student?.title_name] || null
+}
+
+const studentTitle = (student) => {
+    const gender = studentGender(student)
+    if (!gender) return { full: student?.title_name || '', short: student?.title_name || '', gender: null }
+    const age = studentAge(student)
+    // ไม่มีวันเกิด (492 คนใน DB) ค่อยไล่ลงไปดูคำนำหน้าเดิม แล้วสุดท้ายใช้ระดับชั้น
+    const isAdult = age !== null
+        ? age >= 15
+        : (['นาย', 'นางสาว', 'น.ส.', 'นาง'].includes(student?.title_name) || Number(student?.class_level) >= 4)
+    if (gender === 'male') {
+        return isAdult ? { full: 'นาย', short: 'นาย', gender } : { full: 'เด็กชาย', short: 'ด.ช.', gender }
     }
-    if (isGirl) return { prefix: 'ด.ญ.', txtSize: 'text-[46px]' }
-    if (isBoy) return { prefix: 'ด.ช.', txtSize: 'text-[46px]' }
-    if (isMiss) return { prefix: 'น.ส.', txtSize: 'text-[46px]' }
-    return { prefix: '', txtSize: 'text-[44px]' }
+    return isAdult ? { full: 'นางสาว', short: 'น.ส.', gender } : { full: 'เด็กหญิง', short: 'ด.ญ.', gender }
+}
+
+// ---- ชื่อต้องอยู่บรรทัดเดียวเสมอ ----
+// ถ้าตกบรรทัด แถวข้อมูลที่เหลือจะถูกดันลงจนล้นออกนอกบัตร
+// ลำดับการย่อ: คำนำหน้าเต็ม -> คำนำหน้าย่อ (ด.ช./ด.ญ./น.ส.) -> ลดขนาดตัวอักษรทีละ 1px
+const NAME_MAX_WIDTH = 505      // px ที่เหลือให้ชื่อ ในระบบพิกัด 1248 (จากขอบขวาของ ":" ถึงขอบขวาคอลัมน์)
+const fontsReady = ref(false)
+let nameMeasureCtx = null
+
+const measureNameWidth = (text, weight, size) => {
+    if (typeof document === 'undefined' || !text) return 0
+    if (!nameMeasureCtx) nameMeasureCtx = document.createElement('canvas').getContext('2d')
+    nameMeasureCtx.font = `${weight} ${size}px "Noto Sans Thai", sans-serif`
+    return nameMeasureCtx.measureText(text).width
+}
+
+const fitNameSize = (text, weight, maxSize, minSize) => {
+    for (let size = maxSize; size > minSize; size--) {
+        if (measureNameWidth(text, weight, size) <= NAME_MAX_WIDTH) return size
+    }
+    return minSize
+}
+
+const studentThaiName = (student) => {
+    void fontsReady.value        // วัดใหม่เมื่อฟอนต์โหลดเสร็จ (ก่อนหน้านั้น measureText ใช้ฟอนต์ fallback)
+    if (!student?.first_name_thai) return { text: '', size: 46 }
+    const title = studentTitle(student)
+    const name = `${student.first_name_thai || ''} ${student.last_name_thai || ''}`.trim()
+    const withFullTitle = `${title.full}${name}`
+    if (measureNameWidth(withFullTitle, 700, 46) <= NAME_MAX_WIDTH) return { text: withFullTitle, size: 46 }
+    const withShortTitle = `${title.short}${name}`
+    if (measureNameWidth(withShortTitle, 700, 46) <= NAME_MAX_WIDTH) return { text: withShortTitle, size: 46 }
+    return { text: withShortTitle, size: fitNameSize(withShortTitle, 700, 46, 28) }
+}
+
+const studentEnglishName = (student) => {
+    void fontsReady.value
+    if (!student?.first_name_english) return { text: '', size: 36 }
+    const gender = studentTitle(student).gender
+    const prefix = gender === 'female' ? 'Ms.' : gender === 'male' ? 'Mr.' : ''
+    const text = `${prefix}${student.full_name_english || student.first_name_english}`
+    return { text, size: fitNameSize(text, 400, 36, 22) }
 }
 
 const formatDate = (dateStr, locale) => {
@@ -349,17 +407,17 @@ const downloadCard = async (index, studentNumber) => {
                                         <div class="flex items-center">
                                             <div class="w-[284px] text-[38px] font-bold text-gray-600 leading-tight mt-2">ชื่อ</div>
                                             <div class="text-[42px] font-bold text-gray-800 leading-tight mr-3 mt-1">:</div>
-                                            <div :class="studentThaiPrefixName(student).txtSize" class="font-bold text-gray-800 leading-tight -mt-1">
-                                                {{ studentThaiPrefixName(student).prefix }}{{ student.first_name_thai }} {{ student.last_name_thai }}
+                                            <div :style="{ fontSize: `${studentThaiName(student).size}px` }"
+                                                class="font-bold text-gray-800 leading-tight -mt-1 whitespace-nowrap">
+                                                {{ studentThaiName(student).text }}
                                             </div>
                                         </div>
                                         <div class="flex items-center -mt-3">
                                             <div class="w-[284px] text-[32px] text-gray-700 leading-tight">Name</div>
                                             <div class="text-[42px] text-transparent leading-tight mr-4">:</div>
-                                            <div class="text-[36px] text-gray-700 leading-tight">
-                                                <span v-if="student.first_name_english">
-                                                    {{ studentPrefixName(student) }}{{ student.full_name_english || student.first_name_english }}
-                                                </span>
+                                            <div :style="{ fontSize: `${studentEnglishName(student).size}px` }"
+                                                class="text-gray-700 leading-tight whitespace-nowrap">
+                                                {{ studentEnglishName(student).text }}
                                             </div>
                                         </div>
                                     </div>
@@ -414,7 +472,7 @@ const downloadCard = async (index, studentNumber) => {
                                         <div class="flex -mt-3">
                                             <div class="w-[284px] text-[32px] text-gray-700 leading-tight">Date of Birth</div>
                                             <div class="text-[42px] text-transparent leading-tight mr-4">:</div>
-                                            <div class="text-[36px] text-gray-700 leading-tight">{{ formatDate(student.birth_date, 'en-US') }}</div>
+                                            <div class="text-[36px] text-gray-700 leading-tight">{{ formatDate(student.birth_date, 'en-GB') }}</div>
                                         </div>
                                     </div>
                                     <!-- Expiry Date -->
@@ -427,7 +485,7 @@ const downloadCard = async (index, studentNumber) => {
                                         <div class="flex -mt-3">
                                             <div class="w-[284px] text-[32px] text-gray-700 leading-tight">Expiry Date</div>
                                             <div class="text-[42px] text-transparent leading-tight mr-4">:</div>
-                                            <div class="text-[36px] text-gray-700 leading-tight">{{ formatDate(student.card_expiry_date, 'en-US') }}</div>
+                                            <div class="text-[36px] text-gray-700 leading-tight">{{ formatDate(student.card_expiry_date, 'en-GB') }}</div>
                                         </div>
                                     </div>
                                 </div>
