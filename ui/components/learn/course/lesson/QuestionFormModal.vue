@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } from '@headlessui/vue'
 import { Icon } from '@iconify/vue'
+import { normalizeScore } from '~/utils/scoreFormat'
 
 interface Props {
   show: boolean
@@ -39,7 +40,7 @@ const initForm = () => {
   if (props.question) {
     // Edit mode
     form.value.text = props.question.text || ''
-    form.value.points = props.question.points || 1
+    form.value.points = Number(props.question.points) || 1
     form.value.images = [] // New images
     form.value.deleted_images = []
     existingImages.value = [...(props.question.images || [])] 
@@ -167,7 +168,7 @@ const onSubmit = async () => {
   try {
     const formData = new FormData()
     formData.append('text', form.value.text)
-    formData.append('points', form.value.points.toString())
+    formData.append('points', normalizeScore(form.value.points).toString())
     
     // Append Options
     form.value.options.forEach((opt, index) => {
@@ -356,12 +357,16 @@ const onSubmit = async () => {
                 <!-- Points -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">คะแนน</label>
-                  <input 
-                    type="number" 
-                    v-model="form.points" 
-                    class="w-32 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-orange-500 focus:border-orange-500"
-                    min="1"
+                  <input
+                    type="number"
+                    v-model.number="form.points"
+                    class="w-32 min-h-[44px] sm:min-h-0 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-orange-500 focus:border-orange-500"
+                    min="0.5"
+                    max="1000"
+                    step="0.5"
+                    inputmode="decimal"
                   >
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">ตั้งได้ทีละ 0.5 คะแนน</p>
                 </div>
 
               </div>

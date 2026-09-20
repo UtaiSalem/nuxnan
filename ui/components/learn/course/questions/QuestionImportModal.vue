@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } from '@headlessui/vue'
 import { Icon } from '@iconify/vue'
+import { formatScore } from '~/utils/scoreFormat'
 import type { QuestionImportScope, QuestionImportPreview } from '~/types/questionImport'
 import { useQuestionImportService } from '~/services/questionImportService'
 
@@ -304,7 +305,7 @@ const commit = async () => {
                               {{ row.data.options[row.data.correct] }}
                             </span>
                           </td>
-                          <td class="px-4 py-3 align-top">{{ row.data.points }}</td>
+                          <td class="px-4 py-3 align-top">{{ formatScore(row.data.points) }}</td>
                           <td class="px-4 py-3 align-top whitespace-normal">
                             <div v-if="row.errors.length === 0 && row.warnings.length === 0" class="text-green-600 flex items-center gap-1">
                               <Icon icon="fluent:checkmark-circle-16-regular" /> ปกติ

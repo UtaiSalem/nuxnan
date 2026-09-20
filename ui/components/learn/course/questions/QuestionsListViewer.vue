@@ -16,7 +16,7 @@
                       <div class="flex items-center gap-2 flex-shrink-0">
                            <!-- Question Value -->
                            <div class="text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-1 rounded-md border border-blue-100 dark:border-blue-800">
-                               {{ q.points }} คะแนน
+                               {{ formatScore(q.points) }} คะแนน
                            </div>
     
                            <!-- PP Fine (แต้มค่าปรับสำหรับแก้ไขคำตอบ) -->
@@ -151,6 +151,7 @@
 
 <script setup>
 import { Icon } from '@iconify/vue'
+import { formatScore } from '~/utils/scoreFormat'
 import { ref, onMounted } from 'vue'
 import ImageGalleryModal from '@/components/ImageGalleryModal.vue'
 import Swal from 'sweetalert2'

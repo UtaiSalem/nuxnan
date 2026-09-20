@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import { formatScore, normalizeScore, isValidScore } from '~/utils/scoreFormat'
 // import { VueDatePicker } from '@vuepic/vue-datepicker';
 // import '@vuepic/vue-datepicker/dist/main.css'
 import Swal from 'sweetalert2'
@@ -231,6 +232,8 @@ const questionForm = reactive({
     ]
 })
 
+const isQuestionPointsValid = computed(() => isValidScore(questionForm.points))
+
 // File upload handlers
 const handleQuestionMediaChange = (event: Event) => {
     const target = event.target as HTMLInputElement
@@ -320,7 +323,7 @@ const getImageUrl = (item: any): string | null => {
 const openEditQuestion = (q: any) => {
     editingQuestion.value = q
     questionForm.text = q.text || ''
-    questionForm.points = q.points
+    questionForm.points = Number(q.points) || 1
     questionForm.pp_fine = q.pp_fine || 0
     questionForm.media_url = getImageUrl(q)
     // Reset media files
@@ -386,6 +389,11 @@ const saveQuestion = async () => {
         return
     }
 
+    if (!isQuestionPointsValid.value) {
+        Swal.fire('คะแนนไม่ถูกต้อง', 'คะแนนต้องอยู่ระหว่าง 0.5 ถึง 1000 และเพิ่มทีละ 0.5 คะแนน', 'warning')
+        return
+    }
+
     isSavingQuestion.value = true
     try {
         if (editingQuestion.value) {
@@ -393,7 +401,7 @@ const saveQuestion = async () => {
             const qId = editingQuestion.value.id
             const qFormData = buildQuestionFormData({
                 text: questionForm.text,
-                points: questionForm.points,
+                points: normalizeScore(questionForm.points),
                 pp_fine: questionForm.pp_fine,
                 _method: 'PATCH'
             }, questionMediaFile.value)
@@ -457,7 +465,7 @@ const saveQuestion = async () => {
             // Create Question with FormData
             const qFormData = buildQuestionFormData({
                 text: questionForm.text,
-                points: questionForm.points,
+                points: normalizeScore(questionForm.points),
                 pp_fine: questionForm.pp_fine
             }, questionMediaFile.value)
 
@@ -735,7 +743,7 @@ const deleteQuestion = async (qId: number) => {
 
                             <div class="flex items-center justify-between gap-2 flex-shrink-0 border-t border-gray-200/70 dark:border-gray-600/50 pt-2 sm:border-0 sm:pt-0 sm:justify-end">
                                 <div class="flex items-center gap-1.5">
-                                    <span class="text-xs font-bold px-2 py-1 whitespace-nowrap bg-blue-100 dark:bg-blue-900/30 rounded text-blue-600 dark:text-blue-300">{{ q.points }} คะแนน</span>
+                                    <span class="text-xs font-bold px-2 py-1 whitespace-nowrap bg-blue-100 dark:bg-blue-900/30 rounded text-blue-600 dark:text-blue-300">{{ formatScore(q.points) }} คะแนน</span>
                                     <span class="text-xs font-bold px-2 py-1 whitespace-nowrap bg-orange-100 dark:bg-orange-900/30 rounded text-orange-600 dark:text-orange-300">{{ q.pp_fine || 0 }} แต้ม</span>
                                 </div>
                                 <div class="flex items-center gap-0.5 sm:ml-1">
@@ -806,7 +814,17 @@ const deleteQuestion = async (qId: number) => {
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">คะแนน</label>
-                        <input v-model.number="questionForm.points" type="number" min="1" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+                        <input
+                            v-model.number="questionForm.points"
+                            type="number"
+                            min="0.5"
+                            max="1000"
+                            step="0.5"
+                            inputmode="decimal"
+                            :class="['w-full px-4 py-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-900 dark:text-white', isQuestionPointsValid ? 'border-gray-300 dark:border-gray-600' : 'border-red-500']"
+                        />
+                        <p v-if="!isQuestionPointsValid" class="mt-1 text-xs text-red-500">คะแนนต้องอยู่ระหว่าง 0.5 ถึง 1000 และเพิ่มทีละ 0.5</p>
+                        <p v-else class="text-xs text-gray-500 mt-1">ตั้งได้ทีละ 0.5 คะแนน (เช่น 0.5, 1, 1.5)</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

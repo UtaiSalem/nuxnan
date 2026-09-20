@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
+import { formatScore } from '~/utils/scoreFormat'
 import { useApi } from '@/composables/useApi'
 import { useSweetAlert } from '@/composables/useSweetAlert'
 import ImageLightbox from '~/components/play/feed/ImageLightbox.vue'
@@ -625,7 +626,7 @@ onUnmounted(() => {
                                     <Icon :icon="answerResults[question.id].is_correct ? 'fluent:checkmark-circle-24-filled' : 'fluent:dismiss-circle-24-filled'" class="w-6 h-6" />
                                     <span>{{ answerResults[question.id].message }}</span>
                                     <span v-if="answerResults[question.id].is_correct" class="text-sm opacity-80 ml-1">
-                                        (+{{ answerResults[question.id].points }} คะแนน)
+                                        (+{{ formatScore(answerResults[question.id].points) }} คะแนน)
                                     </span>
                                  </div>
                              </transition>
@@ -773,7 +774,7 @@ onUnmounted(() => {
             </div>
             
              <div class="absolute top-4 right-4 text-xs font-medium text-gray-400">
-                {{ question.points }} คะแนน
+                {{ formatScore(question.points) }} คะแนน
             </div>
         </div>
     </div>
