@@ -422,7 +422,7 @@ class CourseScoreService
     /**
      * Backwards compatibility: Calculate internal total score (Quizzes + Assignments + Questions)
      */
-    public function calculateInternalTotalScore(Course $course): int
+    public function calculateInternalTotalScore(Course $course): float
     {
         $quizTotal = $course->courseQuizzes()->sum('total_score');
 
@@ -442,18 +442,18 @@ class CourseScoreService
             ->where('questionable_type', 'App\Models\Lesson')
             ->sum(DB::raw('COALESCE(points, 1)'));
 
-        return (int) ($quizTotal + $assignmentTotal + $lessonAssignmentTotal + $lessonQuestionTotal);
+        return (float) ($quizTotal + $assignmentTotal + $lessonAssignmentTotal + $lessonQuestionTotal);
     }
 
     /**
      * Backwards compatibility: syncCourseTotalScore
      */
-    public function syncCourseTotalScore(Course $course): int
+    public function syncCourseTotalScore(Course $course): float
     {
         $internalTotal = $this->calculateInternalTotalScore($course);
         $externalTotal = CourseExternalScore::where('course_id', $course->id)->where('is_active', true)->sum('max_score');
 
-        $newTotal = max(0, $internalTotal + $externalTotal);
+        $newTotal = max(0, (float) $internalTotal + (float) $externalTotal);
         $course->update(['total_score' => $newTotal]);
 
         return $newTotal;
@@ -461,11 +461,11 @@ class CourseScoreService
 
     // --- Backwards Compatibility Wrappers for Controllers (P1.6 pending) ---
 
-    public function syncMemberAchievedScore(CourseMember $member): int
+    public function syncMemberAchievedScore(CourseMember $member): float
     {
         $breakdown = $this->recompute($member);
 
-        return (int) $breakdown->internalEarned();
+        return (float) $breakdown->internalEarned();
     }
 
     public function syncMemberExternalScore(CourseMember $member): float

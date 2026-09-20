@@ -12,6 +12,10 @@ class UserAnswerQuestion extends Model
 
     protected $guarded = [];
 
+    protected $casts = [
+        'points' => 'float',
+    ];
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

@@ -175,7 +175,7 @@ class LessonAnswerQuestionController extends Controller
 
     private function buildQuizSummary(Lesson $lesson, int $userId, int $totalQuestions, bool $wasAllCorrect): array
     {
-        $totalPoints = (int) $lesson->questions()->sum('points');
+        $totalPoints = (float) $lesson->questions()->sum('points');
 
         $stats = $this->lessonAnswerScope($lesson, $userId)
             ->selectRaw('COUNT(*) as answered_count')
@@ -185,7 +185,7 @@ class LessonAnswerQuestionController extends Controller
 
         $answeredCount = (int) ($stats->answered_count ?? 0);
         $correctCount = (int) ($stats->correct_count ?? 0);
-        $earnedPoints = (int) ($stats->earned_points ?? 0);
+        $earnedPoints = (float) ($stats->earned_points ?? 0);
 
         $allAnswered = $totalQuestions > 0 && $answeredCount >= $totalQuestions;
         $allCorrect = $totalQuestions > 0 && $correctCount >= $totalQuestions;
@@ -198,7 +198,7 @@ class LessonAnswerQuestionController extends Controller
             'total_points' => $totalPoints,
             'all_answered' => $allAnswered,
             'all_correct' => $allCorrect,
-            'percentage' => $totalPoints > 0 ? (int) round($earnedPoints / $totalPoints * 100) : 0,
+            'percentage' => $totalPoints > 0 ? round($earnedPoints / $totalPoints * 100, 2) : 0,
             'just_completed' => $allCorrect && ! $wasAllCorrect,
         ];
     }

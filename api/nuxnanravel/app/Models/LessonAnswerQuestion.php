@@ -9,6 +9,10 @@ class LessonAnswerQuestion extends Model
     //
     protected $guarded = [];
 
+    protected $casts = [
+        'points' => 'float',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);

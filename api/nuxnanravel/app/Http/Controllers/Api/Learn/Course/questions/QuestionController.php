@@ -45,7 +45,7 @@ class QuestionController extends Controller
 
         $validatedData = $request->validate([
             'text' => 'required|string',
-            'points' => 'required|integer',
+            'points' => 'required|numeric|min:0.5|max:1000|multiple_of:0.5',
             'pp_fine' => 'nullable|integer',
             'course_id' => 'required|integer',
             'images' => 'nullable|array',
@@ -56,7 +56,7 @@ class QuestionController extends Controller
             'user_id' => auth()->id(),
             'course_id' => $request->course_id,
             'text' => $request->text,
-            'points' => $request->points,
+            'points' => (float) $validatedData['points'],
             'pp_fine' => $request->pp_fine ?? 0,
         ]);
 
@@ -90,7 +90,7 @@ class QuestionController extends Controller
 
         $validatedData = $request->validate([
             'text' => 'required|string',
-            'points' => 'required|integer',
+            'points' => 'required|numeric|min:0.5|max:1000|multiple_of:0.5',
             'pp_fine' => 'nullable|integer',
             'images' => 'nullable|array',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -98,7 +98,7 @@ class QuestionController extends Controller
 
         $question->update([
             'text' => $request->text,
-            'points' => $request->points,
+            'points' => (float) $validatedData['points'],
             'pp_fine' => $request->pp_fine ?? 0,
         ]);
 

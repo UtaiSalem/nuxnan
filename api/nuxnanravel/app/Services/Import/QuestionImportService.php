@@ -256,14 +256,14 @@ class QuestionImportService
             }
 
             $pointsRaw = trim((string) ($row['points_raw'] ?? ''));
-            $points = 1;
+            $points = 1.0;
             if ($pointsRaw !== '') {
-                if (! is_numeric($pointsRaw) || $pointsRaw < 0 || $pointsRaw > 100) {
-                    $errors[] = 'คะแนนต้องเป็นตัวเลข 0-100';
-                } elseif ((string) (int) $pointsRaw !== $pointsRaw) {
-                    $errors[] = 'คะแนนต้องเป็นจำนวนเต็ม';
+                if (! is_numeric($pointsRaw) || $pointsRaw < 0.5 || $pointsRaw > 100) {
+                    $errors[] = 'คะแนนต้องเป็นตัวเลข 0.5-100';
+                } elseif (fmod((float) $pointsRaw * 2, 1.0) !== 0.0) {
+                    $errors[] = 'คะแนนต้องลงท้ายด้วย .0 หรือ .5 เท่านั้น';
                 } else {
-                    $points = (int) $pointsRaw;
+                    $points = (float) $pointsRaw;
                 }
             }
 
@@ -335,7 +335,7 @@ class QuestionImportService
 
             if ($questionable instanceof CourseQuiz) {
                 $questionable->update([
-                    'total_score' => (int) $questionable->questions()->sum('points'),
+                    'total_score' => (float) $questionable->questions()->sum('points'),
                     'total_questions' => (int) $questionable->questions()->count(),
                 ]);
             }

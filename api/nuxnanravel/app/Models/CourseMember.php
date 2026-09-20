@@ -22,8 +22,8 @@ class CourseMember extends Model
     {
         return [
             'edited_grade' => 'float',
-            'achieved_score' => 'integer',
-            'bonus_points' => 'integer',
+            'achieved_score' => 'float',
+            'bonus_points' => 'float',
             'external_score_points' => 'float',
             'efficiency' => 'integer',
             'grade_progress' => 'float',

@@ -14,6 +14,11 @@ class Question extends Model
 
     protected $guarded = [];
 
+    protected $casts = [
+        'points' => 'float',
+        'pp_fine' => 'integer',
+    ];
+
     public static bool $skipQuizCounterSync = false;
 
     /**

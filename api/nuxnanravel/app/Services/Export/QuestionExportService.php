@@ -75,7 +75,7 @@ class QuestionExportService
                 $sheet->setCellValue('I'.$rowNum, '');
             }
 
-            $sheet->setCellValue('J'.$rowNum, (int) $q->points);
+            $sheet->setCellValue('J'.$rowNum, (float) $q->points);
             $sheet->setCellValueExplicit('K'.$rowNum, $q->explanation ?? '', DataType::TYPE_STRING);
             $sheet->setCellValue('L'.$rowNum, (int) ($q->pp_fine ?? 0));
 

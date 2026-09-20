@@ -32,6 +32,7 @@ class CourseQuizResult extends Model
     ];
 
     protected $casts = [
+        'score' => 'float',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
         'retake_unlocked_at' => 'datetime',
