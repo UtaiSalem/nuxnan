@@ -35,6 +35,8 @@ class RoomStudentResource extends JsonResource
             'student_number' => $student?->student_id,
             'national_id' => $student?->citizen_id,
             'title_name' => $student?->title_prefix_th,
+            // 1 = ชาย, 0 = หญิง — ใช้เดาคำนำหน้าเมื่อ title_prefix_th ว่าง (ว่างอยู่ 482 คน แต่ gender มีครบ)
+            'gender' => $student?->gender,
             'first_name_thai' => $student?->first_name_th,
             'last_name_thai' => $student?->last_name_th,
             'full_name_thai' => trim("{$student?->title_prefix_th} {$student?->first_name_th} {$student?->last_name_th}"),
