@@ -1,5 +1,44 @@
 # Work Log — nuxnan project
 
+## 2026-09-23 — SC-S10d ภาระงานสอน + SC-S10e สอนแทน/งดคาบรายวันที่
+
+### สถานะ: ✅ push ขึ้น main แล้ว 4 commit (`bf34c634..68e0f989`)
+- `bdf1dfa3` feat(api) SC-S10d ภาระงานสอน
+- `1592106a` feat(api) SC-S10e สอนแทน/งดคาบ
+- `fb66791a` feat(ui) หน้า+ป้ายทั้ง S10d/S10e
+- `68e0f989` docs ปิด S10d/S10e
+
+### งานที่ทำในวันนี้
+- **SC-S10d ภาระงานสอน**: `GET /schedules/workload` — ต่อครู: คาบ/สัปดาห์, นาที, จำนวนวิชา/ห้อง/วันที่สอน,
+  คาบมากสุดในวันเดียว · ครูไม่มีคาบขึ้นเป็น 0 · ตัด entry_type=break · ส่งออก Excel · หน้า `admin/schedule-workload.vue` เรียงได้+ค้นหา
+- **SC-S10e สอนแทน/งดคาบ**: ตารางใหม่ `class_schedule_exceptions` (รายวันที่ · ไม่แตะ class_schedules) · 3 ประเภท งดคาบ/สอนแทน/ย้ายห้อง
+  · CRUD endpoints + `available-teachers` · overlay ใน today/timetable/my (ส่ง `date` เท่านั้นถึงเปลี่ยน response)
+  · หน้า `admin/schedule-exceptions.vue` + `SchoolScheduleExceptionModal` · ป้ายใน `my-schedule.vue` + `dashboard/teacher.vue`
+- เทสต์: sqlite 122/122 และ MySQL จริง 122/122 · ตรวจบนเบราว์เซอร์จริงที่ 375px (workload 120 ครู, สอนแทนครบวง, ลบแถวทดสอบแล้ว)
+- อัพเดท memory `project-tests-sqlite-vs-mysql`: กับดัก `Model::truncate()` ในเทสต์ = implicit commit บน MySQL ทำแถวหลุดข้ามเทสต์
+
+### 🔴 3 บั๊กที่ agy รายงานว่าผ่านแต่จริงพัง (Claude แก้เอง)
+1. `schedule-exceptions.vue` เรียก `useAcademyRole()` ไม่ส่ง academyId → หน้าว่างถาวรไม่มี error
+2. `my-schedule.vue` — agy รายงานทำครบแต่ diff มีแค่ 2 hunk (รายงานแต่ง) → Claude เขียนปุ่มเลื่อนสัปดาห์/ป้าย/กล่องสรุปเอง
+3. เทสต์ใช้ `truncate()` → เทสต์อื่น 5 ตัวแดงบน MySQL → เปลี่ยนเป็น `->delete()`
+
+### งานที่ค้างอยู่ (TODO ต่อ — ยังไม่ได้ทำ)
+- [ ] **หน้าสอนแทนอ่านภาคเรียนปัจจุบันเท่านั้น**: `ClassScheduleController::today()` ใช้ `Semester::currentForAcademy()` เสมอ
+      → เลือกวันที่ในภาคเรียนอื่นในหน้า `admin/schedule-exceptions.vue` จะไม่เห็นคาบ · แก้โดยหาภาคเรียนจากช่วงวันที่ของ `semesters`
+- [ ] **ยังไม่ได้ตรวจ `dashboard/teacher.vue` บนจอจริง** — ผ่านแค่ SFC compile (ป้าย + นับ classesToday)
+- [ ] **spec decisions ยังไม่ได้ให้เจ้าของโปรเจคเคาะ** (Claude วางเอง): 3 ประเภทข้อยกเว้น · ครูสอนแทนไม่ว่าง = บล็อก 422 (ไม่ใช่เตือน) ·
+      ภาระงานไม่นับ break · 1 คาบ × 1 วันที่ = 1 รายการ
+
+### Context สำคัญ
+- migration `2026_09_23_090000_create_class_schedule_exceptions_table` **รันบน dev DB แล้ว** (เครื่องนี้) — เครื่องอื่นต้อง `php artisan migrate`
+- route ตารางสอนตอนนี้ = 24 เส้น (เดิม 17) · ห้ามเขียนคิวรีเทียบเวลาเอง ใช้ `ClassSchedule::overlappingQuery()` (G26 · TIME(?) พัง)
+- `busyTeacherIdsOn()` เป็นตัวตัดสิน "ครูว่างสอนแทนไหม" — คาบตัวเองที่ถูกงด/ถูกคนอื่นสอนแทนวันนั้นถือว่าว่าง
+
+### Branch / Git State
+- Branch: main
+- Uncommitted: worklog นี้ (กำลังจะ commit)
+- Push status: 4 commit ของ S10d/S10e push แล้ว
+
 ## 2026-09-04 (ต่อ) — เฟส 2: บังคับเวลาอ่านเนื้อหาบทเรียน
 
 ### สถานะ: ✅ 2 commit — backend `983b86e5` (+268/−9) · frontend `b13f1372` (+167/−16)
