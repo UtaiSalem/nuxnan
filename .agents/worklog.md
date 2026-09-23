@@ -2,11 +2,15 @@
 
 ## 2026-09-23 — SC-S10d ภาระงานสอน + SC-S10e สอนแทน/งดคาบรายวันที่
 
-### สถานะ: ✅ push ขึ้น main แล้ว 4 commit (`bf34c634..68e0f989`)
+### สถานะ: ✅ เสร็จครบ push ขึ้น main แล้ว 8 commit (`bf34c634..eac802cc`)
 - `bdf1dfa3` feat(api) SC-S10d ภาระงานสอน
 - `1592106a` feat(api) SC-S10e สอนแทน/งดคาบ
 - `fb66791a` feat(ui) หน้า+ป้ายทั้ง S10d/S10e
 - `68e0f989` docs ปิด S10d/S10e
+- `c9b83f07` docs เจ้าของโปรเจคเคาะ spec decisions
+- `827df4a2` fix(api) today() เลือกภาคเรียนตามวันที่ที่ถาม
+- `eac802cc` fix(ui) แดชบอร์ดครู นับคาบวันนี้รู้เรื่องสอนแทน
+- (bd47e4b6 = worklog รอบก่อน)
 
 ### งานที่ทำในวันนี้
 - **SC-S10d ภาระงานสอน**: `GET /schedules/workload` — ต่อครู: คาบ/สัปดาห์, นาที, จำนวนวิชา/ห้อง/วันที่สอน,
@@ -43,7 +47,8 @@
 ### Branch / Git State
 - Branch: main
 - Uncommitted: worklog นี้ (กำลังจะ commit)
-- Push status: 4 commit ของ S10d/S10e push แล้ว
+- Push status: 8 commit ของ S10d/S10e push แล้ว · **S10d/S10e เสร็จสมบูรณ์ ไม่มี TODO ค้าง**
+  (spec decisions เคาะครบ · ทุกหน้าตรวจบนจอจริง 375px · เทสต์เขียว sqlite/MySQL 129/129)
 
 ## 2026-09-04 (ต่อ) — เฟส 2: บังคับเวลาอ่านเนื้อหาบทเรียน
 
