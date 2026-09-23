@@ -54,6 +54,16 @@
 - ผลรวม: ทุก analytics GET = 200 ครบ (snapshots 422 = ต้องมี query param ไม่ใช่บั๊ก) · เทสต์ใหม่ AnalyticsAtRiskTest + AnalyticsTeacherPendingTest เขียว sqlite+MySQL
 - 🔑 บทเรียน: `tuition_fees`/`school_attendance_records` ผูกด้วย **students.id** (คอลัมน์ `student_id`) ไม่ใช่ users.id — โค้ดที่เขียนใหม่รอบหน้าอย่าเผลอ join กับ users ตรง ๆ
 
+### กวาดโมดูล reports + dashboard ต่อ (`64c92188`) — ยิงทุก GET จริง
+**แก้แล้ว (200 หมด):**
+- `reports/exports`, `reports/schedules` + read guard ของ show/update/delete: relation `savedReport` ไม่มี → ของจริง `report()` (belongsTo SavedReport 'report_id') · `listExports` where('requested_by') → คอลัมน์จริง `user_id`
+- `createSchedule` (POST): สร้างแถวด้วย `saved_report_id`/`time_of_day` (คอลัมน์จริง `report_id`/`scheduled_time`) + ขาด academy_id/user_id → map ให้ถูก (constants FREQUENCIES/FORMATS มีจริง = ใช้งานได้แล้ว)
+- `dashboard/widgets`: orderBy('sort_order') — ตารางไม่มีคอลัมน์นี้ → order ด้วย name · ตัด sort_order ออกจาก validation store/update
+
+**🔴 พบว่าพังเชิงโครงสร้าง (ไม่ได้แก้ — เป็นฟีเจอร์ที่ยังไม่ได้สร้าง schema จริง ควรตัดสินใจแยก):**
+- `POST reports/{report}/export` (`exportReport`): ใช้ `ReportExport::FORMATS` ที่ **ไม่มี const** + create ด้วยคอลัมน์ผิด (`saved_report_id`/`format`/`requested_by`) + ขาด file_name/file_path/file_type ที่ NOT NULL + มี `// TODO: Dispatch job` = ยังไม่มีตัว generate ไฟล์จริง ⇒ ฟีเจอร์ export ค้างครึ่งทาง
+- `InstructorDashboardController` (`courses/{course}/instructor-dashboard` + `/trends`): ทั้ง controller คิวรีตาราง **`course_assignments` / `course_assignment_files` ที่ไม่มีอยู่ในฐานเลย** (ระบบงานจริงใช้ polymorphic `assignments`/`assignment_answers`) + `course_members.whereNull('deleted_at')` (course_members ไม่มี deleted_at) ⇒ แก้ทีละบรรทัดไม่พอ ต้องเขียนใหม่ทั้งก้อนให้ผูกกับ schema จริง (= งาน implement ไม่ใช่ sweep) · `/at-risk` และ `/top-performers` ของ controller นี้ตอบ 200 (ไม่ได้แตะตารางที่หาย)
+
 ### spec decisions — ✅ เจ้าของโปรเจคเคาะแล้ว 2026-09-23 (ตรงกับที่ทำไปทั้งหมด ไม่ต้องแก้โค้ด)
 - 3 ประเภทข้อยกเว้น (งดคาบ/สอนแทน/ย้ายห้อง) · 1 คาบ × 1 วันที่ = 1 รายการ ·
   ครูสอนแทนไม่ว่าง = บล็อก 422 · ภาระงานนับทุก entry_type ยกเว้น break
