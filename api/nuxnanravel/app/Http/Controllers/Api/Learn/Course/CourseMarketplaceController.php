@@ -333,14 +333,15 @@ class CourseMarketplaceController extends Controller
         $totalRevenuePoints = $sales->sum('amount_points');
         $totalSales = $sales->count();
 
-        // Group by course
-        $salesByCourse = $sales->groupBy('source_course_id')
-            ->map(function ($group, $courseId) {
-                $course = Course::find($courseId);
+        // Group by course — โหลดชื่อคอร์สทั้งหมดครั้งเดียว (เดิม Course::find ใน map = N+1 ต่อคอร์ส)
+        $courseNames = Course::whereIn('id', $sales->pluck('source_course_id')->filter()->unique())
+            ->pluck('name', 'id');
 
+        $salesByCourse = $sales->groupBy('source_course_id')
+            ->map(function ($group, $courseId) use ($courseNames) {
                 return [
                     'course_id' => $courseId,
-                    'course_name' => $course->name ?? 'Unknown',
+                    'course_name' => $courseNames[$courseId] ?? 'Unknown',
                     'total_sales' => $group->count(),
                     'total_revenue_thb' => $group->sum('amount_wallet'),
                     'total_revenue_points' => $group->sum('amount_points'),
