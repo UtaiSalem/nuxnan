@@ -43,6 +43,17 @@
 - ตรวจจริงบนจอ: endpoint 200 (เดิม 500) · network ไม่มี retry storm อีก
 - ⚠️ หมายเหตุเผื่อรอบหน้า: `useApi` retry `retryStatusCodes=[408,429,500,502,503,504]` maxRetries=3 ⇒ endpoint ที่ 500 จะถูกยิงซ้ำ 4 ครั้ง ทำให้หน้าที่เรียกมันช้าเสมอ
 
+### กวาดหา endpoint ที่ 500 แบบเดียวกัน (`135dcae2`) — ยิงทุก analytics GET จริง เจอเพิ่ม 2 จุด
+- **at-risk** (หน้า `admin/at-risk.vue` เรียกจริง = พังทั้งหน้า): (1) bare `DB::` แต่ไม่ import DB facade → Class not found
+  (`studentStats` รอดเพราะใช้ FQN `\Illuminate\...\DB`) · (2) `tuition_fees.pluck('user_id')` — ตารางไม่มี `user_id`
+  ผูกด้วย `student_id`→students.id · (3) `User::whereIn('id', $studentIds)` เอา students.id ไปหาใน users = คนผิด/ว่าง
+  → แก้: import DB · อ่าน student_id ทั้งสองตาราง · map students.id→user · เดิม `academy_member.classroom` ไม่เคยมีค่า
+  (`User::academyMember` รับ arg, `AcademyMember` ไม่มี classroom) จึงปล่อยให้ degrade เป็น 'ไม่ระบุห้อง'
+- **ReportController case 'tuition_fees'**: join `tuition_fees.user_id=users.id` (ไม่มีคอลัมน์) + select `remaining_amount`
+  (คอลัมน์จริง `balance_amount`) → แก้ join ผ่าน students · ใช้ balance_amount
+- ผลรวม: ทุก analytics GET = 200 ครบ (snapshots 422 = ต้องมี query param ไม่ใช่บั๊ก) · เทสต์ใหม่ AnalyticsAtRiskTest + AnalyticsTeacherPendingTest เขียว sqlite+MySQL
+- 🔑 บทเรียน: `tuition_fees`/`school_attendance_records` ผูกด้วย **students.id** (คอลัมน์ `student_id`) ไม่ใช่ users.id — โค้ดที่เขียนใหม่รอบหน้าอย่าเผลอ join กับ users ตรง ๆ
+
 ### spec decisions — ✅ เจ้าของโปรเจคเคาะแล้ว 2026-09-23 (ตรงกับที่ทำไปทั้งหมด ไม่ต้องแก้โค้ด)
 - 3 ประเภทข้อยกเว้น (งดคาบ/สอนแทน/ย้ายห้อง) · 1 คาบ × 1 วันที่ = 1 รายการ ·
   ครูสอนแทนไม่ว่าง = บล็อก 422 · ภาระงานนับทุก entry_type ยกเว้น break
