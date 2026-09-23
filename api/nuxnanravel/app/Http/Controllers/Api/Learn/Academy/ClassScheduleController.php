@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\Classroom;
 use App\Models\ClassSchedule;
+use App\Models\ClassScheduleException;
 use App\Models\SchedulePeriod;
 use App\Models\Semester;
 use App\Models\Student;
@@ -14,6 +15,7 @@ use App\Models\User;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -128,14 +130,23 @@ class ClassScheduleController extends Controller
             ],
             'teacher_id' => 'required_without:classroom_id|exists:users,id',
             'semester_id' => 'nullable|exists:semesters,id',
+            'date' => 'nullable|date_format:Y-m-d',
         ]);
 
         $query = ClassSchedule::with([
             'course:id,name,code,academy_id',
             'teacher:id,name,profile_photo_path',
             'classroom:id,name,grade_level,section',
-        ])
-            ->byAcademy($academy->id)
+        ]);
+
+        $weekStart = null;
+        if ($request->filled('date')) {
+            $weekStart = Carbon::parse($request->date)->startOfWeek(Carbon::MONDAY);
+            $weekEnd = $weekStart->copy()->addDays(6);
+            $query->with(['exceptions' => fn ($q) => $q->whereDate('date', '>=', $weekStart->toDateString())->whereDate('date', '<=', $weekEnd->toDateString())->with('substituteTeacher:id,name')]);
+        }
+
+        $query->byAcademy($academy->id)
             ->active();
 
         // Semester filter
@@ -153,10 +164,20 @@ class ClassScheduleController extends Controller
             $query->byClassroom($request->classroom_id);
             $viewType = 'classroom';
             $viewEntity = Classroom::find($request->classroom_id);
+            $viewTeacherId = null;
         } else {
-            $query->byTeacher($request->teacher_id);
+            $tid = $request->teacher_id;
+            if ($request->filled('date')) {
+                $query->where(fn ($q) => $q->where('teacher_id', $tid)->orWhereHas('exceptions', fn ($e) => $e->whereDate('date', '>=', $weekStart->toDateString())
+                    ->whereDate('date', '<=', $weekEnd->toDateString())
+                    ->where('type', ClassScheduleException::TYPE_SUBSTITUTE)
+                    ->where('substitute_teacher_id', $tid)));
+            } else {
+                $query->byTeacher($tid);
+            }
             $viewType = 'teacher';
-            $viewEntity = User::find($request->teacher_id);
+            $viewEntity = User::find($tid);
+            $viewTeacherId = $tid;
         }
 
         $schedules = $query->orderBy('day_of_week')
@@ -164,18 +185,27 @@ class ClassScheduleController extends Controller
             ->get();
 
         // Group by day
-        $timetable = $this->buildTimetable($schedules, $viewType);
+        $timetable = $this->buildTimetable($schedules, $viewType, $weekStart, $viewTeacherId);
+
+        $responseData = [
+            'view_type' => $viewType,
+            'view_entity' => $viewEntity ? [
+                'id' => $viewEntity->id,
+                'name' => $viewEntity->name ?? $viewEntity->first_name.' '.$viewEntity->last_name,
+            ] : null,
+            'timetable' => array_values($timetable),
+        ];
+
+        if ($weekStart) {
+            $responseData['week'] = [
+                'start' => $weekStart->toDateString(),
+                'end' => $weekEnd->toDateString(),
+            ];
+        }
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'view_type' => $viewType,
-                'view_entity' => $viewEntity ? [
-                    'id' => $viewEntity->id,
-                    'name' => $viewEntity->name ?? $viewEntity->first_name.' '.$viewEntity->last_name,
-                ] : null,
-                'timetable' => array_values($timetable),
-            ],
+            'data' => $responseData,
         ]);
     }
 
@@ -671,14 +701,21 @@ class ClassScheduleController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
+        $request->validate([
+            'date' => 'nullable|date_format:Y-m-d',
+        ]);
+        $date = $request->input('date', now()->toDateString());
+        $day = Carbon::parse($date)->dayOfWeekIso;
+
         $query = ClassSchedule::with([
             'course:id,name,code,academy_id',
             'teacher:id,name,profile_photo_path',
             'classroom:id,name,grade_level,section',
+            'exceptions' => fn ($q) => $q->whereDate('date', $date)->with('substituteTeacher:id,name'),
         ])
             ->byAcademy($academy->id)
             ->active()
-            ->today();
+            ->byDay($day);
 
         // Current semester
         $currentSemester = Semester::currentForAcademy($academy->id);
@@ -691,7 +728,9 @@ class ClassScheduleController extends Controller
             $query->byClassroom($request->classroom_id);
         }
         if ($request->filled('teacher_id')) {
-            $query->byTeacher($request->teacher_id);
+            $tid = $request->teacher_id;
+            $query->where(fn ($q) => $q->where('teacher_id', $tid)->orWhereHas('exceptions', fn ($e) => $e->whereDate('date', $date)
+                ->where('type', ClassScheduleException::TYPE_SUBSTITUTE)->where('substitute_teacher_id', $tid)));
         }
 
         $schedules = $query->orderBy('start_time')->get()->map(function ($s) {
@@ -721,14 +760,15 @@ class ClassScheduleController extends Controller
                     'grade_level' => $s->classroom->grade_level,
                     'section' => $s->classroom->section,
                 ] : null,
+                'exception' => $s->exceptions->first()?->toOverlayArray(),
             ];
         });
 
         return response()->json([
             'success' => true,
             'data' => [
-                'date' => now()->toDateString(),
-                'day_name' => ClassSchedule::DAYS[now()->dayOfWeek ?: 7],
+                'date' => $date,
+                'day_name' => ClassSchedule::DAYS[$day],
                 'schedules' => $schedules,
             ],
         ]);
@@ -747,6 +787,7 @@ class ClassScheduleController extends Controller
 
         $request->validate([
             'semester_id' => 'nullable|exists:semesters,id',
+            'date' => 'nullable|date_format:Y-m-d',
         ]);
 
         if ($request->filled('semester_id')) {
@@ -763,11 +804,18 @@ class ClassScheduleController extends Controller
             $semester = Semester::currentForAcademy($academy->id);
         }
 
+        $weekStart = null;
+        if ($request->filled('date')) {
+            $weekStart = Carbon::parse($request->date)->startOfWeek(Carbon::MONDAY);
+            $weekEnd = $weekStart->copy()->addDays(6);
+        }
+
         $baseQuery = fn () => ClassSchedule::with([
             'course:id,name,code,academy_id',
             'teacher:id,name,profile_photo_path',
             'classroom:id,name,grade_level,section',
         ])
+            ->when($weekStart, fn ($q) => $q->with(['exceptions' => fn ($eq) => $eq->whereDate('date', '>=', $weekStart->toDateString())->whereDate('date', '<=', $weekEnd->toDateString())->with('substituteTeacher:id,name')]))
             ->byAcademy($academy->id)
             ->active()
             ->when($semester, fn ($q) => $q->bySemester($semester->id))
@@ -777,7 +825,16 @@ class ClassScheduleController extends Controller
         $contexts = [];
 
         // 1) ตารางสอนของฉัน — มีคาบสอนจริง หรือบทบาทในโรงเรียนคือครู (ครูใหม่ที่ยังไม่มีคาบต้องเห็นหน้าว่าง ไม่ใช่ 404)
-        $taught = $baseQuery()->byTeacher($user->id)->get();
+        $teacherQuery = $baseQuery();
+        if ($weekStart) {
+            $teacherQuery->where(fn ($q) => $q->where('teacher_id', $user->id)->orWhereHas('exceptions', fn ($e) => $e->whereDate('date', '>=', $weekStart->toDateString())
+                ->whereDate('date', '<=', $weekEnd->toDateString())
+                ->where('type', ClassScheduleException::TYPE_SUBSTITUTE)
+                ->where('substitute_teacher_id', $user->id)));
+        } else {
+            $teacherQuery->byTeacher($user->id);
+        }
+        $taught = $teacherQuery->get();
 
         $roleName = $academy->academyMembers()
             ->where('user_id', $user->id)
@@ -792,7 +849,7 @@ class ClassScheduleController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                 ],
-                'timetable' => array_values($this->buildTimetable($taught, 'teacher')),
+                'timetable' => array_values($this->buildTimetable($taught, 'teacher', $weekStart, $user->id)),
             ];
         }
 
@@ -813,19 +870,28 @@ class ClassScheduleController extends Controller
                     'grade_level' => $classroom->grade_level,
                     'section' => $classroom->section,
                 ],
-                'timetable' => array_values($this->buildTimetable($baseQuery()->byClassroom($classroom->id)->get(), 'classroom')),
+                'timetable' => array_values($this->buildTimetable($baseQuery()->byClassroom($classroom->id)->get(), 'classroom', $weekStart)),
+            ];
+        }
+
+        $responseData = [
+            'semester' => $semester ? [
+                'id' => $semester->id,
+                'name' => $semester->name,
+            ] : null,
+            'contexts' => $contexts,
+        ];
+
+        if ($weekStart) {
+            $responseData['week'] = [
+                'start' => $weekStart->toDateString(),
+                'end' => $weekEnd->toDateString(),
             ];
         }
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'semester' => $semester ? [
-                    'id' => $semester->id,
-                    'name' => $semester->name,
-                ] : null,
-                'contexts' => $contexts,
-            ],
+            'data' => $responseData,
         ]);
     }
 
@@ -1188,12 +1254,27 @@ class ClassScheduleController extends Controller
 
      * เดิมโค้ดชุดนี้อยู่ใน timetable() — ย้ายออกมาเพื่อให้ my() ใช้ร่วมกันได้ ไม่ใช่ก๊อปซ้ำ
      */
-    private function buildTimetable($schedules, string $viewType): array
+    private function buildTimetable($schedules, string $viewType, ?Carbon $weekStart = null, ?int $viewTeacherId = null): array
     {
         $timetable = [];
 
         for ($day = 1; $day <= 7; $day++) {
             $daySchedules = $schedules->where('day_of_week', $day)->values();
+
+            $dateString = $weekStart ? $weekStart->copy()->addDays($day - 1)->toDateString() : null;
+
+            if ($viewTeacherId !== null && $weekStart !== null) {
+                $daySchedules = $daySchedules->filter(function ($s) use ($viewTeacherId, $dateString) {
+                    $isSubstitute = (int) $s->teacher_id !== $viewTeacherId;
+                    if ($isSubstitute) {
+                        $exception = $s->exceptions->first(fn ($e) => $e->dateString() === $dateString);
+
+                        return $exception !== null;
+                    }
+
+                    return true;
+                })->values();
+            }
 
             if ($daySchedules->isEmpty()) {
                 continue;
@@ -1203,7 +1284,7 @@ class ClassScheduleController extends Controller
                 'day' => $day,
                 'day_name' => ClassSchedule::DAYS[$day],
                 'day_name_short' => ClassSchedule::DAYS_SHORT[$day],
-                'schedules' => $daySchedules->map(function ($s) use ($viewType) {
+                'schedules' => $daySchedules->map(function ($s) use ($viewType, $weekStart, $dateString, $viewTeacherId) {
                     $data = [
                         'id' => $s->id,
                         'start_time' => $s->start_time->format('H:i'),
@@ -1219,6 +1300,13 @@ class ClassScheduleController extends Controller
                             'name' => $s->course->name,
                         ] : null,
                     ];
+
+                    if ($weekStart !== null) {
+                        $data['date'] = $dateString;
+                        $exception = $s->exceptions->first(fn ($e) => $e->dateString() === $dateString);
+                        $data['exception'] = $exception ? $exception->toOverlayArray() : null;
+                        $data['is_substitute'] = $viewTeacherId !== null && (int) $s->teacher_id !== $viewTeacherId;
+                    }
 
                     if ($viewType === 'classroom') {
                         $data['teacher'] = $s->teacher ? [

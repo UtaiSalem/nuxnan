@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\Learn\Academy\ClassroomController;
 use App\Http\Controllers\Api\Learn\Academy\ClassroomGroupController;
 use App\Http\Controllers\Api\Learn\Academy\ClassroomInvitationController;
 use App\Http\Controllers\Api\Learn\Academy\ClassScheduleController;
+use App\Http\Controllers\Api\Learn\Academy\ClassScheduleExceptionController;
 use App\Http\Controllers\Api\Learn\Academy\CurriculumController;
 use App\Http\Controllers\Api\Learn\Academy\DashboardWidgetController;
 use App\Http\Controllers\Api\Learn\Academy\DepartmentController;
@@ -654,6 +655,9 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
             // SC-S10d ภาระงานสอนของครู
             Route::get('/workload', [TeacherWorkloadController::class, 'index'])->name('api.academy.schedules.workload');
             Route::get('/workload/export', [TeacherWorkloadController::class, 'export'])->name('api.academy.schedules.workload.export');
+            // SC-S10e สอนแทน/งดคาบรายวันที่ (D6)
+            Route::get('/exceptions', [ClassScheduleExceptionController::class, 'index'])->name('api.academy.schedules.exceptions.index');
+            Route::get('/exceptions/available-teachers', [ClassScheduleExceptionController::class, 'availableTeachers'])->name('api.academy.schedules.exceptions.availableTeachers');
         });
 
         // จัดตาราง
@@ -661,6 +665,9 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
             Route::post('/', [ClassScheduleController::class, 'store'])->name('api.academy.schedules.store');
             Route::post('/bulk', [ClassScheduleController::class, 'bulkStore'])->name('api.academy.schedules.bulkStore');
             Route::post('/copy', [ClassScheduleController::class, 'copy'])->name('api.academy.schedules.copy');
+            Route::post('/exceptions', [ClassScheduleExceptionController::class, 'store'])->name('api.academy.schedules.exceptions.store');
+            Route::patch('/exceptions/{exceptionId}', [ClassScheduleExceptionController::class, 'update'])->whereNumber('exceptionId')->name('api.academy.schedules.exceptions.update');
+            Route::delete('/exceptions/{exceptionId}', [ClassScheduleExceptionController::class, 'destroy'])->whereNumber('exceptionId')->name('api.academy.schedules.exceptions.destroy');
             Route::patch('/{id}', [ClassScheduleController::class, 'update'])->name('api.academy.schedules.update');
             Route::delete('/{id}', [ClassScheduleController::class, 'destroy'])->name('api.academy.schedules.destroy');
         });

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * ClassSchedule Model - ตารางเรียน
@@ -304,5 +305,31 @@ class ClassSchedule extends Model
             ->where('academy_id', $academyId)
             ->where('room', $room)
             ->exists();
+    }
+
+    public function exceptions(): HasMany
+    {
+        return $this->hasMany(ClassScheduleException::class, 'class_schedule_id');
+    }
+
+    /**
+     * id ของครูที่ "ไม่ว่าง" ในช่วงเวลานี้ของวันที่นี้ — ใช้ตัดสินว่าใครสอนแทนได้
+     * ไม่ว่าง = (ก) มีคาบของตัวเองที่ทับเวลา และคาบนั้นไม่ได้ถูกงด/ถูกคนอื่นสอนแทนในวันที่นี้
+     *          (ข) รับสอนแทนคาบอื่นที่ทับเวลาไว้แล้วในวันที่นี้
+     * สูตรทับเวลาใช้ overlappingQuery() เดิมเท่านั้น (half-open · G26) ห้ามเขียนเทียบเวลาเอง
+     */
+    public static function busyTeacherIdsOn(string $date, int $semesterId, int $dayOfWeek, string $startTime, string $endTime, ?int $excludeScheduleId = null): array
+    {
+        $own = static::overlappingQuery($semesterId, $dayOfWeek, $startTime, $endTime, $excludeScheduleId)
+            ->whereDoesntHave('exceptions', fn ($q) => $q->whereDate('date', $date)
+                ->whereIn('type', [ClassScheduleException::TYPE_CANCELLED, ClassScheduleException::TYPE_SUBSTITUTE]))
+            ->pluck('teacher_id');
+
+        $subs = ClassScheduleException::where('type', ClassScheduleException::TYPE_SUBSTITUTE)
+            ->whereDate('date', $date)
+            ->whereIn('class_schedule_id', static::overlappingQuery($semesterId, $dayOfWeek, $startTime, $endTime, $excludeScheduleId)->select('id'))
+            ->pluck('substitute_teacher_id');
+
+        return $own->merge($subs)->filter()->map(fn ($id) => (int) $id)->unique()->values()->all();
     }
 }
