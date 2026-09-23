@@ -717,10 +717,11 @@ class ClassScheduleController extends Controller
             ->active()
             ->byDay($day);
 
-        // Current semester
-        $currentSemester = Semester::currentForAcademy($academy->id);
-        if ($currentSemester) {
-            $query->bySemester($currentSemester->id);
+        // เลือกภาคเรียนจากวันที่ที่ถาม (ไม่ใช่ภาคเรียนปัจจุบันเสมอ) — วันนี้จะได้ภาคเรียนปัจจุบันตามเดิม
+        // ผ่าน fallback ใน forAcademyOnDate ⇒ หน้าสอนแทนเลือกวันในภาคเรียนอื่นแล้วเห็นคาบได้
+        $semester = Semester::forAcademyOnDate($academy->id, $date);
+        if ($semester) {
+            $query->bySemester($semester->id);
         }
 
         // Filter

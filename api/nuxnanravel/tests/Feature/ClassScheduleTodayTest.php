@@ -217,4 +217,29 @@ class ClassScheduleTodayTest extends TestCase
             collect($response->json('data.schedules'))->pluck('start_time')->all()
         );
     }
+
+    public function test_today_resolves_semester_from_the_requested_date()
+    {
+        $c = $this->setupData();
+
+        // 2026-11-02 = จันทร์ (ISO 1) และอยู่ในภาคเรียนที่ 2 (2026-11-01..2027-03-31)
+        $inOther = $this->makeSchedule([
+            'semester_id' => $c['otherSemester']->id, 'day_of_week' => 1,
+            'start_time' => '09:00', 'end_time' => '09:50', 'room' => 'ห้อง 305',
+        ]);
+
+        // คาบวันจันทร์ในภาคเรียนที่ 1 (ปัจจุบัน) ต้องไม่หลุดมาเมื่อถามวันของภาคเรียนที่ 2
+        $this->makeSchedule([
+            'semester_id' => $c['semester']->id, 'day_of_week' => 1,
+            'start_time' => '09:00', 'end_time' => '09:50',
+        ]);
+
+        $response = $this->actingAs($c['owner'], 'api')
+            ->getJson("/api/academies/{$c['academy']->id}/schedules/today?date=2026-11-02");
+
+        $response->assertStatus(200);
+        $response->assertJsonCount(1, 'data.schedules');
+        $response->assertJsonPath('data.schedules.0.id', $inOther->id);
+        $response->assertJsonPath('data.date', '2026-11-02');
+    }
 }

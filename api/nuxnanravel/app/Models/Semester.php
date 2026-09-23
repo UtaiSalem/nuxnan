@@ -84,6 +84,23 @@ class Semester extends Model
                 ->first();
     }
 
+    /**
+     * ภาคเรียนของโรงเรียนที่ครอบวันที่ที่กำหนด (start_date ≤ date ≤ end_date)
+     *
+     * ใช้กับหน้าที่เลือกดูวันที่ย้อน/ล่วงหน้าได้ (เช่น สอนแทน/งดคาบ) — ไม่ใช่ภาคเรียนปัจจุบันเสมอ
+     * ถ้าไม่มีภาคเรียนไหนครอบวันนั้น (เช่น วันปิดเทอม/นอกช่วง) คืนภาคเรียนปัจจุบันแทน
+     * เพื่อให้หน้าที่ถาม "วันนี้" (แดชบอร์ดครู) ได้ผลเหมือนเดิม
+     */
+    public static function forAcademyOnDate($academyId, string $date): ?self
+    {
+        return static::forAcademy($academyId)
+            ->whereDate('start_date', '<=', $date)
+            ->whereDate('end_date', '>=', $date)
+            ->orderByDesc('start_date')
+            ->first()
+            ?? static::currentForAcademy($academyId);
+    }
+
     public function setAsCurrent(): void
     {
         $academyId = $this->academicYear?->academy_id;
