@@ -291,11 +291,14 @@ class ReportController extends Controller
                 break;
 
             case 'tuition_fees':
+                // tuition_fees ผูกด้วย student_id (→ students.id) ไม่มีคอลัมน์ user_id · ยอดค้างคือ balance_amount
                 $data = DB::table('tuition_fees')
-                    ->join('users', 'tuition_fees.user_id', '=', 'users.id')
+                    ->join('students', 'tuition_fees.student_id', '=', 'students.id')
+                    ->join('users', 'students.user_id', '=', 'users.id')
                     ->leftJoin('classrooms', 'tuition_fees.classroom_id', '=', 'classrooms.id')
                     ->select('users.name as student_name', 'classrooms.name as classroom_name',
-                        'total_amount', 'paid_amount', 'remaining_amount', 'due_date')
+                        'tuition_fees.total_amount', 'tuition_fees.paid_amount',
+                        'tuition_fees.balance_amount as remaining_amount', 'tuition_fees.due_date')
                     ->where('tuition_fees.academy_id', $academy->id)
                     ->get();
                 break;

@@ -17,12 +17,14 @@ use App\Models\KpiDefinition;
 use App\Models\KpiValue;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
+use App\Models\Student;
 use App\Models\TrendAnalysis;
 use App\Models\User;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class AnalyticsController extends Controller
@@ -103,10 +105,10 @@ class AnalyticsController extends Controller
             })->count();
 
         // Attendance rate
-        $attendanceStats = \Illuminate\Support\Facades\DB::table('school_attendance_records')
+        $attendanceStats = DB::table('school_attendance_records')
             ->select(
-                \Illuminate\Support\Facades\DB::raw('COUNT(*) as total'),
-                \Illuminate\Support\Facades\DB::raw("SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present")
+                DB::raw('COUNT(*) as total'),
+                DB::raw("SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present")
             )
             ->where('academy_id', $academy->id)
             ->where('student_id', $user->id)
@@ -252,43 +254,52 @@ class AnalyticsController extends Controller
     {
         $attendanceThreshold = $request->get('attendance_threshold', 80);
 
-        // Get students with low attendance
+        // 🔴 ทั้ง school_attendance_records และ tuition_fees ผูกด้วย students.id (คอลัมน์ student_id)
+        // ไม่ใช่ users.id · tuition_fees ไม่มีคอลัมน์ user_id เลย (เดิม pluck('user_id') = 500)
+        // และเดิม User::whereIn('id', ...) เอา students.id ไปหาใน users ⇒ ได้คนผิด/ว่าง
         $atRiskAttendance = DB::table('school_attendance_records')
             ->select('student_id', DB::raw('COUNT(*) as total_days'), DB::raw("SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present_days"))
             ->where('academy_id', $academy->id)
             ->groupBy('student_id')
             ->havingRaw('total_days > 0 AND (present_days / total_days) * 100 < ?', [$attendanceThreshold])
             ->pluck('student_id')
-            ->toArray();
+            ->map(fn ($id) => (int) $id)
+            ->all();
 
-        // Get students with overdue fees
         $atRiskFees = DB::table('tuition_fees')
             ->where('academy_id', $academy->id)
             ->where('status', 'overdue')
-            ->pluck('user_id')
-            ->toArray();
+            ->pluck('student_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
 
-        $allAtRiskIds = array_unique(array_merge($atRiskAttendance, $atRiskFees));
+        $atRiskStudentIds = array_values(array_unique(array_merge($atRiskAttendance, $atRiskFees)));
 
-        $students = User::whereIn('id', $allAtRiskIds)
-            ->select('id', 'name', 'profile_photo_path', 'email')
-            ->with(['academyMember' => function ($q) use ($academy) {
-                $q->where('academy_id', $academy->id);
-            }])
+        if (empty($atRiskStudentIds)) {
+            return response()->json(['success' => true, 'data' => []]);
+        }
+
+        // students.id → user เพื่อคง response รูปเดิมที่หน้า at-risk.vue ใช้ (id, name, profile_photo_path, risk_factors)
+        $students = Student::whereIn('id', $atRiskStudentIds)
+            ->where('academy_id', $academy->id)
+            ->with('user:id,name,profile_photo_path,email')
             ->get()
+            ->filter(fn ($student) => $student->user !== null)
             ->map(function ($student) use ($atRiskAttendance, $atRiskFees) {
                 $factors = [];
-                if (in_array($student->id, $atRiskAttendance)) {
+                if (in_array((int) $student->id, $atRiskAttendance, true)) {
                     $factors[] = 'low_attendance';
                 }
-                if (in_array($student->id, $atRiskFees)) {
+                if (in_array((int) $student->id, $atRiskFees, true)) {
                     $factors[] = 'overdue_fees';
                 }
 
-                $student->risk_factors = $factors;
+                $user = $student->user;
+                $user->risk_factors = $factors;
 
-                return $student;
-            });
+                return $user;
+            })
+            ->values();
 
         return response()->json([
             'success' => true,
