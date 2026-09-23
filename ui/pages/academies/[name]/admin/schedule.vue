@@ -580,6 +580,20 @@ const deleteSchedule = async () => {
             <Icon icon="fluent:print-24-regular" class="w-5 h-5" />
             <span>พิมพ์ / ส่งออก</span>
           </NuxtLink>
+          <NuxtLink
+            :to="`/academies/${academyName}/admin/schedule-workload`"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl font-medium transition-colors"
+          >
+            <Icon icon="fluent:people-team-24-regular" class="w-5 h-5" />
+            <span>ภาระงานสอน</span>
+          </NuxtLink>
+          <NuxtLink
+            :to="`/academies/${academyName}/admin/schedule-exceptions`"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl font-medium transition-colors"
+          >
+            <Icon icon="fluent:calendar-edit-24-regular" class="w-5 h-5" />
+            <span>สอนแทน / งดคาบ</span>
+          </NuxtLink>
           <button
             v-if="canManage"
             :disabled="!canCopySchedule"

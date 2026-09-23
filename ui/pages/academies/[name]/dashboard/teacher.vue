@@ -137,7 +137,7 @@ const fetchTodaySchedule = async () => {
     if (response.success) {
       todaySchedule.value = response.data?.schedules || []
       todayName.value = response.data?.day_name || ''
-      stats.value.classesToday = todaySchedule.value.length
+      stats.value.classesToday = todaySchedule.value.filter((s: any) => !s.exception || s.exception.type === 'room_change' || (s.exception.type === 'substitute' && s.exception.substitute_teacher?.id === authStore.user?.id)).length
     }
   } catch (err) {
     console.error('Failed to fetch today schedule:', err)
@@ -386,11 +386,23 @@ const quickActions = computed(() => [
                   <p class="text-xs text-gray-500">{{ schedule.end_time }}</p>
                 </div>
                 <div class="min-w-0 flex-1">
-                  <p class="font-medium text-gray-900 dark:text-white break-words">{{ schedule.display_title }}</p>
+                  <div class="flex flex-wrap items-center gap-1.5 mb-0.5">
+                    <p class="font-medium text-gray-900 dark:text-white break-words" :class="{'line-through': schedule.exception?.type === 'cancelled'}">
+                      {{ schedule.display_title }}
+                    </p>
+                    <span v-if="schedule.exception?.type === 'cancelled'" class="inline-block text-[10px] font-medium px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">งดคาบ</span>
+                    <span v-else-if="schedule.exception?.type === 'substitute' && schedule.exception.substitute_teacher?.id === authStore.user?.id" class="inline-block text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">คุณสอนแทน</span>
+                    <span v-else-if="schedule.exception?.type === 'substitute'" class="inline-block text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{{ schedule.exception.substitute_teacher?.name }} สอนแทน</span>
+                  </div>
                   <p class="text-sm text-gray-500 break-words">
                     <span v-if="schedule.classroom">{{ schedule.classroom.name }}</span>
-                    <span v-if="schedule.classroom && schedule.room"> • </span>
-                    <span v-if="schedule.room">{{ schedule.room }}</span>
+                    <span v-if="schedule.classroom && (schedule.exception?.room || schedule.room)"> • </span>
+                    <template v-if="schedule.exception?.room">
+                      ย้ายไป {{ schedule.exception.room }}
+                    </template>
+                    <template v-else-if="schedule.room">
+                      {{ schedule.room }}
+                    </template>
                   </p>
                   <p v-if="schedule.course?.code" class="text-xs text-gray-400">{{ schedule.course.code }}</p>
                 </div>

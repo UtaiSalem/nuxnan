@@ -138,6 +138,18 @@ const menuItems = computed(() => [
         to: `/academies/${academyName.value}/admin/schedule-periods`,
         show: can('schedule.manage') || can('academy.view'),
       },
+      {
+        name: 'ภาระงานสอน',
+        icon: 'fluent:people-team-24-regular',
+        to: `/academies/${academyName.value}/admin/schedule-workload`,
+        show: can('schedule.view') || can('academy.view'),
+      },
+      {
+        name: 'สอนแทน / งดคาบ',
+        icon: 'fluent:calendar-edit-24-regular',
+        to: `/academies/${academyName.value}/admin/schedule-exceptions`,
+        show: can('schedule.view') || can('academy.view'),
+      },
     ]
   },
   {

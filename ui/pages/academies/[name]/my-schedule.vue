@@ -18,6 +18,13 @@ const periodSets = ref<any[]>([])
 const academicYears = ref<any[]>([])
 const myScheduleData = ref<any>({ contexts: [] })
 
+const pad = (n: number) => String(n).padStart(2, '0')
+const toYmd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+const todayYmd = toYmd(new Date())
+
+const selectedDate = ref<string>(todayYmd)
+const week = ref<{start:string,end:string}|null>(null)
+
 const selectedSemester = ref<number | null>(null)
 const viewContextIndex = ref<number>(0)
 
@@ -62,10 +69,11 @@ const fetchAcademicYears = async (academyId: number) => {
 const fetchMySchedule = async (academyId: number) => {
   isLoadingSchedule.value = true
   try {
-    const params = selectedSemester.value ? { semester_id: selectedSemester.value } : {}
+    const params = { date: selectedDate.value, ...(selectedSemester.value ? { semester_id: selectedSemester.value } : {}) }
     const res: any = await api.get(`/api/academies/${academyId}/schedules/my`, { params })
     if (res.success) {
       myScheduleData.value = res.data
+      week.value = res.data.week || null
       if (res.data.semester && !selectedSemester.value) {
         selectedSemester.value = res.data.semester.id
       }
@@ -140,8 +148,39 @@ const availableSemesters = computed(() => {
 const currentDayOfWeek = new Date().getDay() || 7
 
 const isToday = (dayValue: number) => {
+  // ไฮไลต์คอลัมน์ "วันนี้" เฉพาะเมื่อสัปดาห์ที่ดูอยู่คือสัปดาห์นี้จริง ๆ
+  if (week.value && (todayYmd < week.value.start || todayYmd > week.value.end)) return false
   return dayValue === currentDayOfWeek
 }
+
+// --- เลื่อนสัปดาห์ (ข้อยกเว้นรายวันที่ผูกกับวันจริง จึงต้องรู้ว่าดูสัปดาห์ไหน) ---
+const shiftWeek = (days: number) => {
+  const d = new Date(`${selectedDate.value}T00:00:00`)
+  d.setDate(d.getDate() + days)
+  selectedDate.value = toYmd(d)
+  if (academy.value?.id) fetchMySchedule(academy.value.id)
+}
+
+const goThisWeek = () => {
+  selectedDate.value = todayYmd
+  if (academy.value?.id) fetchMySchedule(academy.value.id)
+}
+
+const formatShortThai = (ymd: string) =>
+  new Date(`${ymd}T00:00:00`).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
+
+const weekLabel = computed(() => week.value ? `${formatShortThai(week.value.start)} – ${formatShortThai(week.value.end)}` : '')
+
+// สรุปการเปลี่ยนแปลงในสัปดาห์ — บนมือถือตารางกว้างต้องเลื่อนแนวนอน ผู้ใช้อาจไม่เห็นป้ายในเซลล์
+const weekChanges = computed(() => {
+  const items: any[] = []
+  for (const day of currentTimetable.value) {
+    for (const s of day.schedules || []) {
+      if (s.exception) items.push(s)
+    }
+  }
+  return items.sort((a, b) => `${a.date} ${a.start_time}`.localeCompare(`${b.date} ${b.start_time}`))
+})
 </script>
 
 <template>
@@ -193,6 +232,38 @@ const isToday = (dayValue: number) => {
               {{ contexts[0].type === 'teacher' ? 'ตารางสอนของฉัน' : `ตารางเรียนของห้อง ${contexts[0].entity.name}` }}
             </div>
           </div>
+        </div>
+
+        <!-- เลื่อนสัปดาห์ -->
+        <div class="mt-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+          <div class="grid grid-cols-3 gap-2 sm:flex sm:flex-shrink-0">
+            <button
+              type="button"
+              class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 whitespace-nowrap"
+              @click="shiftWeek(-7)"
+            >
+              <Icon icon="fluent:chevron-left-24-regular" class="w-4 h-4 flex-shrink-0" />
+              สัปดาห์ก่อน
+            </button>
+            <button
+              type="button"
+              class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 whitespace-nowrap"
+              @click="goThisWeek"
+            >
+              สัปดาห์นี้
+            </button>
+            <button
+              type="button"
+              class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 whitespace-nowrap"
+              @click="shiftWeek(7)"
+            >
+              สัปดาห์ถัดไป
+              <Icon icon="fluent:chevron-right-24-regular" class="w-4 h-4 flex-shrink-0" />
+            </button>
+          </div>
+          <p v-if="weekLabel" class="min-w-0 flex-1 break-words text-sm text-gray-600 dark:text-gray-400">
+            สัปดาห์ {{ weekLabel }}
+          </p>
         </div>
       </div>
 
@@ -251,11 +322,18 @@ const isToday = (dayValue: number) => {
                       :key="schedule.id"
                       :class="[
                         'p-2 rounded-lg border flex flex-col justify-between h-full min-h-[80px]',
-                        getScheduleColor(schedule)
+                        getScheduleColor(schedule),
+                        schedule.exception?.type === 'cancelled' ? 'opacity-60' : '',
+                        schedule.is_substitute ? 'border-dashed' : ''
                       ]"
                     >
                       <div>
-                        <p class="text-xs font-semibold text-gray-900 dark:text-white break-words line-clamp-2">
+                        <div v-if="schedule.exception || schedule.is_substitute" class="flex flex-wrap gap-1 mb-1">
+                          <span v-if="schedule.exception?.type === 'cancelled'" :title="schedule.exception.reason || ''" class="inline-block text-[10px] font-medium px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">งดคาบ</span>
+                          <span v-else-if="schedule.is_substitute" :title="schedule.exception?.reason || ''" class="inline-block text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">คุณสอนแทน</span>
+                          <span v-else-if="schedule.exception?.type === 'substitute'" :title="schedule.exception.reason || ''" class="inline-block text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 break-words">สอนแทนโดย {{ schedule.exception.substitute_teacher?.name }}</span>
+                        </div>
+                        <p class="text-xs font-semibold text-gray-900 dark:text-white break-words line-clamp-2" :class="{ 'line-through': schedule.exception?.type === 'cancelled' }">
                           {{ schedule.title || schedule.course?.name }}
                         </p>
                         <p v-if="schedule.course?.code" class="text-[10px] text-gray-700 dark:text-gray-300 truncate mt-0.5">
@@ -279,6 +357,10 @@ const isToday = (dayValue: number) => {
                           <Icon icon="fluent:location-24-regular" class="w-3 h-3 inline align-middle mr-0.5" />
                           {{ schedule.room }}
                         </p>
+                        <p v-if="schedule.exception?.room" class="text-[10px] font-medium text-blue-700 dark:text-blue-300 break-words mt-0.5">
+                          <Icon icon="fluent:location-arrow-24-regular" class="w-3 h-3 inline align-middle mr-0.5" />
+                          ย้ายไป {{ schedule.exception.room }}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -288,6 +370,21 @@ const isToday = (dayValue: number) => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      <!-- สรุปการเปลี่ยนแปลงของสัปดาห์ -->
+      <div v-if="weekChanges.length > 0" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3 sm:p-4">
+        <h3 class="text-sm sm:text-base font-semibold text-amber-900 dark:text-amber-200 mb-2">
+          สัปดาห์นี้มีการเปลี่ยนแปลง {{ weekChanges.length }} รายการ
+        </h3>
+        <ul class="space-y-1.5">
+          <li v-for="s in weekChanges" :key="`${s.id}-${s.date}`" class="flex gap-2 text-sm text-amber-900 dark:text-amber-100">
+            <span class="flex-shrink-0 whitespace-nowrap font-medium">{{ formatShortThai(s.date) }} {{ s.start_time }}</span>
+            <span class="min-w-0 flex-1 break-words">
+              {{ s.title || s.course?.name || '-' }} — {{ s.is_substitute ? 'คุณสอนแทน' : s.exception.type_label }}{{ !s.is_substitute && s.exception.substitute_teacher ? ': ' + s.exception.substitute_teacher.name : '' }}{{ s.exception.room ? ' · ย้ายไป ' + s.exception.room : '' }}
+            </span>
+          </li>
+        </ul>
       </div>
     </div>
   </div>
