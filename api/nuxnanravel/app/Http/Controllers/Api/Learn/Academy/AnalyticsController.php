@@ -44,15 +44,24 @@ class AnalyticsController extends Controller
         $user = Auth::user();
         $isFullAdmin = $academy->user_id === $user->id;
 
-        $query = Assignment::whereHas('course', function ($q) use ($academy) {
-            $q->where('academy_id', $academy->id);
-        })->with(['course', 'answers' => function ($q) {
-            $q->whereNull('points')->orWhere('status', 'submitted');
-        }]);
-
-        if (! $isFullAdmin) {
-            $query->where('teacher_id', $user->id);
-        }
+        // Assignment เป็น polymorphic (assignmentable → Lesson) ไม่มีคอลัมน์ course_id/teacher_id
+        // เดิมโค้ดเรียก whereHas('course') + where('teacher_id') ที่ไม่มีจริง ⇒ 500 ทุกครั้ง (ตั้งแต่เขียนมา)
+        // resolve คอร์สผ่าน morph เหมือน dashboardStats · ครูที่ไม่ใช่เจ้าของโรงเรียนเห็นเฉพาะคอร์สที่ตัวเองสอน/เป็นเจ้าของ
+        $query = Assignment::whereHasMorph('assignmentable', [Lesson::class], function ($lq) use ($academy, $user, $isFullAdmin) {
+            $lq->whereHas('course', function ($cq) use ($academy, $user, $isFullAdmin) {
+                $cq->where('academy_id', $academy->id);
+                if (! $isFullAdmin) {
+                    $cq->where(function ($q) use ($user) {
+                        $q->where('user_id', $user->id)->orWhere('instructor_id', $user->id);
+                    });
+                }
+            });
+        })->with([
+            'assignmentable.course:id,name,code',
+            'answers' => function ($q) {
+                $q->whereNull('points')->orWhere('status', 'submitted');
+            },
+        ]);
 
         $assignments = $query->get()
             ->filter(function ($assignment) {
@@ -62,7 +71,7 @@ class AnalyticsController extends Controller
                 return [
                     'id' => $assignment->id,
                     'title' => $assignment->title,
-                    'course' => $assignment->course->title,
+                    'course' => $assignment->assignmentable?->course?->name ?? '-',
                     'pending' => $assignment->answers->count(),
                 ];
             })
