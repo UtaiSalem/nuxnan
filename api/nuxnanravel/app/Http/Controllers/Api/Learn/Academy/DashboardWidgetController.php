@@ -43,7 +43,7 @@ class DashboardWidgetController extends Controller
             $query->active();
         }
 
-        $widgets = $query->orderBy('sort_order')->orderBy('name')->get();
+        $widgets = $query->orderBy('name')->get();
 
         return response()->json([
             'success' => true,
@@ -67,7 +67,6 @@ class DashboardWidgetController extends Controller
             'default_size.width' => 'nullable|integer|min:1|max:12',
             'default_size.height' => 'nullable|integer|min:1|max:4',
             'refresh_interval' => 'nullable|integer|min:0',
-            'sort_order' => 'nullable|integer|min:0',
         ]);
 
         $validated['academy_id'] = $academy->id;
@@ -135,7 +134,6 @@ class DashboardWidgetController extends Controller
             'configuration' => 'nullable|array',
             'default_size' => 'nullable|array',
             'refresh_interval' => 'nullable|integer|min:0',
-            'sort_order' => 'nullable|integer|min:0',
         ]);
 
         $widget->update($validated);

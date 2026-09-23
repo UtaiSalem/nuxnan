@@ -422,9 +422,9 @@ class ReportController extends Controller
      */
     public function listSchedules(Request $request, Academy $academy): JsonResponse
     {
-        $query = ReportSchedule::whereHas('savedReport', function ($q) use ($academy) {
+        $query = ReportSchedule::whereHas('report', function ($q) use ($academy) {
             $q->where('academy_id', $academy->id);
-        })->with(['savedReport']);
+        })->with(['report']);
 
         if ($request->has('is_active')) {
             $query->where('is_active', filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN));
@@ -463,7 +463,18 @@ class ReportController extends Controller
             ], 404);
         }
 
-        $schedule = ReportSchedule::create($validated);
+        // คอลัมน์จริงคือ report_id/scheduled_time (ไม่ใช่ saved_report_id/time_of_day) + ต้องมี academy_id/user_id
+        $schedule = ReportSchedule::create([
+            'academy_id' => $academy->id,
+            'report_id' => $savedReport->id,
+            'user_id' => Auth::id(),
+            'frequency' => $validated['frequency'],
+            'day_of_week' => $validated['day_of_week'] ?? null,
+            'day_of_month' => $validated['day_of_month'] ?? null,
+            'scheduled_time' => $validated['time_of_day'],
+            'export_format' => $validated['export_format'],
+            'recipients' => $validated['recipients'],
+        ]);
         $schedule->calculateNextRun();
 
         $this->auditLog->log(
@@ -476,7 +487,7 @@ class ReportController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Schedule created successfully',
-            'data' => $schedule->load('savedReport'),
+            'data' => $schedule->load('report'),
         ], 201);
     }
 
@@ -485,7 +496,7 @@ class ReportController extends Controller
      */
     public function updateSchedule(Request $request, Academy $academy, ReportSchedule $schedule): JsonResponse
     {
-        if ($schedule->savedReport->academy_id !== $academy->id) {
+        if ($schedule->report->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
                 'message' => 'Schedule not found in this academy',
@@ -508,7 +519,7 @@ class ReportController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Schedule updated successfully',
-            'data' => $schedule->fresh()->load('savedReport'),
+            'data' => $schedule->fresh()->load('report'),
         ]);
     }
 
@@ -517,7 +528,7 @@ class ReportController extends Controller
      */
     public function deleteSchedule(Academy $academy, ReportSchedule $schedule): JsonResponse
     {
-        if ($schedule->savedReport->academy_id !== $academy->id) {
+        if ($schedule->report->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
                 'message' => 'Schedule not found in this academy',
@@ -537,7 +548,7 @@ class ReportController extends Controller
      */
     public function toggleScheduleStatus(Academy $academy, ReportSchedule $schedule): JsonResponse
     {
-        if ($schedule->savedReport->academy_id !== $academy->id) {
+        if ($schedule->report->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
                 'message' => 'Schedule not found in this academy',
@@ -594,11 +605,11 @@ class ReportController extends Controller
      */
     public function listExports(Request $request, Academy $academy): JsonResponse
     {
-        $exports = ReportExport::whereHas('savedReport', function ($q) use ($academy) {
+        $exports = ReportExport::whereHas('report', function ($q) use ($academy) {
             $q->where('academy_id', $academy->id);
         })
-            ->where('requested_by', Auth::id())
-            ->with('savedReport')
+            ->where('user_id', Auth::id())
+            ->with('report')
             ->latest()
             ->paginate($request->get('per_page', 15));
 
@@ -613,7 +624,7 @@ class ReportController extends Controller
      */
     public function showExport(Academy $academy, ReportExport $export): JsonResponse
     {
-        if ($export->savedReport->academy_id !== $academy->id) {
+        if ($export->report->academy_id !== $academy->id) {
             return response()->json([
                 'success' => false,
                 'message' => 'Export not found in this academy',
