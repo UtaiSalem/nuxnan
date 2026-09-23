@@ -34,6 +34,15 @@
       ขึ้นถูกแต่ตัวนับเป็น 0 · แก้: ลบการเขียนทับใน fetchStats ให้ fetchTodaySchedule เป็นเจ้าของ classesToday คนเดียว
       · ตรวจจริง: ครูสอนแทน (17092) เห็น "คุณสอนแทน" + 1 คาบ · ครูประจำคาบ (17481) เห็น "...สอนแทน" + 0 คาบ (ถูกต้อง)
 
+### เพิ่มเติม 2026-09-24 — แก้แดชบอร์ดครูโหลดช้า / analytics 500 (`ceec93e6`)
+- **root cause:** `AnalyticsController::teacherPendingAssignments()` เรียก `whereHas('course')` + `where('teacher_id')`
+  บน `Assignment` ที่ **ไม่มีจริง** (assignment เป็น polymorphic ผ่าน `assignmentable`→Lesson · ไม่มีคอลัมน์ course_id/teacher_id)
+  ⇒ 500 ทุกครั้งตั้งแต่เขียนมา · แดชบอร์ดกลืน error (การ์ด "งานรอตรวจ" ว่างเสมอ) · **`useApi` retry 500 ×3** = โหลดช้า
+- **แก้:** ใช้ `whereHasMorph(...Lesson→course)` แบบเดียวกับ `dashboardStats` (ซึ่ง try/catch ไว้เลยไม่ 500) ·
+  ครูที่ไม่ใช่เจ้าของโรงเรียนเห็นเฉพาะคอร์สที่ตัวเองสอน (`instructor_id`) หรือเป็นเจ้าของ · เทสต์ใหม่ 3 เคส เขียว sqlite+MySQL
+- ตรวจจริงบนจอ: endpoint 200 (เดิม 500) · network ไม่มี retry storm อีก
+- ⚠️ หมายเหตุเผื่อรอบหน้า: `useApi` retry `retryStatusCodes=[408,429,500,502,503,504]` maxRetries=3 ⇒ endpoint ที่ 500 จะถูกยิงซ้ำ 4 ครั้ง ทำให้หน้าที่เรียกมันช้าเสมอ
+
 ### spec decisions — ✅ เจ้าของโปรเจคเคาะแล้ว 2026-09-23 (ตรงกับที่ทำไปทั้งหมด ไม่ต้องแก้โค้ด)
 - 3 ประเภทข้อยกเว้น (งดคาบ/สอนแทน/ย้ายห้อง) · 1 คาบ × 1 วันที่ = 1 รายการ ·
   ครูสอนแทนไม่ว่าง = บล็อก 422 · ภาระงานนับทุก entry_type ยกเว้น break
