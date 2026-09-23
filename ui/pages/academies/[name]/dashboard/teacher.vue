@@ -157,7 +157,8 @@ const fetchStats = async () => {
       const dashboardStats = response.data || {}
       stats.value.totalStudents = dashboardStats.total_students || 0
       stats.value.pendingGrading = dashboardStats.pending_grading || 0
-      stats.value.classesToday = dashboardStats.classes_today || 0
+      // classesToday คำนวณใน fetchTodaySchedule เท่านั้น (รู้เรื่องสอนแทน/งดคาบ) —
+      // ห้ามเขียนทับด้วย classes_today จาก backend ที่ไม่รู้ข้อยกเว้นรายวัน และรันขนานกันใน Promise.all
     }
   } catch (err) {
     console.error('Failed to fetch stats:', err)
