@@ -102,6 +102,20 @@ quizzes 447 attempts (ตรง DB)/85.1% · lessons 0 completed (ตรง) · 
   + อาจต้อง `loadCount` — เสี่ยงและใหญ่ ควรทำเป็น task เฉพาะ + วัด query ก่อน/หลังทุกหน้า
   ⚠️ กับดักตอนแก้: `Share::shareComments` โหลดแบบ `limit(3)` **ต่อโพสต์** — ถ้าเปลี่ยนเป็น eager load แบบ batch limit จะรวมทั้งชุด (ผิด)
 
+### แก้ฟีด N+1 จริงจัง (`ae45353c`) — 1,785 → 393 คิวรี/15 รายการ (−78%)
+วิธีหา: `DB::enableQueryLog()` เรียก `newsfeed()` ผ่าน tinker แล้ว group query ที่ normalize เลขออก → เห็น pattern ที่ซ้ำเยอะ
+- 🔴 ต้นเหตุจริง **ไม่ใช่** `->each(->load())` ใน controller (นั่นแค่ ~14 คิวรี) แต่เป็น **resource ที่ serialize ราย item**:
+  - **UserResource** ยิง posts/followers/following/roles/plearnd_admin **ต่อผู้ใช้ทุกคน** — และผู้ใช้โผล่เป็นทั้งเจ้าของโพสต์
+    **และเจ้าของคอมเมนต์ (×3/โพสต์)** ⇒ ~60 ผู้ใช้ × ~6 คิวรี · UserResource อ่าน `*_count` จาก withCount ถ้ามี (backward-compat อยู่แล้ว)
+  - **PostResource/CoursePostResource** ยิง likedPost/dislikedPost `exists()` + `getComments()` ที่ **re-query** (ไม่ใช้ relation ที่โหลด) + comments count ต่อโพสต์
+- แก้แบบ backward-compatible ทุกจุด (โหลด relation ไว้=ใช้ในหน่วยความจำ · ไม่งั้น query เดิม) ครอบ Post **และ** CoursePost:
+  User::hasRole/isPlearndAdmin (+ relation `plearndAdmin`) · Post/CoursePost::getComments (self eager-load 3 คอมเมนต์) ·
+  resource ทั้ง 4 ตัว · ActivityController loadMorph + user withCount+roles+plearndAdmin
+- ผล: **393 คิวรี** · 191 เทสต์เขียว · output ครบ (author counts, 3 คอมเมนต์, isLiked)
+- ⚠️ **คงเหลือ** (งานแยก): `friends count` (~144) จาก package **Acquaintances** (`friendships` composite table sender/recipient) —
+  `withCount('friends')` ใช้ไม่ได้ตรง ๆ ต้องเขียน subquery เอง · roles-exists เหลือ ~30 (ผู้ใช้บางกลุ่มที่ไม่ได้ eager-load เช่น poll/mention/share user) ·
+  แนวทางรอบหน้า: ทำ UserResource ให้ "เบา" โดยตัด/lazy count ที่ไม่จำเป็น หรือ eager-load ครบทุกจุดที่ serialize user
+
 ### spec decisions — ✅ เจ้าของโปรเจคเคาะแล้ว 2026-09-23 (ตรงกับที่ทำไปทั้งหมด ไม่ต้องแก้โค้ด)
 - 3 ประเภทข้อยกเว้น (งดคาบ/สอนแทน/ย้ายห้อง) · 1 คาบ × 1 วันที่ = 1 รายการ ·
   ครูสอนแทนไม่ว่าง = บล็อก 422 · ภาระงานนับทุก entry_type ยกเว้น break
