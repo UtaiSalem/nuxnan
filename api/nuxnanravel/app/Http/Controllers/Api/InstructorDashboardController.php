@@ -11,6 +11,7 @@ use App\Models\GradeAppeal;
 use App\Services\CourseGradingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -45,7 +46,8 @@ class InstructorDashboardController extends Controller
 
         // Basic counts
         $totalMembers = $course->courseMembers()->count();
-        $activeMembers = $course->courseMembers()->whereNull('deleted_at')->count();
+        // course_members ไม่มี soft delete · active = อนุมัติแล้ว (course_member_status = 1)
+        $activeMembers = $course->courseMembers()->where('course_member_status', 1)->count();
 
         // Get members with their progress
         $members = $course->courseMembers()
@@ -94,7 +96,8 @@ class InstructorDashboardController extends Controller
                     'active_members' => $activeMembers,
                     'total_groups' => $course->courseGroups()->count(),
                     'total_lessons' => $course->courseLessons()->count(),
-                    'total_assignments' => $course->courseAssignments()->count(),
+                    // งานของคอร์ส = แนบกับคอร์สโดยตรง + แนบกับบทเรียน (ให้ตรงกับ assignments.total ด้านล่าง)
+                    'total_assignments' => $this->courseAssignmentIds($course)->count(),
                     'total_quizzes' => $course->courseQuizzes()->count(),
                 ],
                 'grades' => $gradeStats,
@@ -120,42 +123,39 @@ class InstructorDashboardController extends Controller
         $days = $request->get('days', 30);
         $startDate = now()->subDays($days);
 
-        // Get assignment submissions per day
-        $submissions = DB::table('course_assignment_files')
-            ->join('course_assignments', 'course_assignment_files.course_assignment_id', '=', 'course_assignments.id')
-            ->where('course_assignments.course_id', $course->id)
-            ->where('course_assignment_files.created_at', '>=', $startDate)
+        // Get assignment submissions per day — assignment_answers ของงานในคอร์สนี้
+        $submissions = DB::table('assignment_answers')
+            ->whereIn('assignment_id', $this->courseAssignmentIds($course))
+            ->where('created_at', '>=', $startDate)
             ->select(
-                DB::raw('DATE(course_assignment_files.created_at) as date'),
+                DB::raw('DATE(created_at) as date'),
                 DB::raw('COUNT(*) as count')
             )
             ->groupBy('date')
             ->orderBy('date')
             ->get();
 
-        // Get attendance per day
-        $attendance = DB::table('course_group_attendance_details')
-            ->join('course_group_attendances', 'course_group_attendance_details.course_group_attendance_id', '=', 'course_group_attendances.id')
-            ->where('course_group_attendances.course_id', $course->id)
-            ->where('course_group_attendance_details.created_at', '>=', $startDate)
+        // Get attendance per day — attendance_details มี course_id ตรง
+        $attendance = DB::table('attendance_details')
+            ->where('course_id', $course->id)
+            ->where('created_at', '>=', $startDate)
             ->select(
-                DB::raw('DATE(course_group_attendance_details.created_at) as date'),
-                DB::raw('SUM(CASE WHEN course_group_attendance_details.status = "present" THEN 1 ELSE 0 END) as present'),
-                DB::raw('SUM(CASE WHEN course_group_attendance_details.status = "absent" THEN 1 ELSE 0 END) as absent'),
+                DB::raw('DATE(created_at) as date'),
+                DB::raw('SUM(CASE WHEN status = "present" THEN 1 ELSE 0 END) as present'),
+                DB::raw('SUM(CASE WHEN status = "absent" THEN 1 ELSE 0 END) as absent'),
                 DB::raw('COUNT(*) as total')
             )
             ->groupBy('date')
             ->orderBy('date')
             ->get();
 
-        // Get quiz completions per day
-        $quizzes = DB::table('course_quiz_answers')
-            ->join('course_quizzes', 'course_quiz_answers.course_quiz_id', '=', 'course_quizzes.id')
-            ->where('course_quizzes.course_id', $course->id)
-            ->where('course_quiz_answers.created_at', '>=', $startDate)
+        // Get quiz completions per day — course_quiz_results มี course_id ตรง
+        $quizzes = DB::table('course_quiz_results')
+            ->where('course_id', $course->id)
+            ->where('created_at', '>=', $startDate)
             ->select(
-                DB::raw('DATE(course_quiz_answers.created_at) as date'),
-                DB::raw('COUNT(DISTINCT course_quiz_answers.user_id) as completions')
+                DB::raw('DATE(created_at) as date'),
+                DB::raw('COUNT(DISTINCT user_id) as completions')
             )
             ->groupBy('date')
             ->orderBy('date')
@@ -311,6 +311,21 @@ class InstructorDashboardController extends Controller
     // Helper Methods
     // =====================================================
 
+    /**
+     * id ของ "งาน" ทั้งหมดของคอร์สนี้ — Assignment เป็น polymorphic (assignmentable)
+     * แนบได้ทั้งกับคอร์สโดยตรง (Course::courseAssignments) และกับบทเรียนของคอร์ส (Lesson::assignments)
+     * ไม่มีตาราง course_assignments/course_assignment_files จริง — คำตอบอยู่ที่ assignment_answers (assignment_id)
+     */
+    protected function courseAssignmentIds(Course $course): Collection
+    {
+        $lessons = $course->courseLessons()->with('assignments:id,assignmentable_id,assignmentable_type')->get();
+
+        return $course->courseAssignments()->pluck('id')
+            ->merge($lessons->flatMap->assignments->pluck('id'))
+            ->unique()
+            ->values();
+    }
+
     protected function calculateAttendanceStats(Course $course): array
     {
         $attendances = CourseAttendance::where('course_id', $course->id)->get();
@@ -353,8 +368,8 @@ class InstructorDashboardController extends Controller
 
     protected function calculateAssignmentStats(Course $course, $members): array
     {
-        $assignments = $course->courseAssignments;
-        $totalAssignments = $assignments->count();
+        $assignmentIds = $this->courseAssignmentIds($course);
+        $totalAssignments = $assignmentIds->count();
         $totalMembers = $members->count();
 
         if ($totalAssignments === 0 || $totalMembers === 0) {
@@ -367,8 +382,8 @@ class InstructorDashboardController extends Controller
             ];
         }
 
-        $submissions = DB::table('course_assignment_files')
-            ->whereIn('course_assignment_id', $assignments->pluck('id'))
+        $submissions = DB::table('assignment_answers')
+            ->whereIn('assignment_id', $assignmentIds)
             ->count();
 
         $expectedSubmissions = $totalAssignments * $totalMembers;
@@ -376,16 +391,16 @@ class InstructorDashboardController extends Controller
             ? round(($submissions / $expectedSubmissions) * 100, 1)
             : 0;
 
-        // Get graded vs pending
-        $graded = DB::table('course_assignment_files')
-            ->whereIn('course_assignment_id', $assignments->pluck('id'))
-            ->whereNotNull('score')
+        // ตรวจแล้ว (graded) = ให้คะแนนแล้ว (points ไม่ null)
+        $graded = DB::table('assignment_answers')
+            ->whereIn('assignment_id', $assignmentIds)
+            ->whereNotNull('points')
             ->count();
 
-        $averageScore = DB::table('course_assignment_files')
-            ->whereIn('course_assignment_id', $assignments->pluck('id'))
-            ->whereNotNull('score')
-            ->avg('score') ?? 0;
+        $averageScore = DB::table('assignment_answers')
+            ->whereIn('assignment_id', $assignmentIds)
+            ->whereNotNull('points')
+            ->avg('points') ?? 0;
 
         return [
             'total' => $totalAssignments,
@@ -413,10 +428,11 @@ class InstructorDashboardController extends Controller
             ];
         }
 
-        $attempts = DB::table('course_quiz_answers')
-            ->whereIn('course_quiz_id', $quizzes->pluck('id'))
-            ->select('course_quiz_id', 'user_id')
-            ->groupBy('course_quiz_id', 'user_id')
+        // 1 แถวใน course_quiz_results = 1 ครั้งที่ทำแบบทดสอบ (มี course_id ตรง) — นับคู่ (quiz,user) ที่ไม่ซ้ำ
+        $attempts = DB::table('course_quiz_results')
+            ->where('course_id', $course->id)
+            ->select('quiz_id', 'user_id')
+            ->distinct()
             ->get();
 
         $expectedAttempts = $totalQuizzes * $totalMembers;
@@ -424,14 +440,10 @@ class InstructorDashboardController extends Controller
             ? round(($attempts->count() / $expectedAttempts) * 100, 1)
             : 0;
 
-        // Calculate average score per quiz
-        $avgScores = DB::table('course_quiz_answers')
-            ->whereIn('course_quiz_id', $quizzes->pluck('id'))
-            ->select('course_quiz_id', 'user_id', DB::raw('SUM(score) as total_score'))
-            ->groupBy('course_quiz_id', 'user_id')
-            ->get();
-
-        $averageScore = $avgScores->avg('total_score') ?? 0;
+        // percentage เก็บเป็น 0–100 ต่อครั้งอยู่แล้ว — เฉลี่ยตรง ๆ
+        $averageScore = DB::table('course_quiz_results')
+            ->where('course_id', $course->id)
+            ->avg('percentage') ?? 0;
 
         return [
             'total' => $totalQuizzes,
@@ -454,8 +466,10 @@ class InstructorDashboardController extends Controller
             ];
         }
 
-        $completions = DB::table('lesson_member_completes')
-            ->whereIn('course_lesson_id', $lessons->pluck('id'))
+        // ไม่มีตาราง lesson_member_completes จริง — ความคืบหน้าอยู่ที่ lesson_progress (status = completed)
+        $completions = DB::table('lesson_progress')
+            ->whereIn('lesson_id', $lessons->pluck('id'))
+            ->where('status', 'completed')
             ->count();
 
         $expectedCompletions = $totalLessons * $totalMembers;
@@ -475,18 +489,18 @@ class InstructorDashboardController extends Controller
     {
         $activities = collect();
 
-        // Recent assignment submissions
-        $submissions = DB::table('course_assignment_files')
-            ->join('course_assignments', 'course_assignment_files.course_assignment_id', '=', 'course_assignments.id')
-            ->join('users', 'course_assignment_files.user_id', '=', 'users.id')
-            ->where('course_assignments.course_id', $course->id)
-            ->orderByDesc('course_assignment_files.created_at')
+        // Recent assignment submissions — assignment_answers → assignments (title)
+        $submissions = DB::table('assignment_answers')
+            ->join('assignments', 'assignment_answers.assignment_id', '=', 'assignments.id')
+            ->join('users', 'assignment_answers.user_id', '=', 'users.id')
+            ->whereIn('assignment_answers.assignment_id', $this->courseAssignmentIds($course))
+            ->orderByDesc('assignment_answers.created_at')
             ->limit(5)
             ->select(
-                'course_assignment_files.id',
+                'assignment_answers.id',
                 'users.name as user_name',
-                'course_assignments.name as assignment_name',
-                'course_assignment_files.created_at',
+                'assignments.title as assignment_name',
+                'assignment_answers.created_at',
                 DB::raw("'assignment_submitted' as type")
             )
             ->get();
@@ -501,18 +515,18 @@ class InstructorDashboardController extends Controller
             ]);
         }
 
-        // Recent quiz completions
-        $quizzes = DB::table('course_quiz_answers')
-            ->join('course_quizzes', 'course_quiz_answers.course_quiz_id', '=', 'course_quizzes.id')
-            ->join('users', 'course_quiz_answers.user_id', '=', 'users.id')
-            ->where('course_quizzes.course_id', $course->id)
-            ->orderByDesc('course_quiz_answers.created_at')
+        // Recent quiz completions — course_quiz_results มี course_id ตรง · course_quizzes ใช้คอลัมน์ title
+        $quizzes = DB::table('course_quiz_results')
+            ->join('course_quizzes', 'course_quiz_results.quiz_id', '=', 'course_quizzes.id')
+            ->join('users', 'course_quiz_results.user_id', '=', 'users.id')
+            ->where('course_quiz_results.course_id', $course->id)
+            ->orderByDesc('course_quiz_results.created_at')
             ->limit(5)
             ->select(
-                'course_quiz_answers.id',
+                'course_quiz_results.id',
                 'users.name as user_name',
-                'course_quizzes.name as quiz_name',
-                'course_quiz_answers.created_at',
+                'course_quizzes.title as quiz_name',
+                'course_quiz_results.created_at',
                 DB::raw("'quiz_completed' as type")
             )
             ->get();
@@ -537,11 +551,10 @@ class InstructorDashboardController extends Controller
 
     protected function getPendingItems(Course $course): array
     {
-        // Pending assignment grading
-        $pendingAssignments = DB::table('course_assignment_files')
-            ->join('course_assignments', 'course_assignment_files.course_assignment_id', '=', 'course_assignments.id')
-            ->where('course_assignments.course_id', $course->id)
-            ->whereNull('course_assignment_files.score')
+        // Pending assignment grading = คำตอบที่ยังไม่ให้คะแนน (points null)
+        $pendingAssignments = DB::table('assignment_answers')
+            ->whereIn('assignment_id', $this->courseAssignmentIds($course))
+            ->whereNull('points')
             ->count();
 
         // Pending appeals
@@ -572,16 +585,19 @@ class InstructorDashboardController extends Controller
     protected function getCertificateStats(Course $course): array
     {
         $certificates = CourseCertificate::where('course_id', $course->id)->get();
+        $issuedMemberIds = $certificates->pluck('course_member_id')->filter()->unique();
+
+        // course_members ไม่มีคอลัมน์ certificate_eligible และ CourseMember ไม่มี relation certificates()
+        // ใช้ "เรียนจบแล้ว" (completion_status = completed) เป็นเกณฑ์มีสิทธิ์รับเกียรติบัตร · certificate ผูกด้วย course_member_id
+        $eligibleNotIssued = $course->courseMembers()
+            ->where('completion_status', 'completed')
+            ->whereNotIn('id', $issuedMemberIds)
+            ->count();
 
         return [
             'total_issued' => $certificates->count(),
-            'downloaded' => $certificates->where('downloaded_at', '!=', null)->count(),
-            'eligible_not_issued' => $course->courseMembers()
-                ->where('certificate_eligible', true)
-                ->whereDoesntHave('certificates', function ($q) use ($course) {
-                    $q->where('course_id', $course->id);
-                })
-                ->count(),
+            'downloaded' => $certificates->where('download_count', '>', 0)->count(),
+            'eligible_not_issued' => $eligibleNotIssued,
         ];
     }
 
@@ -611,14 +627,15 @@ class InstructorDashboardController extends Controller
 
     protected function getMemberAssignmentRate(CourseMember $member, Course $course): float
     {
-        $totalAssignments = $course->courseAssignments()->count();
+        $assignmentIds = $this->courseAssignmentIds($course);
+        $totalAssignments = $assignmentIds->count();
 
         if ($totalAssignments === 0) {
             return 100;
         }
 
-        $submitted = DB::table('course_assignment_files')
-            ->whereIn('course_assignment_id', $course->courseAssignments()->pluck('id'))
+        $submitted = DB::table('assignment_answers')
+            ->whereIn('assignment_id', $assignmentIds)
             ->where('user_id', $member->user_id)
             ->count();
 
