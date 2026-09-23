@@ -817,8 +817,8 @@ Laravel แทน `*` ในพารามิเตอร์ตามดัช�
 | **SC-S10a** | **UI สร้างหลายคาบพร้อมกัน (bulk) + ปิด B1–B4** — โหมด "เติมทั้งสัปดาห์" ในหน้า `admin/schedule.vue`: เลือกห้อง 1 ห้อง → ติ๊กช่องในกริด วัน×คาบ → กำหนดคอร์ส/ครู/สถานที่ต่อช่อง → ส่งทีเดียวไป `/schedules/bulk` · แสดง `data.errors[]` รายรายการ · เพิ่ม datalist สถานที่ที่เคยใช้ (D8 ทางลัด) | — | FE โหมด bulk + patch `bulkStore` + เทสต์ | 🟢 **done 2026-09-19** (เทสต์ใหม่ 11 เคส · เขียว 101/101 ทั้ง sqlite และ MySQL จริง · สร้างคาบผ่าน UI จริงที่ 375px แล้วยืนยันใน DB ดู §9) |
 | **SC-S10b** | **พิมพ์/ส่งออกตาราง** — หน้า `admin/schedule/print.vue` (`layout:false` + `@media print`): ขอบเขต = ห้องที่เลือก / ทุกห้องในระดับชั้น / ทุกห้อง / ครูที่เลือก / ทุกครู · 1 entity = 1 หน้า (`page-break-after`) · **ไม่ต้องมี endpoint ใหม่** — `GET /schedules?semester_id=` คืนแถวทั้งโรงเรียนพร้อม `classroom`/`teacher` ต่อแถวอยู่แล้ว ดึงครั้งเดียวแล้วจัดกลุ่มฝั่ง client + reuse `useScheduleGrid()` · ส่งออก Excel ผ่าน `app/Exports/ClassScheduleExport` + `api.getBlob()` | S10a (ต้องมีคาบให้พิมพ์) | หน้าพิมพ์ + export + ตรวจ preview จริง | 🟢 **done 2026-09-19** (เทสต์ใหม่ 7 เคส · เขียว 108/108 ทั้ง sqlite และ MySQL จริง · พิมพ์/ส่งออกของจริงแล้ว ดู §9) |
 | **SC-S10c** | **คัดลอกตารางข้ามภาคเรียน** — `POST /schedules/copy` {source_semester_id, target_semester_id, classroom_ids?, on_conflict} · ตรวจว่าทั้งสองภาคเรียนเป็นของโรงเรียนนี้ · ตั้ง `academic_year_id` จากภาคเรียนปลายทาง · audit log · modal ในหน้า schedule แสดงผลสรุป (คัดลอก n / ข้าม m + เหตุผล) | S10a | endpoint + เทสต์ + modal | 🟢 **done 2026-09-19** (เทสต์ใหม่ 9 เมธอด ครอบ 12 เคส · เขียว 117/117 ทั้ง sqlite และ MySQL จริง · คัดลอก 1/2569→2/2569 จริงผ่าน UI แล้ว ดู §9) |
-| **SC-S10d** | **ภาระงานสอนของครู** — `GET /schedules/workload?semester_id=` ต่อครู: คาบ/สัปดาห์ · นาที/สัปดาห์ · จำนวนคอร์ส · จำนวนห้องที่สอน · จำนวนวันที่มีสอน · คาบมากสุดในวันเดียว · **ครูที่ยังไม่มีคาบต้องขึ้นเป็น 0** (นั่นคือจุดที่รายงานมีประโยชน์) · หน้า/แท็บตารางเรียงได้ + ส่งออก Excel · **ไม่มีการเทียบเป้า** (`courses.hours_per_week`=1 ทุกแถว ใช้เป็นเป้าไม่ได้ · `teacher_assignments` ว่างและถือ `subject_id` ที่ตายแล้ว — **ห้ามไปปลุก**) | S10a | endpoint + หน้า + เทสต์ | ⚪ |
-| **SC-S10e** | **สอนแทน / งดคาบ** — รูปร่างขึ้นกับ D6 · **ต้องแก้เรื่องนี้ก่อนไม่ว่าเลือกทางไหน:** ทุก endpoint อ่านผ่าน `->active()` (`scopeActive` = `where('status','active')`) ⇒ คาบที่ "ยกเลิก" **หายจากตารางไปเลยแบบเงียบ ๆ** ทั้งที่โรงเรียนต้องเห็นว่า "งดคาบ" คาดคาบไว้ | S10a · D6 | migration `class_schedule_exceptions` + endpoints + ซ้อนทับใน `today`/`my`/`timetable` + UI | ⚪ (D6 = รายวันที่) |
+| **SC-S10d** | **ภาระงานสอนของครู** — `GET /schedules/workload?semester_id=` ต่อครู: คาบ/สัปดาห์ · นาที/สัปดาห์ · จำนวนคอร์ส · จำนวนห้องที่สอน · จำนวนวันที่มีสอน · คาบมากสุดในวันเดียว · **ครูที่ยังไม่มีคาบต้องขึ้นเป็น 0** (นั่นคือจุดที่รายงานมีประโยชน์) · หน้า/แท็บตารางเรียงได้ + ส่งออก Excel · **ไม่มีการเทียบเป้า** (`courses.hours_per_week`=1 ทุกแถว ใช้เป็นเป้าไม่ได้ · `teacher_assignments` ว่างและถือ `subject_id` ที่ตายแล้ว — **ห้ามไปปลุก**) | S10a | endpoint + หน้า + เทสต์ | 🟢 **done 2026-09-23** (เทสต์ใหม่ 9 เคส · ดู review log ท้าย §10) |
+| **SC-S10e** | **สอนแทน / งดคาบ** — รูปร่างขึ้นกับ D6 · **ต้องแก้เรื่องนี้ก่อนไม่ว่าเลือกทางไหน:** ทุก endpoint อ่านผ่าน `->active()` (`scopeActive` = `where('status','active')`) ⇒ คาบที่ "ยกเลิก" **หายจากตารางไปเลยแบบเงียบ ๆ** ทั้งที่โรงเรียนต้องเห็นว่า "งดคาบ" คาดคาบไว้ | S10a · D6 | migration `class_schedule_exceptions` + endpoints + ซ้อนทับใน `today`/`my`/`timetable` + UI | 🟢 **done 2026-09-23** (3 ประเภท: งดคาบ/สอนแทน/ย้ายห้อง · ดู review log ท้าย §10) |
 | **(ยกออก)** | **ทะเบียนสถานที่/ห้องปฏิบัติการ** — ไม่มีตารางในระบบเลย และของจริงต้องใช้ร่วมกับกิจกรรม/สอบ/จองห้อง ⇒ เป็นเมนูของตัวเอง ไม่ใช่หางของตารางเรียน · รอบนี้แก้แบบถูกที่สุดใน S10a (datalist จากสถานที่ที่เคยใช้) | — | — | 🚫 **ยกออกแล้ว (D8)** |
 
 ### 10.3 กับดักที่ต้องเขียนลงสเปคให้ agy (เจอจาก DB จริง)
@@ -973,6 +973,41 @@ Laravel แทน `*` ในพารามิเตอร์ตามดัช�
     (ก่อนแก้ข้อ 1 URL จะไม่มี query เลย)
   · **เปิดไฟล์ .xlsx ที่ได้จริงด้วย PhpSpreadsheet**: ชีต "ตารางเรียน" · หัวตาราง 11 คอลัมน์ภาษาไทย ·
     2 แถวตรงกับคาบจริง · คอลัมน์ "คาบ" = "คาบ 3" หลังแก้ (ก่อนแก้เป็น "-")
+
+---
+
+- **2026-09-23 SC-S10d + SC-S10e 🟢 verified** — agy เขียน 5 shard (API ×2 ขนาน · UI ×3 ขนาน) · Claude ตรวจเองทุกข้อ
+  **ไฟล์ใหม่:** `TeacherWorkloadController` · `ClassScheduleExceptionController` · `Models/ClassScheduleException` ·
+  `Exports/TeacherWorkloadExport` · migration `2026_09_23_090000_create_class_schedule_exceptions_table` (รันบน dev แล้ว) ·
+  เทสต์ `ClassScheduleWorkloadTest` (9) + `ClassScheduleExceptionTest` (1 เมธอดครอบ 20 เคส · 62 assertions) ·
+  `admin/schedule-workload.vue` · `admin/schedule-exceptions.vue` · `school/SchoolScheduleExceptionModal.vue`
+  **แก้:** `ClassSchedule.php` add-only (`exceptions()` + `busyTeacherIdsOn()` ที่เรียก `overlappingQuery` เดิม) ·
+  `ClassScheduleController` เฉพาะ today/timetable/my/buildTimetable (ไม่ส่ง `date` = response เหมือนเดิมทุกไบต์) ·
+  routes +7 เส้น (Claude ลงเองก่อนปล่อย shard เพื่อกันสอง shard เขียนไฟล์เดียวกัน) · เมนู admin +2 · ปุ่มหัวหน้า schedule +2 ·
+  `my-schedule.vue` (เลื่อนสัปดาห์ + ป้าย + กล่องสรุป) · `dashboard/teacher.vue` (ป้าย + นับคาบวันนี้เฉพาะที่ต้องสอนจริง)
+
+  **การตัดสินใจที่ Claude วางเองในสเปค (ยังไม่ได้ให้เจ้าของโปรเจคเคาะ):** ข้อยกเว้นมี 3 ประเภท (งดคาบ/สอนแทน/ย้ายห้อง) ·
+  1 คาบ × 1 วันที่ = 1 รายการ · ครูสอนแทนที่ไม่ว่าง = **บล็อก 422** ไม่ใช่เตือน (คาบตัวเองที่ถูกงด/ถูกคนอื่นสอนแทนวันนั้น = ว่าง) ·
+  ภาระงานสอน **ไม่นับ entry_type=break** · ครูที่มีคาบแต่ไม่อยู่ในทะเบียนครู (เช่น ผอ.) ขึ้นด้วย `is_member_teacher=false`
+
+  🔴 **บั๊กที่ Claude เจอตอนตรวจ (agy รายงานว่าผ่านทุกข้อ):**
+  1. `schedule-exceptions.vue` เรียก `useAcademyRole()` **ไม่ส่ง academyId** แล้วอ่าน `academyRole.academy` ที่ไม่มีอยู่จริง ⇒ **หน้าว่างเปล่าถาวร ไม่มี error**
+  2. `my-schedule.vue` — agy รายงานว่าทำปุ่มเลื่อนสัปดาห์/ป้าย/กล่องสรุปครบ **แต่ diff มีแค่ 2 hunk แรก** (รายงานแต่ง) ⇒ Claude เขียนส่วนที่เหลือเอง
+  3. เทสต์ exception ใช้ `Model::truncate()` ⇒ บน MySQL เป็น DDL → implicit commit ⇒ แถวหลุดข้ามเทสต์ ⇒ **เทสต์อื่น 5 ตัวแดงบน MySQL** (sqlite เขียว) ⇒ เปลี่ยนเป็น `->delete()`
+  4. ตารางภาระงาน `list.sort()` เรียงทับอาเรย์ต้นทางใน computed · Swal `html` ของ "งดทุกคาบ" ต่อชื่อคาบดิบ ⇒ escape ·
+     โมดัลค้างรายชื่อครูว่างของคาบก่อนหน้า · `minutes_per_week` เป็น float (Carbon 3) · เทสต์ export เรียก `Excel::assertDownloaded` ผิด signature + ชื่อ action ผิด (`exported`)
+
+  **เกณฑ์ที่ Claude รันเอง:** `pint --test` ผ่าน · SFC compile (script+template) ผ่านทุกไฟล์ ·
+  `route:list --path=schedules` = **24 เส้น** (เดิม 17) · **sqlite 122/122 (446 assertions)** และ **MySQL จริง 122/122 (446 assertions)**
+  (filter `ClassSchedule|SchedulePermission|SchedulePeriodSet`)
+
+  **ตรวจบนเบราว์เซอร์จริงที่ 375px (dev server + JWT):** ภาระงานสอนขึ้น 120 ครู (119 ยังไม่มีคาบ — ตรงกับ DB) ไม่เลื่อนแนวนอน ·
+  หน้าสอนแทน: โมดัลบอก "ครูว่าง 119 · ไม่ว่าง 1" → เลือกครู → บันทึก → ป้าย "สอนแทน: …" ขึ้น · DB มีแถว + audit `created` ·
+  `class_schedules.status` ยัง `active` · API `/my?date=` ของครูสอนแทนมีคาบนั้น `is_substitute=true` เฉพาะสัปดาห์นั้น ·
+  หน้า "ตารางของฉัน" ของครูสอนแทนมีป้าย "คุณสอนแทน" + กล่องสรุป + ป้ายสัปดาห์ · **ลบแถวทดสอบแล้ว** (dev เหลือ 0 แถว)
+
+  ⚠️ **ข้อจำกัดที่รู้อยู่:** `today?date=` ยังใช้ **ภาคเรียนปัจจุบัน** เสมอ — เลือกวันที่ในภาคเรียนอื่นในหน้าสอนแทนจะไม่เห็นคาบ
+  (แก้ได้ด้วยการหาภาคเรียนจากช่วงวันที่ของ `semesters` แต่ยังไม่ทำ) · ยังไม่ได้ตรวจ dashboard ครูบนจอจริง (ตรวจแค่ compile)
 
 ---
 
