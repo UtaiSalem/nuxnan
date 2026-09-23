@@ -26,8 +26,12 @@ class CoursePostCommentResource extends JsonResource
             'dislikes' => $this->dislikes,
             'replies' => $this->replies,
 
-            'isLikedByAuth' => $this->comment_likes()->where('user_id', auth()->id())->exists(),
-            'isDislikedByAuth' => $this->comment_dislikes()->where('user_id', auth()->id())->exists(),
+            'isLikedByAuth' => $this->relationLoaded('comment_likes')
+                ? $this->comment_likes->contains('user_id', auth()->id())
+                : $this->comment_likes()->where('user_id', auth()->id())->exists(),
+            'isDislikedByAuth' => $this->relationLoaded('comment_dislikes')
+                ? $this->comment_dislikes->contains('user_id', auth()->id())
+                : $this->comment_dislikes()->where('user_id', auth()->id())->exists(),
 
             'parent_comment_id' => $this->parent_comment_id,
             'sentiment' => $this->sentiment,

@@ -12,29 +12,44 @@ use Illuminate\Support\Facades\Auth;
 class ActivityController extends Controller
 {
     /**
-     * Display a listing of all activities (admin/general use).
+     * closure สำหรับ eager-load ตัวนับของผู้ใช้ + roles ครั้งเดียว
+     * UserResource อ่าน posts_count/followers_count/following_count จาก withCount ถ้ามี (ไม่งั้น query รายคน)
+     * และ isSuperAdmin (hasRole) ใช้ roles ที่โหลดไว้ ⇒ เลี่ยง N+1 รายผู้ใช้ในฟีด
      */
-    public function index()
+    protected function feedUserCounts(): \Closure
     {
-        $activities = Activity::with([
-            'user',
-            'activityable.user',
-        ])
-            ->latest()
-            ->paginate();
+        return fn ($q) => $q->withCount(['posts', 'followers', 'following'])->with(['roles', 'plearndAdmin']);
+    }
 
-        // Load images based on model type
-        $activities->getCollection()->each(function ($activity) {
-            if ($activity->activityable) {
-                if ($activity->activityable_type === 'App\Models\Post') {
-                    $activity->activityable->load(['postImages', 'poll.options', 'poll.user']);
-                } elseif ($activity->activityable_type === 'App\Models\CoursePost') {
-                    $activity->activityable->load(['post_images', 'poll.options', 'poll.user']);
-                }
-            }
-        });
+    /**
+     * eager-load ความสัมพันธ์ของ activityable แบบ batch ต่อชนิด (เลี่ยง N+1 ในฟีด)
+     * shareComments จำกัด 3 ต่อโพสต์จึงต้องโหลดรายรายการ (eager load แบบ batch จะ limit รวมทั้งชุด)
+     */
+    protected function loadActivityableForFeed($activities): void
+    {
+        $authId = Auth::id();
+        $userCounts = $this->feedUserCounts();
 
-        // Load Share comments for Share activities
+        $activities->getCollection()->loadMorph('activityable', [
+            'App\Models\Post' => [
+                'user' => $userCounts,
+                'postImages',
+                'poll.options', 'poll.user',
+                'likedPost' => fn ($q) => $q->where('user_id', $authId),
+                'dislikedPost' => fn ($q) => $q->where('user_id', $authId),
+            ],
+            'App\Models\CoursePost' => [
+                'user' => $userCounts,
+                'post_images',
+                'poll.options', 'poll.user',
+                'course:id,name,code', 'academy:id,name',
+                'likedPost' => fn ($q) => $q->where('user_id', $authId),
+                'dislikedPost' => fn ($q) => $q->where('user_id', $authId),
+            ],
+            'App\Models\DonateRecipient' => ['reciever', 'donation'],
+            'App\Models\Share' => ['user' => $userCounts, 'shareable.user'],
+        ]);
+
         $activities->getCollection()->each(function ($activity) {
             if ($activity->activityable_type === 'App\Models\Share' && $activity->activityable) {
                 $activity->activityable->load(['shareComments' => function ($query) {
@@ -42,6 +57,18 @@ class ActivityController extends Controller
                 }]);
             }
         });
+    }
+
+    /**
+     * Display a listing of all activities (admin/general use).
+     */
+    public function index()
+    {
+        $activities = Activity::with(['user' => $this->feedUserCounts()])
+            ->latest()
+            ->paginate();
+
+        $this->loadActivityableForFeed($activities);
 
         return response()->json([
             'success' => true,
@@ -64,42 +91,11 @@ class ActivityController extends Controller
             'App\Models\DonateRecipient',
             'App\Models\Share',
         ])
-            ->with([
-                'user',
-                'activityable.user',
-            ])
+            ->with(['user' => $this->feedUserCounts()])
             ->latest()
             ->paginate($perPage);
 
-        // Load images and poll based on model type
-        $activities->getCollection()->each(function ($activity) {
-            if ($activity->activityable) {
-                if ($activity->activityable_type === 'App\Models\Post') {
-                    $activity->activityable->load(['postImages', 'poll.options', 'poll.user']);
-                } elseif ($activity->activityable_type === 'App\Models\CoursePost') {
-                    $activity->activityable->load(['post_images', 'poll.options', 'poll.user']);
-                }
-            }
-        });
-
-        // Load DonateRecipient specific relations
-        $activities->getCollection()->each(function ($activity) {
-            if ($activity->activityable_type === 'App\Models\DonateRecipient' && $activity->activityable) {
-                $activity->activityable->load(['reciever', 'donation']);
-            }
-        });
-
-        // Load Share comments for Share activities
-        $activities->getCollection()->each(function ($activity) {
-            if ($activity->activityable_type === 'App\Models\Share' && $activity->activityable) {
-                $activity->activityable->load([
-                    'shareComments' => function ($query) {
-                        $query->with('user')->latest()->limit(3);
-                    },
-                    'shareable.user', // Load original post and its author
-                ]);
-            }
-        });
+        $this->loadActivityableForFeed($activities);
 
         return response()->json([
             'success' => true,
@@ -113,35 +109,11 @@ class ActivityController extends Controller
     public function show(User $user)
     {
         $activities = $user->activities()
-            ->with([
-                'user',
-                'activityable.user',
-            ])
+            ->with(['user' => $this->feedUserCounts()])
             ->latest()
             ->paginate();
 
-        // Load images based on model type
-        $activities->getCollection()->each(function ($activity) {
-            if ($activity->activityable) {
-                if ($activity->activityable_type === 'App\Models\Post') {
-                    $activity->activityable->load(['postImages', 'poll.options', 'poll.user']);
-                } elseif ($activity->activityable_type === 'App\Models\CoursePost') {
-                    $activity->activityable->load(['post_images', 'poll.options', 'poll.user']);
-                }
-            }
-        });
-
-        // Load Share comments for Share activities
-        $activities->getCollection()->each(function ($activity) {
-            if ($activity->activityable_type === 'App\Models\Share' && $activity->activityable) {
-                $activity->activityable->load([
-                    'shareComments' => function ($query) {
-                        $query->with('user')->latest()->limit(3);
-                    },
-                    'shareable.user', // Load original post and its author
-                ]);
-            }
-        });
+        $this->loadActivityableForFeed($activities);
 
         return response()->json([
             'success' => true,

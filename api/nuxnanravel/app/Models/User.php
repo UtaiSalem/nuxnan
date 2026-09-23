@@ -179,6 +179,11 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
      */
     public function hasRole(string $roleName): bool
     {
+        // ถ้า roles ถูก eager-load มาแล้ว ตรวจในหน่วยความจำ (เลี่ยง N+1 ในลิสต์) — ไม่งั้น query
+        if ($this->relationLoaded('roles')) {
+            return $this->roles->contains('name', $roleName);
+        }
+
         return $this->roles()->where('name', $roleName)->exists();
     }
 
@@ -621,9 +626,19 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         return $this->hasMany(AdvertViewer::class);
     }
 
+    public function plearndAdmin(): HasOne
+    {
+        return $this->hasOne(PlearndAdmin::class, 'user_id');
+    }
+
     public function isPlearndAdmin(): bool
     {
-        return PlearndAdmin::where('user_id', $this->id)->exists() && $this->hasVerifiedEmail();
+        // ถ้า eager-load plearndAdmin มาแล้ว ใช้ในหน่วยความจำ (เลี่ยง N+1 ในลิสต์) — ไม่งั้น query
+        $isAdmin = $this->relationLoaded('plearndAdmin')
+            ? $this->plearndAdmin !== null
+            : PlearndAdmin::where('user_id', $this->id)->exists();
+
+        return $isAdmin && $this->hasVerifiedEmail();
     }
 
     public function getIsPlearndAdminAttribute()

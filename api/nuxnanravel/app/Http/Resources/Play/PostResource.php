@@ -88,14 +88,20 @@ class PostResource extends JsonResource
             'likes' => $this->likes ?? 0,
             'dislikes' => $this->dislikes ?? 0,
             'isLikedByAuth' => $this->when(auth()->check(), function () {
-                return $this->likedPost()->where('user_id', auth()->id())->exists();
+                // ถ้า likedPost ถูก eager-load มา ใช้ในหน่วยความจำ (contains ปลอดภัยไม่ว่าถูก constrain หรือไม่) — ไม่งั้น query
+                return $this->relationLoaded('likedPost')
+                    ? $this->likedPost->contains('id', auth()->id())
+                    : $this->likedPost()->where('user_id', auth()->id())->exists();
             }),
             'isDislikedByAuth' => $this->when(auth()->check(), function () {
-                return $this->dislikedPost()->where('user_id', auth()->id())->exists();
+                return $this->relationLoaded('dislikedPost')
+                    ? $this->dislikedPost->contains('id', auth()->id())
+                    : $this->dislikedPost()->where('user_id', auth()->id())->exists();
             }),
             'comments' => $this->comments ?? 0,
-            'comments_count' => $this->postComments ? $this->postComments->count() : ($this->comments_count ?? 0),
-            'post_comments' => $this->postComments ? PostCommentResource::collection($this->getComments()) : [],
+            'comments_count' => $this->relationLoaded('postComments') ? $this->postComments->count() : ($this->comments_count ?? $this->comments ?? 0),
+            // getComments() คืน 3 ล่าสุด (พร้อม eager-load ในตัว) หรือใช้ของที่ eager-load มา — ไม่ lazy-load ทั้งหมด
+            'post_comments' => PostCommentResource::collection($this->getComments()),
             'shares' => $this->shares ?? 0,
             'views' => $this->views ?? 0,
             'engagement_rate' => $this->engagement_rate ?? 0,

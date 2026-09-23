@@ -353,8 +353,22 @@ class Post extends Model
 
     public function getComments()
     {
-        // return $this->postComments()->latest()->paginate(3);
-        return $this->postComments()->latest()->limit(3)->get();
+        // ถ้า postComments ถูก eager-load มาแล้ว ใช้ของที่โหลด (เลี่ยง N+1 ในฟีด) — ไม่งั้น query 3 ล่าสุด
+        if ($this->relationLoaded('postComments')) {
+            return $this->postComments->sortByDesc('created_at')->take(3)->values();
+        }
+
+        // ดึงแค่ 3 ล่าสุด แต่ eager-load relation ของ 3 คอมเมนต์นั้นในตัว (1 คิวรีต่อโพสต์ ไม่ N+1 รายคอมเมนต์)
+        $authId = auth()->id();
+
+        return $this->postComments()->latest()->limit(3)
+            ->with([
+                'user' => fn ($q) => $q->withCount(['posts', 'followers', 'following'])->with('roles'),
+                'postCommentImages',
+                'likedPostComment' => fn ($q) => $q->where('user_id', $authId),
+                'dislikedPostComment' => fn ($q) => $q->where('user_id', $authId),
+            ])
+            ->get();
     }
 
     public function likedByAuth(): bool

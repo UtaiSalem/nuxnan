@@ -84,8 +84,21 @@ class CoursePost extends Model
 
     public function getComments()
     {
-        // return $this->postComments()->latest()->paginate(3);
-        return $this->post_comments()->latest()->limit(3)->get();
+        if ($this->relationLoaded('post_comments')) {
+            return $this->post_comments->sortByDesc('created_at')->take(3)->values();
+        }
+
+        // ดึง 3 ล่าสุด พร้อม eager-load relation ของคอมเมนต์ในตัว (1 คิวรีต่อโพสต์ ไม่ N+1 รายคอมเมนต์)
+        $authId = auth()->id();
+
+        return $this->post_comments()->latest()->limit(3)
+            ->with([
+                'user' => fn ($q) => $q->withCount(['posts', 'followers', 'following'])->with(['roles', 'plearndAdmin']),
+                'postCommentImages',
+                'comment_likes' => fn ($q) => $q->where('user_id', $authId),
+                'comment_dislikes' => fn ($q) => $q->where('user_id', $authId),
+            ])
+            ->get();
     }
 
     public function post_likes()

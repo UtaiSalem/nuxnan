@@ -32,8 +32,17 @@ class PostCommentResource extends JsonResource
             // 'isDislikedByAuth'  => $this->when(auth()->check(), function () {
             //                             return $this->dislikedComment()->where('user_id', auth()->id())->exists() ;
             //                         }),
-            'isLikedByAuth' => auth()->check() ? $this->likedPostComment()->where('user_id', auth()->id())->exists() : false,
-            'isDislikedByAuth' => auth()->check() ? $this->dislikedPostComment()->where('user_id', auth()->id())->exists() : false,
+            // eager-load แล้วใช้ในหน่วยความจำ (เลี่ยง N+1 ในฟีด) — ไม่งั้น fallback query
+            'isLikedByAuth' => auth()->check()
+                ? ($this->relationLoaded('likedPostComment')
+                    ? $this->likedPostComment->contains('id', auth()->id())
+                    : $this->likedPostComment()->where('user_id', auth()->id())->exists())
+                : false,
+            'isDislikedByAuth' => auth()->check()
+                ? ($this->relationLoaded('dislikedPostComment')
+                    ? $this->dislikedPostComment->contains('id', auth()->id())
+                    : $this->dislikedPostComment()->where('user_id', auth()->id())->exists())
+                : false,
 
             'parent_post_comment_id' => $this->parent_post_comment_id,
             'parent_post_comment' => $this->when($this->parent_post_comment_id, function () {
