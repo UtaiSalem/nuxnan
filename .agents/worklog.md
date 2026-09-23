@@ -62,7 +62,30 @@
 
 **🔴 พบว่าพังเชิงโครงสร้าง (ไม่ได้แก้ — เป็นฟีเจอร์ที่ยังไม่ได้สร้าง schema จริง ควรตัดสินใจแยก):**
 - `POST reports/{report}/export` (`exportReport`): ใช้ `ReportExport::FORMATS` ที่ **ไม่มี const** + create ด้วยคอลัมน์ผิด (`saved_report_id`/`format`/`requested_by`) + ขาด file_name/file_path/file_type ที่ NOT NULL + มี `// TODO: Dispatch job` = ยังไม่มีตัว generate ไฟล์จริง ⇒ ฟีเจอร์ export ค้างครึ่งทาง
-- `InstructorDashboardController` (`courses/{course}/instructor-dashboard` + `/trends`): ทั้ง controller คิวรีตาราง **`course_assignments` / `course_assignment_files` ที่ไม่มีอยู่ในฐานเลย** (ระบบงานจริงใช้ polymorphic `assignments`/`assignment_answers`) + `course_members.whereNull('deleted_at')` (course_members ไม่มี deleted_at) ⇒ แก้ทีละบรรทัดไม่พอ ต้องเขียนใหม่ทั้งก้อนให้ผูกกับ schema จริง (= งาน implement ไม่ใช่ sweep) · `/at-risk` และ `/top-performers` ของ controller นี้ตอบ 200 (ไม่ได้แตะตารางที่หาย)
+- ~~`InstructorDashboardController`~~ **✅ เขียนใหม่แล้ว 2026-09-24 (`35f538e6`)** — ดูหัวข้อถัดไป
+
+### เขียน InstructorDashboardController ใหม่ให้ผูกกับ schema จริง (`35f538e6`)
+ทั้ง controller เดิมคิวรีตารางที่ **ไม่มีอยู่จริง 5 ตาราง**: `course_assignments`, `course_assignment_files`,
+`course_quiz_answers`, `course_group_attendance_details`, `lesson_member_completes` + `course_members.deleted_at`
++ `CourseMember::certificates()` (relation ไม่มี) + `certificate_eligible` (คอลัมน์ไม่มี)
+(เดิม courseDashboard/trends 500 · ที่รอด 200 เพราะคอร์สที่ยิงทดสอบไม่มีข้อมูลเลย เลย return early ก่อนถึงตารางที่หาย)
+
+**map ตารางจริง (จดไว้ใช้รอบหน้า):**
+- งาน (assignment): `Assignment` เป็น **polymorphic** (assignmentable) — แนบกับ `Course` โดยตรง (`Course::courseAssignments()` = MorphMany)
+  หรือกับบทเรียน (`Lesson::assignments()` = MorphMany) · helper `courseAssignmentIds()` รวมทั้งสองแหล่ง ·
+  คำตอบ/คะแนน/ค้างตรวจ อยู่ที่ **`assignment_answers`** (`assignment_id`, `points` null = ยังไม่ตรวจ, status submitted/graded)
+- แบบทดสอบ: **`course_quiz_results`** (มี `course_id` ตรง · `percentage` 0–100 ต่อครั้ง · `quiz_id`→`course_quizzes.title`)
+- บทเรียน: **`lesson_progress`** (`lesson_id`, `status`='completed')
+- attendance: **`attendance_details`** มี `course_id` ตรง (ไม่ต้อง join course_group_*)
+- active member = **`course_member_status = 1`** (0=รออนุมัติ, 1=อนุมัติ · ไม่มี soft delete)
+- เกียรติบัตร: **`course_certificates`** ผูกด้วย `course_member_id` (ไม่ใช่ user_id) · `download_count>0`=ดาวน์โหลดแล้ว ·
+  ไม่มี certificate_eligible → ใช้ `completion_status='completed'` เป็นเกณฑ์มีสิทธิ์
+- **course_quizzes ใช้คอลัมน์ `title` ไม่ใช่ name**
+
+ตรวจจริงบน MySQL dev (course 1, cross-check กับ DB ทุกตัว): 424 submissions/89.5%/421 graded/3 pending ·
+quizzes 447 attempts (ตรง DB)/85.1% · lessons 0 completed (ตรง) · attendance 0 sessions · recent activity มีชื่อจริง+ชื่องานจริง ·
+ทุก endpoint (dashboard/trends/at-risk/top-performers) = 200 · เทสต์ใหม่ `InstructorDashboardAssignmentsTest` 2 เคส เขียว sqlite+MySQL
+⚠️ at-risk ช้า ~3s (loop รายสมาชิก N+1 — ยังไม่ optimize, ไม่ใช่ 500)
 
 ### spec decisions — ✅ เจ้าของโปรเจคเคาะแล้ว 2026-09-23 (ตรงกับที่ทำไปทั้งหมด ไม่ต้องแก้โค้ด)
 - 3 ประเภทข้อยกเว้น (งดคาบ/สอนแทน/ย้ายห้อง) · 1 คาบ × 1 วันที่ = 1 รายการ ·
