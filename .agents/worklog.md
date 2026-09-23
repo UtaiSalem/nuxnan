@@ -89,6 +89,19 @@ quizzes 447 attempts (ตรง DB)/85.1% · lessons 0 completed (ตรง) · 
 การเข้าเรียนต่อสมาชิก + การส่งงานต่อผู้ใช้ เป็น grouped query) แล้วคำนวณในหน่วยความจำ · getTopPerformers hoist computedMax ออกนอก map ·
 ลบ getMemberAssignmentRate ที่ไม่มีคนเรียก · ผล: 158 คน = **14 คิวรีคงที่** (จาก ~1000) · **~3.4s → ~0.6s** · at_risk_count เท่าเดิม (29)
 
+### กวาดหา N+1 endpoint อื่น ๆ (2026-09-24)
+วิธี: หา loop/`->map()` ที่ยิงคิวรีต่อ item (`::find`/`::where`/`->count()`/`->load()` ใน closure)
+- **แก้แล้ว `463d1e4f`:** `CourseMarketplaceController::getSalesAnalytics` — `Course::find($courseId)` ใน `groupBy()->map()`
+  = N+1 ต่อคอร์สในรายงาน → โหลดชื่อครั้งเดียว (`whereIn->pluck('name','id')`) · คิวรีคงที่ 2 ครั้ง
+- **ตรวจแล้วไม่ใช่ปัญหา:** `CartController` (eager-load `items.product.postImages` อยู่แล้ว) · `CourseMemberController::showV2`
+  (สมาชิกเดียว ไม่ใช่ list · `getLastActivity` แค่อ่าน updated_at) · `StudentCardController` groupBy/map เป็น in-memory ล้วน
+- 🔴 **พบ N+1 หนักมากแต่ยังไม่แก้ (เป็นงานก้อนใหญ่แยก):** **ฟีด** (`ActivityController::newsfeed/index/show`)
+  วัดได้ **1,785 คิวรีต่อ 15 รายการ** (~118/รายการ) · ต้นเหตุ**ไม่ใช่**ที่ `->each(->load())` ใน controller (ลอง loadMorph แล้ว
+  ประหยัดแค่ ~14 คิวรี — revert ทิ้ง) แต่อยู่ลึกใน **`PostResource`/`CoursePostResource`** ที่เข้าถึง relation ราย item
+  (reactions/comments/counts/poll votes ฯลฯ) · เป็น resource ที่ใช้ทั่วแอป การแก้ต้อง eager-load ครบทุก relation ที่ resource แตะ
+  + อาจต้อง `loadCount` — เสี่ยงและใหญ่ ควรทำเป็น task เฉพาะ + วัด query ก่อน/หลังทุกหน้า
+  ⚠️ กับดักตอนแก้: `Share::shareComments` โหลดแบบ `limit(3)` **ต่อโพสต์** — ถ้าเปลี่ยนเป็น eager load แบบ batch limit จะรวมทั้งชุด (ผิด)
+
 ### spec decisions — ✅ เจ้าของโปรเจคเคาะแล้ว 2026-09-23 (ตรงกับที่ทำไปทั้งหมด ไม่ต้องแก้โค้ด)
 - 3 ประเภทข้อยกเว้น (งดคาบ/สอนแทน/ย้ายห้อง) · 1 คาบ × 1 วันที่ = 1 รายการ ·
   ครูสอนแทนไม่ว่าง = บล็อก 422 · ภาระงานนับทุก entry_type ยกเว้น break
