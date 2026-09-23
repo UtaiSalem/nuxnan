@@ -189,14 +189,44 @@ class InstructorDashboardController extends Controller
             ->with('user:id,name,email,profile_photo_path')
             ->get();
 
+        // --- precompute ระดับคอร์สครั้งเดียว เลี่ยง N+1 (เดิมยิงคิวรีต่อสมาชิก ~6 ครั้ง × จำนวนสมาชิก) ---
+        $computedMax = $this->getComputedMaxTotal($course);
+        $assignmentIds = $this->courseAssignmentIds($course);
+        $totalAssignments = $assignmentIds->count();
+
+        // การเข้าเรียนต่อสมาชิก — attendance_details มี course_id + course_member_id ครบ (คิวรีเดียว)
+        $attendanceByMember = DB::table('attendance_details')
+            ->where('course_id', $course->id)
+            ->select(
+                'course_member_id',
+                DB::raw("SUM(CASE WHEN status IN ('present', 'late') THEN 1 ELSE 0 END) as present"),
+                DB::raw('COUNT(*) as total')
+            )
+            ->groupBy('course_member_id')
+            ->get()
+            ->keyBy('course_member_id');
+
+        // จำนวนการส่งงานต่อผู้ใช้ (คิวรีเดียว)
+        $submissionsByUser = $totalAssignments > 0
+            ? DB::table('assignment_answers')
+                ->whereIn('assignment_id', $assignmentIds)
+                ->select('user_id', DB::raw('COUNT(*) as submitted'))
+                ->groupBy('user_id')
+                ->get()
+                ->keyBy('user_id')
+            : collect();
+
         $atRisk = collect();
 
         foreach ($members as $member) {
             $risks = [];
             $riskScore = 0;
 
-            // Check attendance
-            $attendanceRate = $this->getMemberAttendanceRate($member, $course);
+            // Check attendance — ไม่มีบันทึก = ถือว่าไม่บังคับ (100)
+            $att = $attendanceByMember->get($member->id);
+            $attendanceRate = ($att && $att->total > 0)
+                ? round(($att->present / $att->total) * 100, 1)
+                : 100;
             if ($attendanceRate < $threshold) {
                 $risks[] = [
                     'type' => 'attendance',
@@ -207,7 +237,10 @@ class InstructorDashboardController extends Controller
             }
 
             // Check assignment completion
-            $assignmentRate = $this->getMemberAssignmentRate($member, $course);
+            $submitted = (int) ($submissionsByUser->get($member->user_id)->submitted ?? 0);
+            $assignmentRate = $totalAssignments > 0
+                ? round(($submitted / $totalAssignments) * 100, 1)
+                : 100;
             if ($assignmentRate < $threshold) {
                 $risks[] = [
                     'type' => 'assignments',
@@ -218,7 +251,6 @@ class InstructorDashboardController extends Controller
             }
 
             // Check current score
-            $computedMax = $this->getComputedMaxTotal($course);
             $scorePercentage = $computedMax > 0
                 ? (($member->achieved_score ?? 0) / $computedMax) * 100
                 : 0;
@@ -281,8 +313,10 @@ class InstructorDashboardController extends Controller
             ->limit($limit)
             ->get();
 
-        $topPerformers = $members->map(function ($member) use ($course) {
-            $computedMax = $this->getComputedMaxTotal($course);
+        // คำนวณคะแนนเต็มระดับคอร์สครั้งเดียว (ไม่ใช่ต่อสมาชิกใน map)
+        $computedMax = $this->getComputedMaxTotal($course);
+
+        $topPerformers = $members->map(function ($member) use ($course, $computedMax) {
             $scorePercentage = $computedMax > 0
                 ? (($member->achieved_score ?? 0) / $computedMax) * 100
                 : 0;
@@ -623,23 +657,6 @@ class InstructorDashboardController extends Controller
             ->count();
 
         return $total > 0 ? round(($present / $total) * 100, 1) : 100;
-    }
-
-    protected function getMemberAssignmentRate(CourseMember $member, Course $course): float
-    {
-        $assignmentIds = $this->courseAssignmentIds($course);
-        $totalAssignments = $assignmentIds->count();
-
-        if ($totalAssignments === 0) {
-            return 100;
-        }
-
-        $submitted = DB::table('assignment_answers')
-            ->whereIn('assignment_id', $assignmentIds)
-            ->where('user_id', $member->user_id)
-            ->count();
-
-        return round(($submitted / $totalAssignments) * 100, 1);
     }
 
     protected function getComputedMaxTotal(Course $course): float
