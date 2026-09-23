@@ -85,7 +85,9 @@
 ตรวจจริงบน MySQL dev (course 1, cross-check กับ DB ทุกตัว): 424 submissions/89.5%/421 graded/3 pending ·
 quizzes 447 attempts (ตรง DB)/85.1% · lessons 0 completed (ตรง) · attendance 0 sessions · recent activity มีชื่อจริง+ชื่องานจริง ·
 ทุก endpoint (dashboard/trends/at-risk/top-performers) = 200 · เทสต์ใหม่ `InstructorDashboardAssignmentsTest` 2 เคส เขียว sqlite+MySQL
-⚠️ at-risk ช้า ~3s (loop รายสมาชิก N+1 — ยังไม่ optimize, ไม่ใช่ 500)
+✅ **at-risk N+1 optimize แล้ว (`e05307a4`):** precompute ระดับคอร์สครั้งเดียว (computedMax, courseAssignmentIds,
+การเข้าเรียนต่อสมาชิก + การส่งงานต่อผู้ใช้ เป็น grouped query) แล้วคำนวณในหน่วยความจำ · getTopPerformers hoist computedMax ออกนอก map ·
+ลบ getMemberAssignmentRate ที่ไม่มีคนเรียก · ผล: 158 คน = **14 คิวรีคงที่** (จาก ~1000) · **~3.4s → ~0.6s** · at_risk_count เท่าเดิม (29)
 
 ### spec decisions — ✅ เจ้าของโปรเจคเคาะแล้ว 2026-09-23 (ตรงกับที่ทำไปทั้งหมด ไม่ต้องแก้โค้ด)
 - 3 ประเภทข้อยกเว้น (งดคาบ/สอนแทน/ย้ายห้อง) · 1 คาบ × 1 วันที่ = 1 รายการ ·
