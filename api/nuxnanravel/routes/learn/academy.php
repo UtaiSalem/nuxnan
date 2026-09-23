@@ -69,6 +69,7 @@ use App\Http\Controllers\Api\Learn\Academy\StudentImportController;
 use App\Http\Controllers\Api\Learn\Academy\StudentIntakeController;
 use App\Http\Controllers\Api\Learn\Academy\StudentLifecycleController;
 use App\Http\Controllers\Api\Learn\Academy\SubjectController;
+use App\Http\Controllers\Api\Learn\Academy\TeacherWorkloadController;
 use App\Http\Controllers\Api\Learn\Academy\TranscriptController;
 use App\Http\Controllers\Api\Learn\Academy\TuitionFeeController;
 use App\Models\Academy;
@@ -650,6 +651,9 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
             Route::get('/check-availability', [ClassScheduleController::class, 'checkAvailability'])->name('api.academy.schedules.checkAvailability');
             Route::get('/rooms', [ClassScheduleController::class, 'rooms'])->name('api.academy.schedules.rooms');
             Route::get('/export', [ClassScheduleController::class, 'export'])->name('api.academy.schedules.export');
+            // SC-S10d ภาระงานสอนของครู
+            Route::get('/workload', [TeacherWorkloadController::class, 'index'])->name('api.academy.schedules.workload');
+            Route::get('/workload/export', [TeacherWorkloadController::class, 'export'])->name('api.academy.schedules.workload.export');
         });
 
         // จัดตาราง
