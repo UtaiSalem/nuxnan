@@ -26,8 +26,11 @@
 - [ ] **หน้าสอนแทนอ่านภาคเรียนปัจจุบันเท่านั้น**: `ClassScheduleController::today()` ใช้ `Semester::currentForAcademy()` เสมอ
       → เลือกวันที่ในภาคเรียนอื่นในหน้า `admin/schedule-exceptions.vue` จะไม่เห็นคาบ · แก้โดยหาภาคเรียนจากช่วงวันที่ของ `semesters`
 - [ ] **ยังไม่ได้ตรวจ `dashboard/teacher.vue` บนจอจริง** — ผ่านแค่ SFC compile (ป้าย + นับ classesToday)
-- [ ] **spec decisions ยังไม่ได้ให้เจ้าของโปรเจคเคาะ** (Claude วางเอง): 3 ประเภทข้อยกเว้น · ครูสอนแทนไม่ว่าง = บล็อก 422 (ไม่ใช่เตือน) ·
-      ภาระงานไม่นับ break · 1 คาบ × 1 วันที่ = 1 รายการ
+
+### spec decisions — ✅ เจ้าของโปรเจคเคาะแล้ว 2026-09-23 (ตรงกับที่ทำไปทั้งหมด ไม่ต้องแก้โค้ด)
+- 3 ประเภทข้อยกเว้น (งดคาบ/สอนแทน/ย้ายห้อง) · 1 คาบ × 1 วันที่ = 1 รายการ ·
+  ครูสอนแทนไม่ว่าง = บล็อก 422 · ภาระงานนับทุก entry_type ยกเว้น break
+  (บันทึกล็อกไว้ใน `.agents/school-admin/11-schedule.md` §10 review log แล้ว)
 
 ### Context สำคัญ
 - migration `2026_09_23_090000_create_class_schedule_exceptions_table` **รันบน dev DB แล้ว** (เครื่องนี้) — เครื่องอื่นต้อง `php artisan migrate`
