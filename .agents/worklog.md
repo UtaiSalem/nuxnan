@@ -114,11 +114,12 @@ quizzes 447 attempts (ตรง DB)/85.1% · lessons 0 completed (ตรง) · 
 - ผล: **1,785 → 249 คิวรี (−86%)** · 193 เทสต์เขียว · output ครบ (author counts+friends, 3 คอมเมนต์, isLiked)
   - รอบ 1 (`ae45353c`): 1785→393 — batch UserResource counts + resource prefer-loaded
   - รอบ 2 (`04bb0b4b`): 393→249 — `friends()` เป็น **morphMany จริง** (friendships as sender) ⇒ `withCount('friends')` ตรงกับ `friends()->count()` เดิมเป๊ะ (ตรวจ 3=3,1=1,0=0)
-- ⚠️ **คงเหลือ ~249 (bounded ไม่ใช่ N+1 ตามจำนวน item แต่ตามจำนวน course/academy ที่ต่างกัน — งานแยก):**
-  ต้นเหตุคือ **CoursePostResource ฝัง course (CourseResource) + academy (AcademyResource) เต็มก้อน** ต่อโพสต์ ·
-  CourseResource ยิง `course.user` (UserResource) + isMember/isCourseAdmin · AcademyResource ยิง creater+director (UserResource) + สมาชิก ·
-  แนวทาง: (ก) eager-load `course.user`/`academy.user`/director พร้อม withCount ใน loadMorph หรือ (ข) ทำ CoursePostResource ฝัง course/academy แบบ "เบา" (id/name/code พอ) — ข้อ (ข) เป็น contract change ต้องเช็ค frontend ก่อน
-  · cache reads ~45 (Spatie/permission cache — เร็ว) · academy_members status ต่อโพสต์ ~15
+  - รอบ 3 (`10411570`): 249→128 — **เลือกทาง (ข)**: CoursePostResource ฝัง course/academy แบบ **เบา** (inline id/name/title/code/slug + academy id/name)
+    แทน CourseResource/AcademyResource เต็มก้อน · เช็ค `FeedPost.vue` แล้วใช้แค่ `course.{id,name,title}`+`academy.{id,name}` · grep UI ยืนยันไม่มีที่ไหนอ่าน field หนักของ course/academy จากในโพสต์
+    (CourseResource เต็มก้อนดึง owner + academy creater/director + isMember/isCourseAdmin/invitation เป็น auth-check รายครั้ง เอาออกด้วย eager-load ไม่ได้ ต้องตัดทิ้ง)
+- ✅ **สรุป: 1,785 → 128 คิวรี/15 รายการ (−93%)** · คงเหลือเป็น bounded ~1/โพสต์ (course_posts load, comments, comment relations) + user counts ที่ batch แล้ว — ไม่ใช่ N+1 ทวีคูณอีก
+  · ถ้าจะรีดต่อ: 15 course_posts individual load (น่าจะ morphTo ที่ไม่ batch) + comment queries ต่อโพสต์ — micro-opt คุ้มน้อย
+  · 🔑 CoursePostResource ตอนนี้ส่ง course/academy เบา — ถ้ารอบหน้ามีหน้าไหนต้องการ field หนักของ course จาก "ในโพสต์" ให้ดึงจาก endpoint คอร์สโดยตรงแทน
 
 ### spec decisions — ✅ เจ้าของโปรเจคเคาะแล้ว 2026-09-23 (ตรงกับที่ทำไปทั้งหมด ไม่ต้องแก้โค้ด)
 - 3 ประเภทข้อยกเว้น (งดคาบ/สอนแทน/ย้ายห้อง) · 1 คาบ × 1 วันที่ = 1 รายการ ·
