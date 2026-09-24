@@ -23,7 +23,7 @@ class AcademyResource extends JsonResource
         $viewer = auth()->user();
         $settings = $this->getSettings();
 
-        $canViewContent = $this->resource->canViewContent($viewer);
+        $canViewContent = $this->viewerCanViewContent($viewer);
 
         $base = [
             'id' => $this->id,
@@ -46,11 +46,11 @@ class AcademyResource extends JsonResource
             'show_member_list' => $settings ? (bool) $settings->show_member_list : true,
             'show_course_list' => $settings ? (bool) $settings->show_course_list : true,
             'can_view_content' => $canViewContent,
-            'can_view_member_list' => $this->resource->canViewMemberList($viewer),
-            'can_view_course_list' => $this->resource->canViewCourseList($viewer),
+            'can_view_member_list' => $this->viewerCanViewMemberList($viewer, $canViewContent),
+            'can_view_course_list' => $this->viewerCanViewCourseList($viewer, $canViewContent),
             'is_restricted' => ! $canViewContent,
 
-            'memberStatus' => $this->memberStatus ?? $this->member_status($this->id),
+            'memberStatus' => $this->memberStatus ?? $this->viewerMemberStatus($viewer),
             'authIsAcademyAdmin' => auth()->id() === $this->user_id,
 
             // SET-S2 — ต้องอยู่ใน $base เพราะโรงเรียนที่ถูกเก็บถาวรคืนแค่ $base ให้คนนอก
@@ -99,5 +99,83 @@ class AcademyResource extends JsonResource
 
             'setting' => $settings,
         ]);
+    }
+
+    /**
+     * เฟส 1b — เช็คสิทธิ์ viewer ในหน่วยความจำเมื่อ eager-load relation แบบผูก viewer มาแล้ว
+     * (Academy::withViewerCardRelations) มิฉะนั้น fallback ไปเมธอดบนโมเดล (query เดิม)
+     *
+     * 🔴 helper พวกนี้เช็ค "viewer คนที่ auth เท่านั้น" — closure อ่าน relation ที่ถูกโหลด
+     * จำกัด user_id=viewer อยู่แล้ว จึงไม่มีทางอ่านสิทธิ์ของคนอื่น (กัน PII รั่ว).
+     * ไม่แตะเมธอดบนโมเดล (isAdmin/isApprovedMember/member_status) — ยังเป็น fallback ที่ query
+     * ถูกให้ user ใดก็ได้ สำหรับกรณี relation ไม่ได้โหลด (เช่น AcademyResource ที่ฝังใน CourseResource)
+     */
+    private function viewerIsAdmin($viewer): bool
+    {
+        if (! $viewer) {
+            return false;
+        }
+        if ($viewer->isSuperAdmin() || $this->user_id === $viewer->id) {
+            return true;
+        }
+        if ($this->relationLoaded('academyAdmins')) {
+            return $this->academyAdmins->where('user_id', $viewer->id)->isNotEmpty();
+        }
+
+        return $this->resource->isAdmin($viewer);
+    }
+
+    private function viewerIsApprovedMember($viewer): bool
+    {
+        if (! $viewer) {
+            return false;
+        }
+        if ($this->relationLoaded('academyMembers')) {
+            return $this->academyMembers->where('user_id', $viewer->id)->where('status', 2)->isNotEmpty();
+        }
+
+        return $this->resource->isApprovedMember($viewer);
+    }
+
+    private function viewerCanViewContent($viewer): bool
+    {
+        if ($this->resource->isArchived() && ! $this->resource->canManageArchive($viewer)) {
+            return false;
+        }
+        if (! $this->resource->isPrivate()) {
+            return true;
+        }
+
+        return $this->viewerIsAdmin($viewer) || $this->viewerIsApprovedMember($viewer);
+    }
+
+    private function viewerCanViewMemberList($viewer, bool $canViewContent): bool
+    {
+        if ($this->viewerIsAdmin($viewer) || $this->viewerIsApprovedMember($viewer)) {
+            return true;
+        }
+
+        return $canViewContent && (bool) ($this->getSettings()?->show_member_list ?? true);
+    }
+
+    private function viewerCanViewCourseList($viewer, bool $canViewContent): bool
+    {
+        if ($this->viewerIsAdmin($viewer) || $this->viewerIsApprovedMember($viewer)) {
+            return true;
+        }
+
+        return $canViewContent && (bool) ($this->getSettings()?->show_course_list ?? true);
+    }
+
+    private function viewerMemberStatus($viewer)
+    {
+        if (! $viewer) {
+            return null;
+        }
+        if ($this->relationLoaded('academyMembers')) {
+            return $this->academyMembers->where('user_id', $viewer->id)->first()?->status;
+        }
+
+        return $this->resource->member_status($this->id);
     }
 }

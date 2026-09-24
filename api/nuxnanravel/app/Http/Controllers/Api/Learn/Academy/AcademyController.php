@@ -173,7 +173,7 @@ class AcademyController extends Controller
             // SET-S2 — ซ่อนโรงเรียนที่ถูกเก็บถาวรออกจากรายการ
             return response()->json([
                 'success' => true,
-                'academies' => AcademyResource::collection(auth()->user()->academies()->notArchived()->withCardRelations()->paginate(10)),
+                'academies' => AcademyResource::collection(auth()->user()->academies()->notArchived()->withViewerCardRelations()->paginate(10)),
             ], 200);
 
         } catch (\Throwable $th) {
@@ -206,7 +206,7 @@ class AcademyController extends Controller
 
             // Get academies with pagination
             // SET-S2 — ซ่อนโรงเรียนที่ถูกเก็บถาวรออกจากรายการ
-            $academies = Academy::notArchived()->withCardRelations()->whereIn('id', $academyIds)->paginate(10);
+            $academies = Academy::notArchived()->withViewerCardRelations()->whereIn('id', $academyIds)->paginate(10);
 
             // Map member status to each academy
             $academiesWithStatus = $academies->getCollection()->map(function ($academy) use ($memberships) {
@@ -238,7 +238,7 @@ class AcademyController extends Controller
             // SET-S2 — ซ่อนโรงเรียนที่ถูกเก็บถาวรออกจากรายการ
             return response()->json([
                 'success' => true,
-                'academies' => AcademyResource::collection(Academy::notArchived()->withCardRelations()->paginate(10)),
+                'academies' => AcademyResource::collection(Academy::notArchived()->withViewerCardRelations()->paginate(10)),
             ], 200);
 
         } catch (\Throwable $th) {

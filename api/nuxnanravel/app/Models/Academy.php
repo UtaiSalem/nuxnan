@@ -194,6 +194,27 @@ class Academy extends Model
         ]);
     }
 
+    /**
+     * withCardRelations() + relation แบบผูก viewer สำหรับ list endpoint (เฟส 1b)
+     * academyAdmins/academyMembers ถูกจำกัดเฉพาะ viewer เสมอ → AcademyResource เช็ค
+     * สิทธิ์ในหน่วยความจำได้โดยไม่รั่ว PII ของคนอื่น (ดู helper ใน resource)
+     * guest (ไม่ล็อกอิน) จะไม่โหลด relation viewer พวกนี้ → resource ตกไป fallback query เดิม
+     */
+    public function scopeWithViewerCardRelations($query)
+    {
+        $query->withCardRelations();
+
+        $viewerId = auth()->id();
+        if ($viewerId) {
+            $query->with([
+                'academyAdmins' => fn ($q) => $q->where('user_id', $viewerId),
+                'academyMembers' => fn ($q) => $q->where('user_id', $viewerId),
+            ]);
+        }
+
+        return $query;
+    }
+
     public function isAdmin($user)
     {
         if (! $user) {
