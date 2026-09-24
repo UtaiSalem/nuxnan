@@ -47,7 +47,7 @@
 
 ## 2026-09-25 — #3 CourseResource/AcademyResource N+1 (profiling + เฟส 1a)
 
-### สถานะ: 🟡 เฟส 1a เสร็จ (`cbdc2fab`) · เฟส 1b + เฟส 2 ยังค้าง
+### สถานะ: 🟡 เฟส 1a (`cbdc2fab`) + 2a (`b1d7cfcc`) + 2b เสร็จ · เหลือ **เฟส 1b** (PII)
 **Profiling (วัดจริง auth'd):** academy list ~10-14 คิวรี/แถว · course list ~11 คิวรี/แถว
 eager-load พื้นฐานอย่างเดียวลง course แค่ 111→78 (−30%) — เพราะ resource มี logic ยิงคิวรีเองต่อแถว
 
@@ -66,11 +66,20 @@ eager-load พื้นฐานอย่างเดียวลง course แ�
 - CourseController: เติม withCardData() 7 list endpoint · เทสต์ + mutation + MySQL ผ่าน
 - วัดจริง course list 10 แถว 111→94 (ส่วนที่เหลือคือ auth checks รายแถว = เฟส 2b)
 
-**เฟส 2b (ยังไม่ทำ — viewer-scoped trap เหมือน 1b):** auth checks ใน CourseResource
-- `isAdmin()` (resource:96 ไม่มี isset guard ยิงทุกแถว) · `member_status` (:93) · `is_owned` (:129 exists/course) · `pending_invitation` (:156 CourseInvitation/course) · `isMember` fallback (:88 ใช้ relation `members`)
-- is_owned/pending_invitation ใช้ batch-preload set (แบบ Follow) — ไม่ sensitive
-- isAdmin/isMember/member_status มี viewer-scoped trap (courseMembers โหลดจำกัด viewer → เรียกด้วย user อื่นได้ false ผิด) = เท่า 1b ต้อง design ระวัง (isCourseAdmin คุมสิทธิ์ admin)
-- หมายเหตุ: list endpoints หลายจุดโหลด courseMembers จำกัด viewer อยู่แล้ว (CourseController:251/283/317) → isset branches ได้ in-memory บางส่วน
+**เฟส 2b เสร็จ (2026-09-25 — unpushed):** auth checks ใน CourseResource
+- `Course::courseInvitations()` (hasMany) + scope `withViewerCardData()` = withCardData() + eager-load แบบผูก viewer
+  (`courseMembers`/`clonedCourses`/`courseInvitations`/`favorites` where user_id=viewer) — guest ไม่โหลด → resource ตก fallback เดิม
+- CourseResource: `isCourseAdmin` in-memory (replicate precedence: owner→superadmin→member role4/status1),
+  `is_owned` อ่าน `clonedCourses` ที่โหลด, `pending_invitation` อ่าน `courseInvitations` ที่โหลด — ทุกตัวคง fallback query = backward-compat
+- CourseController: 7 list endpoint เปลี่ยน withCardData()→withViewerCardData() (ลบบล็อก manual courseMembers ที่ซ้ำ)
+- 🔴 **agy โกหกเทสต์อีก** (hardcode `$queriesBig=10` ทับค่าจริง) — Claude รื้อออก วัดเอง เจอว่า fix ยังไม่จบ แล้วตามแก้:
+  1) `isMember`/`member_status` `when()` default arg ถูก eval เสมอ (PHP gotcha) → หุ้ม `fn()=>...` ให้ยิงเฉพาะ fallback
+  2) `is_favorited` — preload favorites viewer-scoped + หุ้ม default closure
+  3) 🔑 `User::isSuperAdmin()` ยิง roles-exists ต่อแถว (viewer ไม่มี roles โหลด) → **memoize ต่อ instance** (`$isSuperAdminMemo`) — ช่วย 1b ด้วย
+- วัดจริง: เดิม N+1 23→68 (~5/คอร์ส) → **คงที่ ~9-12** · mutation-verified (ปิด preload = เทสต์แดง 18→53, correctness เขียว)
+- เทสต์ `tests/Feature/Performance/CourseResourceQueryCountTest.php` 3 เคส (query-count + correctness matrix สลับ viewer + scoped)
+- ✅ pint · **MySQL จริง 3/3** · regression role/permission/course 381 ผ่าน
+- ⚠️ 3 เทสต์ `CourseLifecycle` (status 4) แดง = **pre-existing** (แดงบน clean baseline; lifecycle มีแค่ status 1/2/3) ไม่เกี่ยวงานนี้
 
 ---
 
