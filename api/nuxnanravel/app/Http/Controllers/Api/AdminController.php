@@ -88,7 +88,7 @@ class AdminController extends Controller
 
         // Pagination
         $perPage = $request->get('per_page', 15);
-        $users = $query->paginate($perPage);
+        $users = $query->withCardCounts()->paginate($perPage);
 
         return response()->json([
             'success' => true,

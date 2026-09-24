@@ -23,6 +23,7 @@ class NewsfeedController extends Controller
 
         $peopleMayKnow = User::where('id', '!=', Auth::id())
             ->whereNotIn('id', $authFriends)
+            ->withCardCounts()
             ->inRandomOrder()
             ->limit(15)
             ->get();

@@ -62,7 +62,7 @@ class CourseMemberController extends Controller
 
     public function index(Course $course, Request $request)
     {
-        $query = $course->courseMembers()->with('user', 'group', 'course');
+        $query = $course->courseMembers()->with(['user' => fn ($q) => $q->withCardCounts(), 'group', 'course']);
 
         // Apply filters for V2
         if ($request->has('status') && $request->status !== null) {
@@ -734,7 +734,7 @@ class CourseMemberController extends Controller
 
     public function getMembersRequesters(Course $course)
     {
-        $members = $course->courseMembers()->with('user', 'group')->where('course_member_status', 0)->latest()->paginate();
+        $members = $course->courseMembers()->with(['user' => fn ($q) => $q->withCardCounts(), 'group'])->where('course_member_status', 0)->latest()->paginate();
 
         return response()->json([
             'course' => new CourseResource($course),
@@ -1566,7 +1566,7 @@ class CourseMemberController extends Controller
      */
     public function indexV2(Course $course, Request $request)
     {
-        $query = $course->courseMembers()->with('user', 'group', 'course');
+        $query = $course->courseMembers()->with(['user' => fn ($q) => $q->withCardCounts(), 'group', 'course']);
 
         // Apply filters for V2
         if ($request->has('status') && $request->status !== null) {
