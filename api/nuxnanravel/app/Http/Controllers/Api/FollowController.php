@@ -86,7 +86,10 @@ class FollowController extends Controller
             ->with('follower:id,username,name,profile_photo_path')
             ->paginate($perPage, ['*'], 'page', $page);
 
-        $followersData = $followers->map(function ($follow) use ($user) {
+        // preload id ที่ auth user ตามอยู่ ครั้งเดียว แล้วเช็คใน memory (เลี่ยง N+1 isFollowing รายแถว)
+        $followingIds = $user->following()->pluck('followed_id')->flip();
+
+        $followersData = $followers->map(function ($follow) use ($followingIds) {
             $follower = $follow->follower;
 
             return [
@@ -94,7 +97,7 @@ class FollowController extends Controller
                 'username' => $follower->username,
                 'name' => $follower->name,
                 'avatar' => $follower->profile_photo_url,
-                'is_following' => $user->isFollowing($follower),
+                'is_following' => $followingIds->has($follower->id),
                 'followed_at' => $follow->created_at->format('Y-m-d H:i:s'),
             ];
         });
@@ -141,7 +144,10 @@ class FollowController extends Controller
             ->with('followed:id,username,name,profile_photo_path')
             ->paginate($perPage, ['*'], 'page', $page);
 
-        $followingData = $following->map(function ($follow) use ($user) {
+        // preload id ที่ auth user ตามอยู่ ครั้งเดียว แล้วเช็คใน memory (เลี่ยง N+1 isFollowing รายแถว)
+        $followingIds = $user->following()->pluck('followed_id')->flip();
+
+        $followingData = $following->map(function ($follow) use ($followingIds) {
             $followed = $follow->followed;
 
             return [
@@ -149,7 +155,7 @@ class FollowController extends Controller
                 'username' => $followed->username,
                 'name' => $followed->name,
                 'avatar' => $followed->profile_photo_url,
-                'is_following' => $user->isFollowing($followed),
+                'is_following' => $followingIds->has($followed->id),
                 'followed_at' => $follow->created_at->format('Y-m-d H:i:s'),
             ];
         });
