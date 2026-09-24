@@ -18,7 +18,8 @@ class ActivityController extends Controller
      */
     protected function feedUserCounts(): \Closure
     {
-        return fn ($q) => $q->withCount(['posts', 'followers', 'following'])->with(['roles', 'plearndAdmin']);
+        // friends เป็น morphMany จริง (friendships as sender) ⇒ withCount แทน friends()->count() ได้ตรง
+        return fn ($q) => $q->withCount(['posts', 'followers', 'following', 'friends'])->with(['roles', 'plearndAdmin']);
     }
 
     /**

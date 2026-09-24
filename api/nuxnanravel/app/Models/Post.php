@@ -363,7 +363,7 @@ class Post extends Model
 
         return $this->postComments()->latest()->limit(3)
             ->with([
-                'user' => fn ($q) => $q->withCount(['posts', 'followers', 'following'])->with('roles'),
+                'user' => fn ($q) => $q->withCount(['posts', 'followers', 'following', 'friends'])->with(['roles', 'plearndAdmin']),
                 'postCommentImages',
                 'likedPostComment' => fn ($q) => $q->where('user_id', $authId),
                 'dislikedPostComment' => fn ($q) => $q->where('user_id', $authId),

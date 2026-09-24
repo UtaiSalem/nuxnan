@@ -93,7 +93,7 @@ class CoursePost extends Model
 
         return $this->post_comments()->latest()->limit(3)
             ->with([
-                'user' => fn ($q) => $q->withCount(['posts', 'followers', 'following'])->with(['roles', 'plearndAdmin']),
+                'user' => fn ($q) => $q->withCount(['posts', 'followers', 'following', 'friends'])->with(['roles', 'plearndAdmin']),
                 'postCommentImages',
                 'comment_likes' => fn ($q) => $q->where('user_id', $authId),
                 'comment_dislikes' => fn ($q) => $q->where('user_id', $authId),
