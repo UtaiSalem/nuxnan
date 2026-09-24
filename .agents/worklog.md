@@ -1,5 +1,29 @@
 # Work Log — nuxnan project
 
+## 📋 งานชิ้นต่อไป (backlog — อัพเดท 2026-09-24)
+เรียงตามความคุ้ม/ผลกระทบ · รายละเอียดเต็มอยู่ในบันทึกแต่ละหัวข้อด้านล่าง
+
+1. **UserResource เบาทั้งแอป (ผลกระทบสูงสุด)** — ตอนนี้แก้ N+1 เฉพาะ **ฟีด** (eager-load withCount/roles/plearndAdmin)
+   แต่ list endpoint อื่นทุกตัวที่ serialize ผู้ใช้หลายคน (รายชื่อเพื่อน, สมาชิกโรงเรียน/คอร์ส, followers/following, leaderboard,
+   ผลค้นหาผู้ใช้ ฯลฯ) ยังจ่าย ~6 คิวรี/ผู้ใช้ (posts/friends/followers/following counts + roles hasRole + plearnd_admin)
+   → ควร audit list endpoint แล้ว eager-load `withCount(['posts','followers','following','friends'])->with(['roles','plearndAdmin'])`
+   ให้ครบ (โมเดล/รีซอร์สรองรับ backward-compat แล้ว ตั้งแต่งานฟีด) · หรือทำ UserResource เวอร์ชัน "การ์ดเบา" สำหรับ list
+
+2. **`POST reports/{report}/export` — ฟีเจอร์ export ค้างครึ่งทาง** — อ้าง `ReportExport::FORMATS` (const ไม่มี) + create คอลัมน์ผิด
+   (saved_report_id/format/requested_by) + ขาด file_name/file_path/file_type (NOT NULL) + มี `// TODO: Dispatch job`
+   → ต้องเคาะ: ทำ export จริง (สร้าง job สร้างไฟล์ + เลือกรูปแบบ) หรือถอดปุ่ม/route ออก (ตอนนี้ยิงแล้ว 500)
+
+3. **CourseResource / AcademyResource หนักที่ endpoint ของตัวเอง** — ฟีดเลี่ยงแล้วด้วยก้อนเบา แต่ course detail/list +
+   academy detail ยังดึง owner/director (UserResource) + isMember/isCourseAdmin/invitation เป็น auth-check ราย serialize
+   → ถ้ามีหน้า **list** ที่ใช้ resource เหล่านี้จะช้าแบบเดียวกับฟีดเดิม (ยังไม่ได้วัด — ควร profile ก่อน)
+
+4. **เทสต์กัน N+1 ถอย** — งานฟีดวัด query ด้วยมือ ไม่มี automated query-budget test → ควรเพิ่มเทสต์ assert
+   จำนวนคิวรีของ `newsfeed` ไม่เกินเพดาน (เช่น < 130) กันคนแก้ resource แล้ว N+1 กลับมาเงียบ ๆ
+
+5. **(optional, คุ้มน้อย)** ฟีด getComments ยัง bounded ~5 คิวรี/โพสต์ · at-risk course-scoped ~14 คิวรีคงที่ — ปล่อยได้
+
+---
+
 ## 2026-09-23 — SC-S10d ภาระงานสอน + SC-S10e สอนแทน/งดคาบรายวันที่
 
 ### สถานะ: ✅ เสร็จครบ push ขึ้น main แล้ว 8 commit (`bf34c634..eac802cc`)
