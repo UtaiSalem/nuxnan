@@ -65,7 +65,7 @@ class ActivityController extends Controller
      */
     public function index()
     {
-        $activities = Activity::with(['user' => $this->feedUserCounts()])
+        $activities = Activity::with(['activityable', 'user' => $this->feedUserCounts()])
             ->latest()
             ->paginate();
 
@@ -92,7 +92,7 @@ class ActivityController extends Controller
             'App\Models\DonateRecipient',
             'App\Models\Share',
         ])
-            ->with(['user' => $this->feedUserCounts()])
+            ->with(['activityable', 'user' => $this->feedUserCounts()])
             ->latest()
             ->paginate($perPage);
 
@@ -110,7 +110,7 @@ class ActivityController extends Controller
     public function show(User $user)
     {
         $activities = $user->activities()
-            ->with(['user' => $this->feedUserCounts()])
+            ->with(['activityable', 'user' => $this->feedUserCounts()])
             ->latest()
             ->paginate();
 
