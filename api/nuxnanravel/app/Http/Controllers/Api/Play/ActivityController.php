@@ -43,7 +43,7 @@ class ActivityController extends Controller
                 'user' => $userCounts,
                 'post_images',
                 'poll.options', 'poll.user',
-                'course:id,name,code', 'academy:id,name',
+                'course:id,name,code,slug', 'academy:id,name',
                 'likedPost' => fn ($q) => $q->where('user_id', $authId),
                 'dislikedPost' => fn ($q) => $q->where('user_id', $authId),
             ],

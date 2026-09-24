@@ -2,8 +2,6 @@
 
 namespace App\Http\Resources\Learn\Course\posts;
 
-use App\Http\Resources\Learn\Academy\AcademyResource;
-use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Http\Resources\Play\PollResource;
 use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
@@ -20,8 +18,19 @@ class CoursePostResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'academy' => $this->academy_id ? new AcademyResource($this->academy) : null,
-            'course' => $this->course_id ? new CourseResource($this->course) : null,
+            // course/academy ที่ฝังในโพสต์เป็น "เมทาดาทาไว้ลิงก์" — ใช้ก้อนเบา (id/name/code) ไม่ใช่ CourseResource/AcademyResource เต็ม
+            // (เต็มก้อนดึง owner/director + isMember/isAdmin/invitation ต่อโพสต์ = N+1 หนักในฟีด · frontend ใช้แค่ id/name/title)
+            'academy' => $this->academy_id && $this->academy ? [
+                'id' => $this->academy->id,
+                'name' => $this->academy->name,
+            ] : null,
+            'course' => $this->course_id && $this->course ? [
+                'id' => $this->course->id,
+                'name' => $this->course->name,
+                'title' => $this->course->name,
+                'code' => $this->course->code,
+                'slug' => $this->course->slug,
+            ] : null,
             'course_id' => $this->course_id,
             'author' => new UserResource($this->user),
             'content' => $this->content,
