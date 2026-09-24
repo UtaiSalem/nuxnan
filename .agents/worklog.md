@@ -45,6 +45,41 @@
 
 ---
 
+## 2026-09-25 — #3 CourseResource/AcademyResource N+1 (profiling + เฟส 1a)
+
+### สถานะ: 🟡 เฟส 1a เสร็จ (`cbdc2fab`) · เฟส 1b + เฟส 2 ยังค้าง
+**Profiling (วัดจริง auth'd):** academy list ~10-14 คิวรี/แถว · course list ~11 คิวรี/แถว
+eager-load พื้นฐานอย่างเดียวลง course แค่ 111→78 (−30%) — เพราะ resource มี logic ยิงคิวรีเองต่อแถว
+
+**เฟส 1a เสร็จ (safe, ไม่แตะ visibility/PII):** `cbdc2fab`
+- Academy: `directorUser()` belongsTo (director varchar→user) + scope `withCardRelations()` + getSettings() honor loaded
+- AcademyResource: director ใช้ relation ที่โหลด · AcademyController: 3 list endpoint เติม scope
+- ตัด director/creater(counts)/settings ต่อแถว · เทสต์ + mutation + MySQL ผ่าน
+
+**เฟส 1b (ยังไม่ทำ — ต้องระวัง PII):** batch membership checks ใน AcademyResource
+- `canViewMemberList`/`canViewCourseList` ต่างเรียก `isAdmin`+`isApprovedMember` (Academy.php:319/329) = ~4 คิวรี membership/แถว + `member_status` 1/แถว
+- 🔴 แตะ visibility logic ที่คุมการเห็นรายชื่อสมาชิก (PII) — ถ้า refactor พลาด rอาจรั่วโรงเรียน private
+- แนวทางที่คิดไว้: eager-load relation แบบจำกัด viewer (`academyMembers`/`academyAdmins` where user_id=viewer) แล้วให้ model methods honor loaded — **แต่มีกับดัก**: ถ้า collection ถูกโหลดจำกัด viewer A แล้วเรียก isApprovedMember(B) จะได้ false ผิด → ต้อง design ให้ปลอดภัย (relation ชื่อ viewer-scoped ชัดเจน หรือคง fallback query เมื่อ user ≠ viewer)
+
+**เฟส 2 (ยังไม่ทำ):** CourseResource — ซ้อน AcademyResource ต่อ course + `is_owned` (exists/course) + `pending_invitation` (CourseInvitation/course) + isAdmin/member_status
+- ใช้ pattern batch-preload set (แบบ Follow fix) สำหรับ is_owned/pending_invitation
+- course list endpoints ~7 จุด (CourseController) + AcademyCourseController
+
+---
+
+## 2026-09-25 — backlog #2 report export ทำงานจริง synchronous (`403a2138`)
+
+### สถานะ: ✅ เสร็จ (unpushed)
+- exportReport เดิม 500 (FORMATS const ไม่มี + คอลัมน์ผิด + ไม่สร้างไฟล์) + showExport เรียก isCompleted() ที่ไม่มี → 500
+- ReportExportService (ใหม่): generate xlsx/csv (maatwebsite) + pdf (mpdf garuda) ลง disk public sync
+- frontend ยังไม่เรียก endpoint นี้ (unwired) — ทำ backend ให้ถูกไว้ก่อน
+- เทสต์ ReportExportTest 3 เคส ผ่าน sqlite + MySQL (17 assertions)
+- 🔴 เจอบั๊ก systemic pre-existing: audit log 6 จุดใน ReportController ส่ง class-string ให้ `?Model $entity`
+  → TypeError 500 ทุก endpoint (createDefinition/update/delete/duplicate/generateReport/createSchedule)
+  flag เป็น task chip `task_5fa50dd0` แล้ว — ยังไม่แก้ (นอก scope #2)
+
+---
+
 ## 2026-09-25 — FollowController followers/following N+1 (`b025d890`)
 
 ### สถานะ: ✅ เสร็จ 1 commit บน main (push แล้ว/ยังตามที่เจ้าของเคาะ)
