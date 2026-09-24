@@ -111,10 +111,14 @@ quizzes 447 attempts (ตรง DB)/85.1% · lessons 0 completed (ตรง) · 
 - แก้แบบ backward-compatible ทุกจุด (โหลด relation ไว้=ใช้ในหน่วยความจำ · ไม่งั้น query เดิม) ครอบ Post **และ** CoursePost:
   User::hasRole/isPlearndAdmin (+ relation `plearndAdmin`) · Post/CoursePost::getComments (self eager-load 3 คอมเมนต์) ·
   resource ทั้ง 4 ตัว · ActivityController loadMorph + user withCount+roles+plearndAdmin
-- ผล: **393 คิวรี** · 191 เทสต์เขียว · output ครบ (author counts, 3 คอมเมนต์, isLiked)
-- ⚠️ **คงเหลือ** (งานแยก): `friends count` (~144) จาก package **Acquaintances** (`friendships` composite table sender/recipient) —
-  `withCount('friends')` ใช้ไม่ได้ตรง ๆ ต้องเขียน subquery เอง · roles-exists เหลือ ~30 (ผู้ใช้บางกลุ่มที่ไม่ได้ eager-load เช่น poll/mention/share user) ·
-  แนวทางรอบหน้า: ทำ UserResource ให้ "เบา" โดยตัด/lazy count ที่ไม่จำเป็น หรือ eager-load ครบทุกจุดที่ serialize user
+- ผล: **1,785 → 249 คิวรี (−86%)** · 193 เทสต์เขียว · output ครบ (author counts+friends, 3 คอมเมนต์, isLiked)
+  - รอบ 1 (`ae45353c`): 1785→393 — batch UserResource counts + resource prefer-loaded
+  - รอบ 2 (`04bb0b4b`): 393→249 — `friends()` เป็น **morphMany จริง** (friendships as sender) ⇒ `withCount('friends')` ตรงกับ `friends()->count()` เดิมเป๊ะ (ตรวจ 3=3,1=1,0=0)
+- ⚠️ **คงเหลือ ~249 (bounded ไม่ใช่ N+1 ตามจำนวน item แต่ตามจำนวน course/academy ที่ต่างกัน — งานแยก):**
+  ต้นเหตุคือ **CoursePostResource ฝัง course (CourseResource) + academy (AcademyResource) เต็มก้อน** ต่อโพสต์ ·
+  CourseResource ยิง `course.user` (UserResource) + isMember/isCourseAdmin · AcademyResource ยิง creater+director (UserResource) + สมาชิก ·
+  แนวทาง: (ก) eager-load `course.user`/`academy.user`/director พร้อม withCount ใน loadMorph หรือ (ข) ทำ CoursePostResource ฝัง course/academy แบบ "เบา" (id/name/code พอ) — ข้อ (ข) เป็น contract change ต้องเช็ค frontend ก่อน
+  · cache reads ~45 (Spatie/permission cache — เร็ว) · academy_members status ต่อโพสต์ ~15
 
 ### spec decisions — ✅ เจ้าของโปรเจคเคาะแล้ว 2026-09-23 (ตรงกับที่ทำไปทั้งหมด ไม่ต้องแก้โค้ด)
 - 3 ประเภทข้อยกเว้น (งดคาบ/สอนแทน/ย้ายห้อง) · 1 คาบ × 1 วันที่ = 1 รายการ ·
