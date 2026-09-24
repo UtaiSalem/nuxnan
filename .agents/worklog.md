@@ -117,8 +117,9 @@ quizzes 447 attempts (ตรง DB)/85.1% · lessons 0 completed (ตรง) · 
   - รอบ 3 (`10411570`): 249→128 — **เลือกทาง (ข)**: CoursePostResource ฝัง course/academy แบบ **เบา** (inline id/name/title/code/slug + academy id/name)
     แทน CourseResource/AcademyResource เต็มก้อน · เช็ค `FeedPost.vue` แล้วใช้แค่ `course.{id,name,title}`+`academy.{id,name}` · grep UI ยืนยันไม่มีที่ไหนอ่าน field หนักของ course/academy จากในโพสต์
     (CourseResource เต็มก้อนดึง owner + academy creater/director + isMember/isCourseAdmin/invitation เป็น auth-check รายครั้ง เอาออกด้วย eager-load ไม่ได้ ต้องตัดทิ้ง)
-- ✅ **สรุป: 1,785 → 128 คิวรี/15 รายการ (−93%)** · คงเหลือเป็น bounded ~1/โพสต์ (course_posts load, comments, comment relations) + user counts ที่ batch แล้ว — ไม่ใช่ N+1 ทวีคูณอีก
-  · ถ้าจะรีดต่อ: 15 course_posts individual load (น่าจะ morphTo ที่ไม่ batch) + comment queries ต่อโพสต์ — micro-opt คุ้มน้อย
+  - รอบ 4 (`963d7d54`): 128→114 — ใส่ `activityable` กลับใน base `->with([...])` · `loadMorph()` ทำ `pluck('activityable')` ภายใน ถ้ายังไม่ eager-load จะ lazy รายแถว (15 คิวรี) ⇒ ให้ morphTo batch (whereIn ต่อชนิด) ก่อน
+- ✅ **สรุป: 1,785 → 114 คิวรี/15 รายการ (−94%)** · คงเหลือ ~114 เป็น bounded ราย `getComments` ต่อโพสต์ (3 คอมเมนต์ + relation ×5 คิวรี/โพสต์) + user counts ที่ batch แล้ว — ไม่ทวีคูณตาม item
+  · ถ้าจะรีดต่อ: batch คอมเมนต์ทั้ง 15 โพสต์เป็นคิวรีเดียว (แต่โหลดคอมเมนต์ทั้งหมดแทน 3/โพสต์ = เปลืองหน่วยความจำสำหรับโพสต์ที่คอมเมนต์เยอะ) — เทรดคิวรีกับ memory ไม่คุ้มชัด
   · 🔑 CoursePostResource ตอนนี้ส่ง course/academy เบา — ถ้ารอบหน้ามีหน้าไหนต้องการ field หนักของ course จาก "ในโพสต์" ให้ดึงจาก endpoint คอร์สโดยตรงแทน
 
 ### spec decisions — ✅ เจ้าของโปรเจคเคาะแล้ว 2026-09-23 (ตรงกับที่ทำไปทั้งหมด ไม่ต้องแก้โค้ด)
