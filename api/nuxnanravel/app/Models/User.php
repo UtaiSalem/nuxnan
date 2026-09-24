@@ -829,6 +829,18 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     }
 
     /**
+     * Eager-load ตัวนับ + relation ที่ UserResource ต้องใช้ ในคิวรีเดียว (เลี่ยง N+1 รายผู้ใช้ในลิสต์).
+     * UserResource อ่าน posts_count/followers_count/following_count/friends_count จาก withCount ถ้ามี
+     * (ไม่งั้น query รายคน) และ isSuperAdmin (hasRole) ใช้ roles ที่โหลดไว้, isPlearndAdmin ใช้ plearndAdmin.
+     * ใช้กับลิสต์: $query->withCardCounts()  หรือ nested: with(['user' => fn ($q) => $q->withCardCounts()]).
+     */
+    public function scopeWithCardCounts($query)
+    {
+        return $query->withCount(['posts', 'followers', 'following', 'friends'])
+            ->with(['roles', 'plearndAdmin']);
+    }
+
+    /**
      * Check if this user is following another user.
      */
     public function isFollowing(User $user): bool
