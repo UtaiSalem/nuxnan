@@ -300,6 +300,10 @@ class Course extends Model
      * courseMembers/clonedCourses/courseInvitations ถูกจำกัดเฉพาะ viewer เสมอ
      * → CourseResource อ่าน in-memory ได้โดยไม่รั่วสิทธิ์ของคนอื่น (ดู resource)
      * guest (ไม่ล็อกอิน) จะไม่โหลด relation viewer พวกนี้ → resource ตกไป fallback query เดิม
+     *
+     * academy ถูก override เป็น withViewerCardRelations() (แทน withCardRelations ที่มาจาก
+     * withCardData) เพื่อให้ AcademyResource ที่ฝังในแต่ละแถวเช็คสิทธิ์ในหน่วยความจำ
+     * ไม่ต้อง query membership ต่อ academy (เฟส 1b follow-up)
      */
     public function scopeWithViewerCardData($query)
     {
@@ -312,6 +316,7 @@ class Course extends Model
                 'clonedCourses' => fn ($q) => $q->where('user_id', $viewerId),
                 'courseInvitations' => fn ($q) => $q->where('invitee_id', $viewerId)->where('status', 'pending'),
                 'favorites' => fn ($q) => $q->where('course_favorites.user_id', $viewerId),
+                'academy' => fn ($q) => $q->withViewerCardRelations(),
             ]);
         }
 

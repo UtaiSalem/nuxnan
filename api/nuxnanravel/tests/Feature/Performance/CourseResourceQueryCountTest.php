@@ -3,11 +3,15 @@
 namespace Tests\Feature\Performance;
 
 use App\Http\Resources\Learn\Course\info\CourseResource;
+use App\Models\Academy;
+use App\Models\AcademyMember;
+use App\Models\AcademySetting;
 use App\Models\Course;
 use App\Models\CourseInvitation;
 use App\Models\CourseMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -207,5 +211,89 @@ class CourseResourceQueryCountTest extends TestCase
 
         $resSource = $resourceMap[$courseSource->id];
         $this->assertFalse($resSource['is_owned']);
+    }
+
+    /**
+     * เฟส 1b follow-up — AcademyResource ที่ฝังในแต่ละแถวของ course list
+     * ต้องเช็คสิทธิ์ในหน่วยความจำ (withViewerCardData override academy=>withViewerCardRelations)
+     * → query ไม่โตตามจำนวนคอร์สที่มี academy + สิทธิ์ของ academy ยังถูกต้อง (PII ไม่รั่ว)
+     */
+    private function makeAcademyCourse(int $ownerId, string $privacy): Course
+    {
+        $academy = Academy::factory()->create(['user_id' => $ownerId]);
+        AcademySetting::create([
+            'academy_id' => $academy->id,
+            'privacy' => $privacy,
+            'show_member_list' => true,
+            'show_course_list' => true,
+        ]);
+
+        return Course::factory()->create(['user_id' => $ownerId, 'academy_id' => $academy->id]);
+    }
+
+    public function test_embedded_academy_no_n1_and_visibility_scoped(): void
+    {
+        $viewer = User::factory()->create();
+        $userB = User::factory()->create();
+        $this->actingAs($viewer, 'api');
+
+        // toArray() ตรง ๆ ไม่ resolve nested resource → ต้อง resolve academy เองให้ auth-check ทำงาน
+        // (production ผ่าน ->response() จะ resolve ให้อัตโนมัติ)
+        $resolveList = function () {
+            $out = [];
+            foreach (Course::withViewerCardData()->whereNotNull('academy_id')->get() as $c) {
+                $arr = (new CourseResource($c))->toArray(request());
+                if ($arr['academy'] instanceof JsonResource) {
+                    $arr['academy'] = $arr['academy']->toArray(request());
+                }
+                $out[$c->id] = $arr;
+            }
+
+            return $out;
+        };
+
+        $measure = function () use ($resolveList): int {
+            DB::flushQueryLog();
+            DB::enableQueryLog();
+            $resolveList();
+            $c = count(DB::getQueryLog());
+            DB::disableQueryLog();
+
+            return $c;
+        };
+
+        for ($i = 0; $i < 3; $i++) {
+            $this->makeAcademyCourse($userB->id, 'private');
+        }
+        $small = $measure();
+
+        for ($i = 0; $i < 9; $i++) {
+            $this->makeAcademyCourse($userB->id, 'private');
+        }
+        $big = $measure();
+
+        $this->assertLessThanOrEqual(
+            $small + 1,
+            $big,
+            "query โตตามจำนวนคอร์สที่มี academy (3=$small, 12=$big) — embedded AcademyResource N+1 ยังอยู่"
+        );
+
+        // correctness + PII: คอร์สของ academy private ที่ viewer ไม่ใช่สมาชิก → academy ปิด
+        $privateCourse = $this->makeAcademyCourse($userB->id, 'private');
+        // คอร์สของ academy private ที่ viewer เป็นสมาชิกอนุมัติ → academy เปิด
+        $memberCourse = $this->makeAcademyCourse($userB->id, 'private');
+        AcademyMember::create(['academy_id' => $memberCourse->academy_id, 'user_id' => $viewer->id, 'status' => 2]);
+
+        $map = [];
+        foreach (Course::withViewerCardData()->whereIn('id', [$privateCourse->id, $memberCourse->id])->get() as $c) {
+            $arr = (new CourseResource($c))->toArray(request());
+            $arr['academy'] = $arr['academy']->toArray(request());
+            $map[$c->id] = $arr;
+        }
+
+        $this->assertFalse($map[$privateCourse->id]['academy']['can_view_content'], 'PII รั่ว: academy private ของคนอื่นเปิดให้ viewer');
+        $this->assertFalse($map[$privateCourse->id]['academy']['can_view_member_list']);
+        $this->assertTrue($map[$memberCourse->id]['academy']['can_view_content']);
+        $this->assertTrue($map[$memberCourse->id]['academy']['can_view_member_list']);
     }
 }
