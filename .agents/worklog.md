@@ -61,9 +61,16 @@ eager-load พื้นฐานอย่างเดียวลง course แ�
 - 🔴 แตะ visibility logic ที่คุมการเห็นรายชื่อสมาชิก (PII) — ถ้า refactor พลาด rอาจรั่วโรงเรียน private
 - แนวทางที่คิดไว้: eager-load relation แบบจำกัด viewer (`academyMembers`/`academyAdmins` where user_id=viewer) แล้วให้ model methods honor loaded — **แต่มีกับดัก**: ถ้า collection ถูกโหลดจำกัด viewer A แล้วเรียก isApprovedMember(B) จะได้ false ผิด → ต้อง design ให้ปลอดภัย (relation ชื่อ viewer-scoped ชัดเจน หรือคง fallback query เมื่อ user ≠ viewer)
 
-**เฟส 2 (ยังไม่ทำ):** CourseResource — ซ้อน AcademyResource ต่อ course + `is_owned` (exists/course) + `pending_invitation` (CourseInvitation/course) + isAdmin/member_status
-- ใช้ pattern batch-preload set (แบบ Follow fix) สำหรับ is_owned/pending_invitation
-- course list endpoints ~7 จุด (CourseController) + AcademyCourseController
+**เฟส 2a เสร็จ (safe):** `b1d7cfcc`
+- Course: scope `withCardData()` = with([user+cardcounts, academy+withCardRelations, courseSettings])
+- CourseController: เติม withCardData() 7 list endpoint · เทสต์ + mutation + MySQL ผ่าน
+- วัดจริง course list 10 แถว 111→94 (ส่วนที่เหลือคือ auth checks รายแถว = เฟส 2b)
+
+**เฟส 2b (ยังไม่ทำ — viewer-scoped trap เหมือน 1b):** auth checks ใน CourseResource
+- `isAdmin()` (resource:96 ไม่มี isset guard ยิงทุกแถว) · `member_status` (:93) · `is_owned` (:129 exists/course) · `pending_invitation` (:156 CourseInvitation/course) · `isMember` fallback (:88 ใช้ relation `members`)
+- is_owned/pending_invitation ใช้ batch-preload set (แบบ Follow) — ไม่ sensitive
+- isAdmin/isMember/member_status มี viewer-scoped trap (courseMembers โหลดจำกัด viewer → เรียกด้วย user อื่นได้ false ผิด) = เท่า 1b ต้อง design ระวัง (isCourseAdmin คุมสิทธิ์ admin)
+- หมายเหตุ: list endpoints หลายจุดโหลด courseMembers จำกัด viewer อยู่แล้ว (CourseController:251/283/317) → isset branches ได้ in-memory บางส่วน
 
 ---
 
