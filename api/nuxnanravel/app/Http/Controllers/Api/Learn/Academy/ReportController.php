@@ -73,8 +73,8 @@ class ReportController extends Controller
 
         $this->auditLog->log(
             'report_definition_created',
-            ReportDefinition::class,
-            $definition->id,
+            $definition,
+            null,
             ['name' => $definition->name, 'category' => $definition->category]
         );
 
@@ -130,8 +130,8 @@ class ReportController extends Controller
 
         $this->auditLog->log(
             'report_definition_updated',
-            ReportDefinition::class,
-            $definition->id,
+            $definition,
+            null,
             ['changes' => array_keys($validated)]
         );
 
@@ -161,9 +161,9 @@ class ReportController extends Controller
 
         $this->auditLog->log(
             'report_definition_deleted',
-            ReportDefinition::class,
-            $definitionId,
-            ['name' => $definitionName]
+            null,
+            null,
+            ['id' => $definitionId, 'name' => $definitionName]
         );
 
         return response()->json([
@@ -213,8 +213,8 @@ class ReportController extends Controller
 
         $this->auditLog->log(
             'report_definition_duplicated',
-            ReportDefinition::class,
-            $newDefinition->id,
+            $newDefinition,
+            null,
             ['source_id' => $definition->id]
         );
 
@@ -323,8 +323,8 @@ class ReportController extends Controller
 
         $this->auditLog->log(
             'report_generated',
-            SavedReport::class,
-            $savedReport->id,
+            $savedReport,
+            null,
             ['definition' => $definition->name]
         );
 
@@ -480,8 +480,8 @@ class ReportController extends Controller
 
         $this->auditLog->log(
             'report_schedule_created',
-            ReportSchedule::class,
-            $schedule->id,
+            $schedule,
+            null,
             ['frequency' => $schedule->frequency, 'report' => $savedReport->name]
         );
 
