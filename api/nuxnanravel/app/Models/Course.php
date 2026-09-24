@@ -280,6 +280,21 @@ class Course extends Model
         return $this->hasOne(CourseSetting::class, 'course_id');
     }
 
+    /**
+     * eager-load relation ที่ CourseResource ต้องใช้ (เลี่ยง N+1 user/academy/settings ในลิสต์)
+     * academy ใช้ scope withCardRelations (จากเฟส 1a) เพื่อ preload director/creater/settings ของ academy ซ้อนด้วย
+     * ไม่ใส่ withCount ที่นี่ (count มี fallback เป็นคอลัมน์ + เลี่ยง duplicate column กับ site ที่ withCount เอง)
+     * ใช้: Course::withCardData()  · ต้องเป็นตัวสุดท้ายของ chain eager-load user (closure ต้องไม่ถูก plain with('user') override)
+     */
+    public function scopeWithCardData($query)
+    {
+        return $query->with([
+            'user' => fn ($q) => $q->withCardCounts(),
+            'academy' => fn ($q) => $q->withCardRelations(),
+            'courseSettings',
+        ]);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
