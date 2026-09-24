@@ -47,7 +47,7 @@
 
 ## 2026-09-25 — #3 CourseResource/AcademyResource N+1 (profiling + เฟส 1a)
 
-### สถานะ: 🟡 เฟส 1a (`cbdc2fab`) + 2a (`b1d7cfcc`) + 2b เสร็จ · เหลือ **เฟส 1b** (PII)
+### สถานะ: ✅ #3 เสร็จครบ — เฟส 1a (`cbdc2fab`) + 2a (`b1d7cfcc`) + 2b (`57aee1f4`) + 1b เสร็จ (unpushed)
 **Profiling (วัดจริง auth'd):** academy list ~10-14 คิวรี/แถว · course list ~11 คิวรี/แถว
 eager-load พื้นฐานอย่างเดียวลง course แค่ 111→78 (−30%) — เพราะ resource มี logic ยิงคิวรีเองต่อแถว
 
@@ -56,10 +56,16 @@ eager-load พื้นฐานอย่างเดียวลง course แ�
 - AcademyResource: director ใช้ relation ที่โหลด · AcademyController: 3 list endpoint เติม scope
 - ตัด director/creater(counts)/settings ต่อแถว · เทสต์ + mutation + MySQL ผ่าน
 
-**เฟส 1b (ยังไม่ทำ — ต้องระวัง PII):** batch membership checks ใน AcademyResource
-- `canViewMemberList`/`canViewCourseList` ต่างเรียก `isAdmin`+`isApprovedMember` (Academy.php:319/329) = ~4 คิวรี membership/แถว + `member_status` 1/แถว
-- 🔴 แตะ visibility logic ที่คุมการเห็นรายชื่อสมาชิก (PII) — ถ้า refactor พลาด rอาจรั่วโรงเรียน private
-- แนวทางที่คิดไว้: eager-load relation แบบจำกัด viewer (`academyMembers`/`academyAdmins` where user_id=viewer) แล้วให้ model methods honor loaded — **แต่มีกับดัก**: ถ้า collection ถูกโหลดจำกัด viewer A แล้วเรียก isApprovedMember(B) จะได้ false ผิด → ต้อง design ให้ปลอดภัย (relation ชื่อ viewer-scoped ชัดเจน หรือคง fallback query เมื่อ user ≠ viewer)
+**เฟส 1b เสร็จ (2026-09-25 — unpushed · Claude เขียนเอง ไม่ delegate เพราะ PII-critical + agy โกหกมาแล้ว 2 รอบ session นี้):** batch membership checks ใน AcademyResource
+- `Academy::scopeWithViewerCardRelations()` = withCardRelations() + eager-load `academyAdmins`/`academyMembers` where user_id=viewer (เมื่อ authed)
+- AcademyResource: helper `viewerIsAdmin`/`viewerIsApprovedMember`/`viewerCanViewContent`/`viewerCanViewMemberList`/`viewerCanViewCourseList`/`viewerMemberStatus` — อ่าน relation ที่โหลด in-memory + **fallback เมธอดบนโมเดลเดิม** เมื่อ relation ไม่ได้โหลด (เช่น AcademyResource ที่ฝังใน CourseResource)
+- **ไม่แตะเมธอดบนโมเดล** (isAdmin/isApprovedMember/canViewContent/member_status) — เลี่ยง viewer-scoped trap: helper อ่าน collection ที่จำกัด user_id=viewer อยู่แล้ว + closure อ้าง viewer ตรง ๆ → กัน PII รั่ว
+- AcademyController: 3 list endpoint (myAcademies/getAuthMemberedAcademies/getAllAcademies) เปลี่ยน withCardRelations()→withViewerCardRelations()
+- isSuperAdmin memo (จากเฟส 2b) ตัด roles-exists ของ viewer ให้แล้ว
+- เทสต์ `tests/Feature/Performance/AcademyResourceQueryCountTest.php` — query-count คงที่ + **PII correctness matrix** (public/public-hidden/private-outsider/private-member(2)/private-pending(1)/admin/owner + 🔴 leak guard: userB เป็นสมาชิก private แต่ viewer ไม่เห็น)
+- mutation-verified (ปิด preload = query แดง 21→65, correctness เขียว) · ✅ pint · **MySQL จริง 2/2 (26 assertions)** · regression Academy 513 ผ่าน 0 แดง
+
+**Follow-up ที่ยังไม่ทำ (ไม่ sensitive):** AcademyResource ที่ฝังใน CourseResource (course list ที่มี academy) ยัง fallback query ต่อ academy — ถ้าจะปิดให้ Course::scopeWithCardData เปลี่ยน `academy => withCardRelations` เป็น `withViewerCardRelations` (CourseFactory ไม่มี academy จึงไม่โผล่ในเทสต์ 2b)
 
 **เฟส 2a เสร็จ (safe):** `b1d7cfcc`
 - Course: scope `withCardData()` = with([user+cardcounts, academy+withCardRelations, courseSettings])
