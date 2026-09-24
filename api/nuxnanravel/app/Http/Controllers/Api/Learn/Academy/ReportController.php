@@ -9,6 +9,7 @@ use App\Models\ReportExport;
 use App\Models\ReportSchedule;
 use App\Models\SavedReport;
 use App\Services\AuditLogService;
+use App\Services\ReportExportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -582,22 +583,34 @@ class ReportController extends Controller
             'format' => ['required', Rule::in(ReportExport::FORMATS)],
         ]);
 
+        // สร้างไฟล์ทันที (synchronous) จาก cached_data — ไม่พึ่ง queue
+        $meta = app(ReportExportService::class)->generate($report, $validated['format']);
+
         $export = ReportExport::create([
-            'saved_report_id' => $report->id,
-            'format' => $validated['format'],
-            'requested_by' => Auth::id(),
-            'status' => ReportExport::STATUS_PENDING,
+            'academy_id' => $academy->id,
+            'report_id' => $report->id,
+            'user_id' => Auth::id(),
+            'file_name' => $meta['file_name'],
+            'file_path' => $meta['file_path'],
+            'file_type' => $meta['file_type'],
+            'file_size' => $meta['file_size'],
+            'status' => ReportExport::STATUS_COMPLETED,
+            'expires_at' => now()->addDays(7),
         ]);
 
-        // TODO: Dispatch job to generate export file
-        // For now, mark as processing
-        $export->markAsProcessing();
+        $this->auditLog->log('report_exported', $export, null, [
+            'report' => $report->name,
+            'format' => $export->file_type,
+        ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Export started',
-            'data' => $export,
-        ], 202);
+            'message' => 'Export completed',
+            'data' => [
+                'export' => $export,
+                'download_url' => $export->getDownloadUrl(),
+            ],
+        ], 201);
     }
 
     /**

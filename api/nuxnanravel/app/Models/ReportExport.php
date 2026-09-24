@@ -51,6 +51,12 @@ class ReportExport extends Model
 
     const TYPE_CSV = 'csv';
 
+    const FORMATS = [
+        self::TYPE_PDF,
+        self::TYPE_XLSX,
+        self::TYPE_CSV,
+    ];
+
     // Relationships
     public function academy(): BelongsTo
     {
@@ -113,6 +119,11 @@ class ReportExport extends Model
             'status' => self::STATUS_FAILED,
             'error_message' => $errorMessage,
         ]);
+    }
+
+    public function isCompleted(): bool
+    {
+        return $this->status === self::STATUS_COMPLETED;
     }
 
     public function isExpired(): bool
