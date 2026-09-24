@@ -6,7 +6,7 @@
 1. ✅ **UserResource เบาทั้งแอป — เสร็จ 2026-09-24** (ดูบันทึกด้านล่าง) — รวม eager-load เป็น scope
    `User::withCardCounts()` แล้ว apply เข้า list ที่ render UserResource เต็ม (peopleMayKnow, donateRecipients ×2,
    admin users, course roster ×3) · Academy member ไม่แตะ (resource ใช้ user แบบย่อ) · วัดจริง 20 คน 161→3 คิวรี
-   เหลือ (ถ้าจะต่อ): `FollowController::followers/following` มี N+1 คนละชนิด (`isFollowing()` รายแถว ไม่ผ่าน UserResource)
+   ✅ `FollowController::followers/following` N+1 (`isFollowing()` รายแถว) แก้แล้ว 2026-09-25 (`b025d890`)
 
 2. **`POST reports/{report}/export` — ฟีเจอร์ export ค้างครึ่งทาง** — อ้าง `ReportExport::FORMATS` (const ไม่มี) + create คอลัมน์ผิด
    (saved_report_id/format/requested_by) + ขาด file_name/file_path/file_type (NOT NULL) + มี `// TODO: Dispatch job`
@@ -39,9 +39,20 @@
 - เทสต์: 2 pass บน sqlite · pint ผ่าน · mutation check: ทำ scope เป็น no-op → เทสต์แดงทั้งคู่ (97≠25, 110>35) ยืนยันไม่ผ่านแบบหลอก
 
 ### ยังไม่ได้ทำ (ถ้าจะต่อ)
-- รันเทสต์บน **MySQL จริง** (`php artisan test -c phpunit.mysql.xml --filter=UserResourceQueryCountTest`) — ยังรันแค่ sqlite
-- `FollowController::followers/following` N+1 `isFollowing()` รายแถว (คนละชนิด ไม่ผ่าน UserResource) — เจอระหว่างทาง ยังไม่แก้
+- ~~MySQL จริง~~ ✅ รันแล้ว UserResourceQueryCountTest ผ่าน 2/2 บน MySQL จริง
+- ~~FollowController N+1~~ ✅ แก้แล้ว 2026-09-25 (ดูบันทึกด้านล่าง)
 - backlog #2 (export 500) · #3 (Course/AcademyResource list profile)
+
+---
+
+## 2026-09-25 — FollowController followers/following N+1 (`b025d890`)
+
+### สถานะ: ✅ เสร็จ 1 commit บน main (push แล้ว/ยังตามที่เจ้าของเคาะ)
+- ต้นตอ: `followers()`/`following()` map ลิสต์แล้วเรียก `$user->isFollowing($row)` รายแถว = 1 query/แถว (สูงสุด per_page=20)
+- แก้: preload `$user->following()->pluck('followed_id')->flip()` ครั้งเดียว → เช็ค `->has($id)` ใน memory · ค่า is_following เท่าเดิม
+- เทสต์ `tests/Feature/Follow/FollowListQueryTest.php` 3 เคส: query ไม่โตตามแถว (followers+following) + is_following ถูกตาม viewer
+- mutation-verified: คืนโค้ดเดิม → 2 เทสต์ query แดง (17>11) · ผ่าน sqlite + **MySQL จริง**
+- หมายเหตุ: `stats`/`isFollowing` เป็น single-user ไม่แตะ · `followers/following` สร้าง array เอง ไม่ผ่าน UserResource (จึงไม่เกี่ยว withCardCounts)
 
 ---
 
