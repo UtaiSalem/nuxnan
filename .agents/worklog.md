@@ -65,7 +65,11 @@ eager-load พื้นฐานอย่างเดียวลง course แ�
 - เทสต์ `tests/Feature/Performance/AcademyResourceQueryCountTest.php` — query-count คงที่ + **PII correctness matrix** (public/public-hidden/private-outsider/private-member(2)/private-pending(1)/admin/owner + 🔴 leak guard: userB เป็นสมาชิก private แต่ viewer ไม่เห็น)
 - mutation-verified (ปิด preload = query แดง 21→65, correctness เขียว) · ✅ pint · **MySQL จริง 2/2 (26 assertions)** · regression Academy 513 ผ่าน 0 แดง
 
-**Follow-up ที่ยังไม่ทำ (ไม่ sensitive):** AcademyResource ที่ฝังใน CourseResource (course list ที่มี academy) ยัง fallback query ต่อ academy — ถ้าจะปิดให้ Course::scopeWithCardData เปลี่ยน `academy => withCardRelations` เป็น `withViewerCardRelations` (CourseFactory ไม่มี academy จึงไม่โผล่ในเทสต์ 2b)
+**Follow-up เสร็จ (2026-09-25 — unpushed):** AcademyResource ที่ฝังใน CourseResource
+- `Course::scopeWithViewerCardData` override `academy => withViewerCardRelations()` (แทน withCardRelations จาก withCardData) → embedded AcademyResource เช็คสิทธิ์ใน memory ไม่ query membership ต่อ academy
+- เทสต์ `test_embedded_academy_no_n1_and_visibility_scoped` ใน CourseResourceQueryCountTest — สร้างคอร์สที่มี academy จริง
+  - 🔴 กับดัก: `CourseResource::collection()->toArray()` **ไม่ resolve nested resource** → academy auth-check ไม่ทำงาน (วัด N+1 ไม่เจอ); ต้อง resolve academy เอง (`$arr['academy']->toArray()`) ทั้งตอนวัดและตอน assert (production ผ่าน ->response() resolve ให้เอง)
+  - mutation-verified (ถอด override = query แดง 36→98) · PII leak guard (academy private ของ userB → viewer ไม่เห็น) · MySQL 4/4 · pint ผ่าน
 
 **เฟส 2a เสร็จ (safe):** `b1d7cfcc`
 - Course: scope `withCardData()` = with([user+cardcounts, academy+withCardRelations, courseSettings])
