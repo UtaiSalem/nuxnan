@@ -3,11 +3,10 @@
 ## 📋 งานชิ้นต่อไป (backlog — อัพเดท 2026-09-24)
 เรียงตามความคุ้ม/ผลกระทบ · รายละเอียดเต็มอยู่ในบันทึกแต่ละหัวข้อด้านล่าง
 
-1. **UserResource เบาทั้งแอป (ผลกระทบสูงสุด)** — ตอนนี้แก้ N+1 เฉพาะ **ฟีด** (eager-load withCount/roles/plearndAdmin)
-   แต่ list endpoint อื่นทุกตัวที่ serialize ผู้ใช้หลายคน (รายชื่อเพื่อน, สมาชิกโรงเรียน/คอร์ส, followers/following, leaderboard,
-   ผลค้นหาผู้ใช้ ฯลฯ) ยังจ่าย ~6 คิวรี/ผู้ใช้ (posts/friends/followers/following counts + roles hasRole + plearnd_admin)
-   → ควร audit list endpoint แล้ว eager-load `withCount(['posts','followers','following','friends'])->with(['roles','plearndAdmin'])`
-   ให้ครบ (โมเดล/รีซอร์สรองรับ backward-compat แล้ว ตั้งแต่งานฟีด) · หรือทำ UserResource เวอร์ชัน "การ์ดเบา" สำหรับ list
+1. ✅ **UserResource เบาทั้งแอป — เสร็จ 2026-09-24** (ดูบันทึกด้านล่าง) — รวม eager-load เป็น scope
+   `User::withCardCounts()` แล้ว apply เข้า list ที่ render UserResource เต็ม (peopleMayKnow, donateRecipients ×2,
+   admin users, course roster ×3) · Academy member ไม่แตะ (resource ใช้ user แบบย่อ) · วัดจริง 20 คน 161→3 คิวรี
+   เหลือ (ถ้าจะต่อ): `FollowController::followers/following` มี N+1 คนละชนิด (`isFollowing()` รายแถว ไม่ผ่าน UserResource)
 
 2. **`POST reports/{report}/export` — ฟีเจอร์ export ค้างครึ่งทาง** — อ้าง `ReportExport::FORMATS` (const ไม่มี) + create คอลัมน์ผิด
    (saved_report_id/format/requested_by) + ขาด file_name/file_path/file_type (NOT NULL) + มี `// TODO: Dispatch job`
@@ -17,10 +16,32 @@
    academy detail ยังดึง owner/director (UserResource) + isMember/isCourseAdmin/invitation เป็น auth-check ราย serialize
    → ถ้ามีหน้า **list** ที่ใช้ resource เหล่านี้จะช้าแบบเดียวกับฟีดเดิม (ยังไม่ได้วัด — ควร profile ก่อน)
 
-4. **เทสต์กัน N+1 ถอย** — งานฟีดวัด query ด้วยมือ ไม่มี automated query-budget test → ควรเพิ่มเทสต์ assert
-   จำนวนคิวรีของ `newsfeed` ไม่เกินเพดาน (เช่น < 130) กันคนแก้ resource แล้ว N+1 กลับมาเงียบ ๆ
+4. ✅ **เทสต์กัน N+1 ถอย — เสร็จ 2026-09-24** — `tests/Feature/Performance/UserResourceQueryCountTest.php`
+   หลัก "query ไม่โตตามจำนวนผู้ใช้" 2 ชั้น (resource-level + endpoint /api/newsfeed) · mutation-verified (แดงจริงเมื่อถอด scope)
 
 5. **(optional, คุ้มน้อย)** ฟีด getComments ยัง bounded ~5 คิวรี/โพสต์ · at-risk course-scoped ~14 คิวรีคงที่ — ปล่อยได้
+
+---
+
+## 2026-09-24 — UserResource N+1 เบาทั้งแอป (backlog #1 + #4)
+
+### สถานะ: ✅ เสร็จ 3 commit บน main (ยังไม่ push — รอเจ้าของโปรเจคเคาะ)
+- `7b4ebd1b` perf(api) เฟส A — รวม eager-load เป็น scope `User::withCardCounts()` เดียว (refactor ActivityController + CoursePost ที่ลอกซ้ำ)
+- `2a4ceeb6` perf(api) เฟส B — apply scope เข้า list ที่ render UserResource เต็ม
+- `a0134b45` test(api) เทสต์กัน N+1 ถอย (mutation-verified)
+
+### สาระ
+- ต้นตอ: UserResource ถ้าไม่ preload ตัวนับ → lazy query รายคน ~6-8 (posts/followers/following/friends count + PlearndAdmin::exists + hasRole)
+- เฟส A: เพิ่ม `scopeWithCardCounts` = `withCount([...4])->with(['roles','plearndAdmin'])` · closure เดิมลอกซ้ำ 2 ที่ → เรียก scope แทน
+- เฟส B (5 ไฟล์/7 จุด): NewsfeedController peopleMayKnow · WelcomeController + Shared donateRecipients · AdminController users · CourseMemberController index/getMembersRequesters/indexV2
+- **ตัด Academy member ออกจากแผน**: AcademyMemberResource render user แบบย่อ (id/name/email/photo/ref) ไม่ผ่าน UserResource → ไม่มี N+1 (แตะไปเปลืองเปล่า)
+- วัดจริง (tinker): serialize UserResource 20 ผู้ใช้จริง **161 → 3 คิวรี (−98%)**
+- เทสต์: 2 pass บน sqlite · pint ผ่าน · mutation check: ทำ scope เป็น no-op → เทสต์แดงทั้งคู่ (97≠25, 110>35) ยืนยันไม่ผ่านแบบหลอก
+
+### ยังไม่ได้ทำ (ถ้าจะต่อ)
+- รันเทสต์บน **MySQL จริง** (`php artisan test -c phpunit.mysql.xml --filter=UserResourceQueryCountTest`) — ยังรันแค่ sqlite
+- `FollowController::followers/following` N+1 `isFollowing()` รายแถว (คนละชนิด ไม่ผ่าน UserResource) — เจอระหว่างทาง ยังไม่แก้
+- backlog #2 (export 500) · #3 (Course/AcademyResource list profile)
 
 ---
 
