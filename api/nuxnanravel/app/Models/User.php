@@ -37,6 +37,9 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, SoftDeletes;
 
+    /** cache ผลของ isSuperAdmin() ต่อ instance (กัน roles-exists query ซ้ำตอน serialize ลิสต์) */
+    protected ?bool $isSuperAdminMemo = null;
+
     public $incrementing = true;
 
     protected static ?bool $permissionsSchemaReady = null;
@@ -197,10 +200,13 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
 
     /**
      * Check if user is a Super Admin.
+     *
+     * memoize ต่อ instance — viewer คนเดียวถูกเช็คซ้ำทุกแถวตอน serialize ลิสต์
+     * (CourseResource/AcademyResource isAdmin) ถ้าไม่ cache จะยิง roles-exists query ต่อแถว
      */
     public function isSuperAdmin(): bool
     {
-        return $this->hasRole('SUPER_ADMIN');
+        return $this->isSuperAdminMemo ??= $this->hasRole('SUPER_ADMIN');
     }
 
     /**

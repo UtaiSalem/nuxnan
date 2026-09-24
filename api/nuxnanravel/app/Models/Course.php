@@ -295,6 +295,29 @@ class Course extends Model
         ]);
     }
 
+    /**
+     * withCardData() + relation แบบผูก viewer สำหรับ list endpoint
+     * courseMembers/clonedCourses/courseInvitations ถูกจำกัดเฉพาะ viewer เสมอ
+     * → CourseResource อ่าน in-memory ได้โดยไม่รั่วสิทธิ์ของคนอื่น (ดู resource)
+     * guest (ไม่ล็อกอิน) จะไม่โหลด relation viewer พวกนี้ → resource ตกไป fallback query เดิม
+     */
+    public function scopeWithViewerCardData($query)
+    {
+        $query->withCardData();
+
+        $viewerId = auth()->guard('api')->id();
+        if ($viewerId) {
+            $query->with([
+                'courseMembers' => fn ($q) => $q->where('user_id', $viewerId),
+                'clonedCourses' => fn ($q) => $q->where('user_id', $viewerId),
+                'courseInvitations' => fn ($q) => $q->where('invitee_id', $viewerId)->where('status', 'pending'),
+                'favorites' => fn ($q) => $q->where('course_favorites.user_id', $viewerId),
+            ]);
+        }
+
+        return $query;
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -308,6 +331,11 @@ class Course extends Model
     public function clonedCourses(): HasMany
     {
         return $this->hasMany(Course::class, 'source_course_id');
+    }
+
+    public function courseInvitations(): HasMany
+    {
+        return $this->hasMany(CourseInvitation::class);
     }
 
     public function purchases(): HasMany

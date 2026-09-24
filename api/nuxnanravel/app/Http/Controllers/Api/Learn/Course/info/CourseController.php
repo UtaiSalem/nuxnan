@@ -100,7 +100,7 @@ class CourseController extends Controller
         // จำนวนแถวถูกจำกัดไว้ที่ 5 อยู่แล้ว เรียงในฝั่ง PHP จึงถูกและไม่ต้องมี raw SQL
         $order = array_flip($recentCourseIds->all());
 
-        $courses = Course::withCardData()->withCount('courseLessons')
+        $courses = Course::withViewerCardData()->withCount('courseLessons')
             ->whereIn('id', $recentCourseIds)
             ->get()
             ->sortBy(fn (Course $course) => $order[$course->id] ?? PHP_INT_MAX)
@@ -115,7 +115,7 @@ class CourseController extends Controller
     public function getPopularCourses()
     {
         // Get top 5 courses by member count
-        $courses = Course::withCardData()
+        $courses = Course::withViewerCardData()
             ->withCount(['courseMembers', 'courseLessons'])
             ->orderBy('course_members_count', 'desc')
             ->take(5)
@@ -138,7 +138,7 @@ class CourseController extends Controller
         $courses = Course::whereHas('favorites', function ($q) {
             $q->where('user_id', auth()->id());
         })
-            ->withCardData()
+            ->withViewerCardData()
             ->withCount('courseLessons')
             ->orderBy('created_at', 'desc')
             ->paginate($request->input('limit', 12));
@@ -247,13 +247,7 @@ class CourseController extends Controller
             $query->latest();
         }
 
-        if (auth()->guard('api')->check()) {
-            $query->with(['courseMembers' => function ($q) {
-                $q->where('user_id', auth()->guard('api')->id());
-            }]);
-        }
-
-        $query->withCardData();
+        $query->withViewerCardData();
 
         $perPage = $request->input('per_page', 15);
         $paginated = $query->paginate($perPage);
@@ -275,16 +269,14 @@ class CourseController extends Controller
     public function getUserCourses(User $user)
     {
         return response()->json([
-            'courses' => CourseResource::collection($user->courses()->withCardData()->withCount('courseLessons')->latest()->paginate()),
+            'courses' => CourseResource::collection($user->courses()->withViewerCardData()->withCount('courseLessons')->latest()->paginate()),
         ]);
     }
 
     public function getMyCourses(User $user, Request $request)
     {
         $perPage = $request->input('per_page', 8);
-        $query = $user->courses()->withCount('courseLessons')->withCardData()->with(['courseMembers' => function ($q) {
-            $q->where('user_id', auth()->guard('api')->id());
-        }]);
+        $query = $user->courses()->withCount('courseLessons')->withViewerCardData();
 
         if ($request->has('cloned')) {
             if ($request->cloned == '1') {
@@ -316,10 +308,7 @@ class CourseController extends Controller
         $authMemberCourse = CourseMember::where('user_id', auth()->id())->pluck('course_id')->all();
         $paginated = Course::whereIn('id', $authMemberCourse)
             ->withCount('courseLessons')
-            ->withCardData()
-            ->with(['courseMembers' => function ($q) {
-                $q->where('user_id', auth()->guard('api')->id());
-            }])
+            ->withViewerCardData()
             ->latest()
             ->paginate();
 

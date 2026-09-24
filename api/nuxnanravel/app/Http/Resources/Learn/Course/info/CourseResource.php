@@ -74,7 +74,7 @@ class CourseResource extends JsonResource
             'location' => $this->location,
             'is_favorited' => $this->when(isset($this->favorites), function () {
                 return $this->favorites->isNotEmpty();
-            }, $this->is_favorited),
+            }, fn () => $this->is_favorited),
             'accreditation' => $this->accreditation,
             'accreditation_body' => $this->accreditation_body,
             'level' => $this->level,
@@ -85,15 +85,33 @@ class CourseResource extends JsonResource
             'certificate' => $this->certificate,
             'isMember' => $this->when(isset($this->courseMembers), function () {
                 return $this->courseMembers->where('user_id', auth()->guard('api')->id())->where('status', 1)->isNotEmpty();
-            }, $this->isMember(auth()->guard('api')->user())),
+            }, fn () => $this->isMember(auth()->guard('api')->user())),
             'member_status' => $this->when(isset($this->courseMembers), function () {
                 $member = $this->courseMembers->where('user_id', auth()->guard('api')->id())->first();
 
                 return $member?->course_member_status;
-            }, $this->member_status($this->id)), // Course member status
+            }, fn () => $this->member_status($this->id)), // Course member status
             'lessons_count' => $this->course_lessons_count ?? $this->lessons,
             'course_lessons_count' => $this->course_lessons_count ?? $this->lessons,
-            'isCourseAdmin' => $this->isAdmin(auth()->guard('api')->user()),
+            'isCourseAdmin' => (function () {
+                $viewer = auth()->guard('api')->user();
+                if (! $viewer) {
+                    return false;
+                }
+                if (isset($this->courseMembers)) {
+                    if ($this->user_id === $viewer->id || $viewer->isSuperAdmin()) {
+                        return true;
+                    }
+
+                    return $this->courseMembers
+                        ->where('user_id', $viewer->id)
+                        ->where('role', 4)
+                        ->where('status', 1)
+                        ->isNotEmpty();
+                }
+
+                return $this->isAdmin($viewer);
+            })(),
             'total_score' => $this->total_score,
             'setting' => $this->courseSettings,
             'auth_role' => $this->when(auth()->guard('api')->check(), function () {
@@ -127,12 +145,17 @@ class CourseResource extends JsonResource
             'finalized_at' => $this->finalized_at,
             'total_sales' => $this->total_sales,
             'is_owned' => $this->when(auth()->guard('api')->check(), function () {
-                $user = auth()->guard('api')->user();
-                if ($this->user_id === $user->id) {
+                $viewer = auth()->guard('api')->user();
+                if ($this->user_id === $viewer->id) {
                     return false;
                 }
+                if ($this->relationLoaded('clonedCourses')) {
+                    return $this->clonedCourses
+                        ->where('user_id', $viewer->id)
+                        ->isNotEmpty();
+                }
 
-                return $user->courses()
+                return $viewer->courses()
                     ->where('source_course_id', $this->id)
                     ->exists();
             }),
@@ -154,8 +177,16 @@ class CourseResource extends JsonResource
                     : ['is_member' => false, 'status' => null, 'enrolled_at' => null];
             }),
             'pending_invitation' => $this->when(auth()->guard('api')->check(), function () {
+                $viewerId = auth()->guard('api')->id();
+                if ($this->relationLoaded('courseInvitations')) {
+                    return $this->courseInvitations
+                        ->where('invitee_id', $viewerId)
+                        ->where('status', 'pending')
+                        ->first();
+                }
+
                 return CourseInvitation::where('course_id', $this->id)
-                    ->where('invitee_id', auth()->guard('api')->id())
+                    ->where('invitee_id', $viewerId)
                     ->where('status', 'pending')
                     ->first();
             }),
