@@ -89,6 +89,11 @@ class Academy extends Model
      */
     public function getSettings()
     {
+        // ถ้า eager-load academySetting มาแล้ว ใช้ในหน่วยความจำ (เลี่ยง N+1 ในลิสต์)
+        if ($this->relationLoaded('academySetting')) {
+            return $this->academySetting;
+        }
+
         return Cache::remember("academy_settings_{$this->id}", now()->addHours(24), function () {
             return $this->academySetting()->first();
         });
@@ -165,6 +170,28 @@ class Academy extends Model
     public function academySetting(): HasOne
     {
         return $this->hasOne(AcademySetting::class, 'academy_id');
+    }
+
+    /**
+     * director เป็นคอลัมน์ varchar ที่เก็บ user id — ผูกเป็น belongsTo เพื่อ eager-load ได้
+     * (ค่าที่ไม่ใช่ตัวเลข/หา user ไม่เจอ จะ resolve เป็น null เอง)
+     */
+    public function directorUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'director');
+    }
+
+    /**
+     * eager-load relation ที่ AcademyResource ต้องใช้ (เลี่ยง N+1 director/creater/settings ในลิสต์)
+     * ใช้: Academy::withCardRelations()  หรือ relation: with(['academy' => fn ($q) => $q->withCardRelations()])
+     */
+    public function scopeWithCardRelations($query)
+    {
+        return $query->with([
+            'user' => fn ($q) => $q->withCardCounts(),
+            'directorUser' => fn ($q) => $q->withCardCounts(),
+            'academySetting',
+        ]);
     }
 
     public function isAdmin($user)

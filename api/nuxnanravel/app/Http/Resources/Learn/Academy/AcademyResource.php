@@ -65,7 +65,10 @@ class AcademyResource extends JsonResource
         // SET-S7 / G22 — คอลัมน์ director เป็น varchar ที่เก็บ user id
         // ถ้าค่าไม่ใช่ตัวเลข หรือหา user ไม่เจอ ต้องคืน null เฉย ๆ
         // ก่อนหน้านี้ new UserResource(null) ทำให้ทั้ง endpoint ตอบ 500 (TypeError ใน method_exists)
-        $director = is_numeric($this->director) ? User::find((int) $this->director) : null;
+        // eager-load directorUser มาก่อน = ไม่ต้อง query รายแถว (เลี่ยง N+1 ในลิสต์)
+        $director = $this->relationLoaded('directorUser')
+            ? $this->directorUser
+            : (is_numeric($this->director) ? User::find((int) $this->director) : null);
 
         return array_merge($base, [
             'creater' => new UserResource($this->user),
