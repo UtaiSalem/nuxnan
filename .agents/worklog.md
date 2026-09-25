@@ -11,9 +11,10 @@
 2. ✅ **report export + audit-log 500 — เสร็จ 2026-09-25** — export ทำงานจริง sync (`403a2138`) + audit-log
    TypeError 6 จุด (task_5fa50dd0) แก้แล้ว (`06af70bb`) พร้อมบั๊กซ้อน createDefinition ขาด `code` (ดูบันทึกด้านล่าง)
 
-3. **CourseResource / AcademyResource หนักที่ endpoint ของตัวเอง** — ฟีดเลี่ยงแล้วด้วยก้อนเบา แต่ course detail/list +
-   academy detail ยังดึง owner/director (UserResource) + isMember/isCourseAdmin/invitation เป็น auth-check ราย serialize
-   → ถ้ามีหน้า **list** ที่ใช้ resource เหล่านี้จะช้าแบบเดียวกับฟีดเดิม (ยังไม่ได้วัด — ควร profile ก่อน)
+3. ✅ **CourseResource / AcademyResource N+1 — เสร็จครบ** (เฟส 1a/1b/2a/2b + follow-up 2026-09-25 · profile ยืนยัน 2026-09-26)
+   list endpoint ทุกตัวใช้ withViewerCardData()/withViewerCardRelations() · perf test 6/6 เขียวบน MySQL (48 assertions รวม PII matrix)
+   · re-profile ข้อมูลจริง 2026-09-26 พบ N+1 ตกค้าง 1 จุด (auth_progress lazy-load courses/แถว) → แก้แล้ว `a15d7be1` (ดูบันทึกล่างสุด)
+   · course list วัดจริง bounded ~19-20 query คงที่ทุกขนาด (เดิมโต ~0.83/แถว)
 
 4. ✅ **เทสต์กัน N+1 ถอย — เสร็จ 2026-09-24** — `tests/Feature/Performance/UserResourceQueryCountTest.php`
    หลัก "query ไม่โตตามจำนวนผู้ใช้" 2 ชั้น (resource-level + endpoint /api/newsfeed) · mutation-verified (แดงจริงเมื่อถอด scope)
@@ -22,6 +23,24 @@
    · at-risk course-scoped ~14 คิวรีคงที่ — โค้ดปัจจุบัน bounded + memory-safe แล้ว (limit 3 ต่อโพสต์)
    → จะลดคิวรีต่อได้ต้อง preload latest-3/โพสต์ ทั้งหน้า ซึ่งต้องเพิ่ม package `staudenmeir/eloquent-eager-limit`
    (ทางเลือก whereIn โหลดคอมเมนต์ทั้งหมด = เสี่ยง memory บนโพสต์ยอดวิว) — **ต้องเคาะก่อนว่าจะเพิ่ม dependency ไหม**
+
+---
+
+## 2026-09-26 — #3 re-profile Course/Academy list (ข้อมูลจริง) + ตัด N+1 ตกค้าง
+
+### สถานะ: ✅ เสร็จ (pushed `a15d7be1`) — #3 ปิดสมบูรณ์
+- **guardrail:** perf test 6/6 เขียวบน MySQL (CourseResource 4 + AcademyResource 2, 48 assertions รวม PII matrix) — เฟสเก่าไม่ regress
+- **profile ข้อมูลจริง (24 courses, 1 academy):** 🔴 กับดัก harness — scope เช็ค `auth()->guard('api')->id()`
+  แต่ tinker `auth()->login()` = web guard → api guard = null → preload ถูกข้าม (false alarm ~2.8 q/แถว)
+  · แก้ harness ใช้ `Auth::guard('api')->setUser()` → เห็นภาพจริง
+- **N+1 ตกค้าง 1 จุด (จริง):** `CourseResource.auth_progress` → `CourseMember::getPercentageScore()` อ่าน
+  `$this->course` (belongsTo) แบบ lazy → `select * from courses where id=?` ต่อคอร์สที่ viewer เป็นสมาชิก
+  (viewer #1 สมาชิก 20/24 → x20) · perf test เดิมไม่จับเพราะ viewer ไม่ได้ enroll ในคอร์ส seed
+- **แก้:** `$member->setRelation('course', $this->resource)` ใช้ course ที่มีในมือ → ไม่ lazy-load
+  · วัดจริง course list 24 แถว **40→20 query** · scaling n=3/6/12/24 = คงที่ ~19-20 (bounded)
+- **test:** เสริม `test_..._constant_as_courses_grow` ให้ viewer เป็นสมาชิกทุกคอร์ส (idempotent, achieved_score=42)
+  → **mutation-verified** (ปิด setRelation = แดงที่ N+1 slope assertion บรรทัด 73) · MySQL 4/4 · pint ผ่าน
+- หมายเหตุ: x3 ที่เหลือ (users cardcounts / roles / plearnd_admins) เป็น batched whereIn คงที่ = ไม่ใช่ N+1
 
 ---
 
