@@ -8,9 +8,8 @@
    admin users, course roster ×3) · Academy member ไม่แตะ (resource ใช้ user แบบย่อ) · วัดจริง 20 คน 161→3 คิวรี
    ✅ `FollowController::followers/following` N+1 (`isFollowing()` รายแถว) แก้แล้ว 2026-09-25 (`b025d890`)
 
-2. **`POST reports/{report}/export` — ฟีเจอร์ export ค้างครึ่งทาง** — อ้าง `ReportExport::FORMATS` (const ไม่มี) + create คอลัมน์ผิด
-   (saved_report_id/format/requested_by) + ขาด file_name/file_path/file_type (NOT NULL) + มี `// TODO: Dispatch job`
-   → ต้องเคาะ: ทำ export จริง (สร้าง job สร้างไฟล์ + เลือกรูปแบบ) หรือถอดปุ่ม/route ออก (ตอนนี้ยิงแล้ว 500)
+2. ✅ **report export + audit-log 500 — เสร็จ 2026-09-25** — export ทำงานจริง sync (`403a2138`) + audit-log
+   TypeError 6 จุด (task_5fa50dd0) แก้แล้ว (`06af70bb`) พร้อมบั๊กซ้อน createDefinition ขาด `code` (ดูบันทึกด้านล่าง)
 
 3. **CourseResource / AcademyResource หนักที่ endpoint ของตัวเอง** — ฟีดเลี่ยงแล้วด้วยก้อนเบา แต่ course detail/list +
    academy detail ยังดึง owner/director (UserResource) + isMember/isCourseAdmin/invitation เป็น auth-check ราย serialize
@@ -19,7 +18,10 @@
 4. ✅ **เทสต์กัน N+1 ถอย — เสร็จ 2026-09-24** — `tests/Feature/Performance/UserResourceQueryCountTest.php`
    หลัก "query ไม่โตตามจำนวนผู้ใช้" 2 ชั้น (resource-level + endpoint /api/newsfeed) · mutation-verified (แดงจริงเมื่อถอด scope)
 
-5. **(optional, คุ้มน้อย)** ฟีด getComments ยัง bounded ~5 คิวรี/โพสต์ · at-risk course-scoped ~14 คิวรีคงที่ — ปล่อยได้
+5. **(optional, คุ้มน้อย — ตรวจแล้ว 2026-09-25 → คงคำตัดสิน "ปล่อยได้")** ฟีด getComments ยัง bounded ~5 คิวรี/โพสต์
+   · at-risk course-scoped ~14 คิวรีคงที่ — โค้ดปัจจุบัน bounded + memory-safe แล้ว (limit 3 ต่อโพสต์)
+   → จะลดคิวรีต่อได้ต้อง preload latest-3/โพสต์ ทั้งหน้า ซึ่งต้องเพิ่ม package `staudenmeir/eloquent-eager-limit`
+   (ทางเลือก whereIn โหลดคอมเมนต์ทั้งหมด = เสี่ยง memory บนโพสต์ยอดวิว) — **ต้องเคาะก่อนว่าจะเพิ่ม dependency ไหม**
 
 ---
 
@@ -90,6 +92,25 @@ eager-load พื้นฐานอย่างเดียวลง course แ�
 - เทสต์ `tests/Feature/Performance/CourseResourceQueryCountTest.php` 3 เคส (query-count + correctness matrix สลับ viewer + scoped)
 - ✅ pint · **MySQL จริง 3/3** · regression role/permission/course 381 ผ่าน
 - ⚠️ 3 เทสต์ `CourseLifecycle` (status 4) แดง = **pre-existing** (แดงบน clean baseline; lifecycle มีแค่ status 1/2/3) ไม่เกี่ยวงานนี้
+
+---
+
+## 2026-09-25 — backlog #2 ปิดหนี้: audit-log TypeError 6 จุด + createDefinition ขาด code (`06af70bb`)
+
+### สถานะ: ✅ เสร็จ (unpushed) — ปิด task_5fa50dd0
+- **audit-log bug:** `AuditLogService::log(string, ?Model, ?array, ?array, ...)` แต่ 6 จุดใน ReportController
+  ส่ง class-string ให้ arg2 (`?Model`) + int id ให้ arg3 (`?array`) → TypeError 500 ทุก endpoint
+  (createDefinition/update/delete/duplicate/generateReport/createSchedule)
+  แก้ให้ส่ง **model instance + null** ตามแบบ `exportReport` (`403a2138`) ที่ถูกอยู่แล้ว —
+  entity_id เก็บอัตโนมัติจาก `$entity->id`, ข้อความ descriptive คงอยู่ใน new_values
+- 🔴 **บั๊กซ้อนที่เพิ่งเจอ:** `report_definitions.code` = NOT NULL + unique แต่ `createDefinition`
+  ไม่เคยเซ็ต → QueryException 500 ที่ `ReportDefinition::create()` **ก่อนถึง audit call เสียอีก**
+  (audit fix อย่างเดียวไม่พอ — endpoint ยัง 500) · แก้: helper `uniqueDefinitionCode()` สร้าง code
+  ไม่ซ้ำจาก slug ชื่อ (fallback 'report' เมื่อชื่อไทย slug ว่าง) + do-while กันชน
+- เทสต์ `tests/Feature/Academy/ReportAuditLogTest.php` 3 เคส (createDefinition/generate/schedule)
+  ยืนยัน 201 + `audit_logs` เขียนด้วย entity_type/id จริง · **mutation-verified** (คืน class-string →
+  createSchedule แดง 500) · sqlite + **MySQL จริง 3/3** · pint ผ่าน · ReportExportTest ยังเขียว 3/3
+- หมายเหตุ: frontend ยังไม่ wire endpoint เหล่านี้ (เหมือน export) — แก้ backend ให้ถูกไว้ก่อน
 
 ---
 
