@@ -124,6 +124,9 @@ class CourseResource extends JsonResource
             }),
             'auth_progress' => $this->when(auth()->guard('api')->check(), function () {
                 $member = $this->courseMembers->where('user_id', auth()->guard('api')->id())->first();
+                // Reuse the course already in hand so getPercentageScore() (which reads
+                // $member->course->total_score) doesn't lazy-load courses per row.
+                $member?->setRelation('course', $this->resource);
 
                 return $member?->getPercentageScore() ?? 0;
             }),

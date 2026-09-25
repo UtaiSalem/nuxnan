@@ -19,13 +19,36 @@ class CourseResourceQueryCountTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * Enroll $viewer as a member of every course so the resource exercises the
+     * viewer-scoped paths (auth_progress → getPercentageScore, isMember, etc.).
+     * A member with no course relation set previously lazy-loaded `courses` per
+     * row inside getPercentageScore() — this makes that N+1 visible if it returns.
+     */
+    private function enrollViewerInAllCourses(User $viewer): void
+    {
+        $rows = Course::whereDoesntHave('courseMembers', fn ($q) => $q->where('user_id', $viewer->id))
+            ->pluck('id')->map(fn ($id) => [
+                'course_id' => $id,
+                'user_id' => $viewer->id,
+                'role' => 1,
+                'status' => 1,
+                'course_member_status' => 1,
+                'achieved_score' => 42,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ])->all();
+        CourseMember::insert($rows);
+    }
+
     public function test_courseresource_query_count_constant_as_courses_grow()
     {
         $viewer = User::factory()->create();
         $this->actingAs($viewer, 'api');
 
-        // Create 3 courses -> small
+        // Create 3 courses -> small (viewer enrolled in each → auth_progress runs)
         Course::factory()->count(3)->create();
+        $this->enrollViewerInAllCourses($viewer);
 
         DB::enableQueryLog();
         $coursesSmall = Course::withViewerCardData()->get();
@@ -33,8 +56,9 @@ class CourseResourceQueryCountTest extends TestCase
         $queriesSmall = count(DB::getQueryLog());
         DB::disableQueryLog();
 
-        // Create 9 more -> big (total 12)
+        // Create 9 more -> big (total 12), enroll viewer in the new ones too
         Course::factory()->count(9)->create();
+        $this->enrollViewerInAllCourses($viewer);
 
         DB::flushQueryLog();
         DB::enableQueryLog();
