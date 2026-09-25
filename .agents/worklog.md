@@ -49,11 +49,19 @@
   ที่ต้องมีแถว `course_members` → mismatch คือต้นเหตุ toast (ตรงกับ memory: school owner ไม่มี member row)
 - คอลัมน์ตอนนี้ = `last_viewed_group_id` (bigint unsigned) เก็บ **group id** ไม่ใช่ tab index
 
+### เพิ่มเติม (ทำต่อในวันเดียวกัน)
+- `612874aa` chore — worklog session นี้
+- `19aeba63` refactor — **3 หน้าเดิม (members/attendances/assignment-grading) save/resolve ผ่าน composable แล้ว**
+  ไม่เหลือ inline logic ที่ไหนเลย (ตัด localStorage helper + inline PATCH ออกหมด, −99/+55 บรรทัด)
+  - `saveLastViewedGroup` ปรับให้คืน `boolean` (false = API ของ enrolled member ล้มเหลวจริง)
+    → หน้า members คง toast + sync store + isSavingGroupTab guard ไว้ได้โดยไม่ต้องมี PATCH ของตัวเอง
+  - โบนัส: AttendancesList เดิม `return` ทิ้งถ้าไม่ใช่ member → ตอนนี้ non-member admin ได้ localStorage fallback ด้วย
+
 ### ยังไม่ได้ทำ / ต้องระวัง
-- ⚠️ commit `d8823a43` เป็น **frontend ล้วน** — ยังไม่ได้ `npm run build` (เจ้าของ handle เอง)
+- ⚠️ commit frontend (`d8823a43`, `19aeba63`) **ยังไม่ได้ `npm run build`** (เจ้าของ handle เอง)
   ต้อง rebuild แล้วตรวจ click-through ที่ `:8000` ในฐานะแอดมินคอร์ส (หน้า admin ต้อง login)
-- (optional) เปลี่ยนชื่อ "method/route path" ให้ตรง `last_viewed_group_id` ทำครบแล้ว · ส่วน 3 หน้าเดิม
-  (members/attendances/assignment-grading) ยังมี logic save แบบ inline — อยากรวมเข้า composable ทีหลังได้
+- ทุก entry point ของ "จำกลุ่มล่าสุด" (9 จุด: 6 หน้าใหม่ + 3 หน้าเดิม) รวมศูนย์ที่
+  [`ui/composables/useLastViewedGroup.ts`](../ui/composables/useLastViewedGroup.ts) ที่เดียวแล้ว — งานนี้ปิดครบ
 
 ---
 
