@@ -54,22 +54,28 @@ export function useLastViewedGroup(courseId: MaybeRefOrGetter<number | string | 
     /**
      * Persist the selected group. Always caches locally; only hits the API when
      * the admin is an enrolled member (has a course_members row).
+     *
+     * Returns true when the preference is safely stored (server save succeeded, or
+     * there was nothing to persist server-side), false only when an enrolled
+     * member's API call failed — so callers can surface an error if they want.
      */
-    const saveLastViewedGroup = async (groupId: number, courseMemberOfAuth?: any) => {
+    const saveLastViewedGroup = async (groupId: number, courseMemberOfAuth?: any): Promise<boolean> => {
         const cid = toValue(courseId)
-        if (!cid || !groupId || Number(groupId) <= 0) return
+        if (!cid || !groupId || Number(groupId) <= 0) return false
 
         writeLocal(Number(groupId))
 
         // No member row → nothing to persist server-side (endpoint would no-op).
-        if (!courseMemberOfAuth?.id) return
+        if (!courseMemberOfAuth?.id) return true
 
         try {
             await api.patch(`/api/courses/${cid}/members/update-last-viewed-group`, {
                 last_viewed_group_id: Number(groupId),
             })
+            return true
         } catch (e) {
             console.error('Failed to save last viewed group:', e)
+            return false
         }
     }
 

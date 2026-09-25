@@ -13,6 +13,7 @@ const props = defineProps<{
 const api = useApi()
 const swal = useSweetAlert()
 const { getAvatarUrl } = useAvatar()
+const { resolveLastViewedGroupId, saveLastViewedGroup } = useLastViewedGroup(() => props.courseId)
 
 // State
 const allAnswers = ref<any[]>([])
@@ -48,25 +49,15 @@ const fetchGroups = async () => {
         const res = await api.get(`/api/courses/${props.courseId}/groups`)
         groups.value = res.groups || []
         
-        // Set default selected group based on last_viewed_group_id from courseMemberOfAuth
-        if (res.courseMemberOfAuth) {
-            // Store the member ID to know this admin is an enrolled member (persist server-side)
-            courseMemberId.value = res.courseMemberOfAuth.id
+        // Store the member ID to know this admin is an enrolled member (persist server-side)
+        if (res.courseMemberOfAuth) courseMemberId.value = res.courseMemberOfAuth.id
 
-            if (res.courseMemberOfAuth.last_viewed_group_id) {
-                const lastAccessedGroupId = res.courseMemberOfAuth.last_viewed_group_id
-                // Verify this group exists in the list
-                if (groups.value.some((g: any) => g.id === lastAccessedGroupId)) {
-                    selectedGroup.value = lastAccessedGroupId
-                } else if (groups.value.length > 0) {
-                    selectedGroup.value = groups.value[0].id
-                }
-            } else if (groups.value.length > 0) {
-                selectedGroup.value = groups.value[0].id
-            }
-        } else if (groups.value.length > 0) {
-            // Default to first group if no courseMemberOfAuth
-            selectedGroup.value = groups.value[0].id
+        // Default to the last viewed group (server value or localStorage fallback), else first group
+        if (groups.value.length > 0 && !selectedGroup.value) {
+            const lastId = resolveLastViewedGroupId(res.courseMemberOfAuth)
+            selectedGroup.value = (lastId && groups.value.some((g: any) => g.id === lastId))
+                ? lastId
+                : groups.value[0].id
         }
     } catch (e) {
         console.error(e)
@@ -190,16 +181,10 @@ watch(selectedGroup, async (newGroupId, oldGroupId) => {
         fetchAllAnswers(1, true)
     }
     
-    // Save selected group to database when user clicks on a group tab.
-    // Endpoint is auth-keyed; courseMemberId gates it to admins who are enrolled members.
-    if (newGroupId && oldGroupId !== undefined && courseMemberId.value) {
-        try {
-            await api.patch(`/api/courses/${props.courseId}/members/update-last-viewed-group`, {
-                last_viewed_group_id: newGroupId
-            })
-        } catch (e) {
-            console.error('Failed to save group selection:', e)
-        }
+    // Save selected group when the user changes it (not on the initial programmatic set).
+    // Composable persists server-side for enrolled members, localStorage otherwise.
+    if (newGroupId && oldGroupId !== undefined) {
+        saveLastViewedGroup(newGroupId, courseMemberId.value ? { id: courseMemberId.value } : undefined)
     }
 })
 

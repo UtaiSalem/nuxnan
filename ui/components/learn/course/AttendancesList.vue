@@ -17,6 +17,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const api = useApi()
+const { resolveLastViewedGroupId, saveLastViewedGroup } = useLastViewedGroup(() => props.courseId)
 
 // State
 const attendances = ref<any[]>([])
@@ -132,9 +133,9 @@ const fetchAttendances = async (groupId?: number | null, silent: boolean = false
       
       // Set default selected group based on last_viewed_group_id or first group
       if (props.isCourseAdmin && groups.value.length > 0 && !selectedGroupId.value) {
-        // Try to use last viewed group from courseMemberOfAuth
-        const lastAccessedGroupId = courseMemberOfAuth.value?.last_viewed_group_id
-        
+        // Try to use last viewed group (server value or localStorage fallback)
+        const lastAccessedGroupId = resolveLastViewedGroupId(courseMemberOfAuth.value)
+
         if (lastAccessedGroupId && groups.value.some(g => g.id === lastAccessedGroupId)) {
           selectedGroupId.value = lastAccessedGroupId
         } else {
@@ -169,17 +170,10 @@ const fetchAttendances = async (groupId?: number | null, silent: boolean = false
   }
 }
 
-// Persist the group the admin last viewed
-const updateLastViewedGroup = async (groupId: number) => {
-  if (!props.isCourseAdmin || !courseMemberOfAuth.value) return
-  
-  try {
-    await api.patch(`/api/courses/${props.courseId}/members/update-last-viewed-group`, {
-      last_viewed_group_id: groupId
-    })
-  } catch (error) {
-    console.error('Error updating last access group tab:', error)
-  }
+// Persist the group the admin last viewed (via shared composable)
+const updateLastViewedGroup = (groupId: number) => {
+  if (!props.isCourseAdmin) return
+  saveLastViewedGroup(groupId, courseMemberOfAuth.value)
 }
 
 // Create attendance

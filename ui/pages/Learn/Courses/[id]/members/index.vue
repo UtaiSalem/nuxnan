@@ -12,32 +12,9 @@ const route = useRoute()
 const config = useRuntimeConfig()
 const courseGroupStore = useCourseGroupStore()
 const courseMemberStore = useCourseMemberStore()
-const authStore = useAuthStore()
 
-// localStorage fallback for the "last accessed group tab" of admins/owners who
-// are NOT enrolled as course members (no course_members row on the server, so
-// nothing to persist there). Keyed by course + user to avoid cross-account leak.
-const lastGroupStorageKey = computed(() =>
-    `course-${course?.value?.id}-last-group-tab-${authStore.user?.id ?? 'anon'}`
-)
-const readLocalLastGroup = (): number | null => {
-    if (!import.meta.client || !course?.value?.id) return null
-    try {
-        const raw = localStorage.getItem(lastGroupStorageKey.value)
-        const id = raw ? Number(raw) : NaN
-        return Number.isFinite(id) && id > 0 ? id : null
-    } catch {
-        return null
-    }
-}
-const writeLocalLastGroup = (groupId: number) => {
-    if (!import.meta.client || !course?.value?.id) return
-    try {
-        localStorage.setItem(lastGroupStorageKey.value, String(groupId))
-    } catch {
-        // ignore quota / private-mode errors — persistence is best-effort
-    }
-}
+// Shared "remember the group the admin last viewed" behaviour (server + localStorage fallback)
+const { resolveLastViewedGroupId, saveLastViewedGroup } = useLastViewedGroup(() => course?.value?.id)
 
 // State
 const searchQuery = ref('')
@@ -105,7 +82,7 @@ const getInitialGroupTab = () => {
     }
     
     // Members store the preference server-side; non-member admins fall back to localStorage.
-    const lastAccessedGroupId = courseMemberStore.member?.last_viewed_group_id ?? readLocalLastGroup()
+    const lastAccessedGroupId = resolveLastViewedGroupId(courseMemberStore.member)
     if (!lastAccessedGroupId) return 0
 
     const index = courseGroupStore.groups.findIndex(g => g.id === lastAccessedGroupId)
@@ -121,34 +98,28 @@ async function setActiveGroupTab(tabIndex: number) {
         const groupId = courseGroupStore.groups[tabIndex - 1]?.id
         if (!groupId) return
 
-        // Always cache locally — this is the only persistence for non-member admins,
-        // and a harmless cache for member admins.
-        writeLocalLastGroup(Number(groupId))
-
-        // No course_members row → nothing to persist server-side; skip the API call
-        // (the backend would no-op anyway) so we never trip the error toast.
-        if (!courseMemberStore.member?.id) return
-
         isSavingGroupTab.value = true
         try {
-            await api.patch(`/api/courses/${course.value.id}/members/update-last-viewed-group`, {
-                last_viewed_group_id: Number(groupId)
-            })
-            // Update local store
-            courseMemberStore.member.last_viewed_group_id = Number(groupId)
-        } catch (error) {
-            console.error('Error saving last accessed group tab:', error)
-            // Show error notification with SweetAlert
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'error',
-                title: 'ไม่สามารถบันทึกกลุ่มเริ่มต้นได้',
-                text: 'กรุณาลองใหม่อีกครั้ง',
-                showConfirmButton: false,
-                timer: 3000,
-                timerProgressBar: true
-            })
+            // Composable caches locally + persists server-side (no-op for non-member admins)
+            const ok = await saveLastViewedGroup(Number(groupId), courseMemberStore.member)
+            if (courseMemberStore.member?.id) {
+                if (ok) {
+                    // Keep the local store in sync for subsequent in-SPA reads
+                    courseMemberStore.member.last_viewed_group_id = Number(groupId)
+                } else {
+                    // Server save failed for an enrolled member — surface it
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'error',
+                        title: 'ไม่สามารถบันทึกกลุ่มเริ่มต้นได้',
+                        text: 'กรุณาลองใหม่อีกครั้ง',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true
+                    })
+                }
+            }
         } finally {
             isSavingGroupTab.value = false
         }
