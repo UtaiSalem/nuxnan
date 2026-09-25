@@ -270,6 +270,52 @@ class ReportController extends Controller
     /**
      * Generate and save a report
      */
+    /**
+     * Query-backed data builder for a definition. Shared by generateReport (สร้างใหม่)
+     * และ refreshReport (ดึงข้อมูลสดทับของเดิม) — จุดเดียวกันจึงไม่หลุด logic
+     * source ที่ไม่รู้จัก → คืน [] (ปลอดภัย ไม่ throw)
+     */
+    private function buildReportData(Request $request, Academy $academy, ReportDefinition $definition, array $params): mixed
+    {
+        $sourceType = is_array($definition->data_source) ? ($definition->data_source['type'] ?? '') : $definition->data_source;
+
+        switch ($sourceType) {
+            case 'school_attendances':
+                return DB::table('school_attendance_records')
+                    ->join('school_attendances', 'school_attendance_records.attendance_id', '=', 'school_attendances.id')
+                    ->select(
+                        'school_attendances.date',
+                        'school_attendances.title',
+                        DB::raw("SUM(CASE WHEN school_attendance_records.status = 'present' THEN 1 ELSE 0 END) as present_count"),
+                        DB::raw("SUM(CASE WHEN school_attendance_records.status = 'absent' THEN 1 ELSE 0 END) as absent_count"),
+                        DB::raw("SUM(CASE WHEN school_attendance_records.status = 'late' THEN 1 ELSE 0 END) as late_count"),
+                        DB::raw('COUNT(*) as total_count')
+                    )
+                    ->where('school_attendance_records.academy_id', $academy->id)
+                    ->groupBy('school_attendances.date', 'school_attendances.title')
+                    ->orderByDesc('school_attendances.date')
+                    ->get();
+
+            case 'tuition_fees':
+                // tuition_fees ผูกด้วย student_id (→ students.id) ไม่มีคอลัมน์ user_id · ยอดค้างคือ balance_amount
+                return DB::table('tuition_fees')
+                    ->join('students', 'tuition_fees.student_id', '=', 'students.id')
+                    ->join('users', 'students.user_id', '=', 'users.id')
+                    ->leftJoin('classrooms', 'tuition_fees.classroom_id', '=', 'classrooms.id')
+                    ->select('users.name as student_name', 'classrooms.name as classroom_name',
+                        'tuition_fees.total_amount', 'tuition_fees.paid_amount',
+                        'tuition_fees.balance_amount as remaining_amount', 'tuition_fees.due_date')
+                    ->where('tuition_fees.academy_id', $academy->id)
+                    ->get();
+
+            case 'at_risk_students':
+                return app(AnalyticsController::class)->getAtRiskStudents($request, $academy)->getData()->data;
+
+            default:
+                return [];
+        }
+    }
+
     public function generateReport(Request $request, Academy $academy): JsonResponse
     {
         $validated = $request->validate([
@@ -287,47 +333,9 @@ class ReportController extends Controller
             ], 404);
         }
 
-        // Simple query-backed generation logic
-        $data = [];
+        // Simple query-backed generation logic (shared with refreshReport)
         $params = $validated['parameters'] ?? [];
-        $sourceType = is_array($definition->data_source) ? ($definition->data_source['type'] ?? '') : $definition->data_source;
-
-        switch ($sourceType) {
-            case 'school_attendances':
-                $data = DB::table('school_attendance_records')
-                    ->join('school_attendances', 'school_attendance_records.attendance_id', '=', 'school_attendances.id')
-                    ->select(
-                        'school_attendances.date',
-                        'school_attendances.title',
-                        DB::raw("SUM(CASE WHEN school_attendance_records.status = 'present' THEN 1 ELSE 0 END) as present_count"),
-                        DB::raw("SUM(CASE WHEN school_attendance_records.status = 'absent' THEN 1 ELSE 0 END) as absent_count"),
-                        DB::raw("SUM(CASE WHEN school_attendance_records.status = 'late' THEN 1 ELSE 0 END) as late_count"),
-                        DB::raw('COUNT(*) as total_count')
-                    )
-                    ->where('school_attendance_records.academy_id', $academy->id)
-                    ->groupBy('school_attendances.date', 'school_attendances.title')
-                    ->orderByDesc('school_attendances.date')
-                    ->get();
-                break;
-
-            case 'tuition_fees':
-                // tuition_fees ผูกด้วย student_id (→ students.id) ไม่มีคอลัมน์ user_id · ยอดค้างคือ balance_amount
-                $data = DB::table('tuition_fees')
-                    ->join('students', 'tuition_fees.student_id', '=', 'students.id')
-                    ->join('users', 'students.user_id', '=', 'users.id')
-                    ->leftJoin('classrooms', 'tuition_fees.classroom_id', '=', 'classrooms.id')
-                    ->select('users.name as student_name', 'classrooms.name as classroom_name',
-                        'tuition_fees.total_amount', 'tuition_fees.paid_amount',
-                        'tuition_fees.balance_amount as remaining_amount', 'tuition_fees.due_date')
-                    ->where('tuition_fees.academy_id', $academy->id)
-                    ->get();
-                break;
-
-            case 'at_risk_students':
-                $atRiskResponse = app(AnalyticsController::class)->getAtRiskStudents($request, $academy);
-                $data = $atRiskResponse->getData()->data;
-                break;
-        }
+        $data = $this->buildReportData($request, $academy, $definition, $params);
 
         $savedReport = SavedReport::create([
             'academy_id' => $academy->id,
@@ -416,7 +424,7 @@ class ReportController extends Controller
     /**
      * Refresh saved report data
      */
-    public function refreshReport(Academy $academy, SavedReport $report): JsonResponse
+    public function refreshReport(Request $request, Academy $academy, SavedReport $report): JsonResponse
     {
         if ($report->academy_id !== $academy->id) {
             return response()->json([
@@ -425,8 +433,17 @@ class ReportController extends Controller
             ], 404);
         }
 
-        // TODO: Implement actual refresh logic
-        $report->updateCachedData([]);
+        $definition = $report->definition;
+        if (! $definition) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Report definition no longer exists',
+            ], 422);
+        }
+
+        // Re-run the same data builder as generate (สดทับของเดิม) แทนของเก่าที่ล้างเป็น []
+        $data = $this->buildReportData($request, $academy, $definition, $report->parameters ?? []);
+        $report->update(['cached_data' => $data, 'generated_at' => now()]);
 
         return response()->json([
             'success' => true,
