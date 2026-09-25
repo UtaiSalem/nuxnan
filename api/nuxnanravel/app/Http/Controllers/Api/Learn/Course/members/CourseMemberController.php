@@ -545,17 +545,6 @@ class CourseMemberController extends Controller
         ]);
     }
 
-    public function setActiveGroupTab(Course $course, CourseMember $member, Request $request)
-    {
-        $member->update([
-            'last_accessed_group_tab' => $request->group_tab,
-        ]);
-
-        return response()->json([
-            'success' => true,
-        ], 200);
-    }
-
     // function update
     public function update(Course $course, CourseMember $member, Request $request)
     {

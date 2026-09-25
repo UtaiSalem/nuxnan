@@ -130,10 +130,10 @@ const fetchAttendances = async (groupId?: number | null, silent: boolean = false
     if (response.groups && groups.value.length === 0) {
       groups.value = response.groups
       
-      // Set default selected group based on last_accessed_group_tab or first group
+      // Set default selected group based on last_viewed_group_id or first group
       if (props.isCourseAdmin && groups.value.length > 0 && !selectedGroupId.value) {
-        // Try to use last accessed group from courseMemberOfAuth
-        const lastAccessedGroupId = courseMemberOfAuth.value?.last_accessed_group_tab
+        // Try to use last viewed group from courseMemberOfAuth
+        const lastAccessedGroupId = courseMemberOfAuth.value?.last_viewed_group_id
         
         if (lastAccessedGroupId && groups.value.some(g => g.id === lastAccessedGroupId)) {
           selectedGroupId.value = lastAccessedGroupId
@@ -169,13 +169,13 @@ const fetchAttendances = async (groupId?: number | null, silent: boolean = false
   }
 }
 
-// Update last access group tab
-const updateLastAccessGroupTab = async (groupId: number) => {
+// Persist the group the admin last viewed
+const updateLastViewedGroup = async (groupId: number) => {
   if (!props.isCourseAdmin || !courseMemberOfAuth.value) return
   
   try {
-    await api.patch(`/api/courses/${props.courseId}/members/update-last-access-group`, {
-      last_accessed_group_tab: groupId
+    await api.patch(`/api/courses/${props.courseId}/members/update-last-viewed-group`, {
+      last_viewed_group_id: groupId
     })
   } catch (error) {
     console.error('Error updating last access group tab:', error)
@@ -600,7 +600,7 @@ watch(selectedGroupId, (newGroupId, oldGroupId) => {
   if (newGroupId && props.isCourseAdmin) {
     // Only update backend if this is a user-initiated change (not initial load)
     if (oldGroupId !== undefined && oldGroupId !== null) {
-      updateLastAccessGroupTab(newGroupId)
+      updateLastViewedGroup(newGroupId)
     }
     fetchAttendances(newGroupId)
   }

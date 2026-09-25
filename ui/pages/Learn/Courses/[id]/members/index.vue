@@ -92,7 +92,7 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateMobileDetection)
 })
 
-// Get initial group tab based on last_accessed_group_tab
+// Get initial group tab based on last_viewed_group_id
 const getInitialGroupTab = () => {
     if (!isCourseAdmin.value) {
         // For students, find their group
@@ -105,7 +105,7 @@ const getInitialGroupTab = () => {
     }
     
     // Members store the preference server-side; non-member admins fall back to localStorage.
-    const lastAccessedGroupId = courseMemberStore.member?.last_accessed_group_tab ?? readLocalLastGroup()
+    const lastAccessedGroupId = courseMemberStore.member?.last_viewed_group_id ?? readLocalLastGroup()
     if (!lastAccessedGroupId) return 0
 
     const index = courseGroupStore.groups.findIndex(g => g.id === lastAccessedGroupId)
@@ -131,11 +131,11 @@ async function setActiveGroupTab(tabIndex: number) {
 
         isSavingGroupTab.value = true
         try {
-            await api.patch(`/api/courses/${course.value.id}/members/update-last-access-group`, {
-                last_accessed_group_tab: Number(groupId)
+            await api.patch(`/api/courses/${course.value.id}/members/update-last-viewed-group`, {
+                last_viewed_group_id: Number(groupId)
             })
             // Update local store
-            courseMemberStore.member.last_accessed_group_tab = Number(groupId)
+            courseMemberStore.member.last_viewed_group_id = Number(groupId)
         } catch (error) {
             console.error('Error saving last accessed group tab:', error)
             // Show error notification with SweetAlert

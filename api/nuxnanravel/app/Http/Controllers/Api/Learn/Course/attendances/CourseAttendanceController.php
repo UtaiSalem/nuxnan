@@ -11,6 +11,7 @@ use App\Models\CourseAttendance;
 use App\Models\CourseGroup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 
 class CourseAttendanceController extends Controller
 {
@@ -233,18 +234,24 @@ class CourseAttendanceController extends Controller
     /**
      * Update last access group tab for course member
      */
-    public function updateLastAccessGroupTab(Course $course, Request $request)
+    public function updateLastViewedGroup(Course $course, Request $request)
     {
-        $request->validate([
-            'last_accessed_group_tab' => 'required|integer',
+        $validated = $request->validate([
+            // Must be a group that actually belongs to this course — never trust
+            // an arbitrary id from the client.
+            'last_viewed_group_id' => [
+                'required',
+                'integer',
+                Rule::exists('course_groups', 'id')->where('course_id', $course->id),
+            ],
         ]);
 
         $courseMember = $course->courseMembers()->where('user_id', auth()->id())->first();
 
         // Admin/owner/super-admin may view this page without being enrolled as a
         // course member (no course_members row). There is nowhere to persist the
-        // tab for them, so treat it as a successful no-op instead of a 404 — the
-        // frontend keeps the preference in localStorage for these users.
+        // preference for them, so treat it as a successful no-op instead of a 404 —
+        // the frontend keeps it in localStorage for these users.
         if (! $courseMember) {
             return response()->json([
                 'success' => true,
@@ -254,7 +261,7 @@ class CourseAttendanceController extends Controller
         }
 
         $courseMember->update([
-            'last_accessed_group_tab' => $request->last_accessed_group_tab,
+            'last_viewed_group_id' => $validated['last_viewed_group_id'],
         ]);
 
         return response()->json([

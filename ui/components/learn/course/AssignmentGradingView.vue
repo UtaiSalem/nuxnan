@@ -48,13 +48,13 @@ const fetchGroups = async () => {
         const res = await api.get(`/api/courses/${props.courseId}/groups`)
         groups.value = res.groups || []
         
-        // Set default selected group based on last_accessed_group_tab from courseMemberOfAuth
+        // Set default selected group based on last_viewed_group_id from courseMemberOfAuth
         if (res.courseMemberOfAuth) {
-            // Store the member ID for later API calls
+            // Store the member ID to know this admin is an enrolled member (persist server-side)
             courseMemberId.value = res.courseMemberOfAuth.id
-            
-            if (res.courseMemberOfAuth.last_accessed_group_tab) {
-                const lastAccessedGroupId = res.courseMemberOfAuth.last_accessed_group_tab
+
+            if (res.courseMemberOfAuth.last_viewed_group_id) {
+                const lastAccessedGroupId = res.courseMemberOfAuth.last_viewed_group_id
                 // Verify this group exists in the list
                 if (groups.value.some((g: any) => g.id === lastAccessedGroupId)) {
                     selectedGroup.value = lastAccessedGroupId
@@ -190,11 +190,12 @@ watch(selectedGroup, async (newGroupId, oldGroupId) => {
         fetchAllAnswers(1, true)
     }
     
-    // Save selected group to database when user clicks on a group tab
+    // Save selected group to database when user clicks on a group tab.
+    // Endpoint is auth-keyed; courseMemberId gates it to admins who are enrolled members.
     if (newGroupId && oldGroupId !== undefined && courseMemberId.value) {
         try {
-            await api.post(`/api/courses/${props.courseId}/members/${courseMemberId.value}/set-active-group-tab`, {
-                group_tab: newGroupId
+            await api.patch(`/api/courses/${props.courseId}/members/update-last-viewed-group`, {
+                last_viewed_group_id: newGroupId
             })
         } catch (e) {
             console.error('Failed to save group selection:', e)

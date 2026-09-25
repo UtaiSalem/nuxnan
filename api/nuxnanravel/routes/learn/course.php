@@ -306,7 +306,6 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/members')
     Route::delete('/{member}', [CourseMemberController::class, 'destroy']);
     Route::delete('/{member}/delete', [CourseMemberController::class, 'deleteCourseMember']);
     Route::post('/{member}/set-active-tab', [CourseMemberController::class, 'setActiveTab']);
-    Route::post('/{member}/set-active-group-tab', [CourseMemberController::class, 'setActiveGroupTab']);
     Route::patch('/{member}/update', [CourseMemberController::class, 'update']);
     Route::patch('/{member}/update-own-profile', [CourseMemberController::class, 'updateOwnProfile'])->name('course.member.update-own-profile');
     Route::patch('/{member}/bonus-points', [CourseMemberController::class, 'updateBonusPoints']);
@@ -367,8 +366,8 @@ Route::middleware(['auth:api', 'verified'])->group(function () {
     // Student self check-in
     Route::post('/attendances/{attendance}/check-in', [CourseAttendanceController::class, 'studentCheckIn'])->name('attendances.student.check-in');
 
-    // Update last access group tab for course member
-    Route::patch('/courses/{course}/members/update-last-access-group', [CourseAttendanceController::class, 'updateLastAccessGroupTab'])->name('courses.members.update-last-access-group');
+    // Persist the group the admin last viewed (shared across members/attendance/grading views)
+    Route::patch('/courses/{course}/members/update-last-viewed-group', [CourseAttendanceController::class, 'updateLastViewedGroup'])->name('courses.members.update-last-viewed-group');
 });
 
 Route::middleware(['auth:api', 'verified'])->group(function () {

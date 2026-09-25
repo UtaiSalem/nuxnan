@@ -9,7 +9,7 @@ export const useCourseMemberStore = defineStore('course-member', {
     getters: {
         isMember: (state) => !!state.member,
         currentGroupId: (state) => state.member?.group_id,
-        lastAccessedGroupTab: (state) => state.member?.last_accessed_group_tab
+        lastViewedGroupId: (state) => state.member?.last_viewed_group_id
     },
 
     actions: {

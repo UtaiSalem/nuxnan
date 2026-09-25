@@ -60,7 +60,7 @@ class CourseMemberResource extends JsonResource
             'course_member_status' => $this->course_member_status,
             'group_member_status' => $this->group_member_status,
             'last_accessed_tab' => $this->last_accessed_tab ?? 0,
-            'last_accessed_group_tab' => $this->last_accessed_group_tab ?? 0,
+            'last_viewed_group_id' => $this->last_viewed_group_id ?? 0,
             'last_accessed_at' => $this->last_accessed_at,
             'updated_at' => $this->updated_at,
             'created_at' => $this->created_at,
