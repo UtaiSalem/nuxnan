@@ -25,6 +25,38 @@
 
 ---
 
+## 2026-09-26 — course members: toast bug → cleanup → last_viewed_group ทั้งระบบ
+
+### สถานะ: ✅ เสร็จครบ 5 commit บน main (pushed) — จุดตั้งต้น: toast "ไม่สามารถบันทึกกลุ่มเริ่มต้นได้" ที่ /Learn/Courses/25/members
+
+- `fcfa6d64` fix — toast bug: endpoint `updateLastAccessGroupTab` คืน 404 เมื่อ user ไม่มีแถว `course_members`
+  (owner/super-admin/academy-admin ที่ไม่ได้ enroll แต่ `isCourseAdmin`=true) → เปลี่ยนเป็น **200 no-op**
+  + frontend เก็บ/อ่านกลุ่มล่าสุดจาก **localStorage** เป็น fallback สำหรับ admin ที่ไม่ใช่สมาชิก
+- `639814d3` fix(db) — คอลัมน์ `last_accessed_group_tab` เป็น `tinyInteger` (สูงสุด 127) แต่เก็บ group id จริง
+  (dev DB: max group id = 131, มี 4 กลุ่ม > 127 = landmine) → migration widen เป็น **unsignedBigInteger**
+  (`down()` clamp >127→0 กัน STRICT reject) · รันจริง + ทดสอบเก็บ 131 ได้
+- `2eb54124` refactor — **รวม 2 endpoint ที่เขียนคอลัมน์เดียวกัน**: ตัด `POST .../{member}/set-active-group-tab`
+  (ไม่มี validation/สิทธิ์) เหลือ `PATCH .../update-last-viewed-group` (auth-keyed) + เพิ่ม validation
+  `Rule::exists('course_groups','id')->where('course_id',...)` · **rename คอลัมน์ → `last_viewed_group_id`**
+  (renameColumn, คงชนิด) · อัพเดต Resource key, model cast, Pinia getter, ผู้เรียก 3 หน้า
+- `d8823a43` feat — **ขยาย "จำกลุ่มล่าสุด" ครบ 6 หน้าที่มีตัวเลือกกลุ่ม** ให้พฤติกรรมสม่ำเสมอทั้ง admin area
+  - composable กลาง [`ui/composables/useLastViewedGroup.ts`](../ui/composables/useLastViewedGroup.ts) (resolve + save + localStorage/no-op ที่เดียว)
+  - external-scores · quizzes results · ProgressList(progress) · gradebook index/completion/eligibility
+  - restore หลังโหลด group list · save เฉพาะตอนผู้ใช้เลือกกลุ่มจริง (ไม่ save ตอน "ทั้งหมด")
+
+### สาระ/กับดักที่เจอ
+- `Course::isAdmin()` (super-admin **หรือ** เจ้าของคอร์ส **หรือ** member role=4) กว้างกว่าเงื่อนไข endpoint
+  ที่ต้องมีแถว `course_members` → mismatch คือต้นเหตุ toast (ตรงกับ memory: school owner ไม่มี member row)
+- คอลัมน์ตอนนี้ = `last_viewed_group_id` (bigint unsigned) เก็บ **group id** ไม่ใช่ tab index
+
+### ยังไม่ได้ทำ / ต้องระวัง
+- ⚠️ commit `d8823a43` เป็น **frontend ล้วน** — ยังไม่ได้ `npm run build` (เจ้าของ handle เอง)
+  ต้อง rebuild แล้วตรวจ click-through ที่ `:8000` ในฐานะแอดมินคอร์ส (หน้า admin ต้อง login)
+- (optional) เปลี่ยนชื่อ "method/route path" ให้ตรง `last_viewed_group_id` ทำครบแล้ว · ส่วน 3 หน้าเดิม
+  (members/attendances/assignment-grading) ยังมี logic save แบบ inline — อยากรวมเข้า composable ทีหลังได้
+
+---
+
 ## 2026-09-24 — UserResource N+1 เบาทั้งแอป (backlog #1 + #4)
 
 ### สถานะ: ✅ เสร็จ 3 commit บน main (ยังไม่ push — รอเจ้าของโปรเจคเคาะ)
