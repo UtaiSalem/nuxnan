@@ -8,8 +8,10 @@
    admin users, course roster ×3) · Academy member ไม่แตะ (resource ใช้ user แบบย่อ) · วัดจริง 20 คน 161→3 คิวรี
    ✅ `FollowController::followers/following` N+1 (`isFollowing()` รายแถว) แก้แล้ว 2026-09-25 (`b025d890`)
 
-2. ✅ **report export + audit-log 500 — เสร็จ 2026-09-25** — export ทำงานจริง sync (`403a2138`) + audit-log
-   TypeError 6 จุด (task_5fa50dd0) แก้แล้ว (`06af70bb`) พร้อมบั๊กซ้อน createDefinition ขาด `code` (ดูบันทึกด้านล่าง)
+2. ✅ **report export — เสร็จทั้ง backend + FE export slice** — backend sync export (`403a2138`) + audit-log
+   TypeError 6 จุด (`06af70bb`) + createDefinition ขาด `code` · **FE wire แล้ว 2026-09-26 (`b4e19ab0`)**:
+   สร้าง definition (modal) + generate→export→download ใน SchoolReportsTab (ดูบันทึกล่างสุด)
+   · เหลือ (นอก slice): saved reports tab, schedules CRUD, definition edit/delete/duplicate
 
 3. ✅ **CourseResource / AcademyResource N+1 — เสร็จครบ** (เฟส 1a/1b/2a/2b + follow-up 2026-09-25 · profile ยืนยัน 2026-09-26)
    list endpoint ทุกตัวใช้ withViewerCardData()/withViewerCardRelations() · perf test 6/6 เขียวบน MySQL (48 assertions รวม PII matrix)
@@ -23,6 +25,26 @@
    · at-risk course-scoped ~14 คิวรีคงที่ — โค้ดปัจจุบัน bounded + memory-safe แล้ว (limit 3 ต่อโพสต์)
    → จะลดคิวรีต่อได้ต้อง preload latest-3/โพสต์ ทั้งหน้า ซึ่งต้องเพิ่ม package `staudenmeir/eloquent-eager-limit`
    (ทางเลือก whereIn โหลดคอมเมนต์ทั้งหมด = เสี่ยง memory บนโพสต์ยอดวิว) — **ต้องเคาะก่อนว่าจะเพิ่ม dependency ไหม**
+
+---
+
+## 2026-09-26 — #2 frontend wire report export slice
+
+### สถานะ: ✅ เสร็จ (pushed `b4e19ab0`) — export slice (ตามที่เจ้าของเคาะขอบเขต)
+- backend #2 แก้ไว้แล้ว (createDefinition/generate/export sync) แต่ FE ยังไม่ wire — รอบนี้ต่อฝั่ง FE
+- **useSchoolManagement:** เพิ่ม `createReportDefinition` (POST /reports/definitions) + `exportReport`
+  (POST /reports/saved/{report}/export → คืน `data.download_url` = public `asset('storage/...')`)
+- **SchoolReportsTab** (อยู่ใน academies/[name]/admin/school-management → SchoolManagement):
+  - ปุ่ม "สร้างรายงาน" เดิมเปิด `showReportModal` ที่**ไม่มี modal** → เพิ่ม modal จริง (mobile-first)
+    ฟอร์ม name/ประเภทข้อมูล/คำอธิบาย · เลือก data_source จาก **preset ที่ backend generate ได้จริง**
+    (school_attendances/tuition_fees/at_risk_students) → map category/columns/report_type ให้อัตโนมัติ
+  - `downloadReport()` เดิมเป็น placeholder ว่าง → generate saved report → export (excel→**xlsx**) →
+    `window.open(download_url)` ดาวน์โหลด + loading state ต่อปุ่ม + กันกดซ้ำ (`exportingKey`)
+  - แทน `prompt()`/`alert()` ด้วย `useSweetAlert` (toast/error) ทั้งหมด
+- **ยังไม่ทำ (นอกขอบเขต slice):** แท็บ saved reports (list/view/delete/favorite/refresh), schedules CRUD,
+  definition edit/delete/duplicate/toggle, generateQuickReport (ตอนนี้ขึ้น toast "ยังไม่พร้อม")
+- **verify:** backend endpoints ที่ FE เรียกเขียวบน MySQL — ReportAuditLogTest + ReportExportTest 6/6 (26 assertions)
+  · ⚠️ FE ยังไม่ได้ `npm run build` (เจ้าของ handle) — ต้อง rebuild + คลิกจริงที่ school-management ในฐานะ academy admin
 
 ---
 
