@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class ReportController extends Controller
@@ -68,13 +69,16 @@ class ReportController extends Controller
 
         $validated['academy_id'] = $academy->id;
         $validated['created_by'] = Auth::id();
+        // report_definitions.code เป็น NOT NULL + unique แต่ endpoint ไม่รับค่านี้จาก client
+        // → สร้าง code ที่ไม่ซ้ำเองจากชื่อ (fallback 'report' เมื่อ slug ว่าง เช่นชื่อภาษาไทย)
+        $validated['code'] = $this->uniqueDefinitionCode($validated['name']);
 
         $definition = ReportDefinition::create($validated);
 
         $this->auditLog->log(
             'report_definition_created',
-            ReportDefinition::class,
-            $definition->id,
+            $definition,
+            null,
             ['name' => $definition->name, 'category' => $definition->category]
         );
 
@@ -83,6 +87,21 @@ class ReportController extends Controller
             'message' => 'Report definition created successfully',
             'data' => $definition,
         ], 201);
+    }
+
+    /**
+     * สร้าง code ที่ไม่ซ้ำสำหรับ report_definitions (column globally unique)
+     */
+    private function uniqueDefinitionCode(string $name): string
+    {
+        $base = Str::slug($name);
+        $base = $base !== '' ? $base : 'report';
+
+        do {
+            $code = $base.'-'.Str::lower(Str::random(8));
+        } while (ReportDefinition::where('code', $code)->exists());
+
+        return $code;
     }
 
     /**
@@ -130,8 +149,8 @@ class ReportController extends Controller
 
         $this->auditLog->log(
             'report_definition_updated',
-            ReportDefinition::class,
-            $definition->id,
+            $definition,
+            null,
             ['changes' => array_keys($validated)]
         );
 
@@ -161,9 +180,9 @@ class ReportController extends Controller
 
         $this->auditLog->log(
             'report_definition_deleted',
-            ReportDefinition::class,
-            $definitionId,
-            ['name' => $definitionName]
+            $definition,
+            null,
+            ['id' => $definitionId, 'name' => $definitionName]
         );
 
         return response()->json([
@@ -213,8 +232,8 @@ class ReportController extends Controller
 
         $this->auditLog->log(
             'report_definition_duplicated',
-            ReportDefinition::class,
-            $newDefinition->id,
+            $newDefinition,
+            null,
             ['source_id' => $definition->id]
         );
 
@@ -323,8 +342,8 @@ class ReportController extends Controller
 
         $this->auditLog->log(
             'report_generated',
-            SavedReport::class,
-            $savedReport->id,
+            $savedReport,
+            null,
             ['definition' => $definition->name]
         );
 
@@ -480,8 +499,8 @@ class ReportController extends Controller
 
         $this->auditLog->log(
             'report_schedule_created',
-            ReportSchedule::class,
-            $schedule->id,
+            $schedule,
+            null,
             ['frequency' => $schedule->frequency, 'report' => $savedReport->name]
         );
 
