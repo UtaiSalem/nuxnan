@@ -550,6 +550,13 @@ class ReportController extends Controller
             'recipients.*' => 'email',
         ]);
 
+        // คอลัมน์จริงคือ scheduled_time (createSchedule map ให้ แต่ของเดิม update ไม่ได้ map
+        // → เขียนคอลัมน์ time_of_day ที่ไม่มีจริง = SQL error) จึง map ตรงนี้ด้วย
+        if (array_key_exists('time_of_day', $validated)) {
+            $validated['scheduled_time'] = $validated['time_of_day'];
+            unset($validated['time_of_day']);
+        }
+
         $schedule->update($validated);
         $schedule->calculateNextRun();
 
