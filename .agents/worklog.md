@@ -52,7 +52,19 @@
 - **FE saved reports tab** (SchoolReportsTab, mobile-first): list (paginator data.data) + favorite star toggle
   + view modal (cached_data เป็นตาราง) + refresh (ทับในที่) + export PDF/Excel(xlsx)/CSV + delete (confirm)
   · composable เพิ่ม getSavedReport/deleteSavedReport/toggleReportFavorite/refreshSavedReport
-- **ยังไม่ทำ (นอกขอบเขต):** schedules CRUD, definition edit/delete/duplicate/toggle, generateQuickReport (toast "ยังไม่พร้อม")
+### เพิ่มเติม: schedules CRUD + updateSchedule bug fix (`d00827f8` + `a5d7eaca`)
+- 🔴 **updateSchedule bug:** validate `time_of_day` แต่คอลัมน์จริงคือ `scheduled_time` · createSchedule map ให้
+  แต่ update ส่ง `$validated` ตรงเข้า `update()` → พยายามเขียนคอลัมน์ `time_of_day` ที่ไม่มี = SQL error/500
+  → แก้: map `time_of_day`→`scheduled_time` ใน update ด้วย · test `ReportScheduleTest`
+  (create/update-mapping/toggle/delete) **mutation-verified** (ถอด map = update แดง 500) · report tests 8/8 (43 assertions)
+- **FE schedules tab** (SchoolReportsTab, mobile-first): list (report/ความถี่/เวลา/format/ผู้รับ/รอบถัดไป)
+  + active toggle switch + create/edit modal (saved report / frequency / day_of_week|day_of_month ตาม frequency /
+  เวลา / pdf-excel-csv / recipients คั่น , หรือขึ้นบรรทัด) + delete · composable เพิ่ม 5 method report-schedule
+  (แยกชื่อจาก class getSchedules เดิม) · หมายเหตุ: schedule format = **excel** (ไม่ใช่ xlsx เหมือน export)
+- **ยังไม่ทำ (นอกขอบเขต):** definition edit/delete/duplicate/toggle, generateQuickReport (toast "ยังไม่พร้อม")
+- ⚠️ **testing DB drift (ไม่เกี่ยวงานนี้):** รัน `tests/Feature/Academy/` เต็มเจอ 24 แดง = ตาราง
+  `nuxnan_testing.member_activity_logs` ไม่มี (test:db:rebuild copy จาก dev ที่ยังไม่มีตารางนี้)
+  → report tests ของงานนี้ไม่แตะตารางนั้นจึงเขียวหมด · ควร migrate dev ให้มี member_activity_logs แล้ว rebuild ใหม่
 
 ---
 
