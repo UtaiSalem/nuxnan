@@ -301,8 +301,20 @@ export const useSchoolManagement = () => {
   const generateReport = (academyId: number, definitionId: number, params?: Record<string, any>) =>
     api.call(`/api/academies/${academyId}/reports/generate`, { method: 'POST', body: { definition_id: definitionId, ...(params || {}) } })
 
-  const getSavedReports = (academyId: number) =>
-    api.call(`/api/academies/${academyId}/reports/saved`)
+  const getSavedReports = (academyId: number, params?: Record<string, any>) =>
+    api.call(`/api/academies/${academyId}/reports/saved`, { params })
+
+  const getSavedReport = (academyId: number, reportId: number) =>
+    api.call(`/api/academies/${academyId}/reports/saved/${reportId}`)
+
+  const deleteSavedReport = (academyId: number, reportId: number) =>
+    api.call(`/api/academies/${academyId}/reports/saved/${reportId}`, { method: 'DELETE' })
+
+  const toggleReportFavorite = (academyId: number, reportId: number) =>
+    api.call(`/api/academies/${academyId}/reports/saved/${reportId}/favorite`, { method: 'POST' })
+
+  const refreshSavedReport = (academyId: number, reportId: number) =>
+    api.call(`/api/academies/${academyId}/reports/saved/${reportId}/refresh`, { method: 'POST' })
 
   // POST /reports/saved/{report}/export → { data: { download_url } } (sync)
   const exportReport = (academyId: number, reportId: number, format: string) =>
@@ -535,6 +547,10 @@ export const useSchoolManagement = () => {
     createReportDefinition,
     generateReport,
     getSavedReports,
+    getSavedReport,
+    deleteSavedReport,
+    toggleReportFavorite,
+    refreshSavedReport,
     exportReport,
     getDashboardWidgets,
     getUserDashboardLayout,

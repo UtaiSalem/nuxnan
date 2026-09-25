@@ -223,6 +223,143 @@
       </div>
     </div>
 
+    <!-- Saved Reports Section -->
+    <div v-if="activeSection === 'saved'" class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white">รายงานที่บันทึกไว้</h3>
+        <button
+          @click="loadSavedReports"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900"
+        >
+          <Icon icon="heroicons:arrow-path" class="h-5 w-5" />
+          <span class="hidden sm:inline">โหลดใหม่</span>
+        </button>
+      </div>
+
+      <div v-if="loadingSaved" class="flex justify-center py-8">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+      </div>
+
+      <div v-else-if="savedReports.length === 0" class="text-center py-12 text-gray-500">
+        <Icon icon="heroicons:document-check" class="h-12 w-12 mx-auto mb-3 text-gray-300" />
+        <p>ยังไม่มีรายงานที่บันทึกไว้</p>
+        <p class="text-sm mt-1">สร้างรายงานจากแท็บ "รายงาน" แล้วกดสร้าง เพื่อบันทึกสแนปช็อตข้อมูล</p>
+      </div>
+
+      <div v-else class="space-y-3">
+        <div
+          v-for="report in savedReports"
+          :key="report.id"
+          class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4"
+        >
+          <div class="flex items-start gap-3">
+            <button
+              @click="toggleFavorite(report)"
+              class="min-h-[44px] min-w-[44px] flex items-center justify-center flex-shrink-0 -m-2 sm:m-0 sm:min-h-0 sm:min-w-0"
+              :title="report.is_favorite ? 'เอาออกจากรายการโปรด' : 'เพิ่มในรายการโปรด'"
+            >
+              <Icon
+                :icon="report.is_favorite ? 'heroicons:star-solid' : 'heroicons:star'"
+                class="h-5 w-5"
+                :class="report.is_favorite ? 'text-amber-400' : 'text-gray-400'"
+              />
+            </button>
+            <div class="flex-1 min-w-0">
+              <h4 class="font-semibold text-gray-900 dark:text-white break-words">{{ report.name }}</h4>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                <span v-if="report.definition">{{ report.definition.name }} · </span>
+                <span>{{ report.generated_at ? new Date(report.generated_at).toLocaleString('th-TH') : '-' }}</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-2">
+            <button
+              @click="viewReport(report)"
+              class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-200"
+            >
+              <Icon icon="heroicons:eye" class="h-4 w-4" /> ดู
+            </button>
+            <button
+              @click="refreshOne(report)"
+              :disabled="refreshingId === report.id"
+              class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50"
+            >
+              <Icon icon="heroicons:arrow-path" class="h-4 w-4" :class="{ 'animate-spin': refreshingId === report.id }" /> รีเฟรช
+            </button>
+            <button
+              @click="exportSaved(report, 'pdf')"
+              :disabled="!!exportingKey"
+              class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50"
+            >
+              <Icon v-if="exportingKey === `sr:${report.id}:pdf`" icon="heroicons:arrow-path" class="h-3.5 w-3.5 animate-spin" /> PDF
+            </button>
+            <button
+              @click="exportSaved(report, 'excel')"
+              :disabled="!!exportingKey"
+              class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-green-100 text-green-700 rounded hover:bg-green-200 disabled:opacity-50"
+            >
+              <Icon v-if="exportingKey === `sr:${report.id}:excel`" icon="heroicons:arrow-path" class="h-3.5 w-3.5 animate-spin" /> Excel
+            </button>
+            <button
+              @click="exportSaved(report, 'csv')"
+              :disabled="!!exportingKey"
+              class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 disabled:opacity-50"
+            >
+              <Icon v-if="exportingKey === `sr:${report.id}:csv`" icon="heroicons:arrow-path" class="h-3.5 w-3.5 animate-spin" /> CSV
+            </button>
+            <button
+              @click="deleteReport(report)"
+              class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-red-50 text-red-600 rounded hover:bg-red-100 sm:ml-auto"
+            >
+              <Icon icon="heroicons:trash" class="h-4 w-4" /> ลบ
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- View Saved Report Modal -->
+    <div
+      v-if="viewingReport"
+      class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4"
+      @click.self="viewingReport = null"
+    >
+      <div class="w-full sm:max-w-3xl bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-xl max-h-[90vh] flex flex-col">
+        <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white min-w-0 break-words">{{ viewingReport.name }}</h3>
+          <button @click="viewingReport = null" class="min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-400 hover:text-gray-600 flex-shrink-0">
+            <Icon icon="heroicons:x-mark" class="h-6 w-6" />
+          </button>
+        </div>
+
+        <div class="p-4 overflow-auto">
+          <div v-if="loadingView" class="flex justify-center py-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+          </div>
+          <div v-else-if="viewRows.length === 0" class="text-center py-10 text-gray-500">
+            <Icon icon="heroicons:inbox" class="h-10 w-10 mx-auto mb-2 text-gray-300" />
+            <p>ไม่มีข้อมูลในรายงานนี้</p>
+            <p class="text-sm mt-1">ลองกด "รีเฟรช" เพื่อดึงข้อมูลล่าสุด</p>
+          </div>
+          <div v-else class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead>
+                <tr class="border-b border-gray-200 dark:border-gray-700">
+                  <th v-for="col in viewColumns" :key="col" class="text-left font-medium text-gray-600 dark:text-gray-300 px-3 py-2 whitespace-nowrap">{{ col }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(row, i) in viewRows" :key="i" class="border-b border-gray-100 dark:border-gray-700/50">
+                  <td v-for="col in viewColumns" :key="col" class="px-3 py-2 text-gray-800 dark:text-gray-200 whitespace-nowrap">{{ cellValue(row, col) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Create Report Definition Modal -->
     <div
       v-if="showReportModal"
@@ -475,6 +612,7 @@ const activeSection = ref('dashboard')
 const sections = [
   { id: 'dashboard', name: 'แดชบอร์ด' },
   { id: 'reports', name: 'รายงาน' },
+  { id: 'saved', name: 'รายงานที่บันทึก' },
   { id: 'analytics', name: 'วิเคราะห์' },
   { id: 'kpis', name: 'KPIs' },
 ]
@@ -528,8 +666,15 @@ const openReportModal = () => {
   showReportModal.value = true
 }
 
-// Per-card export progress: `${reportId}:${format}`
+// Per-card export progress: `${reportId}:${format}` (definitions) / `sr:${id}:${format}` (saved)
 const exportingKey = ref<string | null>(null)
+
+// Saved reports
+const savedReports = ref<any[]>([])
+const loadingSaved = ref(false)
+const refreshingId = ref<number | null>(null)
+const viewingReport = ref<any>(null) // saved report currently open in the view modal
+const loadingView = ref(false)
 const quickReports = [
   { id: 'attendance', name: 'รายงานเข้าเรียน', icon: 'heroicons:calendar' },
   { id: 'grades', name: 'รายงานผลการเรียน', icon: 'heroicons:academic-cap' },
@@ -781,9 +926,119 @@ const generateQuickReport = (_type: string) => {
   swal.toast('ฟีเจอร์รายงานด่วนยังไม่พร้อมใช้งาน', 'info')
 }
 
+// ── Saved Reports ────────────────────────────────────────────────
+const loadSavedReports = async () => {
+  loadingSaved.value = true
+  try {
+    const response: any = await schoolApi.getSavedReports(props.academyId)
+    // listSavedReports → { data: paginator{ data: [...] } }
+    savedReports.value = response?.data?.data ?? (Array.isArray(response?.data) ? response.data : [])
+  } catch (error) {
+    console.error('Failed to load saved reports:', error)
+    savedReports.value = []
+  } finally {
+    loadingSaved.value = false
+  }
+}
+
+const viewReport = async (report: any) => {
+  loadingView.value = true
+  viewingReport.value = report // show immediately with what we have
+  try {
+    const res: any = await schoolApi.getSavedReport(props.academyId, report.id)
+    if (res?.success && res.data) viewingReport.value = res.data
+  } catch (error) {
+    console.error('Failed to load report:', error)
+  } finally {
+    loadingView.value = false
+  }
+}
+
+// Table view of a saved report's cached_data
+const viewColumns = computed<string[]>(() => {
+  const rows = viewingReport.value?.cached_data
+  const first = Array.isArray(rows) ? rows[0] : null
+  return first ? Object.keys(first) : []
+})
+const viewRows = computed<any[]>(() => {
+  const rows = viewingReport.value?.cached_data
+  return Array.isArray(rows) ? rows : []
+})
+const cellValue = (row: any, col: string) => {
+  const v = (row && typeof row === 'object') ? row[col] : row
+  return v === null || v === undefined ? '-' : v
+}
+
+const deleteReport = async (report: any) => {
+  const confirmed = await swal.confirmDelete(`รายงาน "${report.name}"`)
+  if (!confirmed) return
+  try {
+    const res: any = await schoolApi.deleteSavedReport(props.academyId, report.id)
+    if (res?.success) {
+      savedReports.value = savedReports.value.filter(r => r.id !== report.id)
+      swal.toast('ลบรายงานแล้ว')
+    }
+  } catch (error: any) {
+    console.error('Failed to delete report:', error)
+    swal.error(error?.data?.message || 'ลบรายงานไม่สำเร็จ')
+  }
+}
+
+const toggleFavorite = async (report: any) => {
+  try {
+    const res: any = await schoolApi.toggleReportFavorite(props.academyId, report.id)
+    if (res?.success) report.is_favorite = res.data?.is_favorite ?? !report.is_favorite
+  } catch (error) {
+    console.error('Failed to toggle favorite:', error)
+    swal.error('ไม่สามารถอัปเดตรายการโปรดได้')
+  }
+}
+
+const refreshOne = async (report: any) => {
+  if (refreshingId.value) return
+  refreshingId.value = report.id
+  try {
+    const res: any = await schoolApi.refreshSavedReport(props.academyId, report.id)
+    if (res?.success && res.data) {
+      Object.assign(report, res.data) // updates generated_at + cached_data in place
+      if (viewingReport.value?.id === report.id) viewingReport.value = res.data
+      swal.toast('รีเฟรชข้อมูลแล้ว')
+    }
+  } catch (error: any) {
+    console.error('Failed to refresh report:', error)
+    swal.error(error?.data?.message || 'รีเฟรชไม่สำเร็จ')
+  } finally {
+    refreshingId.value = null
+  }
+}
+
+// Export an already-saved report (no generate step needed)
+const exportSaved = async (report: any, format: string) => {
+  const apiFormat = format === 'excel' ? 'xlsx' : format
+  const key = `sr:${report.id}:${format}`
+  if (exportingKey.value) return
+  exportingKey.value = key
+  try {
+    const res: any = await schoolApi.exportReport(props.academyId, report.id, apiFormat)
+    const url = res?.data?.download_url
+    if (res?.success && url) {
+      window.open(url, '_blank')
+      swal.toast('ส่งออกไฟล์เรียบร้อยแล้ว')
+    } else {
+      swal.error('ส่งออกไฟล์ไม่สำเร็จ')
+    }
+  } catch (error: any) {
+    console.error('Failed to export saved report:', error)
+    swal.error(error?.data?.message || 'ส่งออกไฟล์ไม่สำเร็จ')
+  } finally {
+    exportingKey.value = null
+  }
+}
+
 // Watch
 watch(activeSection, (section) => {
   if (section === 'reports' && reports.value.length === 0) loadReports()
+  if (section === 'saved' && savedReports.value.length === 0) loadSavedReports()
   if (section === 'kpis' && kpiDefinitions.value.length === 0) loadKpis()
 }, { immediate: true })
 
