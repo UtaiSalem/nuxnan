@@ -41,10 +41,18 @@
   - `downloadReport()` เดิมเป็น placeholder ว่าง → generate saved report → export (excel→**xlsx**) →
     `window.open(download_url)` ดาวน์โหลด + loading state ต่อปุ่ม + กันกดซ้ำ (`exportingKey`)
   - แทน `prompt()`/`alert()` ด้วย `useSweetAlert` (toast/error) ทั้งหมด
-- **ยังไม่ทำ (นอกขอบเขต slice):** แท็บ saved reports (list/view/delete/favorite/refresh), schedules CRUD,
-  definition edit/delete/duplicate/toggle, generateQuickReport (ตอนนี้ขึ้น toast "ยังไม่พร้อม")
 - **verify:** backend endpoints ที่ FE เรียกเขียวบน MySQL — ReportAuditLogTest + ReportExportTest 6/6 (26 assertions)
   · ⚠️ FE ยังไม่ได้ `npm run build` (เจ้าของ handle) — ต้อง rebuild + คลิกจริงที่ school-management ในฐานะ academy admin
+
+### เพิ่มเติม: saved reports tab + refresh fix (`dd6573bc` + `b2f4b7c1`)
+- 🔴 **refreshReport เดิมเป็น TODO stub ที่ `updateCachedData([])`** = ล้างข้อมูลรายงานทิ้งทุกครั้งที่รีเฟรช
+  → แก้: แยก `buildReportData()` ใช้ร่วม generate+refresh · refresh re-run ด้วย definition+parameters เดิม
+  เขียนทับ cached_data (guard definition ถูกลบ → 422) · test `ReportRefreshTest` seed school_attendances จริง
+  พิสูจน์ refresh ดึงข้อมูลกลับ (present2/absent1) · **mutation-verified** · report tests 7/7 (31 assertions)
+- **FE saved reports tab** (SchoolReportsTab, mobile-first): list (paginator data.data) + favorite star toggle
+  + view modal (cached_data เป็นตาราง) + refresh (ทับในที่) + export PDF/Excel(xlsx)/CSV + delete (confirm)
+  · composable เพิ่ม getSavedReport/deleteSavedReport/toggleReportFavorite/refreshSavedReport
+- **ยังไม่ทำ (นอกขอบเขต):** schedules CRUD, definition edit/delete/duplicate/toggle, generateQuickReport (toast "ยังไม่พร้อม")
 
 ---
 
