@@ -15,6 +15,14 @@ const props = withDefaults(defineProps<Props>(), {
 
 const api = useApi()
 const swal = useSweetAlert()
+const courseMemberOfAuth = inject<Ref<any>>('courseMemberOfAuth')
+const { resolveLastViewedGroupId, saveLastViewedGroup } = useLastViewedGroup(() => props.courseId)
+
+// Select a group tab and remember it (shared across course admin views)
+const selectGroupTab = (groupId: number) => {
+  activeTab.value = groupId
+  if (props.isCourseAdmin) saveLastViewedGroup(groupId, courseMemberOfAuth?.value)
+}
 
 // State
 const members = ref<any[]>([])
@@ -515,8 +523,15 @@ const updateTopScrollbarWidth = () => {
 }
 
 // Init
-onMounted(() => {
-  fetchProgress()
+onMounted(async () => {
+  await fetchProgress()
+  // Restore the last viewed group (triggers a filtered refetch via the activeTab watcher)
+  if (props.isCourseAdmin && activeTab.value === 'all') {
+    const lastId = resolveLastViewedGroupId(courseMemberOfAuth?.value)
+    if (lastId && groups.value.some(g => g.id === lastId)) {
+      activeTab.value = lastId
+    }
+  }
   fetchTopPerformers()
   nextTick(() => {
     updateTopScrollbarWidth()
@@ -692,7 +707,7 @@ watch(members, () => {
              </li>
              <!-- Groups -->
              <li v-for="group in groups" :key="group.id" class="mr-1">
-                <button class="min-h-[44px] sm:min-h-0" @click="activeTab = group.id" :class="['px-4 py-2 text-sm font-medium rounded-t-lg', activeTab === group.id ? 'bg-white dark:bg-gray-900 text-blue-600 border-t border-l border-r border-gray-200 dark:border-gray-700' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400']">
+                <button class="min-h-[44px] sm:min-h-0" @click="selectGroupTab(group.id)" :class="['px-4 py-2 text-sm font-medium rounded-t-lg', activeTab === group.id ? 'bg-white dark:bg-gray-900 text-blue-600 border-t border-l border-r border-gray-200 dark:border-gray-700' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400']">
                     {{ group.name }}
                 </button>
              </li>

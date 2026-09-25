@@ -13,6 +13,14 @@ const courseId = computed(() => route.params.id as string)
 
 const course = inject('course') as Ref<any>
 const isCourseAdmin = inject('isCourseAdmin') as Ref<boolean>
+const courseMemberOfAuth = inject<Ref<any>>('courseMemberOfAuth')
+const { resolveLastViewedGroupId, saveLastViewedGroup } = useLastViewedGroup(courseId)
+
+// Select a group tab and remember it (shared across course admin views)
+const selectGroupTab = (groupId: number) => {
+  activeGroup.value = groupId
+  if (isCourseAdmin?.value) saveLastViewedGroup(groupId, courseMemberOfAuth?.value)
+}
 
 // Filters / sort / pagination state
 const members = ref<any[]>([])
@@ -105,8 +113,16 @@ const formatDate = (d?: string | null) => {
   return new Date(d).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
-onMounted(() => {
-  if (courseId.value) fetchData()
+onMounted(async () => {
+  if (!courseId.value) return
+  await fetchData()
+  // Restore the last viewed group (triggers a filtered refetch via the watcher)
+  if (isCourseAdmin?.value && activeGroup.value === 'all') {
+    const lastId = resolveLastViewedGroupId(courseMemberOfAuth?.value)
+    if (lastId && groups.value.some(g => g.id === lastId)) {
+      activeGroup.value = lastId
+    }
+  }
 })
 </script>
 
@@ -172,7 +188,7 @@ onMounted(() => {
       <button class="min-h-[44px] sm:min-h-0"
         v-for="g in groups"
         :key="g.id"
-        @click="activeGroup = g.id"
+        @click="selectGroupTab(g.id)"
         :class="['px-3 py-1.5 text-sm rounded-lg border', activeGroup === g.id ? 'bg-primary-500 text-white border-primary-500' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700']"
       >
         {{ g.name }}

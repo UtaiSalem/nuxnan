@@ -12,6 +12,15 @@ const courseId = computed(() => route.params.id as string)
 // Inject from parent layout
 const course = inject('course') as Ref<any>
 const isCourseAdmin = inject('isCourseAdmin') as Ref<boolean>
+const courseMemberOfAuth = inject<Ref<any>>('courseMemberOfAuth')
+const { resolveLastViewedGroupId, saveLastViewedGroup } = useLastViewedGroup(courseId)
+
+// Remember the group the admin last viewed (fires only on user selection)
+const onGroupFilterChange = () => {
+  if (isCourseAdmin?.value && groupFilter.value !== 'all') {
+    saveLastViewedGroup(Number(groupFilter.value), courseMemberOfAuth?.value)
+  }
+}
 
 // State
 const eligibilitySummary = ref<any>(null)
@@ -76,9 +85,15 @@ watch([searchQuery, statusFilter, groupFilter], () => {
   currentPage.value = 1
 })
 
-onMounted(() => {
-  if (courseId.value) {
-    fetchEligibility()
+onMounted(async () => {
+  if (!courseId.value) return
+  await fetchEligibility()
+  // Restore the last viewed group (client-side filter only)
+  if (isCourseAdmin?.value && groupFilter.value === 'all') {
+    const lastId = resolveLastViewedGroupId(courseMemberOfAuth?.value)
+    if (lastId && groupOptions.value.some((g: any) => g.id === lastId)) {
+      groupFilter.value = String(lastId)
+    }
   }
 })
 
@@ -434,6 +449,7 @@ const unlockMember = async () => {
                 <Icon icon="heroicons:user-group" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
                 <select
                   v-model="groupFilter"
+                  @change="onGroupFilterChange"
                   class="w-full pl-10 pr-8 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value="all">ทุกกลุ่ม</option>

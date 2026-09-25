@@ -42,9 +42,11 @@ interface Group {
 
 const course = inject<Ref<any>>('course')
 const isCourseAdmin = inject<Ref<boolean>>('isCourseAdmin')
+const courseMemberOfAuth = inject<Ref<any>>('courseMemberOfAuth')
 
 const api = useApi()
 const swal = useSweetAlert()
+const { resolveLastViewedGroupId, saveLastViewedGroup } = useLastViewedGroup(() => course?.value?.id)
 
 // State
 const columns = ref<ScoreColumn[]>([])
@@ -159,6 +161,17 @@ const selectGroup = (groupId: number) => {
     fetchTableData()
   } else {
     selectedGroupId.value = groupId
+    // Remember the group the admin last viewed (shared across course admin views)
+    if (isCourseAdmin?.value) saveLastViewedGroup(groupId, courseMemberOfAuth?.value)
+  }
+}
+
+// Restore the last viewed group once the group list is available
+const restoreLastViewedGroup = () => {
+  if (!isCourseAdmin?.value || selectedGroupId.value) return
+  const lastId = resolveLastViewedGroupId(courseMemberOfAuth?.value)
+  if (lastId && groups.value.some(g => g.id === lastId)) {
+    selectedGroupId.value = lastId // triggers the watch → fetches filtered data
   }
 }
 
@@ -457,8 +470,9 @@ const onClickOutside = (event: MouseEvent) => {
   }
 }
 
-onMounted(() => {
-  fetchTableData()
+onMounted(async () => {
+  await fetchTableData()
+  restoreLastViewedGroup()
   document.addEventListener('click', onClickOutside)
   nextTick(() => updateTableFades())
   tableContainer.value?.addEventListener('scroll', updateTableFades, { passive: true })

@@ -11,6 +11,23 @@ const api = useApi()
 const swal = useSweetAlert()
 
 const isCourseAdmin = inject<Ref<boolean>>('isCourseAdmin')
+const courseMemberOfAuth = inject<Ref<any>>('courseMemberOfAuth')
+const { resolveLastViewedGroupId, saveLastViewedGroup } = useLastViewedGroup(courseId)
+
+// Group filter selection — remember the group the admin last viewed
+const onSelectGroup = (groupId: number) => {
+  selectedGroupId.value = groupId
+  if (isCourseAdmin?.value) saveLastViewedGroup(groupId, courseMemberOfAuth?.value)
+}
+
+// Restore the last viewed group once the quiz + group list are available (client only)
+onMounted(() => {
+  if (!isCourseAdmin?.value || selectedGroupId.value) return
+  const lastId = resolveLastViewedGroupId(courseMemberOfAuth?.value)
+  if (lastId && groups.value.some((g: any) => g.id === lastId)) {
+    selectedGroupId.value = lastId
+  }
+})
 
 // Duplicate Modal State
 const showDuplicateModal = ref(false)
@@ -429,7 +446,7 @@ const getStatusBadge = computed(() => {
                 <button class="min-h-[44px] sm:min-h-0"
                   v-for="group in groups"
                   :key="group.id"
-                  @click="selectedGroupId = group.id"
+                  @click="onSelectGroup(group.id)"
                   :class="[
                     'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border',
                     selectedGroupId === group.id

@@ -11,6 +11,14 @@ const courseId = computed(() => route.params.id as string)
 // Inject from parent layout
 const course = inject('course') as Ref<any>
 const isCourseAdmin = inject('isCourseAdmin') as Ref<boolean>
+const courseMemberOfAuth = inject<Ref<any>>('courseMemberOfAuth')
+const { resolveLastViewedGroupId, saveLastViewedGroup } = useLastViewedGroup(courseId)
+
+// Select a group tab and remember it (shared across course admin views)
+const selectGroupTab = (groupId: number) => {
+  activeGroup.value = groupId
+  if (isCourseAdmin?.value) saveLastViewedGroup(groupId, courseMemberOfAuth?.value)
+}
 
 // State
 const summary = ref<any>(null)
@@ -40,6 +48,13 @@ const editGradeForm = ref({
 
 onMounted(async () => {
   await fetchData()
+  // Restore the last viewed group (client-side filter only)
+  if (isCourseAdmin?.value && activeGroup.value === 'all') {
+    const lastId = resolveLastViewedGroupId(courseMemberOfAuth?.value)
+    if (lastId && groups.value.some((g: any) => g.id === lastId)) {
+      activeGroup.value = lastId
+    }
+  }
   isLoading.value = false
 })
 
@@ -499,7 +514,7 @@ const gradeOptions = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F']
             <button class="min-h-[44px] sm:min-h-0"
               v-for="g in groups"
               :key="g.id"
-              @click="activeGroup = g.id"
+              @click="selectGroupTab(g.id)"
               :class="['px-3 py-1.5 text-sm rounded-lg border', activeGroup === g.id ? 'bg-primary-500 text-white border-primary-500' : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200']"
             >
               {{ g.name }} ({{ groupCount(g.id) }})
