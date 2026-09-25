@@ -149,7 +149,7 @@
       <div class="flex justify-between items-center">
         <h3 class="text-lg font-medium text-gray-900 dark:text-white">รายงาน</h3>
         <button
-          @click="showReportModal = true"
+          @click="openReportModal"
           class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
         >
           <Icon icon="heroicons:plus" class="h-5 w-5" />
@@ -180,16 +180,20 @@
           <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <span class="text-xs text-gray-500">{{ getReportTypeLabel(report.report_type) }}</span>
             <div class="flex items-center gap-2">
-              <button 
+              <button
                 @click.stop="downloadReport(report, 'pdf')"
-                class="min-h-[44px] sm:min-h-0 text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
+                :disabled="!!exportingKey"
+                class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1 text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
+                <Icon v-if="exportingKey === `${report.id}:pdf`" icon="heroicons:arrow-path" class="h-3.5 w-3.5 animate-spin" />
                 PDF
               </button>
-              <button 
+              <button
                 @click.stop="downloadReport(report, 'excel')"
-                class="min-h-[44px] sm:min-h-0 text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200"
+                :disabled="!!exportingKey"
+                class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1 text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
+                <Icon v-if="exportingKey === `${report.id}:excel`" icon="heroicons:arrow-path" class="h-3.5 w-3.5 animate-spin" />
                 Excel
               </button>
             </div>
@@ -214,6 +218,71 @@
           >
             <component :is="quick.icon" class="h-8 w-8 text-primary-500 mb-2" />
             <p class="font-medium text-gray-900 dark:text-white text-sm">{{ quick.name }}</p>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Report Definition Modal -->
+    <div
+      v-if="showReportModal"
+      class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4"
+      @click.self="showReportModal = false"
+    >
+      <div class="w-full sm:max-w-lg bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">สร้างรายงานใหม่</h3>
+          <button @click="showReportModal = false" class="min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-400 hover:text-gray-600">
+            <Icon icon="heroicons:x-mark" class="h-6 w-6" />
+          </button>
+        </div>
+
+        <div class="p-4 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ชื่อรายงาน <span class="text-red-500">*</span></label>
+            <input
+              v-model="reportForm.name"
+              type="text"
+              placeholder="เช่น สรุปการเข้าเรียนรายเดือน"
+              class="w-full min-h-[44px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ประเภทข้อมูล <span class="text-red-500">*</span></label>
+            <select
+              v-model="reportForm.source"
+              class="w-full min-h-[44px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            >
+              <option v-for="s in REPORT_SOURCES" :key="s.key" :value="s.key">{{ s.label }}</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">คำอธิบาย</label>
+            <textarea
+              v-model="reportForm.description"
+              rows="3"
+              placeholder="รายละเอียดของรายงาน (ไม่บังคับ)"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent break-words"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
+          <button
+            @click="showReportModal = false"
+            class="min-h-[44px] px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            ยกเลิก
+          </button>
+          <button
+            @click="createReport"
+            :disabled="creatingReport"
+            class="min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary-500 text-white hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Icon v-if="creatingReport" icon="heroicons:arrow-path" class="h-5 w-5 animate-spin" />
+            สร้างรายงาน
           </button>
         </div>
       </div>
@@ -399,6 +468,7 @@ const props = defineProps<{
 }>()
 
 const schoolApi = useSchoolManagement()
+const swal = useSweetAlert()
 
 // State
 const activeSection = ref('dashboard')
@@ -422,6 +492,44 @@ const kpiData = ref([
 const reports = ref<any[]>([])
 const loadingReports = ref(false)
 const showReportModal = ref(false)
+
+// Data sources that the backend generateReport() can actually populate.
+// Each preset carries the fields createDefinition requires so the created
+// definition generates real data + exports cleanly.
+const REPORT_SOURCES = [
+  {
+    key: 'school_attendances',
+    label: 'รายงานการเข้าเรียน',
+    category: 'attendance',
+    columns: ['date', 'title', 'present_count', 'absent_count', 'late_count', 'total_count'],
+  },
+  {
+    key: 'tuition_fees',
+    label: 'รายงานค่าเทอม/การเงิน',
+    category: 'financial',
+    columns: ['student_name', 'classroom_name', 'total_amount', 'paid_amount', 'remaining_amount', 'due_date'],
+  },
+  {
+    key: 'at_risk_students',
+    label: 'รายงานนักเรียนกลุ่มเสี่ยง',
+    category: 'academic',
+    columns: ['name', 'risk_level', 'reason'],
+  },
+]
+
+// Create-definition form
+const creatingReport = ref(false)
+const reportForm = ref({ name: '', description: '', source: REPORT_SOURCES[0].key })
+const resetReportForm = () => {
+  reportForm.value = { name: '', description: '', source: REPORT_SOURCES[0].key }
+}
+const openReportModal = () => {
+  resetReportForm()
+  showReportModal.value = true
+}
+
+// Per-card export progress: `${reportId}:${format}`
+const exportingKey = ref<string | null>(null)
 const quickReports = [
   { id: 'attendance', name: 'รายงานเข้าเรียน', icon: 'heroicons:calendar' },
   { id: 'grades', name: 'รายงานผลการเรียน', icon: 'heroicons:academic-cap' },
@@ -583,30 +691,94 @@ const loadKpis = async () => {
 }
 
 // Actions
-const generateReport = async (report: any) => {
-  const reportName = prompt('ระบุชื่อรายงานที่ต้องการสร้าง:', report.name)
-  if (!reportName) return
-  
+// Create a new report definition from the chosen preset source
+const createReport = async () => {
+  const name = reportForm.value.name.trim()
+  if (!name) {
+    swal.error('กรุณากรอกชื่อรายงาน')
+    return
+  }
+  const preset = REPORT_SOURCES.find(s => s.key === reportForm.value.source) || REPORT_SOURCES[0]
+
+  creatingReport.value = true
   try {
-    const response: any = await schoolApi.generateReport(props.academyId, report.id, {
-      name: reportName,
-      parameters: {} // Default params
+    const response: any = await schoolApi.createReportDefinition(props.academyId, {
+      name,
+      description: reportForm.value.description.trim() || null,
+      category: preset.category,
+      report_type: 'table',
+      data_source: preset.key,
+      columns: preset.columns,
+      filters: [],
+      default_params: {},
     })
-    
     if (response.success) {
-      alert('สร้างรายงานเรียบร้อยแล้ว คุณสามารถดูได้ที่แท็บ "รายงานที่บันทึกไว้"')
+      showReportModal.value = false
+      resetReportForm()
+      await loadReports()
+      swal.toast('สร้างรายงานเรียบร้อยแล้ว')
     }
-  } catch (error) {
-    console.error('Failed to generate report:', error)
+  } catch (error: any) {
+    console.error('Failed to create report definition:', error)
+    swal.error(error?.data?.message || 'ไม่สามารถสร้างรายงานได้')
+  } finally {
+    creatingReport.value = false
   }
 }
 
-const downloadReport = (_report: any, _format: string) => {
-  // placeholder
+// Generate a saved report from a definition; returns the saved report id (or null)
+const generateSavedReport = async (definition: any): Promise<number | null> => {
+  const stamp = new Date().toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })
+  const response: any = await schoolApi.generateReport(props.academyId, definition.id, {
+    name: `${definition.name} — ${stamp}`,
+    parameters: {},
+  })
+  return response?.success ? (response.data?.id ?? response.data?.report?.id ?? null) : null
+}
+
+const generateReport = async (report: any) => {
+  try {
+    const id = await generateSavedReport(report)
+    if (id) swal.toast('สร้างรายงานเรียบร้อยแล้ว')
+    else swal.error('ไม่สามารถสร้างรายงานได้')
+  } catch (error) {
+    console.error('Failed to generate report:', error)
+    swal.error('ไม่สามารถสร้างรายงานได้')
+  }
+}
+
+// Generate → export → download in one click from a definition card
+const downloadReport = async (report: any, format: string) => {
+  const apiFormat = format === 'excel' ? 'xlsx' : format
+  const key = `${report.id}:${format}`
+  if (exportingKey.value) return
+  exportingKey.value = key
+  try {
+    const reportId = await generateSavedReport(report)
+    if (!reportId) {
+      swal.error('ไม่สามารถสร้างรายงานได้')
+      return
+    }
+    const res: any = await schoolApi.exportReport(props.academyId, reportId, apiFormat)
+    const url = res?.data?.download_url
+    if (res?.success && url) {
+      // public storage url → open to download
+      window.open(url, '_blank')
+      swal.toast('ส่งออกไฟล์เรียบร้อยแล้ว')
+    } else {
+      swal.error('ส่งออกไฟล์ไม่สำเร็จ')
+    }
+  } catch (error: any) {
+    console.error('Failed to export report:', error)
+    swal.error(error?.data?.message || 'ส่งออกไฟล์ไม่สำเร็จ')
+  } finally {
+    exportingKey.value = null
+  }
 }
 
 const generateQuickReport = (_type: string) => {
-  // placeholder
+  // ยังไม่รองรับใน export slice นี้
+  swal.toast('ฟีเจอร์รายงานด่วนยังไม่พร้อมใช้งาน', 'info')
 }
 
 // Watch

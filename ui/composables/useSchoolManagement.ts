@@ -292,14 +292,21 @@ export const useSchoolManagement = () => {
   const getReports = (academyId: number, params?: Record<string, any>) => 
     api.call(`/api/academies/${academyId}/reports/definitions`, { params })
 
-  const getReportDefinitions = (academyId: number) => 
+  const getReportDefinitions = (academyId: number) =>
     api.call(`/api/academies/${academyId}/reports/definitions`)
 
-  const generateReport = (academyId: number, definitionId: number, params?: Record<string, any>) => 
+  const createReportDefinition = (academyId: number, data: Record<string, any>) =>
+    api.call(`/api/academies/${academyId}/reports/definitions`, { method: 'POST', body: data })
+
+  const generateReport = (academyId: number, definitionId: number, params?: Record<string, any>) =>
     api.call(`/api/academies/${academyId}/reports/generate`, { method: 'POST', body: { definition_id: definitionId, ...(params || {}) } })
 
-  const getSavedReports = (academyId: number) => 
+  const getSavedReports = (academyId: number) =>
     api.call(`/api/academies/${academyId}/reports/saved`)
+
+  // POST /reports/saved/{report}/export → { data: { download_url } } (sync)
+  const exportReport = (academyId: number, reportId: number, format: string) =>
+    api.call(`/api/academies/${academyId}/reports/saved/${reportId}/export`, { method: 'POST', body: { format } })
 
   // Dashboard Widgets
   const getDashboardWidgets = (academyId: number) => 
@@ -525,8 +532,10 @@ export const useSchoolManagement = () => {
     // Reports & Analytics
     getReports,
     getReportDefinitions,
+    createReportDefinition,
     generateReport,
     getSavedReports,
+    exportReport,
     getDashboardWidgets,
     getUserDashboardLayout,
     updateUserDashboardLayout,
