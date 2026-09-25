@@ -360,6 +360,156 @@
       </div>
     </div>
 
+    <!-- Schedules Section -->
+    <div v-if="activeSection === 'schedules'" class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white">ตั้งเวลาส่งรายงาน</h3>
+        <button
+          @click="openCreateSchedule"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+        >
+          <Icon icon="heroicons:plus" class="h-5 w-5" />
+          <span class="hidden sm:inline">ตั้งเวลาใหม่</span>
+        </button>
+      </div>
+
+      <div v-if="loadingSchedules" class="flex justify-center py-8">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+      </div>
+
+      <div v-else-if="schedules.length === 0" class="text-center py-12 text-gray-500">
+        <Icon icon="heroicons:clock" class="h-12 w-12 mx-auto mb-3 text-gray-300" />
+        <p>ยังไม่มีการตั้งเวลา</p>
+        <p class="text-sm mt-1">ตั้งเวลาเพื่อส่งออกรายงานที่บันทึกไว้ให้อีเมลผู้รับอัตโนมัติ</p>
+      </div>
+
+      <div v-else class="space-y-3">
+        <div
+          v-for="s in schedules"
+          :key="s.id"
+          class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4"
+        >
+          <div class="flex items-start gap-3">
+            <div class="flex-1 min-w-0">
+              <h4 class="font-semibold text-gray-900 dark:text-white break-words">{{ s.report?.name || 'รายงาน' }}</h4>
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <span class="inline-flex items-center gap-1"><Icon icon="heroicons:arrow-path-rounded-square" class="h-4 w-4" />{{ frequencyLabel(s.frequency) }}</span>
+                <span class="inline-flex items-center gap-1"><Icon icon="heroicons:clock" class="h-4 w-4" />{{ (s.scheduled_time || '').slice(0,5) }}</span>
+                <span class="uppercase">{{ s.export_format }}</span>
+                <span class="inline-flex items-center gap-1"><Icon icon="heroicons:envelope" class="h-4 w-4" />{{ (s.recipients || []).length }} ผู้รับ</span>
+              </div>
+              <p v-if="s.next_run_at" class="text-xs text-gray-400 mt-1">รอบถัดไป: {{ new Date(s.next_run_at).toLocaleString('th-TH') }}</p>
+            </div>
+            <!-- Active toggle -->
+            <button
+              @click="toggleScheduleActive(s)"
+              class="flex-shrink-0 relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+              :class="s.is_active ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'"
+              :title="s.is_active ? 'กำลังทำงาน' : 'ปิดอยู่'"
+            >
+              <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform" :class="s.is_active ? 'translate-x-6' : 'translate-x-1'" />
+            </button>
+          </div>
+
+          <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 flex items-center gap-2">
+            <button
+              @click="openEditSchedule(s)"
+              class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-200"
+            >
+              <Icon icon="heroicons:pencil-square" class="h-4 w-4" /> แก้ไข
+            </button>
+            <button
+              @click="removeSchedule(s)"
+              class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-red-50 text-red-600 rounded hover:bg-red-100 ml-auto"
+            >
+              <Icon icon="heroicons:trash" class="h-4 w-4" /> ลบ
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Schedule Create/Edit Modal -->
+    <div
+      v-if="showScheduleModal"
+      class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4"
+      @click.self="showScheduleModal = false"
+    >
+      <div class="w-full sm:max-w-lg bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">{{ editingScheduleId ? 'แก้ไขตารางเวลา' : 'ตั้งเวลาใหม่' }}</h3>
+          <button @click="showScheduleModal = false" class="min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-400 hover:text-gray-600">
+            <Icon icon="heroicons:x-mark" class="h-6 w-6" />
+          </button>
+        </div>
+
+        <div class="p-4 space-y-4">
+          <div v-if="!editingScheduleId">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">รายงานที่บันทึกไว้ <span class="text-red-500">*</span></label>
+            <select v-model="scheduleForm.saved_report_id" class="w-full min-h-[44px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+              <option v-if="savedReports.length === 0" :value="null" disabled>— ยังไม่มีรายงานที่บันทึก —</option>
+              <option v-for="r in savedReports" :key="r.id" :value="r.id">{{ r.name }}</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ความถี่</label>
+              <select v-model="scheduleForm.frequency" class="w-full min-h-[44px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                <option v-for="f in FREQUENCY_OPTIONS" :key="f.value" :value="f.value">{{ f.label }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">เวลา</label>
+              <input v-model="scheduleForm.time_of_day" type="time" class="w-full min-h-[44px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+            </div>
+          </div>
+
+          <div v-if="scheduleForm.frequency === 'weekly'">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">วันในสัปดาห์</label>
+            <select v-model.number="scheduleForm.day_of_week" class="w-full min-h-[44px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+              <option v-for="d in DOW_OPTIONS" :key="d.value" :value="d.value">{{ d.label }}</option>
+            </select>
+          </div>
+          <div v-else-if="scheduleForm.frequency !== 'daily'">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">วันที่ของเดือน (1–31)</label>
+            <input v-model.number="scheduleForm.day_of_month" type="number" min="1" max="31" class="w-full min-h-[44px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">รูปแบบไฟล์</label>
+            <select v-model="scheduleForm.export_format" class="w-full min-h-[44px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+              <option value="pdf">PDF</option>
+              <option value="excel">Excel</option>
+              <option value="csv">CSV</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">อีเมลผู้รับ <span class="text-red-500">*</span></label>
+            <textarea
+              v-model="scheduleForm.recipients"
+              rows="3"
+              placeholder="คั่นด้วยจุลภาคหรือขึ้นบรรทัดใหม่ เช่น a@example.com, b@example.com"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white break-words"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
+          <button @click="showScheduleModal = false" class="min-h-[44px] px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">ยกเลิก</button>
+          <button
+            @click="saveSchedule"
+            :disabled="savingSchedule"
+            class="min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary-500 text-white hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Icon v-if="savingSchedule" icon="heroicons:arrow-path" class="h-5 w-5 animate-spin" />
+            {{ editingScheduleId ? 'บันทึก' : 'ตั้งเวลา' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Create Report Definition Modal -->
     <div
       v-if="showReportModal"
@@ -613,6 +763,7 @@ const sections = [
   { id: 'dashboard', name: 'แดชบอร์ด' },
   { id: 'reports', name: 'รายงาน' },
   { id: 'saved', name: 'รายงานที่บันทึก' },
+  { id: 'schedules', name: 'ตั้งเวลา' },
   { id: 'analytics', name: 'วิเคราะห์' },
   { id: 'kpis', name: 'KPIs' },
 ]
@@ -675,6 +826,39 @@ const loadingSaved = ref(false)
 const refreshingId = ref<number | null>(null)
 const viewingReport = ref<any>(null) // saved report currently open in the view modal
 const loadingView = ref(false)
+
+// Report Schedules
+const schedules = ref<any[]>([])
+const loadingSchedules = ref(false)
+const showScheduleModal = ref(false)
+const savingSchedule = ref(false)
+const editingScheduleId = ref<number | null>(null)
+const scheduleForm = ref({
+  saved_report_id: null as number | null,
+  frequency: 'weekly',
+  day_of_week: 1,
+  day_of_month: 1,
+  time_of_day: '08:00',
+  export_format: 'pdf',
+  recipients: '',
+})
+const FREQUENCY_OPTIONS = [
+  { value: 'daily', label: 'รายวัน' },
+  { value: 'weekly', label: 'รายสัปดาห์' },
+  { value: 'monthly', label: 'รายเดือน' },
+  { value: 'quarterly', label: 'รายไตรมาส' },
+  { value: 'yearly', label: 'รายปี' },
+]
+const DOW_OPTIONS = [
+  { value: 0, label: 'อาทิตย์' },
+  { value: 1, label: 'จันทร์' },
+  { value: 2, label: 'อังคาร' },
+  { value: 3, label: 'พุธ' },
+  { value: 4, label: 'พฤหัสบดี' },
+  { value: 5, label: 'ศุกร์' },
+  { value: 6, label: 'เสาร์' },
+]
+const frequencyLabel = (v: string) => FREQUENCY_OPTIONS.find(f => f.value === v)?.label || v
 const quickReports = [
   { id: 'attendance', name: 'รายงานเข้าเรียน', icon: 'heroicons:calendar' },
   { id: 'grades', name: 'รายงานผลการเรียน', icon: 'heroicons:academic-cap' },
@@ -1035,10 +1219,125 @@ const exportSaved = async (report: any, format: string) => {
   }
 }
 
+// ── Report Schedules ─────────────────────────────────────────────
+const loadSchedules = async () => {
+  loadingSchedules.value = true
+  try {
+    const response: any = await schoolApi.getReportSchedules(props.academyId)
+    schedules.value = response?.data?.data ?? (Array.isArray(response?.data) ? response.data : [])
+  } catch (error) {
+    console.error('Failed to load schedules:', error)
+    schedules.value = []
+  } finally {
+    loadingSchedules.value = false
+  }
+}
+
+const openCreateSchedule = async () => {
+  editingScheduleId.value = null
+  scheduleForm.value = {
+    saved_report_id: savedReports.value[0]?.id ?? null,
+    frequency: 'weekly',
+    day_of_week: 1,
+    day_of_month: 1,
+    time_of_day: '08:00',
+    export_format: 'pdf',
+    recipients: '',
+  }
+  showScheduleModal.value = true
+  if (savedReports.value.length === 0) {
+    await loadSavedReports()
+    if (!scheduleForm.value.saved_report_id) scheduleForm.value.saved_report_id = savedReports.value[0]?.id ?? null
+  }
+}
+
+const openEditSchedule = (schedule: any) => {
+  editingScheduleId.value = schedule.id
+  scheduleForm.value = {
+    saved_report_id: schedule.report_id,
+    frequency: schedule.frequency || 'weekly',
+    day_of_week: schedule.day_of_week ?? 1,
+    day_of_month: schedule.day_of_month ?? 1,
+    time_of_day: (schedule.scheduled_time || '08:00').slice(0, 5),
+    export_format: schedule.export_format || 'pdf',
+    recipients: Array.isArray(schedule.recipients) ? schedule.recipients.join(', ') : '',
+  }
+  showScheduleModal.value = true
+}
+
+const saveSchedule = async () => {
+  const f = scheduleForm.value
+  const recipients = f.recipients.split(/[,\n]/).map(s => s.trim()).filter(Boolean)
+  if (!editingScheduleId.value && !f.saved_report_id) {
+    swal.error('กรุณาเลือกรายงานที่บันทึกไว้')
+    return
+  }
+  if (recipients.length === 0) {
+    swal.error('กรุณาระบุอีเมลผู้รับอย่างน้อย 1 รายการ')
+    return
+  }
+
+  // ส่งเฉพาะ day ที่ตรงกับ frequency (weekly→day_of_week, monthly/quarterly/yearly→day_of_month)
+  const payload: Record<string, any> = {
+    frequency: f.frequency,
+    time_of_day: f.time_of_day,
+    export_format: f.export_format,
+    recipients,
+    day_of_week: f.frequency === 'weekly' ? f.day_of_week : null,
+    day_of_month: f.frequency !== 'weekly' && f.frequency !== 'daily' ? f.day_of_month : null,
+  }
+
+  savingSchedule.value = true
+  try {
+    let res: any
+    if (editingScheduleId.value) {
+      res = await schoolApi.updateReportSchedule(props.academyId, editingScheduleId.value, payload)
+    } else {
+      res = await schoolApi.createReportSchedule(props.academyId, { saved_report_id: f.saved_report_id, ...payload })
+    }
+    if (res?.success) {
+      showScheduleModal.value = false
+      await loadSchedules()
+      swal.toast(editingScheduleId.value ? 'อัปเดตตารางเวลาแล้ว' : 'ตั้งเวลารายงานแล้ว')
+    }
+  } catch (error: any) {
+    console.error('Failed to save schedule:', error)
+    swal.error(error?.data?.message || 'บันทึกตารางเวลาไม่สำเร็จ')
+  } finally {
+    savingSchedule.value = false
+  }
+}
+
+const toggleScheduleActive = async (schedule: any) => {
+  try {
+    const res: any = await schoolApi.toggleReportScheduleStatus(props.academyId, schedule.id)
+    if (res?.success) schedule.is_active = res.data?.is_active ?? !schedule.is_active
+  } catch (error) {
+    console.error('Failed to toggle schedule:', error)
+    swal.error('ไม่สามารถสลับสถานะได้')
+  }
+}
+
+const removeSchedule = async (schedule: any) => {
+  const confirmed = await swal.confirmDelete('ตารางเวลานี้')
+  if (!confirmed) return
+  try {
+    const res: any = await schoolApi.deleteReportSchedule(props.academyId, schedule.id)
+    if (res?.success) {
+      schedules.value = schedules.value.filter(s => s.id !== schedule.id)
+      swal.toast('ลบตารางเวลาแล้ว')
+    }
+  } catch (error: any) {
+    console.error('Failed to delete schedule:', error)
+    swal.error(error?.data?.message || 'ลบตารางเวลาไม่สำเร็จ')
+  }
+}
+
 // Watch
 watch(activeSection, (section) => {
   if (section === 'reports' && reports.value.length === 0) loadReports()
   if (section === 'saved' && savedReports.value.length === 0) loadSavedReports()
+  if (section === 'schedules' && schedules.value.length === 0) loadSchedules()
   if (section === 'kpis' && kpiDefinitions.value.length === 0) loadKpis()
 }, { immediate: true })
 

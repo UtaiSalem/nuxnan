@@ -320,6 +320,22 @@ export const useSchoolManagement = () => {
   const exportReport = (academyId: number, reportId: number, format: string) =>
     api.call(`/api/academies/${academyId}/reports/saved/${reportId}/export`, { method: 'POST', body: { format } })
 
+  // Report Schedules (แยกจาก class getSchedules ด้านบน — คนละ endpoint /reports/schedules)
+  const getReportSchedules = (academyId: number, params?: Record<string, any>) =>
+    api.call(`/api/academies/${academyId}/reports/schedules`, { params })
+
+  const createReportSchedule = (academyId: number, data: Record<string, any>) =>
+    api.call(`/api/academies/${academyId}/reports/schedules`, { method: 'POST', body: data })
+
+  const updateReportSchedule = (academyId: number, scheduleId: number, data: Record<string, any>) =>
+    api.call(`/api/academies/${academyId}/reports/schedules/${scheduleId}`, { method: 'PATCH', body: data })
+
+  const deleteReportSchedule = (academyId: number, scheduleId: number) =>
+    api.call(`/api/academies/${academyId}/reports/schedules/${scheduleId}`, { method: 'DELETE' })
+
+  const toggleReportScheduleStatus = (academyId: number, scheduleId: number) =>
+    api.call(`/api/academies/${academyId}/reports/schedules/${scheduleId}/toggle-status`, { method: 'POST' })
+
   // Dashboard Widgets
   const getDashboardWidgets = (academyId: number) => 
     api.call(`/api/academies/${academyId}/dashboard/widgets`)
@@ -552,6 +568,11 @@ export const useSchoolManagement = () => {
     toggleReportFavorite,
     refreshSavedReport,
     exportReport,
+    getReportSchedules,
+    createReportSchedule,
+    updateReportSchedule,
+    deleteReportSchedule,
+    toggleReportScheduleStatus,
     getDashboardWidgets,
     getUserDashboardLayout,
     updateUserDashboardLayout,
