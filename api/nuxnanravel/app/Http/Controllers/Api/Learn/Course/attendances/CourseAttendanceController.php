@@ -241,11 +241,16 @@ class CourseAttendanceController extends Controller
 
         $courseMember = $course->courseMembers()->where('user_id', auth()->id())->first();
 
+        // Admin/owner/super-admin may view this page without being enrolled as a
+        // course member (no course_members row). There is nowhere to persist the
+        // tab for them, so treat it as a successful no-op instead of a 404 — the
+        // frontend keeps the preference in localStorage for these users.
         if (! $courseMember) {
             return response()->json([
-                'success' => false,
-                'message' => 'ไม่พบข้อมูลสมาชิกในรายวิชานี้',
-            ], 404);
+                'success' => true,
+                'skipped' => true,
+                'message' => 'ไม่มีข้อมูลสมาชิกให้บันทึก (ข้ามการบันทึกฝั่งเซิร์ฟเวอร์)',
+            ], 200);
         }
 
         $courseMember->update([

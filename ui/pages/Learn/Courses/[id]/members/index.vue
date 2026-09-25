@@ -12,6 +12,32 @@ const route = useRoute()
 const config = useRuntimeConfig()
 const courseGroupStore = useCourseGroupStore()
 const courseMemberStore = useCourseMemberStore()
+const authStore = useAuthStore()
+
+// localStorage fallback for the "last accessed group tab" of admins/owners who
+// are NOT enrolled as course members (no course_members row on the server, so
+// nothing to persist there). Keyed by course + user to avoid cross-account leak.
+const lastGroupStorageKey = computed(() =>
+    `course-${course?.value?.id}-last-group-tab-${authStore.user?.id ?? 'anon'}`
+)
+const readLocalLastGroup = (): number | null => {
+    if (!import.meta.client || !course?.value?.id) return null
+    try {
+        const raw = localStorage.getItem(lastGroupStorageKey.value)
+        const id = raw ? Number(raw) : NaN
+        return Number.isFinite(id) && id > 0 ? id : null
+    } catch {
+        return null
+    }
+}
+const writeLocalLastGroup = (groupId: number) => {
+    if (!import.meta.client || !course?.value?.id) return
+    try {
+        localStorage.setItem(lastGroupStorageKey.value, String(groupId))
+    } catch {
+        // ignore quota / private-mode errors — persistence is best-effort
+    }
+}
 
 // State
 const searchQuery = ref('')
@@ -78,9 +104,10 @@ const getInitialGroupTab = () => {
         return 0
     }
     
-    const lastAccessedGroupId = courseMemberStore.member?.last_accessed_group_tab
+    // Members store the preference server-side; non-member admins fall back to localStorage.
+    const lastAccessedGroupId = courseMemberStore.member?.last_accessed_group_tab ?? readLocalLastGroup()
     if (!lastAccessedGroupId) return 0
-    
+
     const index = courseGroupStore.groups.findIndex(g => g.id === lastAccessedGroupId)
     return index >= 0 ? index + 1 : 0 // +1 because 0 is "all"
 }
@@ -91,18 +118,24 @@ async function setActiveGroupTab(tabIndex: number) {
 
     // Only save if admin and not 'all' and course exists
     if (isCourseAdmin.value && tabIndex > 0 && course?.value?.id && !isSavingGroupTab.value) {
+        const groupId = courseGroupStore.groups[tabIndex - 1]?.id
+        if (!groupId) return
+
+        // Always cache locally — this is the only persistence for non-member admins,
+        // and a harmless cache for member admins.
+        writeLocalLastGroup(Number(groupId))
+
+        // No course_members row → nothing to persist server-side; skip the API call
+        // (the backend would no-op anyway) so we never trip the error toast.
+        if (!courseMemberStore.member?.id) return
+
         isSavingGroupTab.value = true
         try {
-            const groupId = courseGroupStore.groups[tabIndex - 1]?.id
-            if (groupId) {
-                await api.patch(`/api/courses/${course.value.id}/members/update-last-access-group`, {
-                    last_accessed_group_tab: Number(groupId)
-                })
-                // Update local store
-                if (courseMemberStore.member) {
-                    courseMemberStore.member.last_accessed_group_tab = Number(groupId)
-                }
-            }
+            await api.patch(`/api/courses/${course.value.id}/members/update-last-access-group`, {
+                last_accessed_group_tab: Number(groupId)
+            })
+            // Update local store
+            courseMemberStore.member.last_accessed_group_tab = Number(groupId)
         } catch (error) {
             console.error('Error saving last accessed group tab:', error)
             // Show error notification with SweetAlert
