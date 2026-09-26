@@ -28,6 +28,26 @@
 
 ---
 
+## 2026-09-27 — ตามเรื่อง member_activity_logs drift (Academy suite 24 แดง)
+
+### สถานะ: ✅ ต้นตอจริงแก้แล้ว (`97f99311`) — 24 แดง → 1 (ที่เหลือ pre-existing แยกเรื่อง)
+- **เข้าใจผิดตอนแรก:** คิดว่า testing DB ขาดตาราง (dev schema drift) · จริง ๆ dev **มี** member_activity_logs
+  (migration `2025_06_22`, Ran batch 47) · testing DB ที่ค้างเป็นของ rebuild เก่า — rebuild ใหม่ก็ได้ตารางมา
+- 🎯 **ต้นตอจริง = test pollution:** [`AcademySettingsAuditLogTest::test_logging_failure_does_not_break_the_save`](../api/nuxnanravel/tests/Feature/Academy/AcademySettingsAuditLogTest.php)
+  เรียก `Schema::drop('member_activity_logs')` เพื่อจำลอง logging ล้มเหลว · `Schema::drop` = **DDL → implicit commit**
+  ทำให้ transaction ของ RefreshDatabase หลุด → (1) ตารางหายถาวรทั้ง suite (2) ข้อมูล setUp ของเทสต์นั้นไม่ rollback
+  → เทสต์ Academy ที่รันทีหลังพัง (missing table + duplicate `S9 Audit Log Academy`) รวม 24 แดง
+- **แก้:** จำลอง failure ผ่าน model event `MemberActivityLog::creating()` โยน exception แทน (record() กลืน `\Throwable`
+  → save ยังได้ 200) แล้ว `app('events')->forget('eloquent.creating: ...')` ใน finally · **ไม่มี DDL = transaction-safe**
+  · full `tests/Feature/Academy/` **24 แดง → 1** (230 passed)
+- ⚠️ **เหลือ 1 แดง = pre-existing แยกเรื่อง (ไม่แก้ในงานนี้):** `AcademyMemberGuardsTest::test_owner_can_self_update`
+  แดงตอน isolated ด้วย · test ส่ง `member_code='OWN'` แต่คอลัมน์ `academy_members.member_code` = **`int unsigned`**
+  → SQLSTATE 1366 · ต้องตัดสินใจว่า member_code ควรเป็น varchar (code ตัวอักษร) หรือ test/endpoint ผิด — เป็นเรื่อง schema แยก
+- **บทเรียน:** `Schema::drop`/DDL ในเทสต์ที่ใช้ RefreshDatabase = pollute ทั้ง process (implicit commit) · จำลอง failure
+  ควรใช้ model event / mock ไม่ใช่ DDL (เพิ่มเข้า [[project_tests_sqlite_vs_mysql]] ได้)
+
+---
+
 ## 2026-09-26 — #2 frontend wire report export slice
 
 ### สถานะ: ✅ เสร็จ (pushed `b4e19ab0`) — export slice (ตามที่เจ้าของเคาะขอบเขต)
@@ -62,9 +82,8 @@
   เวลา / pdf-excel-csv / recipients คั่น , หรือขึ้นบรรทัด) + delete · composable เพิ่ม 5 method report-schedule
   (แยกชื่อจาก class getSchedules เดิม) · หมายเหตุ: schedule format = **excel** (ไม่ใช่ xlsx เหมือน export)
 - **ยังไม่ทำ (นอกขอบเขต):** definition edit/delete/duplicate/toggle, generateQuickReport (toast "ยังไม่พร้อม")
-- ⚠️ **testing DB drift (ไม่เกี่ยวงานนี้):** รัน `tests/Feature/Academy/` เต็มเจอ 24 แดง = ตาราง
-  `nuxnan_testing.member_activity_logs` ไม่มี (test:db:rebuild copy จาก dev ที่ยังไม่มีตารางนี้)
-  → report tests ของงานนี้ไม่แตะตารางนั้นจึงเขียวหมด · ควร migrate dev ให้มี member_activity_logs แล้ว rebuild ใหม่
+- ✅ **testing DB drift ตามต่อแล้ว 2026-09-27** (ดูบันทึกล่างสุด) — ต้นตอไม่ใช่ dev schema แต่เป็นเทสต์ที่
+  `Schema::drop` pollute ทั้ง suite · แก้แล้ว (`97f99311`) 24 แดง → เหลือ 1 (member_code pre-existing แยกเรื่อง)
 
 ---
 
