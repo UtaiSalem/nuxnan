@@ -11,7 +11,6 @@ use App\Models\Classroom;
 use App\Models\MemberActivityLog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class AcademySettingsAuditLogTest extends TestCase
@@ -126,19 +125,33 @@ class AcademySettingsAuditLogTest extends TestCase
 
     public function test_logging_failure_does_not_break_the_save()
     {
-        Schema::drop('member_activity_logs');
+        // จำลอง "การเขียน activity log ล้มเหลว" แบบ transaction-safe:
+        // ให้ MemberActivityLog::create โยน exception ผ่าน model event `creating`
+        // (record() กลืน \Throwable อยู่แล้ว → save ต้องยังสำเร็จ)
+        //
+        // เดิมใช้ Schema::drop('member_activity_logs') ซึ่งเป็น DDL → implicit commit
+        // ทำให้ transaction ของ RefreshDatabase หลุด: ตารางหายทั้ง suite + ข้อมูล setUp รั่ว
+        // (duplicate academy name) ทำเทสต์อื่นพังยกแผง — เลิกใช้ DDL แล้ว
+        MemberActivityLog::creating(function () {
+            throw new \RuntimeException('simulated member activity log failure');
+        });
 
-        $response = $this->actingAs($this->owner, 'api')->postJson(
-            "/api/academies/{$this->academy->id}/settings",
-            $this->payload([
-                'privacy' => 'private',
-            ])
-        );
+        try {
+            $response = $this->actingAs($this->owner, 'api')->postJson(
+                "/api/academies/{$this->academy->id}/settings",
+                $this->payload([
+                    'privacy' => 'private',
+                ])
+            );
 
-        $response->assertStatus(200);
+            $response->assertStatus(200);
 
-        $this->academy->refresh();
-        $this->assertEquals('private', $this->academy->academySetting->privacy);
+            $this->academy->refresh();
+            $this->assertEquals('private', $this->academy->academySetting->privacy);
+        } finally {
+            // ถอด listener เฉพาะของเทสต์นี้ (โมเดลไม่มี creating hook อื่น) ไม่ให้รั่วไปเทสต์ถัดไป
+            app('events')->forget('eloquent.creating: '.MemberActivityLog::class);
+        }
     }
 
     public function test_removed_academy_audit_logs_index_route_is_gone()
