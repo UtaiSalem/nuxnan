@@ -36,6 +36,18 @@ class AcademyMember extends Model
 
     protected $guarded = [];
 
+    /**
+     * member_code เป็นรหัสตัวอักษร (เช่น 'OWN', 'S12848') เก็บใน varchar(50) —
+     * cast เป็น string ให้ตรงกับ CourseMember::member_code กัน int-coercion ฝั่ง PHP
+     * (เลขนำหน้า 0 / การเทียบสตริงจะไม่เพี้ยน)
+     */
+    protected function casts(): array
+    {
+        return [
+            'member_code' => 'string',
+        ];
+    }
+
     public function academy(): BelongsTo
     {
         return $this->belongsTo(Academy::class);
