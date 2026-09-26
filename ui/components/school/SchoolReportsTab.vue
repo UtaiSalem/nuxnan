@@ -249,9 +249,14 @@
             v-for="quick in quickReports"
             :key="quick.id"
             @click="generateQuickReport(quick.id)"
-            class="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-primary-400 hover:shadow-md transition-all text-left"
+            :disabled="!!quickBusy"
+            class="min-h-[44px] p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-primary-400 hover:shadow-md transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <component :is="quick.icon" class="h-8 w-8 text-primary-500 mb-2" />
+            <Icon
+              :icon="quickBusy === quick.id ? 'heroicons:arrow-path' : quick.icon"
+              class="h-8 w-8 text-primary-500 mb-2"
+              :class="{ 'animate-spin': quickBusy === quick.id }"
+            />
             <p class="font-medium text-gray-900 dark:text-white text-sm">{{ quick.name }}</p>
           </button>
         </div>
@@ -949,12 +954,14 @@ const DOW_OPTIONS = [
   { value: 6, label: 'เสาร์' },
 ]
 const frequencyLabel = (v: string) => FREQUENCY_OPTIONS.find(f => f.value === v)?.label || v
+// รายงานด่วน = data_source ที่ backend generate ได้จริง (ตรงกับ REPORT_SOURCES)
+// คลิกเดียว: หา/สร้าง definition → generate saved report → ไปแท็บรายงานที่บันทึก
 const quickReports = [
-  { id: 'attendance', name: 'รายงานเข้าเรียน', icon: 'heroicons:calendar' },
-  { id: 'grades', name: 'รายงานผลการเรียน', icon: 'heroicons:academic-cap' },
-  { id: 'finance', name: 'รายงานการเงิน', icon: 'heroicons:currency-dollar' },
-  { id: 'staff', name: 'รายงานบุคลากร', icon: 'heroicons:users' },
+  { id: 'school_attendances', name: 'รายงานการเข้าเรียน', icon: 'heroicons:calendar' },
+  { id: 'tuition_fees', name: 'รายงานค่าเทอม/การเงิน', icon: 'heroicons:currency-dollar' },
+  { id: 'at_risk_students', name: 'นักเรียนกลุ่มเสี่ยง', icon: 'heroicons:exclamation-triangle' },
 ]
+const quickBusy = ref<string | null>(null)
 
 // Analytics
 const loadingAnalytics = ref(false)
@@ -1195,9 +1202,49 @@ const downloadReport = async (report: any, format: string) => {
   }
 }
 
-const generateQuickReport = (_type: string) => {
-  // ยังไม่รองรับใน export slice นี้
-  swal.toast('ฟีเจอร์รายงานด่วนยังไม่พร้อมใช้งาน', 'info')
+const generateQuickReport = async (sourceKey: string) => {
+  const preset = REPORT_SOURCES.find(s => s.key === sourceKey)
+  if (!preset) {
+    swal.error('ไม่รองรับรายงานด่วนประเภทนี้')
+    return
+  }
+  if (quickBusy.value) return
+  quickBusy.value = sourceKey
+  try {
+    // ใช้ definition เดิมที่ data_source ตรงกัน ถ้าไม่มีก็สร้างใหม่จาก preset
+    let def = reports.value.find(r => r.data_source === sourceKey)
+    if (!def) {
+      const created: any = await schoolApi.createReportDefinition(props.academyId, {
+        name: preset.label,
+        category: preset.category,
+        report_type: 'table',
+        data_source: preset.key,
+        columns: preset.columns,
+        filters: [],
+        default_params: {},
+      })
+      if (!created?.success) {
+        swal.error('สร้างรายงานไม่สำเร็จ')
+        return
+      }
+      def = created.data
+      await loadReports()
+    }
+
+    const savedId = await generateSavedReport(def)
+    if (savedId) {
+      swal.toast('สร้างรายงานแล้ว — ดูที่แท็บรายงานที่บันทึก')
+      activeSection.value = 'saved'
+      await loadSavedReports()
+    } else {
+      swal.error('สร้างรายงานไม่สำเร็จ')
+    }
+  } catch (error: any) {
+    console.error('Failed to generate quick report:', error)
+    swal.error(error?.data?.message || 'สร้างรายงานด่วนไม่สำเร็จ')
+  } finally {
+    quickBusy.value = null
+  }
 }
 
 // ── Definition management (edit/toggle/duplicate/delete) ─────────
