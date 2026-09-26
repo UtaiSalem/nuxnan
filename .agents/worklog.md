@@ -59,6 +59,15 @@
   → เป็นโปรเจกต์แยกที่ควรทยอยแก้เป็นคลัสเตอร์ ไม่ใช่งาน "ทำให้ผ่าน" รอบเดียว
 - JUnit log: scratchpad/suite2.xml · **สรุป: 1729 passed / 144 pre-existing failed / 23 skipped**
 
+### คลัสเตอร์ 1 (status/role int-string) — เสร็จ (`75270127`)
+- ~49 failed จาก test ใส่ string enum ให้ int column: `academy_members.status`←'active' (27), `course_members.role`←'student' (19),
+  `course_members.status`←'active' (3) · SQLite coerce, MySQL strict reject
+- แก้ด้วย **set-mutator** (pattern เดียวกับ `Course::setStatusAttribute` ที่มีอยู่ในโปรเจค): numeric ผ่านตรง (int writes เดิมไม่กระทบ),
+  string→map เป็น int · AcademyMember.status (active→2 ฯลฯ, role คง varchar) · CourseMember.status (active→1) + role (student→1/admin→4)
+- verify: `AuditLogCallSitesTest` 17 แดง→เขียวหมด · ledger tests ผ่าน status/role แล้ว · regression member-heavy classes เขียว
+- 🔗 **clusters เป็นชั้น (layered):** แก้ status/role แล้ว ledger tests ไปโผล่ **คลัสเตอร์ 2** ต่อ (`users.suggester_code` NOT-NULL,
+  test สร้าง user ตรง/ตั้ง null bypass UserFactory) — ยังไม่แก้ · net count ที่แท้จริงต้องรอ full re-run หลังทำหลายคลัสเตอร์
+
 ---
 
 ## 2026-09-27 — ตามเรื่อง academy_donate_claims partial-table bug → พบว่าแก้ไปแล้ว
