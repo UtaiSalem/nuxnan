@@ -47,8 +47,13 @@ course pages · G25 (migrate จากศูนย์บน MySQL ยังพ�
   เติม composite index ที่ขาดแบบ idempotent (เช็คด้วย `Schema::getIndexes` เติมเฉพาะตัวที่ยังไม่มี) กัน env ที่ค้าง partial
   · down()=no-op โดยตั้งใจ (index เป็นสคีมาฐานของ create migration) · verify: dev no-op ไม่ซ้ำ · testing drop 1 idx →
   up() เติมกลับครบ 2 · รันซ้ำยังคง 2 (idempotent)
-- ⚠️ **ยังเหลือ FK repair (deferred):** เติม FK ที่ขาดจะพังถ้ามี orphan ledger rows ในตารางเงิน → ต้องให้เจ้าของ
-  เช็ค/เคลียร์ข้อมูล prod ก่อน (แนวเดียวกับ G25) · อัปเดต memory ให้ตรงแล้ว
+- ✅ **orphan check (dev) + FK repair migration ทำแล้ว (`62b1131a`):**
+  - ตรวจ orphan ทั้ง 7 FK บน dev: **academy_donate_claims มี 0 rows** (feature ยัง dormant) → 0 orphan · FK ครบอยู่แล้ว
+  - `2026_09_27_000003_repair_academy_donate_claims_foreign_keys` — idempotent เติม FK เฉพาะคอลัมน์ที่ยังไม่มี
+    (เช็ค information_schema, คง cascade/nullOnDelete ตาม create migration) · down()=no-op
+  - verify: dev no-op (FK 7) · testing drop suggester_id FK (7→6) → up() เติมกลับ 7 · รันซ้ำยัง 7 (idempotent)
+  - 🔴 **prod:** ต้องรัน orphan-check ก่อน deploy — การเติม FK จะพังถ้ามี orphan · query orphan (7 FK, leftJoin+whereNull)
+    เก็บไว้ที่ scratchpad/adc_orphan.php pattern · academy_donate_claims ยังปิดครบ (index+FK repair) · อัปเดต memory แล้ว
 
 ---
 
