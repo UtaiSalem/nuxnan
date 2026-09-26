@@ -43,9 +43,12 @@ course pages · G25 (migrate จากศูนย์บน MySQL ยังพ�
 - migration `2026_07_26_000002` ตอนนี้ใช้ชื่อ index สั้น (`adc_donate_claimer_at_idx`/`adc_claimer_at_idx`) + FK ครบ 7 via constrained()
 - dev table: composite index 2 ตัว + FK 7 ตัวครบ (SHOW INDEX / information_schema) · fresh create บน MySQL
   (drop ใน nuxnan_testing แล้ว `$m->up()`) ✅ OK ไม่มี 64-char error · index สั้น + FK 7 ครบ
-- ⚠️ **caveat ที่ยังอยู่ (ไม่แก้):** migration คง `if (Schema::hasTable) return;` → env อื่นที่ตารางยังค้าง partial
-  จะถูกข้ามตลอด (migration Ran แล้วซ่อมไม่ได้) · repair migration เติม index ได้ปลอดภัย แต่เติม FK จะพังถ้ามี
-  orphan ledger rows → ต้องให้เจ้าของเคาะข้อมูลก่อน (แนวเดียวกับ G25 ที่ deferred) · อัปเดต memory ให้ตรงแล้ว
+- ✅ **repair migration (index-only) ทำแล้ว `4279ab77`:** `2026_09_27_000002_repair_academy_donate_claims_indexes`
+  เติม composite index ที่ขาดแบบ idempotent (เช็คด้วย `Schema::getIndexes` เติมเฉพาะตัวที่ยังไม่มี) กัน env ที่ค้าง partial
+  · down()=no-op โดยตั้งใจ (index เป็นสคีมาฐานของ create migration) · verify: dev no-op ไม่ซ้ำ · testing drop 1 idx →
+  up() เติมกลับครบ 2 · รันซ้ำยังคง 2 (idempotent)
+- ⚠️ **ยังเหลือ FK repair (deferred):** เติม FK ที่ขาดจะพังถ้ามี orphan ledger rows ในตารางเงิน → ต้องให้เจ้าของ
+  เช็ค/เคลียร์ข้อมูล prod ก่อน (แนวเดียวกับ G25) · อัปเดต memory ให้ตรงแล้ว
 
 ---
 
