@@ -298,6 +298,18 @@ export const useSchoolManagement = () => {
   const createReportDefinition = (academyId: number, data: Record<string, any>) =>
     api.call(`/api/academies/${academyId}/reports/definitions`, { method: 'POST', body: data })
 
+  const updateReportDefinition = (academyId: number, definitionId: number, data: Record<string, any>) =>
+    api.call(`/api/academies/${academyId}/reports/definitions/${definitionId}`, { method: 'PATCH', body: data })
+
+  const deleteReportDefinition = (academyId: number, definitionId: number) =>
+    api.call(`/api/academies/${academyId}/reports/definitions/${definitionId}`, { method: 'DELETE' })
+
+  const toggleReportDefinitionStatus = (academyId: number, definitionId: number) =>
+    api.call(`/api/academies/${academyId}/reports/definitions/${definitionId}/toggle-status`, { method: 'POST' })
+
+  const duplicateReportDefinition = (academyId: number, definitionId: number) =>
+    api.call(`/api/academies/${academyId}/reports/definitions/${definitionId}/duplicate`, { method: 'POST' })
+
   const generateReport = (academyId: number, definitionId: number, params?: Record<string, any>) =>
     api.call(`/api/academies/${academyId}/reports/generate`, { method: 'POST', body: { definition_id: definitionId, ...(params || {}) } })
 
@@ -561,6 +573,10 @@ export const useSchoolManagement = () => {
     getReports,
     getReportDefinitions,
     createReportDefinition,
+    updateReportDefinition,
+    deleteReportDefinition,
+    toggleReportDefinitionStatus,
+    duplicateReportDefinition,
     generateReport,
     getSavedReports,
     getSavedReport,

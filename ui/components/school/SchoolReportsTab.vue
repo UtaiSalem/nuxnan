@@ -166,6 +166,7 @@
           v-for="report in reports"
           :key="report.id"
           class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow cursor-pointer"
+          :class="{ 'opacity-60': report.is_active === false }"
           @click="generateReport(report)"
         >
           <div class="flex items-start gap-3">
@@ -173,7 +174,10 @@
               <component :is="getReportIcon(report.report_type)" class="h-6 w-6" />
             </div>
             <div class="flex-1 min-w-0">
-              <h4 class="font-semibold text-gray-900 dark:text-white">{{ report.name }}</h4>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h4 class="font-semibold text-gray-900 dark:text-white break-words min-w-0">{{ report.name }}</h4>
+                <span v-if="report.is_active === false" class="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 whitespace-nowrap">ปิดอยู่</span>
+              </div>
               <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{{ report.description }}</p>
             </div>
           </div>
@@ -197,6 +201,37 @@
                 Excel
               </button>
             </div>
+          </div>
+          <!-- Definition management actions -->
+          <div class="mt-2 flex items-center gap-1 text-gray-500 dark:text-gray-400">
+            <button
+              @click.stop="toggleDefinitionActive(report)"
+              class="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:p-1.5 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+              :title="report.is_active === false ? 'เปิดใช้งาน' : 'ปิดใช้งาน'"
+            >
+              <Icon :icon="report.is_active === false ? 'heroicons:play-circle' : 'heroicons:pause-circle'" class="h-5 w-5" />
+            </button>
+            <button
+              @click.stop="openEditDefinition(report)"
+              class="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:p-1.5 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+              title="แก้ไข"
+            >
+              <Icon icon="heroicons:pencil-square" class="h-5 w-5" />
+            </button>
+            <button
+              @click.stop="duplicateDefinition(report)"
+              class="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:p-1.5 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+              title="ทำสำเนา"
+            >
+              <Icon icon="heroicons:document-duplicate" class="h-5 w-5" />
+            </button>
+            <button
+              @click.stop="deleteDefinition(report)"
+              class="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:p-1.5 flex items-center justify-center rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 ml-auto"
+              title="ลบ"
+            >
+              <Icon icon="heroicons:trash" class="h-5 w-5" />
+            </button>
           </div>
         </div>
 
@@ -510,6 +545,52 @@
       </div>
     </div>
 
+    <!-- Edit Report Definition Modal (name/description) -->
+    <div
+      v-if="showEditDefModal"
+      class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4"
+      @click.self="showEditDefModal = false"
+    >
+      <div class="w-full sm:max-w-lg bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">แก้ไขรายงาน</h3>
+          <button @click="showEditDefModal = false" class="min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-400 hover:text-gray-600">
+            <Icon icon="heroicons:x-mark" class="h-6 w-6" />
+          </button>
+        </div>
+        <div class="p-4 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ชื่อรายงาน <span class="text-red-500">*</span></label>
+            <input
+              v-model="editDefForm.name"
+              type="text"
+              class="w-full min-h-[44px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">คำอธิบาย</label>
+            <textarea
+              v-model="editDefForm.description"
+              rows="3"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white break-words"
+            ></textarea>
+          </div>
+          <p class="text-xs text-gray-400">* แก้ได้เฉพาะชื่อและคำอธิบาย · ประเภทข้อมูล/คอลัมน์ตั้งค่าตอนสร้าง</p>
+        </div>
+        <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
+          <button @click="showEditDefModal = false" class="min-h-[44px] px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">ยกเลิก</button>
+          <button
+            @click="saveDefinitionEdit"
+            :disabled="savingDef"
+            class="min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary-500 text-white hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Icon v-if="savingDef" icon="heroicons:arrow-path" class="h-5 w-5 animate-spin" />
+            บันทึก
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Create Report Definition Modal -->
     <div
       v-if="showReportModal"
@@ -817,6 +898,15 @@ const openReportModal = () => {
   showReportModal.value = true
 }
 
+// Edit-definition (name/description only — เลี่ยงเขียนทับ category/columns/data_source)
+const showEditDefModal = ref(false)
+const savingDef = ref(false)
+const editDefForm = ref({ id: null as number | null, name: '', description: '' })
+const openEditDefinition = (report: any) => {
+  editDefForm.value = { id: report.id, name: report.name || '', description: report.description || '' }
+  showEditDefModal.value = true
+}
+
 // Per-card export progress: `${reportId}:${format}` (definitions) / `sr:${id}:${format}` (saved)
 const exportingKey = ref<string | null>(null)
 
@@ -1108,6 +1198,70 @@ const downloadReport = async (report: any, format: string) => {
 const generateQuickReport = (_type: string) => {
   // ยังไม่รองรับใน export slice นี้
   swal.toast('ฟีเจอร์รายงานด่วนยังไม่พร้อมใช้งาน', 'info')
+}
+
+// ── Definition management (edit/toggle/duplicate/delete) ─────────
+const saveDefinitionEdit = async () => {
+  const name = editDefForm.value.name.trim()
+  if (!name) {
+    swal.error('กรุณากรอกชื่อรายงาน')
+    return
+  }
+  savingDef.value = true
+  try {
+    const res: any = await schoolApi.updateReportDefinition(props.academyId, editDefForm.value.id!, {
+      name,
+      description: editDefForm.value.description.trim() || null,
+    })
+    if (res?.success) {
+      showEditDefModal.value = false
+      await loadReports()
+      swal.toast('บันทึกการแก้ไขแล้ว')
+    }
+  } catch (error: any) {
+    console.error('Failed to update definition:', error)
+    swal.error(error?.data?.message || 'บันทึกไม่สำเร็จ')
+  } finally {
+    savingDef.value = false
+  }
+}
+
+const toggleDefinitionActive = async (report: any) => {
+  try {
+    const res: any = await schoolApi.toggleReportDefinitionStatus(props.academyId, report.id)
+    if (res?.success) report.is_active = res.data?.is_active ?? !report.is_active
+  } catch (error) {
+    console.error('Failed to toggle definition:', error)
+    swal.error('ไม่สามารถสลับสถานะได้')
+  }
+}
+
+const duplicateDefinition = async (report: any) => {
+  try {
+    const res: any = await schoolApi.duplicateReportDefinition(props.academyId, report.id)
+    if (res?.success) {
+      await loadReports()
+      swal.toast('ทำสำเนารายงานแล้ว')
+    }
+  } catch (error: any) {
+    console.error('Failed to duplicate definition:', error)
+    swal.error(error?.data?.message || 'ทำสำเนาไม่สำเร็จ')
+  }
+}
+
+const deleteDefinition = async (report: any) => {
+  const confirmed = await swal.confirmDelete(`รายงาน "${report.name}"`)
+  if (!confirmed) return
+  try {
+    const res: any = await schoolApi.deleteReportDefinition(props.academyId, report.id)
+    if (res?.success) {
+      reports.value = reports.value.filter(r => r.id !== report.id)
+      swal.toast('ลบรายงานแล้ว')
+    }
+  } catch (error: any) {
+    console.error('Failed to delete definition:', error)
+    swal.error(error?.data?.message || 'ลบไม่สำเร็จ')
+  }
 }
 
 // ── Saved Reports ────────────────────────────────────────────────
