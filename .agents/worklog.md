@@ -40,9 +40,11 @@
 - **แก้:** จำลอง failure ผ่าน model event `MemberActivityLog::creating()` โยน exception แทน (record() กลืน `\Throwable`
   → save ยังได้ 200) แล้ว `app('events')->forget('eloquent.creating: ...')` ใน finally · **ไม่มี DDL = transaction-safe**
   · full `tests/Feature/Academy/` **24 แดง → 1** (230 passed)
-- ⚠️ **เหลือ 1 แดง = pre-existing แยกเรื่อง (ไม่แก้ในงานนี้):** `AcademyMemberGuardsTest::test_owner_can_self_update`
-  แดงตอน isolated ด้วย · test ส่ง `member_code='OWN'` แต่คอลัมน์ `academy_members.member_code` = **`int unsigned`**
-  → SQLSTATE 1366 · ต้องตัดสินใจว่า member_code ควรเป็น varchar (code ตัวอักษร) หรือ test/endpoint ผิด — เป็นเรื่อง schema แยก
+- ✅ **เหลือ 1 แดงตามต่อแล้ว (`28bb634c`):** `AcademyMemberGuardsTest::test_owner_can_self_update` แดงเพราะ
+  `academy_members.member_code` = `int unsigned` แต่โค้ดใช้เป็นสตริง (updateIdentity validate `nullable|string|max:50`,
+  SUBSTRING/prefix, อีเมล `S{code}@...`, sibling `course_members.member_code` = varchar(50) อยู่แล้ว) · code 'OWN' = SQLSTATE 1366
+  → migration int→**varchar(50)** (มี migration เก่า `2026_01_16` ที่ควรทำแต่ dev drift/import dump ทับเป็น int)
+  · dev migrate DONE + เก็บ 'OWN' ได้ · **full `tests/Feature/Academy/` 24 แดง → 0 (231 passed)** · existing test เป็น guard ในตัว
 - **บทเรียน:** `Schema::drop`/DDL ในเทสต์ที่ใช้ RefreshDatabase = pollute ทั้ง process (implicit commit) · จำลอง failure
   ควรใช้ model event / mock ไม่ใช่ DDL (เพิ่มเข้า [[project_tests_sqlite_vs_mysql]] ได้)
 
