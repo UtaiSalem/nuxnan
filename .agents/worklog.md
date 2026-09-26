@@ -35,6 +35,20 @@ course pages · G25 (migrate จากศูนย์บน MySQL ยังพ�
 
 ---
 
+## 2026-09-27 — ตามเรื่อง academy_donate_claims partial-table bug → พบว่าแก้ไปแล้ว
+
+### สถานะ: ✅ ไม่มีโค้ดต้องแก้ (verify only) — memory เก่า 3 วันจึงคลาดเคลื่อน
+- memory `[[project-tests-sqlite-vs-mysql]]` บันทึกว่า `academy_donate_claims` ค้าง partial (มีแค่ PRIMARY,
+  ไม่มี index/FK) จาก 64-char auto index name · **ตรวจ dev จริง 2026-09-27: แก้ไปแล้ว**
+- migration `2026_07_26_000002` ตอนนี้ใช้ชื่อ index สั้น (`adc_donate_claimer_at_idx`/`adc_claimer_at_idx`) + FK ครบ 7 via constrained()
+- dev table: composite index 2 ตัว + FK 7 ตัวครบ (SHOW INDEX / information_schema) · fresh create บน MySQL
+  (drop ใน nuxnan_testing แล้ว `$m->up()`) ✅ OK ไม่มี 64-char error · index สั้น + FK 7 ครบ
+- ⚠️ **caveat ที่ยังอยู่ (ไม่แก้):** migration คง `if (Schema::hasTable) return;` → env อื่นที่ตารางยังค้าง partial
+  จะถูกข้ามตลอด (migration Ran แล้วซ่อมไม่ได้) · repair migration เติม index ได้ปลอดภัย แต่เติม FK จะพังถ้ามี
+  orphan ledger rows → ต้องให้เจ้าของเคาะข้อมูลก่อน (แนวเดียวกับ G25 ที่ deferred) · อัปเดต memory ให้ตรงแล้ว
+
+---
+
 ## 2026-09-27 — ตามเรื่อง member_activity_logs drift (Academy suite 24 แดง)
 
 ### สถานะ: ✅ ต้นตอจริงแก้แล้ว (`97f99311`) — 24 แดง → 1 (ที่เหลือ pre-existing แยกเรื่อง)
