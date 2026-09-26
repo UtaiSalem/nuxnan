@@ -8,10 +8,10 @@
    admin users, course roster ×3) · Academy member ไม่แตะ (resource ใช้ user แบบย่อ) · วัดจริง 20 คน 161→3 คิวรี
    ✅ `FollowController::followers/following` N+1 (`isFollowing()` รายแถว) แก้แล้ว 2026-09-25 (`b025d890`)
 
-2. ✅ **report export — เสร็จทั้ง backend + FE export slice** — backend sync export (`403a2138`) + audit-log
-   TypeError 6 จุด (`06af70bb`) + createDefinition ขาด `code` · **FE wire แล้ว 2026-09-26 (`b4e19ab0`)**:
-   สร้าง definition (modal) + generate→export→download ใน SchoolReportsTab (ดูบันทึกล่างสุด)
-   · เหลือ (นอก slice): saved reports tab, schedules CRUD, definition edit/delete/duplicate
+2. ✅ **report module — เสร็จครบ backend + FE (2026-09-26/27)** — sync export (`403a2138`) + audit-log fix
+   (`06af70bb`) + FE ครบทุกแท็บ: definitions CRUD/toggle/duplicate · generate · saved reports (view/refresh/
+   favorite/export/delete) · schedules CRUD · แก้ bug ระหว่างทาง 3 จุด (refreshReport ล้าง data, updateSchedule
+   time_of_day, duplicateDefinition arg) · backend report tests 9 ไฟล์เขียวบน MySQL · เหลือแค่ generateQuickReport (ยังไม่มีสเปค)
 
 3. ✅ **CourseResource / AcademyResource N+1 — เสร็จครบ** (เฟส 1a/1b/2a/2b + follow-up 2026-09-25 · profile ยืนยัน 2026-09-26)
    list endpoint ทุกตัวใช้ withViewerCardData()/withViewerCardRelations() · perf test 6/6 เขียวบน MySQL (48 assertions รวม PII matrix)
@@ -86,7 +86,16 @@
   + active toggle switch + create/edit modal (saved report / frequency / day_of_week|day_of_month ตาม frequency /
   เวลา / pdf-excel-csv / recipients คั่น , หรือขึ้นบรรทัด) + delete · composable เพิ่ม 5 method report-schedule
   (แยกชื่อจาก class getSchedules เดิม) · หมายเหตุ: schedule format = **excel** (ไม่ใช่ xlsx เหมือน export)
-- **ยังไม่ทำ (นอกขอบเขต):** definition edit/delete/duplicate/toggle, generateQuickReport (toast "ยังไม่พร้อม")
+### เพิ่มเติม: definition management (`71850880` + `eb4953db`) — #2 ปิดครบ
+- 🔴 **duplicateDefinition bug:** `ReportDefinition::duplicate(string $newName)` เป็น required param
+  แต่ controller เรียก `duplicate()` เปล่า → ArgumentCountError 500 ทุกครั้ง → แก้ส่ง `name.' (สำเนา)'`
+  · test `ReportDefinitionTest` (update/toggle/duplicate/delete) mutation-verified (ถอด arg = duplicate แดง 500)
+- **FE definition management** (SchoolReportsTab การ์ดแท็บ "รายงาน"): badge "ปิดอยู่"+dim เมื่อ inactive ·
+  แถว action toggle/แก้ไข/ทำสำเนา/ลบ (mobile-first 44px) · edit modal แก้เฉพาะ name/description
+  (เลี่ยงเขียนทับ category/columns/data_source) · composable +4 method
+- **#2 report ปิดครบทุกส่วน** (definitions CRUD+toggle+duplicate · generate · saved reports · schedules · exports)
+  ยกเว้น `generateQuickReport` (toast "ยังไม่พร้อม" — ตั้งใจ ยังไม่มีสเปค)
+- backend report tests รวม: AuditLog 3 + Export 3 + Refresh 1 + Schedule 1 + Definition 1 = **9 ไฟล์เขียวบน MySQL**
 - ✅ **testing DB drift ตามต่อแล้ว 2026-09-27** (ดูบันทึกล่างสุด) — ต้นตอไม่ใช่ dev schema แต่เป็นเทสต์ที่
   `Schema::drop` pollute ทั้ง suite · แก้แล้ว (`97f99311`) 24 แดง → เหลือ 1 (member_code pre-existing แยกเรื่อง)
 
