@@ -131,7 +131,7 @@ class ClassroomStudentguardianPayloadTest extends TestCase
         ]);
 
         // Reset log count to check for sensitive_view log later
-        DB::table('member_activity_logs')->truncate();
+        DB::table('member_activity_logs')->delete(); // ไม่ใช้ truncate: DDL implicit commit ทำ transaction ของเทสต์หลุด
 
         $response = $this->actingAs($owner, 'api')
             ->getJson("/api/academies/{$academy->id}/students/{$student->id}");
@@ -200,7 +200,7 @@ class ClassroomStudentguardianPayloadTest extends TestCase
         ]);
         $classroom = $this->setupClassroom($academy, $student);
 
-        DB::table('member_activity_logs')->truncate();
+        DB::table('member_activity_logs')->delete(); // ไม่ใช้ truncate: DDL implicit commit ทำ transaction ของเทสต์หลุด
 
         $response = $this->actingAs($owner, 'api')
             ->getJson("/api/academies/{$academy->id}/students/{$student->id}");

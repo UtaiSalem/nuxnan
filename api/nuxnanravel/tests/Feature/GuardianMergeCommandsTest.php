@@ -14,6 +14,11 @@ class GuardianMergeCommandsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // schema ชั่วคราว (guardians/students/...) สำหรับ sqlite :memory: เท่านั้น
+        // บน prebuilt-MySQL จะ error/ทำลายตารางร่วม (students) ทำเทสต์อื่นพัง → ข้าม
+        if (static::usesPrebuiltTestDatabase()) {
+            $this->markTestSkipped('schema ชั่วคราว — รันบน sqlite เท่านั้น (prebuilt-MySQL จะทำลายตารางร่วม)');
+        }
         Schema::create('guardians', function ($t) {
             $t->id();
             foreach (['academy_id', 'user_id'] as $f) {
@@ -67,9 +72,12 @@ class GuardianMergeCommandsTest extends TestCase
 
     protected function tearDown(): void
     {
-        foreach (['guardian_contacts', 'student_guardian_links', 'students', 'guardian_merge_candidates', 'guardians'] as $t) {
-            Schema::dropIfExists($t);
-        } parent::tearDown();
+        if (! static::usesPrebuiltTestDatabase()) {
+            foreach (['guardian_contacts', 'student_guardian_links', 'students', 'guardian_merge_candidates', 'guardians'] as $t) {
+                Schema::dropIfExists($t);
+            }
+        }
+        parent::tearDown();
     }
 
     private function guardians(): array

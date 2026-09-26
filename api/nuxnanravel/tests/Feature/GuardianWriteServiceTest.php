@@ -17,6 +17,12 @@ class GuardianWriteServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // เทสต์นี้สร้าง/ลบ schema ชั่วคราว (audit_logs/students/guardians ...) ออกแบบสำหรับ sqlite :memory:
+        // บน prebuilt-MySQL (นุน_testing ที่ใช้ร่วม) การ create ตารางที่มีอยู่จะ error และ drop ตอน tearDown
+        // จะทำลายตารางร่วม (students/audit_logs) ทำเทสต์อื่นพังยกแผง → ข้ามบนโปรไฟล์ MySQL
+        if (static::usesPrebuiltTestDatabase()) {
+            $this->markTestSkipped('schema ชั่วคราว — รันบน sqlite เท่านั้น (prebuilt-MySQL จะทำลายตารางร่วม)');
+        }
         Schema::create('audit_logs', function ($t) {
             $t->id();
             $t->unsignedBigInteger('user_id')->nullable();
@@ -73,9 +79,13 @@ class GuardianWriteServiceTest extends TestCase
 
     protected function tearDown(): void
     {
-        foreach (['guardian_contacts', 'student_guardian_links', 'guardians', 'students', 'audit_logs'] as $t) {
-            Schema::dropIfExists($t);
-        } parent::tearDown();
+        // อย่า drop บน prebuilt-MySQL — จะลบตารางร่วมของ nuxnan_testing (setUp ก็ skip ไปแล้ว)
+        if (! static::usesPrebuiltTestDatabase()) {
+            foreach (['guardian_contacts', 'student_guardian_links', 'guardians', 'students', 'audit_logs'] as $t) {
+                Schema::dropIfExists($t);
+            }
+        }
+        parent::tearDown();
     }
 
     private function student(int $id = 1): Student
