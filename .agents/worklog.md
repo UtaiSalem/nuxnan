@@ -33,6 +33,8 @@ course pages · G25 (migrate จากศูนย์บน MySQL ยังพ�
    limited eager load ได้ native (window function บน MySQL) · preload postComments/post_comments/shareComments limit 3/โพสต์
    + nested ใน morph batch (ActivityController) → getComments ใช้ branch in-memory · ตัด Share .load() loop (N+1)
    · วัดจริง loadFeed=21q คงที่ (per=5/15) · getComments เพิ่ม 0q (เดิม ~5/โพสต์) · max 3/โพสต์
+   · **regression test `FeedCommentsQueryCountTest` (`2b69e6dc`)** — seed posts+comments+activity morph, รัน
+   loadActivityableForFeed จริง, assert getComments 0 extra + bounded + cap 3 · mutation-verified · MySQL เขียว
 
 ---
 
