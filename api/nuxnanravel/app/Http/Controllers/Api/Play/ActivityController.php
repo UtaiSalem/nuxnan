@@ -24,7 +24,10 @@ class ActivityController extends Controller
 
     /**
      * eager-load ความสัมพันธ์ของ activityable แบบ batch ต่อชนิด (เลี่ยง N+1 ในฟีด)
-     * shareComments จำกัด 3 ต่อโพสต์จึงต้องโหลดรายรายการ (eager load แบบ batch จะ limit รวมทั้งชุด)
+     *
+     * comment 3 ล่าสุด/โพสต์ preload ตรงนี้เลย: Laravel 11+ รองรับ per-parent limit บน eager load
+     * (window function บน MySQL) → getComments() ในโมเดลจะใช้ relation ที่โหลดแล้ว = 0 คิวรี/โพสต์
+     * (เดิมเชื่อว่า batch limit รวมทั้งชุดจึงต้องวน .load รายโพสต์ — ไม่จริงบน L11+ แล้ว จึงตัด loop ทิ้ง)
      */
     protected function loadActivityableForFeed($activities): void
     {
@@ -38,6 +41,12 @@ class ActivityController extends Controller
                 'poll.options', 'poll.user',
                 'likedPost' => fn ($q) => $q->where('user_id', $authId),
                 'dislikedPost' => fn ($q) => $q->where('user_id', $authId),
+                'postComments' => fn ($q) => $q->latest()->limit(3)->with([
+                    'user' => $userCounts,
+                    'postCommentImages',
+                    'likedPostComment' => fn ($q2) => $q2->where('user_id', $authId),
+                    'dislikedPostComment' => fn ($q2) => $q2->where('user_id', $authId),
+                ]),
             ],
             'App\Models\CoursePost' => [
                 'user' => $userCounts,
@@ -46,18 +55,20 @@ class ActivityController extends Controller
                 'course:id,name,code,slug', 'academy:id,name',
                 'likedPost' => fn ($q) => $q->where('user_id', $authId),
                 'dislikedPost' => fn ($q) => $q->where('user_id', $authId),
+                'post_comments' => fn ($q) => $q->latest()->limit(3)->with([
+                    'user' => $userCounts,
+                    'postCommentImages',
+                    'comment_likes' => fn ($q2) => $q2->where('user_id', $authId),
+                    'comment_dislikes' => fn ($q2) => $q2->where('user_id', $authId),
+                ]),
             ],
             'App\Models\DonateRecipient' => ['reciever', 'donation'],
-            'App\Models\Share' => ['user' => $userCounts, 'shareable.user'],
+            'App\Models\Share' => [
+                'user' => $userCounts,
+                'shareable.user',
+                'shareComments' => fn ($q) => $q->latest()->limit(3)->with('user'),
+            ],
         ]);
-
-        $activities->getCollection()->each(function ($activity) {
-            if ($activity->activityable_type === 'App\Models\Share' && $activity->activityable) {
-                $activity->activityable->load(['shareComments' => function ($query) {
-                    $query->with('user')->latest()->limit(3);
-                }]);
-            }
-        });
     }
 
     /**

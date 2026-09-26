@@ -71,6 +71,11 @@ class Share extends Model
      */
     public function getComments()
     {
+        // ใช้ relation ที่ feed preload มาแล้ว (limit 3/โพสต์) เลี่ยง query ซ้ำต่อโพสต์
+        if ($this->relationLoaded('shareComments')) {
+            return $this->shareComments->sortByDesc('created_at')->take(3)->values();
+        }
+
         return $this->shareComments()->latest()->limit(3)->get();
     }
 
