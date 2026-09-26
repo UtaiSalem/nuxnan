@@ -38,6 +38,32 @@ class CourseMember extends Model
         ];
     }
 
+    // status/role เป็น tinyint แต่บางที่ส่ง string enum มา — map เป็น int (numeric ผ่านตรง)
+    // pattern เดียวกับ Course::setStatusAttribute · ค่าจริงใน DB: status 0=pending/1=active · role 1=student/3/4=admin
+    public const STATUS_MAP = ['pending' => 0, 'inactive' => 0, 'active' => 1];
+
+    public const ROLE_MAP = ['student' => 1, 'member' => 1, 'teacher' => 3, 'assistant' => 3, 'admin' => 4];
+
+    public function setStatusAttribute($value): void
+    {
+        if ($value === null || is_numeric($value)) {
+            $this->attributes['status'] = $value === null ? null : (int) $value;
+
+            return;
+        }
+        $this->attributes['status'] = self::STATUS_MAP[strtolower((string) $value)] ?? 0;
+    }
+
+    public function setRoleAttribute($value): void
+    {
+        if ($value === null || is_numeric($value)) {
+            $this->attributes['role'] = $value === null ? null : (int) $value;
+
+            return;
+        }
+        $this->attributes['role'] = self::ROLE_MAP[strtolower((string) $value)] ?? 1;
+    }
+
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);

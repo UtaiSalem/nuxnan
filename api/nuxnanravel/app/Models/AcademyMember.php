@@ -48,6 +48,27 @@ class AcademyMember extends Model
         ];
     }
 
+    // status เป็น tinyint แต่บางที่ส่ง string enum ('active') มา — map เป็น int (numeric ผ่านตรง)
+    // pattern เดียวกับ Course::setStatusAttribute (role เป็น varchar อยู่แล้ว จึงไม่ต้องแปลง)
+    public const STATUS_MAP = [
+        'pending' => self::STATUS_PENDING,
+        'active' => self::STATUS_APPROVED,
+        'approved' => self::STATUS_APPROVED,
+        'rejected' => self::STATUS_REJECTED,
+        'invited' => self::STATUS_INVITED,
+        'discharged' => self::STATUS_DISCHARGED,
+    ];
+
+    public function setStatusAttribute($value): void
+    {
+        if ($value === null || is_numeric($value)) {
+            $this->attributes['status'] = $value === null ? null : (int) $value;
+
+            return;
+        }
+        $this->attributes['status'] = self::STATUS_MAP[strtolower((string) $value)] ?? self::STATUS_PENDING;
+    }
+
     public function academy(): BelongsTo
     {
         return $this->belongsTo(Academy::class);
