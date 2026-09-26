@@ -45,6 +45,9 @@
   SUBSTRING/prefix, อีเมล `S{code}@...`, sibling `course_members.member_code` = varchar(50) อยู่แล้ว) · code 'OWN' = SQLSTATE 1366
   → migration int→**varchar(50)** (มี migration เก่า `2026_01_16` ที่ควรทำแต่ dev drift/import dump ทับเป็น int)
   · dev migrate DONE + เก็บ 'OWN' ได้ · **full `tests/Feature/Academy/` 24 แดง → 0 (231 passed)** · existing test เป็น guard ในตัว
+- ✅ **ตามต่อความสอดคล้อง 2026-09-27:** ตรวจ member_code ทุกตาราง — `course_members`=varchar(50) (มี migration + cast 'string'
+  ครบอยู่แล้ว ไม่ drift), `election_voters`=varchar(20) (คนละ domain) · เหลือแค่ `AcademyMember` ไม่มี cast →
+  เพิ่ม `'member_code'=>'string'` ให้ตรงกับ CourseMember (`4629e5a6`) · cleanup: ฆ่า tinker ค้าง (PID 16476, task bleat5xg7)
 - **บทเรียน:** `Schema::drop`/DDL ในเทสต์ที่ใช้ RefreshDatabase = pollute ทั้ง process (implicit commit) · จำลอง failure
   ควรใช้ model event / mock ไม่ใช่ DDL (เพิ่มเข้า [[project_tests_sqlite_vs_mysql]] ได้)
 
