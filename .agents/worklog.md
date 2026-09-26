@@ -101,6 +101,9 @@
 - คลิกเดียว: หา definition ที่ data_source ตรงกัน → ไม่มีก็สร้างจาก REPORT_SOURCES preset → generate saved report
   → สลับไปแท็บ "รายงานที่บันทึก" · เป็น orchestration ของ endpoint ที่ test แล้ว (create+generate)
 - แก้บั๊ก UI แถม: ปุ่ม quick ใช้ `<component :is="'heroicons:...'">` (string → ไม่ render icon) เปลี่ยนเป็น `<Icon :icon>`
+- **verify บน MySQL (tinker, reflection buildReportData ทั้ง 3 source):** school_attendances ✅ 1 row (cols ถูก),
+  tuition_fees ✅ 0 row (dev ไม่มีข้อมูล tuition เลย — query โครงสร้างเดียวกับ attendance ไม่ error),
+  at_risk_students ✅ 0 row (ตัวที่ไม่มีใน test เดิม เรียก AnalyticsController — ยืนยันไม่ throw) · read-only ไม่มีแถวค้าง
 - **#2 report module ปิดครบทุกส่วน ไม่มีค้าง**
 - ✅ **testing DB drift ตามต่อแล้ว 2026-09-27** (ดูบันทึกล่างสุด) — ต้นตอไม่ใช่ dev schema แต่เป็นเทสต์ที่
   `Schema::drop` pollute ทั้ง suite · แก้แล้ว (`97f99311`) 24 แดง → เหลือ 1 (member_code pre-existing แยกเรื่อง)
