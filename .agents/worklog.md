@@ -41,6 +41,26 @@
 
 ---
 
+## 2026-09-27 — full test suite บน MySQL: cascade fix (238→144) + ที่เหลือเป็น pre-existing
+
+### สถานะ: ✅ แก้ cascade แล้ว (`15f88bf4`) · ⚠️ เหลือ 144 pre-existing (SQLite-vs-MySQL) — งานใหญ่แยก
+- รัน `php artisan test -c phpunit.mysql.xml` เต็ม (~710s, 1897 tests): รอบแรก **238 failed / 1650 passed**
+- 🎯 **ต้นตอ cascade (แก้แล้ว):** test ที่ยิง DDL (implicit commit ข้าม transaction) แล้ว drop/truncate ตารางร่วม
+  - `GuardianWriteServiceTest` + `GuardianMergeCommandsTest`: `Schema::create/dropIfExists` students/audit_logs/guardians
+    (ออกแบบสำหรับ sqlite :memory:) → tearDown drop ตารางร่วม → เทสต์หลังพังยกแผง · แก้: skip บน prebuilt-MySQL + guard tearDown
+  - `ClassroomStudentGuardianPayloadTest`: `truncate()` → `delete()`
+  - ผล: **238 → 144 failed** (กู้ ~94 · skipped 8→23)
+- ⚠️ **144 ที่เหลือ = pre-existing SQLite-vs-MySQL divergence (46 คลาส)** — ไม่ใช่ cascade/ไม่ใช่จาก session นี้
+  (JUnit XML parse): `Incorrect integer value 'active'/'student'` ให้ academy_members.status/role (int col, test ใส่ string, ×46)
+  · `personal_code/suggester_code` NOT-NULL ตอน insert users ตรง (bypass factory, ×25) · `Unknown column 'title'/'privacy'`
+  select คอลัมน์ที่ไม่มี (×18) · `Data too long` (×10) · BIGINT unsigned out of range (×3) — ทั้งหมดคือคลาสที่ [[project-tests-sqlite-vs-mysql]] อธิบายไว้
+- **ทำไมไม่แก้ทั้งหมดในรอบนี้:** กระจาย 46 คลาส/หลายร้อยจุด (218 จุดใส่ status='active' inline), ไม่มี single fix,
+  ปนทั้ง test-fixture bug + app-query bug + อาจต้อง schema migration (แนว owner-gated เหมือน member_code/G25)
+  → เป็นโปรเจกต์แยกที่ควรทยอยแก้เป็นคลัสเตอร์ ไม่ใช่งาน "ทำให้ผ่าน" รอบเดียว
+- JUnit log: scratchpad/suite2.xml · **สรุป: 1729 passed / 144 pre-existing failed / 23 skipped**
+
+---
+
 ## 2026-09-27 — ตามเรื่อง academy_donate_claims partial-table bug → พบว่าแก้ไปแล้ว
 
 ### สถานะ: ✅ ไม่มีโค้ดต้องแก้ (verify only) — memory เก่า 3 วันจึงคลาดเคลื่อน
