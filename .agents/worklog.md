@@ -28,10 +28,11 @@ course pages · G25 (migrate จากศูนย์บน MySQL ยังพ�
 4. ✅ **เทสต์กัน N+1 ถอย — เสร็จ 2026-09-24** — `tests/Feature/Performance/UserResourceQueryCountTest.php`
    หลัก "query ไม่โตตามจำนวนผู้ใช้" 2 ชั้น (resource-level + endpoint /api/newsfeed) · mutation-verified (แดงจริงเมื่อถอด scope)
 
-5. **(optional, คุ้มน้อย — ตรวจแล้ว 2026-09-25 → คงคำตัดสิน "ปล่อยได้")** ฟีด getComments ยัง bounded ~5 คิวรี/โพสต์
-   · at-risk course-scoped ~14 คิวรีคงที่ — โค้ดปัจจุบัน bounded + memory-safe แล้ว (limit 3 ต่อโพสต์)
-   → จะลดคิวรีต่อได้ต้อง preload latest-3/โพสต์ ทั้งหน้า ซึ่งต้องเพิ่ม package `staudenmeir/eloquent-eager-limit`
-   (ทางเลือก whereIn โหลดคอมเมนต์ทั้งหมด = เสี่ยง memory บนโพสต์ยอดวิว) — **ต้องเคาะก่อนว่าจะเพิ่ม dependency ไหม**
+5. ✅ **feed getComments N+1 — เสร็จ 2026-09-27 (`961be8d9`) · ไม่ต้องเพิ่ม dependency** — dependency question คลี่คลาย:
+   `staudenmeir/eloquent-eager-limit` หยุดที่ Laravel 10 เพราะ feature รวมเข้า core L11+ → Laravel 12 ทำ per-parent
+   limited eager load ได้ native (window function บน MySQL) · preload postComments/post_comments/shareComments limit 3/โพสต์
+   + nested ใน morph batch (ActivityController) → getComments ใช้ branch in-memory · ตัด Share .load() loop (N+1)
+   · วัดจริง loadFeed=21q คงที่ (per=5/15) · getComments เพิ่ม 0q (เดิม ~5/โพสต์) · max 3/โพสต์
 
 ---
 
