@@ -228,7 +228,8 @@ class ReportController extends Controller
             ], 404);
         }
 
-        $newDefinition = $definition->duplicate();
+        // duplicate() ต้องรับชื่อใหม่ (required param) — ของเดิมเรียกเปล่า = TypeError 500
+        $newDefinition = $definition->duplicate($definition->name.' (สำเนา)');
 
         $this->auditLog->log(
             'report_definition_duplicated',
