@@ -1,7 +1,14 @@
 # Work Log — nuxnan project
 
-## 📋 งานชิ้นต่อไป (backlog — อัพเดท 2026-09-24)
+## 📋 งานชิ้นต่อไป (backlog — อัพเดท 2026-09-27)
 เรียงตามความคุ้ม/ผลกระทบ · รายละเอียดเต็มอยู่ในบันทึกแต่ละหัวข้อด้านล่าง
+
+**เสร็จใน session 2026-09-26/27 (ดูบันทึกด้านล่าง):** course members "จำกลุ่มล่าสุด" (toast fix → last_viewed_group
+รวมศูนย์ composable 9 จุด) · #3 re-profile + ตัด N+1 auth_progress · **#2 report module ครบ 100%** (4 แท็บ FE +
+แก้ backend 3 bug) · member_activity_logs drift (จริง ๆ คือ Schema::drop pollute suite) · member_code int→varchar(50)
+→ **Academy suite 24 แดง → 0**
+**ค้างเชิงปฏิบัติ:** commit FE หลายชุดยังไม่ `npm run build` (เจ้าของ handle) — rebuild + คลิกจริงที่ school-management /
+course pages · G25 (migrate จากศูนย์บน MySQL ยังพัง) ยังไม่แก้ตามคำตัดสินเจ้าของ
 
 1. ✅ **UserResource เบาทั้งแอป — เสร็จ 2026-09-24** (ดูบันทึกด้านล่าง) — รวม eager-load เป็น scope
    `User::withCardCounts()` แล้ว apply เข้า list ที่ render UserResource เต็ม (peopleMayKnow, donateRecipients ×2,
