@@ -149,12 +149,20 @@ Unknown-column จริง = **9 test / 3 คอลัมน์** (เลข 15
 ทั้ง viewer+referrer → เท่ากันทุก engine (prod ไม่เปลี่ยน — MySQL ได้ 5003.85 อยู่แล้ว) · test คาด 5003.85 · 13 passed
 🔴 **BIGINT out-of-range** = มีแค่ `academy_point_accounts.balance=-5` (deferred — เจ้าของเคาะเรื่อง signed)
 
-### 📊 สถานะรวม suite — รอบปิดวันนี้ (2026-09-28): **45 failed / 1828 passed / 23 skipped / 3 incomplete** (715s)
-ต้นวัน 69 → ปิดวันนี้ 45 = **แก้ไป 24 test** (Unknown-column 9 + truncation 14 + rounding 1 + sweep untested)
-เหลือ 45 คลัสเตอร์อื่น (นับจาก final.xml): **`No active revenue share policy`** ~6 test (ขาด seed RevenueSharePolicy
-— AdDelivery ฯลฯ, dup ×12 ใน XML) · **row-count divergence** ~ElectionBallot/ElectionVoterRoll (member_code
-int-vs-string filter คืนแถวเกิน) + StreakLeaderboard ×2 (leaderboard คืนแถวเกิน) · balance=-5 (deferred) · + เบ็ดเตล็ด
-JUnit: session scratchpad/final.xml
+### คลัสเตอร์ revenue-policy — เสร็จ (`a5c1a36c`) [2026-09-28]
+12 test (RevenueSharePolicyResolver 2, RewardDistribution 8, AdDeliveryHardening 2) แดงด้วย
+`DomainException 'No active revenue share policy found'` · default platform policy (60/25/10/5) ถูก
+**insert เป็น data โดย migration `2026_07_18_220000`** → sqlite (RefreshDatabase รัน migration) มีแถว แต่
+prebuilt MySQL (`test:db:rebuild` คัดโครงสร้างอย่างเดียว ไม่คัด data) → nuxnan_testing 0 แถว → resolver throw
+(dev เองก็ drift เป็น student=70) · แก้: **trait `SeedsDefaultRevenueSharePolicy`** (firstOrCreate key
+scope/version=1 → no-op บน sqlite) เรียกใน setUp 3 คลาส · 26 passed บน MySQL
+🔑 **บทเรียนใหม่:** ทุก data-migration (insert reference data) จะหายบน prebuilt MySQL — test ที่พึ่งมันต้อง seed เอง
+
+### 📊 สถานะรวม suite — รอบปิดวันนี้ (2026-09-28): **45 → ~33 failed** (หลัง revenue-policy)
+ต้นวัน 69 → 45 (รอบปิด) → **แก้ revenue-policy อีก 12** = เหลือ ~33 (ยังไม่ full re-run ยืนยัน)
+รวมแก้วันนี้: Unknown-column 9 + truncation 14 + rounding 1 + revenue-policy 12 + sweep untested = **~36 test**
+เหลือ ~33: **row-count divergence** — ElectionBallot/ElectionVoterRoll (member_code int-vs-string filter คืนแถวเกิน)
++ StreakLeaderboard ×2 (คืนแถวเกิน) · balance=-5 (deferred owner) · + เบ็ดเตล็ด · JUnit: session scratchpad/final.xml
 
 ---
 
