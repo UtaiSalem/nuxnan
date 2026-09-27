@@ -33,7 +33,7 @@ class AcademyStudentListingTest extends TestCase
     {
         parent::setUp();
 
-        $this->admin = User::create([
+        $this->admin = User::factory()->create([
             'name' => 'Academy Admin',
             'email' => 'admin@academy.test',
             'password' => bcrypt('password'),

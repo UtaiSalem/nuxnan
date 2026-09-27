@@ -25,7 +25,7 @@ class StudentRosterImportIntegrationTest extends TestCase
         parent::setUp();
 
         // Create operator user explicitly
-        User::create([
+        User::factory()->create([
             'id' => 1,
             'name' => 'Test User',
             'email' => 'test@example.com',

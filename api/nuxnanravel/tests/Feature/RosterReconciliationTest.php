@@ -22,7 +22,7 @@ class RosterReconciliationTest extends TestCase
     {
         parent::setUp();
 
-        User::create([
+        User::factory()->create([
             'id' => 1,
             'name' => 'Operator Admin',
             'email' => 'admin@example.com',
@@ -282,13 +282,13 @@ class RosterReconciliationTest extends TestCase
         ]);
 
         // Scenario 3: Ambiguous teacher
-        $teacher1 = User::create([
+        $teacher1 = User::factory()->create([
             'name' => 'สมคิด รักดี',
             'email' => 't1@example.com',
             'password' => bcrypt('password'),
             'username' => 'somkid1',
         ]);
-        $teacher2 = User::create([
+        $teacher2 = User::factory()->create([
             'name' => 'สมคิด รักดี',
             'email' => 't2@example.com',
             'password' => bcrypt('password'),
@@ -356,7 +356,7 @@ class RosterReconciliationTest extends TestCase
         $this->assertContains($teacher2->id, $teacherAssignments[0]['candidate_user_ids']);
 
         // Process rows
-        $operator = User::create([
+        $operator = User::factory()->create([
             'name' => 'Operator Admin 2',
             'email' => 'admin2@example.com',
             'password' => bcrypt('password'),
