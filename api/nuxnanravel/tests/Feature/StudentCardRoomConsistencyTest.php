@@ -26,7 +26,7 @@ class StudentCardRoomConsistencyTest extends TestCase
             'academy_id' => $academy->id, 'academic_year_id' => $year->id, 'grade_level' => $grade, 'section' => (string) ($i + 1), 'name' => $grade.'/'.($i + 1),
         ])]);
         $students = $rooms->mapWithKeys(function ($room, $grade) use ($academy, $year) {
-            $student = Student::create(['academy_id' => $academy->id, 'student_id' => 'S'.uniqid(), 'first_name_th' => 'Test', 'last_name_th' => $grade, 'status' => 'active']);
+            $student = Student::create(['academy_id' => $academy->id, 'student_id' => 'S'.substr(uniqid(), -7), 'first_name_th' => 'Test', 'last_name_th' => $grade, 'status' => 'active']);
             ClassroomStudent::create(['academy_id' => $academy->id, 'student_id' => $student->id, 'classroom_id' => $room->id, 'academic_year_id' => $year->id, 'status' => 'active', 'student_number' => 1]);
             StudentCard::create(['academy_id' => $academy->id, 'student_id' => $student->id, 'student_number' => $student->student_id, 'class_level' => '99', 'class_section' => '99', 'student_status' => 'active']);
 
@@ -72,7 +72,7 @@ class StudentCardRoomConsistencyTest extends TestCase
     {
         [$academy, $rooms, , $user] = $this->fixture();
         $room = $rooms['ม.1'];
-        DB::table('classrooms')->where('id', $room->id)->update(['status' => 'inactive']);
+        DB::table('classrooms')->where('id', $room->id)->update(['status' => 'archived']);
         $response = $this->actingAs($user, 'api')->getJson("/api/academies/{$academy->id}/student-cards/dashboard")->assertOk();
         $this->assertSame(1, $response->json('totalStudents'));
         $this->assertSame(['11'], collect($response->json('levels'))->pluck('level')->all());

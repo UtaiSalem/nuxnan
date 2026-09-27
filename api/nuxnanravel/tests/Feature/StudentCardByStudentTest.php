@@ -52,7 +52,7 @@ class StudentCardByStudentTest extends TestCase
             'title_prefix_th' => 'เด็กชาย',
             'first_name_th' => 'สมปอง',
             'last_name_th' => 'ใจดี',
-            'status' => 'studying',
+            'status' => 'active',
         ]);
 
         $studentRole = AcademyRole::create([

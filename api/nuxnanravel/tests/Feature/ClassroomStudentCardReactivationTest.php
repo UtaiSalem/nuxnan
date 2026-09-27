@@ -59,7 +59,7 @@ class ClassroomStudentCardReactivationTest extends TestCase
     {
         return Student::create([
             'academy_id' => $this->academy->id,
-            'student_id' => 'S'.uniqid(),
+            'student_id' => 'S'.substr(uniqid(), -7),
             'first_name_th' => 'Test',
             'last_name_th' => 'Student',
             'status' => 'active',

@@ -81,8 +81,8 @@ class AcademyMemberFilterOptionsTest extends TestCase
             'student_id' => 'FLT001',
             'citizen_id' => '1111111111111',
             'status' => 'active',
-            'class_level' => 'legacy-level',
-            'class_section' => 'legacy-room',
+            'class_level' => 'legacy',
+            'class_section' => 'oldroom',
             'gender' => 1,
         ]);
 
@@ -126,7 +126,7 @@ class AcademyMemberFilterOptionsTest extends TestCase
             ->assertJsonPath('filters.classrooms.0.count', 1);
 
         $classLevels = collect($response->json('filters.class_levels'))->pluck('value')->all();
-        $this->assertNotContains('legacy-level', $classLevels);
+        $this->assertNotContains('legacy', $classLevels);
     }
 
     public function test_filter_options_fall_back_to_student_snapshot_when_no_current_year_exists(): void
