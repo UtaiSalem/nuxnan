@@ -143,10 +143,18 @@ Unknown-column จริง = **9 test / 3 คอลัมน์** (เลข 15
      (ขาด seed RevenueSharePolicy) — คนละคลัสเตอร์ ไม่ใช่ truncation
 - 🔗 layered: student_number/campaign fix แล้วโผล่ classrooms.status + revenue-policy (แก้/flag ตามด้านบน)
 
-### 📊 สถานะรวม suite (หลัง cluster 3 + Data-too-long + sweep)
-รอบวัด full = 69 failed (ก่อนเริ่มวันนี้) · ทำไปแล้ว: Unknown-column 9 test + truncation 14 test + sweep (untested)
-เหลือ ~46 ในคลัสเตอร์อื่น: decimal rounding, BIGINT out-of-range, revenue-policy seed, + คลาสเบ็ดเตล็ด
-(ต้อง full re-run เพื่อได้ net count จริง — ยังไม่ได้รันรอบปิดวันนี้)
+### decimal rounding (campaign reward) — เสร็จ (`06f735fd`) [2026-09-28]
+`CampaignViewService` increment wallet (DECIMAL(15,2)) ด้วยค่าเศษ 0.76667/view → MySQL ปัดทีละ credit
+เป็น 0.77, SQLite สะสม float → wallet เพี้ยน (5003.85 vs test คาด 5003.83 = ค่า SQLite) · แก้ `round($reward,2)`
+ทั้ง viewer+referrer → เท่ากันทุก engine (prod ไม่เปลี่ยน — MySQL ได้ 5003.85 อยู่แล้ว) · test คาด 5003.85 · 13 passed
+🔴 **BIGINT out-of-range** = มีแค่ `academy_point_accounts.balance=-5` (deferred — เจ้าของเคาะเรื่อง signed)
+
+### 📊 สถานะรวม suite — รอบปิดวันนี้ (2026-09-28): **45 failed / 1828 passed / 23 skipped / 3 incomplete** (715s)
+ต้นวัน 69 → ปิดวันนี้ 45 = **แก้ไป 24 test** (Unknown-column 9 + truncation 14 + rounding 1 + sweep untested)
+เหลือ 45 คลัสเตอร์อื่น (นับจาก final.xml): **`No active revenue share policy`** ~6 test (ขาด seed RevenueSharePolicy
+— AdDelivery ฯลฯ, dup ×12 ใน XML) · **row-count divergence** ~ElectionBallot/ElectionVoterRoll (member_code
+int-vs-string filter คืนแถวเกิน) + StreakLeaderboard ×2 (leaderboard คืนแถวเกิน) · balance=-5 (deferred) · + เบ็ดเตล็ด
+JUnit: session scratchpad/final.xml
 
 ---
 
