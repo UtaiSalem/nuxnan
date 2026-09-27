@@ -65,8 +65,16 @@
 - แก้ด้วย **set-mutator** (pattern เดียวกับ `Course::setStatusAttribute` ที่มีอยู่ในโปรเจค): numeric ผ่านตรง (int writes เดิมไม่กระทบ),
   string→map เป็น int · AcademyMember.status (active→2 ฯลฯ, role คง varchar) · CourseMember.status (active→1) + role (student→1/admin→4)
 - verify: `AuditLogCallSitesTest` 17 แดง→เขียวหมด · ledger tests ผ่าน status/role แล้ว · regression member-heavy classes เขียว
-- 🔗 **clusters เป็นชั้น (layered):** แก้ status/role แล้ว ledger tests ไปโผล่ **คลัสเตอร์ 2** ต่อ (`users.suggester_code` NOT-NULL,
-  test สร้าง user ตรง/ตั้ง null bypass UserFactory) — ยังไม่แก้ · net count ที่แท้จริงต้องรอ full re-run หลังทำหลายคลัสเตอร์
+- 🔗 **clusters เป็นชั้น (layered):** แก้ status/role แล้ว ledger tests ไปโผล่คลัสเตอร์ 2 ต่อ
+
+### คลัสเตอร์ 2 (users.suggester_code NOT-NULL) — เสร็จ (`04637cd3`)
+- `users.suggester_code` = varchar NOT NULL DEFAULT '99999999' บน MySQL (drift; migration ว่า nullable) · ledger tests
+  ส่ง `suggester_code => null` ตรง ๆ (เจตนา "ไม่มีผู้แนะนำ") → explicit null ข้าม default → 1048 cannot be null (sqlite ปล่อยผ่าน)
+- แก้: ลบ key `suggester_code=>null` (4 จุด/2 ไฟล์ ledger) → DB default '99999999' apply = sentinel "ไม่มีผู้แนะนำ"
+  (AcademyClaimService/CourseClaimService: `suggester_code ? lookup->where(id!=platform) : null` · '99999999'=platform ถูก exclude → null เหมือนเดิม)
+- verify: AcademyClaimLedgerTest + CourseClaimLedgerTest **14 passed** (7+7) บน MySQL
+- ⏭️ **sub-cluster ถัดไป (2b):** `personal_code doesn't have default` (×11) — test สร้าง user bypass UserFactory ใน
+  ClassroomUniquenessTest(4)/AcademyStudentDetail(2)/AcademyStudentListing(2)/RosterReconciliation(2)/StudentRosterImportIntegration(1)
 
 ---
 
