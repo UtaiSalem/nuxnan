@@ -487,11 +487,17 @@ class AcademyMemberController extends Controller
 
         if ($request->filled('search')) {
             $searchTerm = $request->search;
+            // member_name is a computed accessor (user name > student Thai/English name),
+            // not a real column on academy_members — search the underlying relations instead.
             $query->where(function ($q) use ($searchTerm) {
-                $q->where('member_name', 'like', "%{$searchTerm}%")
-                    ->orWhereHas('user', function ($uq) use ($searchTerm) {
-                        $uq->where('name', 'like', "%{$searchTerm}%");
-                    });
+                $q->whereHas('user', function ($uq) use ($searchTerm) {
+                    $uq->where('name', 'like', "%{$searchTerm}%");
+                })->orWhereHas('student', function ($sq) use ($searchTerm) {
+                    $sq->where('first_name_th', 'like', "%{$searchTerm}%")
+                        ->orWhere('last_name_th', 'like', "%{$searchTerm}%")
+                        ->orWhere('first_name_en', 'like', "%{$searchTerm}%")
+                        ->orWhere('last_name_en', 'like', "%{$searchTerm}%");
+                });
             });
         }
 

@@ -70,11 +70,11 @@ class CampaignController extends Controller
     public function targetCourses(Request $request): JsonResponse
     {
         $query = Course::query()
-            ->select(['id', 'name', 'title', 'code', 'academy_id', 'cover as cover_image'])
+            ->select(['id', 'name', 'code', 'academy_id', 'cover as cover_image'])
             ->when($request->filled('id'), fn ($q) => $q->whereKey($request->integer('id')))
             ->when($request->filled('q'), function ($q) use ($request) {
                 $term = '%'.$request->string('q')->toString().'%';
-                $q->where(fn ($inner) => $inner->where('name', 'like', $term)->orWhere('title', 'like', $term)->orWhere('code', 'like', $term));
+                $q->where(fn ($inner) => $inner->where('name', 'like', $term)->orWhere('code', 'like', $term));
             })
             ->orderBy('name')
             ->limit(20)

@@ -341,12 +341,11 @@ class CourseController extends Controller
         if (strlen($query) >= 2) {
             $coursesQuery->where(function ($q) use ($query) {
                 $q->where('name', 'like', '%'.$query.'%')
-                    ->orWhere('title', 'like', '%'.$query.'%')
                     ->orWhere('code', 'like', '%'.$query.'%');
             });
         }
 
-        $courses = $coursesQuery->select(['id', 'name', 'title', 'code', 'cover_image', 'academy_id'])
+        $courses = $coursesQuery->select(['id', 'name', 'code', 'cover as cover_image', 'academy_id'])
             ->orderBy('updated_at', 'desc')
             ->limit($request->boolean('all') ? 100 : 10)
             ->get();
