@@ -117,6 +117,37 @@ Unknown-column จริง = **9 test / 3 คอลัมน์** (เลข 15
 - `RemediationController:341` + `RemediationService:376` — `remediationSession.course:id,title`
   (หมายเหตุ: `remediationSession:id,title,...` ตรงนี้ **ไม่ใช่บั๊ก** — course_remediation_sessions มี title จริง)
 
+### ✅ course:id,title sweep — เสร็จ (`5bc60a4c`) [2026-09-28]
+เช็ค FE ก่อน: ทุกจุดใช้ `course.title || course.name` อยู่แล้ว (defensive) → เปลี่ยน select/read เป็น `name` ปลอดภัย
+(เดิม title = null หรือ 500 บน MySQL อยู่แล้ว ไม่ regress) · แก้ 5 จุด: GradeAppeal, CertificateService
+(course:id,title,cover_image→id,name,cover + read $course->title 3 จุด→name), Remediation ×2, +CourseCompletion
+(full-model read title=null → name) · verify: smoke-run 3 query บน MySQL ผ่าน ไม่มี Unknown column · pint ok
+(endpoint พวกนี้ไม่มี test — CourseCompletionApiTest ถูก skip บน prebuilt-MySQL)
+
+### คลัสเตอร์ Data-too-long/truncation — เสร็จ (`80eb296b`) [2026-09-28]
+16(+1) failure / 4 กลุ่มราก (SQLite ปล่อยผ่าน length+enum, MySQL strict):
+- **student_cards.student_number varchar(8)** (ถูกต้อง — data จริง max 5) · test ตั้ง `student_id='S'.uniqid()`
+  (14 ตัว) แล้ว app คัดลอกลง student_number → overflow → แก้ fixture `'S'.substr(uniqid(),-7)` 3 ไฟล์ (กู้ 10 test)
+- **campaign_delivery_events.status varchar(16)** แคบกว่า const ของ model เอง (`insufficient_visibility`=23) →
+  migration `2026_09_28_000001` widen เป็น varchar(32) (in-place MODIFY, index คงอยู่) · migrate dev DONE
+- **fixture ค่าไม่ตรง schema:** students.status `'studying'`→`'active'` · class_level `'legacy-level'`→`'legacy'`
+  + class_section `'legacy-room'`→`'oldroom'` (>varchar(10)) · classrooms.status test เขียน `'inactive'`
+  (enum มีแค่ active/archived) → `'archived'`
+- **course_group_members.status enum('0','1')**: เขียน int 0 = index ผิด (MySQL 1265 truncated), int 1 →'0' เพี้ยน →
+  **set-mutator** coerce string label (pattern cluster 1, ไม่แตะ schema — dev 4,166 แถว) · แก้บั๊ก prod join กลุ่ม private
+- verify: 7 ไฟล์เขียวบน MySQL · pint ok
+- 🔴 **ยังไม่แก้ (เคาะเจ้าของ/คนละคลัสเตอร์):**
+  1. `academy_point_accounts.balance` = bigint **UNSIGNED** แต่ `AdRevenueIntegrityTest` ใส่ -5 ทดสอบ scanner ยอดติดลบ
+     → ถ้ายอดติดลบเกิดไม่ได้จริง scanner ก็ตายอยู่แล้ว = ต้องตัดสินใจว่า balance ควร signed ไหม (money-adjacent)
+  2. `AdDeliveryHardeningTest` 2 test (complete/replay) = `DomainException 'No active revenue share policy'`
+     (ขาด seed RevenueSharePolicy) — คนละคลัสเตอร์ ไม่ใช่ truncation
+- 🔗 layered: student_number/campaign fix แล้วโผล่ classrooms.status + revenue-policy (แก้/flag ตามด้านบน)
+
+### 📊 สถานะรวม suite (หลัง cluster 3 + Data-too-long + sweep)
+รอบวัด full = 69 failed (ก่อนเริ่มวันนี้) · ทำไปแล้ว: Unknown-column 9 test + truncation 14 test + sweep (untested)
+เหลือ ~46 ในคลัสเตอร์อื่น: decimal rounding, BIGINT out-of-range, revenue-policy seed, + คลาสเบ็ดเตล็ด
+(ต้อง full re-run เพื่อได้ net count จริง — ยังไม่ได้รันรอบปิดวันนี้)
+
 ---
 
 ## 2026-09-27 — ตามเรื่อง academy_donate_claims partial-table bug → พบว่าแก้ไปแล้ว
