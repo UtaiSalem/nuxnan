@@ -373,7 +373,7 @@ class RemediationService
         return CourseRemediationEnrollment::where('student_id', $student->id)
             ->with([
                 'remediationSession:id,title,type,start_at,end_at,status',
-                'remediationSession.course:id,title',
+                'remediationSession.course:id,name',
             ])
             ->orderBy('enrolled_at', 'desc')
             ->get()

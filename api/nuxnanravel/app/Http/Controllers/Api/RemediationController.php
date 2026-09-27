@@ -338,7 +338,7 @@ class RemediationController extends Controller
         $enrollments = CourseRemediationEnrollment::where('student_id', $request->user()->id)
             ->with([
                 'remediationSession:id,title,type,start_at,end_at,status',
-                'remediationSession.course:id,title',
+                'remediationSession.course:id,name',
             ])
             ->orderBy('enrolled_at', 'desc')
             ->get();

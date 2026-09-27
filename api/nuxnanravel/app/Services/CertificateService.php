@@ -99,7 +99,7 @@ class CertificateService
             'score' => $member->final_percentage ?? $member->draft_percentage,
             'grade_point' => $member->final_grade_point ?? $member->draft_grade_point,
             'student_name' => $student->name,
-            'course_title' => $course->title,
+            'course_title' => $course->name,
             'instructor_name' => $course->instructor?->name,
             'completion_date' => $member->completed_at ?? now(),
             'issue_date' => now(),
@@ -237,7 +237,7 @@ class CertificateService
     public function getStudentCertificates(User $student): array
     {
         return CourseCertificate::where('student_id', $student->id)
-            ->with(['course:id,title,cover_image'])
+            ->with(['course:id,name,cover'])
             ->orderBy('issued_at', 'desc')
             ->get()
             ->map(function ($cert) {
@@ -353,7 +353,7 @@ class CertificateService
                 'balance_after' => $userBalanceAfter,
                 'source_type' => 'certificate_download',
                 'source_id' => $certificate->id,
-                'description' => "ค่าดาวน์โหลดใบประกาศ: {$course->title}",
+                'description' => "ค่าดาวน์โหลดใบประกาศ: {$course->name}",
                 'metadata' => [
                     'certificate_id' => $certificate->id,
                     'certificate_number' => $certificate->certificate_number,
@@ -381,7 +381,7 @@ class CertificateService
                     'balance_after' => $instructorBalanceAfter,
                     'source_type' => 'certificate_revenue',
                     'source_id' => $certificate->id,
-                    'description' => "รายได้จากใบประกาศ: {$course->title}",
+                    'description' => "รายได้จากใบประกาศ: {$course->name}",
                     'metadata' => [
                         'certificate_id' => $certificate->id,
                         'student_id' => $user->id,

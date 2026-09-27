@@ -61,7 +61,7 @@ class GradeAppealController extends Controller
         $user = $request->user();
 
         $appeals = GradeAppeal::where('student_id', $user->id)
-            ->with(['course:id,title', 'reviewer:id,name'])
+            ->with(['course:id,name', 'reviewer:id,name'])
             ->orderBy('created_at', 'desc')
             ->get();
 

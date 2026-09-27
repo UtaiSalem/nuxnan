@@ -375,7 +375,7 @@ class CourseCompletionController extends Controller
             'data' => [
                 'course' => [
                     'id' => $course->id,
-                    'title' => $course->title,
+                    'title' => $course->name,
                     'finalization_status' => $course->finalization_status,
                 ],
                 'students' => $members,
