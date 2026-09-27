@@ -23,7 +23,7 @@ class CourseClaimLedgerTest extends TestCase
     {
         $owner = User::factory()->create();
         $donor = User::factory()->create(['pp' => 1000]);
-        $claimer = User::factory()->create(['pp' => 0, 'suggester_code' => null]);
+        $claimer = User::factory()->create(['pp' => 0]);
         $platform = User::factory()->create([
             'personal_code' => config('economy.platform_personal_code', '99999999'),
             'pp' => 0,
@@ -143,7 +143,7 @@ class CourseClaimLedgerTest extends TestCase
     public function test_member_sees_newest_first_paginated_claim_history_and_summary(): void
     {
         [$owner, $donor, $claimer, $platform, $course] = $this->setupClaimTest();
-        $other = User::factory()->create(['pp' => 0, 'suggester_code' => null]);
+        $other = User::factory()->create(['pp' => 0]);
         CourseMember::create(['course_id' => $course->id, 'user_id' => $other->id]);
         $firstDonation = app(CourseDonateService::class)->createPointDonation($donor, $course, 270, ['donor_display_name' => 'Donor'], 'ledger-history-1');
         $first = app(CourseClaimService::class)->claimSpecific($claimer, $course, $firstDonation);

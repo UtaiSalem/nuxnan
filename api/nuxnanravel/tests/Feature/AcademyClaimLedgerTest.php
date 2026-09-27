@@ -23,7 +23,7 @@ class AcademyClaimLedgerTest extends TestCase
     {
         $owner = User::factory()->create();
         $donor = User::factory()->create(['pp' => 1000]);
-        $claimer = User::factory()->create(['pp' => 0, 'suggester_code' => null]);
+        $claimer = User::factory()->create(['pp' => 0]);
         $platform = User::factory()->create([
             'personal_code' => config('economy.platform_personal_code', '99999999'),
             'pp' => 0,
@@ -145,7 +145,7 @@ class AcademyClaimLedgerTest extends TestCase
     public function test_academy_claim_history_is_newest_first_with_summary(): void
     {
         [$owner, $donor, $claimer, $platform, $academy] = $this->setupClaimTest();
-        $other = User::factory()->create(['pp' => 0, 'suggester_code' => null]);
+        $other = User::factory()->create(['pp' => 0]);
         $this->joinAcademy($academy, $claimer, $other);
 
         $donation = app(AcademyDonateService::class)->createPointDonation($donor, $academy, 540, [], 'history-key-1');
