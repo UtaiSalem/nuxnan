@@ -7,11 +7,19 @@ use App\Models\CoursePointAccount;
 use App\Models\RevenueSharePolicy;
 use App\Services\RevenueSharePolicyResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\SeedsDefaultRevenueSharePolicy;
 use Tests\TestCase;
 
 class RevenueSharePolicyResolverTest extends TestCase
 {
     use RefreshDatabase;
+    use SeedsDefaultRevenueSharePolicy;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seedDefaultRevenueSharePolicy();
+    }
 
     public function test_resolver_falls_back_to_platform_default(): void
     {

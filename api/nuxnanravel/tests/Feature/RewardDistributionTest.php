@@ -16,16 +16,19 @@ use App\Services\Campaign\AdDeliveryService;
 use App\Services\Campaign\RewardDistributionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Tests\Concerns\SeedsDefaultRevenueSharePolicy;
 use Tests\TestCase;
 
 class RewardDistributionTest extends TestCase
 {
     use RefreshDatabase;
+    use SeedsDefaultRevenueSharePolicy;
 
     protected function setUp(): void
     {
         parent::setUp();
         config(['campaign.gross_reward_per_view_per_second' => 1]);
+        $this->seedDefaultRevenueSharePolicy();
     }
 
     private function completeDelivery(?int $courseId = null, ?int $academyId = null, int $budget = 1000, int $duration = 10, float $visibility = 1.0): array

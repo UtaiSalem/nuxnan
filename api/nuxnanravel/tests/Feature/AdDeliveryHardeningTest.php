@@ -10,11 +10,19 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Tests\Concerns\SeedsDefaultRevenueSharePolicy;
 use Tests\TestCase;
 
 class AdDeliveryHardeningTest extends TestCase
 {
     use RefreshDatabase;
+    use SeedsDefaultRevenueSharePolicy;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seedDefaultRevenueSharePolicy();
+    }
 
     private function start($duration = 10): array
     {
