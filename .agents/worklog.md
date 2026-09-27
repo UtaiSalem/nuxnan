@@ -73,8 +73,18 @@
 - แก้: ลบ key `suggester_code=>null` (4 จุด/2 ไฟล์ ledger) → DB default '99999999' apply = sentinel "ไม่มีผู้แนะนำ"
   (AcademyClaimService/CourseClaimService: `suggester_code ? lookup->where(id!=platform) : null` · '99999999'=platform ถูก exclude → null เหมือนเดิม)
 - verify: AcademyClaimLedgerTest + CourseClaimLedgerTest **14 passed** (7+7) บน MySQL
-- ⏭️ **sub-cluster ถัดไป (2b):** `personal_code doesn't have default` (×11) — test สร้าง user bypass UserFactory ใน
-  ClassroomUniquenessTest(4)/AcademyStudentDetail(2)/AcademyStudentListing(2)/RosterReconciliation(2)/StudentRosterImportIntegration(1)
+### คลัสเตอร์ 2b (users.personal_code NOT-NULL) — เสร็จ (`a4471af8`)
+- `users.personal_code`/`reference_code` NOT NULL no-default บน MySQL (drift) · 5 ไฟล์ใช้ `User::create([...])` ตรง (bypass factory)
+  ไม่ใส่ code → 1364 doesn't have a default
+- แก้: convert `User::create(` → `User::factory()->create(` (8 จุด/5 ไฟล์) — factory เติม personal_code/reference_code
+  (generator เดียวกับ signup) · override เดิมชนะ
+- verify: 5 คลาส (ClassroomUniqueness/AcademyStudentDetail/AcademyStudentListing/RosterReconciliation/StudentRosterImport) **11 passed** บน MySQL
+
+### สรุปคลัสเตอร์ที่ทำ (1 + 2 + 2b) — verified บน MySQL
+- cluster 1 status/role mutator: AuditLogCallSites 17 · cluster 2 suggester_code: ledger 14 · cluster 2b personal_code: 11
+- **ยังเหลือ (จาก 144):** `Unknown column 'title'/'privacy'` (×18, genuine query bug — select คอลัมน์ที่ไม่มี),
+  `Data too long` (×10), BIGINT out of range (×3), + คลาสอื่น (LessonQuestionScoring/StudentSectionalUpdate/CoursePurchaseFlow ฯลฯ)
+  · net count ที่แท้จริงต้อง full re-run
 
 ---
 
