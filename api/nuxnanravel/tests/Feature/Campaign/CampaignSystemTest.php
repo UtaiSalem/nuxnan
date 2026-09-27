@@ -247,9 +247,10 @@ class CampaignSystemTest extends TestCase
         $viewer->refresh();
         // 5 views * 200 PP = 1000 PP deducted -> 19000 PP remaining
         $this->assertEquals(19000, $viewer->pp);
-        // Reward per view = 10s * 0.06 + 200 PP / 1200 = 0.6 + 0.16667 = 0.76667 THB.
-        // 5 views -> 3.8333 THB added -> 5003.83 wallet
-        $this->assertEqualsWithDelta(5003.83, (float) $viewer->wallet, 0.01);
+        // Reward per view = round(10s * 0.06 + 200 PP / 1200, 2) = round(0.76667, 2) = 0.77 THB
+        // (the wallet is DECIMAL(15,2), so each credit is rounded to 2 decimals — same on every engine).
+        // 5 views -> 3.85 THB added -> 5003.85 wallet
+        $this->assertEqualsWithDelta(5003.85, (float) $viewer->wallet, 0.01);
 
         // 6th view should be rejected with 429 (daily quota reached), not a 500 server error
         $response = $this->withHeaders([

@@ -64,9 +64,12 @@ class CampaignViewService
             $viewer->decrement('pp', $pointsRequired);
 
             // Viewer reward = base per-second rate + a points-derived bonus (config-driven).
+            // Round to 2 decimals (the wallet is DECIMAL(15,2)) so the credit is explicit
+            // and identical on every engine — otherwise MySQL rounds each increment while
+            // SQLite accumulates the raw float, and the two wallets drift apart.
             $pointsPerBaht = (float) config('campaign.points_per_reward_baht', 1200);
-            $viewerReward = $locked->duration * (float) config('campaign.viewer_reward_per_second')
-                + ($pointsPerBaht > 0 ? $pointsRequired / $pointsPerBaht : 0);
+            $viewerReward = round($locked->duration * (float) config('campaign.viewer_reward_per_second')
+                + ($pointsPerBaht > 0 ? $pointsRequired / $pointsPerBaht : 0), 2);
             $viewer->increment('wallet', $viewerReward);
 
             // Reward the referrer who introduced the viewer (falls back to the platform account).
@@ -78,7 +81,7 @@ class CampaignViewService
 
     private function rewardReferrer(User $viewer, int $duration): void
     {
-        $referrerReward = $duration * (float) config('campaign.referrer_reward_per_second');
+        $referrerReward = round($duration * (float) config('campaign.referrer_reward_per_second'), 2);
         if ($referrerReward <= 0) {
             return;
         }
