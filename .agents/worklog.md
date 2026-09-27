@@ -86,6 +86,37 @@
   `Data too long` (×10), BIGINT out of range (×3), + คลาสอื่น (LessonQuestionScoring/StudentSectionalUpdate/CoursePurchaseFlow ฯลฯ)
   · net count ที่แท้จริงต้อง full re-run
 
+### คลัสเตอร์ 3 (Unknown column: title/member_name/privacy) — เสร็จ (`d99479a1`)
+รัน full suite ใหม่: **69 failed / 1804 passed / 23 skipped** (จาก 144 หลังทำ 1/2/2b) · JUnit ที่ session scratchpad/cluster3.xml
+Unknown-column จริง = **9 test / 3 คอลัมน์** (เลข 15/3/3 ใน grep คือ message ซ้ำใน XML):
+- **courses ไม่มี `title`** (ชื่อจริง = `name`; ไม่มี migration ไหนสร้าง title เลย → genuine bug ไม่ใช่ drift) →
+  แก้ 3 จุด query: `CampaignController::targetCourses` (ตัด title จาก select+where), `CourseController::searchCourses`
+  (ตัด title + `cover_image`→`cover as cover_image`), `PublicAcademyDetailResource` (ตัด title จาก select)
+  · ครอบ 5 test: CampaignSystem search-targets, CourseAdminSearch ×3, PublicSchoolDiscovery donation-signals
+- **academy_members ไม่มี `member_name`** (เป็น accessor: user->name > student th/en ที่ `AcademyMember::getMemberNameAttribute`,
+  ไม่ใช่คอลัมน์ · คอลัมน์จริงอยู่บน course_members) → `AcademyMemberController::getAcademyMembers` เปลี่ยน
+  `where('member_name',...)` เป็นค้นผ่าน relation `user` + `student` (th/en) · resource output ใช้ accessor เหมือนเดิม (ผ่าน)
+- **course_groups.privacy = drift** (migration `2026_01_03_020322` สร้างไว้ แต่ guard `hasColumn` + dev/prod ถูก import
+  dump ทับจนคอลัมน์หาย และแถว migration = ran แล้ว เลยไม่เติมซ้ำ) → **repair migration `2026_09_27_000004`**
+  idempotent เติม enum('public','private') default public (down = no-op เพราะเป็น base schema ของ migration เดิม)
+  · pattern เดียวกับ member_code/academy_donate_claims · migrate dev DONE batch 142 · ครอบ 3 test:
+  CourseEnrollmentApproval ×2, CourseGroupMemberRemoval
+- **verify บน MySQL:** 4 ไฟล์ cluster-3 บริสุทธิ์ **20 passed** (AcademyMemberFilter/CourseAdminSearch/
+  PublicSchoolDiscovery/CourseEnrollmentApproval) · pint passed · ไม่มี "Unknown column" เหลือ
+- 🔗 **layered:** 2 test ในไฟล์เดียวกันเด้งไป cluster อื่นหลังปลด Unknown-column blocker (ไม่ใช่ของ cluster 3):
+  `CampaignSystemTest::it_limits_rewarded_views` = decimal rounding (5003.85 vs 5003.83) ·
+  `CourseGroupMemberRemovalTest::remove_also_clears_pending_join` = `1265 Data truncated for column 'status'`
+  (insert int 0 ลง course_group_members.status ที่เป็น enum) → เข้าคลัสเตอร์ Data-too-long/truncation
+
+### 🔴 ของค้าง cluster-3 family (untested — ต้องเคาะก่อนทำ): `course:id,title` ที่ยังไม่แตะ
+เจอ 4 จุดที่ select `course:id,title` (courses ไม่มี title) แต่ **ไม่มี test คลุม** → จะ 500 บน prod เงียบ ๆ
+เหมือนเคส avatar (SET-S9 ที่ตอนนั้นกวาดทั้ง 36 จุด). ไม่แก้รอบนี้เพราะ **แตะ response key ที่ FE เห็น** (`course.title`→`course.name`)
+โดยไม่มี test/รู้ฝั่ง FE ยืนยัน — ควรทำเป็น sweep แยก + assert payload key เหมือน SET-S9:
+- `GradeAppealController::myAppeals:64` — `course:id,title` (คืน model ตรง, FE อ่าน course.title)
+- `CertificateService::getStudentCertificates:240` — `course:id,title,cover_image` + อ่าน `$course->title` ที่ :102/:356/:384
+- `RemediationController:341` + `RemediationService:376` — `remediationSession.course:id,title`
+  (หมายเหตุ: `remediationSession:id,title,...` ตรงนี้ **ไม่ใช่บั๊ก** — course_remediation_sessions มี title จริง)
+
 ---
 
 ## 2026-09-27 — ตามเรื่อง academy_donate_claims partial-table bug → พบว่าแก้ไปแล้ว
