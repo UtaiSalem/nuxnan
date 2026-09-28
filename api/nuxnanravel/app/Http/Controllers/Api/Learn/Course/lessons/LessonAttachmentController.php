@@ -151,9 +151,13 @@ class LessonAttachmentController extends Controller
 
     public function destroy(Request $request, $attachment)
     {
+        // Resolve by route name, not the positional method arg: these routes carry two
+        // params ({lesson|topic} then {attachment}) but this method has one scalar arg, so
+        // Laravel injects the FIRST route param (the lesson/topic id) into $attachment.
+        // On sqlite the two tables' ids coincide often enough to hide it; on MySQL they differ → 404.
         $attachment = $attachment instanceof LessonAttachment
             ? $attachment
-            : LessonAttachment::findOrFail($attachment);
+            : LessonAttachment::findOrFail($request->route('attachment'));
 
         try {
             $user = auth()->user();
@@ -196,9 +200,10 @@ class LessonAttachmentController extends Controller
 
     public function download(Request $request, $attachment)
     {
+        // Resolve by route name, not the positional method arg — see destroy() for why.
         $attachment = $attachment instanceof LessonAttachment
             ? $attachment
-            : LessonAttachment::findOrFail($attachment);
+            : LessonAttachment::findOrFail($request->route('attachment'));
 
         try {
             $user = auth()->user();

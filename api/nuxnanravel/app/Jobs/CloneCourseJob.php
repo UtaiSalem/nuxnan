@@ -200,8 +200,10 @@ class CloneCourseJob implements ShouldQueue
                 'refunded_at' => now(),
             ]);
 
-            // Reverse the total_sales increment from CoursePurchaseService
-            if ($purchase->sourceCourse) {
+            // Reverse the total_sales increment from CoursePurchaseService.
+            // Guard against going below 0: total_sales is BIGINT UNSIGNED, so 0 - 1 throws
+            // "out of range" on MySQL (SQLite silently stores -1). A sales count is never negative.
+            if ($purchase->sourceCourse && $purchase->sourceCourse->total_sales > 0) {
                 $purchase->sourceCourse->decrement('total_sales');
             }
         });
