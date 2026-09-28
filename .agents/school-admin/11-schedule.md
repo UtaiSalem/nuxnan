@@ -322,7 +322,11 @@ validator ของ `update()` มีแค่ `sometimes|date_format:H:i` (ไ�
 **เจ้าของโปรเจคเคาะ: ลบทิ้ง** — ทุกเคสเป็น `assertStatus(200)` เปล่า ๆ ซึ่งชนกับบทเรียนของ SC-S9
 ("200 ไม่ได้แปลว่าใช้งานได้") · เมนูอื่นที่อยากได้เทสต์ ให้เขียนแบบมี assertion จริงในเมนูนั้นเอง
 
-**G25 · 🔴 สร้างฐานข้อมูลใหม่จาก migration ทั้งชุดไม่ได้ — หนี้ข้ามเมนู (เจอตอน SC-S11)**
+**G25 · 🟢 ปิดแล้ว 2026-09-28 — สร้างฐานข้อมูลใหม่จาก migration ทั้งชุดได้แล้ว (migrate:fresh เขียว 495/495 บน MySQL 8.4)**
+เจ้าของอนุมัติให้ซ่อม → verify ด้วย docker mysql:8.4 จริง · แก้ 3 กอง (FK-ordering→repair migration
+2026_02_02_000000 · pluralization curriculums · index/FK 1553 schedule_periods) + ตัด dangling FK
+poll_option_id/department_id (ตารางไม่มีจริง) · ดู `.agents/worklog.md` 2026-09-28
+~~เดิม (2026-09-18):~~
 สร้าง DB เปล่าแล้วสั่ง `migrate` บน MySQL → **ตายที่ migration ตัวที่ 9**
 `2025_06_22_create_academy_invite_links_table` → `SQLSTATE[HY000] 1824 Failed to open the referenced table 'academies'`
 (ตาราง `academies` ถูกสร้างที่ `2025_10_26_070433` ซึ่งเรียงทีหลัง)
