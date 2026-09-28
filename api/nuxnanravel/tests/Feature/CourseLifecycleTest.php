@@ -103,10 +103,10 @@ class CourseLifecycleTest extends TestCase
         $response->assertJsonPath('code', 'COURSE_ENROLLMENT_CLOSED');
     }
 
-    public function test_new_user_cannot_enroll_when_status_closed(): void
+    public function test_new_user_cannot_enroll_when_enrollment_closed(): void
     {
         $student = User::factory()->create(['wallet' => 1000]);
-        $course = $this->makeCourse(['status' => 4]);
+        $course = $this->makeCourse(['status' => 1, 'end_date' => now()->subDay()]);
 
         $response = $this->actingAs($student, 'api')
             ->postJson("/api/courses/{$course->id}/members");

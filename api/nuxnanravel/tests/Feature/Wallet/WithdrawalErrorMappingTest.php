@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Wallet;
 
+use App\Models\Role;
 use App\Models\User;
 use App\Models\WalletTransaction;
 use App\Services\WalletService;
@@ -17,6 +18,10 @@ class WithdrawalErrorMappingTest extends TestCase
 
     private function rejectWith(\Throwable $exception): TestResponse
     {
+        // The SUPER_ADMIN role is seeded by migration 2026_01_21 (data), which the prebuilt
+        // MySQL test DB does not carry — without the row, assignRole() is a silent no-op and
+        // the admin guard returns 403. Ensure it exists (same pattern as AcademyArchiveTest).
+        Role::firstOrCreate(['name' => 'SUPER_ADMIN']);
         $admin = User::factory()->create();
         $admin->assignRole('SUPER_ADMIN');
         $token = JWTAuth::fromUser($admin);

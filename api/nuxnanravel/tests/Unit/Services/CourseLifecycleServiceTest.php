@@ -43,9 +43,11 @@ class CourseLifecycleServiceTest extends TestCase
         $this->assertSame(CourseLifecycleState::Draft, $course->lifecycleState());
     }
 
-    public function test_lifecycle_state_enrollment_closed_when_status_4(): void
+    public function test_enrollment_closed_when_end_date_is_past(): void
     {
-        $course = Course::factory()->create(['status' => 4]);
+        // "closed" is derived from a past end_date — courses.status is 1/2/3 only (see f0db46dd),
+        // there is no status=4. finalization_status is the other closing driver.
+        $course = Course::factory()->create(['status' => 1, 'end_date' => now()->subDay()]);
         $this->assertSame(CourseLifecycleState::EnrollmentClosed, $course->lifecycleState());
         $this->assertFalse($course->is_enrollment_open);
     }
@@ -62,7 +64,7 @@ class CourseLifecycleServiceTest extends TestCase
     public function test_finalization_status_takes_precedence_over_status_and_end_date(): void
     {
         $course = Course::factory()->create([
-            'status' => 4,
+            'status' => 1,
             'end_date' => now()->subDay(),
             'finalization_status' => 'finalized',
         ]);
@@ -123,10 +125,10 @@ class CourseLifecycleServiceTest extends TestCase
         $this->assertSame(CourseLifecycleService::REASON_ENROLLMENT_CLOSED, $result->reasonCode);
     }
 
-    public function test_can_enroll_blocks_when_status_is_closed(): void
+    public function test_can_enroll_blocks_when_enrollment_closed(): void
     {
         $user = User::factory()->create();
-        $course = Course::factory()->create(['status' => 4]);
+        $course = Course::factory()->create(['status' => 1, 'end_date' => now()->subDay()]);
 
         $result = $this->service->canEnroll($course, $user);
         $this->assertFalse($result->allowed);
