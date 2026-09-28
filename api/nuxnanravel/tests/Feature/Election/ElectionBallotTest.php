@@ -156,7 +156,11 @@ class ElectionBallotTest extends TestCase
     {
         [$academy, $actor, $election, $station, $voter, $party] = $this->context();
         $token = $this->issue($station, $voter, $actor);
-        $before = MemberActivityLog::count();
+        // Threshold on the max id, not count(): on the shared MySQL test DB the
+        // AUTO_INCREMENT keeps climbing across tests while count() reflects only the
+        // rows in this transaction, so count() as an id boundary lets the pre-cast
+        // issue log (a high id) leak into "logs written after cast".
+        $before = (int) MemberActivityLog::max('id');
         app(ElectionBallotService::class)->cast($election, $token, $party->id, $actor);
         $newLogs = MemberActivityLog::where('id', '>', $before)->get();
         foreach ($newLogs as $log) {

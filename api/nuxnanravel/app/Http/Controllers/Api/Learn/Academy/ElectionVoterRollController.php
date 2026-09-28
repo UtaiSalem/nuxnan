@@ -49,7 +49,10 @@ class ElectionVoterRollController extends Controller
         }
         if (in_array($missing, ['member_code', 'student_card'], true)) {
             if ($missing === 'member_code') {
-                $q->where(fn ($x) => $x->whereNull('member_code')->orWhere('member_code', '')->orWhere('member_code', 0));
+                // member_code is a varchar; "missing" means null or empty string. A numeric 0
+                // comparison is a legacy of the old int column and, on MySQL, matches every
+                // non-numeric code (e.g. 'ACTOR' coerces to 0), wrongly flagging them as missing.
+                $q->where(fn ($x) => $x->whereNull('member_code')->orWhere('member_code', ''));
             }
             if ($missing === 'student_card') {
                 $q->where('voter_type', 'student')->whereNotExists(function ($cards) use ($e) {
