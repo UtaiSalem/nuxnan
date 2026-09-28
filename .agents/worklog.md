@@ -185,6 +185,17 @@ scope/version=1 → no-op บน sqlite) เรียกใน setUp 3 คลา
   SQLite บังเอิญผ่านเพราะ id 2 ตารางชนกัน (AUTO_INCREMENT reset ต่อเทสต์) · MySQL id ต่างกัน · แก้: resolve จาก
   `$request->route('attachment')` ตรง ๆ · verify 24 passed
 
+### คลัสเตอร์ CourseLifecycle + WithdrawalErrorMapping — เสร็จ (`183b3aa6`) [2026-09-28]
+6 test / 2 ต้นตอ:
+- **CourseLifecycle status=4 stale** (3): test คาด `courses.status=4` → EnrollmentClosed แต่ status consolidate
+  เป็น 1/2/3 แล้ว (`f0db46dd`) — ไม่มีที่ไหน set status=4, "closed" มาจาก end_date อดีต/finalization ·
+  เจ้าของเคาะ "test เก่า → align เป็น end_date" → แก้ 3 test ใช้ `end_date => now()->subDay()` แทน status=4
+  (+ เก็บกวาด status=4→1 ใน test precedence) · lifecycleState() ไม่มี branch status=4 (ไม่แตะโค้ด prod)
+- **WithdrawalErrorMapping 403** (3): role SUPER_ADMIN seed โดย migration `2026_01_21` (data) แต่ prebuilt
+  MySQL ไม่มี → `assignRole` no-op เงียบ (guard `if ($role)`) → admin guard 403 แทน 500/409/422 ·
+  เพิ่ม `Role::firstOrCreate(['name'=>'SUPER_ADMIN'])` (pattern เดียวกับ AcademyArchiveTest) · family เดียวกับ revenue-policy
+- verify: 34 passed บน MySQL
+
 ### 📊 สถานะรวม suite — รอบปิดวันนี้ (2026-09-28): **45 → ~33 failed** (หลัง revenue-policy)
 ต้นวัน 69 → 45 (รอบปิด) → **แก้ revenue-policy อีก 12** = เหลือ ~33 (ยังไม่ full re-run ยืนยัน)
 รวมแก้วันนี้: Unknown-column 9 + truncation 14 + rounding 1 + revenue-policy 12 + sweep untested = **~36 test**
