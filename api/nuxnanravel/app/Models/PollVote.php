@@ -20,7 +20,9 @@ class PollVote extends Model
 
     public function option()
     {
-        return $this->belongsTo(PollOption::class, 'poll_option_id');
+        // ตัวเลือกของโพลล์เก็บใน question_options (Poll::options() morphMany) — เดิมอ้าง PollOption::class
+        // ที่ไม่มีจริง (fatal ถ้าถูกเรียก) · poll_option_id เก็บ question_options.id (ดู PollVoteController)
+        return $this->belongsTo(QuestionOption::class, 'poll_option_id');
     }
 
     public function user()
