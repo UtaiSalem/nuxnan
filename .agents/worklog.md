@@ -207,11 +207,12 @@ scope/version=1 → no-op บน sqlite) เรียกใน setUp 3 คลา
 - **HouseImport countBy**: `assertSame` order-sensitive แต่ `rows()` ไม่มี ORDER BY → `assertEquals`
 - verify: 44 passed / 2 skipped บน MySQL
 
-### 🏁 รอบปิดยอดจริง (2026-09-28/29): **1 failed / 1868 passed / 27 skipped / 3 incomplete** (799s)
-**จาก 69 → 1 วันนี้** · JUnit: session scratchpad/close.xml · rebuild สดก่อนรัน
-- **1 failed ที่เหลือ = `AdRevenueIntegrityTest::test_scan_academy_negative_balance_flags_negative_account`**
-  (balance=-5 บน bigint UNSIGNED) = 🔴 **deferred owner-gated** ตั้งแต่คลัสเตอร์ truncation — ต้องตัดสินใจว่า
-  academy_point_accounts.balance ควรเป็น signed ไหม (ถ้ายอดติดลบเกิดไม่ได้จริง scanner ก็ไร้ผล)
+### 🏁 รอบปิดยอดจริง (2026-09-28/29): **1868 passed / 1 failed → แก้แล้วเป็น 0 failed** (799s)
+**จาก 69 → 0 วันนี้** · JUnit ปิด: session scratchpad/close.xml · rebuild สดก่อนรัน
+- **failed ตัวสุดท้าย = `AdRevenueIntegrityTest::test_scan_academy_negative_balance` (balance=-5 บน bigint UNSIGNED)**
+  → เจ้าของเคาะ "ยอดห้ามติดลบเด็ดขาด" ⇒ unsigned คือตัวบังคับ invariant, scanner `scanAcademyNegativeBalance`
+  (where balance<0) ยิงไม่ได้ = dead code → **ตัดทิ้ง** (method + RiskScanCommand line + 2 test) `a3eb840f`
+  · ReconcileAll มี academyBalances() reconcile ตัวจริงอยู่แล้ว (stored vs transaction) ไม่กระทบ · AdRevenueIntegrity 2 passed
 - **27 skipped:** รวม intentional skip ที่เพิ่มวันนี้ (ElectionPermissionBackfill 2, AcademicYearRollover demotes_other 1,
   EnrollmentRepair duplicate 1) + Guardian*/ของเดิม · **3 incomplete** = markTestIncomplete (AcademyMemberFilters ฯลฯ)
 - **สรุปวันนี้:** แก้ ~66 test / 9 คลัสเตอร์ (Unknown-column 9 · truncation 14 · rounding 1 · revenue-policy 12 ·
