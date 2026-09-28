@@ -14,6 +14,19 @@ class ElectionPermissionBackfillMigrationTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        // These tests invoke a real migration ($migration->up()/down()), whose Schema::create/drop
+        // is DDL — an implicit commit on MySQL that ends the RefreshDatabase transaction and leaks
+        // this test's academy + users into the shared prebuilt DB (poisoning later tests, e.g. the
+        // global StreakLeaderboard row counts). Safe only on the per-test sqlite schema.
+        if (static::usesPrebuiltTestDatabase()) {
+            $this->markTestSkipped('รัน migration จริง (DDL → implicit commit) — sqlite เท่านั้น; บน prebuilt-MySQL จะทำให้ข้อมูลรั่วทั้ง suite');
+        }
+
+        parent::setUp();
+    }
+
     public function test_empty_database_is_a_no_op_and_keeps_backfill_table(): void
     {
         $migration = require database_path('migrations/2026_08_24_000001_backfill_election_permissions_and_member_roles.php');
