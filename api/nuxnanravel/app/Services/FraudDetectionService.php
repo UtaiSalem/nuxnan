@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\AcademyPointAccount;
 use App\Models\CampaignDeliveryEvent;
 use App\Models\CourseDonate;
 use App\Models\RiskEvent;
@@ -51,22 +50,6 @@ class FraudDetectionService
             $reason = $delivery->fraud_reason;
             $severity = ['low_visibility' => 'low', 'below_required_duration' => 'medium', 'replayed' => 'high'][$reason] ?? 'medium';
             $event = RiskEvent::firstOrCreate(['deduplication_key' => 'ad_fraud:'.$delivery->id], ['rule_name' => 'ad_fraud', 'subject_type' => CampaignDeliveryEvent::class, 'subject_id' => $delivery->id, 'severity' => $severity, 'score' => ['low' => 25, 'medium' => 50, 'high' => 75][$severity], 'evidence' => ['fraud_reason' => $reason, 'metadata' => $delivery->metadata], 'status' => RiskEvent::STATUS_OPEN]);
-            $created += $event->wasRecentlyCreated ? 1 : 0;
-        }
-
-        return $created;
-    }
-
-    /**
-     * Flag any academy point account whose stored balance is negative — this
-     * must never happen and would indicate a double-credit or broken debit.
-     */
-    public function scanAcademyNegativeBalance(): int
-    {
-        $created = 0;
-        foreach (AcademyPointAccount::where('balance', '<', 0)->get() as $account) {
-            $key = 'academy_negative_balance:'.$account->academy_id;
-            $event = RiskEvent::firstOrCreate(['deduplication_key' => $key], ['rule_name' => 'academy_negative_balance', 'subject_type' => AcademyPointAccount::class, 'subject_id' => $account->id, 'severity' => RiskEvent::SEVERITY_CRITICAL, 'score' => 100, 'evidence' => ['academy_id' => $account->academy_id, 'balance' => $account->balance], 'status' => RiskEvent::STATUS_OPEN]);
             $created += $event->wasRecentlyCreated ? 1 : 0;
         }
 

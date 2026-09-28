@@ -27,9 +27,6 @@ class RiskScanCommand extends Command
         $this->info('Scanning ad revenue policy integrity...');
         $this->line('  created: '.$fraud->scanAdRevenuePolicy($window));
 
-        $this->info('Scanning academy negative balances...');
-        $this->line('  created: '.$fraud->scanAcademyNegativeBalance());
-
         $this->info('Risk scan complete.');
 
         return self::SUCCESS;

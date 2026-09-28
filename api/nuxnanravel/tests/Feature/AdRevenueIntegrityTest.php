@@ -2,11 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Academy;
-use App\Models\AcademyPointAccount;
 use App\Models\Advert;
 use App\Models\CampaignDeliveryEvent;
-use App\Models\RiskEvent;
 use App\Models\User;
 use App\Services\FraudDetectionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -46,24 +43,6 @@ class AdRevenueIntegrityTest extends TestCase
         $created = app(FraudDetectionService::class)->scanAdRevenuePolicy(24);
         $this->assertSame(1, $created);
         $this->assertDatabaseHas('risk_events', ['rule_name' => 'ad_revenue_policy', 'subject_id' => $delivery->id]);
-    }
-
-    public function test_scan_academy_negative_balance_flags_negative_account(): void
-    {
-        $academy = Academy::factory()->create();
-        $account = AcademyPointAccount::create(['academy_id' => $academy->id, 'balance' => -5]);
-
-        $created = app(FraudDetectionService::class)->scanAcademyNegativeBalance();
-        $this->assertSame(1, $created);
-        $this->assertDatabaseHas('risk_events', ['rule_name' => 'academy_negative_balance', 'severity' => RiskEvent::SEVERITY_CRITICAL]);
-    }
-
-    public function test_scan_academy_negative_balance_ignores_positive(): void
-    {
-        $academy = Academy::factory()->create();
-        AcademyPointAccount::create(['academy_id' => $academy->id, 'balance' => 100]);
-
-        $this->assertSame(0, app(FraudDetectionService::class)->scanAcademyNegativeBalance());
     }
 
     public function test_reconcile_all_includes_academy_and_ad_gross_checks(): void
