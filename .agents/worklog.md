@@ -173,6 +173,18 @@ scope/version=1 → no-op บน sqlite) เรียกใน setUp 3 คลา
   (856 เทสต์ถัดไปเห็นเลข 4 คงที่ = polluter ตัวเดียว) · แก้: markTestSkipped บน prebuilt (family เดียวกับ
   Guardian*/AcademySettingsAuditLog) · verify: Election 52 passed · Streak 5 passed + residual 0
 
+### คลัสเตอร์ CoursePurchase + LessonAttachment — เสร็จ (`5ceabfdc`) [2026-09-28]
+13 test / 3 ต้นตอ:
+- **course_purchases.academy_id drift**: migration `2026_06_11` เพิ่มคอลัมน์ (mark ran) แต่ dev/testing ไม่มี
+  (dump ทับ + ไม่มี hasColumn guard) → purchase academy-scoped `where('academy_id')` → 1054 Unknown column →
+  catch เป็น 400 · แก้: repair migration `2026_09_28_000002` idempotent เติมคอลัมน์+FK (AcademyCoursePurchase 5 + CoursePurchaseFlow 3)
+- **courses.total_sales underflow**: CloneCourseJob refund `decrement('total_sales')` เมื่อ=0 → 0-1 BIGINT UNSIGNED
+  = 1690 out of range · แก้: decrement เฉพาะเมื่อ >0 (CoursePurchaseFlow failed_method ×3)
+- **LessonAttachment download/destroy 404**: route 2 param ({lesson},{attachment}) แต่ method รับ scalar เดียว →
+  Laravel ฉีด param **แรก** (lesson id) เข้า $attachment → findOrFail(lesson_id) บน attachments ไม่เจอ → 404 ·
+  SQLite บังเอิญผ่านเพราะ id 2 ตารางชนกัน (AUTO_INCREMENT reset ต่อเทสต์) · MySQL id ต่างกัน · แก้: resolve จาก
+  `$request->route('attachment')` ตรง ๆ · verify 24 passed
+
 ### 📊 สถานะรวม suite — รอบปิดวันนี้ (2026-09-28): **45 → ~33 failed** (หลัง revenue-policy)
 ต้นวัน 69 → 45 (รอบปิด) → **แก้ revenue-policy อีก 12** = เหลือ ~33 (ยังไม่ full re-run ยืนยัน)
 รวมแก้วันนี้: Unknown-column 9 + truncation 14 + rounding 1 + revenue-policy 12 + sweep untested = **~36 test**
