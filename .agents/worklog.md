@@ -207,6 +207,19 @@ scope/version=1 → no-op บน sqlite) เรียกใน setUp 3 คลา
 - **HouseImport countBy**: `assertSame` order-sensitive แต่ `rows()` ไม่มี ORDER BY → `assertEquals`
 - verify: 44 passed / 2 skipped บน MySQL
 
+### 🏁 รอบปิดยอดจริง (2026-09-28/29): **1 failed / 1868 passed / 27 skipped / 3 incomplete** (799s)
+**จาก 69 → 1 วันนี้** · JUnit: session scratchpad/close.xml · rebuild สดก่อนรัน
+- **1 failed ที่เหลือ = `AdRevenueIntegrityTest::test_scan_academy_negative_balance_flags_negative_account`**
+  (balance=-5 บน bigint UNSIGNED) = 🔴 **deferred owner-gated** ตั้งแต่คลัสเตอร์ truncation — ต้องตัดสินใจว่า
+  academy_point_accounts.balance ควรเป็น signed ไหม (ถ้ายอดติดลบเกิดไม่ได้จริง scanner ก็ไร้ผล)
+- **27 skipped:** รวม intentional skip ที่เพิ่มวันนี้ (ElectionPermissionBackfill 2, AcademicYearRollover demotes_other 1,
+  EnrollmentRepair duplicate 1) + Guardian*/ของเดิม · **3 incomplete** = markTestIncomplete (AcademyMemberFilters ฯลฯ)
+- **สรุปวันนี้:** แก้ ~66 test / 9 คลัสเตอร์ (Unknown-column 9 · truncation 14 · rounding 1 · revenue-policy 12 ·
+  row-count 6 · purchase/attachment 13 · lifecycle/withdrawal 6 · SAI/half-point/row-order 5 · + course:id,title sweep)
+  · migration ใหม่ 3 (course_groups.privacy · course_purchases.academy_id · campaign_delivery_events.status widen)
+  · บั๊ก prod จริงที่เจอ: LessonAttachment positional-param 404 · member_code=0 coercion · total_sales unsigned underflow
+- **ค้างเดียว (owner):** balance signedness · ยังไม่ push (branch main)
+
 ### 📊 สถานะรวม suite — รอบปิดวันนี้ (2026-09-28): **45 → ~33 failed** (หลัง revenue-policy)
 ต้นวัน 69 → 45 (รอบปิด) → **แก้ revenue-policy อีก 12** = เหลือ ~33 (ยังไม่ full re-run ยืนยัน)
 รวมแก้วันนี้: Unknown-column 9 + truncation 14 + rounding 1 + revenue-policy 12 + sweep untested = **~36 test**
