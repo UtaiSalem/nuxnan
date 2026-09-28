@@ -24,7 +24,8 @@ return new class extends Migration
                 $table->boolean('is_active')->default(true);
                 $table->timestamps();
 
-                $table->foreign('academy_id')->references('id')->on('academies')->onDelete('cascade');
+                // FK academy_id → academies ย้ายไป repair migration
+                // 2026_02_02_000000_repair_early_cross_table_foreign_keys (academies สร้างทีหลัง — G25)
 
                 $table->unique(['academy_id', 'name']);
                 $table->unique(['academy_id', 'slug']);
@@ -41,7 +42,8 @@ return new class extends Migration
                 $table->unsignedBigInteger('assigned_by')->nullable();
                 $table->timestamps();
 
-                $table->foreign('academy_member_id')->references('id')->on('academy_members')->onDelete('cascade');
+                // FK academy_member_id → academy_members ย้ายไป repair migration
+                // 2026_02_02_000000_repair_early_cross_table_foreign_keys (academy_members สร้างทีหลัง — G25)
                 $table->foreign('member_tag_id')->references('id')->on('member_tags')->onDelete('cascade');
                 $table->foreign('assigned_by')->references('id')->on('users')->onDelete('set null');
 
