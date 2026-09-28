@@ -8494,11 +8494,21 @@ port 33061 + `.env.g25` (throwaway, gitignored) → `php artisan migrate:fresh -
    `unique_period_per_academy` ทั้งที่ FK academy_id ยังพึ่ง index นั้น · **แก้:** สลับลำดับ — สร้าง
    `sp_academy_set_idx` (ขึ้นต้น academy_id) ก่อน drop → MySQL มี index สำรองให้ FK จึงยอม drop
 
-**Dangling FK (ตารางที่ไม่มีจริง — ทำเป็น column ไม่มี FK, เก็บ column ไว้ให้เจ้าของตัดสิน):**
-- `poll_votes.poll_option_id` → `poll_options` (ไม่มีตาราง/model · ตัวเลือกโพลล์จริงอยู่ใน question_options
-  ผ่าน Poll::options() morphMany · PollVote::option() อ้าง PollOption::class ที่ไม่มี) → column + index, ไม่มี FK
-- `positions.department_id` / `staff_profiles.department_id` → `departments` (ไม่มีตาราง/model) → column nullable, ไม่มี FK
-- 🟡 **owner decision:** repoint poll_option_id → question_options? · สร้างตาราง departments (ฟีเจอร์บุคลากร)?
+**Dangling FK (ตารางที่ไม่มีจริง) — ตัดสินแล้ว 2026-09-28:**
+- 🟢 `poll_votes.poll_option_id` → **repoint เป็น FK ไป `question_options`** (cascade): หลักฐานชัด —
+  PollVoteController validate `exists:question_options,id` แล้วเก็บ poll_option_id = question_option->id ·
+  ตัวเลือกโพลล์อยู่ใน question_options (Poll::options() morphMany) · แก้ PollVote::option() จาก
+  PollOption::class (ไม่มี → fatal) → QuestionOption::class ด้วย · verify migrate:fresh เขียว FK ชี้ question_options
+- 🟢 `positions`/`staff_profiles.department_id` → **เก็บ column ไม่มี FK** (โดยเจตนา): "แผนก" ในระบบนี้คือ
+  AcademyGroup type='department' (DepartmentController ใช้ AcademyGroup ล้วน · ไม่มีตาราง departments/Department model)
+  → ไม่สร้างตาราง departments (จะขัดกับ DepartmentController)
+- 🔴 **หนี้แยกที่เจอระหว่างทาง (feature-level, ยังไม่แก้):** StaffController validate `exists:departments,id` +
+  Position/StaffProfile::department() อ้าง Department::class ที่ไม่มี ⇒ **ฟีเจอร์ staff+department พังตอน runtime**
+  (submit department_id → SQL error ตารางไม่มี) · ต้องรวมให้ชี้ AcademyGroup — เป็นงาน feature แยก ไม่ใช่ G25
+
+**หมายเหตุ existing DB:** create migration ที่แก้ (รวม poll_votes) รันบน dev/prod ไปแล้ว → ไม่ re-run ⇒ FK ใหม่
+มีผลเฉพาะ migrate จากศูนย์ · ถ้าจะเติม FK question_options ให้ poll_votes บน DB เดิม ต้องทำ repair migration
+แยกพร้อม orphan-check (แบบ academy_donate_claims 000003) เพราะ vote เก่าอาจชี้ option ที่ถูกลบ
 
 **ไฟล์ที่แก้ (10):** 9 create migration (ตัด/ระบุ FK) + 1 repair migration ใหม่ · pint ผ่าน · php -l ผ่านทุกไฟล์
 **ผลลัพธ์:** `RefreshDatabase`/`migrate:fresh` ใช้ได้แล้ว · เครื่อง/env ใหม่ตั้งจากศูนย์ได้ · ทางลัด

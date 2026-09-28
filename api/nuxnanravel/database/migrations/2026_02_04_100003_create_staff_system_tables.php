@@ -28,9 +28,12 @@ return new class extends Migration
         Schema::create('positions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('academy_id')->constrained()->onDelete('cascade');
-            // department_id: ไม่มี FK เพราะ "ตาราง departments ไม่มีจริง" (ไม่มี migration/model) → migrate
-            // จากศูนย์ตายที่ 1824 (G25). เก็บ column nullable ไว้ ให้เจ้าของตัดสินว่าจะสร้างตาราง departments
-            // (ฟีเจอร์ระบบบุคลากร) หรือถอด department_id ทิ้ง
+            // department_id: ไม่มี FK — โดยเจตนา. "แผนก" ในระบบนี้คือ AcademyGroup ที่ type='department'
+            // (DepartmentController ใช้ AcademyGroup ล้วน · ไม่มีตาราง departments / model Department จริง)
+            // เดิม ->constrained('departments') → migrate จากศูนย์ตายที่ 1824 (G25). เก็บ column nullable ไว้.
+            // 🟡 หนี้แยก (ไม่ใช่แค่ FK): StaffController validate exists:departments,id + Position/StaffProfile
+            //    ::department() อ้าง Department::class ที่ไม่มี → ฟีเจอร์ staff+department พังตอน runtime อยู่แล้ว
+            //    การรวมให้ชี้ AcademyGroup เป็นงาน feature-level แยก (ดู worklog 2026-09-28)
             $table->unsignedBigInteger('department_id')->nullable();
             $table->string('code', 20)->nullable();
             $table->string('name');
@@ -52,7 +55,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('academy_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            // department_id: ไม่มี FK — ตาราง departments ไม่มีจริง (ดูหมายเหตุที่ positions ด้านบน · G25)
+            // department_id: ไม่มี FK — แผนก = AcademyGroup type='department' (ดูหมายเหตุที่ positions ด้านบน · G25)
             $table->unsignedBigInteger('department_id')->nullable();
             $table->foreignId('position_id')->nullable()->constrained('positions')->onDelete('set null');
             $table->string('employee_id', 20)->comment('รหัสพนักงาน');
