@@ -158,6 +158,21 @@ prebuilt MySQL (`test:db:rebuild` คัดโครงสร้างอย่�
 scope/version=1 → no-op บน sqlite) เรียกใน setUp 3 คลาส · 26 passed บน MySQL
 🔑 **บทเรียนใหม่:** ทุก data-migration (insert reference data) จะหายบน prebuilt MySQL — test ที่พึ่งมันต้อง seed เอง
 
+### คลัสเตอร์ row-count divergence — เสร็จ (`2a2a1d8d`, `bfc02fce`) [2026-09-28]
+6 test แดงเพราะจำนวนแถวไม่ตรง — 3 ต้นตอต่างกัน:
+- **ElectionVoterRoll `?missing=member_code`** (2 vs 1): filter `orWhere('member_code', 0)` เป็น legacy
+  ตอน member_code เป็น int · เดี๋ยวนี้ varchar → บน MySQL string ที่ไม่ใช่ตัวเลข ('ACTOR') coerce→0
+  → `'ACTOR'=0` true → นับว่า missing ผิด · แก้: ตัด `orWhere(...,0)` เหลือ whereNull OR ''
+- **ElectionBallot casting-no-log** (1 vs 0): test ใช้ `count()` เป็น id threshold — บน prebuilt MySQL
+  AUTO_INCREMENT ไต่ข้าม test แต่ count() นับเฉพาะแถวใน transaction → log จาก issue() (id สูง) หลุดเข้ามา
+  · แก้เป็น `max('id')`
+- **StreakLeaderboard ×4** (เห็น 7 แทน 3 ฯลฯ): ไม่ใช่ query — เป็น **test pollution**. leaderboard นับ user
+  ทั้งระบบ เจอ user แปลกปลอม 4 ตัว · หา polluter ด้วย **tripwire** (แปะ log จำนวนแถวต้นเทสต์ทั้ง suite ใน
+  TestCase::setUp แล้วดูจุดที่ 0→4) → `ElectionPermissionBackfillMigrationTest::test_backfill_round_trip`
+  เรียก `$migration->up()` (Schema::create = DDL → implicit commit) หลังสร้าง academy+4 user → รั่วทั้ง suite
+  (856 เทสต์ถัดไปเห็นเลข 4 คงที่ = polluter ตัวเดียว) · แก้: markTestSkipped บน prebuilt (family เดียวกับ
+  Guardian*/AcademySettingsAuditLog) · verify: Election 52 passed · Streak 5 passed + residual 0
+
 ### 📊 สถานะรวม suite — รอบปิดวันนี้ (2026-09-28): **45 → ~33 failed** (หลัง revenue-policy)
 ต้นวัน 69 → 45 (รอบปิด) → **แก้ revenue-policy อีก 12** = เหลือ ~33 (ยังไม่ full re-run ยืนยัน)
 รวมแก้วันนี้: Unknown-column 9 + truncation 14 + rounding 1 + revenue-policy 12 + sweep untested = **~36 test**
