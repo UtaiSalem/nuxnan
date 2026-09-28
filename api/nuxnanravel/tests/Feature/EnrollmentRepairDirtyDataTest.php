@@ -196,6 +196,13 @@ class EnrollmentRepairDirtyDataTest extends TestCase
 
     public function test_duplicate_academic_info_repaired()
     {
+        // This test seeds TWO is_current=1 SAI rows for one student to exercise the repair — a state
+        // uq_sai_current_student forbids on MySQL (the constraint is MySQL-only; sqlite skips it), so
+        // the dirty precondition cannot be built on the prebuilt DB. Repair logic is validated on sqlite.
+        if (static::usesPrebuiltTestDatabase()) {
+            $this->markTestSkipped('ต้องมี SAI is_current=1 ซ้ำ (dirty) — uq_sai_current_student บน MySQL ห้าม; validate บน sqlite');
+        }
+
         [$user, $academy, $academicYear, $classroom, $student] = $this->createSetup();
 
         // Create duplicate student_academic_info rows with is_current = true

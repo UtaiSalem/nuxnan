@@ -233,7 +233,9 @@ class QuestionImportTest extends TestCase
 
         $responseError->assertStatus(200);
         $responseError->assertJsonPath('summary.invalid', 1);
-        $this->assertContains('คะแนนต้องเป็นจำนวนเต็ม', $responseError->json('rows.0.errors'));
+        // Scores now allow half points (0.5 steps), so 2.7 is rejected with the .0/.5 message
+        // rather than the old integer-only message.
+        $this->assertContains('คะแนนต้องลงท้ายด้วย .0 หรือ .5 เท่านั้น', $responseError->json('rows.0.errors'));
 
         $csvContentOk = "\xEF\xBB\xBFคำถาม,ตัวเลือก1,ตัวเลือก2,เฉลย,คะแนน\nQ1,A,B,1,3";
         $fileOk = UploadedFile::fake()->createWithContent('test_ok.csv', $csvContentOk);

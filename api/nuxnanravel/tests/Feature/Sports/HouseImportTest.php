@@ -70,7 +70,9 @@ class HouseImportTest extends TestCase
     {
         $this->student('2001', 'One', 'Person');
         $batch = $this->import("code,house\n2001,Missing\n9999,Red\n");
-        $this->assertSame(['unknown_house' => 1, 'unmatched' => 1], $batch->rows()->pluck('status')->countBy()->all());
+        // assertEquals (not assertSame): countBy key order follows row order, which is not fixed
+        // without an ORDER BY and differs between MySQL and SQLite. The counts are what matter.
+        $this->assertEquals(['unknown_house' => 1, 'unmatched' => 1], $batch->rows()->pluck('status')->countBy()->all());
         $this->assertNotEmpty($batch->rows()->first()->raw);
         app(HouseAssignmentService::class)->commit($batch, $this->actor);
         $this->assertDatabaseCount('house_memberships', 0);

@@ -531,6 +531,11 @@ class AcademicYearRolloverServiceTest extends TestCase
 
     public function test_undo_does_not_delete_target_year_sai_for_skip_students(): void
     {
+        // Active6 already has a current SAI from setUp; demote it first so the target-year row is
+        // her only current one. Two is_current=1 rows for one student violate uq_sai_current_student
+        // (enforced on MySQL) — the "one current per student" invariant this test does not exercise.
+        StudentAcademicInfo::where('student_id', $this->studentActive6->id)->update(['is_current' => false]);
+
         // Create a target year SAI for skip student Active6 prior to rollover
         StudentAcademicInfo::create([
             'student_id' => $this->studentActive6->id,
@@ -649,6 +654,14 @@ class AcademicYearRolloverServiceTest extends TestCase
 
     public function test_undo_demotes_other_current_sai_when_restoring_from_year_row(): void
     {
+        // This exercises undo against TWO simultaneous is_current=1 rows (a dirty state) — which
+        // uq_sai_current_student forbids on MySQL, so the precondition cannot be constructed on the
+        // prebuilt DB. The constraint is MySQL-only (the migration skips it on sqlite), so the
+        // defensive demotion logic is validated on the sqlite profile.
+        if (static::usesPrebuiltTestDatabase()) {
+            $this->markTestSkipped('ต้องมี SAI is_current=1 พร้อมกัน 2 แถว — uq_sai_current_student บน MySQL ห้าม; validate บน sqlite');
+        }
+
         $userMapping = [
             [
                 'student_id' => $this->studentActive1->id,
