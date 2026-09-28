@@ -196,6 +196,17 @@ scope/version=1 → no-op บน sqlite) เรียกใน setUp 3 คลา
   เพิ่ม `Role::firstOrCreate(['name'=>'SUPER_ADMIN'])` (pattern เดียวกับ AcademyArchiveTest) · family เดียวกับ revenue-policy
 - verify: 34 passed บน MySQL
 
+### คลัสเตอร์ที่เหลือ (SAI unique / half-point / row-order) — เสร็จ (`764c21c5`) [2026-09-28]
+5 test / 3 ต้นตอ:
+- **student_academic_info uq_sai_current_student** (generated col `current_student_uid`) เป็น **MySQL-only**
+  (migration `2026_06_21` guard `driver===mysql`; sqlite ข้าม) → test ที่สร้าง 2 แถว is_current=1 ต่อ student พัง:
+  · `AcademicYearRollover::undo_does_not_delete`: demote SAI current เดิมก่อนสร้าง target-year (invariant 1 current) — แก้ได้
+  · `AcademicYearRollover::demotes_other` + `EnrollmentRepair::duplicate_academic_info`: ต้องมี 2 current พร้อมกัน
+    (dirty) ที่ MySQL ห้าม → markTestSkipped บน prebuilt (validate logic บน sqlite ที่ไม่มี constraint)
+- **QuestionImport decimal**: half-point เปลี่ยน validation → 2.7 reject ด้วย 'ต้องลงท้าย .0 หรือ .5' แทน 'ต้องเป็นจำนวนเต็ม' → อัปเดต assertion
+- **HouseImport countBy**: `assertSame` order-sensitive แต่ `rows()` ไม่มี ORDER BY → `assertEquals`
+- verify: 44 passed / 2 skipped บน MySQL
+
 ### 📊 สถานะรวม suite — รอบปิดวันนี้ (2026-09-28): **45 → ~33 failed** (หลัง revenue-policy)
 ต้นวัน 69 → 45 (รอบปิด) → **แก้ revenue-policy อีก 12** = เหลือ ~33 (ยังไม่ full re-run ยืนยัน)
 รวมแก้วันนี้: Unknown-column 9 + truncation 14 + rounding 1 + revenue-policy 12 + sweep untested = **~36 test**
