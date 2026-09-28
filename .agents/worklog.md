@@ -10,8 +10,10 @@
 
 **ค้างเชิงปฏิบัติ (owner-gated — ไม่ใช่งาน backlog):**
 - commit FE หลายชุดยังไม่ `npm run build` (เจ้าของ handle) — rebuild + คลิกจริงที่ school-management / course pages
-- G25 (migrate จากศูนย์บน MySQL ยังพัง) ยังไม่แก้ตามคำตัดสินเจ้าของ
+- ~~G25 (migrate จากศูนย์บน MySQL ยังพัง)~~ 🟢 **แก้แล้ว 2026-09-28** (เจ้าของอนุมัติให้ซ่อม) — `migrate:fresh`
+  บน MySQL 8.4 จริง (docker) เขียวครบ 495/495 · ดูบันทึก 2026-09-28 ท้ายไฟล์
 - academy_donate_claims FK-repair: ก่อน deploy prod ต้องรัน orphan-check ก่อน (ดูบันทึก 2026-09-27)
+  🟢 orphan-check tool พร้อมแล้ว 2026-09-28 (`php artisan academy:donate-claims-orphan-check` + SQL script)
 
 1. ✅ **UserResource เบาทั้งแอป — เสร็จ 2026-09-24** (ดูบันทึกด้านล่าง) — รวม eager-load เป็น scope
    `User::withCardCounts()` แล้ว apply เข้า list ที่ render UserResource เต็ม (peopleMayKnow, donateRecipients ×2,
@@ -8462,3 +8464,51 @@ cf2de7a5 / f53f32da  docs: worklog + ข้อสรุปเรื่องต�
 - กดดาวน์โหลดจริงกับเคสหนักสุดของโรงเรียน (ม.2/7 `ด.ช.มูฮัมหมัดรอมฎอน แวดือราแม` 35px/27px)
   ได้ไฟล์ 2496×1536 ครบทุกแถว ไม่มีอะไรล้น
 - `./vendor/bin/pint --test` ผ่าน
+
+---
+
+## 2026-09-28 — G25 ปิดจบ: migrate จากศูนย์บน MySQL 8.4 เขียวครบ + academy_donate_claims orphan-check
+
+### สถานะ: 🟢 เจ้าของอนุมัติให้ซ่อม G25 → `migrate:fresh` เขียว 495/495 บน MySQL 8.4.11 จริง (docker)
+
+**harness ที่ใช้ verify (ในคลาวด์ container):** `composer install` (network flaky แต่ผ่าน) + docker `mysql:8.4`
+port 33061 + `.env.g25` (throwaway, gitignored) → `php artisan migrate:fresh --env=g25` reproduce แล้วแก้จนเขียว
+
+**สาเหตุ 3 กอง (เจอจาก run จริง — บาง bug static analysis มองไม่เห็น):**
+
+1. **FK-ordering (1824)** — create migration ยุคแรกอ้างตาราง academy_* ที่สร้างทีหลัง
+   - `2025_06_22_*` (invite_links / member_activity_logs / member_tags) → academies(2025_10_26),
+     academy_members(2025_10_26), academy_roles(**2026_02_01**)
+   - `2025_10_26_070433_create_academy_group_{admins,members}` → academy_groups (sort ทีหลัง · `_`<`s`)
+   - **แก้:** ตัด FK ออกจาก create (เหลือ column) → เติมกลับที่ repair migration ใหม่
+     `2026_02_02_000000_repair_early_cross_table_foreign_keys` (idempotent เช็ค information_schema
+     → DB เดิม no-op · DB ใหม่ได้ FK ครบ) · academy_group FK heal เองที่
+     `2026_06_20_181200_recreate_academy_group_members_admins` (ตอนนั้น academy_groups มีแล้ว)
+   - verify: FK ครบ 9 ตัวบน fresh DB (รวม academy_group_permissions)
+
+2. **Pluralization (1824)** — `2026_02_04_072947_create_curriculums_table`: `foreignId('curriculum_id')->constrained()`
+   Laravel อนุมานตาราง `curricula` (Latin plural) แต่ตารางจริงชื่อ `curriculums` (2 จุด: curriculum_courses,
+   curriculum_students) · **แก้:** `->constrained('curriculums')` ระบุตรง
+
+3. **Index/FK dependency (1553)** — `2026_09_17_090000_create_schedule_period_sets_table`: drop
+   `unique_period_per_academy` ทั้งที่ FK academy_id ยังพึ่ง index นั้น · **แก้:** สลับลำดับ — สร้าง
+   `sp_academy_set_idx` (ขึ้นต้น academy_id) ก่อน drop → MySQL มี index สำรองให้ FK จึงยอม drop
+
+**Dangling FK (ตารางที่ไม่มีจริง — ทำเป็น column ไม่มี FK, เก็บ column ไว้ให้เจ้าของตัดสิน):**
+- `poll_votes.poll_option_id` → `poll_options` (ไม่มีตาราง/model · ตัวเลือกโพลล์จริงอยู่ใน question_options
+  ผ่าน Poll::options() morphMany · PollVote::option() อ้าง PollOption::class ที่ไม่มี) → column + index, ไม่มี FK
+- `positions.department_id` / `staff_profiles.department_id` → `departments` (ไม่มีตาราง/model) → column nullable, ไม่มี FK
+- 🟡 **owner decision:** repoint poll_option_id → question_options? · สร้างตาราง departments (ฟีเจอร์บุคลากร)?
+
+**ไฟล์ที่แก้ (10):** 9 create migration (ตัด/ระบุ FK) + 1 repair migration ใหม่ · pint ผ่าน · php -l ผ่านทุกไฟล์
+**ผลลัพธ์:** `RefreshDatabase`/`migrate:fresh` ใช้ได้แล้ว · เครื่อง/env ใหม่ตั้งจากศูนย์ได้ · ทางลัด
+`test:db:rebuild` (copy schema) ยังใช้ได้เหมือนเดิม (ไม่แตะ) แต่ตอนนี้ migrate:fresh เป็นทางเลือกที่พิสูจน์ตัวเองได้แล้ว
+
+**⚠️ ยังไม่ได้ verify (ต้องเจ้าของรันบนเครื่องจริง):** schema ที่ได้จาก migrate:fresh ตรงกับ DB dev เป๊ะไหม
+(อาจมี drift อื่นที่ migrate สร้างได้แต่ไม่ตรง dev เช่น users.personal_code varchar(50) vs 255) — from-zero
+migrate เขียวไม่ได้แปลว่า schema = dev · แนะนำรัน suite เต็ม (`test -c phpunit.mysql.xml`) ยืนยันก่อน merge
+
+### academy_donate_claims orphan-check (จากบันทึก 2026-09-27) — 🟢 tool พร้อม
+- `php artisan academy:donate-claims-orphan-check` (--json / --samples) · exit 0/1/2 ใช้เป็น deploy gate
+- SQL สำรอง `database/orphan_check_academy_donate_claims_2026_09_27.sql` (phpMyAdmin/mysql)
+- read-only เช็ค 7 FK ก่อนรัน migration 000003 FK-repair บน prod
