@@ -35,7 +35,7 @@ return new class extends Migration
         // ตาราง curriculum_courses - การผูก Course เข้ากับ Curriculum
         Schema::create('curriculum_courses', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('curriculum_id')->constrained()->onDelete('cascade');
+            $table->foreignId('curriculum_id')->constrained('curriculums')->onDelete('cascade'); // ตารางชื่อ curriculums (Laravel อนุมาน curricula ผิด) — G25
             $table->foreignId('course_id')->constrained()->onDelete('cascade');
             $table->string('course_type')->default('required'); // required, elective, general
             $table->string('semester')->nullable(); // ภาคเรียนที่ควรเรียน เช่น "1", "2"
@@ -54,7 +54,7 @@ return new class extends Migration
         // ตาราง curriculum_students - นักเรียนที่ลงทะเบียนในหลักสูตร
         Schema::create('curriculum_students', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('curriculum_id')->constrained()->onDelete('cascade');
+            $table->foreignId('curriculum_id')->constrained('curriculums')->onDelete('cascade'); // ตารางชื่อ curriculums (Laravel อนุมาน curricula ผิด) — G25
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->unsignedBigInteger('academy_member_id')->nullable();
             $table->integer('current_year_level')->default(1); // ชั้นปีปัจจุบัน

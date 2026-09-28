@@ -28,9 +28,10 @@ return new class extends Migration
             $table->json('metadata')->nullable()->comment('Additional settings');
             $table->timestamps();
 
-            $table->foreign('academy_id')->references('id')->on('academies')->onDelete('cascade');
+            // FK academy_id → academies / academy_role_id → academy_roles ถูกย้ายไป repair migration
+            // 2026_02_02_000000_repair_early_cross_table_foreign_keys เพราะตารางเหล่านั้นถูกสร้างทีหลัง
+            // (academies=2025_10_26, academy_roles=2026_02_01) migrate จากศูนย์จึงตายที่ 1824 — ดู G25
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
-            $table->foreign('academy_role_id')->references('id')->on('academy_roles')->onDelete('set null');
 
             $table->index(['academy_id', 'is_active']);
             $table->index('code');

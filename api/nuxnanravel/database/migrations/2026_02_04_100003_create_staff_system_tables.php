@@ -28,7 +28,10 @@ return new class extends Migration
         Schema::create('positions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('academy_id')->constrained()->onDelete('cascade');
-            $table->foreignId('department_id')->nullable()->constrained('departments')->onDelete('set null');
+            // department_id: ไม่มี FK เพราะ "ตาราง departments ไม่มีจริง" (ไม่มี migration/model) → migrate
+            // จากศูนย์ตายที่ 1824 (G25). เก็บ column nullable ไว้ ให้เจ้าของตัดสินว่าจะสร้างตาราง departments
+            // (ฟีเจอร์ระบบบุคลากร) หรือถอด department_id ทิ้ง
+            $table->unsignedBigInteger('department_id')->nullable();
             $table->string('code', 20)->nullable();
             $table->string('name');
             $table->string('level', 20)->nullable()->comment('ระดับตำแหน่ง');
@@ -49,7 +52,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('academy_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->foreignId('department_id')->nullable()->constrained('departments')->onDelete('set null');
+            // department_id: ไม่มี FK — ตาราง departments ไม่มีจริง (ดูหมายเหตุที่ positions ด้านบน · G25)
+            $table->unsignedBigInteger('department_id')->nullable();
             $table->foreignId('position_id')->nullable()->constrained('positions')->onDelete('set null');
             $table->string('employee_id', 20)->comment('รหัสพนักงาน');
             $table->string('citizen_id', 13)->nullable();
