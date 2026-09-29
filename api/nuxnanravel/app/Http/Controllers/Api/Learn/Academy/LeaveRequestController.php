@@ -170,11 +170,10 @@ class LeaveRequestController extends Controller
         ]);
 
         $this->auditLogService->log(
-            'leave.request',
-            $leave,
-            $academy->id,
-            'academy',
-            [
+            action: 'leave.request',
+            entity: $leave,
+            module: 'academy',
+            metadata: [
                 'leave_type' => $leaveType->name,
                 'days' => $totalDays,
                 'dates' => "{$validated['start_date']} - {$validated['end_date']}",
@@ -209,11 +208,10 @@ class LeaveRequestController extends Controller
         $leave->approve(auth()->id(), $validated['approver_notes'] ?? null);
 
         $this->auditLogService->log(
-            'leave.approve',
-            $leave,
-            $academy->id,
-            'academy',
-            ['days' => $leave->total_days]
+            action: 'leave.approve',
+            entity: $leave,
+            module: 'academy',
+            metadata: ['days' => $leave->total_days]
         );
 
         return response()->json([
@@ -244,11 +242,10 @@ class LeaveRequestController extends Controller
         $leave->reject(auth()->id(), $validated['approver_notes']);
 
         $this->auditLogService->log(
-            'leave.reject',
-            $leave,
-            $academy->id,
-            'academy',
-            ['reason' => $validated['approver_notes']]
+            action: 'leave.reject',
+            entity: $leave,
+            module: 'academy',
+            metadata: ['reason' => $validated['approver_notes']]
         );
 
         return response()->json([
@@ -275,11 +272,10 @@ class LeaveRequestController extends Controller
         $leave->cancel();
 
         $this->auditLogService->log(
-            'leave.cancel',
-            $leave,
-            $academy->id,
-            'academy',
-            []
+            action: 'leave.cancel',
+            entity: $leave,
+            module: 'academy',
+            metadata: []
         );
 
         return response()->json([
@@ -329,11 +325,10 @@ class LeaveRequestController extends Controller
         $type = LeaveType::create($validated);
 
         $this->auditLogService->log(
-            'leave_type.create',
-            $type,
-            $academy->id,
-            'academy',
-            ['name' => $type->name]
+            action: 'leave_type.create',
+            entity: $type,
+            module: 'academy',
+            metadata: ['name' => $type->name]
         );
 
         return response()->json([

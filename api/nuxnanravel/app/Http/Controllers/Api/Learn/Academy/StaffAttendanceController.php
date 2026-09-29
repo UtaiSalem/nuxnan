@@ -116,11 +116,10 @@ class StaffAttendanceController extends Controller
         ]);
 
         $this->auditLogService->log(
-            'attendance.check_in',
-            $attendance,
-            $academy->id,
-            'academy',
-            ['check_in_time' => $checkInTime->format('H:i')]
+            action: 'attendance.check_in',
+            entity: $attendance,
+            module: 'academy',
+            metadata: ['check_in_time' => $checkInTime->format('H:i')]
         );
 
         return response()->json([
@@ -184,11 +183,10 @@ class StaffAttendanceController extends Controller
         $attendance->calculateWorkHours();
 
         $this->auditLogService->log(
-            'attendance.check_out',
-            $attendance,
-            $academy->id,
-            'academy',
-            [
+            action: 'attendance.check_out',
+            entity: $attendance,
+            module: 'academy',
+            metadata: [
                 'check_out_time' => $checkOutTime->format('H:i'),
                 'work_hours' => $attendance->work_hours,
             ]
@@ -247,11 +245,10 @@ class StaffAttendanceController extends Controller
         }
 
         $this->auditLogService->log(
-            'attendance.create',
-            $attendance,
-            $academy->id,
-            'academy',
-            $validated
+            action: 'attendance.create',
+            entity: $attendance,
+            module: 'academy',
+            metadata: $validated
         );
 
         return response()->json([
@@ -282,11 +279,10 @@ class StaffAttendanceController extends Controller
         }
 
         $this->auditLogService->log(
-            'attendance.update',
-            $attendance,
-            $academy->id,
-            'academy',
-            $validated
+            action: 'attendance.update',
+            entity: $attendance,
+            module: 'academy',
+            metadata: $validated
         );
 
         return response()->json([
@@ -306,11 +302,10 @@ class StaffAttendanceController extends Controller
         $attendance->delete();
 
         $this->auditLogService->log(
-            'attendance.delete',
-            $attendance,
-            $academy->id,
-            'academy',
-            ['date' => $attendance->attendance_date]
+            action: 'attendance.delete',
+            entity: $attendance,
+            module: 'academy',
+            metadata: ['date' => $attendance->attendance_date]
         );
 
         return response()->json([
