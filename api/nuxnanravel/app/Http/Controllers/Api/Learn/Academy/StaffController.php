@@ -9,6 +9,8 @@ use App\Models\StaffProfile;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Exists;
 
 class StaffController extends Controller
 {
@@ -98,7 +100,7 @@ class StaffController extends Controller
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'position_id' => 'required|exists:positions,id',
-            'department_id' => 'nullable|exists:departments,id',
+            'department_id' => ['nullable', $this->departmentExistsRule($academy)],
             'supervisor_id' => 'nullable|exists:staff_profiles,id',
             'employment_type' => 'required|in:full_time,part_time,contract,temporary',
             'hire_date' => 'required|date',
@@ -124,9 +126,8 @@ class StaffController extends Controller
         $this->auditLogService->log(
             'staff.create',
             $staff,
-            $academy->id,
-            'academy',
-            ['employee_id' => $staff->employee_id]
+            module: 'academy',
+            metadata: ['employee_id' => $staff->employee_id]
         );
 
         return response()->json([
@@ -145,7 +146,7 @@ class StaffController extends Controller
 
         $validated = $request->validate([
             'position_id' => 'sometimes|exists:positions,id',
-            'department_id' => 'nullable|exists:departments,id',
+            'department_id' => ['nullable', $this->departmentExistsRule($academy)],
             'supervisor_id' => 'nullable|exists:staff_profiles,id',
             'employment_type' => 'sometimes|in:full_time,part_time,contract,temporary',
             'hire_date' => 'sometimes|date',
@@ -165,9 +166,8 @@ class StaffController extends Controller
         $this->auditLogService->log(
             'staff.update',
             $staff,
-            $academy->id,
-            'academy',
-            ['changes' => $validated]
+            module: 'academy',
+            metadata: ['changes' => $validated]
         );
 
         return response()->json([
@@ -203,9 +203,8 @@ class StaffController extends Controller
         $this->auditLogService->log(
             'staff.status_change',
             $staff,
-            $academy->id,
-            'academy',
-            [
+            module: 'academy',
+            metadata: [
                 'old_status' => $oldStatus,
                 'new_status' => $validated['status'],
                 'reason' => $validated['reason'] ?? null,
@@ -231,9 +230,8 @@ class StaffController extends Controller
         $this->auditLogService->log(
             'staff.delete',
             $staff,
-            $academy->id,
-            'academy',
-            ['employee_id' => $staff->employee_id]
+            module: 'academy',
+            metadata: ['employee_id' => $staff->employee_id]
         );
 
         return response()->json([
@@ -273,7 +271,7 @@ class StaffController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'code' => 'nullable|string|max:50|unique:positions,code',
-            'department_id' => 'nullable|exists:departments,id',
+            'department_id' => ['nullable', $this->departmentExistsRule($academy)],
             'description' => 'nullable|string',
             'min_salary' => 'nullable|numeric|min:0',
             'max_salary' => 'nullable|numeric|min:0',
@@ -290,9 +288,8 @@ class StaffController extends Controller
         $this->auditLogService->log(
             'position.create',
             $position,
-            $academy->id,
-            'academy',
-            ['name' => $position->name]
+            module: 'academy',
+            metadata: ['name' => $position->name]
         );
 
         return response()->json([
@@ -314,7 +311,7 @@ class StaffController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'code' => 'nullable|string|max:50|unique:positions,code,'.$position->id,
-            'department_id' => 'nullable|exists:departments,id',
+            'department_id' => ['nullable', $this->departmentExistsRule($academy)],
             'description' => 'nullable|string',
             'min_salary' => 'nullable|numeric|min:0',
             'max_salary' => 'nullable|numeric|min:0',
@@ -415,6 +412,18 @@ class StaffController extends Controller
     }
 
     // Helper methods
+
+    /**
+     * กฎ validate department_id: แผนก = AcademyGroup type='department' ของ academy นี้
+     * (ไม่มีตาราง departments จริง — เดิมใช้ exists:departments,id ที่พังตอน runtime)
+     */
+    protected function departmentExistsRule(Academy $academy): Exists
+    {
+        return Rule::exists('academy_groups', 'id')
+            ->where('type', 'department')
+            ->where('academy_id', $academy->id);
+    }
+
     protected function authorizeStaff(Academy $academy, StaffProfile $staff): void
     {
         if ($staff->academy_id !== $academy->id) {

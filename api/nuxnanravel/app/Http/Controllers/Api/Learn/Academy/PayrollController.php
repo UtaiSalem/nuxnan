@@ -11,6 +11,7 @@ use App\Models\StaffProfile;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class PayrollController extends Controller
 {
@@ -411,7 +412,10 @@ class PayrollController extends Controller
         $validated = $request->validate([
             'pay_period' => 'required|date_format:Y-m',
             'salary_structure_id' => 'nullable|exists:salary_structures,id',
-            'department_id' => 'nullable|exists:departments,id',
+            // แผนก = AcademyGroup type='department' ของ academy นี้ (ไม่มีตาราง departments จริง)
+            'department_id' => ['nullable', Rule::exists('academy_groups', 'id')
+                ->where('type', 'department')
+                ->where('academy_id', $academy->id)],
             'staff_ids' => 'nullable|array',
             'staff_ids.*' => 'exists:staff_profiles,id',
         ]);

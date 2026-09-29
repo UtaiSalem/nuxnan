@@ -8502,9 +8502,13 @@ port 33061 + `.env.g25` (throwaway, gitignored) → `php artisan migrate:fresh -
 - 🟢 `positions`/`staff_profiles.department_id` → **เก็บ column ไม่มี FK** (โดยเจตนา): "แผนก" ในระบบนี้คือ
   AcademyGroup type='department' (DepartmentController ใช้ AcademyGroup ล้วน · ไม่มีตาราง departments/Department model)
   → ไม่สร้างตาราง departments (จะขัดกับ DepartmentController)
-- 🔴 **หนี้แยกที่เจอระหว่างทาง (feature-level, ยังไม่แก้):** StaffController validate `exists:departments,id` +
-  Position/StaffProfile::department() อ้าง Department::class ที่ไม่มี ⇒ **ฟีเจอร์ staff+department พังตอน runtime**
-  (submit department_id → SQL error ตารางไม่มี) · ต้องรวมให้ชี้ AcademyGroup — เป็นงาน feature แยก ไม่ใช่ G25
+- 🟢 **หนี้แยกที่เจอระหว่างทาง — แก้แล้ว 2026-09-29 (staff+department runtime):** เดิม StaffController/
+  PayrollController validate `exists:departments,id` + Position/StaffProfile::department() อ้าง Department::class
+  ที่ไม่มี ⇒ ฟีเจอร์ staff+department พังตอน runtime · แก้: รวมให้ "แผนก" = AcademyGroup type='department'
+  (relation → AcademyGroup · validate scoped academy_groups where type=department + academy นี้) ·
+  เจอ+แก้ bug audit call ผิด signature 5 จุดใน StaffController (log($action,$entity,$academy->id,...) →
+  named args) ที่ทำให้ทุก staff write TypeError · test ใหม่ StaffDepartmentValidationTest 5 เคส เขียวบน MySQL
+  🟡 ยังเหลือ (นอกขอบเขต): StaffController::store ไม่เซ็ต first_name/last_name (NOT NULL) → สร้าง staff เต็มยังไม่ได้
 
 **หมายเหตุ existing DB:** create migration ที่แก้ (รวม poll_votes) รันบน dev/prod ไปแล้ว → ไม่ re-run ⇒ FK ใหม่
 มีผลเฉพาะ migrate จากศูนย์ · ถ้าจะเติม FK question_options ให้ poll_votes บน DB เดิม ต้องทำ repair migration
