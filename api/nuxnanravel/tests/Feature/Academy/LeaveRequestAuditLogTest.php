@@ -13,13 +13,17 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Guards the audit-logging bug where LeaveRequestController called
- * AuditLogService::log() positionally, pushing $academy->id (int) into the
- * ?array $oldValues parameter -> TypeError -> HTTP 500 after the row was written.
+ * Covers two pre-existing defects in LeaveRequestController:
  *
- * These endpoints touch only real leave_requests columns, so the only 500 source
- * left is the audit-log call itself. Before the fix they returned 500; after,
- * they must return 2xx and persist the correct audit row.
+ * 1. Audit-logging bug — log() was called positionally, pushing $academy->id
+ *    (int) into the ?array $oldValues parameter -> TypeError -> HTTP 500 after
+ *    the row was written. Guarded by the approve/reject/cancel tests.
+ *
+ * 2. Schema drift — store()/storeLeaveType()/staffLeaveBalance() referenced
+ *    columns that do not exist (days_per_year, allow_negative, is_half_day,
+ *    half_day_type, attachment_path). The controller now uses the real columns
+ *    (max_days_per_year, leave_period, document_path). Guarded by the store /
+ *    store-leave-type / half-day / balance tests.
  */
 class LeaveRequestAuditLogTest extends TestCase
 {
@@ -48,9 +52,9 @@ class LeaveRequestAuditLogTest extends TestCase
         return [$academy, $user];
     }
 
-    private function pendingLeave(Academy $academy): LeaveRequest
+    private function staff(Academy $academy): StaffProfile
     {
-        $staff = StaffProfile::create([
+        return StaffProfile::create([
             'academy_id' => $academy->id,
             'user_id' => User::factory()->create()->id,
             'employee_id' => 'EMP-'.uniqid(),
@@ -58,16 +62,23 @@ class LeaveRequestAuditLogTest extends TestCase
             'last_name' => 'Test',
             'hire_date' => '2026-01-01',
         ]);
+    }
 
-        $type = LeaveType::create([
+    private function leaveType(Academy $academy, ?int $maxDays = null): LeaveType
+    {
+        return LeaveType::create([
             'academy_id' => $academy->id,
-            'code' => 'SICK'.random_int(100, 999),
+            'code' => 'LV'.random_int(1000, 9999),
             'name' => 'ลาป่วย',
+            'max_days_per_year' => $maxDays,
         ]);
+    }
 
+    private function pendingLeave(Academy $academy): LeaveRequest
+    {
         return LeaveRequest::create([
-            'staff_profile_id' => $staff->id,
-            'leave_type_id' => $type->id,
+            'staff_profile_id' => $this->staff($academy)->id,
+            'leave_type_id' => $this->leaveType($academy)->id,
             'start_date' => '2026-10-01',
             'end_date' => '2026-10-01',
             'total_days' => 1,
@@ -75,6 +86,8 @@ class LeaveRequestAuditLogTest extends TestCase
             'status' => LeaveRequest::STATUS_PENDING,
         ]);
     }
+
+    // ── Audit-logging bug (approve / reject / cancel) ──────────────────────
 
     public function test_approve_leave_request_returns_2xx_and_writes_audit_log(): void
     {
@@ -130,6 +143,113 @@ class LeaveRequestAuditLogTest extends TestCase
             'action' => 'leave.cancel',
             'entity_type' => LeaveRequest::class,
             'entity_id' => $leave->id,
+            'module' => 'academy',
+        ]);
+    }
+
+    // ── Schema drift (store / storeLeaveType / half-day / balance) ─────────
+
+    public function test_store_leave_request_returns_201_using_real_columns(): void
+    {
+        [$academy, $user] = $this->academyWithMember(['staff.view']);
+        $staff = $this->staff($academy);
+        $type = $this->leaveType($academy, 10);
+        $date = now()->addWeek()->toDateString();
+
+        $response = $this->actingAs($user, 'api')
+            ->postJson("/api/academies/{$academy->id}/leave-requests", [
+                'staff_profile_id' => $staff->id,
+                'leave_type_id' => $type->id,
+                'start_date' => $date,
+                'end_date' => $date,
+                'reason' => 'พักผ่อน',
+            ]);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('leave_requests', [
+            'staff_profile_id' => $staff->id,
+            'leave_type_id' => $type->id,
+            'leave_period' => LeaveRequest::PERIOD_FULL_DAY,
+            'total_days' => 1,
+            'status' => LeaveRequest::STATUS_PENDING,
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'leave.request',
+            'entity_type' => LeaveRequest::class,
+            'module' => 'academy',
+        ]);
+    }
+
+    public function test_store_half_day_leave_counts_as_half(): void
+    {
+        [$academy, $user] = $this->academyWithMember(['staff.view']);
+        $staff = $this->staff($academy);
+        $type = $this->leaveType($academy, 10);
+        $date = now()->addWeek()->toDateString();
+
+        $response = $this->actingAs($user, 'api')
+            ->postJson("/api/academies/{$academy->id}/leave-requests", [
+                'staff_profile_id' => $staff->id,
+                'leave_type_id' => $type->id,
+                'start_date' => $date,
+                'end_date' => $date,
+                'leave_period' => LeaveRequest::PERIOD_MORNING,
+                'reason' => 'ธุระครึ่งวัน',
+            ]);
+
+        $response->assertStatus(201);
+        $this->assertSame('0.50', (string) $response->json('data.total_days'));
+        $this->assertDatabaseHas('leave_requests', [
+            'staff_profile_id' => $staff->id,
+            'leave_period' => LeaveRequest::PERIOD_MORNING,
+            'total_days' => 0.5,
+        ]);
+    }
+
+    public function test_store_rejects_when_balance_insufficient(): void
+    {
+        [$academy, $user] = $this->academyWithMember(['staff.view']);
+        $staff = $this->staff($academy);
+        $type = $this->leaveType($academy, 1); // quota 1 day
+        $start = now()->addWeek();
+
+        $response = $this->actingAs($user, 'api')
+            ->postJson("/api/academies/{$academy->id}/leave-requests", [
+                'staff_profile_id' => $staff->id,
+                'leave_type_id' => $type->id,
+                'start_date' => $start->toDateString(),
+                'end_date' => $start->copy()->addDay()->toDateString(), // 2 days > quota
+                'reason' => 'ลายาว',
+            ]);
+
+        $response->assertStatus(400);
+        $this->assertDatabaseMissing('leave_requests', [
+            'staff_profile_id' => $staff->id,
+            'leave_type_id' => $type->id,
+        ]);
+    }
+
+    public function test_store_leave_type_returns_201_using_real_columns(): void
+    {
+        [$academy, $user] = $this->academyWithMember(['staff.view']);
+
+        $response = $this->actingAs($user, 'api')
+            ->postJson("/api/academies/{$academy->id}/leave-requests/leave-types", [
+                'code' => 'VAC'.random_int(100, 999),
+                'name' => 'ลาพักร้อน',
+                'max_days_per_year' => 10,
+                'is_paid' => true,
+            ]);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('leave_types', [
+            'academy_id' => $academy->id,
+            'name' => 'ลาพักร้อน',
+            'max_days_per_year' => 10,
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'leave_type.create',
+            'entity_type' => LeaveType::class,
             'module' => 'academy',
         ]);
     }
