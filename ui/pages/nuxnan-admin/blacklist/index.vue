@@ -118,13 +118,22 @@ onMounted(fetchSuspensions)
           บัญชีที่ถูกระงับระบบแต้ม/Wallet ({{ total.toLocaleString() }} บัญชี)
         </p>
       </div>
-      <button
-        @click="fetchSuspensions"
-        class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-300 transition-colors flex-shrink-0 whitespace-nowrap"
-      >
-        <Icon icon="fluent:arrow-sync-24-regular" class="w-5 h-5" :class="{ 'animate-spin': isLoading }" />
-        รีเฟรช
-      </button>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <NuxtLink
+          to="/nuxnan-admin/blacklist/audit"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-300 transition-colors whitespace-nowrap"
+        >
+          <Icon icon="fluent:history-24-regular" class="w-5 h-5" />
+          ประวัติ
+        </NuxtLink>
+        <button
+          @click="fetchSuspensions"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-300 transition-colors whitespace-nowrap"
+        >
+          <Icon icon="fluent:arrow-sync-24-regular" class="w-5 h-5" :class="{ 'animate-spin': isLoading }" />
+          <span class="hidden sm:inline">รีเฟรช</span>
+        </button>
+      </div>
     </div>
 
     <!-- Search -->
