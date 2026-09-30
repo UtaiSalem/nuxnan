@@ -136,6 +136,73 @@ const unverifyEmail = async () => {
   }
 }
 
+// ── Economy suspension (blacklist) ───────────────────────────────────
+const suspendForm = ref<{ points: boolean; wallet: boolean; reason: string }>({
+  points: true,
+  wallet: true,
+  reason: ''
+})
+const isSuspending = ref(false)
+const suspendMessage = ref('')
+const suspendError = ref('')
+
+const submitSuspend = async () => {
+  suspendMessage.value = ''
+  suspendError.value = ''
+  if (!suspendForm.value.points && !suspendForm.value.wallet) {
+    suspendError.value = 'ต้องเลือกระงับอย่างน้อยหนึ่งระบบ'
+    return
+  }
+  if (!confirm('ยืนยันการระงับระบบแต้ม/Wallet ของผู้ใช้นี้?')) return
+
+  isSuspending.value = true
+  try {
+    const token = useCookie('token')
+    const response = await $fetch<any>(`${apiBase}/api/admin/users/${userId}/suspend-economy`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.value}` },
+      body: {
+        points: suspendForm.value.points,
+        wallet: suspendForm.value.wallet,
+        reason: suspendForm.value.reason || undefined
+      }
+    })
+    if (response.success) {
+      user.value = { ...user.value, ...response.data }
+      suspendMessage.value = 'ระงับบัญชีสำเร็จ'
+    }
+  } catch (err: any) {
+    console.error('Suspend failed:', err)
+    suspendError.value = err.data?.message || 'ไม่สามารถระงับบัญชีได้'
+  } finally {
+    isSuspending.value = false
+  }
+}
+
+const submitRestore = async () => {
+  suspendMessage.value = ''
+  suspendError.value = ''
+  if (!confirm('ยกเลิกการระงับระบบแต้ม/Wallet ของผู้ใช้นี้?')) return
+
+  isSuspending.value = true
+  try {
+    const token = useCookie('token')
+    const response = await $fetch<any>(`${apiBase}/api/admin/users/${userId}/restore-economy`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token.value}` }
+    })
+    if (response.success) {
+      user.value = { ...user.value, ...response.data }
+      suspendMessage.value = 'ยกเลิกการระงับสำเร็จ'
+    }
+  } catch (err: any) {
+    console.error('Restore failed:', err)
+    suspendError.value = err.data?.message || 'ไม่สามารถยกเลิกการระงับได้'
+  } finally {
+    isSuspending.value = false
+  }
+}
+
 onMounted(() => {
   fetchUser()
 })
@@ -325,6 +392,83 @@ onMounted(() => {
               </span>
             </div>
           </div>
+        </div>
+
+        <!-- Economy Suspension (Blacklist) -->
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 shadow-hopeui border border-slate-100 dark:border-slate-700">
+          <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-1 flex items-center gap-2">
+            <Icon icon="fluent:shield-error-24-regular" class="w-5 h-5 text-amber-600" />
+            ระงับระบบแต้ม / Wallet (Blacklist)
+          </h3>
+          <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">
+            ระงับการสะสม/โอน/แปลงแต้ม และการเปลี่ยนแปลง Wallet — ผู้ใช้ยังเรียนได้ตามปกติ
+          </p>
+
+          <!-- Current status -->
+          <div class="flex flex-wrap items-center gap-2 mb-4">
+            <span
+              class="px-2.5 py-1 text-xs rounded-lg"
+              :class="user.points_suspended
+                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'"
+            >
+              แต้ม: {{ user.points_suspended ? 'ถูกระงับ' : 'ปกติ' }}
+            </span>
+            <span
+              class="px-2.5 py-1 text-xs rounded-lg"
+              :class="user.wallet_suspended
+                ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'"
+            >
+              Wallet: {{ user.wallet_suspended ? 'ถูกระงับ' : 'ปกติ' }}
+            </span>
+          </div>
+
+          <!-- Restore (when already suspended) -->
+          <div v-if="user.points_suspended || user.wallet_suspended" class="space-y-3">
+            <div v-if="user.economy_suspended_reason" class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl text-sm text-slate-600 dark:text-slate-300 break-words">
+              เหตุผล: {{ user.economy_suspended_reason }}
+            </div>
+            <button
+              @click="submitRestore"
+              :disabled="isSuspending"
+              class="w-full min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-xl transition-colors"
+            >
+              <Icon v-if="isSuspending" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
+              <Icon v-else icon="fluent:arrow-undo-24-regular" class="w-5 h-5" />
+              ยกเลิกการระงับ
+            </button>
+          </div>
+
+          <!-- Suspend form (when active) -->
+          <div v-else class="space-y-3">
+            <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 min-h-[44px]">
+              <input v-model="suspendForm.points" type="checkbox" class="w-4 h-4 rounded" />
+              ระงับระบบสะสมแต้ม (ห้ามสะสม/โอน/แปลงแต้ม)
+            </label>
+            <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 min-h-[44px]">
+              <input v-model="suspendForm.wallet" type="checkbox" class="w-4 h-4 rounded" />
+              ระงับระบบ Wallet (ห้ามถอน/โอน/เติม/แปลง)
+            </label>
+            <textarea
+              v-model="suspendForm.reason"
+              rows="2"
+              placeholder="เหตุผลในการระงับ (เช่น ตรวจพบพฤติกรรมทุจริต)"
+              class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 resize-none"
+            ></textarea>
+            <button
+              @click="submitSuspend"
+              :disabled="isSuspending"
+              class="w-full min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl transition-colors"
+            >
+              <Icon v-if="isSuspending" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
+              <Icon v-else icon="fluent:shield-error-24-regular" class="w-5 h-5" />
+              ระงับบัญชี
+            </button>
+          </div>
+
+          <p v-if="suspendMessage" class="text-sm text-green-600 dark:text-green-400 mt-3">{{ suspendMessage }}</p>
+          <p v-if="suspendError" class="text-sm text-red-600 dark:text-red-400 mt-3">{{ suspendError }}</p>
         </div>
 
         <!-- Statistics -->

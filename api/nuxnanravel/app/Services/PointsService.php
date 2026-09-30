@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\AccountEconomyRestrictedException;
 use App\Models\LevelDefinition;
 use App\Models\PointRule;
 use App\Models\PointsTransaction;
@@ -19,6 +20,13 @@ class PointsService
      */
     public function earn(User $user, float $amount, string $sourceType, ?int $sourceId = null, ?string $description = null, ?array $metadata = null, int $xpAmount = 0, ?string $idempotencyKey = null): PointsTransaction
     {
+        // Fraud suspension: a frozen account never accumulates points. We skip
+        // the credit (without breaking the surrounding transaction, which may
+        // also credit other, non-suspended users) and log a cancelled record.
+        if ($user->pointsFrozen()) {
+            return $this->recordBlockedPointsEarn($user, $amount, $sourceType, $sourceId, $description, $metadata);
+        }
+
         return DB::transaction(function () use ($user, $amount, $sourceType, $sourceId, $description, $metadata, $xpAmount, $idempotencyKey) {
             $balanceBefore = $user->pp;
             $balanceAfter = $balanceBefore + $amount;
@@ -68,10 +76,46 @@ class PointsService
     }
 
     /**
+     * Log a blocked earn attempt for a suspended account, without changing the
+     * balance. The idempotency key is intentionally left off so the credit can
+     * still be granted normally once the account is restored.
+     */
+    private function recordBlockedPointsEarn(User $user, float $amount, string $sourceType, ?int $sourceId, ?string $description, ?array $metadata): PointsTransaction
+    {
+        Log::warning('Points earn blocked: account points suspended', [
+            'user_id' => $user->id,
+            'amount' => $amount,
+            'source_type' => $sourceType,
+        ]);
+
+        return PointsTransaction::create([
+            'user_id' => $user->id,
+            'transaction_type' => 'earn',
+            'amount' => $amount,
+            'balance_before' => $user->pp,
+            'balance_after' => $user->pp,
+            'source_type' => $sourceType,
+            'source_id' => $sourceId,
+            'description' => $description,
+            'metadata' => array_merge($metadata ?? [], ['blocked_reason' => 'points_suspended']),
+            'status' => 'cancelled',
+        ]);
+    }
+
+    /**
      * Award PP through rule limits and a database-backed idempotency key.
      */
     public function awardGoverned(User $user, float $amount, string $ruleKey, string $idempotencyKey, ?int $sourceId = null, ?string $description = null, ?array $metadata = null): ?PointsTransaction
     {
+        if ($user->pointsFrozen()) {
+            Log::warning('Governed points award blocked: account points suspended', [
+                'user_id' => $user->id,
+                'rule_key' => $ruleKey,
+            ]);
+
+            return null;
+        }
+
         if ($amount <= 0 || PointsTransaction::where('idempotency_key', $idempotencyKey)->exists()) {
             return null;
         }
@@ -125,6 +169,10 @@ class PointsService
      */
     public function spend(User $user, float $amount, string $sourceType, ?int $sourceId = null, ?string $description = null, ?array $metadata = null, ?string $idempotencyKey = null): ?PointsTransaction
     {
+        if ($user->pointsFrozen()) {
+            throw AccountEconomyRestrictedException::points();
+        }
+
         return DB::transaction(function () use ($user, $amount, $sourceType, $sourceId, $description, $metadata, $idempotencyKey) {
             if ($idempotencyKey && PointsTransaction::where('idempotency_key', $idempotencyKey)->exists()) {
                 return PointsTransaction::where('idempotency_key', $idempotencyKey)->first();
@@ -222,6 +270,12 @@ class PointsService
      */
     public function transfer(User $fromUser, User $toUser, float $amount, ?string $message = null): array
     {
+        // Freeze applies to both ends: a suspended sender cannot move points
+        // out, and a suspended receiver cannot accumulate transferred points.
+        if ($fromUser->pointsFrozen() || $toUser->pointsFrozen()) {
+            throw AccountEconomyRestrictedException::points();
+        }
+
         return DB::transaction(function () use ($fromUser, $toUser, $amount, $message) {
             $fromBalanceBefore = $fromUser->pp;
 
@@ -354,6 +408,15 @@ class PointsService
      */
     public function awardByRule(User $user, string $ruleKey, ?int $sourceId = null, ?string $description = null, ?array $metadata = null): ?PointsTransaction
     {
+        if ($user->pointsFrozen()) {
+            Log::warning('Rule points award blocked: account points suspended', [
+                'user_id' => $user->id,
+                'rule_key' => $ruleKey,
+            ]);
+
+            return null;
+        }
+
         $rule = $this->getRule($ruleKey);
 
         if (! $rule) {
@@ -535,6 +598,11 @@ class PointsService
      */
     public function convertPointsToWallet(User $user, int $points): array
     {
+        // Converting points to wallet money touches both frozen systems.
+        if ($user->pointsFrozen() || $user->walletFrozen()) {
+            throw AccountEconomyRestrictedException::points();
+        }
+
         return DB::transaction(function () use ($user, $points) {
             $exchangeRate = 1200; // 1 THB = 1200 points
             $walletAmount = $points / $exchangeRate;

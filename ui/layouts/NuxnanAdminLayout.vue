@@ -37,6 +37,11 @@ const allNavItems = [
     href: '/nuxnan-admin/users'
   },
   {
+    name: 'Blacklist',
+    icon: 'fluent:person-prohibited-24-regular',
+    href: '/nuxnan-admin/blacklist'
+  },
+  {
     name: 'จัดการบทบาท',
     icon: 'fluent:shield-24-regular',
     href: '/nuxnan-admin/roles',

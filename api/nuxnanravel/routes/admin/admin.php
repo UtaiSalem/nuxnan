@@ -20,6 +20,7 @@ use App\Models\Course;
 use App\Models\PointsTransaction;
 use App\Models\User;
 use App\Models\WalletTransaction;
+use App\Services\PointsService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -266,7 +267,111 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
         Route::post('/{id}/verify-email', [AdminController::class, 'verifyEmail'])->middleware('permission:user-edit')->name('admin.users.verify-email');
         Route::post('/{id}/unverify-email', [AdminController::class, 'unverifyEmail'])->middleware('permission:user-edit')->name('admin.users.unverify-email');
         Route::post('/{id}/toggle-ban', [AdminController::class, 'toggleBan'])->middleware('permission:user-edit')->name('admin.users.toggle-ban');
+
+        // Award / adjust points for a user (มอบ Points)
+        Route::post('/{id}/award-points', function (Request $request, int $id, PointsService $points) {
+            $data = $request->validate([
+                'amount' => ['required', 'numeric', 'min:0.01'],
+                'action' => ['nullable', 'in:add,deduct,set'],
+                'reason' => ['nullable', 'string', 'max:255'],
+            ]);
+
+            $user = User::findOrFail($id);
+            $transaction = $points->adminAdjust(
+                $user,
+                (float) $data['amount'],
+                $data['action'] ?? 'add',
+                $data['reason'] ?? null,
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'ปรับแต้มสำเร็จ',
+                'data' => [
+                    'transaction' => $transaction,
+                    'new_balance' => $user->fresh()->pp,
+                ],
+            ]);
+        })->middleware('permission:user-edit')->name('admin.users.award-points');
+
+        // Suspend the points/wallet economy for a user (fraud blacklist)
+        Route::post('/{id}/suspend-economy', function (Request $request, int $id) {
+            $data = $request->validate([
+                'points' => ['nullable', 'boolean'],
+                'wallet' => ['nullable', 'boolean'],
+                'reason' => ['nullable', 'string', 'max:1000'],
+            ]);
+
+            $suspendPoints = $request->boolean('points', true);
+            $suspendWallet = $request->boolean('wallet', true);
+
+            if (! $suspendPoints && ! $suspendWallet) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'ต้องเลือกระงับอย่างน้อยหนึ่งระบบ (แต้ม หรือ Wallet)',
+                ], 422);
+            }
+
+            $user = User::findOrFail($id);
+            $user->update([
+                'points_suspended' => $suspendPoints,
+                'wallet_suspended' => $suspendWallet,
+                'economy_suspended_reason' => $data['reason'] ?? null,
+                'economy_suspended_at' => now(),
+                'economy_suspended_by' => $request->user()?->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'ระงับบัญชีสำเร็จ',
+                'data' => $user->fresh(),
+            ]);
+        })->middleware('permission:user-edit')->name('admin.users.suspend-economy');
+
+        // Restore the economy for a user (remove from blacklist)
+        Route::post('/{id}/restore-economy', function (Request $request, int $id) {
+            $user = User::findOrFail($id);
+            $user->update([
+                'points_suspended' => false,
+                'wallet_suspended' => false,
+                'economy_suspended_reason' => null,
+                'economy_suspended_at' => null,
+                'economy_suspended_by' => null,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'ยกเลิกการระงับสำเร็จ',
+                'data' => $user->fresh(),
+            ]);
+        })->middleware('permission:user-edit')->name('admin.users.restore-economy');
     });
+
+    // =====================================================
+    // Economy Blacklist (suspended points/wallet accounts)
+    // =====================================================
+    Route::get('/economy-suspensions', function (Request $request) {
+        $query = User::query()
+            ->where(function ($q) {
+                $q->where('points_suspended', true)
+                    ->orWhere('wallet_suspended', true);
+            })
+            ->with('economySuspendedBy:id,name,username');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('username', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $suspensions = $query->orderByDesc('economy_suspended_at')
+            ->paginate($request->get('per_page', 20));
+
+        return response()->json(['success' => true, 'data' => $suspensions]);
+    })->name('admin.economy-suspensions.index');
 
     // =====================================================
     // Role Management (Super Admin only for write operations)

@@ -353,6 +353,10 @@ class AdminController extends Controller
                 'points' => $user->points ?? 0,
                 'courses_count' => $user->courses()->count() ?? 0,
                 'login_count' => $user->login_count ?? 0,
+                'points_suspended' => (bool) $user->points_suspended,
+                'wallet_suspended' => (bool) $user->wallet_suspended,
+                'economy_suspended_reason' => $user->economy_suspended_reason,
+                'economy_suspended_at' => $user->economy_suspended_at,
             ],
         ]);
     }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\AccountEconomyRestrictedException;
 use App\Http\Middleware\AuditRequest;
 use App\Http\Middleware\CheckAcademyPermission;
 use App\Http\Middleware\CheckPermission;
@@ -59,6 +60,16 @@ return Application::configure(basePath: dirname(__DIR__))
                     'success' => false,
                     'message' => 'Unauthenticated. Please login first.',
                 ], 401);
+            }
+        });
+        // Return JSON 403 when a suspended account attempts an economy action
+        $exceptions->render(function (AccountEconomyRestrictedException $e, Request $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'restricted_system' => $e->system,
+                ], 403);
             }
         });
         $exceptions->render(function (ThrottleRequestsException $e, Request $request) {

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\AccountEconomyRestrictedException;
 use App\Models\Course;
 use App\Models\CoursePurchase;
 use App\Models\User;
@@ -17,6 +18,10 @@ class WalletService
      */
     public function deposit(User $user, float $amount, string $method, ?string $reference = null, ?string $description = null, ?array $metadata = null): WalletTransaction
     {
+        if ($user->walletFrozen()) {
+            throw AccountEconomyRestrictedException::wallet();
+        }
+
         return DB::transaction(function () use ($user, $amount, $method, $reference, $description, $metadata) {
             $user = $this->lockUser($user->id);
             $amount = bcround((string) $amount, 2);
@@ -61,6 +66,10 @@ class WalletService
      */
     public function deductForPurchase(User $user, string $amount, string $reason, ?string $description = null, array $metadata = []): ?WalletTransaction
     {
+        if ($user->walletFrozen()) {
+            throw AccountEconomyRestrictedException::wallet();
+        }
+
         return DB::transaction(function () use ($user, $amount, $reason, $description, $metadata) {
             $user = User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
 
@@ -100,6 +109,10 @@ class WalletService
      */
     public function withdraw(User $user, string $amount, string $method, array $bankAccount, ?string $description = null, ?string $idempotencyKey = null): ?WalletTransaction
     {
+        if ($user->walletFrozen()) {
+            throw AccountEconomyRestrictedException::wallet();
+        }
+
         // Internal spends must go through deductForPurchase() — they settle
         // immediately and must not enter the withdrawal approval pipeline.
         if (! in_array($method, ['bank_transfer', 'promptpay'], true)) {
@@ -229,6 +242,10 @@ class WalletService
      */
     public function transfer(User $fromUser, User $toUser, float $amount, ?string $message = null): array
     {
+        if ($fromUser->walletFrozen() || $toUser->walletFrozen()) {
+            throw AccountEconomyRestrictedException::wallet();
+        }
+
         return DB::transaction(function () use ($fromUser, $toUser, $amount, $message) {
             // Lock both rows in a deterministic order (ascending id) to avoid
             // deadlocks when two transfers touch the same pair of users.
@@ -344,6 +361,11 @@ class WalletService
      */
     public function convertWalletToPoints(User $user, float $amount): array
     {
+        // Converting wallet money to points touches both frozen systems.
+        if ($user->walletFrozen() || $user->pointsFrozen()) {
+            throw AccountEconomyRestrictedException::wallet();
+        }
+
         return DB::transaction(function () use ($user, $amount) {
             $user = $this->lockUser($user->id);
             $exchangeRate = 1200; // 1 THB = 1200 points
@@ -1053,6 +1075,10 @@ class WalletService
      */
     public function purchaseCourse(User $user, Course $course, ?float $overridePrice = null): WalletTransaction
     {
+        if ($user->walletFrozen()) {
+            throw AccountEconomyRestrictedException::wallet();
+        }
+
         // Calculate price - use override, tuition_fees, or price
         $originalPrice = bcround((string) ($course->tuition_fees ?? $course->price ?? 0), 2);
         $finalPrice = $overridePrice !== null ? bcround((string) $overridePrice, 2) : $originalPrice;

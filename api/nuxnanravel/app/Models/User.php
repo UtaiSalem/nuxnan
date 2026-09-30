@@ -5,6 +5,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -88,6 +89,11 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         'deleted_by',
         'deletion_reason',
         'anonymized_at',
+        'points_suspended',
+        'wallet_suspended',
+        'economy_suspended_reason',
+        'economy_suspended_at',
+        'economy_suspended_by',
     ];
 
     /**
@@ -121,6 +127,9 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             'two_factor_confirmed_at' => 'datetime',
             'total_points_earned' => 'integer',
             'total_points_spent' => 'integer',
+            'points_suspended' => 'boolean',
+            'wallet_suspended' => 'boolean',
+            'economy_suspended_at' => 'datetime',
             'level' => 'integer',
             'xp' => 'integer',
             'xp_level' => 'integer',
@@ -160,6 +169,32 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     public function coursePurchases(): HasMany
     {
         return $this->hasMany(CoursePurchase::class, 'buyer_id');
+    }
+
+    /**
+     * The admin who suspended this account's economy, if any.
+     */
+    public function economySuspendedBy(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'economy_suspended_by');
+    }
+
+    /**
+     * Whether the points system is frozen for this user (fraud suspension).
+     * Learning access is never affected by this.
+     */
+    public function pointsFrozen(): bool
+    {
+        return (bool) $this->points_suspended;
+    }
+
+    /**
+     * Whether the wallet system is frozen for this user (fraud suspension).
+     * Learning access is never affected by this.
+     */
+    public function walletFrozen(): bool
+    {
+        return (bool) $this->wallet_suspended;
     }
 
     public function student(): HasOne
