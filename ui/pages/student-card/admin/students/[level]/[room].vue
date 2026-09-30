@@ -40,6 +40,9 @@ const reviewRequest = async (student, action) => {
         confirmButtonText: action === 'approve' ? 'อนุมัติ' : action === 'reject' ? 'ปฏิเสธ' : action === 'start' ? 'เริ่มจัดทำ' : 'ทำเสร็จและส่งมอบแล้ว',
         cancelButtonText: 'ยกเลิก',
         confirmButtonColor: action === 'reject' ? '#dc2626' : '#2563eb',
+        // heightAuto:true (ค่าเริ่มต้น) จะไปตั้ง height ของ html/body เป็น auto !important
+        // ทำให้หน้าเด้งขึ้นบนสุดทุกครั้งที่เปิด/ปิดกล่อง — ปิดไว้เพื่อคง scroll เดิม
+        heightAuto: false,
     })
     if (!confirmation.isConfirmed) return
     try {
@@ -52,9 +55,9 @@ const reviewRequest = async (student, action) => {
         await fetchStudents({ silent: true })
         await nextTick()
         if (typeof window !== 'undefined') window.scrollTo({ top: scrollY })
-        Swal.fire({ icon: 'success', title: action === 'approve' ? 'อนุมัติคำขอแล้ว' : action === 'reject' ? 'ปฏิเสธคำขอแล้ว' : action === 'start' ? 'บันทึกว่าเริ่มจัดทำบัตรแล้ว' : 'บันทึกว่าทำและส่งมอบบัตรแล้ว', timer: 1500, showConfirmButton: false })
+        Swal.fire({ icon: 'success', title: action === 'approve' ? 'อนุมัติคำขอแล้ว' : action === 'reject' ? 'ปฏิเสธคำขอแล้ว' : action === 'start' ? 'บันทึกว่าเริ่มจัดทำบัตรแล้ว' : 'บันทึกว่าทำและส่งมอบบัตรแล้ว', timer: 1500, showConfirmButton: false, heightAuto: false })
     } catch (error) {
-        Swal.fire({ icon: 'error', title: 'ดำเนินการไม่สำเร็จ', text: error?.data?.message || 'กรุณาลองใหม่อีกครั้ง' })
+        Swal.fire({ icon: 'error', title: 'ดำเนินการไม่สำเร็จ', text: error?.data?.message || 'กรุณาลองใหม่อีกครั้ง', heightAuto: false })
     }
 }
 
@@ -83,7 +86,7 @@ const fetchStudents = async ({ silent = false } = {}) => {
         students.value = response.students || []
     } catch (error) {
         console.error('Error fetching students:', error)
-        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถโหลดข้อมูลนักเรียนได้' })
+        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถโหลดข้อมูลนักเรียนได้', heightAuto: false })
     } finally {
         if (!silent) isLoading.value = false
     }
@@ -274,7 +277,7 @@ const downloadCard = async (index, studentNumber) => {
         link.click()
         document.body.removeChild(link)
     } catch {
-        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถดาวน์โหลดบัตรนักเรียนได้' })
+        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถดาวน์โหลดบัตรนักเรียนได้', heightAuto: false })
     }
 }
 </script>
