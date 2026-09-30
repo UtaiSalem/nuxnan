@@ -74,6 +74,11 @@ const allNavItems = [
     href: '/nuxnan-admin/wallet'
   },
   {
+    name: 'ธุรกรรมทั้งหมด',
+    icon: 'fluent:receipt-24-regular',
+    href: '/nuxnan-admin/transactions'
+  },
+  {
     name: 'จัดการการสนับสนุน',
     icon: 'fluent:gift-24-regular',
     href: '/nuxnan-admin/supports'
