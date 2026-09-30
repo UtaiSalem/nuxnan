@@ -9,6 +9,7 @@ import { usePoints } from '~/composables/usePoints'
 import { useApi } from '~/composables/useApi'
 import BaseCard from '~/components/atoms/BaseCard.vue'
 import UnifiedTransactionCard from '~/components/Common/UnifiedTransactionCard.vue'
+import EconomySuspendedBanner from '~/components/Common/EconomySuspendedBanner.vue'
 
 definePageMeta({
   layout: 'main',
@@ -220,6 +221,7 @@ const bankOptions = [
 
 // Computed
 const walletBalance = computed(() => authStore.user?.wallet || 0)
+const walletSuspended = computed(() => authStore.user?.wallet_suspended === true)
 
 const conversionPreview = computed(() => {
   const pts = convertForm.value.points
@@ -862,6 +864,7 @@ onMounted(async () => {
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-0 sm:px-4 sm:px-6 lg:px-8 pb-24 lg:pb-8">
     <div class="max-w-4xl mx-auto">
+      <EconomySuspendedBanner v-if="walletSuspended" system="wallet" class="mb-4 mx-3 sm:mx-0" />
       <!-- Page Header -->
       <div class="text-center mb-8">
         <div class="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-full flex items-center justify-center shadow-lg">

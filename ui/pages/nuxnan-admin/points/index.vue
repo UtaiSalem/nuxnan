@@ -52,6 +52,27 @@ const currentPage = ref(1)
 const totalPages = ref(1)
 const perPage = ref(20)
 
+// Award / adjust points modal
+const showAwardModal = ref(false)
+const awardForm = ref<{ amount: number | null; action: 'add' | 'deduct' | 'set'; reason: string }>({
+  amount: null,
+  action: 'add',
+  reason: ''
+})
+const awardUserSearch = ref('')
+const awardUserResults = ref<any[]>([])
+const awardSelectedUser = ref<any | null>(null)
+const awardSearching = ref(false)
+const awardSubmitting = ref(false)
+const awardError = ref('')
+const awardSuccess = ref('')
+
+const awardActions = [
+  { value: 'add', label: 'เพิ่มแต้ม (+)' },
+  { value: 'deduct', label: 'หักแต้ม (−)' },
+  { value: 'set', label: 'ตั้งค่าแต้มเป็น' }
+]
+
 const summary = ref<Summary>({
   total_transactions: 0,
   total_earned: 0,
@@ -242,6 +263,97 @@ const summaryCards = computed(() => [
   }
 ])
 
+// ── Award / adjust points ────────────────────────────────────────────
+const openAwardModal = () => {
+  awardForm.value = { amount: null, action: 'add', reason: '' }
+  awardUserSearch.value = ''
+  awardUserResults.value = []
+  awardSelectedUser.value = null
+  awardError.value = ''
+  awardSuccess.value = ''
+  showAwardModal.value = true
+}
+
+let awardSearchTimer: ReturnType<typeof setTimeout> | null = null
+watch(awardUserSearch, (val) => {
+  if (awardSelectedUser.value) return
+  if (awardSearchTimer) clearTimeout(awardSearchTimer)
+  if (!val.trim()) {
+    awardUserResults.value = []
+    return
+  }
+  awardSearchTimer = setTimeout(async () => {
+    awardSearching.value = true
+    try {
+      const token = useCookie('token')
+      const params = new URLSearchParams({ search: val.trim(), per_page: '8' })
+      const response = await $fetch<any>(`${apiBase}/api/admin/users?${params}`, {
+        headers: { Authorization: `Bearer ${token.value}` }
+      })
+      awardUserResults.value = response?.data?.data || response?.data || []
+    } catch (error) {
+      console.error('User search failed:', error)
+      awardUserResults.value = []
+    } finally {
+      awardSearching.value = false
+    }
+  }, 400)
+})
+
+const selectAwardUser = (user: any) => {
+  awardSelectedUser.value = user
+  awardUserSearch.value = user.name || user.username || user.email || `#${user.id}`
+  awardUserResults.value = []
+}
+
+const clearAwardUser = () => {
+  awardSelectedUser.value = null
+  awardUserSearch.value = ''
+  awardUserResults.value = []
+}
+
+const submitAward = async () => {
+  awardError.value = ''
+  awardSuccess.value = ''
+
+  if (!awardSelectedUser.value) {
+    awardError.value = 'กรุณาเลือกผู้ใช้'
+    return
+  }
+  if (!awardForm.value.amount || awardForm.value.amount <= 0) {
+    awardError.value = 'กรุณาระบุจำนวนแต้มที่มากกว่า 0'
+    return
+  }
+
+  awardSubmitting.value = true
+  try {
+    const token = useCookie('token')
+    const response = await $fetch<any>(
+      `${apiBase}/api/admin/users/${awardSelectedUser.value.id}/award-points`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token.value}` },
+        body: {
+          amount: awardForm.value.amount,
+          action: awardForm.value.action,
+          reason: awardForm.value.reason || undefined
+        }
+      }
+    )
+    if (response.success) {
+      awardSuccess.value = `สำเร็จ • แต้มคงเหลือใหม่: ${formatPoints(response.data?.new_balance ?? 0)}`
+      awardForm.value.amount = null
+      awardForm.value.reason = ''
+      fetchPointsTransactions()
+    }
+  } catch (error: any) {
+    console.error('Award points failed:', error)
+    awardError.value = error?.data?.message || 'ไม่สามารถปรับแต้มได้ กรุณาลองใหม่'
+  } finally {
+    awardSubmitting.value = false
+  }
+}
+
 onMounted(() => {
   fetchPointsTransactions()
 })
@@ -257,13 +369,22 @@ onMounted(() => {
           ดูธุรกรรมและการโอนแต้มของผู้ใช้ทั้งระบบ
         </p>
       </div>
-      <button
-        @click="fetchPointsTransactions"
-        class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-300 transition-colors flex-shrink-0 whitespace-nowrap"
-      >
-        <Icon icon="fluent:arrow-sync-24-regular" class="w-5 h-5" :class="{ 'animate-spin': isLoading }" />
-        รีเฟรช
-      </button>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <button
+          @click="openAwardModal"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white transition-colors whitespace-nowrap"
+        >
+          <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
+          มอบ Points
+        </button>
+        <button
+          @click="fetchPointsTransactions"
+          class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-300 transition-colors whitespace-nowrap"
+        >
+          <Icon icon="fluent:arrow-sync-24-regular" class="w-5 h-5" :class="{ 'animate-spin': isLoading }" />
+          <span class="hidden sm:inline">รีเฟรช</span>
+        </button>
+      </div>
     </div>
 
     <!-- Summary Cards -->
@@ -417,6 +538,119 @@ onMounted(() => {
             class="min-w-[44px] min-h-[44px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center rounded-lg text-sm font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             <Icon icon="fluent:chevron-right-24-regular" class="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Award / Adjust Points Modal -->
+    <div
+      v-if="showAwardModal"
+      class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4"
+      @click.self="showAwardModal = false"
+    >
+      <div class="w-full sm:max-w-md bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-800">
+          <h3 class="text-lg font-bold text-slate-800 dark:text-white">มอบ / ปรับแต้ม</h3>
+          <button
+            @click="showAwardModal = false"
+            class="w-10 h-10 flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
+          >
+            <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
+          </button>
+        </div>
+
+        <div class="p-4 space-y-4">
+          <!-- User picker -->
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">ผู้ใช้</label>
+            <div v-if="awardSelectedUser" class="flex items-center justify-between gap-2 px-3 py-2.5 bg-slate-50 dark:bg-slate-700 rounded-xl">
+              <span class="text-sm text-slate-800 dark:text-white truncate">
+                {{ awardSelectedUser.name || awardSelectedUser.username || awardSelectedUser.email }}
+              </span>
+              <button @click="clearAwardUser" class="text-slate-400 hover:text-red-500 flex-shrink-0">
+                <Icon icon="fluent:dismiss-circle-24-regular" class="w-5 h-5" />
+              </button>
+            </div>
+            <div v-else class="relative">
+              <input
+                v-model="awardUserSearch"
+                type="text"
+                placeholder="ค้นหาผู้ใช้ (ชื่อ / อีเมล / เบอร์)..."
+                class="w-full px-4 py-2.5 min-h-[44px] bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
+              />
+              <div v-if="awardSearching" class="absolute right-3 top-1/2 -translate-y-1/2">
+                <Icon icon="fluent:spinner-ios-20-regular" class="w-5 h-5 text-slate-400 animate-spin" />
+              </div>
+              <ul
+                v-if="awardUserResults.length"
+                class="absolute z-10 mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg"
+              >
+                <li
+                  v-for="u in awardUserResults"
+                  :key="u.id"
+                  @click="selectAwardUser(u)"
+                  class="px-4 py-2.5 min-h-[44px] flex items-center text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer"
+                >
+                  {{ u.name || u.username || u.email || ('#' + u.id) }}
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Action -->
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">การทำรายการ</label>
+            <select
+              v-model="awardForm.action"
+              class="w-full px-4 py-2.5 min-h-[44px] bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
+            >
+              <option v-for="a in awardActions" :key="a.value" :value="a.value">{{ a.label }}</option>
+            </select>
+          </div>
+
+          <!-- Amount -->
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">จำนวนแต้ม</label>
+            <input
+              v-model.number="awardForm.amount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              placeholder="0"
+              class="w-full px-4 py-2.5 min-h-[44px] bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
+            />
+          </div>
+
+          <!-- Reason -->
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">เหตุผล (ไม่บังคับ)</label>
+            <textarea
+              v-model="awardForm.reason"
+              rows="2"
+              placeholder="เช่น รางวัลกิจกรรม, ชดเชย ฯลฯ"
+              class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 resize-none"
+            ></textarea>
+          </div>
+
+          <p v-if="awardError" class="text-sm text-red-500">{{ awardError }}</p>
+          <p v-if="awardSuccess" class="text-sm text-green-600">{{ awardSuccess }}</p>
+        </div>
+
+        <div class="flex items-center gap-2 p-4 border-t border-slate-100 dark:border-slate-700">
+          <button
+            @click="showAwardModal = false"
+            class="flex-1 min-h-[44px] px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-300 transition-colors"
+          >
+            ปิด
+          </button>
+          <button
+            @click="submitAward"
+            :disabled="awardSubmitting"
+            class="flex-1 min-h-[44px] px-4 py-2.5 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
+          >
+            <Icon v-if="awardSubmitting" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
+            ยืนยัน
           </button>
         </div>
       </div>

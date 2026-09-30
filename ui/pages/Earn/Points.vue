@@ -4,6 +4,7 @@ import { Icon } from '@iconify/vue'
 import { useAuthStore } from '~/stores/auth'
 import { usePoints } from '~/composables/usePoints'
 import BaseCard from '~/components/atoms/BaseCard.vue'
+import EconomySuspendedBanner from '~/components/Common/EconomySuspendedBanner.vue'
 
 definePageMeta({
   layout: 'main',
@@ -81,6 +82,7 @@ const quickConvertAmounts = [1200, 2400, 4800, 6000, 9600, 12000, 14400, 18000, 
 
 // Computed
 const pointsBalance = computed(() => authStore.points || 0)
+const pointsSuspended = computed(() => authStore.user?.points_suspended === true)
 
 const conversionPreview = computed(() => {
   const pts = convertForm.value.points
@@ -425,6 +427,7 @@ onMounted(async () => {
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-0 sm:px-4 sm:px-6 lg:px-8 pb-24 lg:pb-8">
     <div class="max-w-4xl mx-auto">
+      <EconomySuspendedBanner v-if="pointsSuspended" system="points" class="mb-4 mx-3 sm:mx-0" />
       <!-- Page Header -->
       <div class="text-center mb-8">
         <div class="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-full flex items-center justify-center shadow-lg">
