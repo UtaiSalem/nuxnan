@@ -482,14 +482,18 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
         $transactions = $query->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 20));
 
-        // Summary across all point transactions (unaffected by the filters above)
-        $creditTypes = ['earn', 'transfer_in', 'refund'];
-        $debitTypes = ['spend', 'transfer_out', 'transfer'];
+        // Summary across all point transactions (unaffected by the filters above).
+        // Direction is derived from the balance delta so every type is counted,
+        // including admin_adjust / conversion which can go either way.
+        $totals = PointsTransaction::selectRaw(
+            'COALESCE(SUM(CASE WHEN balance_after >= balance_before THEN amount ELSE 0 END), 0) as earned, '.
+            'COALESCE(SUM(CASE WHEN balance_after < balance_before THEN amount ELSE 0 END), 0) as spent'
+        )->first();
 
         $summary = [
             'total_transactions' => PointsTransaction::count(),
-            'total_earned' => (float) PointsTransaction::whereIn('transaction_type', $creditTypes)->sum('amount'),
-            'total_spent' => (float) PointsTransaction::whereIn('transaction_type', $debitTypes)->sum('amount'),
+            'total_earned' => (float) ($totals->earned ?? 0),
+            'total_spent' => (float) ($totals->spent ?? 0),
             'total_users' => (int) PointsTransaction::distinct()->count('user_id'),
         ];
 

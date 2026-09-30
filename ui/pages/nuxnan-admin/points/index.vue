@@ -25,7 +25,8 @@ interface PointsTransaction {
   user?: PointsUser | null
   transaction_type: string
   amount: number
-  balance_after?: number
+  balance_before?: number | string
+  balance_after?: number | string
   description?: string | null
   status: string
   created_at: string
@@ -79,9 +80,18 @@ const transactionStatuses = [
   { value: 'cancelled', label: 'ยกเลิก' }
 ]
 
-// Debit types spend points (show as red / negative)
+// Direction: prefer the balance delta (correct even for admin_adjust /
+// conversion, which can go either way); fall back to the type when the
+// balance figures are missing or equal.
 const debitTypes = ['spend', 'transfer_out', 'transfer']
-const isDebit = (type: string) => debitTypes.includes(type)
+const isDebit = (tx: PointsTransaction) => {
+  const before = Number(tx.balance_before)
+  const after = Number(tx.balance_after)
+  if (!Number.isNaN(before) && !Number.isNaN(after) && before !== after) {
+    return after < before
+  }
+  return debitTypes.includes(tx.transaction_type)
+}
 
 // Fetch points transactions
 const fetchPointsTransactions = async () => {
@@ -364,9 +374,9 @@ onMounted(() => {
               </td>
               <td
                 class="px-4 py-3 text-sm text-right font-medium whitespace-nowrap"
-                :class="isDebit(tx.transaction_type) ? 'text-red-600' : 'text-green-600'"
+                :class="isDebit(tx) ? 'text-red-600' : 'text-green-600'"
               >
-                {{ isDebit(tx.transaction_type) ? '-' : '+' }}{{ formatPoints(tx.amount) }}
+                {{ isDebit(tx) ? '-' : '+' }}{{ formatPoints(tx.amount) }}
               </td>
               <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300 min-w-0 max-w-[280px] break-words">{{ tx.description || '-' }}</td>
               <td class="px-4 py-3 text-center whitespace-nowrap">
