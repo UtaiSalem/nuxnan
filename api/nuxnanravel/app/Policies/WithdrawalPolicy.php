@@ -12,6 +12,17 @@ class WithdrawalPolicy
         return $user->id === $transaction->user_id || $user->isSuperAdmin() || $user->hasAnyRole(['ADMIN', 'MODERATOR']) || $user->isPlearndAdmin();
     }
 
+    /**
+     * Who may inspect the fund-source trail (incoming transfers / conversions)
+     * behind a withdrawal. Admin/reviewer only — never the owner, since this
+     * exposes counterparties and is a fraud-review control.
+     */
+    public function viewFundSource(User $user, WalletTransaction $transaction): bool
+    {
+        return $transaction->transaction_type === 'withdraw'
+            && ($user->isSuperAdmin() || $user->hasAnyRole(['ADMIN', 'MODERATOR']) || $user->isPlearndAdmin());
+    }
+
     public function approve(User $user, WalletTransaction $transaction): bool
     {
         return ($user->isSuperAdmin() || $user->hasRole('ADMIN')) && $transaction->transaction_type === 'withdraw';

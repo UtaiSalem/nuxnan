@@ -9,6 +9,7 @@ use App\Models\WalletDepositRequest;
 use App\Models\WalletTransaction;
 use App\Services\AuditLogService;
 use App\Services\WalletService;
+use App\Services\WithdrawalFundSourceService;
 use App\Support\BankAccountNameMatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -421,6 +422,45 @@ class AdminWalletController extends Controller
         $this->attachNameMismatch($data);
 
         return response()->json(['success' => true, 'data' => $data]);
+    }
+
+    /**
+     * Trace where the money behind a withdrawal came from (incoming points/
+     * wallet transfers and points->wallet conversions) so a reviewer can spot
+     * the "transfer stolen value in -> convert -> withdraw" fraud pattern before
+     * approving. Read-only; access is audit-logged.
+     */
+    public function sourceOfFunds(Request $request, int $transactionId): JsonResponse
+    {
+        $user = Auth::user();
+        $transaction = WalletTransaction::find($transactionId);
+
+        if (! $transaction || $transaction->transaction_type !== 'withdraw') {
+            return response()->json(['success' => false, 'message' => 'Transaction not found'], 404);
+        }
+
+        if (! $user || $user->cannot('viewFundSource', $transaction)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $windowDays = (int) $request->input('window_days', WithdrawalFundSourceService::DEFAULT_WINDOW_DAYS);
+
+        $trace = app(WithdrawalFundSourceService::class)->trace($transaction, $windowDays);
+
+        app(AuditLogService::class)->log(
+            'withdrawal.source_of_funds_viewed',
+            $transaction,
+            null,
+            null,
+            'wallet',
+            [
+                'admin_id' => $user->id,
+                'window_days' => $trace['window_days'],
+                'risk_level' => $trace['risk']['level'],
+            ]
+        );
+
+        return response()->json(['success' => true, 'data' => $trace]);
     }
 
     /**
