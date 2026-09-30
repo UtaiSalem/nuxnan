@@ -456,16 +456,48 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
     // Transactions
     // =====================================================
     Route::get('/points-transactions', function (Request $request) {
-        $query = PointsTransaction::with(['user', 'targetUser']);
+        $query = PointsTransaction::with(['user:id,name,username,email,profile_photo_path']);
 
-        if ($request->has('user_id')) {
+        if ($request->filled('user_id')) {
             $query->where('user_id', $request->user_id);
+        }
+
+        if ($request->filled('type') && $request->type !== 'all') {
+            $query->where('transaction_type', $request->type);
+        }
+
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('user', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('username', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
         }
 
         $transactions = $query->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 20));
 
-        return response()->json(['success' => true, 'data' => $transactions]);
+        // Summary across all point transactions (unaffected by the filters above)
+        $creditTypes = ['earn', 'transfer_in', 'refund'];
+        $debitTypes = ['spend', 'transfer_out', 'transfer'];
+
+        $summary = [
+            'total_transactions' => PointsTransaction::count(),
+            'total_earned' => (float) PointsTransaction::whereIn('transaction_type', $creditTypes)->sum('amount'),
+            'total_spent' => (float) PointsTransaction::whereIn('transaction_type', $debitTypes)->sum('amount'),
+            'total_users' => (int) PointsTransaction::distinct()->count('user_id'),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $transactions,
+            'summary' => $summary,
+        ]);
     })->name('admin.points-transactions.index');
 
     Route::get('/wallet-transactions', function (Request $request) {
