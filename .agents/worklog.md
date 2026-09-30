@@ -8508,7 +8508,10 @@ port 33061 + `.env.g25` (throwaway, gitignored) → `php artisan migrate:fresh -
   (relation → AcademyGroup · validate scoped academy_groups where type=department + academy นี้) ·
   เจอ+แก้ bug audit call ผิด signature 5 จุดใน StaffController (log($action,$entity,$academy->id,...) →
   named args) ที่ทำให้ทุก staff write TypeError · test ใหม่ StaffDepartmentValidationTest 5 เคส เขียวบน MySQL
-  🟡 ยังเหลือ (นอกขอบเขต): StaffController::store ไม่เซ็ต first_name/last_name (NOT NULL) → สร้าง staff เต็มยังไม่ได้
+  🟢 first_name/last_name — แก้แล้ว 2026-09-30: เพิ่ม validate+เก็บ title_prefix/first_name(required)/last_name(required)/
+  nickname ใน store + update (phantom fields อื่น เช่น supervisor_id/base_salary/work_location ไม่อยู่ใน $fillable
+  → Eloquent drop เงียบ ไม่ error) · test เพิ่ม 2 เคส (store staff สำเร็จ end-to-end / require first+last) เขียวบน MySQL
+  · StaffDepartmentValidationTest รวม 7/7
 
 **หมายเหตุ existing DB:** create migration ที่แก้ (รวม poll_votes) รันบน dev/prod ไปแล้ว → ไม่ re-run ⇒ FK ใหม่
 มีผลเฉพาะ migrate จากศูนย์ · ถ้าจะเติม FK question_options ให้ poll_votes บน DB เดิม ต้องทำ repair migration

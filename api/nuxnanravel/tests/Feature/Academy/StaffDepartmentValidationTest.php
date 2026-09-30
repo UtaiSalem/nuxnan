@@ -92,6 +92,50 @@ class StaffDepartmentValidationTest extends TestCase
         $this->assertSame('ฝ่ายวิชาการ', $position->department->name);
     }
 
+    public function test_store_staff_succeeds_with_first_and_last_name(): void
+    {
+        [$academy, $owner, $department] = $this->context();
+        $position = Position::create(['academy_id' => $academy->id, 'name' => 'ครูผู้สอน']);
+        $member = User::factory()->create();
+
+        $response = $this->actingAs($owner, 'api')
+            ->postJson("/api/academies/{$academy->id}/staff", [
+                'user_id' => $member->id,
+                'position_id' => $position->id,
+                'department_id' => $department->id,
+                'first_name' => 'สมหญิง',
+                'last_name' => 'รักเรียน',
+                'employment_type' => 'full_time',
+                'hire_date' => '2026-05-01',
+            ]);
+
+        $response->assertCreated();
+        $this->assertDatabaseHas('staff_profiles', [
+            'academy_id' => $academy->id,
+            'user_id' => $member->id,
+            'first_name' => 'สมหญิง',
+            'last_name' => 'รักเรียน',
+            'department_id' => $department->id,
+        ]);
+    }
+
+    public function test_store_staff_requires_first_and_last_name(): void
+    {
+        [$academy, $owner] = $this->context();
+        $position = Position::create(['academy_id' => $academy->id, 'name' => 'ครู']);
+        $member = User::factory()->create();
+
+        $response = $this->actingAs($owner, 'api')
+            ->postJson("/api/academies/{$academy->id}/staff", [
+                'user_id' => $member->id,
+                'position_id' => $position->id,
+                'employment_type' => 'full_time',
+                'hire_date' => '2026-05-01',
+            ]);
+
+        $response->assertStatus(422)->assertJsonValidationErrors(['first_name', 'last_name']);
+    }
+
     public function test_staff_profile_department_relation_resolves_to_academy_group(): void
     {
         [$academy, $owner, $department] = $this->context();

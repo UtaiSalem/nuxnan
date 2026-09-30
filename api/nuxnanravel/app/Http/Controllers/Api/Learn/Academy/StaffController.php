@@ -102,6 +102,12 @@ class StaffController extends Controller
             'position_id' => 'required|exists:positions,id',
             'department_id' => ['nullable', $this->departmentExistsRule($academy)],
             'supervisor_id' => 'nullable|exists:staff_profiles,id',
+            // first_name/last_name เป็น NOT NULL ในตาราง staff_profiles — เดิมไม่ได้ validate/เก็บ
+            // ⇒ store ตายด้วย 1364 field doesn't have a default value
+            'title_prefix' => 'nullable|string|max:20',
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'nickname' => 'nullable|string|max:50',
             'employment_type' => 'required|in:full_time,part_time,contract,temporary',
             'hire_date' => 'required|date',
             'probation_end_date' => 'nullable|date|after:hire_date',
@@ -148,6 +154,10 @@ class StaffController extends Controller
             'position_id' => 'sometimes|exists:positions,id',
             'department_id' => ['nullable', $this->departmentExistsRule($academy)],
             'supervisor_id' => 'nullable|exists:staff_profiles,id',
+            'title_prefix' => 'nullable|string|max:20',
+            'first_name' => 'sometimes|string|max:255',
+            'last_name' => 'sometimes|string|max:255',
+            'nickname' => 'nullable|string|max:50',
             'employment_type' => 'sometimes|in:full_time,part_time,contract,temporary',
             'hire_date' => 'sometimes|date',
             'probation_end_date' => 'nullable|date',
