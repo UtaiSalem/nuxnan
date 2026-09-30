@@ -456,16 +456,54 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
     // Transactions
     // =====================================================
     Route::get('/points-transactions', function (Request $request) {
-        $query = PointsTransaction::with(['user', 'targetUser']);
+        $query = PointsTransaction::with(['user:id,name,username,email,profile_photo_path']);
 
-        if ($request->has('user_id')) {
+        if ($request->filled('user_id')) {
             $query->where('user_id', $request->user_id);
+        }
+
+        if ($request->filled('type') && $request->type !== 'all') {
+            $query->where('transaction_type', $request->type);
+        }
+
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('user', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('username', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
         }
 
         $transactions = $query->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 20));
 
-        return response()->json(['success' => true, 'data' => $transactions]);
+        // Summary across all point transactions (unaffected by the filters above).
+        // Earned/spent totals count only completed transactions so that
+        // pending / failed / cancelled records do not inflate the figures.
+        // Direction is derived from the balance delta so every type is counted,
+        // including admin_adjust / conversion which can go either way.
+        $totals = PointsTransaction::where('status', 'completed')->selectRaw(
+            'COALESCE(SUM(CASE WHEN balance_after >= balance_before THEN amount ELSE 0 END), 0) as earned, '.
+            'COALESCE(SUM(CASE WHEN balance_after < balance_before THEN amount ELSE 0 END), 0) as spent'
+        )->first();
+
+        $summary = [
+            'total_transactions' => PointsTransaction::count(),
+            'total_earned' => (float) ($totals->earned ?? 0),
+            'total_spent' => (float) ($totals->spent ?? 0),
+            'total_users' => (int) PointsTransaction::distinct()->count('user_id'),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $transactions,
+            'summary' => $summary,
+        ]);
     })->name('admin.points-transactions.index');
 
     Route::get('/wallet-transactions', function (Request $request) {
