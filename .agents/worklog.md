@@ -41,6 +41,26 @@
 
 ---
 
+## 2026-09-30 — student-card admin: แก้หน้าเด้งขึ้นบนสุดตอนอนุมัติคำร้อง (เสร็จ · merge เข้า main แล้ว)
+
+หน้า `ui/pages/student-card/admin/students/[level]/[room].vue` (URL `/student-card/admin/students/{level}/{room}`)
+ทุกครั้งที่กดปุ่มบนการ์ดนักเรียน (อนุมัติ/ปฏิเสธ/เริ่มจัดทำ/ทำเสร็จ) หน้าจะเด้งขึ้นบนสุด → อนุมัติคนล่าง ๆ ต้องเลื่อนใหม่ทุกครั้ง
+
+**ต้นเหตุ 2 ชั้น:**
+1. `reviewRequest()` เรียก `fetchStudents()` ซึ่งตั้ง `isLoading=true` → list ทั้งหมดถูกสลับเป็นสปินเนอร์เต็มจอ (unmount/remount)
+   ทำให้ดูเหมือน "โหลดใหม่ทั้งหน้า" และ scroll หาย
+2. SweetAlert2 ค่าเริ่มต้น `heightAuto:true` ตั้ง height ของ html/body เป็น auto !important ทุกครั้งเปิด/ปิดกล่อง → หน้าเด้ง
+
+**แก้:**
+- เพิ่มโหมด `fetchStudents({ silent })` — silent refetch ไม่แตะ `isLoading` (คง list ไว้ให้ Vue patch ด้วย `:key`) + เก็บ/คืน `window.scrollY` หลัง `nextTick`
+- ตั้ง `heightAuto:false` ให้ทุก `Swal.fire` ในหน้านี้
+- ยังดึงข้อมูลจาก backend เป็น source of truth (`activeCardRequest` นับเฉพาะ pending/approved/in_progress → reject/complete หลุดจากตัวกรอง "มีคำร้อง" ตามเดิม)
+
+**สถานะ:** commit `ac7d50f` + `365c465` → PR #13 merge เข้า `main` (`cea36f3`) · เจ้าของทดสอบจริงยืนยันหายเด้งแล้ว · branch `claude/dazzling-edison-twbe22` ลบแล้ว
+**บทเรียน:** เจ้าของทดสอบบนเครื่อง local (WAMP) — ต้อง `git pull` ก่อนเทสต์เสมอ (รอบแรกยังเห็นอาการเดิมเพราะยังรันโค้ดเก่า)
+
+---
+
 ## 2026-09-27 — full test suite บน MySQL: cascade fix (238→144) + ที่เหลือเป็น pre-existing
 
 ### สถานะ: ✅ แก้ cascade แล้ว (`15f88bf4`) · ⚠️ เหลือ 144 pre-existing (SQLite-vs-MySQL) — งานใหญ่แยก
