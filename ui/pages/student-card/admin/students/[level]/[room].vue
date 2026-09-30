@@ -46,7 +46,12 @@ const reviewRequest = async (student, action) => {
         await $fetch(`${apiBase}/api/student-card/${level.value}/${room.value}/requests/${request.id}/${action}`, {
             method: 'POST',
         })
-        await fetchStudents()
+        // รีเฟรชแบบเงียบ + คงตำแหน่ง scroll ไว้ ไม่งั้นทุกครั้งที่กดปุ่ม หน้าจะเด้งขึ้นบนสุด
+        // (เมื่อมีนักเรียนหลายคน การอนุมัติคนล่าง ๆ จะต้องเลื่อนลงมาใหม่ทุกครั้ง)
+        const scrollY = typeof window !== 'undefined' ? window.scrollY : 0
+        await fetchStudents({ silent: true })
+        await nextTick()
+        if (typeof window !== 'undefined') window.scrollTo({ top: scrollY })
         Swal.fire({ icon: 'success', title: action === 'approve' ? 'อนุมัติคำขอแล้ว' : action === 'reject' ? 'ปฏิเสธคำขอแล้ว' : action === 'start' ? 'บันทึกว่าเริ่มจัดทำบัตรแล้ว' : 'บันทึกว่าทำและส่งมอบบัตรแล้ว', timer: 1500, showConfirmButton: false })
     } catch (error) {
         Swal.fire({ icon: 'error', title: 'ดำเนินการไม่สำเร็จ', text: error?.data?.message || 'กรุณาลองใหม่อีกครั้ง' })
@@ -69,8 +74,10 @@ const filteredStudents = computed(() => {
     )
 })
 
-const fetchStudents = async () => {
-    isLoading.value = true
+// silent = true → ไม่สลับหน้าเป็นสปินเนอร์เต็มจอ (ใช้ตอนรีเฟรชหลังกดปุ่มในการ์ด)
+// เพื่อไม่ให้ list ถูก unmount/remount ซึ่งเป็นสาเหตุที่ทำให้ scroll เด้งขึ้นบนสุด
+const fetchStudents = async ({ silent = false } = {}) => {
+    if (!silent) isLoading.value = true
     try {
         const response = await $fetch(`${apiBase}/api/student-card/admin/students/${level.value}/${room.value}`)
         students.value = response.students || []
@@ -78,11 +85,11 @@ const fetchStudents = async () => {
         console.error('Error fetching students:', error)
         Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถโหลดข้อมูลนักเรียนได้' })
     } finally {
-        isLoading.value = false
+        if (!silent) isLoading.value = false
     }
 }
 
-onMounted(fetchStudents)
+onMounted(() => fetchStudents())
 
 onMounted(() => {
     document.fonts?.ready?.then(() => { fontsReady.value = true })
