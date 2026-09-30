@@ -170,6 +170,7 @@ const submitSuspend = async () => {
     if (response.success) {
       user.value = { ...user.value, ...response.data }
       suspendMessage.value = 'ระงับบัญชีสำเร็จ'
+      fetchSuspensionAudits()
     }
   } catch (err: any) {
     console.error('Suspend failed:', err)
@@ -194,6 +195,7 @@ const submitRestore = async () => {
     if (response.success) {
       user.value = { ...user.value, ...response.data }
       suspendMessage.value = 'ยกเลิกการระงับสำเร็จ'
+      fetchSuspensionAudits()
     }
   } catch (err: any) {
     console.error('Restore failed:', err)
@@ -203,8 +205,42 @@ const submitRestore = async () => {
   }
 }
 
+// ── Suspension audit history (per user) ──────────────────────────────
+const suspensionAudits = ref<any[]>([])
+const auditsLoading = ref(false)
+
+const fetchSuspensionAudits = async () => {
+  auditsLoading.value = true
+  try {
+    const token = useCookie('token')
+    const response = await $fetch<any>(`${apiBase}/api/admin/users/${userId}/suspension-audits?per_page=10`, {
+      headers: { Authorization: `Bearer ${token.value}` }
+    })
+    if (response.success) {
+      suspensionAudits.value = response.data.data || []
+    }
+  } catch (err) {
+    console.error('Failed to fetch suspension audits:', err)
+    suspensionAudits.value = []
+  } finally {
+    auditsLoading.value = false
+  }
+}
+
+const auditActorName = (a: any) => a.performed_by?.name || a.performed_by?.username || 'ระบบ'
+
+const formatAuditDate = (dateStr?: string) => {
+  if (!dateStr) return '-'
+  const date = new Date(dateStr)
+  if (Number.isNaN(date.getTime())) return '-'
+  return date.toLocaleString('th-TH', {
+    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+  })
+}
+
 onMounted(() => {
   fetchUser()
+  fetchSuspensionAudits()
 })
 </script>
 
@@ -469,6 +505,40 @@ onMounted(() => {
 
           <p v-if="suspendMessage" class="text-sm text-green-600 dark:text-green-400 mt-3">{{ suspendMessage }}</p>
           <p v-if="suspendError" class="text-sm text-red-600 dark:text-red-400 mt-3">{{ suspendError }}</p>
+
+          <!-- Audit history -->
+          <div class="mt-5 pt-4 border-t border-slate-100 dark:border-slate-700">
+            <p class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+              <Icon icon="fluent:history-24-regular" class="w-4 h-4" />
+              ประวัติการระงับ
+            </p>
+
+            <div v-if="auditsLoading" class="text-sm text-slate-400 py-2">กำลังโหลด...</div>
+            <p v-else-if="suspensionAudits.length === 0" class="text-sm text-slate-400 py-2">ยังไม่มีประวัติ</p>
+            <ul v-else class="space-y-3">
+              <li v-for="a in suspensionAudits" :key="a.id" class="flex items-start gap-2.5">
+                <span
+                  class="mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                  :class="a.action === 'suspend'
+                    ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                    : 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'"
+                >
+                  <Icon :icon="a.action === 'suspend' ? 'fluent:shield-error-24-regular' : 'fluent:arrow-undo-24-regular'" class="w-4 h-4" />
+                </span>
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="text-sm font-medium text-slate-800 dark:text-white">
+                      {{ a.action === 'suspend' ? 'ระงับ' : 'ปลดระงับ' }}
+                    </span>
+                    <span v-if="a.action === 'suspend' && a.points_suspended" class="px-1.5 py-0.5 text-xs rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">แต้ม</span>
+                    <span v-if="a.action === 'suspend' && a.wallet_suspended" class="px-1.5 py-0.5 text-xs rounded bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">Wallet</span>
+                  </div>
+                  <p v-if="a.reason" class="text-xs text-slate-600 dark:text-slate-300 mt-0.5 break-words">{{ a.reason }}</p>
+                  <p class="text-xs text-slate-400 mt-0.5">{{ formatAuditDate(a.created_at) }} • โดย {{ auditActorName(a) }}</p>
+                </div>
+              </li>
+            </ul>
+          </div>
         </div>
 
         <!-- Statistics -->

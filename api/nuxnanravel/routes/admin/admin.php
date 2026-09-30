@@ -17,6 +17,7 @@ use App\Models\Academy;
 use App\Models\ActivityLog;
 use App\Models\Coupon;
 use App\Models\Course;
+use App\Models\AccountSuspensionAudit;
 use App\Models\PointsTransaction;
 use App\Models\User;
 use App\Models\WalletTransaction;
@@ -321,6 +322,18 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
                 'economy_suspended_by' => $request->user()?->id,
             ]);
 
+            AccountSuspensionAudit::create([
+                'user_id' => $user->id,
+                'user_email' => $user->email,
+                'action' => 'suspend',
+                'points_suspended' => $suspendPoints,
+                'wallet_suspended' => $suspendWallet,
+                'reason' => $data['reason'] ?? null,
+                'performed_by' => $request->user()?->id,
+                'ip_address' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 255),
+            ]);
+
             return response()->json([
                 'success' => true,
                 'message' => 'ระงับบัญชีสำเร็จ',
@@ -339,12 +352,34 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
                 'economy_suspended_by' => null,
             ]);
 
+            AccountSuspensionAudit::create([
+                'user_id' => $user->id,
+                'user_email' => $user->email,
+                'action' => 'restore',
+                'points_suspended' => false,
+                'wallet_suspended' => false,
+                'reason' => $request->input('reason'),
+                'performed_by' => $request->user()?->id,
+                'ip_address' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 255),
+            ]);
+
             return response()->json([
                 'success' => true,
                 'message' => 'ยกเลิกการระงับสำเร็จ',
                 'data' => $user->fresh(),
             ]);
         })->middleware('permission:user-edit')->name('admin.users.restore-economy');
+
+        // Per-user suspension audit history
+        Route::get('/{id}/suspension-audits', function (Request $request, int $id) {
+            $audits = AccountSuspensionAudit::with('performedBy:id,name,username')
+                ->where('user_id', $id)
+                ->orderByDesc('created_at')
+                ->paginate($request->get('per_page', 20));
+
+            return response()->json(['success' => true, 'data' => $audits]);
+        })->name('admin.users.suspension-audits');
     });
 
     // =====================================================
@@ -372,6 +407,37 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
 
         return response()->json(['success' => true, 'data' => $suspensions]);
     })->name('admin.economy-suspensions.index');
+
+    // Global suspension audit log (every suspend/restore action)
+    Route::get('/suspension-audits', function (Request $request) {
+        $query = AccountSuspensionAudit::query()
+            ->with(['user:id,name,username,email', 'performedBy:id,name,username']);
+
+        if ($request->filled('action') && in_array($request->action, ['suspend', 'restore'], true)) {
+            $query->where('action', $request->action);
+        }
+
+        if ($request->filled('user_id')) {
+            $query->where('user_id', $request->user_id);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('user_email', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($uq) use ($search) {
+                        $uq->where('name', 'like', "%{$search}%")
+                            ->orWhere('username', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $audits = $query->orderByDesc('created_at')
+            ->paginate($request->get('per_page', 20));
+
+        return response()->json(['success' => true, 'data' => $audits]);
+    })->name('admin.suspension-audits.index');
 
     // =====================================================
     // Role Management (Super Admin only for write operations)
