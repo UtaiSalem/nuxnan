@@ -220,14 +220,14 @@ const summaryCards = computed(() => [
     color: 'text-hopeui-info'
   },
   {
-    label: 'แต้มที่ได้รับ/โอนเข้า',
+    label: 'แต้มเข้า (สำเร็จ)',
     value: formatPoints(summary.value.total_earned),
     icon: 'fluent:arrow-trending-24-regular',
     wrap: 'bg-green-100 dark:bg-green-900/30',
     color: 'text-green-600'
   },
   {
-    label: 'แต้มที่ใช้/โอนออก',
+    label: 'แต้มออก (สำเร็จ)',
     value: formatPoints(summary.value.total_spent),
     icon: 'fluent:arrow-exit-20-regular',
     wrap: 'bg-orange-100 dark:bg-orange-900/30',

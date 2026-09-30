@@ -483,9 +483,11 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
             ->paginate($request->get('per_page', 20));
 
         // Summary across all point transactions (unaffected by the filters above).
+        // Earned/spent totals count only completed transactions so that
+        // pending / failed / cancelled records do not inflate the figures.
         // Direction is derived from the balance delta so every type is counted,
         // including admin_adjust / conversion which can go either way.
-        $totals = PointsTransaction::selectRaw(
+        $totals = PointsTransaction::where('status', 'completed')->selectRaw(
             'COALESCE(SUM(CASE WHEN balance_after >= balance_before THEN amount ELSE 0 END), 0) as earned, '.
             'COALESCE(SUM(CASE WHEN balance_after < balance_before THEN amount ELSE 0 END), 0) as spent'
         )->first();
