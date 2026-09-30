@@ -41,6 +41,40 @@
 
 ---
 
+## 2026-09-30 — wallet: ถอนเงินไม่ได้ทั้งที่ยอดโชว์พอ (bug A แก้แล้ว · PR #15 รอ merge)
+
+### สถานะ: ✅ 1 commit `900d788` (ui +49/−15) · draft PR #15 → main · ยังไม่ merge
+
+เคสที่เจ้าของแจ้ง: สมาชิกมีเงินสะสม 25 บาท กด "ถอน 25" ไม่ได้ (หน้า `/earn/wallet`)
+
+### สาเหตุ (bug A) — ฟอร์มถอนอิงยอดผิดตัว
+`WalletService::getBalance()` คืน `total_balance = cash_balance + locked_balance`
+แต่ frontend `useWallet.getBalance()` เดิมเลือก `total_balance` มาเก็บลง auth store เป็น `wallet`
+→ การ์ด wallet + ฟอร์มถอน (`:max`, ปุ่มลัด, ปุ่ม submit) อิงยอดที่รวมเงินที่ถูกล็อกไว้
+แต่ backend หัก/เช็คจาก `users.wallet` (cash) เท่านั้น
+🔴 เคสจริง: เงิน 25 ถูกล็อกในคำขอถอนที่ค้างอยู่ → cash=0 แต่การ์ดยังโชว์ 25 →
+กดถอนแล้ว backend ปฏิเสธ (cash ไม่พอ / ติดเพดาน `max_pending_requests` default 1)
+ยืนยันแล้ว `locked_balance` ถูกเขียนจาก withdrawal flow เท่านั้น (add ตอนสร้าง, ลบตอนจ่าย/คืน)
+
+### การแก้
+- `ui/composables/useWallet.ts`: `getBalance()` เก็บ **`cash_balance`** (spendable) ลง store แทน
+  `total_balance` เหลือเป็น fallback ท้ายสุด · เพิ่ม reactive `lockedBalance` / `totalBalance`
+- `ui/pages/Earn/Wallet.vue`: การ์ด + ฟอร์มถอนอิง cash · โชว์ยอด "ถูกล็อก" เมื่อ `lockedBalance>0`
+  · เปลี่ยนป้าย "ยอดเงินคงเหลือ" → "ยอดที่ถอนได้" (mobile-first: `flex-shrink-0` + `min-w-0 break-words`)
+- `ui/tests/useWallet.spec.ts`: อัพเดทเทสต์เดิมที่ยืนยันพฤติกรรมบั๊ก → ยืนยันเก็บ cash + expose locked/total
+
+### เกณฑ์ที่รันเอง
+- รันตรรกะ getBalance selection + locked/total เป็นสคริปต์ node แยก 11 เคส (รวมเคสสมาชิก
+  cash 0/locked 25 → ถอนได้ 0 · cash 25 สะอาด → ถอนได้ 25) ผ่านหมด
+- ⚠️ รัน `npm run test` / build เต็มในคอนเทนเนอร์ cloud ไม่ได้ (ไม่มี node_modules · install Nuxt เต็มไม่ผ่าน)
+  → **ต้องรัน `npm run test` + build ที่เครื่อง dev ยืนยันอีกครั้งก่อน merge**
+
+### ปัญหา D (ไม่ใช่บั๊ก) — เจ้าของยืนยันว่า "ตั้งใจ"
+ค่าธรรมเนียมถอนขั้นต่ำ 5 บาท (`max(amount×1%, 5)`) → ถอน 25 ได้รับสุทธิ 20 เป็นดีไซน์ที่ตั้งใจ
+เจ้าของบอกไม่ต้องเน้นยอดสุทธิเพิ่มในฟอร์ม (คง preview เดิม) → ไม่แตะ
+
+---
+
 ## 2026-09-30 — student-card admin: แก้หน้าเด้งขึ้นบนสุดตอนอนุมัติคำร้อง (เสร็จ · merge เข้า main แล้ว)
 
 หน้า `ui/pages/student-card/admin/students/[level]/[room].vue` (URL `/student-card/admin/students/{level}/{room}`)

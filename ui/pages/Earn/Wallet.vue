@@ -25,6 +25,7 @@ const swal = useSweetAlert()
 const { get } = useApi()
 const {
   wallet,
+  lockedBalance,
   isLoading,
   error,
   getBalance,
@@ -893,9 +894,13 @@ onMounted(async () => {
                 <Icon icon="mdi:wallet" class="w-12 h-12" />
               </div>
               <div>
-                <p class="text-white/80 text-sm mb-1">ยอดเงินคงเหลือ</p>
+                <p class="text-white/80 text-sm mb-1">ยอดที่ถอนได้</p>
                 <div v-if="isLoading && !walletBalance" class="h-10 w-32 bg-white/20 animate-pulse rounded"></div>
                 <p v-else class="text-4xl lg:text-5xl font-bold">{{ formatMoney(walletBalance) }}</p>
+                <p v-if="lockedBalance > 0" class="text-white/80 text-xs mt-1 flex items-start gap-1">
+                  <Icon icon="mdi:lock-clock" class="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span class="min-w-0 break-words">ถูกล็อกในคำขอถอนที่รอดำเนินการ {{ formatMoney(lockedBalance) }}</span>
+                </p>
               </div>
             </div>
             
@@ -1448,7 +1453,11 @@ onMounted(async () => {
                 >
                 <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">บาท</span>
               </div>
-              <p class="text-sm text-gray-500 mt-1">ยอดเงินคงเหลือ: {{ formatMoney(walletBalance) }} | ถอนขั้นต่ำ {{ WITHDRAW_MIN_AMOUNT }} บาท</p>
+              <p class="text-sm text-gray-500 mt-1">ยอดที่ถอนได้: {{ formatMoney(walletBalance) }} | ถอนขั้นต่ำ {{ WITHDRAW_MIN_AMOUNT }} บาท</p>
+              <p v-if="lockedBalance > 0" class="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-start gap-1">
+                <Icon icon="mdi:lock-clock" class="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span class="min-w-0 break-words">มีเงิน {{ formatMoney(lockedBalance) }} ถูกล็อกอยู่ในคำขอถอนที่ยังไม่เสร็จสิ้น จึงยังถอนซ้ำไม่ได้จนกว่าคำขอเดิมจะเสร็จหรือถูกยกเลิก</span>
+              </p>
               
               <!-- Quick Amounts -->
               <div class="flex flex-wrap gap-2 mt-3">

@@ -30,6 +30,13 @@ export const useWallet = () => {
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
+  // Balance breakdown from the API. `wallet` (in the auth store) mirrors the
+  // spendable cash. `lockedBalance` is money held in in-flight withdrawals,
+  // and `totalBalance` = cash + locked. Keep them separate so the UI never
+  // offers locked money as if it were spendable.
+  const lockedBalance = ref(0)
+  const totalBalance = ref(0)
+
   // Computed properties
   const wallet = computed(() => authStore.user?.wallet || 0)
   const user = computed(() => authStore.user)
@@ -54,28 +61,38 @@ export const useWallet = () => {
       }
 
       const data = response.data || {}
-      
-      // Determine next balance check order: total_balance, cash_balance, balance, wallet, current_wallet, current_balance
-      const hasBalanceKey = 
-        'total_balance' in data || 
-        'cash_balance' in data || 
-        'balance' in data || 
-        'wallet' in data || 
-        'current_wallet' in data || 
+
+      const hasBalanceKey =
+        'cash_balance' in data ||
+        'available_balance' in data ||
+        'total_balance' in data ||
+        'balance' in data ||
+        'wallet' in data ||
+        'current_wallet' in data ||
         'current_balance' in data
 
       if (!hasBalanceKey) {
         throw new Error('API response does not contain any valid balance keys')
       }
 
+      // The store's wallet must be the SPENDABLE cash balance — every
+      // deduction (withdraw/transfer/purchase) draws from users.wallet, never
+      // from locked funds. Prefer cash_balance; total_balance is only a last
+      // resort because it includes locked money and would over-report what the
+      // user can actually withdraw (see WalletService::getBalance()).
       const nextWallet =
-        data.total_balance ??
         data.cash_balance ??
+        data.available_balance ??
         data.balance ??
         data.wallet ??
         data.current_wallet ??
         data.current_balance ??
+        data.total_balance ??
         0
+
+      lockedBalance.value = Number(data.locked_balance) || 0
+      totalBalance.value =
+        Number(data.total_balance ?? (Number(nextWallet) || 0) + lockedBalance.value) || 0
 
       // Sync to store so dashboard card can use cached value immediately
       authStore.setWallet(Number(nextWallet) || 0)
@@ -558,6 +575,8 @@ export const useWallet = () => {
   return {
     // State
     wallet,
+    lockedBalance,
+    totalBalance,
     user,
     isLoading,
     error,

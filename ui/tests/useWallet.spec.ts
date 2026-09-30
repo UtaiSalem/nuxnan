@@ -28,20 +28,26 @@ describe('useWallet.ts unit tests', () => {
     vi.clearAllMocks()
   })
 
-  it('should parse total_balance correctly', async () => {
+  it('stores the spendable cash_balance, not total_balance (which includes locked funds)', async () => {
     mockFetch.mockResolvedValueOnce({
       success: true,
       data: {
         total_balance: 150.50,
-        cash_balance: 100
+        cash_balance: 100,
+        locked_balance: 50.50
       }
     })
 
-    const { getBalance } = useWallet()
+    const { getBalance, lockedBalance, totalBalance } = useWallet()
     const result = await getBalance()
 
+    // Raw payload is still returned untouched…
     expect(result.total_balance).toBe(150.50)
-    expect(mockSetWallet).toHaveBeenCalledWith(150.50)
+    // …but the store's wallet mirrors spendable cash only, so the withdraw
+    // form never offers locked money the backend would then reject.
+    expect(mockSetWallet).toHaveBeenCalledWith(100)
+    expect(lockedBalance.value).toBe(50.50)
+    expect(totalBalance.value).toBe(150.50)
   })
 
   it('should fallback to cash_balance if total_balance is missing', async () => {
