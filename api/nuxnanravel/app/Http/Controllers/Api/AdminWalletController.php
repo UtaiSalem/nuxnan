@@ -493,8 +493,9 @@ class AdminWalletController extends Controller
             $query->where('transaction_type', $type);
         }
 
-        $perPage = (int) $request->input('per_page', 20);
-        $page = (int) $request->input('page', 1);
+        // Cap page size so a hand-crafted request cannot pull an unbounded ledger.
+        $perPage = min(max((int) $request->input('per_page', 20), 1), 100);
+        $page = max((int) $request->input('page', 1), 1);
         $transactions = $query->orderByDesc('created_at')->paginate($perPage, ['*'], 'page', $page);
 
         // Resolve every transfer counterparty (source_id) in one query.
