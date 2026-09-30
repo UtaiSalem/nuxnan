@@ -55,6 +55,61 @@ const isLoadingFundSource = ref(false)
 const fundSourceError = ref('')
 const showFundSourceDetails = ref(false)
 
+// User points-transfer history (admin fraud lens)
+const showPointsModal = ref(false)
+const pointsUser = ref<any>(null)
+const pointsTx = ref<any[]>([])
+const pointsLoading = ref(false)
+const pointsError = ref('')
+const pointsFilter = ref<'transfers' | 'all'>('transfers')
+
+const openPointsHistory = (user: any) => {
+  pointsUser.value = user
+  pointsFilter.value = 'transfers'
+  showPointsModal.value = true
+  fetchPointsHistory()
+}
+
+const fetchPointsHistory = async () => {
+  if (!pointsUser.value?.id) return
+  pointsLoading.value = true
+  pointsError.value = ''
+  try {
+    const token = useCookie('token')
+    const response = await $fetch(`${apiBase}/api/admin/wallet/users/${pointsUser.value.id}/points-transactions`, {
+      params: { type: pointsFilter.value === 'transfers' ? 'transfers' : undefined, per_page: 50 },
+      headers: { Authorization: `Bearer ${token.value}` }
+    })
+    if (response.success) {
+      pointsTx.value = response.data.transactions
+      pointsUser.value = { ...pointsUser.value, ...response.data.user }
+    } else {
+      pointsError.value = response.message || 'ไม่สามารถโหลดประวัติได้'
+    }
+  } catch (error: any) {
+    console.error('Failed to fetch points history:', error)
+    pointsError.value = error.data?.message || error.message || 'เกิดข้อผิดพลาดในการโหลดประวัติ'
+  } finally {
+    pointsLoading.value = false
+  }
+}
+
+const setPointsFilter = (f: 'transfers' | 'all') => {
+  if (pointsFilter.value === f) return
+  pointsFilter.value = f
+  fetchPointsHistory()
+}
+
+const POINTS_TYPE_LABELS: Record<string, string> = {
+  transfer_in: 'รับโอนแต้ม', transfer_out: 'โอนแต้มออก', earn: 'ได้รับแต้ม', spend: 'ใช้แต้ม',
+  conversion: 'แปลงแต้ม', refund: 'คืนแต้ม', admin_adjust: 'ปรับโดยแอดมิน'
+}
+const pointsTypeLabel = (t: string) => POINTS_TYPE_LABELS[t] || t
+const formatPointsAmount = (n: any) => {
+  const num = typeof n === 'string' ? parseFloat(n) : n
+  return new Intl.NumberFormat('th-TH').format(num || 0) + ' แต้ม'
+}
+
 // Fetch pending withdrawals (pending + under_review)
 const fetchPendingWithdrawals = async () => {
   try {
@@ -1073,6 +1128,14 @@ onMounted(() => {
                       <span class="text-slate-500">ยอดเงินใน Wallet:</span>
                       <span class="text-slate-700 dark:text-slate-300 font-medium">{{ formatCurrency(selectedRequestDetails.user?.wallet) }}</span>
                     </div>
+                    <button
+                      v-if="selectedRequestDetails.user?.id"
+                      @click="openPointsHistory(selectedRequestDetails.user)"
+                      class="min-h-[44px] sm:min-h-0 sm:py-2 w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 mt-1 text-xs font-medium rounded-xl border border-hopeui-primary-200 dark:border-hopeui-primary-900/60 text-hopeui-primary-600 dark:text-hopeui-primary-300 hover:bg-hopeui-primary-50 dark:hover:bg-hopeui-primary-950/30 transition-colors"
+                    >
+                      <Icon icon="fluent:arrow-swap-24-regular" class="w-4 h-4 flex-shrink-0" />
+                      ดูประวัติการโอนแต้มของผู้ใช้
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1540,6 +1603,66 @@ onMounted(() => {
                 </div>
               </div>
            </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- User Points-Transfer History Modal (fraud lens) -->
+    <Teleport to="body">
+      <div v-if="showPointsModal" class="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" @click="showPointsModal = false"></div>
+        <div class="relative w-full sm:max-w-lg max-h-[92vh] sm:max-h-[85vh] flex flex-col bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden">
+          <div class="flex items-center justify-between gap-2 px-4 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+            <div class="min-w-0 flex-1">
+              <h3 class="text-base font-bold text-slate-800 dark:text-white truncate">ประวัติการโอนแต้ม</h3>
+              <p class="text-xs text-slate-500 truncate">{{ pointsUser?.name }} <span v-if="pointsUser?.username">· @{{ pointsUser.username }}</span> <span v-if="pointsUser?.pp != null">· คงเหลือ {{ formatPointsAmount(pointsUser.pp) }}</span></p>
+            </div>
+            <button @click="showPointsModal = false" class="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 inline-flex items-center justify-center p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 flex-shrink-0">
+              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
+            </button>
+          </div>
+
+          <div class="flex gap-2 px-4 sm:px-6 py-3 border-b border-slate-100 dark:border-slate-700">
+            <button
+              @click="setPointsFilter('transfers')"
+              class="min-h-[44px] sm:min-h-0 sm:py-1.5 px-3 py-2 text-xs font-medium rounded-xl transition-colors"
+              :class="pointsFilter === 'transfers' ? 'bg-hopeui-primary-500 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'"
+            >เฉพาะการโอน</button>
+            <button
+              @click="setPointsFilter('all')"
+              class="min-h-[44px] sm:min-h-0 sm:py-1.5 px-3 py-2 text-xs font-medium rounded-xl transition-colors"
+              :class="pointsFilter === 'all' ? 'bg-hopeui-primary-500 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'"
+            >ทั้งหมด</button>
+          </div>
+
+          <div class="flex-1 overflow-y-auto px-4 sm:px-6 py-3 space-y-2">
+            <div v-if="pointsLoading" class="py-8 text-center text-sm text-slate-500">กำลังโหลด…</div>
+            <div v-else-if="pointsError" class="py-8 text-center text-sm text-red-500">{{ pointsError }}</div>
+            <div v-else-if="!pointsTx.length" class="py-8 text-center text-sm text-slate-500">ไม่พบรายการ</div>
+            <div
+              v-for="(tx, i) in pointsTx"
+              :key="i"
+              class="flex items-center gap-2 rounded-xl bg-slate-50 dark:bg-slate-900/30 px-3 py-2"
+            >
+              <span
+                class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap"
+                :class="tx.transaction_type === 'transfer_in' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                  : tx.transaction_type === 'transfer_out' ? 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                  : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'"
+              >{{ pointsTypeLabel(tx.transaction_type) }}</span>
+              <div class="min-w-0 flex-1">
+                <p class="text-xs text-slate-700 dark:text-slate-200 truncate">
+                  <span v-if="tx.counterparty">{{ tx.direction === 'in' ? 'จาก' : 'ถึง' }} {{ tx.counterparty.name }}</span>
+                  <span v-else class="text-slate-500">{{ tx.description || '—' }}</span>
+                </p>
+                <p class="text-[11px] text-slate-400">{{ tx.created_at ? new Date(tx.created_at).toLocaleString('th-TH') : '—' }}</p>
+              </div>
+              <p
+                class="text-xs font-bold flex-shrink-0 whitespace-nowrap"
+                :class="tx.direction === 'in' ? 'text-red-600 dark:text-red-400' : tx.direction === 'out' ? 'text-slate-600 dark:text-slate-300' : 'text-slate-700 dark:text-slate-200'"
+              >{{ tx.direction === 'in' ? '+' : tx.direction === 'out' ? '−' : '' }}{{ formatPointsAmount(tx.amount) }}</p>
+            </div>
+          </div>
         </div>
       </div>
     </Teleport>

@@ -532,6 +532,7 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
         Route::get('/withdrawals/{id}', [AdminWalletController::class, 'showWithdrawal'])->whereNumber('id')->name('admin.wallet.withdrawals.show');
         Route::get('/withdrawals/{id}/proof', [AdminWalletController::class, 'downloadWithdrawalProof'])->whereNumber('id')->name('admin.wallet.withdrawals.proof');
         Route::get('/withdrawals/{id}/source-of-funds', [AdminWalletController::class, 'sourceOfFunds'])->whereNumber('id')->name('admin.wallet.withdrawals.source-of-funds');
+        Route::get('/users/{userId}/points-transactions', [AdminWalletController::class, 'userPointsTransactions'])->whereNumber('userId')->name('admin.wallet.user-points-transactions');
         Route::post('/withdrawals/{id}/approve', [AdminWalletController::class, 'approveWithdrawal'])->name('admin.wallet.withdrawals.approve');
         Route::post('/withdrawals/{id}/reject', [AdminWalletController::class, 'rejectWithdrawal'])->name('admin.wallet.withdrawals.reject');
         Route::post('/withdrawals/{id}/process', [AdminWalletController::class, 'processWithdrawal'])->name('admin.wallet.withdrawals.process');

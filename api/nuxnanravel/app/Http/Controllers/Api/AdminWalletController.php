@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\MarkWithdrawalPaidRequest;
+use App\Models\PointsTransaction;
 use App\Models\User;
 use App\Models\WalletDepositRequest;
 use App\Models\WalletTransaction;
@@ -461,6 +462,87 @@ class AdminWalletController extends Controller
         );
 
         return response()->json(['success' => true, 'data' => $trace]);
+    }
+
+    /**
+     * List a user's points ledger (transfer counterparties resolved) so an
+     * admin can trace where a user's points came from — e.g. incoming transfers
+     * from other accounts before a withdrawal. Read-only; audit-logged.
+     */
+    public function userPointsTransactions(Request $request, int $userId): JsonResponse
+    {
+        $admin = Auth::user();
+
+        if (! $this->isAdminUser($admin)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $user = User::find($userId);
+
+        if (! $user) {
+            return response()->json(['success' => false, 'message' => 'User not found'], 404);
+        }
+
+        $query = PointsTransaction::where('user_id', $userId);
+
+        $type = $request->input('type');
+        if ($type === 'transfers') {
+            // Shortcut: incoming + outgoing peer transfers only (the fraud lens).
+            $query->whereIn('transaction_type', ['transfer_in', 'transfer_out']);
+        } elseif ($type) {
+            $query->where('transaction_type', $type);
+        }
+
+        $perPage = (int) $request->input('per_page', 20);
+        $page = (int) $request->input('page', 1);
+        $transactions = $query->orderByDesc('created_at')->paginate($perPage, ['*'], 'page', $page);
+
+        // Resolve every transfer counterparty (source_id) in one query.
+        $counterpartyIds = collect($transactions->items())
+            ->filter(fn ($t) => in_array($t->transaction_type, ['transfer_in', 'transfer_out'], true))
+            ->pluck('source_id')->filter()->unique()->values();
+        $people = $counterpartyIds->isEmpty()
+            ? collect()
+            : User::whereIn('id', $counterpartyIds)->get()->keyBy('id');
+
+        $items = collect($transactions->items())->map(function (PointsTransaction $t) use ($people) {
+            $row = $t->toArray();
+            if (in_array($t->transaction_type, ['transfer_in', 'transfer_out'], true)) {
+                $other = $t->source_id ? $people->get($t->source_id) : null;
+                $row['direction'] = $t->transaction_type === 'transfer_in' ? 'in' : 'out';
+                $row['counterparty'] = $other ? [
+                    'id' => $other->id,
+                    'name' => $other->name,
+                    'username' => $other->username,
+                    'avatar' => $other->profile_photo_url ?? $other->avatar ?? null,
+                ] : null;
+            }
+
+            return $row;
+        });
+
+        app(AuditLogService::class)->log(
+            'user.points_transactions_viewed',
+            $user,
+            null,
+            null,
+            'wallet',
+            ['admin_id' => $admin->id, 'target_user_id' => $userId, 'type' => $type]
+        );
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'user' => ['id' => $user->id, 'name' => $user->name, 'username' => $user->username, 'pp' => $user->pp],
+                'transactions' => $items,
+                'pagination' => [
+                    'current_page' => $transactions->currentPage(),
+                    'total_pages' => $transactions->lastPage(),
+                    'per_page' => $transactions->perPage(),
+                    'total_items' => $transactions->total(),
+                ],
+            ],
+        ]);
     }
 
     /**
