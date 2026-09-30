@@ -10,6 +10,10 @@
 
 **ค้างเชิงปฏิบัติ (owner-gated — ไม่ใช่งาน backlog):**
 - commit FE หลายชุดยังไม่ `npm run build` (เจ้าของ handle) — rebuild + คลิกจริงที่ school-management / course pages
+  🟢 **build verified 2026-09-30:** `npm install` + `npm run build` (Nuxt 4, node 22) บน cloud container →
+  ✨ Build complete ไม่มี error (client 2m50s + SSR 1m43s + Nitro) · school-management chunk compile ผ่าน ·
+  built server boot ได้ (HTTP 200) · commit report ที่ค้าง (647eb34/eb4953d) build สะอาด · warning เป็น
+  runtime asset (/storage/images/...) + sourcemap เท่านั้น 🟡 คลิกจริงยังเป็นของเจ้าของ (ต้องมี backend+data)
 - ~~G25 (migrate จากศูนย์บน MySQL ยังพัง)~~ 🟢 **แก้แล้ว 2026-09-28** (เจ้าของอนุมัติให้ซ่อม) — `migrate:fresh`
   บน MySQL 8.4 จริง (docker) เขียวครบ 495/495 · ดูบันทึก 2026-09-28 ท้ายไฟล์
 - academy_donate_claims FK-repair: ก่อน deploy prod ต้องรัน orphan-check ก่อน (ดูบันทึก 2026-09-27)
