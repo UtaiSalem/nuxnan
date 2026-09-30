@@ -40,16 +40,24 @@ const reviewRequest = async (student, action) => {
         confirmButtonText: action === 'approve' ? 'อนุมัติ' : action === 'reject' ? 'ปฏิเสธ' : action === 'start' ? 'เริ่มจัดทำ' : 'ทำเสร็จและส่งมอบแล้ว',
         cancelButtonText: 'ยกเลิก',
         confirmButtonColor: action === 'reject' ? '#dc2626' : '#2563eb',
+        // heightAuto:true (ค่าเริ่มต้น) จะไปตั้ง height ของ html/body เป็น auto !important
+        // ทำให้หน้าเด้งขึ้นบนสุดทุกครั้งที่เปิด/ปิดกล่อง — ปิดไว้เพื่อคง scroll เดิม
+        heightAuto: false,
     })
     if (!confirmation.isConfirmed) return
     try {
         await $fetch(`${apiBase}/api/student-card/${level.value}/${room.value}/requests/${request.id}/${action}`, {
             method: 'POST',
         })
-        await fetchStudents()
-        Swal.fire({ icon: 'success', title: action === 'approve' ? 'อนุมัติคำขอแล้ว' : action === 'reject' ? 'ปฏิเสธคำขอแล้ว' : action === 'start' ? 'บันทึกว่าเริ่มจัดทำบัตรแล้ว' : 'บันทึกว่าทำและส่งมอบบัตรแล้ว', timer: 1500, showConfirmButton: false })
+        // รีเฟรชแบบเงียบ + คงตำแหน่ง scroll ไว้ ไม่งั้นทุกครั้งที่กดปุ่ม หน้าจะเด้งขึ้นบนสุด
+        // (เมื่อมีนักเรียนหลายคน การอนุมัติคนล่าง ๆ จะต้องเลื่อนลงมาใหม่ทุกครั้ง)
+        const scrollY = typeof window !== 'undefined' ? window.scrollY : 0
+        await fetchStudents({ silent: true })
+        await nextTick()
+        if (typeof window !== 'undefined') window.scrollTo({ top: scrollY })
+        Swal.fire({ icon: 'success', title: action === 'approve' ? 'อนุมัติคำขอแล้ว' : action === 'reject' ? 'ปฏิเสธคำขอแล้ว' : action === 'start' ? 'บันทึกว่าเริ่มจัดทำบัตรแล้ว' : 'บันทึกว่าทำและส่งมอบบัตรแล้ว', timer: 1500, showConfirmButton: false, heightAuto: false })
     } catch (error) {
-        Swal.fire({ icon: 'error', title: 'ดำเนินการไม่สำเร็จ', text: error?.data?.message || 'กรุณาลองใหม่อีกครั้ง' })
+        Swal.fire({ icon: 'error', title: 'ดำเนินการไม่สำเร็จ', text: error?.data?.message || 'กรุณาลองใหม่อีกครั้ง', heightAuto: false })
     }
 }
 
@@ -69,20 +77,22 @@ const filteredStudents = computed(() => {
     )
 })
 
-const fetchStudents = async () => {
-    isLoading.value = true
+// silent = true → ไม่สลับหน้าเป็นสปินเนอร์เต็มจอ (ใช้ตอนรีเฟรชหลังกดปุ่มในการ์ด)
+// เพื่อไม่ให้ list ถูก unmount/remount ซึ่งเป็นสาเหตุที่ทำให้ scroll เด้งขึ้นบนสุด
+const fetchStudents = async ({ silent = false } = {}) => {
+    if (!silent) isLoading.value = true
     try {
         const response = await $fetch(`${apiBase}/api/student-card/admin/students/${level.value}/${room.value}`)
         students.value = response.students || []
     } catch (error) {
         console.error('Error fetching students:', error)
-        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถโหลดข้อมูลนักเรียนได้' })
+        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถโหลดข้อมูลนักเรียนได้', heightAuto: false })
     } finally {
-        isLoading.value = false
+        if (!silent) isLoading.value = false
     }
 }
 
-onMounted(fetchStudents)
+onMounted(() => fetchStudents())
 
 onMounted(() => {
     document.fonts?.ready?.then(() => { fontsReady.value = true })
@@ -267,7 +277,7 @@ const downloadCard = async (index, studentNumber) => {
         link.click()
         document.body.removeChild(link)
     } catch {
-        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถดาวน์โหลดบัตรนักเรียนได้' })
+        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถดาวน์โหลดบัตรนักเรียนได้', heightAuto: false })
     }
 }
 </script>
