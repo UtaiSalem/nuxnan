@@ -41,9 +41,9 @@
 
 ---
 
-## 2026-09-30 — wallet: ถอนเงินไม่ได้ทั้งที่ยอดโชว์พอ (bug A แก้แล้ว · PR #15 รอ merge)
+## 2026-09-30 → 10-01 — wallet: ถอนเงินไม่ได้ทั้งที่ยอดโชว์พอ (A/B/C merged · D ตั้งใจ)
 
-### สถานะ: ✅ 1 commit `900d788` (ui +49/−15) · draft PR #15 → main · ยังไม่ merge
+### สถานะ: ✅ merged เข้า main ครบ — A: PR #15 (`f439613`) · B+C: PR #23 (`c331674`) · D: ยืนยันว่าตั้งใจ ไม่แตะ
 
 เคสที่เจ้าของแจ้ง: สมาชิกมีเงินสะสม 25 บาท กด "ถอน 25" ไม่ได้ (หน้า `/earn/wallet`)
 
@@ -72,6 +72,31 @@
 ### ปัญหา D (ไม่ใช่บั๊ก) — เจ้าของยืนยันว่า "ตั้งใจ"
 ค่าธรรมเนียมถอนขั้นต่ำ 5 บาท (`max(amount×1%, 5)`) → ถอน 25 ได้รับสุทธิ 20 เป็นดีไซน์ที่ตั้งใจ
 เจ้าของบอกไม่ต้องเน้นยอดสุทธิเพิ่มในฟอร์ม (คง preview เดิม) → ไม่แตะ
+
+### งานต่อยอด B/C — PR #23 (`c331674`, merged 2026-10-01)
+ตอนตรวจ A เจอว่า B/C (ที่เคยเป็นแค่ "สาเหตุที่เป็นไปได้") มีงานจริง:
+
+**B — FE/BE ไม่ตรงกัน (บั๊กจริง):** `WalletController::withdraw` ยอมรับ profile first/last
+**หรือ** display name (`users.name`) เป็นตัวตรวจเจ้าของบัญชี (matchesFullName) แต่ FE เช็กแค่
+profile first/last → ผู้ใช้ที่มี display name แต่ไม่กรอก profile โดนปุ่ม disable + แบนเนอร์ ทั้งที่ BE ยอม
+- `ui/pages/Earn/Wallet.vue`: เพิ่ม `displayName` / `payoutNameForMatch` / `hasPayoutIdentity`
+  (สะท้อน BE) · แบนเนอร์ + ปุ่ม + hint + prefill `account_name` อิง `hasPayoutIdentity`
+
+**C — เติมเทสต์ guard ด้าน fraud (เดิมไม่มีเลย):**
+- `tests/Unit/BankAccountNameMatcherTest.php`: เพิ่มเทสต์ `matches()` (strict first+last) accept/reject
+- `tests/Feature/Wallet/WithdrawTest.php`: ชื่อไม่ตรง → 422 + ไม่มี withdraw row + wallet ไม่ลด ·
+  profile ว่าง + display name ว่าง → 422 `profile_name_required`
+
+เกณฑ์: `BankAccountNameMatcher` รันกับคลาสจริง 13/13 ผ่าน · ⚠️ feature test (Laravel) + build FE
+รันในคอนเทนเนอร์ cloud ไม่ได้ (ไม่มี vendor/node_modules) ยืนยันด้วยการอ่านโค้ด + cast `decimal:2`
+
+### 🔴 ค้างก่อนขึ้นจริง — ต้องรันที่เครื่อง dev
+A/B/C merge เข้า main แล้วแต่ **ยังไม่ผ่าน test/build จริง** (รันในคลาวด์ไม่ได้):
+```
+cd api/nuxnanravel && php artisan test --filter=Withdraw
+cd api/nuxnanravel && php artisan test --filter=BankAccountNameMatcher
+cd ui && npm run test && npm run build
+```
 
 ---
 
