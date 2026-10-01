@@ -61,12 +61,15 @@ return new class extends Migration
                 ->update(['set_id' => $setId]);
         }
 
-        $this->dropIndexIfExists('schedule_periods', 'unique_period_per_academy');
-
+        // 🔴 ต้องสร้าง index ใหม่ที่ขึ้นต้นด้วย academy_id (sp_academy_set_idx) ก่อน drop
+        // unique_period_per_academy ไม่งั้น FK academy_id ที่พึ่ง index นั้นอยู่ทำให้ drop ตายด้วย
+        // 1553 บน migrate จากศูนย์ (G25) — มี index สำรองก่อน MySQL จึงยอมให้ drop
         Schema::table('schedule_periods', function (Blueprint $table) {
             $table->unique(['set_id', 'period_number'], 'unique_period_per_set');
             $table->index(['academy_id', 'set_id'], 'sp_academy_set_idx');
         });
+
+        $this->dropIndexIfExists('schedule_periods', 'unique_period_per_academy');
     }
 
     public function down(): void

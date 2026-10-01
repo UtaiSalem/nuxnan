@@ -26,10 +26,10 @@ return new class extends Migration
             $table->string('user_agent')->nullable();
             $table->timestamps();
 
-            $table->foreign('academy_id')->references('id')->on('academies')->onDelete('cascade');
+            // FK academy_id → academies / academy_member_id → academy_members ย้ายไป repair migration
+            // 2026_02_02_000000_repair_early_cross_table_foreign_keys (ตารางถูกสร้างทีหลัง — G25)
             $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');
             $table->foreign('target_user_id')->references('id')->on('users')->onDelete('set null');
-            $table->foreign('academy_member_id')->references('id')->on('academy_members')->onDelete('set null');
 
             $table->index(['academy_id', 'created_at']);
             $table->index(['academy_id', 'action']);

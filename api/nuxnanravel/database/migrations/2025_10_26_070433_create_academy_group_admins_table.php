@@ -16,7 +16,10 @@ return new class extends Migration
         }
         Schema::create('academy_group_admins', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->foreignId('academy_group_id')->constrained()->onDelete('cascade');
+            // FK academy_group_id → academy_groups ย้ายไป repair migration
+            // 2026_02_02_000000_repair_early_cross_table_foreign_keys: ชื่อไฟล์ create_academy_group_admins
+            // sort ก่อน create_academy_groups (070433 เดียวกัน · '_' < 's') → migrate จากศูนย์ตายที่ 1824 (G25)
+            $table->unsignedBigInteger('academy_group_id');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('role')->default('admin');
             $table->timestamps();
