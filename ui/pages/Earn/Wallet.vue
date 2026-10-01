@@ -322,13 +322,25 @@ const profileFullName = computed(() =>
   [myProfile.value?.first_name, myProfile.value?.last_name].filter(Boolean).join(' ')
 )
 
+// The backend accepts EITHER a completed profile first/last name OR the
+// account's display name (users.name) as the payout-owner check
+// (WalletController::withdraw → BankAccountNameMatcher). Mirror that here so a
+// user who has a display name but no profile first/last is not blocked by the
+// frontend when the backend would actually allow the withdrawal.
+const displayName = computed(() => (authStore.user?.name || '').trim())
+const payoutNameForMatch = computed(() =>
+  profileNameComplete.value ? profileFullName.value : displayName.value
+)
+const hasPayoutIdentity = computed(() => !!payoutNameForMatch.value)
+
 const loadMyProfile = async () => {
   try {
     const response = await get('/api/profile/me') as any
     myProfile.value = response.data || null
-    // The payout account name must match the profile name — prefill it
-    if (profileNameComplete.value && !withdrawForm.value.bank_account.account_name) {
-      withdrawForm.value.bank_account.account_name = profileFullName.value
+    // The payout account name must match the profile name (or display name) —
+    // prefill it from whichever the backend will verify against.
+    if (payoutNameForMatch.value && !withdrawForm.value.bank_account.account_name) {
+      withdrawForm.value.bank_account.account_name = payoutNameForMatch.value
     }
   } catch (err) {
     console.error('Failed to load my profile:', err)
@@ -1420,7 +1432,7 @@ onMounted(async () => {
 
           <div class="space-y-6">
             <!-- Profile name required warning -->
-            <div v-if="myProfile && !profileNameComplete" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+            <div v-if="myProfile && !hasPayoutIdentity" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
               <div class="flex items-start gap-3">
                 <Icon icon="mdi:account-alert" class="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
                 <div class="flex-grow">
@@ -1564,9 +1576,9 @@ onMounted(async () => {
                 class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 placeholder="ระบุชื่อบัญชี"
               >
-              <p v-if="profileNameComplete" class="text-sm text-gray-500 mt-1">
+              <p v-if="hasPayoutIdentity" class="text-sm text-gray-500 mt-1">
                 <Icon icon="mdi:information-outline" class="w-4 h-4 inline" />
-                ชื่อบัญชีต้องตรงกับชื่อในโปรไฟล์: <span class="font-medium">{{ profileFullName }}</span>
+                ชื่อบัญชีต้องตรงกับชื่อของคุณ: <span class="font-medium">{{ payoutNameForMatch }}</span>
               </p>
             </div>
 
@@ -1590,7 +1602,7 @@ onMounted(async () => {
             <button 
               class="w-full py-3 bg-gradient-to-r from-red-500 to-rose-500 text-white font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               :disabled="isProcessing
-                || (myProfile && !profileNameComplete)
+                || (myProfile && !hasPayoutIdentity)
                 || withdrawForm.amount < WITHDRAW_MIN_AMOUNT
                 || withdrawForm.amount > walletBalance
                 || !withdrawForm.bank_account.account_name

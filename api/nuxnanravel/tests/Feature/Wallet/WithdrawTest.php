@@ -337,4 +337,62 @@ class WithdrawTest extends TestCase
 
         $response->assertStatus(400)->assertJson(['success' => false]);
     }
+
+    public function test_withdraw_rejects_when_account_name_does_not_match_profile(): void
+    {
+        // Fraud guard (bug C): payout account name must contain the profile's
+        // first + last name. A mismatching name is rejected before any money moves.
+        [$user, $token] = $this->actingUser(5000); // profile = สมชาย ใจดี
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->postJson('/api/wallet/withdraw', [
+                'amount' => 100,
+                'method' => 'bank_transfer',
+                'bank_account' => [
+                    'bank_name' => 'kbank',
+                    'account_number' => '1234567890',
+                    'account_name' => 'สมหญิง รวยทรัพย์',
+                ],
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJson(['success' => false])
+            ->assertJsonStructure(['errors' => ['bank_account.account_name']]);
+
+        // No withdrawal row and the wallet is untouched.
+        $this->assertDatabaseMissing('wallet_transactions', [
+            'user_id' => $user->id,
+            'transaction_type' => 'withdraw',
+        ]);
+        $this->assertSame('5000.00', (string) $user->fresh()->wallet);
+    }
+
+    public function test_withdraw_rejects_when_profile_name_and_display_name_are_both_empty(): void
+    {
+        // Fraud guard (bug B): with no profile first/last AND no display name,
+        // there is nothing to verify the payout owner against, so withdrawal is
+        // blocked with the profile_name_required code.
+        $user = User::factory()->create(['wallet' => 5000, 'name' => '']);
+        $user->profile()->create(['first_name' => '', 'last_name' => '']);
+        $token = JWTAuth::fromUser($user);
+
+        $response = $this->withHeader('Authorization', "Bearer $token")
+            ->postJson('/api/wallet/withdraw', [
+                'amount' => 100,
+                'method' => 'bank_transfer',
+                'bank_account' => [
+                    'bank_name' => 'kbank',
+                    'account_number' => '1234567890',
+                    'account_name' => 'ใครก็ได้ นามสกุล',
+                ],
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJson(['success' => false, 'error_code' => 'profile_name_required']);
+
+        $this->assertDatabaseMissing('wallet_transactions', [
+            'user_id' => $user->id,
+            'transaction_type' => 'withdraw',
+        ]);
+    }
 }
