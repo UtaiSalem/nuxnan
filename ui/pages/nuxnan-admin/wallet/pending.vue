@@ -110,6 +110,74 @@ const formatPointsAmount = (n: any) => {
   return new Intl.NumberFormat('th-TH').format(num || 0) + ' แต้ม'
 }
 
+// --- Fraud remediation: reverse transfer + freeze/unfreeze wallets ---
+const fraudBusy = ref(false)
+
+// Live freeze state of the user under review (synced from the loaded details)
+const pointsFrozen = computed(() => !!selectedRequestDetails.value?.user?.points_frozen_at)
+const walletFrozen = computed(() => !!selectedRequestDetails.value?.user?.wallet_frozen_at)
+
+const postFraud = async (path: string, body: Record<string, any>) => {
+  const token = useCookie('token')
+  return await $fetch(`${apiBase}/api/admin/wallet/${path}`, {
+    method: 'POST', body, headers: { Authorization: `Bearer ${token.value}` }
+  })
+}
+
+// Reverse a fraudulent incoming points transfer (claws back up to available balance)
+const reversePointsTransfer = async (tx: any) => {
+  if (fraudBusy.value) return
+  const reason = window.prompt('ยืนยันการ "ยกเลิก + โอนแต้มคืน" ของรายการนี้\nระบบจะดึงแต้มคืนจากผู้รับเท่าที่มี แล้วคืนให้ผู้โอน\n\nกรุณาระบุเหตุผล:')
+  if (!reason || !reason.trim()) return
+  fraudBusy.value = true
+  try {
+    const res = await postFraud(`points-transactions/${tx.id}/reverse`, { reason: reason.trim() })
+    if (res.success) {
+      const d = res.data
+      pointsError.value = ''
+      message.value = `ย้อนรายการสำเร็จ: คืน ${formatPointsAmount(d.reversed)}${d.shortfall > 0 ? ` (ขาด ${formatPointsAmount(d.shortfall)} เพราะถูกใช้ไปแล้ว)` : ''}`
+      await fetchPointsHistory()
+    } else {
+      pointsError.value = res.message || 'ย้อนรายการไม่สำเร็จ'
+    }
+  } catch (error: any) {
+    pointsError.value = error.data?.message || error.message || 'ย้อนรายการไม่สำเร็จ'
+  } finally {
+    fraudBusy.value = false
+  }
+}
+
+// Freeze or unfreeze a wallet (scope: 'points' | 'wallet')
+const toggleFreeze = async (scope: 'points' | 'wallet') => {
+  if (fraudBusy.value || !selectedRequestDetails.value?.user?.id) return
+  const userId = selectedRequestDetails.value.user.id
+  const currentlyFrozen = scope === 'points' ? pointsFrozen.value : walletFrozen.value
+  const label = scope === 'points' ? 'กระเป๋าสะสมแต้ม' : 'กระเป๋าเงิน (wallet)'
+  let body: Record<string, any> = { scope }
+  if (currentlyFrozen) {
+    if (!window.confirm(`ปลดระงับ${label}ของผู้ใช้นี้?`)) return
+  } else {
+    const reason = window.prompt(`ระงับ${label}ของผู้ใช้นี้ชั่วคราว (ผู้ใช้จะโอน/ถอน/แปลงไม่ได้จนกว่าจะปลด)\n\nกรุณาระบุเหตุผล:`)
+    if (!reason || !reason.trim()) return
+    body = { scope, reason: reason.trim() }
+  }
+  fraudBusy.value = true
+  try {
+    const res = await postFraud(`users/${userId}/${currentlyFrozen ? 'unfreeze' : 'freeze'}`, body)
+    if (res.success && selectedRequestDetails.value?.user) {
+      selectedRequestDetails.value.user.points_frozen_at = res.data.points_frozen_at
+      selectedRequestDetails.value.user.wallet_frozen_at = res.data.wallet_frozen_at
+      message.value = currentlyFrozen ? `ปลดระงับ${label}แล้ว` : `ระงับ${label}แล้ว`
+    } else if (!res.success) {
+      errorMessage.value = res.message || 'ดำเนินการไม่สำเร็จ'
+    }
+  } catch (error: any) {
+    errorMessage.value = error.data?.message || error.message || 'ดำเนินการไม่สำเร็จ'
+  } finally {
+    fraudBusy.value = false
+  }
+}
+
 // Fetch pending withdrawals (pending + under_review)
 const fetchPendingWithdrawals = async () => {
   try {
@@ -1136,6 +1204,35 @@ onMounted(() => {
                       <Icon icon="fluent:arrow-swap-24-regular" class="w-4 h-4 flex-shrink-0" />
                       ดูประวัติการโอนแต้มของผู้ใช้
                     </button>
+
+                    <!-- Fraud remediation: freeze/unfreeze wallets -->
+                    <div v-if="selectedRequestDetails.user?.id" class="pt-2 mt-1 border-t border-slate-100 dark:border-slate-700 space-y-2">
+                      <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">ระงับกระเป๋า (กันทุจริต)</p>
+                      <div class="flex flex-col gap-2 sm:flex-row">
+                        <button
+                          @click="toggleFreeze('points')"
+                          :disabled="fraudBusy"
+                          class="min-h-[44px] sm:min-h-0 sm:py-2 flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl transition-colors disabled:opacity-50"
+                          :class="pointsFrozen ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' : 'border border-amber-300 text-amber-700 dark:border-amber-800 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30'"
+                        >
+                          <Icon :icon="pointsFrozen ? 'fluent:lock-closed-24-filled' : 'fluent:lock-open-24-regular'" class="w-4 h-4 flex-shrink-0" />
+                          {{ pointsFrozen ? 'ปลดระงับแต้ม' : 'ระงับกระเป๋าแต้ม' }}
+                        </button>
+                        <button
+                          @click="toggleFreeze('wallet')"
+                          :disabled="fraudBusy"
+                          class="min-h-[44px] sm:min-h-0 sm:py-2 flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl transition-colors disabled:opacity-50"
+                          :class="walletFrozen ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300' : 'border border-red-300 text-red-700 dark:border-red-800 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30'"
+                        >
+                          <Icon :icon="walletFrozen ? 'fluent:lock-closed-24-filled' : 'fluent:lock-open-24-regular'" class="w-4 h-4 flex-shrink-0" />
+                          {{ walletFrozen ? 'ปลดระงับเงิน' : 'ระงับกระเป๋าเงิน' }}
+                        </button>
+                      </div>
+                      <p v-if="pointsFrozen || walletFrozen" class="text-[11px] text-amber-700 dark:text-amber-400">
+                        <Icon icon="fluent:info-24-regular" class="w-3.5 h-3.5 inline -mt-0.5" />
+                        ผู้ใช้นี้ถูกระงับ{{ pointsFrozen && walletFrozen ? 'ทั้งแต้มและเงิน' : pointsFrozen ? 'กระเป๋าแต้ม' : 'กระเป๋าเงิน' }} — โอน/ถอน/แปลงไม่ได้
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1642,25 +1739,42 @@ onMounted(() => {
             <div
               v-for="(tx, i) in pointsTx"
               :key="i"
-              class="flex items-center gap-2 rounded-xl bg-slate-50 dark:bg-slate-900/30 px-3 py-2"
+              class="flex flex-col gap-1.5 rounded-xl bg-slate-50 dark:bg-slate-900/30 px-3 py-2"
             >
-              <span
-                class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap"
-                :class="tx.transaction_type === 'transfer_in' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
-                  : tx.transaction_type === 'transfer_out' ? 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
-                  : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'"
-              >{{ pointsTypeLabel(tx.transaction_type) }}</span>
-              <div class="min-w-0 flex-1">
-                <p class="text-xs text-slate-700 dark:text-slate-200 truncate">
-                  <span v-if="tx.counterparty">{{ tx.direction === 'in' ? 'จาก' : 'ถึง' }} {{ tx.counterparty.name }}</span>
-                  <span v-else class="text-slate-500">{{ tx.description || '—' }}</span>
-                </p>
-                <p class="text-[11px] text-slate-400">{{ tx.created_at ? new Date(tx.created_at).toLocaleString('th-TH') : '—' }}</p>
+              <div class="flex items-center gap-2">
+                <span
+                  class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap"
+                  :class="tx.transaction_type === 'transfer_in' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                    : tx.transaction_type === 'transfer_out' ? 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                    : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'"
+                >{{ pointsTypeLabel(tx.transaction_type) }}</span>
+                <div class="min-w-0 flex-1">
+                  <p class="text-xs text-slate-700 dark:text-slate-200 truncate">
+                    <span v-if="tx.counterparty">{{ tx.direction === 'in' ? 'จาก' : 'ถึง' }} {{ tx.counterparty.name }}</span>
+                    <span v-else class="text-slate-500">{{ tx.description || '—' }}</span>
+                  </p>
+                  <p class="text-[11px] text-slate-400">{{ tx.created_at ? new Date(tx.created_at).toLocaleString('th-TH') : '—' }}</p>
+                </div>
+                <p
+                  class="text-xs font-bold flex-shrink-0 whitespace-nowrap"
+                  :class="tx.direction === 'in' ? 'text-red-600 dark:text-red-400' : tx.direction === 'out' ? 'text-slate-600 dark:text-slate-300' : 'text-slate-700 dark:text-slate-200'"
+                >{{ tx.direction === 'in' ? '+' : tx.direction === 'out' ? '−' : '' }}{{ formatPointsAmount(tx.amount) }}</p>
               </div>
-              <p
-                class="text-xs font-bold flex-shrink-0 whitespace-nowrap"
-                :class="tx.direction === 'in' ? 'text-red-600 dark:text-red-400' : tx.direction === 'out' ? 'text-slate-600 dark:text-slate-300' : 'text-slate-700 dark:text-slate-200'"
-              >{{ tx.direction === 'in' ? '+' : tx.direction === 'out' ? '−' : '' }}{{ formatPointsAmount(tx.amount) }}</p>
+              <!-- Reverse a fraudulent incoming transfer -->
+              <div v-if="tx.transaction_type === 'transfer_in'" class="flex justify-end">
+                <span v-if="tx.metadata?.fraud_reversed_at" class="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400">
+                  <Icon icon="fluent:checkmark-circle-24-filled" class="w-3.5 h-3.5" /> ย้อนรายการแล้ว
+                </span>
+                <button
+                  v-else
+                  @click="reversePointsTransfer(tx)"
+                  :disabled="fraudBusy"
+                  class="min-h-[44px] sm:min-h-0 sm:py-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-[11px] font-medium rounded-lg border border-red-300 text-red-700 dark:border-red-800 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50"
+                >
+                  <Icon icon="fluent:arrow-undo-24-regular" class="w-3.5 h-3.5 flex-shrink-0" />
+                  ยกเลิก + โอนแต้มคืน
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -66,6 +66,10 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         'pp',
         'wallet',
         'locked_balance',
+        'points_frozen_at',
+        'wallet_frozen_at',
+        'freeze_reason',
+        'frozen_by',
         'profile_photo_path',
         'verified',
         'is_placeholder',
@@ -130,9 +134,29 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             'pp' => 'decimal:2',
             'wallet' => 'decimal:2',
             'locked_balance' => 'decimal:2',
+            'points_frozen_at' => 'datetime',
+            'wallet_frozen_at' => 'datetime',
             'anonymized_at' => 'datetime',
             'deleted_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Whether an admin has temporarily frozen this user's points wallet (pp)
+     * as a fraud-remediation measure. A frozen wallet blocks transfers,
+     * conversions and withdrawals until an admin unfreezes it.
+     */
+    public function isPointsFrozen(): bool
+    {
+        return $this->points_frozen_at !== null;
+    }
+
+    /**
+     * Whether an admin has temporarily frozen this user's money wallet.
+     */
+    public function isWalletFrozen(): bool
+    {
+        return $this->wallet_frozen_at !== null;
     }
 
     /**

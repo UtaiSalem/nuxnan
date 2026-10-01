@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Admin\GamificationRuleLogController;
 use App\Http\Controllers\Api\Admin\PointRuleController;
 use App\Http\Controllers\Api\AdminAuthController;
 use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\AdminFraudController;
 use App\Http\Controllers\Api\AdminPermissionController;
 use App\Http\Controllers\Api\AdminRoleController;
 use App\Http\Controllers\Api\AdminWalletController;
@@ -540,6 +541,12 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
         Route::post('/withdrawals/{id}/failed', [AdminWalletController::class, 'markWithdrawalFailed'])->name('admin.wallet.withdrawals.failed');
         Route::post('/deposit-requests/{id}/approve', [AdminWalletController::class, 'approveDepositRequest'])->name('admin.wallet.deposits.approve');
         Route::post('/deposit-requests/{id}/reject', [AdminWalletController::class, 'rejectDepositRequest'])->name('admin.wallet.deposits.reject');
+
+        // Fraud remediation (SUPER_ADMIN / ADMIN only; enforced in the controller)
+        Route::post('/points-transactions/{id}/reverse', [AdminFraudController::class, 'reversePointsTransaction'])->whereNumber('id')->name('admin.wallet.points-tx.reverse');
+        Route::post('/transactions/{id}/reverse', [AdminFraudController::class, 'reverseWalletTransaction'])->whereNumber('id')->name('admin.wallet.tx.reverse');
+        Route::post('/users/{userId}/freeze', [AdminFraudController::class, 'freeze'])->whereNumber('userId')->name('admin.wallet.users.freeze');
+        Route::post('/users/{userId}/unfreeze', [AdminFraudController::class, 'unfreeze'])->whereNumber('userId')->name('admin.wallet.users.unfreeze');
     });
 
     // =====================================================

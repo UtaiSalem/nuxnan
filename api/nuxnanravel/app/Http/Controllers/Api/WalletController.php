@@ -114,6 +114,10 @@ class WalletController extends Controller
             ], 401);
         }
 
+        if ($user->isWalletFrozen()) {
+            return response()->json(['success' => false, 'message' => 'กระเป๋าเงินของคุณถูกระงับชั่วคราวระหว่างการตรวจสอบการทุจริต กรุณาติดต่อผู้ดูแลระบบ'], 403);
+        }
+
         $validated = $request->validate([
             'amount' => 'required|numeric|min:1',
             'reason' => 'required|string',
@@ -165,6 +169,10 @@ class WalletController extends Controller
                 'success' => false,
                 'message' => 'User not authenticated',
             ], 401);
+        }
+
+        if ($user->isWalletFrozen()) {
+            return response()->json(['success' => false, 'message' => 'กระเป๋าเงินของคุณถูกระงับชั่วคราวระหว่างการตรวจสอบการทุจริต กรุณาติดต่อผู้ดูแลระบบ'], 403);
         }
 
         $validated = $request->validate([
@@ -395,6 +403,10 @@ class WalletController extends Controller
             ], 401);
         }
 
+        if ($user->isWalletFrozen()) {
+            return response()->json(['success' => false, 'message' => 'กระเป๋าเงินของคุณถูกระงับชั่วคราวระหว่างการตรวจสอบการทุจริต กรุณาติดต่อผู้ดูแลระบบ'], 403);
+        }
+
         $validated = $request->validate([
             'recipient_id' => 'required|integer|exists:users,id|different:'.$user->id,
             'amount' => 'required|numeric|min:10',
@@ -456,6 +468,10 @@ class WalletController extends Controller
             ], 401);
         }
 
+        if ($user->isPointsFrozen()) {
+            return response()->json(['success' => false, 'message' => 'กระเป๋าสะสมแต้มของคุณถูกระงับชั่วคราวระหว่างการตรวจสอบการทุจริต กรุณาติดต่อผู้ดูแลระบบ'], 403);
+        }
+
         $validated = $request->validate([
             'points' => 'required|integer|min:1200', // Minimum 1200 points (1 THB)
         ]);
@@ -501,6 +517,10 @@ class WalletController extends Controller
                 'success' => false,
                 'message' => 'User not authenticated',
             ], 401);
+        }
+
+        if ($user->isWalletFrozen()) {
+            return response()->json(['success' => false, 'message' => 'กระเป๋าเงินของคุณถูกระงับชั่วคราวระหว่างการตรวจสอบการทุจริต กรุณาติดต่อผู้ดูแลระบบ'], 403);
         }
 
         $validated = $request->validate([
