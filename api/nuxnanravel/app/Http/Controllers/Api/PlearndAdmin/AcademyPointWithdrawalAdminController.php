@@ -10,6 +10,8 @@ use App\Http\Requests\AcademyPointWithdrawal\ReviewRequest;
 use App\Http\Resources\AcademyPointWithdrawal\AcademyPointWithdrawalResource;
 use App\Models\AcademyPointWithdrawalRequest;
 use App\Services\AcademyPointWithdrawalService;
+use App\Services\AuditLogService;
+use App\Services\PointWithdrawalFundSourceService;
 use DomainException;
 use Illuminate\Http\Request;
 
@@ -36,6 +38,30 @@ class AcademyPointWithdrawalAdminController extends Controller
         $this->authorize('moderate', $withdrawal);
 
         return new AcademyPointWithdrawalResource($withdrawal->load(['academy', 'requester', 'reviewer', 'approver', 'payer']));
+    }
+
+    /**
+     * Trace where the withdrawn points came from (who funded this academy point
+     * account) so a moderator can spot self-funding or concentrated funding
+     * before approving. Read-only; access is audit-logged.
+     */
+    public function sourceOfFunds(Request $r, AcademyPointWithdrawalRequest $withdrawal)
+    {
+        $this->authorize('moderate', $withdrawal);
+
+        $trace = app(PointWithdrawalFundSourceService::class)
+            ->forAcademy($withdrawal, $r->integer('window_days') ?: null);
+
+        app(AuditLogService::class)->log(
+            'academy_point_withdrawal.source_of_funds_viewed',
+            $withdrawal,
+            null,
+            null,
+            'academy_point_withdrawal',
+            ['admin_id' => $r->user()?->id, 'window_days' => $trace['window_days'], 'risk_level' => $trace['risk']['level']]
+        );
+
+        return response()->json(['success' => true, 'data' => $trace]);
     }
 
     public function review(ReviewRequest $r, AcademyPointWithdrawalRequest $withdrawal)
