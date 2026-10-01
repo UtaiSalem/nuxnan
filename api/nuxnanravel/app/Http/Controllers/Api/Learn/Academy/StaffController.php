@@ -122,11 +122,10 @@ class StaffController extends Controller
         $staff = StaffProfile::create($validated);
 
         $this->auditLogService->log(
-            'staff.create',
-            $staff,
-            $academy->id,
-            'academy',
-            ['employee_id' => $staff->employee_id]
+            action: 'staff.create',
+            entity: $staff,
+            module: 'academy',
+            metadata: ['employee_id' => $staff->employee_id]
         );
 
         return response()->json([
@@ -163,11 +162,10 @@ class StaffController extends Controller
         $staff->update($validated);
 
         $this->auditLogService->log(
-            'staff.update',
-            $staff,
-            $academy->id,
-            'academy',
-            ['changes' => $validated]
+            action: 'staff.update',
+            entity: $staff,
+            module: 'academy',
+            metadata: ['changes' => $validated]
         );
 
         return response()->json([
@@ -201,11 +199,10 @@ class StaffController extends Controller
         $staff->save();
 
         $this->auditLogService->log(
-            'staff.status_change',
-            $staff,
-            $academy->id,
-            'academy',
-            [
+            action: 'staff.status_change',
+            entity: $staff,
+            module: 'academy',
+            metadata: [
                 'old_status' => $oldStatus,
                 'new_status' => $validated['status'],
                 'reason' => $validated['reason'] ?? null,
@@ -229,11 +226,10 @@ class StaffController extends Controller
         $staff->delete();
 
         $this->auditLogService->log(
-            'staff.delete',
-            $staff,
-            $academy->id,
-            'academy',
-            ['employee_id' => $staff->employee_id]
+            action: 'staff.delete',
+            entity: $staff,
+            module: 'academy',
+            metadata: ['employee_id' => $staff->employee_id]
         );
 
         return response()->json([
@@ -288,11 +284,10 @@ class StaffController extends Controller
         $position = Position::create($validated);
 
         $this->auditLogService->log(
-            'position.create',
-            $position,
-            $academy->id,
-            'academy',
-            ['name' => $position->name]
+            action: 'position.create',
+            entity: $position,
+            module: 'academy',
+            metadata: ['name' => $position->name]
         );
 
         return response()->json([

@@ -97,10 +97,10 @@ class LeaveRequestController extends Controller
             'leave_type_id' => 'required|exists:leave_types,id',
             'start_date' => 'required|date|after_or_equal:today',
             'end_date' => 'required|date|after_or_equal:start_date',
-            'is_half_day' => 'nullable|boolean',
-            'half_day_type' => 'nullable|in:morning,afternoon',
+            'leave_period' => 'nullable|in:full_day,morning,afternoon',
             'reason' => 'required|string|max:1000',
-            'attachment_path' => 'nullable|string|max:255',
+            'document_path' => 'nullable|string|max:255',
+            'contact_during_leave' => 'nullable|string|max:255',
         ]);
 
         $staffProfile = StaffProfile::findOrFail($validated['staff_profile_id']);
@@ -116,24 +116,29 @@ class LeaveRequestController extends Controller
         $endDate = Carbon::parse($validated['end_date']);
         $totalDays = $startDate->diffInDays($endDate) + 1;
 
-        if ($validated['is_half_day'] ?? false) {
+        // ลาครึ่งวัน (เช้า/บ่าย) นับเป็น 0.5 วัน
+        $leavePeriod = $validated['leave_period'] ?? LeaveRequest::PERIOD_FULL_DAY;
+
+        if ($leavePeriod !== LeaveRequest::PERIOD_FULL_DAY) {
             $totalDays = 0.5;
         }
 
-        // Check leave balance
-        $usedLeave = LeaveRequest::where('staff_profile_id', $staffProfile->id)
-            ->where('leave_type_id', $leaveType->id)
-            ->whereYear('start_date', now()->year)
-            ->whereIn('status', [LeaveRequest::STATUS_PENDING, LeaveRequest::STATUS_APPROVED])
-            ->sum('total_days');
+        // Check leave balance — บังคับโควตาเฉพาะประเภทลาที่กำหนดจำนวนวันสูงสุดไว้
+        if ($leaveType->max_days_per_year !== null) {
+            $usedLeave = LeaveRequest::where('staff_profile_id', $staffProfile->id)
+                ->where('leave_type_id', $leaveType->id)
+                ->whereYear('start_date', now()->year)
+                ->whereIn('status', [LeaveRequest::STATUS_PENDING, LeaveRequest::STATUS_APPROVED])
+                ->sum('total_days');
 
-        $availableBalance = $leaveType->days_per_year - $usedLeave;
+            $availableBalance = $leaveType->max_days_per_year - $usedLeave;
 
-        if (! $leaveType->allow_negative && $totalDays > $availableBalance) {
-            return response()->json([
-                'success' => false,
-                'message' => "วันลาคงเหลือไม่เพียงพอ (เหลือ {$availableBalance} วัน)",
-            ], 400);
+            if ($totalDays > $availableBalance) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "วันลาคงเหลือไม่เพียงพอ (เหลือ {$availableBalance} วัน)",
+                ], 400);
+            }
         }
 
         // Check for overlapping leave requests
@@ -161,20 +166,19 @@ class LeaveRequestController extends Controller
             'leave_type_id' => $validated['leave_type_id'],
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'],
-            'is_half_day' => $validated['is_half_day'] ?? false,
-            'half_day_type' => $validated['half_day_type'] ?? null,
+            'leave_period' => $leavePeriod,
             'total_days' => $totalDays,
             'reason' => $validated['reason'],
-            'attachment_path' => $validated['attachment_path'] ?? null,
+            'document_path' => $validated['document_path'] ?? null,
+            'contact_during_leave' => $validated['contact_during_leave'] ?? null,
             'status' => LeaveRequest::STATUS_PENDING,
         ]);
 
         $this->auditLogService->log(
-            'leave.request',
-            $leave,
-            $academy->id,
-            'academy',
-            [
+            action: 'leave.request',
+            entity: $leave,
+            module: 'academy',
+            metadata: [
                 'leave_type' => $leaveType->name,
                 'days' => $totalDays,
                 'dates' => "{$validated['start_date']} - {$validated['end_date']}",
@@ -209,11 +213,10 @@ class LeaveRequestController extends Controller
         $leave->approve(auth()->id(), $validated['approver_notes'] ?? null);
 
         $this->auditLogService->log(
-            'leave.approve',
-            $leave,
-            $academy->id,
-            'academy',
-            ['days' => $leave->total_days]
+            action: 'leave.approve',
+            entity: $leave,
+            module: 'academy',
+            metadata: ['days' => $leave->total_days]
         );
 
         return response()->json([
@@ -244,11 +247,10 @@ class LeaveRequestController extends Controller
         $leave->reject(auth()->id(), $validated['approver_notes']);
 
         $this->auditLogService->log(
-            'leave.reject',
-            $leave,
-            $academy->id,
-            'academy',
-            ['reason' => $validated['approver_notes']]
+            action: 'leave.reject',
+            entity: $leave,
+            module: 'academy',
+            metadata: ['reason' => $validated['approver_notes']]
         );
 
         return response()->json([
@@ -275,11 +277,10 @@ class LeaveRequestController extends Controller
         $leave->cancel();
 
         $this->auditLogService->log(
-            'leave.cancel',
-            $leave,
-            $academy->id,
-            'academy',
-            []
+            action: 'leave.cancel',
+            entity: $leave,
+            module: 'academy',
+            metadata: []
         );
 
         return response()->json([
@@ -311,16 +312,15 @@ class LeaveRequestController extends Controller
     public function storeLeaveType(Request $request, Academy $academy): JsonResponse
     {
         $validated = $request->validate([
-            'code' => 'required|string|max:20|unique:leave_types,code',
+            'code' => 'required|string|max:10|unique:leave_types,code',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'days_per_year' => 'required|integer|min:0',
+            'max_days_per_year' => 'nullable|integer|min:0',
             'is_paid' => 'nullable|boolean',
             'requires_approval' => 'nullable|boolean',
             'requires_document' => 'nullable|boolean',
-            'min_notice_days' => 'nullable|integer|min:0',
-            'max_consecutive_days' => 'nullable|integer|min:1',
-            'allow_negative' => 'nullable|boolean',
+            'advance_notice_days' => 'nullable|integer|min:0',
+            'applicable_to' => 'nullable|array',
             'is_active' => 'nullable|boolean',
         ]);
 
@@ -329,11 +329,10 @@ class LeaveRequestController extends Controller
         $type = LeaveType::create($validated);
 
         $this->auditLogService->log(
-            'leave_type.create',
-            $type,
-            $academy->id,
-            'academy',
-            ['name' => $type->name]
+            action: 'leave_type.create',
+            entity: $type,
+            module: 'academy',
+            metadata: ['name' => $type->name]
         );
 
         return response()->json([
@@ -353,16 +352,15 @@ class LeaveRequestController extends Controller
         }
 
         $validated = $request->validate([
-            'code' => 'sometimes|string|max:20|unique:leave_types,code,'.$leaveType->id,
+            'code' => 'sometimes|string|max:10|unique:leave_types,code,'.$leaveType->id,
             'name' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
-            'days_per_year' => 'sometimes|integer|min:0',
+            'max_days_per_year' => 'nullable|integer|min:0',
             'is_paid' => 'nullable|boolean',
             'requires_approval' => 'nullable|boolean',
             'requires_document' => 'nullable|boolean',
-            'min_notice_days' => 'nullable|integer|min:0',
-            'max_consecutive_days' => 'nullable|integer|min:1',
-            'allow_negative' => 'nullable|boolean',
+            'advance_notice_days' => 'nullable|integer|min:0',
+            'applicable_to' => 'nullable|array',
             'is_active' => 'nullable|boolean',
         ]);
 
@@ -403,10 +401,12 @@ class LeaveRequestController extends Controller
                     'code' => $type->code,
                     'name' => $type->name,
                 ],
-                'entitlement' => $type->days_per_year,
+                'entitlement' => $type->max_days_per_year,
                 'used' => $used,
                 'pending' => $pending,
-                'available' => $type->days_per_year - $used - $pending,
+                'available' => $type->max_days_per_year !== null
+                    ? $type->max_days_per_year - $used - $pending
+                    : null,
             ];
         });
 
