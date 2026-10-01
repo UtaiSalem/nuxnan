@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Admin\GamificationRuleLogController;
 use App\Http\Controllers\Api\Admin\PointRuleController;
 use App\Http\Controllers\Api\AdminAuthController;
 use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\AdminFraudController;
 use App\Http\Controllers\Api\AdminPermissionController;
 use App\Http\Controllers\Api\AdminRoleController;
 use App\Http\Controllers\Api\AdminWalletController;
@@ -740,6 +741,8 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
         Route::get('/deposit-requests/pending', [AdminWalletController::class, 'pendingDepositRequests'])->name('admin.wallet.deposits.pending');
         Route::get('/withdrawals/{id}', [AdminWalletController::class, 'showWithdrawal'])->whereNumber('id')->name('admin.wallet.withdrawals.show');
         Route::get('/withdrawals/{id}/proof', [AdminWalletController::class, 'downloadWithdrawalProof'])->whereNumber('id')->name('admin.wallet.withdrawals.proof');
+        Route::get('/withdrawals/{id}/source-of-funds', [AdminWalletController::class, 'sourceOfFunds'])->whereNumber('id')->name('admin.wallet.withdrawals.source-of-funds');
+        Route::get('/users/{userId}/points-transactions', [AdminWalletController::class, 'userPointsTransactions'])->whereNumber('userId')->name('admin.wallet.user-points-transactions');
         Route::post('/withdrawals/{id}/approve', [AdminWalletController::class, 'approveWithdrawal'])->name('admin.wallet.withdrawals.approve');
         Route::post('/withdrawals/{id}/reject', [AdminWalletController::class, 'rejectWithdrawal'])->name('admin.wallet.withdrawals.reject');
         Route::post('/withdrawals/{id}/process', [AdminWalletController::class, 'processWithdrawal'])->name('admin.wallet.withdrawals.process');
@@ -747,6 +750,12 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
         Route::post('/withdrawals/{id}/failed', [AdminWalletController::class, 'markWithdrawalFailed'])->name('admin.wallet.withdrawals.failed');
         Route::post('/deposit-requests/{id}/approve', [AdminWalletController::class, 'approveDepositRequest'])->name('admin.wallet.deposits.approve');
         Route::post('/deposit-requests/{id}/reject', [AdminWalletController::class, 'rejectDepositRequest'])->name('admin.wallet.deposits.reject');
+
+        // Fraud remediation (SUPER_ADMIN / ADMIN only; enforced in the controller)
+        Route::post('/points-transactions/{id}/reverse', [AdminFraudController::class, 'reversePointsTransaction'])->whereNumber('id')->name('admin.wallet.points-tx.reverse');
+        Route::post('/transactions/{id}/reverse', [AdminFraudController::class, 'reverseWalletTransaction'])->whereNumber('id')->name('admin.wallet.tx.reverse');
+        Route::post('/users/{userId}/freeze', [AdminFraudController::class, 'freeze'])->whereNumber('userId')->name('admin.wallet.users.freeze');
+        Route::post('/users/{userId}/unfreeze', [AdminFraudController::class, 'unfreeze'])->whereNumber('userId')->name('admin.wallet.users.unfreeze');
     });
 
     // =====================================================
