@@ -8,6 +8,7 @@ definePageMeta({
 
 const api = useApi()
 const toast = useToast()
+const swal = useSweetAlert()
 const authStore = useAuthStore()
 
 // State
@@ -128,14 +129,14 @@ const redeemCoupon = async () => {
         success: false,
         message: response.message || 'ไม่สามารถใช้คูปองได้',
       }
-      toast.error(response.message || 'ไม่สามารถใช้คูปองได้')
+      swal.error(response.message || 'ไม่สามารถใช้คูปองได้')
     }
   } catch (error: any) {
     result.value = {
       success: false,
       message: error.message || 'เกิดข้อผิดพลาด',
     }
-    toast.error(error.message || 'เกิดข้อผิดพลาด')
+    swal.error(error.message || 'เกิดข้อผิดพลาด')
   } finally {
     isLoading.value = false
     stopScanning()

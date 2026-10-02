@@ -2,6 +2,9 @@
 import { ref, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 
+const { parseApiError } = useApiError()
+const swal = useSweetAlert()
+
 definePageMeta({
   layout: 'nuxnan-admin-layout',
   middleware: 'nuxnan-admin'
@@ -80,7 +83,7 @@ const formatDate = (dateStr: string) => {
 
 // Verify email
 const verifyEmail = async () => {
-  if (!confirm('ต้องการยืนยันอีเมลของผู้ใช้นี้หรือไม่?')) return
+  if (!await swal.confirm('ต้องการยืนยันอีเมลของผู้ใช้นี้หรือไม่?', 'ยืนยันอีเมล', { icon: 'question', confirmText: 'ยืนยัน' })) return
   
   isVerifying.value = true
   verifyMessage.value = ''
@@ -109,7 +112,7 @@ const verifyEmail = async () => {
 
 // Unverify email
 const unverifyEmail = async () => {
-  if (!confirm('ต้องการยกเลิกการยืนยันอีเมลของผู้ใช้นี้หรือไม่?')) return
+  if (!await swal.confirm('ต้องการยกเลิกการยืนยันอีเมลของผู้ใช้นี้หรือไม่?', 'ยกเลิกการยืนยันอีเมล', { icon: 'warning', isDanger: true, confirmText: 'ยกเลิกการยืนยัน' })) return
   
   isVerifying.value = true
   verifyMessage.value = ''
@@ -143,17 +146,19 @@ const suspendForm = ref<{ points: boolean; wallet: boolean; reason: string }>({
   reason: ''
 })
 const isSuspending = ref(false)
-const suspendMessage = ref('')
-const suspendError = ref('')
 
 const submitSuspend = async () => {
-  suspendMessage.value = ''
-  suspendError.value = ''
   if (!suspendForm.value.points && !suspendForm.value.wallet) {
-    suspendError.value = 'ต้องเลือกระงับอย่างน้อยหนึ่งระบบ'
+    swal.warning('ต้องเลือกระงับอย่างน้อยหนึ่งระบบ (แต้ม หรือ Wallet)')
     return
   }
-  if (!confirm('ยืนยันการระงับระบบแต้ม/Wallet ของผู้ใช้นี้?')) return
+
+  const confirmed = await swal.confirm(
+    'ยืนยันการระงับระบบแต้ม/Wallet ของผู้ใช้นี้?',
+    'ยืนยันการระงับบัญชี',
+    { icon: 'warning', isDanger: true, confirmText: 'ระงับบัญชี' }
+  )
+  if (!confirmed) return
 
   isSuspending.value = true
   try {
@@ -169,21 +174,25 @@ const submitSuspend = async () => {
     })
     if (response.success) {
       user.value = { ...user.value, ...response.data }
-      suspendMessage.value = 'ระงับบัญชีสำเร็จ'
       fetchSuspensionAudits()
+      swal.success('ระงับบัญชีเรียบร้อยแล้ว')
     }
   } catch (err: any) {
     console.error('Suspend failed:', err)
-    suspendError.value = err.data?.message || 'ไม่สามารถระงับบัญชีได้'
+    const parsed = parseApiError(err, 'ไม่สามารถระงับบัญชีได้')
+    swal.error(parsed.message, 'เกิดข้อผิดพลาด', parsed.detail)
   } finally {
     isSuspending.value = false
   }
 }
 
 const submitRestore = async () => {
-  suspendMessage.value = ''
-  suspendError.value = ''
-  if (!confirm('ยกเลิกการระงับระบบแต้ม/Wallet ของผู้ใช้นี้?')) return
+  const confirmed = await swal.confirm(
+    'ยกเลิกการระงับระบบแต้ม/Wallet ของผู้ใช้นี้?',
+    'ยืนยันการยกเลิกการระงับ',
+    { icon: 'question', confirmText: 'ยกเลิกการระงับ' }
+  )
+  if (!confirmed) return
 
   isSuspending.value = true
   try {
@@ -194,12 +203,13 @@ const submitRestore = async () => {
     })
     if (response.success) {
       user.value = { ...user.value, ...response.data }
-      suspendMessage.value = 'ยกเลิกการระงับสำเร็จ'
       fetchSuspensionAudits()
+      swal.success('ยกเลิกการระงับเรียบร้อยแล้ว')
     }
   } catch (err: any) {
     console.error('Restore failed:', err)
-    suspendError.value = err.data?.message || 'ไม่สามารถยกเลิกการระงับได้'
+    const parsed = parseApiError(err, 'ไม่สามารถยกเลิกการระงับได้')
+    swal.error(parsed.message, 'เกิดข้อผิดพลาด', parsed.detail)
   } finally {
     isSuspending.value = false
   }
@@ -503,8 +513,6 @@ onMounted(() => {
             </button>
           </div>
 
-          <p v-if="suspendMessage" class="text-sm text-green-600 dark:text-green-400 mt-3">{{ suspendMessage }}</p>
-          <p v-if="suspendError" class="text-sm text-red-600 dark:text-red-400 mt-3">{{ suspendError }}</p>
 
           <!-- Audit history -->
           <div class="mt-5 pt-4 border-t border-slate-100 dark:border-slate-700">

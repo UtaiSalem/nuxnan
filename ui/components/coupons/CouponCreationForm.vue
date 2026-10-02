@@ -101,6 +101,7 @@ const emit = defineEmits(['created', 'cancel'])
 
 const api = useApi()
 const toast = useToast()
+const swal = useSweetAlert()
 
 const type = ref<'points' | 'wallet'>('points')
 const amount = ref<number>(0)
@@ -163,11 +164,11 @@ async function createCoupon() {
       expiresInDays.value = null
     } else {
       error.value = response.message || 'ไม่สามารถสร้างคูปองได้'
-      toast.error(response.message || 'ไม่สามารถสร้างคูปองได้')
+      swal.error(response.message || 'ไม่สามารถสร้างคูปองได้')
     }
   } catch (err: any) {
     error.value = err.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่'
-    toast.error(error.value)
+    swal.error(error.value)
   } finally {
     isLoading.value = false
   }

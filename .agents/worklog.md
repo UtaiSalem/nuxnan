@@ -41,6 +41,43 @@
 
 ---
 
+## 2026-10-02 — ระบบร้องเรียนบัญชีทุจริต + ยกเครื่อง alert (SweetAlert) — PR #26 (draft, ยังไม่ merge)
+
+### สถานะ: 🔶 draft PR #26 (branch `claude/youthful-gates-abvw3k`) — รอ migrate + build + review
+PR: https://github.com/UtaiSalem/nuxnan/pull/26 · ยัง watch อยู่ (ไม่มี CI ตั้งบน repo นี้)
+
+### 1. คำถาม "super admin ระงับบัญชีธุรกรรมแต้ม/เงินได้อย่างไร" → **มีอยู่แล้ว** (session 2026-09-30)
+- คอลัมน์ `points_suspended`/`wallet_suspended`/`economy_suspended_*` + routes `suspend-economy`/`restore-economy`
+  + บังคับใช้ใน `PointsService`/`WalletService` (`pointsFrozen()`/`walletFrozen()`) + audit `account_suspension_audits`
+  + FE: `nuxnan-admin/users/[id]`, `blacklist/`, `EconomySuspendedBanner`
+- 🔴 **ติดที่ migration ยังไม่ได้รันบน dev DB** → error `Unknown column 'points_suspended'` ตอนกดระงับ
+  → **ต้องรัน `php artisan migrate` บน WAMP** (อย่าใช้ migrate:fresh) ถึงจะใช้ได้ (รวม table ใหม่ด้านล่าง)
+
+### 2. ระบบใหม่: สมาชิกร้องเรียนบัญชีทุจริต (BE+FE ครบ)
+- BE: table/model `account_fraud_reports` + `AccountFraudReport` · member API `POST /api/fraud-reports` (+`/mine`)
+  · admin API `/api/admin/fraud-reports` (index/stats/show/status/**suspend**) · `suspendFromReport` = ระงับเศรษฐกิจ
+  + เขียน `AccountSuspensionAudit` แบบ flow เดิม แล้วปิดคำร้องเป็น action_taken (ใน DB transaction)
+  · `StoreFraudReportRequest` (กันร้องตัวเอง/ยื่นซ้ำ) · feature tests `tests/Feature/FraudReportTest.php`
+- FE (mobile-first): `ReportAccountModal` + `useFraudReports` · ปุ่ม "ร้องเรียน" บน `profile/[id].vue`
+  · admin `nuxnan-admin/fraud-reports/{index,[id]}` · เมนูใน `NuxnanAdminLayout`
+- ⚠️ เทสต์รันในคอนเทนเนอร์ไม่ได้ (ไม่มี MySQL + migration repair_academy_donate_claims ใช้ information_schema)
+  → ต้องรัน `php artisan test -c phpunit.mysql.xml --filter=FraudReportTest` บนเครื่องที่มี MySQL · pint+php -l ผ่าน
+
+### 3. ยกเครื่องระบบ alert (ตาม feedback เจ้าของ)
+- `AlertMessage.vue` (กล่อง alert มีไอคอน 4 แบบ) + `useApiError` (ซ่อน SQL/5xx ไว้หลังปุ่มดูรายละเอียด)
+- เปลี่ยนมาใช้ **SweetAlert** (`useSweetAlert`) — confirm + success/error ใน suspend form, fraud-report detail, report modal
+- แทน native `confirm()`/`alert()` ที่เหลือในหน้า admin ทั้งหมด (users, blacklist, wallet, settings)
+- **toast → SweetAlert เฉพาะ error วิกฤต** (กติกา: งานทั่วไป/โหลด/คัดลอก/โซเชียล = toast · มูลค่า/ย้อนกลับยาก = swal):
+  แลก/ใช้/สร้างคูปองล้มเหลว · rollover commit/undo ล้มเหลว
+- `useSweetAlert.error()` รับ `detail` เพิ่ม (collapsible, escape HTML)
+
+### ค้างทำ (owner-gated)
+- [ ] `php artisan migrate` บน dev DB (ปลดล็อก suspend เดิม + table ใหม่)
+- [ ] `npm run build` ฝั่ง FE แล้วคลิกจริงที่ 375px
+- [ ] รัน FraudReportTest บน MySQL · review + merge PR #26
+
+---
+
 ## 2026-09-30 → 10-01 — wallet: ถอนเงินไม่ได้ทั้งที่ยอดโชว์พอ (A/B/C merged · D ตั้งใจ)
 
 ### สถานะ: ✅ merged เข้า main ครบ — A: PR #15 (`f439613`) · B+C: PR #23 (`c331674`) · D: ยืนยันว่าตั้งใจ ไม่แตะ · worklog: PR #24 (`e3ea28b`, merged 2026-10-01)

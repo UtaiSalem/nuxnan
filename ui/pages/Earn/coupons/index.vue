@@ -12,6 +12,7 @@ definePageMeta({
 
 const api = useApi()
 const toast = useToast()
+const swal = useSweetAlert()
 const authStore = useAuthStore()
 
 // State
@@ -127,11 +128,11 @@ const redeemCoupon = async () => {
       fetchCoupons()
       fetchStatistics()
     } else {
-      toast.error(response.message || 'ไม่สามารถแลกคูปองได้')
+      swal.error(response.message || 'ไม่สามารถแลกคูปองได้')
     }
   } catch (error) {
     console.error('Error redeeming coupon:', error)
-    toast.error('ไม่สามารถแลกคูปองได้')
+    swal.error('ไม่สามารถแลกคูปองได้')
   } finally {
     isRedeeming.value = false
   }
