@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue'
 import { Icon } from '@iconify/vue'
+import AlertMessage from '~/components/Common/AlertMessage.vue'
+
+const { parseApiError } = useApiError()
 
 definePageMeta({
   layout: 'nuxnan-admin-layout',
@@ -56,6 +59,7 @@ const reports = ref<FraudReport[]>([])
 const stats = ref<Record<string, number>>({ pending: 0, reviewing: 0, action_taken: 0, dismissed: 0, total: 0 })
 const isLoading = ref(true)
 const errorMessage = ref('')
+const errorDetail = ref('')
 const searchQuery = ref('')
 const activeStatus = ref('')
 const currentPage = ref(1)
@@ -83,6 +87,7 @@ const fetchStats = async () => {
 const fetchReports = async () => {
   isLoading.value = true
   errorMessage.value = ''
+  errorDetail.value = ''
   try {
     const params = new URLSearchParams({
       page: currentPage.value.toString(),
@@ -99,7 +104,9 @@ const fetchReports = async () => {
   } catch (error) {
     console.error('Failed to fetch fraud reports:', error)
     reports.value = []
-    errorMessage.value = 'ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่'
+    const parsed = parseApiError(error, 'ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่')
+    errorMessage.value = parsed.message
+    errorDetail.value = parsed.detail
   } finally {
     isLoading.value = false
   }
@@ -217,10 +224,11 @@ onMounted(refresh)
         <p class="text-slate-500 mt-2">กำลังโหลดข้อมูล...</p>
       </div>
 
-      <div v-else-if="errorMessage" class="p-8 text-center">
-        <Icon icon="fluent:error-circle-24-regular" class="w-12 h-12 text-red-400 mx-auto" />
-        <p class="text-red-500 mt-2">{{ errorMessage }}</p>
-        <button @click="refresh" class="mt-4 min-h-[44px] px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white">ลองใหม่</button>
+      <div v-else-if="errorMessage" class="p-4 sm:p-6">
+        <AlertMessage type="error" :message="errorMessage" :detail="errorDetail" />
+        <div class="text-center">
+          <button @click="refresh" class="mt-4 min-h-[44px] px-4 py-2 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 rounded-xl text-white">ลองใหม่</button>
+        </div>
       </div>
 
       <div v-else-if="reports.length === 0" class="p-8 text-center">
