@@ -42,6 +42,11 @@ const allNavItems = [
     href: '/nuxnan-admin/blacklist'
   },
   {
+    name: 'ร้องเรียนทุจริต',
+    icon: 'fluent:shield-error-24-regular',
+    href: '/nuxnan-admin/fraud-reports'
+  },
+  {
     name: 'จัดการบทบาท',
     icon: 'fluent:shield-24-regular',
     href: '/nuxnan-admin/roles',
