@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\AdminFraudReportController;
 use App\Http\Controllers\Api\Admin\GamificationRuleLogController;
 use App\Http\Controllers\Api\Admin\PointRuleController;
 use App\Http\Controllers\Api\AdminAuthController;
@@ -14,10 +15,10 @@ use App\Http\Requests\Admin\UpdateAcademyRequest;
 use App\Http\Requests\Admin\UpdateCouponRequest;
 use App\Http\Requests\Admin\UpdateCourseRequest;
 use App\Models\Academy;
+use App\Models\AccountSuspensionAudit;
 use App\Models\ActivityLog;
 use App\Models\Coupon;
 use App\Models\Course;
-use App\Models\AccountSuspensionAudit;
 use App\Models\PointsTransaction;
 use App\Models\User;
 use App\Models\WalletTransaction;
@@ -438,6 +439,23 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
 
         return response()->json(['success' => true, 'data' => $audits]);
     })->name('admin.suspension-audits.index');
+
+    // =====================================================
+    // Fraud Reports (member-submitted account reports)
+    // =====================================================
+    Route::prefix('fraud-reports')->group(function () {
+        Route::get('/', [AdminFraudReportController::class, 'index'])->name('admin.fraud-reports.index');
+        Route::get('/stats', [AdminFraudReportController::class, 'stats'])->name('admin.fraud-reports.stats');
+        Route::get('/{id}', [AdminFraudReportController::class, 'show'])->whereNumber('id')->name('admin.fraud-reports.show');
+        Route::post('/{id}/status', [AdminFraudReportController::class, 'updateStatus'])
+            ->whereNumber('id')
+            ->middleware('permission:user-edit')
+            ->name('admin.fraud-reports.status');
+        Route::post('/{id}/suspend', [AdminFraudReportController::class, 'suspendFromReport'])
+            ->whereNumber('id')
+            ->middleware('permission:user-edit')
+            ->name('admin.fraud-reports.suspend');
+    });
 
     // =====================================================
     // Role Management (Super Admin only for write operations)
