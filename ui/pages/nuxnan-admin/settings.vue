@@ -7,6 +7,8 @@ definePageMeta({
   middleware: 'nuxnan-admin'
 })
 
+const swal = useSweetAlert()
+
 // Settings sections
 const sections = [
   { id: 'general', name: 'ทั่วไป', icon: 'fluent:settings-24-regular' },
@@ -68,10 +70,10 @@ const saveSettings = async () => {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000))
     // Show success message
-    alert('บันทึกการตั้งค่าเรียบร้อย')
+    swal.success('บันทึกการตั้งค่าเรียบร้อยแล้ว')
   } catch (error) {
     console.error('Failed to save settings:', error)
-    alert('เกิดข้อผิดพลาดในการบันทึก')
+    swal.error('เกิดข้อผิดพลาดในการบันทึก')
   } finally {
     isSaving.value = false
   }

@@ -9,6 +9,7 @@ definePageMeta({
 
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase as string
+const swal = useSweetAlert()
 
 // State
 const walletTransactions = ref([])
@@ -173,7 +174,7 @@ const downloadProof = async (txId: number) => {
     window.open(url, '_blank')
   } catch (error) {
     console.error('Failed to download proof:', error)
-    alert('ไม่สามารถดาวน์โหลดหลักฐานการโอนได้')
+    swal.error('ไม่สามารถดาวน์โหลดหลักฐานการโอนได้')
   } finally {
     isDownloadingProof.value = false
   }

@@ -83,7 +83,7 @@ const formatDate = (dateStr: string) => {
 
 // Verify email
 const verifyEmail = async () => {
-  if (!confirm('ต้องการยืนยันอีเมลของผู้ใช้นี้หรือไม่?')) return
+  if (!await swal.confirm('ต้องการยืนยันอีเมลของผู้ใช้นี้หรือไม่?', 'ยืนยันอีเมล', { icon: 'question', confirmText: 'ยืนยัน' })) return
   
   isVerifying.value = true
   verifyMessage.value = ''
@@ -112,7 +112,7 @@ const verifyEmail = async () => {
 
 // Unverify email
 const unverifyEmail = async () => {
-  if (!confirm('ต้องการยกเลิกการยืนยันอีเมลของผู้ใช้นี้หรือไม่?')) return
+  if (!await swal.confirm('ต้องการยกเลิกการยืนยันอีเมลของผู้ใช้นี้หรือไม่?', 'ยกเลิกการยืนยันอีเมล', { icon: 'warning', isDanger: true, confirmText: 'ยกเลิกการยืนยัน' })) return
   
   isVerifying.value = true
   verifyMessage.value = ''

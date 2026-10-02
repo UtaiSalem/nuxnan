@@ -9,6 +9,8 @@ definePageMeta({
 
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase as string
+const swal = useSweetAlert()
+const { parseApiError } = useApiError()
 
 interface SuspendedUser {
   id: number
@@ -74,7 +76,12 @@ const goToPage = (page: number) => {
 }
 
 const restore = async (user: SuspendedUser) => {
-  if (!confirm(`ยกเลิกการระงับบัญชี "${user.name || user.username || user.email}" ?`)) return
+  const confirmed = await swal.confirm(
+    `ยกเลิกการระงับบัญชี <b>${user.name || user.username || user.email}</b>?`,
+    'ยืนยันการยกเลิกการระงับ',
+    { icon: 'question', confirmText: 'ยกเลิกการระงับ' }
+  )
+  if (!confirmed) return
   restoringId.value = user.id
   try {
     const token = useCookie('token')
@@ -85,10 +92,12 @@ const restore = async (user: SuspendedUser) => {
     if (response.success) {
       users.value = users.value.filter(u => u.id !== user.id)
       total.value = Math.max(0, total.value - 1)
+      swal.success('ยกเลิกการระงับเรียบร้อยแล้ว')
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Restore failed:', error)
-    alert('ไม่สามารถยกเลิกการระงับได้ กรุณาลองใหม่')
+    const parsed = parseApiError(error, 'ไม่สามารถยกเลิกการระงับได้ กรุณาลองใหม่')
+    swal.error(parsed.message, 'เกิดข้อผิดพลาด', parsed.detail)
   } finally {
     restoringId.value = null
   }

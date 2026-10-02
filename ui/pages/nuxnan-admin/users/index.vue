@@ -9,6 +9,7 @@ definePageMeta({
 
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase as string
+const swal = useSweetAlert()
 
 // ─── State ────────────────────────────────────────────────────
 const users       = ref<any[]>([])
@@ -193,7 +194,7 @@ const confirmVerify = async () => {
 
 const bulkVerify = async () => {
   if (!selectedUserIds.value.length) return
-  if (!confirm(`ยืนยันบัญชี ${selectedUserIds.value.length} คน?`)) return
+  if (!await swal.confirm(`ยืนยันบัญชีที่เลือก ${selectedUserIds.value.length} คน?`, 'ยืนยันบัญชีแบบกลุ่ม', { icon: 'question', confirmText: 'ยืนยัน' })) return
   try {
     const res: any = await $fetch(`${apiBase}/api/admin/users/bulk-verify`, {
       method: 'POST', 
@@ -428,7 +429,11 @@ const confirmDelete = async () => {
 
 // ─── Restore ──────────────────────────────────────────────────
 const restoreUser = async (user: any) => {
-  if (!confirm(`กู้คืนบัญชี "${user.name}" ใช่หรือไม่?\n\nหมายเหตุ: email/ชื่ออาจถูก anonymize ไปแล้ว ต้องอัพเดทเองหลังกู้คืน`)) return
+  if (!await swal.confirm(
+    `กู้คืนบัญชี <b>${user.name}</b> ใช่หรือไม่?<br><br><span style="font-size:.85em;opacity:.8">หมายเหตุ: email/ชื่ออาจถูก anonymize ไปแล้ว ต้องอัพเดทเองหลังกู้คืน</span>`,
+    'ยืนยันการกู้คืนบัญชี',
+    { icon: 'warning', confirmText: 'กู้คืน' }
+  )) return
   try {
     const res: any = await $fetch(
       `${apiBase}/api/admin/users/${user.id}/restore`,
