@@ -44,8 +44,34 @@ export const useSweetAlert = () => {
     })
   }
 
-  // Error alert
-  const error = (message: string, title: string = 'เกิดข้อผิดพลาด') => {
+  // Escape untrusted text before injecting into Swal html.
+  const escapeHtml = (value: string) =>
+    value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+
+  // Error alert. An optional `detail` renders a collapsible technical section
+  // (e.g. a raw server/SQL message) so users see a clean headline but can still
+  // inspect the cause.
+  const error = (message: string, title: string = 'เกิดข้อผิดพลาด', detail: string = '') => {
+    if (detail) {
+      return Swal.fire({
+        title,
+        html:
+          `<p style="margin:0">${escapeHtml(message)}</p>` +
+          `<details style="margin-top:.75rem;text-align:left">` +
+          `<summary style="cursor:pointer;font-size:.8rem;opacity:.75">ดูรายละเอียดทางเทคนิค</summary>` +
+          `<pre style="white-space:pre-wrap;word-break:break-word;font-size:.72rem;max-height:12rem;overflow:auto;margin-top:.5rem;padding:.5rem;border-radius:.5rem;background:rgba(127,127,127,.15)">${escapeHtml(detail)}</pre>` +
+          `</details>`,
+        icon: 'error',
+        confirmButtonText: 'ตกลง',
+        ...getDarkModeConfig()
+      })
+    }
+
     return Swal.fire({
       title,
       text: message,

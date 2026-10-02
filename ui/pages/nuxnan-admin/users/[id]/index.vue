@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import AlertMessage from '~/components/Common/AlertMessage.vue'
 
 const { parseApiError } = useApiError()
+const swal = useSweetAlert()
 
 definePageMeta({
   layout: 'nuxnan-admin-layout',
@@ -146,19 +146,19 @@ const suspendForm = ref<{ points: boolean; wallet: boolean; reason: string }>({
   reason: ''
 })
 const isSuspending = ref(false)
-const suspendMessage = ref('')
-const suspendError = ref('')
-const suspendErrorDetail = ref('')
 
 const submitSuspend = async () => {
-  suspendMessage.value = ''
-  suspendError.value = ''
-  suspendErrorDetail.value = ''
   if (!suspendForm.value.points && !suspendForm.value.wallet) {
-    suspendError.value = 'ต้องเลือกระงับอย่างน้อยหนึ่งระบบ'
+    swal.warning('ต้องเลือกระงับอย่างน้อยหนึ่งระบบ (แต้ม หรือ Wallet)')
     return
   }
-  if (!confirm('ยืนยันการระงับระบบแต้ม/Wallet ของผู้ใช้นี้?')) return
+
+  const confirmed = await swal.confirm(
+    'ยืนยันการระงับระบบแต้ม/Wallet ของผู้ใช้นี้?',
+    'ยืนยันการระงับบัญชี',
+    { icon: 'warning', isDanger: true, confirmText: 'ระงับบัญชี' }
+  )
+  if (!confirmed) return
 
   isSuspending.value = true
   try {
@@ -174,24 +174,25 @@ const submitSuspend = async () => {
     })
     if (response.success) {
       user.value = { ...user.value, ...response.data }
-      suspendMessage.value = 'ระงับบัญชีสำเร็จ'
       fetchSuspensionAudits()
+      swal.success('ระงับบัญชีเรียบร้อยแล้ว')
     }
   } catch (err: any) {
     console.error('Suspend failed:', err)
     const parsed = parseApiError(err, 'ไม่สามารถระงับบัญชีได้')
-    suspendError.value = parsed.message
-    suspendErrorDetail.value = parsed.detail
+    swal.error(parsed.message, 'เกิดข้อผิดพลาด', parsed.detail)
   } finally {
     isSuspending.value = false
   }
 }
 
 const submitRestore = async () => {
-  suspendMessage.value = ''
-  suspendError.value = ''
-  suspendErrorDetail.value = ''
-  if (!confirm('ยกเลิกการระงับระบบแต้ม/Wallet ของผู้ใช้นี้?')) return
+  const confirmed = await swal.confirm(
+    'ยกเลิกการระงับระบบแต้ม/Wallet ของผู้ใช้นี้?',
+    'ยืนยันการยกเลิกการระงับ',
+    { icon: 'question', confirmText: 'ยกเลิกการระงับ' }
+  )
+  if (!confirmed) return
 
   isSuspending.value = true
   try {
@@ -202,14 +203,13 @@ const submitRestore = async () => {
     })
     if (response.success) {
       user.value = { ...user.value, ...response.data }
-      suspendMessage.value = 'ยกเลิกการระงับสำเร็จ'
       fetchSuspensionAudits()
+      swal.success('ยกเลิกการระงับเรียบร้อยแล้ว')
     }
   } catch (err: any) {
     console.error('Restore failed:', err)
     const parsed = parseApiError(err, 'ไม่สามารถยกเลิกการระงับได้')
-    suspendError.value = parsed.message
-    suspendErrorDetail.value = parsed.detail
+    swal.error(parsed.message, 'เกิดข้อผิดพลาด', parsed.detail)
   } finally {
     isSuspending.value = false
   }
@@ -513,8 +513,6 @@ onMounted(() => {
             </button>
           </div>
 
-          <AlertMessage v-if="suspendMessage" type="success" :message="suspendMessage" class="mt-3" />
-          <AlertMessage v-if="suspendError" type="error" :message="suspendError" :detail="suspendErrorDetail" class="mt-3" />
 
           <!-- Audit history -->
           <div class="mt-5 pt-4 border-t border-slate-100 dark:border-slate-700">

@@ -21,7 +21,7 @@ const emit = defineEmits<{ (e: 'close'): void; (e: 'submitted'): void }>()
 
 const { submitReport, FRAUD_CATEGORY_OPTIONS } = useFraudReports()
 const { parseApiError } = useApiError()
-const toast = useToast()
+const swal = useSweetAlert()
 
 const category = ref<FraudCategory>('money_fraud')
 const description = ref('')
@@ -68,9 +68,9 @@ const submit = async () => {
       related_transaction_id: props.transactionId,
       evidence_note: evidenceNote.value.trim() || null,
     })
-    toast.success('ส่งคำร้องเรียนเรียบร้อยแล้ว ทีมงานจะตรวจสอบโดยเร็วที่สุด')
     emit('submitted')
     emit('close')
+    swal.success('ส่งคำร้องเรียนเรียบร้อยแล้ว ทีมงานจะตรวจสอบโดยเร็วที่สุด', 'ส่งคำร้องเรียนแล้ว')
   } catch (err: any) {
     errorMessage.value = parseApiError(err, 'ไม่สามารถส่งคำร้องเรียนได้ กรุณาลองใหม่').message
   } finally {

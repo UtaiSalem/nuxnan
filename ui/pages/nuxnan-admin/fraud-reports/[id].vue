@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import AlertMessage from '~/components/Common/AlertMessage.vue'
 
 definePageMeta({
   layout: 'nuxnan-admin-layout',
@@ -9,6 +8,7 @@ definePageMeta({
 })
 
 const { parseApiError } = useApiError()
+const swal = useSweetAlert()
 
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase as string
@@ -36,9 +36,6 @@ const isLoading = ref(true)
 const errorMessage = ref('')
 
 const adminNote = ref('')
-const actionMessage = ref('')
-const actionError = ref('')
-const actionErrorDetail = ref('')
 const isUpdatingStatus = ref(false)
 
 const suspendForm = ref({ points: true, wallet: true, reason: '' })
@@ -85,9 +82,6 @@ const fetchReport = async () => {
 }
 
 const updateStatus = async (status: string) => {
-  actionMessage.value = ''
-  actionError.value = ''
-  actionErrorDetail.value = ''
   isUpdatingStatus.value = true
   try {
     const response = await $fetch<any>(`${apiBase}/api/admin/fraud-reports/${reportId.value}/status`, {
@@ -96,27 +90,29 @@ const updateStatus = async (status: string) => {
       body: { status, admin_note: adminNote.value || undefined }
     })
     if (response.success) {
-      actionMessage.value = 'อัพเดทสถานะเรียบร้อยแล้ว'
       await fetchReport()
+      swal.success('อัพเดทสถานะคำร้องเรียนเรียบร้อยแล้ว')
     }
   } catch (error: any) {
     const parsed = parseApiError(error, 'ไม่สามารถอัพเดทสถานะได้')
-    actionError.value = parsed.message
-    actionErrorDetail.value = parsed.detail
+    swal.error(parsed.message, 'เกิดข้อผิดพลาด', parsed.detail)
   } finally {
     isUpdatingStatus.value = false
   }
 }
 
 const suspendAccount = async () => {
-  actionMessage.value = ''
-  actionError.value = ''
-  actionErrorDetail.value = ''
   if (!suspendForm.value.points && !suspendForm.value.wallet) {
-    actionError.value = 'ต้องเลือกระงับอย่างน้อยหนึ่งระบบ (แต้ม หรือ Wallet)'
+    swal.warning('ต้องเลือกระงับอย่างน้อยหนึ่งระบบ (แต้ม หรือ Wallet)')
     return
   }
-  if (!confirm(`ยืนยันระงับบัญชี "${userName(reportedUser.value)}" และปิดคำร้องเรียนนี้?`)) return
+
+  const confirmed = await swal.confirm(
+    `ระงับบัญชี <b>${userName(reportedUser.value)}</b> และปิดคำร้องเรียนนี้เป็น "ดำเนินการแล้ว"?`,
+    'ยืนยันการระงับบัญชี',
+    { icon: 'warning', isDanger: true, confirmText: 'ระงับบัญชี' }
+  )
+  if (!confirmed) return
 
   isSuspending.value = true
   try {
@@ -130,13 +126,12 @@ const suspendAccount = async () => {
       }
     })
     if (response.success) {
-      actionMessage.value = 'ระงับบัญชีและปิดคำร้องเรียนเรียบร้อยแล้ว'
       await fetchReport()
+      swal.success('ระงับบัญชีและปิดคำร้องเรียนเรียบร้อยแล้ว')
     }
   } catch (error: any) {
     const parsed = parseApiError(error, 'ไม่สามารถระงับบัญชีได้')
-    actionError.value = parsed.message
-    actionErrorDetail.value = parsed.detail
+    swal.error(parsed.message, 'เกิดข้อผิดพลาด', parsed.detail)
   } finally {
     isSuspending.value = false
   }
@@ -243,10 +238,6 @@ onMounted(fetchReport)
               <span class="text-slate-800 dark:text-white text-right">{{ formatDate(report.resolved_at) }}</span>
             </div>
           </div>
-
-          <!-- Action messages -->
-          <AlertMessage v-if="actionMessage" type="success" :message="actionMessage" />
-          <AlertMessage v-if="actionError" type="error" :message="actionError" :detail="actionErrorDetail" />
 
           <!-- Triage -->
           <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 shadow-hopeui border border-slate-100 dark:border-slate-700 space-y-3">
