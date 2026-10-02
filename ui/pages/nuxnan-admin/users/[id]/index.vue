@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
+import AlertMessage from '~/components/Common/AlertMessage.vue'
+
+const { parseApiError } = useApiError()
 
 definePageMeta({
   layout: 'nuxnan-admin-layout',
@@ -145,10 +148,12 @@ const suspendForm = ref<{ points: boolean; wallet: boolean; reason: string }>({
 const isSuspending = ref(false)
 const suspendMessage = ref('')
 const suspendError = ref('')
+const suspendErrorDetail = ref('')
 
 const submitSuspend = async () => {
   suspendMessage.value = ''
   suspendError.value = ''
+  suspendErrorDetail.value = ''
   if (!suspendForm.value.points && !suspendForm.value.wallet) {
     suspendError.value = 'ต้องเลือกระงับอย่างน้อยหนึ่งระบบ'
     return
@@ -174,7 +179,9 @@ const submitSuspend = async () => {
     }
   } catch (err: any) {
     console.error('Suspend failed:', err)
-    suspendError.value = err.data?.message || 'ไม่สามารถระงับบัญชีได้'
+    const parsed = parseApiError(err, 'ไม่สามารถระงับบัญชีได้')
+    suspendError.value = parsed.message
+    suspendErrorDetail.value = parsed.detail
   } finally {
     isSuspending.value = false
   }
@@ -183,6 +190,7 @@ const submitSuspend = async () => {
 const submitRestore = async () => {
   suspendMessage.value = ''
   suspendError.value = ''
+  suspendErrorDetail.value = ''
   if (!confirm('ยกเลิกการระงับระบบแต้ม/Wallet ของผู้ใช้นี้?')) return
 
   isSuspending.value = true
@@ -199,7 +207,9 @@ const submitRestore = async () => {
     }
   } catch (err: any) {
     console.error('Restore failed:', err)
-    suspendError.value = err.data?.message || 'ไม่สามารถยกเลิกการระงับได้'
+    const parsed = parseApiError(err, 'ไม่สามารถยกเลิกการระงับได้')
+    suspendError.value = parsed.message
+    suspendErrorDetail.value = parsed.detail
   } finally {
     isSuspending.value = false
   }
@@ -503,8 +513,8 @@ onMounted(() => {
             </button>
           </div>
 
-          <p v-if="suspendMessage" class="text-sm text-green-600 dark:text-green-400 mt-3">{{ suspendMessage }}</p>
-          <p v-if="suspendError" class="text-sm text-red-600 dark:text-red-400 mt-3">{{ suspendError }}</p>
+          <AlertMessage v-if="suspendMessage" type="success" :message="suspendMessage" class="mt-3" />
+          <AlertMessage v-if="suspendError" type="error" :message="suspendError" :detail="suspendErrorDetail" class="mt-3" />
 
           <!-- Audit history -->
           <div class="mt-5 pt-4 border-t border-slate-100 dark:border-slate-700">

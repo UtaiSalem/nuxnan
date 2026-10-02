@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { Icon } from '@iconify/vue'
+import AlertMessage from '~/components/Common/AlertMessage.vue'
 
 definePageMeta({
   layout: 'nuxnan-admin-layout',
   middleware: 'nuxnan-admin'
 })
+
+const { parseApiError } = useApiError()
 
 const config = useRuntimeConfig()
 const apiBase = config.public.apiBase as string
@@ -35,6 +38,7 @@ const errorMessage = ref('')
 const adminNote = ref('')
 const actionMessage = ref('')
 const actionError = ref('')
+const actionErrorDetail = ref('')
 const isUpdatingStatus = ref(false)
 
 const suspendForm = ref({ points: true, wallet: true, reason: '' })
@@ -74,7 +78,7 @@ const fetchReport = async () => {
     }
   } catch (error: any) {
     console.error('Failed to fetch report:', error)
-    errorMessage.value = error?.data?.message || 'ไม่สามารถโหลดคำร้องเรียนได้'
+    errorMessage.value = parseApiError(error, 'ไม่สามารถโหลดคำร้องเรียนได้').message
   } finally {
     isLoading.value = false
   }
@@ -83,6 +87,7 @@ const fetchReport = async () => {
 const updateStatus = async (status: string) => {
   actionMessage.value = ''
   actionError.value = ''
+  actionErrorDetail.value = ''
   isUpdatingStatus.value = true
   try {
     const response = await $fetch<any>(`${apiBase}/api/admin/fraud-reports/${reportId.value}/status`, {
@@ -95,7 +100,9 @@ const updateStatus = async (status: string) => {
       await fetchReport()
     }
   } catch (error: any) {
-    actionError.value = error?.data?.message || 'ไม่สามารถอัพเดทสถานะได้'
+    const parsed = parseApiError(error, 'ไม่สามารถอัพเดทสถานะได้')
+    actionError.value = parsed.message
+    actionErrorDetail.value = parsed.detail
   } finally {
     isUpdatingStatus.value = false
   }
@@ -104,6 +111,7 @@ const updateStatus = async (status: string) => {
 const suspendAccount = async () => {
   actionMessage.value = ''
   actionError.value = ''
+  actionErrorDetail.value = ''
   if (!suspendForm.value.points && !suspendForm.value.wallet) {
     actionError.value = 'ต้องเลือกระงับอย่างน้อยหนึ่งระบบ (แต้ม หรือ Wallet)'
     return
@@ -126,7 +134,9 @@ const suspendAccount = async () => {
       await fetchReport()
     }
   } catch (error: any) {
-    actionError.value = error?.data?.message || 'ไม่สามารถระงับบัญชีได้'
+    const parsed = parseApiError(error, 'ไม่สามารถระงับบัญชีได้')
+    actionError.value = parsed.message
+    actionErrorDetail.value = parsed.detail
   } finally {
     isSuspending.value = false
   }
@@ -235,8 +245,8 @@ onMounted(fetchReport)
           </div>
 
           <!-- Action messages -->
-          <div v-if="actionMessage" class="p-3 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm break-words">{{ actionMessage }}</div>
-          <div v-if="actionError" class="p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 text-sm break-words">{{ actionError }}</div>
+          <AlertMessage v-if="actionMessage" type="success" :message="actionMessage" />
+          <AlertMessage v-if="actionError" type="error" :message="actionError" :detail="actionErrorDetail" />
 
           <!-- Triage -->
           <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 shadow-hopeui border border-slate-100 dark:border-slate-700 space-y-3">

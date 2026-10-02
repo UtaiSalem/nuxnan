@@ -20,6 +20,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{ (e: 'close'): void; (e: 'submitted'): void }>()
 
 const { submitReport, FRAUD_CATEGORY_OPTIONS } = useFraudReports()
+const { parseApiError } = useApiError()
 const toast = useToast()
 
 const category = ref<FraudCategory>('money_fraud')
@@ -71,7 +72,7 @@ const submit = async () => {
     emit('submitted')
     emit('close')
   } catch (err: any) {
-    errorMessage.value = err?.data?.message || 'ไม่สามารถส่งคำร้องเรียนได้ กรุณาลองใหม่'
+    errorMessage.value = parseApiError(err, 'ไม่สามารถส่งคำร้องเรียนได้ กรุณาลองใหม่').message
   } finally {
     isSubmitting.value = false
   }
