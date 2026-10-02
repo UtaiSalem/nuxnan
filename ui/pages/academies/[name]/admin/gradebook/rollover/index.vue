@@ -385,7 +385,7 @@ async function handleCommit(confirmText: string) {
       return
     }
 
-    toast.error(getErrorMessage('ไม่สามารถ commit rollover ได้'))
+    swal.error(getErrorMessage('ไม่สามารถ commit rollover ได้'))
   } finally {
     isSubmittingCommit.value = false
   }
@@ -399,7 +399,7 @@ async function handleUndo() {
     resetWizard()
     toast.success('undo rollover สำเร็จแล้ว ระบบพากลับไป Step 1')
   } catch (error) {
-    toast.error(getErrorMessage('ไม่สามารถ undo rollover ได้'))
+    swal.error(getErrorMessage('ไม่สามารถ undo rollover ได้'))
   }
 }
 
