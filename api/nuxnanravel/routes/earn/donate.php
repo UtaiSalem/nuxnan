@@ -41,6 +41,7 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified'])->g
 Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified', 'plearnd_admin'])->prefix('/plearnd-admin/academy-withdrawals')->group(function () {
     Route::get('/', [AcademyPointWithdrawalAdminController::class, 'index']);
     Route::get('/{withdrawal}', [AcademyPointWithdrawalAdminController::class, 'show']);
+    Route::get('/{withdrawal}/source-of-funds', [AcademyPointWithdrawalAdminController::class, 'sourceOfFunds']);
     Route::patch('/{withdrawal}/review', [AcademyPointWithdrawalAdminController::class, 'review']);
     Route::patch('/{withdrawal}/approve', [AcademyPointWithdrawalAdminController::class, 'approve']);
     Route::patch('/{withdrawal}/reject', [AcademyPointWithdrawalAdminController::class, 'reject']);
@@ -59,6 +60,7 @@ Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified', 'pl
 Route::middleware(['auth:api', config('jetstream.auth_session'), 'verified', 'plearnd_admin'])->prefix('/plearnd-admin/course-withdrawals')->group(function () {
     Route::get('/', [CoursePointWithdrawalAdminController::class, 'index']);
     Route::get('/{withdrawal}', [CoursePointWithdrawalAdminController::class, 'show']);
+    Route::get('/{withdrawal}/source-of-funds', [CoursePointWithdrawalAdminController::class, 'sourceOfFunds']);
     Route::patch('/{withdrawal}/review', [CoursePointWithdrawalAdminController::class, 'review']);
     Route::patch('/{withdrawal}/approve', [CoursePointWithdrawalAdminController::class, 'approve']);
     Route::patch('/{withdrawal}/reject', [CoursePointWithdrawalAdminController::class, 'reject']);
