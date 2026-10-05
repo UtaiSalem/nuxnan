@@ -3,6 +3,7 @@ import { Icon } from '@iconify/vue'
 import BaseCard from '~/components/atoms/BaseCard.vue'
 import FeedPost from '~/components/play/feed/FeedPost.vue'
 import CreatePostBox from '~/components/play/feed/CreatePostBox.vue'
+import ReportAccountModal from '~/components/report/ReportAccountModal.vue'
 // Lazy load heavy components to reduce initial memory footprint
 const ProfileCompletionWidget = defineAsyncComponent(() => import('~/components/organisms/ProfileCompletionWidget.vue'))
 const FriendsList = defineAsyncComponent(() => import('~/components/profile/FriendsList.vue'))
@@ -32,6 +33,9 @@ const { sendFriendRequest, acceptFriendRequest, cancelFriendRequest, unfriend } 
 const authStore = useAuthStore()
 const toast = useToast()
 const swal = useSweetAlert()
+
+// Report fraudulent account
+const showReportModal = ref(false)
 
 // State
 const profile = ref<UserProfile | null>(null)
@@ -764,12 +768,21 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                     <span class="hidden sm:inline">{{ friendButtonConfig.text }}</span>
                   </button>
                   
-                  <button 
+                  <button
                     @click="handleMessage"
                     class="min-h-[44px] sm:min-h-0 px-5 py-2.5 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-white rounded-xl hover:bg-gray-300 dark:hover:bg-gray-700 transition-all flex items-center gap-2 font-bold"
                   >
                     <Icon icon="fluent:chat-24-regular" class="w-5 h-5" />
                     <span class="hidden sm:inline">ส่งข้อความ</span>
+                  </button>
+
+                  <button
+                    @click="showReportModal = true"
+                    title="ร้องเรียนบัญชีทุจริต"
+                    class="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 px-4 py-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/40 transition-all flex items-center justify-center gap-2 font-bold"
+                  >
+                    <Icon icon="fluent:shield-error-24-regular" class="w-5 h-5" />
+                    <span class="hidden sm:inline">ร้องเรียน</span>
                   </button>
                 </template>
                 
@@ -2085,6 +2098,14 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
         </button>
       </div>
     </div>
+
+    <!-- Report fraudulent account modal -->
+    <ReportAccountModal
+      :show="showReportModal"
+      :reported-user-id="profile?.user_id ?? null"
+      :reported-user-name="displayName"
+      @close="showReportModal = false"
+    />
   </div>
 </template>
 

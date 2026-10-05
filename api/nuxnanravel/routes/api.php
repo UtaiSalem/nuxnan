@@ -204,6 +204,7 @@ require __DIR__.'/earn/campaign.php';
 require __DIR__.'/earn/points-wallet.php';
 require __DIR__.'/earn/coupons.php';
 require __DIR__.'/earn/qr.php';
+require __DIR__.'/fraud-reports.php';
 require __DIR__.'/play/post.php';
 require __DIR__.'/play/game.php';
 require __DIR__.'/play/shares.php';

@@ -8,6 +8,7 @@ definePageMeta({
 
 const api = useApi()
 const toast = useToast()
+const swal = useSweetAlert()
 const authStore = useAuthStore()
 const router = useRouter()
 
@@ -77,10 +78,10 @@ const createCoupon = async () => {
         authStore.setPoints(remainingPoints.value)
       }
     } else {
-      toast.error(response.message || 'ไม่สามารถสร้างคูปองได้')
+      swal.error(response.message || 'ไม่สามารถสร้างคูปองได้')
     }
   } catch (error: any) {
-    toast.error(error.message || 'เกิดข้อผิดพลาด')
+    swal.error(error.message || 'เกิดข้อผิดพลาด')
   } finally {
     isLoading.value = false
   }

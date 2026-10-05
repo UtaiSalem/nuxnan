@@ -141,6 +141,7 @@ import jsQR from 'jsqr'
 
 const api = useApi()
 const toast = useToast()
+const swal = useSweetAlert()
 
 const method = ref<'scan' | 'code'>('code')
 const couponCode = ref<string>('')
@@ -271,14 +272,14 @@ async function redeemCoupon() {
       // Clear input after successful redemption
       couponCode.value = ''
     } else {
-      toast.error(response.message || 'ไม่สามารถรับคูปองได้')
+      swal.error(response.message || 'ไม่สามารถรับคูปองได้')
     }
   } catch (err: any) {
     result.value = {
       success: false,
       message: err.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่'
     }
-    toast.error(result.value.message)
+    swal.error(result.value.message)
   } finally {
     isLoading.value = false
   }
