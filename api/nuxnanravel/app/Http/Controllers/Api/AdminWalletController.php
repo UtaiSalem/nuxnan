@@ -508,6 +508,9 @@ class AdminWalletController extends Controller
 
         $items = collect($transactions->items())->map(function (PointsTransaction $t) use ($people) {
             $row = $t->toArray();
+            $row = array_merge($row, $this->reversalInfo($t->metadata ?? []));
+            $row['reversible'] = false;
+
             if (in_array($t->transaction_type, ['transfer_in', 'transfer_out'], true)) {
                 $other = $t->source_id ? $people->get($t->source_id) : null;
                 $row['direction'] = $t->transaction_type === 'transfer_in' ? 'in' : 'out';
@@ -517,6 +520,15 @@ class AdminWalletController extends Controller
                     'username' => $other->username,
                     'avatar' => $other->profile_photo_url ?? $other->avatar ?? null,
                 ] : null;
+
+                // Only a genuine incoming peer transfer can be clawed back, and
+                // only once. A reversal-correction row (source_type fraud_reversal)
+                // is never itself reversible.
+                $row['reversible'] = $t->transaction_type === 'transfer_in'
+                    && $t->source_id
+                    && $t->status === 'completed'
+                    && ($t->source_type ?? null) !== 'fraud_reversal'
+                    && ! $row['reversed'];
             }
 
             return $row;
@@ -786,9 +798,9 @@ class AdminWalletController extends Controller
      */
     public function userTransactions(Request $request, int $userId): JsonResponse
     {
-        $adminUser = Auth::user();
+        $admin = Auth::user();
 
-        if (! $adminUser || ! $adminUser->isSuperAdmin()) {
+        if (! $this->isAdminUser($admin)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -806,9 +818,14 @@ class AdminWalletController extends Controller
 
         $query = WalletTransaction::where('user_id', $userId);
 
-        // Filter by type
-        if ($request->has('type') && $request->type) {
-            $query->where('transaction_type', $request->type);
+        $type = $request->input('type');
+        if ($type === 'transfers') {
+            // Shortcut: peer money transfers only (the fraud lens). Both incoming
+            // and outgoing live under the single 'transfer' type; direction is
+            // derived from the metadata counterparty below.
+            $query->where('transaction_type', 'transfer');
+        } elseif ($type) {
+            $query->where('transaction_type', $type);
         }
 
         // Filter by date range
@@ -820,17 +837,65 @@ class AdminWalletController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        // Pagination
-        $perPage = $request->input('per_page', 20);
-        $page = $request->input('page', 1);
+        // Cap page size so a hand-crafted request cannot pull an unbounded ledger.
+        $perPage = min(max((int) $request->input('per_page', 20), 1), 100);
+        $page = max((int) $request->input('page', 1), 1);
 
         $transactions = $query->orderBy('created_at', 'desc')
             ->paginate($perPage, ['*'], 'page', $page);
 
+        // Resolve every transfer counterparty (metadata from/to user id) at once.
+        $counterpartyIds = collect($transactions->items())
+            ->filter(fn ($t) => $t->transaction_type === 'transfer')
+            ->map(fn ($t) => ($t->metadata ?? [])['from_user_id'] ?? ($t->metadata ?? [])['to_user_id'] ?? null)
+            ->filter()->unique()->values();
+        $people = $counterpartyIds->isEmpty()
+            ? collect()
+            : User::whereIn('id', $counterpartyIds)->get()->keyBy('id');
+
+        $items = collect($transactions->items())->map(function (WalletTransaction $t) use ($people) {
+            $row = $t->toArray();
+            $meta = $t->metadata ?? [];
+            $row = array_merge($row, $this->reversalInfo($meta));
+            $row['reversible'] = false;
+
+            if ($t->transaction_type === 'transfer') {
+                $isIncoming = isset($meta['from_user_id']);
+                $otherId = $meta['from_user_id'] ?? $meta['to_user_id'] ?? null;
+                $other = $otherId ? $people->get($otherId) : null;
+                $row['direction'] = $isIncoming ? 'in' : 'out';
+                $row['counterparty'] = $other ? [
+                    'id' => $other->id,
+                    'name' => $other->name,
+                    'username' => $other->username,
+                    'avatar' => $other->profile_photo_url ?? $other->avatar ?? null,
+                ] : null;
+
+                // Only a genuine incoming peer transfer can be clawed back, once.
+                // A reversal-correction row (metadata.fraud_reversal) is excluded.
+                $row['reversible'] = $isIncoming
+                    && $t->status === 'completed'
+                    && empty($meta['fraud_reversal'])
+                    && ! $row['reversed'];
+            }
+
+            return $row;
+        });
+
+        app(AuditLogService::class)->log(
+            'user.wallet_transactions_viewed',
+            $user,
+            null,
+            null,
+            'wallet',
+            ['admin_id' => $admin->id, 'target_user_id' => $userId, 'type' => $type]
+        );
+
         return response()->json([
             'success' => true,
             'data' => [
-                'transactions' => $transactions->items(),
+                'user' => ['id' => $user->id, 'name' => $user->name, 'username' => $user->username, 'wallet' => $user->wallet],
+                'transactions' => $items,
                 'pagination' => [
                     'current_page' => $transactions->currentPage(),
                     'total_pages' => $transactions->lastPage(),
@@ -839,6 +904,26 @@ class AdminWalletController extends Controller
                 ],
             ],
         ]);
+    }
+
+    /**
+     * Normalize the fraud-reversal markers stored on a transfer's metadata into
+     * a stable shape the admin UI can render (reversed flag + reversal detail).
+     */
+    private function reversalInfo(array $metadata): array
+    {
+        $reversed = ($metadata['fraud_reversed_at'] ?? null) !== null;
+
+        return [
+            'reversed' => $reversed,
+            'reversal' => $reversed ? [
+                'at' => $metadata['fraud_reversed_at'] ?? null,
+                'amount' => $metadata['fraud_reversal_amount'] ?? null,
+                'shortfall' => $metadata['fraud_reversal_shortfall'] ?? null,
+                'reason' => $metadata['fraud_reversal_reason'] ?? null,
+                'by' => $metadata['fraud_reversed_by'] ?? null,
+            ] : null,
+        ];
     }
 
     /**

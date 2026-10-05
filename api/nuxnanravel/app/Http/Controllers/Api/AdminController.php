@@ -350,7 +350,8 @@ class AdminController extends Controller
                 'personal_code' => $user->personal_code,
                 'reference_code' => $user->reference_code,
                 'wallet' => $user->wallet ?? 0,
-                'points' => $user->points ?? 0,
+                // Points balance lives on the `pp` column (there is no `points` column/accessor).
+                'points' => $user->pp ?? 0,
                 'courses_count' => $user->courses()->count() ?? 0,
                 'login_count' => $user->login_count ?? 0,
                 'points_suspended' => (bool) $user->points_suspended,
