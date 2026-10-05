@@ -40,12 +40,17 @@ class AdminFraudController extends Controller
         $data = $request->validate(['reason' => 'required|string|max:500']);
 
         try {
-            $result = $this->service->reversePointsTransfer($tx, $admin, $data['reason']);
+            // One endpoint handles both peer transfers and intra-user conversions.
+            $result = $tx->transaction_type === 'conversion'
+                ? $this->service->reverseConversion($tx, $admin, $data['reason'])
+                : $this->service->reversePointsTransfer($tx, $admin, $data['reason']);
         } catch (\DomainException $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }
 
-        return response()->json(['success' => true, 'message' => 'ย้อนรายการโอนแต้มสำเร็จ', 'data' => $result]);
+        $message = ($result['kind'] ?? null) === 'conversion' ? 'ย้อนรายการแปลงแต้ม/เงินสำเร็จ' : 'ย้อนรายการโอนแต้มสำเร็จ';
+
+        return response()->json(['success' => true, 'message' => $message, 'data' => $result]);
     }
 
     public function reverseWalletTransaction(Request $request, int $id): JsonResponse
@@ -63,12 +68,17 @@ class AdminFraudController extends Controller
         $data = $request->validate(['reason' => 'required|string|max:500']);
 
         try {
-            $result = $this->service->reverseWalletTransfer($tx, $admin, $data['reason']);
+            // One endpoint handles both peer transfers and intra-user conversions.
+            $result = $tx->transaction_type === 'conversion'
+                ? $this->service->reverseConversion($tx, $admin, $data['reason'])
+                : $this->service->reverseWalletTransfer($tx, $admin, $data['reason']);
         } catch (\DomainException $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }
 
-        return response()->json(['success' => true, 'message' => 'ย้อนรายการโอนเงินสำเร็จ', 'data' => $result]);
+        $message = ($result['kind'] ?? null) === 'conversion' ? 'ย้อนรายการแปลงแต้ม/เงินสำเร็จ' : 'ย้อนรายการโอนเงินสำเร็จ';
+
+        return response()->json(['success' => true, 'message' => $message, 'data' => $result]);
     }
 
     public function freeze(Request $request, int $userId): JsonResponse

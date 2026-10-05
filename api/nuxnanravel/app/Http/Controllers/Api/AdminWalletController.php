@@ -12,6 +12,7 @@ use App\Services\AuditLogService;
 use App\Services\WalletService;
 use App\Services\WithdrawalFundSourceService;
 use App\Support\BankAccountNameMatcher;
+use App\Support\TransactionReversal;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -507,7 +508,8 @@ class AdminWalletController extends Controller
             : User::whereIn('id', $counterpartyIds)->get()->keyBy('id');
 
         $items = collect($transactions->items())->map(function (PointsTransaction $t) use ($people) {
-            $row = $t->toArray();
+            $row = array_merge($t->toArray(), TransactionReversal::annotatePoints($t));
+
             if (in_array($t->transaction_type, ['transfer_in', 'transfer_out'], true)) {
                 $other = $t->source_id ? $people->get($t->source_id) : null;
                 $row['direction'] = $t->transaction_type === 'transfer_in' ? 'in' : 'out';
@@ -786,9 +788,9 @@ class AdminWalletController extends Controller
      */
     public function userTransactions(Request $request, int $userId): JsonResponse
     {
-        $adminUser = Auth::user();
+        $admin = Auth::user();
 
-        if (! $adminUser || ! $adminUser->isSuperAdmin()) {
+        if (! $this->isAdminUser($admin)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -806,9 +808,14 @@ class AdminWalletController extends Controller
 
         $query = WalletTransaction::where('user_id', $userId);
 
-        // Filter by type
-        if ($request->has('type') && $request->type) {
-            $query->where('transaction_type', $request->type);
+        $type = $request->input('type');
+        if ($type === 'transfers') {
+            // Shortcut: peer money transfers only (the fraud lens). Both incoming
+            // and outgoing live under the single 'transfer' type; direction is
+            // derived from the metadata counterparty below.
+            $query->where('transaction_type', 'transfer');
+        } elseif ($type) {
+            $query->where('transaction_type', $type);
         }
 
         // Filter by date range
@@ -820,17 +827,56 @@ class AdminWalletController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        // Pagination
-        $perPage = $request->input('per_page', 20);
-        $page = $request->input('page', 1);
+        // Cap page size so a hand-crafted request cannot pull an unbounded ledger.
+        $perPage = min(max((int) $request->input('per_page', 20), 1), 100);
+        $page = max((int) $request->input('page', 1), 1);
 
         $transactions = $query->orderBy('created_at', 'desc')
             ->paginate($perPage, ['*'], 'page', $page);
 
+        // Resolve every transfer counterparty (metadata from/to user id) at once.
+        $counterpartyIds = collect($transactions->items())
+            ->filter(fn ($t) => $t->transaction_type === 'transfer')
+            ->map(fn ($t) => ($t->metadata ?? [])['from_user_id'] ?? ($t->metadata ?? [])['to_user_id'] ?? null)
+            ->filter()->unique()->values();
+        $people = $counterpartyIds->isEmpty()
+            ? collect()
+            : User::whereIn('id', $counterpartyIds)->get()->keyBy('id');
+
+        $items = collect($transactions->items())->map(function (WalletTransaction $t) use ($people) {
+            $meta = $t->metadata ?? [];
+            $row = array_merge($t->toArray(), TransactionReversal::annotateWallet($t));
+
+            if ($t->transaction_type === 'transfer') {
+                $isIncoming = isset($meta['from_user_id']);
+                $otherId = $meta['from_user_id'] ?? $meta['to_user_id'] ?? null;
+                $other = $otherId ? $people->get($otherId) : null;
+                $row['direction'] = $isIncoming ? 'in' : 'out';
+                $row['counterparty'] = $other ? [
+                    'id' => $other->id,
+                    'name' => $other->name,
+                    'username' => $other->username,
+                    'avatar' => $other->profile_photo_url ?? $other->avatar ?? null,
+                ] : null;
+            }
+
+            return $row;
+        });
+
+        app(AuditLogService::class)->log(
+            'user.wallet_transactions_viewed',
+            $user,
+            null,
+            null,
+            'wallet',
+            ['admin_id' => $admin->id, 'target_user_id' => $userId, 'type' => $type]
+        );
+
         return response()->json([
             'success' => true,
             'data' => [
-                'transactions' => $transactions->items(),
+                'user' => ['id' => $user->id, 'name' => $user->name, 'username' => $user->username, 'wallet' => $user->wallet],
+                'transactions' => $items,
                 'pagination' => [
                     'current_page' => $transactions->currentPage(),
                     'total_pages' => $transactions->lastPage(),

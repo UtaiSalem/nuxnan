@@ -24,6 +24,7 @@ use App\Models\PointsTransaction;
 use App\Models\User;
 use App\Models\WalletTransaction;
 use App\Services\PointsService;
+use App\Support\TransactionReversal;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -672,6 +673,15 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
         $transactions = $query->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 20));
 
+        // Flag which rows a super admin can still cancel (transfer / conversion).
+        $transactions->getCollection()->transform(function (PointsTransaction $t) {
+            foreach (TransactionReversal::annotatePoints($t) as $key => $value) {
+                $t->setAttribute($key, $value);
+            }
+
+            return $t;
+        });
+
         // Summary across all point transactions (unaffected by the filters above).
         // Earned/spent totals count only completed transactions so that
         // pending / failed / cancelled records do not inflate the figures.
@@ -717,6 +727,15 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
         $transactions = $query->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 20));
 
+        // Flag which rows a super admin can still cancel (transfer / conversion).
+        $transactions->getCollection()->transform(function (WalletTransaction $t) {
+            foreach (TransactionReversal::annotateWallet($t) as $key => $value) {
+                $t->setAttribute($key, $value);
+            }
+
+            return $t;
+        });
+
         return response()->json(['success' => true, 'data' => $transactions]);
     })->name('admin.wallet-transactions.index');
 
@@ -761,6 +780,7 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
         Route::get('/withdrawals/{id}/proof', [AdminWalletController::class, 'downloadWithdrawalProof'])->whereNumber('id')->name('admin.wallet.withdrawals.proof');
         Route::get('/withdrawals/{id}/source-of-funds', [AdminWalletController::class, 'sourceOfFunds'])->whereNumber('id')->name('admin.wallet.withdrawals.source-of-funds');
         Route::get('/users/{userId}/points-transactions', [AdminWalletController::class, 'userPointsTransactions'])->whereNumber('userId')->name('admin.wallet.user-points-transactions');
+        Route::get('/users/{userId}/wallet-transactions', [AdminWalletController::class, 'userTransactions'])->whereNumber('userId')->name('admin.wallet.user-wallet-transactions');
         Route::post('/withdrawals/{id}/approve', [AdminWalletController::class, 'approveWithdrawal'])->name('admin.wallet.withdrawals.approve');
         Route::post('/withdrawals/{id}/reject', [AdminWalletController::class, 'rejectWithdrawal'])->name('admin.wallet.withdrawals.reject');
         Route::post('/withdrawals/{id}/process', [AdminWalletController::class, 'processWithdrawal'])->name('admin.wallet.withdrawals.process');
