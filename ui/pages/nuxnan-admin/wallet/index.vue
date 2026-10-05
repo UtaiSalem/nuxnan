@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 
 definePageMeta({
@@ -19,6 +19,18 @@ const selectedType = ref('all')
 const currentPage = ref(1)
 const totalPages = ref(1)
 const selectedTransaction = ref<any>(null)
+
+// Cancel / claw back a transfer or conversion (super admin only; backend enforces)
+const authStore = useAuthStore()
+const canReverse = computed(() => !!authStore.user?.is_super_admin)
+const { reverse, reversingId } = useReverseTransaction()
+const reverseTx = (tx: any) => reverse('wallet', tx, async () => {
+  await fetchTransactions()
+  // keep the open detail modal (if any) in sync after a reversal
+  if (selectedTransaction.value) {
+    selectedTransaction.value = walletTransactions.value.find((t: any) => t.id === selectedTransaction.value.id) || null
+  }
+})
 
 // Summary stats
 const summary = ref({
@@ -335,14 +347,37 @@ watch(selectedType, () => {
               </td>
               <td class="px-6 py-4 text-right text-slate-500">{{ formatTransactionDate(tx.created_at || tx.date) }}</td>
               <td class="px-6 py-4 text-right">
-                <button
-                  type="button"
-                  aria-label="ดูรายละเอียดธุรกรรม"
-                  @click="openTransaction(tx)"
-                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-slate-500 hover:text-hopeui-primary-600 hover:bg-hopeui-primary-100 dark:hover:bg-hopeui-primary-900/30 rounded-lg transition-colors"
-                >
-                  <Icon icon="fluent:eye-24-regular" class="w-5 h-5" />
-                </button>
+                <div class="inline-flex items-center justify-end gap-1.5">
+                  <button
+                    v-if="canReverse && tx.reversible"
+                    type="button"
+                    @click="reverseTx(tx)"
+                    :disabled="reversingId === tx.id"
+                    class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1.5 px-3 py-2 sm:py-1.5 text-xs font-medium bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg transition-colors whitespace-nowrap"
+                  >
+                    <Icon
+                      :icon="reversingId === tx.id ? 'fluent:spinner-ios-20-regular' : 'fluent:arrow-undo-24-regular'"
+                      class="w-4 h-4"
+                      :class="reversingId === tx.id ? 'animate-spin' : ''"
+                    />
+                    {{ tx.reversal_kind === 'conversion' ? 'ยกเลิกการแปลง' : 'ยกเลิก/ดึงคืน' }}
+                  </button>
+                  <span
+                    v-else-if="tx.reversed"
+                    class="inline-flex items-center gap-1 text-xs text-slate-400 whitespace-nowrap"
+                  >
+                    <Icon icon="fluent:arrow-undo-24-regular" class="w-3.5 h-3.5" />
+                    ย้อนแล้ว
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="ดูรายละเอียดธุรกรรม"
+                    @click="openTransaction(tx)"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-slate-500 hover:text-hopeui-primary-600 hover:bg-hopeui-primary-100 dark:hover:bg-hopeui-primary-900/30 rounded-lg transition-colors"
+                  >
+                    <Icon icon="fluent:eye-24-regular" class="w-5 h-5" />
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>

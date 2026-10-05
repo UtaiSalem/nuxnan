@@ -12,6 +12,7 @@ use App\Services\AuditLogService;
 use App\Services\WalletService;
 use App\Services\WithdrawalFundSourceService;
 use App\Support\BankAccountNameMatcher;
+use App\Support\TransactionReversal;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -507,9 +508,7 @@ class AdminWalletController extends Controller
             : User::whereIn('id', $counterpartyIds)->get()->keyBy('id');
 
         $items = collect($transactions->items())->map(function (PointsTransaction $t) use ($people) {
-            $row = $t->toArray();
-            $row = array_merge($row, $this->reversalInfo($t->metadata ?? []));
-            $row['reversible'] = false;
+            $row = array_merge($t->toArray(), TransactionReversal::annotatePoints($t));
 
             if (in_array($t->transaction_type, ['transfer_in', 'transfer_out'], true)) {
                 $other = $t->source_id ? $people->get($t->source_id) : null;
@@ -520,15 +519,6 @@ class AdminWalletController extends Controller
                     'username' => $other->username,
                     'avatar' => $other->profile_photo_url ?? $other->avatar ?? null,
                 ] : null;
-
-                // Only a genuine incoming peer transfer can be clawed back, and
-                // only once. A reversal-correction row (source_type fraud_reversal)
-                // is never itself reversible.
-                $row['reversible'] = $t->transaction_type === 'transfer_in'
-                    && $t->source_id
-                    && $t->status === 'completed'
-                    && ($t->source_type ?? null) !== 'fraud_reversal'
-                    && ! $row['reversed'];
             }
 
             return $row;
@@ -854,10 +844,8 @@ class AdminWalletController extends Controller
             : User::whereIn('id', $counterpartyIds)->get()->keyBy('id');
 
         $items = collect($transactions->items())->map(function (WalletTransaction $t) use ($people) {
-            $row = $t->toArray();
             $meta = $t->metadata ?? [];
-            $row = array_merge($row, $this->reversalInfo($meta));
-            $row['reversible'] = false;
+            $row = array_merge($t->toArray(), TransactionReversal::annotateWallet($t));
 
             if ($t->transaction_type === 'transfer') {
                 $isIncoming = isset($meta['from_user_id']);
@@ -870,13 +858,6 @@ class AdminWalletController extends Controller
                     'username' => $other->username,
                     'avatar' => $other->profile_photo_url ?? $other->avatar ?? null,
                 ] : null;
-
-                // Only a genuine incoming peer transfer can be clawed back, once.
-                // A reversal-correction row (metadata.fraud_reversal) is excluded.
-                $row['reversible'] = $isIncoming
-                    && $t->status === 'completed'
-                    && empty($meta['fraud_reversal'])
-                    && ! $row['reversed'];
             }
 
             return $row;
@@ -904,26 +885,6 @@ class AdminWalletController extends Controller
                 ],
             ],
         ]);
-    }
-
-    /**
-     * Normalize the fraud-reversal markers stored on a transfer's metadata into
-     * a stable shape the admin UI can render (reversed flag + reversal detail).
-     */
-    private function reversalInfo(array $metadata): array
-    {
-        $reversed = ($metadata['fraud_reversed_at'] ?? null) !== null;
-
-        return [
-            'reversed' => $reversed,
-            'reversal' => $reversed ? [
-                'at' => $metadata['fraud_reversed_at'] ?? null,
-                'amount' => $metadata['fraud_reversal_amount'] ?? null,
-                'shortfall' => $metadata['fraud_reversal_shortfall'] ?? null,
-                'reason' => $metadata['fraud_reversal_reason'] ?? null,
-                'by' => $metadata['fraud_reversed_by'] ?? null,
-            ] : null,
-        ];
     }
 
     /**

@@ -30,6 +30,9 @@ interface PointsTransaction {
   description?: string | null
   status: string
   created_at: string
+  reversible?: boolean
+  reversed?: boolean
+  reversal_kind?: string | null
 }
 
 interface Summary {
@@ -51,6 +54,12 @@ const selectedStatus = ref('all')
 const currentPage = ref(1)
 const totalPages = ref(1)
 const perPage = ref(20)
+
+// Cancel / claw back a transfer or conversion (super admin only; backend enforces)
+const authStore = useAuthStore()
+const canReverse = computed(() => !!authStore.user?.is_super_admin)
+const { reverse, reversingId } = useReverseTransaction()
+const reverseTx = (tx: PointsTransaction) => reverse('points', tx, fetchPointsTransactions)
 
 // Award / adjust points modal
 const showAwardModal = ref(false)
@@ -483,6 +492,7 @@ onMounted(() => {
               <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap">รายละเอียด</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap">สถานะ</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap">วันที่</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap">จัดการ</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
@@ -506,6 +516,29 @@ onMounted(() => {
                 </span>
               </td>
               <td class="px-4 py-3 text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">{{ formatDate(tx.created_at) }}</td>
+              <td class="px-4 py-3 text-right whitespace-nowrap">
+                <button
+                  v-if="canReverse && tx.reversible"
+                  @click="reverseTx(tx)"
+                  :disabled="reversingId === tx.id"
+                  class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-1.5 px-3 py-2 sm:py-1.5 text-xs font-medium bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg transition-colors"
+                >
+                  <Icon
+                    :icon="reversingId === tx.id ? 'fluent:spinner-ios-20-regular' : 'fluent:arrow-undo-24-regular'"
+                    class="w-4 h-4"
+                    :class="reversingId === tx.id ? 'animate-spin' : ''"
+                  />
+                  {{ tx.reversal_kind === 'conversion' ? 'ยกเลิกการแปลง' : 'ยกเลิก/ดึงคืน' }}
+                </button>
+                <span
+                  v-else-if="tx.reversed"
+                  class="inline-flex items-center gap-1 text-xs text-slate-400"
+                >
+                  <Icon icon="fluent:arrow-undo-24-regular" class="w-3.5 h-3.5" />
+                  ย้อนแล้ว
+                </span>
+                <span v-else class="text-xs text-slate-300 dark:text-slate-600">—</span>
+              </td>
             </tr>
           </tbody>
         </table>
