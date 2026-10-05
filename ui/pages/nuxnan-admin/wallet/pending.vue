@@ -49,6 +49,135 @@ const proofPreviewUrl = ref('')
 // Copy feedback
 const copiedField = ref('')
 
+// Source-of-funds (fraud trace) for the withdrawal under review
+const fundSource = ref<any>(null)
+const isLoadingFundSource = ref(false)
+const fundSourceError = ref('')
+const showFundSourceDetails = ref(false)
+
+// User points-transfer history (admin fraud lens)
+const showPointsModal = ref(false)
+const pointsUser = ref<any>(null)
+const pointsTx = ref<any[]>([])
+const pointsLoading = ref(false)
+const pointsError = ref('')
+const pointsFilter = ref<'transfers' | 'all'>('transfers')
+
+const openPointsHistory = (user: any) => {
+  pointsUser.value = user
+  pointsFilter.value = 'transfers'
+  showPointsModal.value = true
+  fetchPointsHistory()
+}
+
+const fetchPointsHistory = async () => {
+  if (!pointsUser.value?.id) return
+  pointsLoading.value = true
+  pointsError.value = ''
+  try {
+    const token = useCookie('token')
+    const response = await $fetch(`${apiBase}/api/admin/wallet/users/${pointsUser.value.id}/points-transactions`, {
+      params: { type: pointsFilter.value === 'transfers' ? 'transfers' : undefined, per_page: 50 },
+      headers: { Authorization: `Bearer ${token.value}` }
+    })
+    if (response.success) {
+      pointsTx.value = response.data.transactions
+      pointsUser.value = { ...pointsUser.value, ...response.data.user }
+    } else {
+      pointsError.value = response.message || 'ไม่สามารถโหลดประวัติได้'
+    }
+  } catch (error: any) {
+    console.error('Failed to fetch points history:', error)
+    pointsError.value = error.data?.message || error.message || 'เกิดข้อผิดพลาดในการโหลดประวัติ'
+  } finally {
+    pointsLoading.value = false
+  }
+}
+
+const setPointsFilter = (f: 'transfers' | 'all') => {
+  if (pointsFilter.value === f) return
+  pointsFilter.value = f
+  fetchPointsHistory()
+}
+
+const POINTS_TYPE_LABELS: Record<string, string> = {
+  transfer_in: 'รับโอนแต้ม', transfer_out: 'โอนแต้มออก', earn: 'ได้รับแต้ม', spend: 'ใช้แต้ม',
+  conversion: 'แปลงแต้ม', refund: 'คืนแต้ม', admin_adjust: 'ปรับโดยแอดมิน'
+}
+const pointsTypeLabel = (t: string) => POINTS_TYPE_LABELS[t] || t
+const formatPointsAmount = (n: any) => {
+  const num = typeof n === 'string' ? parseFloat(n) : n
+  return new Intl.NumberFormat('th-TH').format(num || 0) + ' แต้ม'
+}
+
+// --- Fraud remediation: reverse transfer + freeze/unfreeze wallets ---
+const fraudBusy = ref(false)
+
+// Live freeze state of the user under review (synced from the loaded details)
+const pointsFrozen = computed(() => !!selectedRequestDetails.value?.user?.points_frozen_at)
+const walletFrozen = computed(() => !!selectedRequestDetails.value?.user?.wallet_frozen_at)
+
+const postFraud = async (path: string, body: Record<string, any>) => {
+  const token = useCookie('token')
+  return await $fetch(`${apiBase}/api/admin/wallet/${path}`, {
+    method: 'POST', body, headers: { Authorization: `Bearer ${token.value}` }
+  })
+}
+
+// Reverse a fraudulent incoming points transfer (claws back up to available balance)
+const reversePointsTransfer = async (tx: any) => {
+  if (fraudBusy.value) return
+  const reason = window.prompt('ยืนยันการ "ยกเลิก + โอนแต้มคืน" ของรายการนี้\nระบบจะดึงแต้มคืนจากผู้รับเท่าที่มี แล้วคืนให้ผู้โอน\n\nกรุณาระบุเหตุผล:')
+  if (!reason || !reason.trim()) return
+  fraudBusy.value = true
+  try {
+    const res = await postFraud(`points-transactions/${tx.id}/reverse`, { reason: reason.trim() })
+    if (res.success) {
+      const d = res.data
+      pointsError.value = ''
+      message.value = `ย้อนรายการสำเร็จ: คืน ${formatPointsAmount(d.reversed)}${d.shortfall > 0 ? ` (ขาด ${formatPointsAmount(d.shortfall)} เพราะถูกใช้ไปแล้ว)` : ''}`
+      await fetchPointsHistory()
+    } else {
+      pointsError.value = res.message || 'ย้อนรายการไม่สำเร็จ'
+    }
+  } catch (error: any) {
+    pointsError.value = error.data?.message || error.message || 'ย้อนรายการไม่สำเร็จ'
+  } finally {
+    fraudBusy.value = false
+  }
+}
+
+// Freeze or unfreeze a wallet (scope: 'points' | 'wallet')
+const toggleFreeze = async (scope: 'points' | 'wallet') => {
+  if (fraudBusy.value || !selectedRequestDetails.value?.user?.id) return
+  const userId = selectedRequestDetails.value.user.id
+  const currentlyFrozen = scope === 'points' ? pointsFrozen.value : walletFrozen.value
+  const label = scope === 'points' ? 'กระเป๋าสะสมแต้ม' : 'กระเป๋าเงิน (wallet)'
+  let body: Record<string, any> = { scope }
+  if (currentlyFrozen) {
+    if (!window.confirm(`ปลดระงับ${label}ของผู้ใช้นี้?`)) return
+  } else {
+    const reason = window.prompt(`ระงับ${label}ของผู้ใช้นี้ชั่วคราว (ผู้ใช้จะโอน/ถอน/แปลงไม่ได้จนกว่าจะปลด)\n\nกรุณาระบุเหตุผล:`)
+    if (!reason || !reason.trim()) return
+    body = { scope, reason: reason.trim() }
+  }
+  fraudBusy.value = true
+  try {
+    const res = await postFraud(`users/${userId}/${currentlyFrozen ? 'unfreeze' : 'freeze'}`, body)
+    if (res.success && selectedRequestDetails.value?.user) {
+      selectedRequestDetails.value.user.points_frozen_at = res.data.points_frozen_at
+      selectedRequestDetails.value.user.wallet_frozen_at = res.data.wallet_frozen_at
+      message.value = currentlyFrozen ? `ปลดระงับ${label}แล้ว` : `ระงับ${label}แล้ว`
+    } else if (!res.success) {
+      errorMessage.value = res.message || 'ดำเนินการไม่สำเร็จ'
+    }
+  } catch (error: any) {
+    errorMessage.value = error.data?.message || error.message || 'ดำเนินการไม่สำเร็จ'
+  } finally {
+    fraudBusy.value = false
+  }
+}
+
 // Fetch pending withdrawals (pending + under_review)
 const fetchPendingWithdrawals = async () => {
   try {
@@ -130,6 +259,9 @@ const openDetailsModal = async (request: any) => {
   showDetailsModal.value = true
   isLoadingDetails.value = true
   errorMessage.value = ''
+  fundSource.value = null
+  fundSourceError.value = ''
+  showFundSourceDetails.value = false
 
   try {
     const token = useCookie('token')
@@ -142,6 +274,8 @@ const openDetailsModal = async (request: any) => {
       selectedRequestDetails.value = response.data
       // Refresh to update statuses (e.g. pending -> under_review, reviewer assigned)
       fetchPendingRequests()
+      // Trace where the withdrawn money came from (fraud review)
+      fetchSourceOfFunds(request.id)
     } else {
       errorMessage.value = response.message || 'ไม่สามารถโหลดรายละเอียดคำขอได้'
     }
@@ -151,6 +285,56 @@ const openDetailsModal = async (request: any) => {
   } finally {
     isLoadingDetails.value = false
   }
+}
+
+// Fetch the source-of-funds trail (incoming points/wallet transfers + conversions)
+const fetchSourceOfFunds = async (withdrawalId: number) => {
+  isLoadingFundSource.value = true
+  fundSourceError.value = ''
+  try {
+    const token = useCookie('token')
+    const response = await $fetch(`${apiBase}/api/admin/wallet/withdrawals/${withdrawalId}/source-of-funds`, {
+      headers: {
+        Authorization: `Bearer ${token.value}`
+      }
+    })
+    if (response.success) {
+      fundSource.value = response.data
+    } else {
+      fundSourceError.value = response.message || 'ไม่สามารถโหลดแหล่งที่มาของเงินได้'
+    }
+  } catch (error: any) {
+    console.error('Failed to fetch source of funds:', error)
+    fundSourceError.value = error.data?.message || error.message || 'เกิดข้อผิดพลาดในการโหลดแหล่งที่มาของเงิน'
+  } finally {
+    isLoadingFundSource.value = false
+  }
+}
+
+// Risk banner styling helpers
+const riskLevel = computed<string>(() => fundSource.value?.risk?.level || 'low')
+const RISK_BANNER_CLASS: Record<string, string> = {
+  high: 'bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-800 text-red-900 dark:text-red-200',
+  medium: 'bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200',
+  low: 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-300'
+}
+const RISK_LABEL: Record<string, string> = {
+  high: 'ความเสี่ยงสูง — ควรตรวจสอบก่อนอนุมัติ',
+  medium: 'ควรตรวจสอบ',
+  low: 'ไม่พบสัญญาณผิดปกติ'
+}
+const RISK_ICON: Record<string, string> = {
+  high: 'fluent:shield-error-24-filled',
+  medium: 'fluent:shield-warning-24-filled',
+  low: 'fluent:shield-checkmark-24-filled'
+}
+const riskBannerClass = computed(() => RISK_BANNER_CLASS[riskLevel.value] || RISK_BANNER_CLASS.low)
+const riskLabel = computed(() => RISK_LABEL[riskLevel.value] || RISK_LABEL.low)
+const riskIcon = computed(() => RISK_ICON[riskLevel.value] || RISK_ICON.low)
+
+const formatPoints = (amount: any) => {
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount
+  return new Intl.NumberFormat('th-TH').format(num || 0) + ' แต้ม'
 }
 
 // Open approve modal
@@ -851,6 +1035,121 @@ onMounted(() => {
               </p>
             </div>
 
+            <!-- Source of Funds (fraud trace) -->
+            <div class="space-y-3">
+              <!-- Risk banner -->
+              <div v-if="isLoadingFundSource" class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/20 border border-slate-100 dark:border-slate-700 p-3 rounded-2xl">
+                <Icon icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin flex-shrink-0" />
+                <span>กำลังตรวจสอบแหล่งที่มาของเงิน…</span>
+              </div>
+
+              <div v-else-if="fundSourceError" class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/20 border border-slate-100 dark:border-slate-700 p-3 rounded-2xl">
+                <Icon icon="fluent:info-24-regular" class="w-4 h-4 flex-shrink-0" />
+                <span class="min-w-0 break-words">{{ fundSourceError }}</span>
+              </div>
+
+              <div v-else-if="fundSource" class="border-2 p-4 rounded-2xl space-y-3" :class="riskBannerClass">
+                <div class="flex items-start gap-2">
+                  <Icon :icon="riskIcon" class="w-6 h-6 flex-shrink-0" />
+                  <div class="min-w-0 flex-1">
+                    <p class="font-bold text-sm break-words">แหล่งที่มาของเงิน · {{ riskLabel }}</p>
+                    <p class="text-xs opacity-90 mt-0.5">ตรวจย้อนหลัง {{ fundSource.window_days }} วันก่อนการขอถอน</p>
+                  </div>
+                </div>
+
+                <!-- Risk reasons -->
+                <ul v-if="fundSource.risk?.reasons?.length" class="text-xs space-y-1 pl-1">
+                  <li v-for="(reason, idx) in fundSource.risk.reasons" :key="idx" class="flex items-start gap-1.5">
+                    <Icon icon="fluent:chevron-right-12-filled" class="w-3 h-3 mt-1 flex-shrink-0 opacity-70" />
+                    <span class="min-w-0 break-words">{{ reason }}</span>
+                  </li>
+                </ul>
+
+                <!-- Quick totals -->
+                <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <div class="bg-white/70 dark:bg-slate-900/40 rounded-xl p-2.5">
+                    <p class="text-[11px] opacity-80">รับโอนแต้มเข้า</p>
+                    <p class="text-sm font-bold mt-0.5 break-words">{{ formatPoints(fundSource.summary?.inbound_points_transfers?.points) }}</p>
+                    <p class="text-[11px] opacity-70">≈ {{ formatCurrency(fundSource.summary?.inbound_points_transfers?.value_thb) }} · {{ fundSource.summary?.inbound_points_transfers?.count || 0 }} รายการ</p>
+                  </div>
+                  <div class="bg-white/70 dark:bg-slate-900/40 rounded-xl p-2.5">
+                    <p class="text-[11px] opacity-80">รับโอนเงินเข้า</p>
+                    <p class="text-sm font-bold mt-0.5 break-words">{{ formatCurrency(fundSource.summary?.inbound_wallet_transfers?.value_thb) }}</p>
+                    <p class="text-[11px] opacity-70">{{ fundSource.summary?.inbound_wallet_transfers?.count || 0 }} รายการ</p>
+                  </div>
+                  <div class="bg-white/70 dark:bg-slate-900/40 rounded-xl p-2.5">
+                    <p class="text-[11px] opacity-80">รวมยอดรับโอน / ยอดถอน</p>
+                    <p class="text-sm font-bold mt-0.5 break-words">{{ formatCurrency(fundSource.summary?.incoming_value_thb) }}</p>
+                    <p class="text-[11px] opacity-70">คิดเป็น {{ fundSource.risk?.coverage_percent || 0 }}% ของยอดถอน</p>
+                  </div>
+                </div>
+
+                <!-- Senders list -->
+                <div v-if="fundSource.summary?.senders?.length" class="space-y-1.5 pt-1">
+                  <p class="text-[11px] font-semibold uppercase tracking-wider opacity-80">ผู้ที่โอนเข้ามา</p>
+                  <div
+                    v-for="sender in fundSource.summary.senders"
+                    :key="sender.user?.id"
+                    class="flex items-center gap-2 bg-white/70 dark:bg-slate-900/40 rounded-xl px-2.5 py-2"
+                  >
+                    <img v-if="sender.user?.avatar" :src="sender.user.avatar" class="w-7 h-7 rounded-full object-cover flex-shrink-0" alt="" />
+                    <div v-else class="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                      <Icon icon="fluent:person-24-regular" class="w-4 h-4 opacity-60" />
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <p class="text-xs font-semibold truncate">{{ sender.user?.name || ('ผู้ใช้ #' + sender.user?.id) }}</p>
+                      <p v-if="sender.user?.username" class="text-[11px] opacity-70 truncate">@{{ sender.user.username }}</p>
+                    </div>
+                    <div class="text-right flex-shrink-0 whitespace-nowrap">
+                      <p class="text-xs font-bold">{{ formatCurrency(sender.value_thb) }}</p>
+                      <p class="text-[11px] opacity-70">{{ sender.count }} ครั้ง</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Toggle full timeline -->
+                <button
+                  v-if="fundSource.inflows?.length"
+                  @click="showFundSourceDetails = !showFundSourceDetails"
+                  class="min-h-[44px] sm:min-h-0 sm:py-1.5 w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl bg-white/70 dark:bg-slate-900/40 hover:bg-white dark:hover:bg-slate-900/70 transition-colors"
+                >
+                  <Icon :icon="showFundSourceDetails ? 'fluent:chevron-up-12-filled' : 'fluent:chevron-down-12-filled'" class="w-3.5 h-3.5" />
+                  {{ showFundSourceDetails ? 'ซ่อนรายการเงินเข้า' : `ดูรายการเงินเข้าทั้งหมด (${fundSource.inflows.length})` }}
+                </button>
+
+                <!-- Full inflow timeline -->
+                <div v-if="showFundSourceDetails" class="space-y-1.5">
+                  <div
+                    v-for="(flow, idx) in fundSource.inflows"
+                    :key="idx"
+                    class="flex items-center gap-2 bg-white/70 dark:bg-slate-900/40 rounded-xl px-2.5 py-2"
+                  >
+                    <span
+                      class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap"
+                      :class="flow.type === 'transfer_in' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                        : flow.type === 'transfer' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300'
+                        : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'"
+                    >
+                      {{ flow.type_label }}
+                    </span>
+                    <div class="min-w-0 flex-1">
+                      <p class="text-xs truncate">
+                        <span v-if="flow.counterparty">จาก {{ flow.counterparty.name }}</span>
+                        <span v-else class="opacity-70">{{ flow.description || '—' }}</span>
+                      </p>
+                      <p class="text-[11px] opacity-70">{{ formatDate(flow.created_at) }}</p>
+                    </div>
+                    <div class="text-right flex-shrink-0 whitespace-nowrap">
+                      <p class="text-xs font-bold">
+                        {{ flow.unit === 'points' ? formatPoints(flow.amount) : formatCurrency(flow.amount) }}
+                      </p>
+                      <p v-if="flow.unit === 'points'" class="text-[11px] opacity-70">≈ {{ formatCurrency(flow.value_thb) }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Maker-Checker Warning Banner -->
             <div v-if="isMakerCheckerRequired" class="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-300 p-4 rounded-2xl space-y-1">
               <div class="flex items-center gap-2 font-semibold text-sm">
@@ -896,6 +1195,43 @@ onMounted(() => {
                     <div class="flex justify-between">
                       <span class="text-slate-500">ยอดเงินใน Wallet:</span>
                       <span class="text-slate-700 dark:text-slate-300 font-medium">{{ formatCurrency(selectedRequestDetails.user?.wallet) }}</span>
+                    </div>
+                    <button
+                      v-if="selectedRequestDetails.user?.id"
+                      @click="openPointsHistory(selectedRequestDetails.user)"
+                      class="min-h-[44px] sm:min-h-0 sm:py-2 w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 mt-1 text-xs font-medium rounded-xl border border-hopeui-primary-200 dark:border-hopeui-primary-900/60 text-hopeui-primary-600 dark:text-hopeui-primary-300 hover:bg-hopeui-primary-50 dark:hover:bg-hopeui-primary-950/30 transition-colors"
+                    >
+                      <Icon icon="fluent:arrow-swap-24-regular" class="w-4 h-4 flex-shrink-0" />
+                      ดูประวัติการโอนแต้มของผู้ใช้
+                    </button>
+
+                    <!-- Fraud remediation: freeze/unfreeze wallets -->
+                    <div v-if="selectedRequestDetails.user?.id" class="pt-2 mt-1 border-t border-slate-100 dark:border-slate-700 space-y-2">
+                      <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">ระงับกระเป๋า (กันทุจริต)</p>
+                      <div class="flex flex-col gap-2 sm:flex-row">
+                        <button
+                          @click="toggleFreeze('points')"
+                          :disabled="fraudBusy"
+                          class="min-h-[44px] sm:min-h-0 sm:py-2 flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl transition-colors disabled:opacity-50"
+                          :class="pointsFrozen ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' : 'border border-amber-300 text-amber-700 dark:border-amber-800 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30'"
+                        >
+                          <Icon :icon="pointsFrozen ? 'fluent:lock-closed-24-filled' : 'fluent:lock-open-24-regular'" class="w-4 h-4 flex-shrink-0" />
+                          {{ pointsFrozen ? 'ปลดระงับแต้ม' : 'ระงับกระเป๋าแต้ม' }}
+                        </button>
+                        <button
+                          @click="toggleFreeze('wallet')"
+                          :disabled="fraudBusy"
+                          class="min-h-[44px] sm:min-h-0 sm:py-2 flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl transition-colors disabled:opacity-50"
+                          :class="walletFrozen ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300' : 'border border-red-300 text-red-700 dark:border-red-800 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30'"
+                        >
+                          <Icon :icon="walletFrozen ? 'fluent:lock-closed-24-filled' : 'fluent:lock-open-24-regular'" class="w-4 h-4 flex-shrink-0" />
+                          {{ walletFrozen ? 'ปลดระงับเงิน' : 'ระงับกระเป๋าเงิน' }}
+                        </button>
+                      </div>
+                      <p v-if="pointsFrozen || walletFrozen" class="text-[11px] text-amber-700 dark:text-amber-400">
+                        <Icon icon="fluent:info-24-regular" class="w-3.5 h-3.5 inline -mt-0.5" />
+                        ผู้ใช้นี้ถูกระงับ{{ pointsFrozen && walletFrozen ? 'ทั้งแต้มและเงิน' : pointsFrozen ? 'กระเป๋าแต้ม' : 'กระเป๋าเงิน' }} — โอน/ถอน/แปลงไม่ได้
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1364,6 +1700,83 @@ onMounted(() => {
                 </div>
               </div>
            </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- User Points-Transfer History Modal (fraud lens) -->
+    <Teleport to="body">
+      <div v-if="showPointsModal" class="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" @click="showPointsModal = false"></div>
+        <div class="relative w-full sm:max-w-lg max-h-[92vh] sm:max-h-[85vh] flex flex-col bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden">
+          <div class="flex items-center justify-between gap-2 px-4 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-700">
+            <div class="min-w-0 flex-1">
+              <h3 class="text-base font-bold text-slate-800 dark:text-white truncate">ประวัติการโอนแต้ม</h3>
+              <p class="text-xs text-slate-500 truncate">{{ pointsUser?.name }} <span v-if="pointsUser?.username">· @{{ pointsUser.username }}</span> <span v-if="pointsUser?.pp != null">· คงเหลือ {{ formatPointsAmount(pointsUser.pp) }}</span></p>
+            </div>
+            <button @click="showPointsModal = false" class="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 inline-flex items-center justify-center p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 flex-shrink-0">
+              <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
+            </button>
+          </div>
+
+          <div class="flex gap-2 px-4 sm:px-6 py-3 border-b border-slate-100 dark:border-slate-700">
+            <button
+              @click="setPointsFilter('transfers')"
+              class="min-h-[44px] sm:min-h-0 sm:py-1.5 px-3 py-2 text-xs font-medium rounded-xl transition-colors"
+              :class="pointsFilter === 'transfers' ? 'bg-hopeui-primary-500 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'"
+            >เฉพาะการโอน</button>
+            <button
+              @click="setPointsFilter('all')"
+              class="min-h-[44px] sm:min-h-0 sm:py-1.5 px-3 py-2 text-xs font-medium rounded-xl transition-colors"
+              :class="pointsFilter === 'all' ? 'bg-hopeui-primary-500 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'"
+            >ทั้งหมด</button>
+          </div>
+
+          <div class="flex-1 overflow-y-auto px-4 sm:px-6 py-3 space-y-2">
+            <div v-if="pointsLoading" class="py-8 text-center text-sm text-slate-500">กำลังโหลด…</div>
+            <div v-else-if="pointsError" class="py-8 text-center text-sm text-red-500">{{ pointsError }}</div>
+            <div v-else-if="!pointsTx.length" class="py-8 text-center text-sm text-slate-500">ไม่พบรายการ</div>
+            <div
+              v-for="(tx, i) in pointsTx"
+              :key="i"
+              class="flex flex-col gap-1.5 rounded-xl bg-slate-50 dark:bg-slate-900/30 px-3 py-2"
+            >
+              <div class="flex items-center gap-2">
+                <span
+                  class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap"
+                  :class="tx.transaction_type === 'transfer_in' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                    : tx.transaction_type === 'transfer_out' ? 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                    : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'"
+                >{{ pointsTypeLabel(tx.transaction_type) }}</span>
+                <div class="min-w-0 flex-1">
+                  <p class="text-xs text-slate-700 dark:text-slate-200 truncate">
+                    <span v-if="tx.counterparty">{{ tx.direction === 'in' ? 'จาก' : 'ถึง' }} {{ tx.counterparty.name }}</span>
+                    <span v-else class="text-slate-500">{{ tx.description || '—' }}</span>
+                  </p>
+                  <p class="text-[11px] text-slate-400">{{ tx.created_at ? new Date(tx.created_at).toLocaleString('th-TH') : '—' }}</p>
+                </div>
+                <p
+                  class="text-xs font-bold flex-shrink-0 whitespace-nowrap"
+                  :class="tx.direction === 'in' ? 'text-red-600 dark:text-red-400' : tx.direction === 'out' ? 'text-slate-600 dark:text-slate-300' : 'text-slate-700 dark:text-slate-200'"
+                >{{ tx.direction === 'in' ? '+' : tx.direction === 'out' ? '−' : '' }}{{ formatPointsAmount(tx.amount) }}</p>
+              </div>
+              <!-- Reverse a fraudulent incoming transfer -->
+              <div v-if="tx.transaction_type === 'transfer_in'" class="flex justify-end">
+                <span v-if="tx.metadata?.fraud_reversed_at" class="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400">
+                  <Icon icon="fluent:checkmark-circle-24-filled" class="w-3.5 h-3.5" /> ย้อนรายการแล้ว
+                </span>
+                <button
+                  v-else
+                  @click="reversePointsTransfer(tx)"
+                  :disabled="fraudBusy"
+                  class="min-h-[44px] sm:min-h-0 sm:py-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-[11px] font-medium rounded-lg border border-red-300 text-red-700 dark:border-red-800 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50"
+                >
+                  <Icon icon="fluent:arrow-undo-24-regular" class="w-3.5 h-3.5 flex-shrink-0" />
+                  ยกเลิก + โอนแต้มคืน
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </Teleport>

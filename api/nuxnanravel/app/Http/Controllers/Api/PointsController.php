@@ -270,6 +270,10 @@ class PointsController extends Controller
             ], 401);
         }
 
+        if ($user->isPointsFrozen()) {
+            return response()->json(['success' => false, 'message' => 'กระเป๋าสะสมแต้มของคุณถูกระงับชั่วคราวระหว่างการตรวจสอบการทุจริต กรุณาติดต่อผู้ดูแลระบบ'], 403);
+        }
+
         $validated = $request->validate([
             'recipient_id' => 'required|integer|exists:users,id|different:'.$user->id,
             'amount' => 'required|numeric|min:0.01',
@@ -329,6 +333,10 @@ class PointsController extends Controller
                 'success' => false,
                 'message' => 'User not authenticated',
             ], 401);
+        }
+
+        if ($user->isPointsFrozen()) {
+            return response()->json(['success' => false, 'message' => 'กระเป๋าสะสมแต้มของคุณถูกระงับชั่วคราวระหว่างการตรวจสอบการทุจริต กรุณาติดต่อผู้ดูแลระบบ'], 403);
         }
 
         $validated = $request->validate([
