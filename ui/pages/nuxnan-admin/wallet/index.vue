@@ -18,6 +18,7 @@ const searchQuery = ref('')
 const selectedType = ref('all')
 const currentPage = ref(1)
 const totalPages = ref(1)
+const totalTransactions = ref(0)
 const selectedTransaction = ref<any>(null)
 
 // Cancel / claw back a transfer or conversion (super admin only; backend enforces)
@@ -98,6 +99,7 @@ const fetchTransactions = async () => {
     if (response.success) {
       walletTransactions.value = response.data.data || response.data
       totalPages.value = response.data.last_page || 1
+      totalTransactions.value = response.data.total || walletTransactions.value.length
     }
   } catch (error) {
     console.error('Failed to fetch wallet transactions:', error)
@@ -199,6 +201,12 @@ const getStatusBadge = (status: string) => {
     failed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
   }
   return badges[status] || badges.pending
+}
+
+const goToPage = (page: number) => {
+  if (page < 1 || page > totalPages.value || page === currentPage.value) return
+  currentPage.value = page
+  fetchTransactions()
 }
 
 onMounted(() => {
@@ -382,6 +390,46 @@ watch(selectedType, () => {
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Pagination -->
+      <div
+        v-if="!isLoading && totalPages > 1"
+        class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-t border-slate-100 dark:border-slate-700"
+      >
+        <p class="text-sm text-slate-500 dark:text-slate-400 text-center sm:text-left">
+          หน้า {{ currentPage }} / {{ totalPages }}
+          <span v-if="totalTransactions"> • ทั้งหมด {{ totalTransactions.toLocaleString('th-TH') }} รายการ</span>
+        </p>
+        <div class="flex items-center justify-center gap-1 flex-wrap">
+          <button
+            @click="goToPage(currentPage - 1)"
+            :disabled="currentPage === 1"
+            aria-label="หน้าก่อนหน้า"
+            class="min-w-[44px] min-h-[44px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center rounded-lg text-sm font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <Icon icon="fluent:chevron-left-24-regular" class="w-5 h-5" />
+          </button>
+          <button
+            v-for="page in Math.min(totalPages, 10)"
+            :key="page"
+            @click="goToPage(page)"
+            class="min-w-[44px] min-h-[44px] sm:min-w-[40px] sm:min-h-[40px] rounded-lg text-sm font-medium transition-colors"
+            :class="currentPage === page
+              ? 'bg-hopeui-primary-500 text-white'
+              : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'"
+          >
+            {{ page }}
+          </button>
+          <button
+            @click="goToPage(currentPage + 1)"
+            :disabled="currentPage === totalPages"
+            aria-label="หน้าถัดไป"
+            class="min-w-[44px] min-h-[44px] sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center rounded-lg text-sm font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <Icon icon="fluent:chevron-right-24-regular" class="w-5 h-5" />
+          </button>
+        </div>
       </div>
     </div>
 
