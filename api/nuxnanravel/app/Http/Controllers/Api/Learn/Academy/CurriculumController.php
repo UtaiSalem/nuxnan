@@ -16,10 +16,29 @@ use Illuminate\Validation\Rule;
 class CurriculumController extends Controller
 {
     /**
+     * สิทธิ์ "ดู" — สมาชิกที่อนุมัติของโรงเรียนคนใดก็ได้ (ครู/นักเรียนดูได้ทั้งหมด · Q2)
+     * ทำ tenant isolation ในตัว: userCan เช็คสมาชิกของโรงเรียนนี้ ⇒ คนนอก/ข้ามโรงเรียน = 403
+     */
+    private function authorizeView(Academy $academy): void
+    {
+        abort_unless($academy->userCan(auth()->user()), 403, 'ไม่มีสิทธิ์เข้าถึงหลักสูตรของโรงเรียนนี้');
+    }
+
+    /**
+     * สิทธิ์ "จัดการ" — owner/admin หรือผู้ถือ `courses.manage` (ฝ่ายวิชาการ) · Q1/Q2
+     */
+    private function authorizeManage(Academy $academy): void
+    {
+        abort_unless($academy->userCan(auth()->user(), 'courses.manage'), 403, 'ไม่มีสิทธิ์จัดการหลักสูตรของโรงเรียนนี้');
+    }
+
+    /**
      * แสดงรายการหลักสูตรทั้งหมดของ Academy
      */
     public function index(Request $request, Academy $academy): JsonResponse
     {
+        $this->authorizeView($academy);
+
         $query = Curriculum::forAcademy($academy->id)
             ->withCount(['curriculumCourses', 'curriculumStudents as active_students_count' => function ($q) {
                 $q->where('status', 'active');
@@ -71,6 +90,8 @@ class CurriculumController extends Controller
      */
     public function store(Request $request, Academy $academy): JsonResponse
     {
+        $this->authorizeManage($academy);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'code' => 'nullable|string|max:50',
@@ -102,6 +123,8 @@ class CurriculumController extends Controller
      */
     public function show(Curriculum $curriculum): JsonResponse
     {
+        $this->authorizeView($curriculum->academy);
+
         $curriculum->load([
             'curriculumCourses.course:id,name,code,credit_units,description',
             'curriculumStudents' => function ($q) {
@@ -130,6 +153,8 @@ class CurriculumController extends Controller
      */
     public function update(Request $request, Curriculum $curriculum): JsonResponse
     {
+        $this->authorizeManage($curriculum->academy);
+
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'code' => 'nullable|string|max:50',
@@ -158,6 +183,8 @@ class CurriculumController extends Controller
      */
     public function destroy(Curriculum $curriculum): JsonResponse
     {
+        $this->authorizeManage($curriculum->academy);
+
         // ตรวจสอบว่ามีนักเรียนที่กำลังเรียนอยู่หรือไม่
         $activeStudents = $curriculum->curriculumStudents()->where('status', 'active')->count();
         if ($activeStudents > 0) {
@@ -180,6 +207,8 @@ class CurriculumController extends Controller
      */
     public function getCourses(Request $request, Curriculum $curriculum): JsonResponse
     {
+        $this->authorizeView($curriculum->academy);
+
         $query = $curriculum->curriculumCourses()
             ->with('course:id,name,code,credit_units,description,cover,instructor_id,status');
 
@@ -226,6 +255,8 @@ class CurriculumController extends Controller
      */
     public function addCourse(Request $request, Curriculum $curriculum): JsonResponse
     {
+        $this->authorizeManage($curriculum->academy);
+
         $validated = $request->validate([
             'course_id' => [
                 'required',
@@ -269,6 +300,8 @@ class CurriculumController extends Controller
      */
     public function updateCourse(Request $request, Curriculum $curriculum, CurriculumCourse $curriculumCourse): JsonResponse
     {
+        $this->authorizeManage($curriculum->academy);
+
         // ตรวจสอบว่า curriculum_course เป็นของ curriculum นี้
         if ($curriculumCourse->curriculum_id !== $curriculum->id) {
             return response()->json([
@@ -302,6 +335,8 @@ class CurriculumController extends Controller
      */
     public function removeCourse(Curriculum $curriculum, CurriculumCourse $curriculumCourse): JsonResponse
     {
+        $this->authorizeManage($curriculum->academy);
+
         if ($curriculumCourse->curriculum_id !== $curriculum->id) {
             return response()->json([
                 'success' => false,
@@ -322,6 +357,8 @@ class CurriculumController extends Controller
      */
     public function bulkAddCourses(Request $request, Curriculum $curriculum): JsonResponse
     {
+        $this->authorizeManage($curriculum->academy);
+
         $validated = $request->validate([
             'courses' => 'required|array|min:1',
             'courses.*.course_id' => 'required|exists:courses,id',
@@ -375,6 +412,8 @@ class CurriculumController extends Controller
      */
     public function getStudents(Request $request, Curriculum $curriculum): JsonResponse
     {
+        $this->authorizeView($curriculum->academy);
+
         $query = $curriculum->curriculumStudents()
             ->with('user:id,name,email,profile_photo_path');
 
@@ -418,6 +457,8 @@ class CurriculumController extends Controller
      */
     public function enrollStudent(Request $request, Curriculum $curriculum): JsonResponse
     {
+        $this->authorizeManage($curriculum->academy);
+
         $validated = $request->validate([
             'user_id' => [
                 'required',
@@ -454,6 +495,8 @@ class CurriculumController extends Controller
      */
     public function bulkEnrollStudents(Request $request, Curriculum $curriculum): JsonResponse
     {
+        $this->authorizeManage($curriculum->academy);
+
         $validated = $request->validate([
             'user_ids' => 'required|array|min:1',
             'user_ids.*' => 'exists:users,id',
@@ -501,6 +544,8 @@ class CurriculumController extends Controller
      */
     public function updateStudent(Request $request, Curriculum $curriculum, CurriculumStudent $student): JsonResponse
     {
+        $this->authorizeManage($curriculum->academy);
+
         if ($student->curriculum_id !== $curriculum->id) {
             return response()->json([
                 'success' => false,
@@ -533,6 +578,8 @@ class CurriculumController extends Controller
      */
     public function removeStudent(Curriculum $curriculum, CurriculumStudent $student): JsonResponse
     {
+        $this->authorizeManage($curriculum->academy);
+
         if ($student->curriculum_id !== $curriculum->id) {
             return response()->json([
                 'success' => false,
@@ -553,6 +600,8 @@ class CurriculumController extends Controller
      */
     public function getStatistics(Academy $academy): JsonResponse
     {
+        $this->authorizeView($academy);
+
         $stats = [
             'total_curriculums' => Curriculum::forAcademy($academy->id)->count(),
             'active_curriculums' => Curriculum::forAcademy($academy->id)->active()->count(),
@@ -585,6 +634,9 @@ class CurriculumController extends Controller
      */
     public function getAvailableCourses(Request $request, Academy $academy, Curriculum $curriculum): JsonResponse
     {
+        $this->authorizeView($academy);
+        abort_unless((int) $curriculum->academy_id === (int) $academy->id, 404, 'ไม่พบหลักสูตรในโรงเรียนนี้');
+
         // รายวิชาที่มีอยู่แล้วในหลักสูตร
         $existingCourseIds = $curriculum->curriculumCourses()->pluck('course_id');
 

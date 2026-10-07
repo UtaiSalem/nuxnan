@@ -57,6 +57,25 @@ production ยังไม่ได้รัน migration บางชุด (�
 
 ---
 
+## 2026-10-07 — เมนู #13 หลักสูตร: audit (ขั้น [1]+[2]) · ฟีเจอร์ครบ แต่เจอช่องโหว่สิทธิ์ P0
+
+### สถานะ: 🔴 audit เสร็จ · ไฟล์รอง `.agents/school-admin/13-curriculums.md` · รอเจ้าของเคาะ Q1–Q3 ก่อน CR-S1
+(เมนู #12 คอร์สเรียน CO-S1–S7 merge เข้า main แล้วใน PR #30 squash `2fab408`)
+
+### สแกนแล้ว
+- FE `curriculums.vue` (1,140 บรรทัด) ฟีเจอร์ครบ (CRUD + คอร์สในหลักสูตร + นักเรียน + สถิติ) · gate UI ด้วย `useAcademyRole` can()/isAdmin()
+- BE `CurriculumController` (611 บรรทัด) ครบทุก method · route `academy.php:604–636` ใต้ `auth:api` เท่านั้น
+
+### 🔴 Gap P0
+- **G1** ทั้งโมดูล curriculum ไม่มี authz backend เลย (ไม่มี isAdmin/userCan/abort/tenant) → ใครล็อกอินก็ CRUD หลักสูตร/คอร์ส/นักเรียนของโรงเรียนไหนก็ได้ (FE กันอย่างเดียว)
+- **G2** กลุ่ม `curriculums/{curriculum}` ไม่มี `{academy}` ใน path → bind ตรง ๆ รั่วข้ามโรงเรียนด้วยการเดา id (getStudents คืน name/email/photo)
+- **G3** ไม่มีเทสต์
+
+### ค้าง — รอเคาะ Q1 (permission key = courses.*?) · Q2 (ใครจัดการ/ครู-นักเรียนดูแค่ไหน) · Q3 (enroll นักเรียนอยู่ #13 หรือ #15 ทะเบียน)
+แตกงาน CR-S1 (ปิด G1+G2 สิทธิ์+tenant) · CR-S2 (เทสต์ authz+isolation)
+
+---
+
 ## 2026-10-07 — เริ่มเมนู #12 คอร์สเรียน: audit (ขั้น [1]+[2]) · พบ gap 7 ข้อ
 
 ### สถานะ: 🔴 audit เสร็จ · เขียนไฟล์รอง `.agents/school-admin/12-courses.md` แล้ว · ยังไม่แตะโค้ด · รอเจ้าของเคาะ Q1–Q3
