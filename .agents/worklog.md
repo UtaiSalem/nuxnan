@@ -41,10 +41,56 @@
 
 ---
 
-## 2026-10-02 — ระบบร้องเรียนบัญชีทุจริต + ยกเครื่อง alert (SweetAlert) — PR #26 (draft, ยังไม่ merge)
+## 2026-10-05/06 — super admin: ดู + ยกเลิก/ดึงคืน (claw-back) transfer & conversion — PR #27, #28 (✅ merged)
 
-### สถานะ: 🔶 draft PR #26 (branch `claude/youthful-gates-abvw3k`) — รอ migrate + build + review
-PR: https://github.com/UtaiSalem/nuxnan/pull/26 · ยัง watch อยู่ (ไม่มี CI ตั้งบน repo นี้)
+### สถานะ: ✅ merged เข้า main ทั้งคู่
+- **PR #27** https://github.com/UtaiSalem/nuxnan/pull/27 — merge commit `699fd7f` (2026-10-06) · 2 commit: `630af7d`, `0a28022`
+- **PR #28** https://github.com/UtaiSalem/nuxnan/pull/28 — merge commit `0cebe79` (2026-10-06) · 1 commit: `8389a3a`
+ต่อยอดจากระบบ fraud-report + suspend (PR #26) · ไม่มี CI ตั้งบน repo นี้
+
+### PR #27 — claw-back transfer & conversion (`630af7d` + `0a28022`)
+**แนวคิด:** super admin ย้อนกลับ (ยกเลิก + ดึงคืน) ธุรกรรมที่ทุจริตได้ ทั้งจากหน้า profile ผู้ใช้และจาก list กลาง
+
+**ส่วนที่ 1 — view + claw-back จาก profile (`630af7d`):**
+- BE: `AdminWalletController::userTransactions` (wallet) เปิดสิทธิ์ให้ admin (เท่า points lens) + เพิ่ม `type=transfers`
+  shortcut, annotate แต่ละแถวด้วย direction/counterparty/reversible/reversed, คืน user block, audit-log การเปิดดู
+  · `userPointsTransactions` annotate flag เดียวกัน (แถว fraud_reversal correction ย้อนซ้ำไม่ได้)
+  · route ใหม่ `GET /admin/wallet/users/{userId}/wallet-transactions`
+  · 🔴 `AdminController::show` แก้อ่าน points จากคอลัมน์จริง `pp` (เดิมอ่าน `points` ที่ไม่มี → โชว์ 0 ตลอด)
+- FE: การ์ด "ธุรกรรมการโอน (เงิน & แต้ม)" ในหน้า admin user profile · ปุ่ม "ยกเลิก + ดึงคืน" (ถามเหตุผล) บนแถวที่
+  reversible เฉพาะขารับ (super admin เท่านั้น · BE บังคับซ้ำ) · ขาส่ง link ไป profile ผู้รับเพื่อย้อนที่นั่น
+  · แก้ binding ยอด wallet/points ที่โชว์ 0 · mobile-first stacked cards + 44px
+- Test: `tests/Feature/Wallet/AdminUserTransferLensTest.php` (annotation + auth)
+
+**ส่วนที่ 2 — claw-back จาก list กลาง + conversion reversal (`0a28022`):**
+- BE: `App\Support\TransactionReversal` = SSOT ว่าแถว points/wallet ยัง reversible ไหม / ย้อนไปแล้วไหม / รายละเอียดการย้อน
+  (ใช้ทั้ง global list + profile lens → กติกาไม่ drift)
+  · `FraudRemediationService::reverseConversion` ย้อน conversion points↔money ภายในผู้ใช้เดียวจาก leg ไหนก็ได้
+  (policy เดียวกับ transfer: ดึงคืนเท่าที่ยอดฝั่งเครดิตมี, คืนอีกฝั่งตาม exchange rate ที่บันทึก, บันทึก shortfall,
+  เขียน correction rows, stamp ทั้งสอง leg · idempotent + locked)
+  · `AdminFraudController`: endpoint reverse เดิม dispatch เป็น transfer- หรือ conversion-reversal ตาม type (FE คง 1 endpoint/ตาราง)
+  · annotate `/admin/points-transactions` + `/admin/wallet-transactions` ด้วย reversibility flags · refactor profile endpoint ใช้ helper กลาง
+- FE: composable `useReverseTransaction` (flow claw-back ถามเหตุผล ร่วมกัน) · list Points & Wallet มี action "จัดการ"
+  → "ยกเลิก/ดึงคืน" (หรือ "ยกเลิกการแปลง" สำหรับ conversion) บนแถว reversible + marker "ย้อนแล้ว" บนแถวที่ย้อนไปแล้ว
+- Test: `tests/Feature/Wallet/ConversionReversalTest.php` (points→money, money→points partial claw-back, idempotency 2 leg, reject non-conversion)
+
+### PR #28 — pagination ให้ list ธุรกรรม Wallet admin (`8389a3a`)
+- `/nuxnan-admin/wallet` ดึงด้วย page/per_page + track currentPage/totalPages อยู่แล้ว แต่ไม่เคย render ปุ่ม → เข้าถึงได้แค่ 20 แถวแรก
+- เพิ่มแถบ pagination prev/เลขหน้า/next (mirror หน้า Points) + สรุป "หน้า X / Y • ทั้งหมด N รายการ" · track total + `goToPage()` (bounds-checked) · mobile-first 44px
+
+### ค้างทำ (owner-gated — runtime บนเครื่อง WAMP)
+- [ ] `npm run build` ฝั่ง FE แล้วคลิกตรวจจริงที่ 375px (profile lens / points & wallet lists / pagination)
+- [ ] รัน `php artisan test -c phpunit.mysql.xml --filter='AdminUserTransferLens|ConversionReversal'` บน MySQL
+- [ ] ยืนยันว่า migrate ของ PR #26 (fraud/suspend) รันบน dev DB แล้ว — ฟีเจอร์ชุดนี้ build บน flow suspend เดิม
+
+---
+
+## 2026-10-02 — ระบบร้องเรียนบัญชีทุจริต + ยกเครื่อง alert (SweetAlert) — PR #26 (✅ merged 2026-10-05)
+
+### สถานะ: ✅ merged เข้า main แล้ว (2026-10-05, merge commit `7031969`, branch `claude/youthful-gates-abvw3k`)
+PR: https://github.com/UtaiSalem/nuxnan/pull/26 · ต่อยอดใน PR #27/#28 (ดูด้านบน)
+⚠️ งาน runtime owner-gated ด้านล่าง (migrate dev DB / build / รัน FraudReportTest บน MySQL) อยู่บนเครื่อง WAMP ของเจ้าของ
+— การ merge โค้ดไม่ได้รันสิ่งเหล่านี้ให้ ตรวจยืนยันจากในนี้ไม่ได้
 
 ### 1. คำถาม "super admin ระงับบัญชีธุรกรรมแต้ม/เงินได้อย่างไร" → **มีอยู่แล้ว** (session 2026-09-30)
 - คอลัมน์ `points_suspended`/`wallet_suspended`/`economy_suspended_*` + routes `suspend-economy`/`restore-economy`
@@ -71,10 +117,11 @@ PR: https://github.com/UtaiSalem/nuxnan/pull/26 · ยัง watch อยู่ 
   แลก/ใช้/สร้างคูปองล้มเหลว · rollover commit/undo ล้มเหลว
 - `useSweetAlert.error()` รับ `detail` เพิ่ม (collapsible, escape HTML)
 
-### ค้างทำ (owner-gated)
-- [ ] `php artisan migrate` บน dev DB (ปลดล็อก suspend เดิม + table ใหม่)
+### ค้างทำ (owner-gated — runtime บนเครื่อง WAMP · ตรวจจากคอนเทนเนอร์ไม่ได้)
+- [x] review + merge PR #26 → ✅ merged 2026-10-05
+- [ ] `php artisan migrate` บน dev DB (ปลดล็อก suspend เดิม + table `account_fraud_reports`) **ห้าม `migrate:fresh`**
 - [ ] `npm run build` ฝั่ง FE แล้วคลิกจริงที่ 375px
-- [ ] รัน FraudReportTest บน MySQL · review + merge PR #26
+- [ ] รัน `php artisan test -c phpunit.mysql.xml --filter=FraudReportTest` บนเครื่องที่มี MySQL
 
 ---
 
