@@ -57,6 +57,25 @@ production ยังไม่ได้รัน migration บางชุด (�
 
 ---
 
+## 2026-10-07 — เมนู #14 บุคลากร: audit (ขั้น [1]+[2]) · โมดูลพังหลายชั้น "สร้างไว้แต่ไม่เคยต่อ backend จริง"
+
+### สถานะ: 🔴 audit เสร็จ · ไฟล์รอง `.agents/school-admin/14-staff.md` · รอเจ้าของเคาะ Q1–Q5 ก่อน ST-S1
+(ต่อจากลำดับ loop #12 คอร์ส → #13 หลักสูตร → **#14 บุคลากร**)
+
+### สแกนแล้ว (ยิง schema/route/model จริง)
+- FE `staff.vue` (738 บรรทัด) · BE `StaffController` (439) · route `academy.php:767–824` · migration `2026_02_04_100003_create_staff_system_tables.php`
+- ต่างจาก #13 (ฟีเจอร์ครบ เหลือ authz) — **#14 พังตั้งแต่ contract FE↔BE จนถึง schema-drift** คล้าย Expense เมนู #8
+
+### 🔴 Gap (รายละเอียดครบในไฟล์รอง)
+- **FE contract:** F1 gate `isAdmin` แต่เมนูโชว์เมื่อ `staff.view` (เด้งออก · G21 ซ้ำ) · F2 list อ่าน paginator เป็น array · F3 summary อ่านผิดชั้น (การ์ด 0) · F4 query ไม่เข้า URL (กรอง/แบ่งหน้าตาย) · F5 create ส่ง `employee_type`/`department` free-text + ไม่ส่ง first_name/last_name NOT NULL (พังถาวร) · F6 PUT ชน PATCH 405 · F7 ปุ่มเปลี่ยนสถานะไม่มี · F8 ไม่มี UI สร้างตำแหน่งแต่ create บังคับ position (dead-end)
+- **BE schema-drift:** B1 scope `byStatus`/`byType` ไม่มี → 500 · B2 `show()` โหลด `supervisor` ไม่มี relationship → 500 · B3 store validate 6 ฟิลด์ไม่มีคอลัมน์ + ไม่เก็บ first_name/last_name · B4 updateStatus เขียน `termination_*` (จริงคือ `resignation_*`) → 500 · B6 position `requirements`/`code` unique global
+- **Security/Test:** B7 write ทุกเส้นใช้แค่ `staff.view` (ควรแยก `staff.manage`) · B8 ไม่มีเทสต์
+
+### ค้าง — รอเคาะ Q1 (identity จาก user หรือเก็บชื่อแยก) · Q2 (ขอบเขต = ทะเบียน+ตำแหน่ง หรือรวม attendance/leave/payroll) · Q3 (สิทธิ์ view/manage + เปิดหน้าให้ staff.view) · Q4 (ฝ่าย free-text/department_id) · Q5 (enum canonical)
+แตกงาน ST-S1 (สิทธิ์) · ST-S2 (ซ่อม BE schema) · ST-S3 (ซ่อม FE contract) · ST-S4 (UI ตำแหน่ง) · ST-S5 (เปลี่ยนสถานะ) · ST-S6 (เทสต์)
+
+---
+
 ## 2026-10-07 — เมนู #13 หลักสูตร: audit (ขั้น [1]+[2]) · ฟีเจอร์ครบ แต่เจอช่องโหว่สิทธิ์ P0
 
 ### สถานะ: 🔴 audit เสร็จ · ไฟล์รอง `.agents/school-admin/13-curriculums.md` · รอเจ้าของเคาะ Q1–Q3 ก่อน CR-S1
