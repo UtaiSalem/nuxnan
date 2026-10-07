@@ -57,6 +57,28 @@ production ยังไม่ได้รัน migration บางชุด (�
 
 ---
 
+## 2026-10-07 — เริ่มเมนู #12 คอร์สเรียน: audit (ขั้น [1]+[2]) · พบ gap 7 ข้อ
+
+### สถานะ: 🔴 audit เสร็จ · เขียนไฟล์รอง `.agents/school-admin/12-courses.md` แล้ว · ยังไม่แตะโค้ด · รอเจ้าของเคาะ Q1–Q3
+ต่อเนื่องจากแผน loop เมนูโรงเรียน (ถัดจาก #11 ตารางเรียน) · เมนู #12 = จัดการ **catalog รายวิชา** ของโรงเรียน (ไม่ใช่เนื้อหาในคอร์ส)
+
+### สแกนโค้ดจริงแล้ว (ขอบเขต: หน้า `academies/[name]/admin/courses/`)
+- FE: `index.vue` (list 2 แท็บ คลัง+ตลาด) · `create.vue` (ฟอร์มสร้าง) · **ไม่มีหน้า edit**
+- BE: `AcademyCourseController` (`getAcademyCourses`/`store`) · โฟลว์แก้/ลบอยู่ที่เจ้าของคอร์ส `CourseController` (`PUT/DELETE /courses/{course}`)
+- Course model: status tinyint 1=published/2=draft/3=archived + finalization_status · permission key `courses.*` มีครบและ assign ให้ role แล้ว
+
+### Gap ที่พบ (G1–G7, รายละเอียดในไฟล์รอง)
+- G1 ปุ่มลบในหน้า list เป็นปุ่มตาย (ไม่มี handler) · G2 ลิงก์ edit ชี้หน้า `{id}/edit` ที่ไม่มีไฟล์ (404)
+- G3 FE แสดงสถานะ draft(2)/archived(3) ผิด (map แค่ 0/1) · G4 list gate แค่ `visibility:courses` ไม่ใช่ `courses.view`
+- G5 create ไม่มี permission middleware (เช็ค isAdmin||teacher ภายใน) · G6 ไม่มี endpoint แก้/ลบในโฟลว์ admin
+- G7 `store()` comment ฟิลด์ส่วนใหญ่ทิ้ง บันทึกแค่ name/code/description/cover
+
+### ค้าง — รอเจ้าของเคาะก่อนเริ่ม CO-S1
+- Q1 ขอบเขต = แค่ catalog ใช่ไหม (เนื้อหาคอร์สเป็นงานหน้าเจ้าของคอร์ส) · Q2 สิทธิ์แก้/ลบ (admin แก้ของครูคนอื่นได้ไหม · ลบคอร์สที่มีนักเรียนแล้ว?) · Q3 สิทธิ์สร้าง (ครูทุกคน vs `courses.create`)
+- แตกงานเป็น CO-S1 (ด่านสิทธิ์) · CO-S2 (FE สถานะ) · CO-S3 (ปุ่มลบ) · CO-S4 (หน้า edit) · CO-S5 (store ฟิลด์ครบ) · CO-S6 (เทสต์)
+
+---
+
 ## 2026-10-05/06 — super admin: ดู + ยกเลิก/ดึงคืน (claw-back) transfer & conversion — PR #27, #28 (✅ merged)
 
 ### สถานะ: ✅ merged เข้า main ทั้งคู่

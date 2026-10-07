@@ -668,7 +668,10 @@ class CourseController extends Controller
      */
     public function update(Course $course, Request $request)
     {
-        if (! $course->isAdmin(auth()->user())) {
+        // Course owner/co-admin/super-admin, OR an admin of the course's own
+        // academy (academy admin manages the school's course catalog — menu #12).
+        $user = auth()->user();
+        if (! $course->isAdmin($user) && ! $course->academy?->isAdmin($user)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -722,8 +725,9 @@ class CourseController extends Controller
 
         $course->update($validated);
 
+        // คอร์สบางตัว (เช่น clone จากตลาด/legacy) อาจไม่มีแถว course_settings — กัน null ไม่ให้ 500 (G8)
         $course->courseSettings()->update([
-            'auto_accept_members' => $request->auto_accept_members ?? $course->courseSettings->auto_accept_members,
+            'auto_accept_members' => $request->auto_accept_members ?? $course->courseSettings?->auto_accept_members ?? 0,
         ]);
 
         if ($request->hasFile('cover')) {
@@ -862,7 +866,10 @@ class CourseController extends Controller
      */
     public function destroy(Course $course, CourseMediaService $mediaService)
     {
-        if (! $course->isAdmin(auth()->user())) { // Usually only owner can destroy course, but if user wants admin = owner, then this is fine.
+        // Course owner/co-admin/super-admin, OR an admin of the course's own
+        // academy (academy admin manages the school's course catalog — menu #12).
+        $user = auth()->user();
+        if (! $course->isAdmin($user) && ! $course->academy?->isAdmin($user)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 

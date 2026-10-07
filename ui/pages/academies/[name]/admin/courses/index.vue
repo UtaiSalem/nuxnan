@@ -16,6 +16,7 @@ definePageMeta({
 
 const route = useRoute()
 const api = useApi()
+const swal = useSweetAlert()
 const academyName = computed(() => route.params.name as string)
 
 // Tabs State
@@ -167,6 +168,32 @@ const viewCourse = (course: any) => {
   navigateTo(`/Learn/Courses/${course.id}`)
 }
 
+const deletingId = ref<number | null>(null)
+
+const deleteCourse = async (course: any) => {
+  if (deletingId.value) return
+  const ok = await swal.confirmDelete(
+    `รายวิชา "${course.title || course.name}"`,
+    'การลบจะนำรายวิชาและเนื้อหาออกจากคลังของโรงเรียน',
+  )
+  if (!ok) return
+
+  deletingId.value = course.id
+  try {
+    await api.delete(`/api/courses/${course.id}`)
+    courses.value = courses.value.filter((c) => c.id !== course.id)
+    totalCourses.value = Math.max(0, totalCourses.value - 1)
+    swal.toast('ลบรายวิชาแล้ว', 'success')
+  } catch (error: any) {
+    swal.error(
+      error?.data?.message || 'ลบรายวิชาไม่สำเร็จ โปรดลองใหม่',
+      'ลบไม่สำเร็จ',
+    )
+  } finally {
+    deletingId.value = null
+  }
+}
+
 const purchaseBanner = ref<{ type: 'success' | 'queued'; text: string } | null>(null)
 
 const onPurchaseSuccess = (result: any) => {
@@ -191,23 +218,28 @@ const onPurchaseSuccess = (result: any) => {
 
 const getStatusBadge = (status: string | number) => {
   const s = String(status)
+  // courses.status tinyint: 1=published, 2=draft, 3=archived (0 = legacy draft)
+  const green = 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+  const yellow = 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+  const gray = 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
   const badges: Record<string, string> = {
-    '1': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    'published': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    '0': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-    'draft': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-    'archived': 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    '1': green, 'published': green,
+    '0': yellow, '2': yellow, 'draft': yellow,
+    '3': gray, 'archived': gray,
   }
   return badges[s] || badges.draft
 }
 
 const getStatusLabel = (status: string | number) => {
   const s = String(status)
+  // courses.status tinyint: 1=published, 2=draft, 3=archived (0 = legacy draft)
   const labels: Record<string, string> = {
     '1': 'เผยแพร่',
     'published': 'เผยแพร่',
     '0': 'ฉบับร่าง',
+    '2': 'ฉบับร่าง',
     'draft': 'ฉบับร่าง',
+    '3': 'เก็บถาวร',
     'archived': 'เก็บถาวร',
   }
   return labels[s] || 'ไม่ทราบ'
@@ -395,23 +427,28 @@ watch(activeTab, (newTab) => {
               <div class="flex items-center gap-2 sm:flex-col sm:justify-center">
                 <NuxtLink
                   :to="`/courses/${course.name || course.slug}`"
-                  class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-primary-50 hover:text-primary-600 dark:hover:bg-primary-900/30"
+                  class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg p-2 text-gray-500 transition-colors hover:bg-primary-50 hover:text-primary-600 dark:hover:bg-primary-900/30 sm:min-h-0 sm:min-w-0"
                   title="ดูรายวิชา"
                 >
                   <Icon icon="fluent:eye-24-regular" class="h-5 w-5" />
                 </NuxtLink>
                 <NuxtLink
                   :to="`/academies/${academyName}/admin/courses/${course.id}/edit`"
-                  class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/30"
+                  class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg p-2 text-gray-500 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/30 sm:min-h-0 sm:min-w-0"
                   title="แก้ไข"
                 >
                   <Icon icon="fluent:edit-24-regular" class="h-5 w-5" />
                 </NuxtLink>
                 <button
-                  class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30"
+                  @click="deleteCourse(course)"
+                  :disabled="deletingId === course.id"
+                  class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg p-2 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-900/30 sm:min-h-0 sm:min-w-0"
                   title="ลบ"
                 >
-                  <Icon icon="fluent:delete-24-regular" class="h-5 w-5" />
+                  <Icon
+                    :icon="deletingId === course.id ? 'fluent:spinner-ios-20-regular' : 'fluent:delete-24-regular'"
+                    :class="['h-5 w-5', deletingId === course.id && 'animate-spin']"
+                  />
                 </button>
               </div>
             </div>

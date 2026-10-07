@@ -108,7 +108,11 @@ class AcademyCourseController extends Controller
             $newCourse->hours_per_week = $request->hours_per_week ?? null;
             $newCourse->category = $request->category == 'null' || $request->category == null ? null : $request->category;
             $newCourse->tuition_fees = $request->tuition_fees ?? null;
-            $newCourse->status = $request->status === 'true' ? 1 : 0;
+            // status มาเป็น string 'published'/'draft'/'archived' จากฟอร์ม — ปล่อยให้ mutator
+            // ของ Course map เป็น tinyint (1/2/3) · ค่าที่ไม่รู้จัก/ว่าง => ตั้งเป็นฉบับร่าง
+            $newCourse->status = in_array($request->status, ['published', 'draft', 'archived'], true)
+                ? $request->status
+                : 'draft';
             $newCourse->saleable = $request->saleable === 'true' ? 1 : 0;
             $newCourse->price = $request->price == 'null' || $request->price == null ? null : $request->price;
             $newCourse->level = $request->level == 'null' || $request->level == null ? null : $request->level;
