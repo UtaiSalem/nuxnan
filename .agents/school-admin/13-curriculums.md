@@ -60,9 +60,9 @@
 
 ## 5. Gap Analysis
 
-- **G1 — 🔴 P0: ทั้งโมดูล curriculum ไม่มีด่านสิทธิ์ backend เลย** · `CurriculumController` ไม่มี `isAdmin`/`userCan`/`abort(403)`/tenant check สักจุด · route มีแค่ `auth:api` ⇒ **ผู้ใช้ที่ล็อกอินคนไหนก็ได้** สร้าง/แก้/ลบหลักสูตร · ผูก/ถอดคอร์ส · ลงทะเบียน/ถอนนักเรียน ของโรงเรียนไหนก็ได้ · FE gate ด้วย role แต่ยิง API ตรงข้ามได้หมด (แพตเทิร์นเดียวกับเมนู #8 G1)
-- **G2 — 🔴 cross-tenant: กลุ่ม `curriculums/{curriculum}` ไม่มี `{academy}` ใน path** · show/update/destroy/courses/students bind `Curriculum` ด้วย id ตรง ๆ ⇒ เดา id ของโรงเรียนอื่นแล้วอ่าน/แก้/ลบได้ (รวมรายชื่อนักเรียน `getStudents` คืน user name/email/photo) · ต้องเพิ่ม tenant check ว่า user เป็น admin/สมาชิกของ `$curriculum->academy_id`
-- **G3 — ไม่มีเทสต์** · ควรมีชุด authz + CRUD + tenant isolation (เหมือน `AcademyCourseCrudTest` ของ #12)
+- **G1 — ✅ แก้แล้ว (CR-S1, 2026-10-07)** · เพิ่ม authz ทุก method ใน `CurriculumController` ผ่าน helper `authorizeView()` / `authorizeManage()` ที่เรียก `Academy::userCan()` · read = สมาชิกที่อนุมัติคนใดก็ได้ (Q2) · write = `courses.manage` (Q1/Q2)
+- **G2 — ✅ แก้แล้ว (CR-S1)** · method ที่รับ `Curriculum` ดึง `$curriculum->academy` มาเช็ค `userCan` ⇒ คนที่ไม่ใช่สมาชิกของโรงเรียนนั้น (รวม admin โรงเรียนอื่น) ได้ 403 · tenant isolation ครบ · `getAvailableCourses` เพิ่มเช็ค `curriculum.academy_id === academy.id` (404 ถ้าไม่ตรง)
+- **G3 — ✅ แก้แล้ว (CR-S2)** · `tests/Feature/Api/Academy/CurriculumAuthzTest.php` 9 เคส (authz + tenant isolation + CRUD)
 
 ## 6. คำถามที่ต้องให้เจ้าของโปรเจคเคาะก่อนลงมือ
 
@@ -74,9 +74,9 @@
 
 | Step | Title | Depends on | Deliverable | Status |
 |---|---|---|---|---|
-| CR-S1 | **ปิดช่องโหว่ P0 (G1+G2)** — ใส่ `academy.permission:courses.view`/`courses.manage` ให้กลุ่ม `{academy}/curriculums` + ทำ tenant+permission guard ให้กลุ่ม `curriculums/{curriculum}` (เช็ค user เป็น admin/ผู้มีสิทธิ์ของ `$curriculum->academy_id`) | Q1,Q2 | routes + controller/middleware | ⚪ pending |
-| CR-S2 | เทสต์ authz + tenant isolation (cross-academy 403) + CRUD happy-path | CR-S1 | `tests/Feature/Api/Academy/CurriculumAuthzTest.php` | ⚪ pending |
-| CR-S3 | (ถ้า Q3 ตัดสินว่า enroll อยู่เมนูนี้) ทวนสิทธิ์ enroll/remove student ให้สอดคล้อง | Q3 | — | ⚪ pending |
+| CR-S1 | **ปิดช่องโหว่ P0 (G1+G2)** — authz ในคอนโทรลเลอร์ (`authorizeView`/`authorizeManage` → `Academy::userCan`) ทุก method + tenant isolation จาก `$curriculum->academy` | Q1,Q2 | `CurriculumController` | 🟡 โค้ดเสร็จ (2026-10-07) · php -l รอ classifier · **รอเทสต์ MySQL** |
+| CR-S2 | เทสต์ authz + tenant isolation (cross-academy 403) + CRUD | CR-S1 | `CurriculumAuthzTest.php` (9 เคส) | 🟡 เขียนเสร็จ (2026-10-07) · **รอรัน MySQL** |
+| CR-S3 | enroll/remove student — Q3 ตัดสินว่าอยู่เมนูนี้ ⇒ ใช้ `courses.manage` (ครอบใน CR-S1 แล้ว: enrollStudent/removeStudent/bulkEnroll = authorizeManage) | Q3 | — | ✅ ครอบใน CR-S1 |
 
 **Rule:** ทุก step verify (build/test บน MySQL) ก่อน 🟢 · รายงาน agy เชื่อไม่ได้ ต้อง `git diff` + รันเกณฑ์เอง
 
@@ -92,4 +92,9 @@ Report back: diff + ผลเทสต์
 ```
 
 ## 9. Review Log
-- **2026-10-07** — ขั้น [1] สแกนโค้ด + [2] เขียนไฟล์รองนี้ เสร็จ (claude) · ฟีเจอร์ครบแต่เจอ **G1/G2 ช่องโหว่สิทธิ์ระดับ P0** (ทั้งโมดูลไม่มี authz + รั่วข้ามโรงเรียน) · ยังไม่ส่ง step · รอเจ้าของเคาะ Q1–Q3 ก่อนเริ่ม CR-S1
+- **2026-10-07** — ขั้น [1] สแกนโค้ด + [2] เขียนไฟล์รองนี้ เสร็จ · เจอ G1/G2 P0 · รอเจ้าของเคาะ Q1–Q3
+- **2026-10-07 (CR-S1 + CR-S2)** — เจ้าของเคาะ Q1–Q3 (key=courses.view/manage · owner/admin/ฝ่ายวิชาการจัดการ · ครู/นักเรียนดูทั้งหมด · enroll อยู่เมนูนี้)
+  - **CR-S1 🟡** ปิด G1+G2: เพิ่ม `authorizeView()`/`authorizeManage()` (เรียก `Academy::userCan`) เป็นบรรทัดแรกของ **ทุก 16 method** · read=สมาชิกคนใดก็ได้ · write=`courses.manage` · tenant isolation จาก `$curriculum->academy` (admin โรงเรียนอื่น/คนนอก = 403) · `getAvailableCourses` เช็คคู่ academy↔curriculum · ตรวจ guard coverage ครบ 16/16 ด้วย grep · ไม่แตะ response shape ที่ FE ใช้
+  - **CR-S2 🟡** `CurriculumAuthzTest.php` 9 เคส: admin สร้างได้ · ฝ่ายวิชาการ (courses.manage) สร้างได้ · สมาชิกธรรมดาสร้าง/แก้ไม่ได้ (403) · สมาชิกดู index ได้ · คนนอกดูไม่ได้ (403) · admin แก้ได้ · admin โรงเรียนอื่นแก้ไม่ได้ (403) · admin โรงเรียนอื่นอ่านรายชื่อนักเรียนไม่ได้ (403)
+  - ⚠️ **ยังไม่รันเทสต์/php -l ใน container** (Bash classifier error ชั่วคราว + ไม่มี vendor/MySQL) ⇒ เจ้าของรัน `php artisan test -c phpunit.mysql.xml --filter=CurriculumAuthzTest`
+  - 🎯 เมนู #13 ปิดช่องโหว่ P0 ครบ — เหลือเจ้าของ verify (รันเทสต์ MySQL)
