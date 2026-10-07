@@ -89,6 +89,7 @@
 - **G2 — หน้าแก้ไขคอร์สไม่มีจริง** · ปุ่มแก้ลิงก์ไป `/academies/{name}/admin/courses/{id}/edit` แต่โฟลเดอร์มีแค่ `index.vue` + `create.vue` → กดแล้ว 404
 - **G3 — FE แสดงสถานะผิด** · `getStatusLabel/getStatusBadge` map แค่ `'1'`/`'0'` + string · โมเดลจริงเป็น 1/2/3 ⇒ คอร์ส **draft (2)** และ **archived (3)** โชว์ "ไม่ทราบ" / ป้ายผิด (published=1 เท่านั้นที่ถูก)
 - **G4 — ❌ ไม่ใช่ gap จริง (ตรวจแล้ว 2026-10-07)** · endpoint `GET /academies/{id}/courses` ถูกเรียกจาก **9 หน้า** รวมโปรไฟล์โรงเรียนสาธารณะ (`academies/[name].vue`) · dashboard นักเรียน/ครู/admin · schedule · allocations ⇒ เป็น endpoint **รายการคอร์สทั่วไป ไม่ใช่ admin-only** · `academy.visibility:courses` (คุม public/private ของโรงเรียน) คือด่านที่ **ถูกต้องแล้ว** — ถ้าเปลี่ยนเป็น `courses.view` (สิทธิ์ admin) หน้าสาธารณะ/นักเรียน/ครูจะพังทันที ⇒ **ไม่แตะ** · สิทธิ์ `courses.view` ของ permission model ใช้คุม "การเข้าถึงเมนู admin" ที่ระดับหน้า/route admin ไม่ใช่ที่ data endpoint นี้
+- **G8 — ⚠️ latent bug (เจอตอนเขียนเทสต์ CO-S6)** · `CourseController@update` บรรทัด ~729 อ่าน `$course->courseSettings->auto_accept_members` แบบไม่กัน null ⇒ ถ้าคอร์ส**ไม่มี row `course_settings`** และ request ไม่ส่ง `auto_accept_members` จะ **500 (อ่าน property บน null)** · คอร์สที่สร้างผ่าน `store()` มี settings เสมอจึงไม่เจอ แต่คอร์สที่ clone จากตลาด/legacy อาจไม่มี → admin กดแก้แล้ว 500 · **ยังไม่แก้** (อยู่นอก CO-S1 เดิม · เสนอเป็น CO-S7 หรือ quick-fix `?->auto_accept_members ?? 0`) · เทสต์ CO-S6 สร้าง courseSettings ให้คอร์สทดสอบเพื่อเลี่ยงบั๊กนี้ชั่วคราว
 - **G5 — create ไม่มี permission middleware (✅ by design ตาม Q3)** · `POST /{academy}/courses` authz ภายในเช็ค `isAdmin || ครูที่อนุมัติ` · เจ้าของเคาะ Q3 แล้วว่า **ครูทุกคนที่อนุมัติสร้างได้** ⇒ พฤติกรรมปัจจุบันถูกต้อง ไม่ต้องเพิ่ม gate (เก็บไว้เป็นบันทึก ไม่ใช่งานแก้)
 - **G6 — ไม่มี endpoint แก้/ลบคอร์สในโฟลว์ admin** · การแก้/ลบทำได้แค่ผ่านหน้าเจ้าของคอร์ส (`PUT/DELETE /courses/{course}`) ⇒ เมนู admin ยังไม่มีทางแก้/ลบที่ใช้ได้ (คู่กับ G1/G2) · ต้องตัดสินว่า (ก) ชี้ปุ่ม admin ไปใช้ endpoint เจ้าของคอร์ส + เพิ่ม authz ให้ academy admin แก้/ลบของครูคนอื่นได้ หรือ (ข) เพิ่ม endpoint admin-scoped ใหม่
 - **G7 — store บันทึกฟิลด์ไม่ครบ** · `store()` comment ฟิลด์ส่วนใหญ่ทิ้ง (status/level/credit/dates/price/saleable) · บันทึกจริงแค่ name/code/description/cover ⇒ สร้างคอร์สได้แบบ minimal · สถานะเริ่มต้นไม่ได้เซ็ตชัดเจนตอนสร้าง
@@ -108,7 +109,8 @@
 | CO-S3 | ทำปุ่มลบให้ทำงาน (handler + confirm SweetAlert + เรียก `DELETE /courses/{id}` + ลบออกจาก list) (G1) | CO-S1 | FE | 🟡 โค้ดเสร็จ (2026-10-07) · **รอ build + คลิกจริง 375px ฝั่งเจ้าของ** |
 | CO-S4 | สร้างหน้าแก้ไข `admin/courses/[id]/edit.vue` + ต่อ `PATCH /courses/{id}` (G2) | CO-S1 | FE page | 🟡 โค้ดเสร็จ (2026-10-07) · **รอ build + คลิกจริง 375px** |
 | CO-S5 | แก้ contract ของฟอร์ม create + store (G7) | — | `store()` + create.vue | 🟡 โค้ดเสร็จ (2026-10-07) · **รอ build/test** |
-| CO-S6 | ชุดเทสต์ happy-path (create/edit/delete/filter/authz ข้ามโรงเรียน) บน MySQL | CO-S1..S5 | test suite | ⚪ pending |
+| CO-S6 | ชุดเทสต์ authz + CRUD | CO-S1..S5 | `tests/Feature/Api/Academy/AcademyCourseCrudTest.php` | 🟡 เขียนเสร็จ 7 เคส (2026-10-07) · php -l ผ่าน · **รอรันบน MySQL ฝั่งเจ้าของ** |
+| CO-S7 | (ใหม่) quick-fix G8 — กัน null `courseSettings` ใน `update()` | G8 | BE | ⚪ pending (เสนอ) |
 
 > **CO-S5 เจอมากกว่าที่คิด:** create ปัจจุบัน**พังจริง** — ฟอร์มส่ง `title`/`thumbnail` แต่ `store()` validate `name` (required) + อ่าน `cover` ⇒ 422 ทุกครั้ง · และ `status` ถูกแปลงเป็น boolean 0/1 (ผิด ทำให้เป็น published เสมอผ่าน mutator) · แก้: create.vue ส่ง `name`/`cover` · status options = draft/published/archived · `store()` ส่ง status เป็น string ให้ mutator (default draft)
 > **CO-S4 กัน regression:** `update()` ตั้ง `saleable` จาก request แบบไม่มีเงื่อนไข → edit page โหลด `saleable` เดิมแล้วส่งกลับ (ไม่งั้นบันทึกแล้ว saleable กลายเป็น null)
@@ -142,3 +144,9 @@ Report back: <diff + ผลเกณฑ์>
   - **CO-S4 🟡** สร้าง `ui/pages/academies/[name]/admin/courses/[id]/edit.vue` — โหลดจาก `GET /api/courses/{id}/basic-info` (CourseResource) · prefill (status 1/2/3 → string) · บันทึก `POST /api/courses/{id}` + `_method=PATCH` (รองรับไฟล์ปก) · preserve `saleable` เดิมกัน update() ล้างเป็น null · mobile-first 44px
   - **CO-S2+ (44px)** ปุ่ม ดู/แก้/ลบ ในแถว list เพิ่ม `min-h/min-w-[44px]` บนมือถือ (ลดที่ `sm:`)
   - ยังเหลือ **CO-S6** (เทสต์ MySQL) · ยังไม่รัน build/test ใน container (ไม่มี node_modules/vendor/MySQL) ⇒ **เจ้าของต้อง `npm run build` + คลิก 375px (สร้าง/แก้/ลบ) + `php artisan test -c phpunit.mysql.xml`**
+- **2026-10-07 (CO-S6)** — เขียน `tests/Feature/Api/Academy/AcademyCourseCrudTest.php` 7 เคส:
+  (1) admin โรงเรียนแก้คอร์สครูคนอื่นได้ 200 · (2) admin ลบคอร์สครูคนอื่นได้ 200 · (3) ครูเจ้าของแก้ของตัวเองได้ 200
+  · (4) admin โรงเรียนอื่นแก้ข้ามโรงเรียนไม่ได้ 403 · (5) คนนอกลบไม่ได้ 403 · (6) create ไม่มี name → 422
+  · (7) create status 'draft' → map เป็น tinyint 2 (CO-S5) · setup: `actingAs($u,'api')` + Academy/Course/User factory + สร้าง courseSettings
+  - 🐛 **เจอ G8** (update() 500 เมื่อคอร์สไม่มี courseSettings) — บันทึกไว้ · เสนอ CO-S7 quick-fix
+  - php -l ผ่านทุกไฟล์ · **ยังไม่รันเทสต์** (ไม่มี vendor/MySQL ใน container) ⇒ เจ้าของรัน `php artisan test -c phpunit.mysql.xml --filter=AcademyCourseCrudTest`
