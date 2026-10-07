@@ -88,27 +88,29 @@
 - **G1 — ปุ่มลบคอร์สเป็นปุ่มตาย** · `index.vue:410-415` ปุ่มลบไม่มี `@click` ไม่มี handler ไม่เรียก API อะไรเลย
 - **G2 — หน้าแก้ไขคอร์สไม่มีจริง** · ปุ่มแก้ลิงก์ไป `/academies/{name}/admin/courses/{id}/edit` แต่โฟลเดอร์มีแค่ `index.vue` + `create.vue` → กดแล้ว 404
 - **G3 — FE แสดงสถานะผิด** · `getStatusLabel/getStatusBadge` map แค่ `'1'`/`'0'` + string · โมเดลจริงเป็น 1/2/3 ⇒ คอร์ส **draft (2)** และ **archived (3)** โชว์ "ไม่ทราบ" / ป้ายผิด (published=1 เท่านั้นที่ถูก)
-- **G4 — list ไม่ได้ gate ด้วย `courses.view`** · route ใช้แค่ `academy.visibility:courses` (คุมมองเห็นระดับ public/private ของโรงเรียน) ไม่ใช่สิทธิ์ตาม role → permission key `courses.view`/`courses.view.enrolled` ที่ assign ให้ role ไม่มีผลกับเมนูนี้
-- **G5 — create ไม่มี permission middleware** · `POST /{academy}/courses` ไม่มี `academy.permission:courses.create|manage` · authz ภายในเช็คแค่ `isAdmin || เป็นครูที่อนุมัติ` ⇒ ครูทุกคนสร้างได้โดยไม่สน `courses.create` grant (อาจตั้งใจ — ยืนยัน Q3)
+- **G4 — ❌ ไม่ใช่ gap จริง (ตรวจแล้ว 2026-10-07)** · endpoint `GET /academies/{id}/courses` ถูกเรียกจาก **9 หน้า** รวมโปรไฟล์โรงเรียนสาธารณะ (`academies/[name].vue`) · dashboard นักเรียน/ครู/admin · schedule · allocations ⇒ เป็น endpoint **รายการคอร์สทั่วไป ไม่ใช่ admin-only** · `academy.visibility:courses` (คุม public/private ของโรงเรียน) คือด่านที่ **ถูกต้องแล้ว** — ถ้าเปลี่ยนเป็น `courses.view` (สิทธิ์ admin) หน้าสาธารณะ/นักเรียน/ครูจะพังทันที ⇒ **ไม่แตะ** · สิทธิ์ `courses.view` ของ permission model ใช้คุม "การเข้าถึงเมนู admin" ที่ระดับหน้า/route admin ไม่ใช่ที่ data endpoint นี้
+- **G5 — create ไม่มี permission middleware (✅ by design ตาม Q3)** · `POST /{academy}/courses` authz ภายในเช็ค `isAdmin || ครูที่อนุมัติ` · เจ้าของเคาะ Q3 แล้วว่า **ครูทุกคนที่อนุมัติสร้างได้** ⇒ พฤติกรรมปัจจุบันถูกต้อง ไม่ต้องเพิ่ม gate (เก็บไว้เป็นบันทึก ไม่ใช่งานแก้)
 - **G6 — ไม่มี endpoint แก้/ลบคอร์สในโฟลว์ admin** · การแก้/ลบทำได้แค่ผ่านหน้าเจ้าของคอร์ส (`PUT/DELETE /courses/{course}`) ⇒ เมนู admin ยังไม่มีทางแก้/ลบที่ใช้ได้ (คู่กับ G1/G2) · ต้องตัดสินว่า (ก) ชี้ปุ่ม admin ไปใช้ endpoint เจ้าของคอร์ส + เพิ่ม authz ให้ academy admin แก้/ลบของครูคนอื่นได้ หรือ (ข) เพิ่ม endpoint admin-scoped ใหม่
 - **G7 — store บันทึกฟิลด์ไม่ครบ** · `store()` comment ฟิลด์ส่วนใหญ่ทิ้ง (status/level/credit/dates/price/saleable) · บันทึกจริงแค่ name/code/description/cover ⇒ สร้างคอร์สได้แบบ minimal · สถานะเริ่มต้นไม่ได้เซ็ตชัดเจนตอนสร้าง
 
-## 6. คำถามที่ต้องให้เจ้าของโปรเจคเคาะก่อนลงมือ
+## 6. คำถามที่เจ้าของโปรเจคเคาะแล้ว (2026-10-07)
 
-- **Q1 — ขอบเขตเมนู:** #12 ดูแล "เฉพาะ catalog" (สร้าง/แก้ข้อมูลหลัก/สถานะ/ลบ รายการคอร์ส) ใช่ไหม · เนื้อหาในคอร์ส (บทเรียน/ข้อสอบ) ให้เป็นงานของเจ้าของคอร์สในหน้า `/courses/{course}` ตามเดิม?
-- **Q2 — สิทธิ์แก้/ลบ:** academy admin แก้/ลบคอร์สของครูคนอื่นได้ไหม · ครูแก้/ลบได้เฉพาะคอร์สตัวเอง (`courses.edit.own`) ใช่ไหม · ลบคอร์สที่มีนักเรียนลงทะเบียนแล้วอนุญาตหรือบล็อก (archive แทน)?
-- **Q3 — สิทธิ์สร้าง:** ให้ครูทุกคนที่อนุมัติสร้างคอร์สได้ (ตามโค้ดปัจจุบัน) หรือจำกัดด้วย `courses.create`/`courses.manage` ตาม permission model?
+- **Q1 — ขอบเขตเมนู:** ✅ **แค่ catalog** (สร้าง/แก้ข้อมูลหลัก/สถานะ/ลบ รายการคอร์ส) · เนื้อหาในคอร์ส (บทเรียน/ข้อสอบ) เป็นงานหน้าเจ้าของคอร์ส `/courses/{course}` ตามเดิม ⇒ เมนูนี้ไม่แตะ `Api/Learn/Course/**`
+- **Q2 — สิทธิ์แก้/ลบ:** ✅ **academy admin แก้/ลบคอร์สของครูคนอื่นได้** · ครูยังแก้/ลบของตัวเองได้ (`courses.edit.own`) · (การลบคอร์สที่มีนักเรียน: ใช้พฤติกรรม `CourseController@destroy` เดิมไปก่อน — ถ้าเจอว่าลบ hard แล้วเสี่ยง จะเสนอ archive เพิ่มใน CO-S3)
+- **Q3 — สิทธิ์สร้าง:** ✅ **ครูทุกคนที่อนุมัติสร้างได้** (ตามโค้ด `store()` ปัจจุบัน) ⇒ ไม่ต้องเพิ่ม `courses.create` gate ที่ route create · CO-S1 โฟกัสที่ **list (G4)** + ทำ authz ของ **แก้/ลบ (G6)** ให้รองรับ academy admin
 
 ## 7. Implementation Tasks (ส่งให้ agy ทีละ step — ยังไม่เริ่ม)
 
 | Step | Title | Depends on | Deliverable | Status |
 |---|---|---|---|---|
-| CO-S1 | ปิดด่านสิทธิ์ route คอร์สของเมนูนี้ให้ตรง permission model (list=`courses.view`, create=`courses.create\|manage`) + เทสต์ non-permission 403 | Q3 | middleware + test | ⚪ pending |
-| CO-S2 | แก้ FE สถานะให้ตรง 1/2/3 (label/badge) + mobile-first | — | `index.vue` | ⚪ pending |
-| CO-S3 | ทำปุ่มลบให้ทำงาน (handler + confirm swal + endpoint) | Q2, G6 | FE + BE | ⚪ pending |
-| CO-S4 | สร้างหน้าแก้ไข `admin/courses/[id]/edit.vue` + ต่อ endpoint แก้ (authz ตาม Q2) | Q2, G6 | FE page + BE | ⚪ pending |
-| CO-S5 | เปิดฟิลด์คอร์สที่ store comment ไว้ให้บันทึกจริง (status/level/ภาคเรียน ฯลฯ) ตามที่ฟอร์มรองรับ | Q1 | `store()` + create.vue | ⚪ pending |
-| CO-S6 | ชุดเทสต์ happy-path (list/create/edit/delete/filter/permission) บน MySQL | CO-S1..S5 | test suite | ⚪ pending |
+| CO-S1 | **แก้ authz ของ `CourseController@update/destroy` ให้ academy admin แก้/ลบคอร์สของครูคนอื่นในโรงเรียนตัวเองได้** (G6, ตาม Q2) · ครูยังแก้/ลบของตัวเอง · กันข้ามโรงเรียน | G6, Q2 | BE authz + test | ⚪ pending |
+| CO-S2 | แก้ FE สถานะให้ตรง 1/2/3 (label/badge) + mobile-first (G3) | — | `index.vue` | 🟢 verified (2026-10-07) |
+| CO-S3 | ทำปุ่มลบให้ทำงาน (handler + confirm SweetAlert + เรียก `DELETE /courses/{id}` + ลบออกจาก list) (G1) | CO-S1 | FE | ⚪ pending |
+| CO-S4 | สร้างหน้าแก้ไข `admin/courses/[id]/edit.vue` + ต่อ `PATCH /courses/{id}` (G2) | CO-S1 | FE page | ⚪ pending |
+| CO-S5 | เปิดฟิลด์คอร์สที่ store comment ไว้ให้บันทึกจริง (status/level/ภาคเรียน ฯลฯ) ตามที่ฟอร์มรองรับ (G7) | — | `store()` + create.vue | ⚪ pending |
+| CO-S6 | ชุดเทสต์ happy-path (create/edit/delete/filter/authz ข้ามโรงเรียน) บน MySQL | CO-S1..S5 | test suite | ⚪ pending |
+
+> **หมายเหตุ re-scope 2026-10-07:** G4 (ปิด list ด้วย courses.view) ถูกตัดทิ้ง — endpoint list เป็น shared (9 หน้า) `visibility:courses` ถูกแล้ว · G5 (create gate) by design ตาม Q3 ⇒ CO-S1 เดิมที่เป็น "ปิด list/create" ไม่ทำแล้ว เปลี่ยนเป็น authz แก้/ลบของ admin แทน
 
 **Rule:** ทุก step ต้อง verify (build/test/manual browser 375px) ก่อนขึ้น 🟢 · รายงาน agy เชื่อไม่ได้ ต้อง `git diff` + รันเกณฑ์เอง
 

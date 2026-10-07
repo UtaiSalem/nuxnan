@@ -191,23 +191,28 @@ const onPurchaseSuccess = (result: any) => {
 
 const getStatusBadge = (status: string | number) => {
   const s = String(status)
+  // courses.status tinyint: 1=published, 2=draft, 3=archived (0 = legacy draft)
+  const green = 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+  const yellow = 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+  const gray = 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
   const badges: Record<string, string> = {
-    '1': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    'published': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    '0': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-    'draft': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-    'archived': 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    '1': green, 'published': green,
+    '0': yellow, '2': yellow, 'draft': yellow,
+    '3': gray, 'archived': gray,
   }
   return badges[s] || badges.draft
 }
 
 const getStatusLabel = (status: string | number) => {
   const s = String(status)
+  // courses.status tinyint: 1=published, 2=draft, 3=archived (0 = legacy draft)
   const labels: Record<string, string> = {
     '1': 'เผยแพร่',
     'published': 'เผยแพร่',
     '0': 'ฉบับร่าง',
+    '2': 'ฉบับร่าง',
     'draft': 'ฉบับร่าง',
+    '3': 'เก็บถาวร',
     'archived': 'เก็บถาวร',
   }
   return labels[s] || 'ไม่ทราบ'
