@@ -66,9 +66,9 @@
 | 2 | ค้นหา (ชื่อ/รหัส/คำอธิบาย) | ✅ | `buildCourseQuery` |
 | 3 | กรองสถานะ published/draft/archived | ✅ (BE) / ⚠️ (FE) | BE map 1/2/3 ถูก · FE แสดงป้ายผิด (G3) |
 | 4 | กรองปี/ภาคเรียน/ระดับชั้น/scope | ✅ (BE) | FE ยังไม่มี UI ให้ (มีแต่ช่องสถานะ) |
-| 5 | สร้างรายวิชาใหม่ | ⚠️ | ใช้งานได้ แต่ store บันทึกแค่ name/code/description/cover · ฟิลด์อื่น comment ไว้ (G7) |
-| 6 | แก้ไขรายวิชา (จากหน้า admin) | ❌ | ไม่มีหน้า edit + ไม่มี endpoint admin (G2/G6) |
-| 7 | ลบรายวิชา (จากหน้า admin) | ❌ | ปุ่มลบไม่มี handler (G1) · ไม่มี endpoint admin (G6) |
+| 5 | สร้างรายวิชาใหม่ | 🟡 | CO-S5 แก้ contract (name/cover/status) แล้ว · รอ build/test ยืนยัน |
+| 6 | แก้ไขรายวิชา (จากหน้า admin) | 🟡 | CO-S4 หน้า `[id]/edit.vue` + PATCH + CO-S1 authz admin · รอ build/test |
+| 7 | ลบรายวิชา (จากหน้า admin) | 🟡 | CO-S3 ต่อปุ่มลบ + CO-S1 authz admin · รอ build/test |
 | 8 | ซื้อ Master Copy จากตลาด (clone) | ✅ | `CoursePurchaseModal` + async clone (queue) |
 | 9 | ด่านสิทธิ์ตาม permission model (courses.view/manage) | ❌ | route ไม่ได้ gate ด้วย key (G4/G5) |
 
@@ -106,9 +106,12 @@
 | CO-S1 | **แก้ authz ของ `CourseController@update/destroy` ให้ academy admin แก้/ลบคอร์สของครูคนอื่นในโรงเรียนตัวเองได้** (G6, ตาม Q2) · ครูยังแก้/ลบของตัวเอง · กันข้ามโรงเรียน | G6, Q2 | BE authz + test | 🟡 โค้ดเสร็จ (2026-10-07) · php -l ผ่าน · **รอรันเทสต์บน MySQL (CO-S6)** |
 | CO-S2 | แก้ FE สถานะให้ตรง 1/2/3 (label/badge) + mobile-first (G3) | — | `index.vue` | 🟢 verified (2026-10-07) |
 | CO-S3 | ทำปุ่มลบให้ทำงาน (handler + confirm SweetAlert + เรียก `DELETE /courses/{id}` + ลบออกจาก list) (G1) | CO-S1 | FE | 🟡 โค้ดเสร็จ (2026-10-07) · **รอ build + คลิกจริง 375px ฝั่งเจ้าของ** |
-| CO-S4 | สร้างหน้าแก้ไข `admin/courses/[id]/edit.vue` + ต่อ `PATCH /courses/{id}` (G2) | CO-S1 | FE page | ⚪ pending |
-| CO-S5 | เปิดฟิลด์คอร์สที่ store comment ไว้ให้บันทึกจริง (status/level/ภาคเรียน ฯลฯ) ตามที่ฟอร์มรองรับ (G7) | — | `store()` + create.vue | ⚪ pending |
+| CO-S4 | สร้างหน้าแก้ไข `admin/courses/[id]/edit.vue` + ต่อ `PATCH /courses/{id}` (G2) | CO-S1 | FE page | 🟡 โค้ดเสร็จ (2026-10-07) · **รอ build + คลิกจริง 375px** |
+| CO-S5 | แก้ contract ของฟอร์ม create + store (G7) | — | `store()` + create.vue | 🟡 โค้ดเสร็จ (2026-10-07) · **รอ build/test** |
 | CO-S6 | ชุดเทสต์ happy-path (create/edit/delete/filter/authz ข้ามโรงเรียน) บน MySQL | CO-S1..S5 | test suite | ⚪ pending |
+
+> **CO-S5 เจอมากกว่าที่คิด:** create ปัจจุบัน**พังจริง** — ฟอร์มส่ง `title`/`thumbnail` แต่ `store()` validate `name` (required) + อ่าน `cover` ⇒ 422 ทุกครั้ง · และ `status` ถูกแปลงเป็น boolean 0/1 (ผิด ทำให้เป็น published เสมอผ่าน mutator) · แก้: create.vue ส่ง `name`/`cover` · status options = draft/published/archived · `store()` ส่ง status เป็น string ให้ mutator (default draft)
+> **CO-S4 กัน regression:** `update()` ตั้ง `saleable` จาก request แบบไม่มีเงื่อนไข → edit page โหลด `saleable` เดิมแล้วส่งกลับ (ไม่งั้นบันทึกแล้ว saleable กลายเป็น null)
 
 > **หมายเหตุ re-scope 2026-10-07:** G4 (ปิด list ด้วย courses.view) ถูกตัดทิ้ง — endpoint list เป็น shared (9 หน้า) `visibility:courses` ถูกแล้ว · G5 (create gate) by design ตาม Q3 ⇒ CO-S1 เดิมที่เป็น "ปิด list/create" ไม่ทำแล้ว เปลี่ยนเป็น authz แก้/ลบของ admin แทน
 
@@ -134,3 +137,8 @@ Report back: <diff + ผลเกณฑ์>
   - **CO-S3 🟡** ต่อปุ่มลบใน `index.vue` (`confirmDelete` → `DELETE /api/courses/{id}` → กรองออกจาก list + toast/error + spinner ต่อแถว)
   - ⚠️ เหลือ CO-S4 (หน้า edit) · CO-S5 (store ฟิลด์ครบ) · CO-S6 (เทสต์ MySQL) · **หนี้ย่อย:** ปุ่ม ดู/แก้/ลบ ในแถว list เป็น `p-2` (~36px) < 44px — ยกไปทำพร้อม CO-S4 ที่แตะ cluster นี้อยู่แล้ว
   - ⚠️ **ต้อง verify ฝั่งเจ้าของ:** `npm run build` + คลิกจริง 375px (ลบคอร์ส) · `php artisan test -c phpunit.mysql.xml` (authz update/destroy ข้ามโรงเรียน)
+- **2026-10-07 (CO-S4 + CO-S5)** — ทำต่อตามที่เจ้าของสั่ง
+  - **CO-S5 🟡** `AcademyCourseController@store` แก้ status (string→mutator, default draft) · `create.vue` เปลี่ยน `title`→`name` + `thumbnail`→`cover` + status options draft/published/archived + validate `name` (ก่อนหน้านี้ create พังเพราะ `title`≠`name` ⇒ 422) · php -l ผ่าน
+  - **CO-S4 🟡** สร้าง `ui/pages/academies/[name]/admin/courses/[id]/edit.vue` — โหลดจาก `GET /api/courses/{id}/basic-info` (CourseResource) · prefill (status 1/2/3 → string) · บันทึก `POST /api/courses/{id}` + `_method=PATCH` (รองรับไฟล์ปก) · preserve `saleable` เดิมกัน update() ล้างเป็น null · mobile-first 44px
+  - **CO-S2+ (44px)** ปุ่ม ดู/แก้/ลบ ในแถว list เพิ่ม `min-h/min-w-[44px]` บนมือถือ (ลดที่ `sm:`)
+  - ยังเหลือ **CO-S6** (เทสต์ MySQL) · ยังไม่รัน build/test ใน container (ไม่มี node_modules/vendor/MySQL) ⇒ **เจ้าของต้อง `npm run build` + คลิก 375px (สร้าง/แก้/ลบ) + `php artisan test -c phpunit.mysql.xml`**

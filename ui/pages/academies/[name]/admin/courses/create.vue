@@ -25,16 +25,15 @@ const isSubmitting = ref(false)
 const errors = ref<Record<string, string>>({})
 const successMessage = ref('')
 
+// ชื่อฟิลด์ตรงกับ backend: name (required) / cover (ไฟล์) / status เป็น string ที่ mutator ของ Course map เป็น tinyint
 const form = reactive({
-  title: '',
+  name: '',
   description: '',
   price: 0,
-  discount_price: null as number | null,
   duration: '',
   level: 'beginner',
   status: 'draft',
-  is_featured: false,
-  thumbnail: null as File | null
+  cover: null as File | null
 })
 
 // Levels
@@ -44,27 +43,27 @@ const levels = [
   { value: 'advanced', label: 'ขั้นสูง' }
 ]
 
-// Statuses
+// Statuses — ตรงกับ Course::STATUS_MAP (published/draft/archived)
 const statuses = [
-  { value: 'draft', label: 'แบบร่าง' },
-  { value: 'pending', label: 'รอตรวจสอบ' },
-  { value: 'published', label: 'เผยแพร่' }
+  { value: 'draft', label: 'ฉบับร่าง' },
+  { value: 'published', label: 'เผยแพร่' },
+  { value: 'archived', label: 'เก็บถาวร' }
 ]
 
 // Handle file upload
 const handleFileChange = (event: Event) => {
   const target = event.target as HTMLInputElement
   if (target.files && target.files[0]) {
-    form.thumbnail = target.files[0]
+    form.cover = target.files[0]
   }
 }
 
 // Validate form
 const validateForm = () => {
   errors.value = {}
-  
-  if (!form.title) {
-    errors.value.title = 'กรุณากรอกชื่อรายวิชา'
+
+  if (!form.name) {
+    errors.value.name = 'กรุณากรอกชื่อรายวิชา'
   }
   
   if (!form.description) {
@@ -164,13 +163,13 @@ onMounted(async () => {
           ชื่อรายวิชา <span class="text-red-500">*</span>
         </label>
         <input
-          v-model="form.title"
+          v-model="form.name"
           type="text"
           class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-          :class="{ 'border-red-500': errors.title }"
+          :class="{ 'border-red-500': errors.name }"
           placeholder="เช่น วิทยาศาสตร์ ม.1"
         />
-        <p v-if="errors.title" class="mt-1 text-sm text-red-500">{{ errors.title }}</p>
+        <p v-if="errors.name" class="mt-1 text-sm text-red-500">{{ errors.name }}</p>
       </div>
 
       <!-- Description -->
@@ -259,8 +258,8 @@ onMounted(async () => {
             <span class="mt-2 text-sm text-gray-500">คลิกเพื่ออัพโหลด</span>
             <input type="file" accept="image/*" class="hidden" @change="handleFileChange" />
           </label>
-          <div v-if="form.thumbnail" class="text-sm text-gray-600 dark:text-gray-400">
-            {{ form.thumbnail.name }}
+          <div v-if="form.cover" class="text-sm text-gray-600 dark:text-gray-400">
+            {{ form.cover.name }}
           </div>
         </div>
       </div>

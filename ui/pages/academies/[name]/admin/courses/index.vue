@@ -427,14 +427,14 @@ watch(activeTab, (newTab) => {
               <div class="flex items-center gap-2 sm:flex-col sm:justify-center">
                 <NuxtLink
                   :to="`/courses/${course.name || course.slug}`"
-                  class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-primary-50 hover:text-primary-600 dark:hover:bg-primary-900/30"
+                  class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg p-2 text-gray-500 transition-colors hover:bg-primary-50 hover:text-primary-600 dark:hover:bg-primary-900/30 sm:min-h-0 sm:min-w-0"
                   title="ดูรายวิชา"
                 >
                   <Icon icon="fluent:eye-24-regular" class="h-5 w-5" />
                 </NuxtLink>
                 <NuxtLink
                   :to="`/academies/${academyName}/admin/courses/${course.id}/edit`"
-                  class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/30"
+                  class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg p-2 text-gray-500 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/30 sm:min-h-0 sm:min-w-0"
                   title="แก้ไข"
                 >
                   <Icon icon="fluent:edit-24-regular" class="h-5 w-5" />
@@ -442,7 +442,7 @@ watch(activeTab, (newTab) => {
                 <button
                   @click="deleteCourse(course)"
                   :disabled="deletingId === course.id"
-                  class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-900/30"
+                  class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg p-2 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-900/30 sm:min-h-0 sm:min-w-0"
                   title="ลบ"
                 >
                   <Icon
