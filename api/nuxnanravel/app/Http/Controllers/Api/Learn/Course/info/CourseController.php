@@ -668,7 +668,10 @@ class CourseController extends Controller
      */
     public function update(Course $course, Request $request)
     {
-        if (! $course->isAdmin(auth()->user())) {
+        // Course owner/co-admin/super-admin, OR an admin of the course's own
+        // academy (academy admin manages the school's course catalog — menu #12).
+        $user = auth()->user();
+        if (! $course->isAdmin($user) && ! $course->academy?->isAdmin($user)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -862,7 +865,10 @@ class CourseController extends Controller
      */
     public function destroy(Course $course, CourseMediaService $mediaService)
     {
-        if (! $course->isAdmin(auth()->user())) { // Usually only owner can destroy course, but if user wants admin = owner, then this is fine.
+        // Course owner/co-admin/super-admin, OR an admin of the course's own
+        // academy (academy admin manages the school's course catalog — menu #12).
+        $user = auth()->user();
+        if (! $course->isAdmin($user) && ! $course->academy?->isAdmin($user)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 

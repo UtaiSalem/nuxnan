@@ -16,6 +16,7 @@ definePageMeta({
 
 const route = useRoute()
 const api = useApi()
+const swal = useSweetAlert()
 const academyName = computed(() => route.params.name as string)
 
 // Tabs State
@@ -165,6 +166,32 @@ const openPurchase = (course: any) => {
 // ดูรายละเอียด Master Copy บนหน้า course จริง (แยกจากปุ่มซื้อ)
 const viewCourse = (course: any) => {
   navigateTo(`/Learn/Courses/${course.id}`)
+}
+
+const deletingId = ref<number | null>(null)
+
+const deleteCourse = async (course: any) => {
+  if (deletingId.value) return
+  const ok = await swal.confirmDelete(
+    `รายวิชา "${course.title || course.name}"`,
+    'การลบจะนำรายวิชาและเนื้อหาออกจากคลังของโรงเรียน',
+  )
+  if (!ok) return
+
+  deletingId.value = course.id
+  try {
+    await api.delete(`/api/courses/${course.id}`)
+    courses.value = courses.value.filter((c) => c.id !== course.id)
+    totalCourses.value = Math.max(0, totalCourses.value - 1)
+    swal.toast('ลบรายวิชาแล้ว', 'success')
+  } catch (error: any) {
+    swal.error(
+      error?.data?.message || 'ลบรายวิชาไม่สำเร็จ โปรดลองใหม่',
+      'ลบไม่สำเร็จ',
+    )
+  } finally {
+    deletingId.value = null
+  }
 }
 
 const purchaseBanner = ref<{ type: 'success' | 'queued'; text: string } | null>(null)
@@ -413,10 +440,15 @@ watch(activeTab, (newTab) => {
                   <Icon icon="fluent:edit-24-regular" class="h-5 w-5" />
                 </NuxtLink>
                 <button
-                  class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30"
+                  @click="deleteCourse(course)"
+                  :disabled="deletingId === course.id"
+                  class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:hover:bg-red-900/30"
                   title="ลบ"
                 >
-                  <Icon icon="fluent:delete-24-regular" class="h-5 w-5" />
+                  <Icon
+                    :icon="deletingId === course.id ? 'fluent:spinner-ios-20-regular' : 'fluent:delete-24-regular'"
+                    :class="['h-5 w-5', deletingId === course.id && 'animate-spin']"
+                  />
                 </button>
               </div>
             </div>

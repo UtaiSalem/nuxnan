@@ -103,9 +103,9 @@
 
 | Step | Title | Depends on | Deliverable | Status |
 |---|---|---|---|---|
-| CO-S1 | **แก้ authz ของ `CourseController@update/destroy` ให้ academy admin แก้/ลบคอร์สของครูคนอื่นในโรงเรียนตัวเองได้** (G6, ตาม Q2) · ครูยังแก้/ลบของตัวเอง · กันข้ามโรงเรียน | G6, Q2 | BE authz + test | ⚪ pending |
+| CO-S1 | **แก้ authz ของ `CourseController@update/destroy` ให้ academy admin แก้/ลบคอร์สของครูคนอื่นในโรงเรียนตัวเองได้** (G6, ตาม Q2) · ครูยังแก้/ลบของตัวเอง · กันข้ามโรงเรียน | G6, Q2 | BE authz + test | 🟡 โค้ดเสร็จ (2026-10-07) · php -l ผ่าน · **รอรันเทสต์บน MySQL (CO-S6)** |
 | CO-S2 | แก้ FE สถานะให้ตรง 1/2/3 (label/badge) + mobile-first (G3) | — | `index.vue` | 🟢 verified (2026-10-07) |
-| CO-S3 | ทำปุ่มลบให้ทำงาน (handler + confirm SweetAlert + เรียก `DELETE /courses/{id}` + ลบออกจาก list) (G1) | CO-S1 | FE | ⚪ pending |
+| CO-S3 | ทำปุ่มลบให้ทำงาน (handler + confirm SweetAlert + เรียก `DELETE /courses/{id}` + ลบออกจาก list) (G1) | CO-S1 | FE | 🟡 โค้ดเสร็จ (2026-10-07) · **รอ build + คลิกจริง 375px ฝั่งเจ้าของ** |
 | CO-S4 | สร้างหน้าแก้ไข `admin/courses/[id]/edit.vue` + ต่อ `PATCH /courses/{id}` (G2) | CO-S1 | FE page | ⚪ pending |
 | CO-S5 | เปิดฟิลด์คอร์สที่ store comment ไว้ให้บันทึกจริง (status/level/ภาคเรียน ฯลฯ) ตามที่ฟอร์มรองรับ (G7) | — | `store()` + create.vue | ⚪ pending |
 | CO-S6 | ชุดเทสต์ happy-path (create/edit/delete/filter/authz ข้ามโรงเรียน) บน MySQL | CO-S1..S5 | test suite | ⚪ pending |
@@ -126,4 +126,11 @@ Report back: <diff + ผลเกณฑ์>
 ```
 
 ## 9. Review Log
-- **2026-10-07** — ขั้น [1] สแกนโค้ด + [2] เขียนไฟล์รองนี้ เสร็จ (claude) · พบ gap G1–G7 · ยังไม่ส่ง step ไหนให้ agy · รอเจ้าของเคาะ Q1–Q3 ก่อนเริ่ม CO-S1
+- **2026-10-07** — ขั้น [1] สแกนโค้ด + [2] เขียนไฟล์รองนี้ เสร็จ (claude) · พบ gap G1–G7 · รอเจ้าของเคาะ Q1–Q3
+- **2026-10-07 (ต่อ)** — เจ้าของเคาะ Q1–Q3 แล้ว (catalog only · admin แก้/ลบของครูคนอื่นได้ · ครูทุกคนสร้างได้)
+  - ตรวจเพิ่ม: G4 **ไม่ใช่ gap** (endpoint list shared 9 หน้า) · G5 by design ⇒ re-scope CO-S1
+  - **CO-S2 ✅** แก้ FE status label/badge ให้ครบ 1/2/3 (`index.vue`)
+  - **CO-S1 🟡** `CourseController@update/destroy` เพิ่มเงื่อนไข `$course->academy?->isAdmin($user)` (academy admin แก้/ลบคอร์สในโรงเรียนตัวเองได้ · กันข้ามโรงเรียนเพราะเช็ค academy ของคอร์สเอง) · php -l ผ่าน · ยังไม่รันเทสต์ (ไม่มี vendor/MySQL ใน container)
+  - **CO-S3 🟡** ต่อปุ่มลบใน `index.vue` (`confirmDelete` → `DELETE /api/courses/{id}` → กรองออกจาก list + toast/error + spinner ต่อแถว)
+  - ⚠️ เหลือ CO-S4 (หน้า edit) · CO-S5 (store ฟิลด์ครบ) · CO-S6 (เทสต์ MySQL) · **หนี้ย่อย:** ปุ่ม ดู/แก้/ลบ ในแถว list เป็น `p-2` (~36px) < 44px — ยกไปทำพร้อม CO-S4 ที่แตะ cluster นี้อยู่แล้ว
+  - ⚠️ **ต้อง verify ฝั่งเจ้าของ:** `npm run build` + คลิกจริง 375px (ลบคอร์ส) · `php artisan test -c phpunit.mysql.xml` (authz update/destroy ข้ามโรงเรียน)
