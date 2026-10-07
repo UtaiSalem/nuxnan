@@ -2,7 +2,9 @@
 
 # 2026-08-09 — 🅰️ ลบเกาะ Inertia legacy ออกจาก `ui/` (Tier A: orphan ล้วน)
 
-- **Status:** ✅ **ทำเสร็จแล้ว 2026-08-10** — Tier A ลบครบ 6 เกาะ (75 ไฟล์ / −18,773 บรรทัด) commit `a4093743` `3055501d` `84a56449` `e2b7fa86` `9476499f` `42a4e9b9` · Tier C ปิดด้วย `bcefe3dc` · เกณฑ์ผ่านครบทั้ง A–E · **ยังไม่ push · ยังไม่ได้ `npm run build`** · เหลือ **Tier B 9 ไฟล์** เป็นงานถัดไป
+- **Status:** ✅ **ปิดครบทุก Tier แล้ว** — Tier A ลบครบ 6 เกาะ (75 ไฟล์ / −18,773 บรรทัด) 2026-08-10 commit `a4093743` `3055501d` `84a56449` `e2b7fa86` `9476499f` `42a4e9b9` · Tier C ปิดด้วย `bcefe3dc` · เกณฑ์ผ่านครบทั้ง A–E
+  - ✅ **Tier B + Tier D เสร็จ 2026-08-16/17** (เดิม status บรรทัดนี้ค้างเขียนว่า "เหลือ Tier B 9 ไฟล์" — ไม่จริงแล้ว): `bcb478e8` เขียนใหม่ `PrivacyPolicy`/`TermsOfService`/`ForgotPassword`(→หน้าติดต่อแอดมิน)/`AuthenticationCardLogo` · `745f9e09` ถอด shim+plugin+alias `nuxt.config.ts` + `CreateNewCourse` เลิกพึ่ง `$page` + ลบ 4 หน้า auth orphan · ดูบันทึกเต็มที่ worklog 2026-08-16
+  - 🔎 **ยืนยัน codebase 2026-10-07:** `git grep @inertiajs`/`$page` ใน `ui/` = ว่าง · ไฟล์ shim/plugin ถูกลบแล้ว ⇒ Inertia ถอดออกจากโปรเจคหมด ไม่มีงาน Tier ไหนค้าง
 - **Branch ตอนร่างแผน:** `main` (`b5481114`, working tree สะอาด, ตรงกับ `origin/main`)
 - **ขอบเขต:** ลบอย่างเดียว **ห้ามเขียนหน้าใหม่ ห้ามแก้ลอจิก** — ไฟล์ที่ยังใช้งานจริงอยู่ (Tier B) เป็นงานคนละรอบ
 - **ที่มา:** TODO ค้างจากเซสชัน 2026-08-09 (ปิดท้าย) — *"หน้าใต้ `Learn/Academy/[name]/Settings/*` และ `curriculum/*` เป็นโค้ด Inertia เก่า … ต้องตัดสินใจว่าจะรื้อหรือลบทิ้ง (ทั้งโปรเจคมี 51 ไฟล์ที่ import Inertia)"*
