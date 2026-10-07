@@ -1,5 +1,21 @@
 # Work Log — nuxnan project
 
+## 🧭 สถานะ git — ยืนยัน 2026-10-07 (อ่านก่อนเชื่อคำว่า "ยังไม่ push/ยังไม่ merge" ในบันทึกเก่า)
+
+บันทึกด้านล่างเป็น log ประวัติ หลาย entry เขียน "ยังไม่ push" / "ยังไม่ merge" / "⏳ ยังไม่ทำ" ตามสภาพ ณ ตอนนั้น
+ตรวจจริงวันนี้: `git log origin/main..HEAD` = เหลือเฉพาะ commit เอกสารของเซสชันนี้ · remote เหลือแค่ `origin/main`
+\+ branch เซสชันนี้ (ไม่มี dev branch เก่าค้างบน origin แล้ว · repo เป็น shallow clone · PR ทุกตัว squash-merge)
+⇒ **งานที่บันทึกว่า commit ตรงบน `main` (ส่วนใหญ่ของ entry) เข้า `main` ครบแล้ว** — "ยังไม่ push" ของ entry พวกนั้นปิดแล้ว
+(SHA เดิมของ dev branch ตรวจไม่เจอใน clone นี้เป็นเรื่องปกติของ squash-merge — ไม่ได้แปลว่างานหาย)
+🔸 entry ที่ commit อยู่บน **feature branch** เฉพาะชื่อ: branch นั้นไม่เหลือบน origin แล้ว ซึ่งปกติ = merge เข้า main
+   แต่ยืนยันราย SHA ไม่ได้ (shallow) — ถ้าสงสัย ให้เช็กว่าโค้ด/ไฟล์ของงานนั้นอยู่ใน main จริงไหมก่อนสรุป
+
+⚠️ ข้อนี้ครอบคลุม **push/merge เท่านั้น** — งาน runtime owner-gated ที่ยังค้างจริงตามแต่ละ entry ยังคงค้าง:
+production ยังไม่ได้รัน migration บางชุด (ก่อนรันให้ `mysqldump` ก่อนเสมอ) · `npm run build` ฝั่ง FE เจ้าของรันเอง
+· `guardians:backfill --force` ยังไม่รันบนฐานบางเครื่อง · G25 (migrate จากศูนย์บน MySQL) — เหล่านี้ไม่เกี่ยวกับ push
+
+---
+
 ## 📋 Backlog — ✅ ปิดครบทุกข้อ (อัพเดท 2026-09-27)
 ข้อ 1–5 ด้านล่างเสร็จหมดแล้ว (รายละเอียด + commit อยู่ในแต่ละหัวข้อ) · ไม่มีงาน backlog ค้าง
 
@@ -556,7 +572,7 @@ scope/version=1 → no-op บน sqlite) เรียกใน setUp 3 คลา
 
 ## 2026-09-24 — UserResource N+1 เบาทั้งแอป (backlog #1 + #4)
 
-### สถานะ: ✅ เสร็จ 3 commit บน main (ยังไม่ push — รอเจ้าของโปรเจคเคาะ)
+### สถานะ: ✅ เสร็จ 3 commit บน main (~~ยังไม่ push — รอเจ้าของโปรเจคเคาะ~~ → เข้า main แล้ว, ดู §สถานะ git ด้านบน)
 - `7b4ebd1b` perf(api) เฟส A — รวม eager-load เป็น scope `User::withCardCounts()` เดียว (refactor ActivityController + CoursePost ที่ลอกซ้ำ)
 - `2a4ceeb6` perf(api) เฟส B — apply scope เข้า list ที่ render UserResource เต็ม
 - `a0134b45` test(api) เทสต์กัน N+1 ถอย (mutation-verified)
@@ -1839,7 +1855,7 @@ social login เซ็ตให้ทันที · มี `AdminUserApprovalTe
 
 ## 2026-09-02 (ต่อ) — ลบเมธอดตายใน AuthService
 
-### สถานะ: ✅ 1 ไฟล์ · **−99 / +19** · commit แล้ว `82cf5fd2` · **ยังไม่ push**
+### สถานะ: ✅ 1 ไฟล์ · **−99 / +19** · commit แล้ว `82cf5fd2` · ~~**ยังไม่ push**~~ → เข้า main แล้ว (§สถานะ git)
 
 คลาสนี้มี 5 เมธอด **มีคนเรียกจริงแค่ 1** คือ `assignDefaultRole`
 (จุดร่วมของสองทางสมัคร: `AuthController::register` + `SocialAuthController`)
@@ -1898,7 +1914,7 @@ SQLSTATE[HY000]: General error: 1364 Field 'name' doesn't have a default value
 
 ## 2026-09-02 (ต่อ) — เลิกใช้ FIELD() ใน CourseController
 
-### สถานะ: ✅ 1 ไฟล์แก้ + เทสต์ใหม่ 1 (3 เคส) · commit แล้ว `8189ec82` · **ยังไม่ push**
+### สถานะ: ✅ 1 ไฟล์แก้ + เทสต์ใหม่ 1 (3 เคส) · commit แล้ว `8189ec82` · ~~**ยังไม่ push**~~ → เข้า main แล้ว (§สถานะ git)
 
 `getRecentCourses` (`/api/me/recent-courses`) เรียงด้วย
 `orderByRaw('FIELD(id, '.implode(',', $ids).')')` ⇒ ปัญหาสองชั้น:
@@ -1982,7 +1998,7 @@ SQLSTATE[HY000]: General error: 1364 Field 'name' doesn't have a default value
 
 ## 2026-09-02 (ต่อ) — G18: ปิดรูรั่ว endpoint โรงเรียน 4 กลุ่ม
 
-### สถานะ: **G18 ✅ ตรวจครบทุกข้อ** — 9 ไฟล์ + migration 1 + เทสต์ใหม่ 1 · **ยังไม่ push**
+### สถานะ: **G18 ✅ ตรวจครบทุกข้อ** — 9 ไฟล์ + migration 1 + เทสต์ใหม่ 1 · ~~**ยังไม่ push**~~ → เข้า main แล้ว (§สถานะ git)
 
 เอกสารหลัก: [`.agents/school-admin/07-settings.md`](school-admin/07-settings.md) §G18 (D23–D26)
 
@@ -4160,7 +4176,7 @@ migration รันใหม่ทุกคลาสที่ใช้ `RefreshD
 
 ## 2026-08-26 — G-S3 ปิดครบทุกจุดอ่าน (G-S3-b + G-S3-c) · ทางอ่านพ้น `student_guardians` แล้ว
 
-### สถานะ: **เสร็จ · commit แล้ว 2 ก้อน** (`3664e030`, `037052d0`) · **ยังไม่ push**
+### สถานะ: **เสร็จ · commit แล้ว 2 ก้อน** (`3664e030`, `037052d0`) · ~~**ยังไม่ push**~~ → เข้า main แล้ว (§สถานะ git)
 
 **G-S3 จบแล้ว** — `grep` ทั้ง `app/` ตอนนี้ทุกจุดที่เหลือซึ่งอ้าง `student_guardians`
 เป็น **ทางเขียน** (GuardianWriteService, GuardianController store/update/destroy,
@@ -4578,7 +4594,7 @@ shard B รายงานว่า `pint --test` ผ่าน — **ไม่�
 
 ## 2026-08-25 (ต่อ) — G-S8: ฟิลด์อ่อนไหวของผู้ปกครอง ปิด 5 ทางที่เคยหลุด
 
-### สถานะ: **เสร็จ ตรวจครบ · commit แล้ว 2 ชุด** (`5d36dd1b`, `0f07a99e`) ยังไม่ push
+### สถานะ: **เสร็จ ตรวจครบ · commit แล้ว 2 ชุด** (`5d36dd1b`, `0f07a99e`) ~~ยังไม่ push~~ → เข้า main แล้ว (§สถานะ git)
 
 ### นโยบายที่เจ้าของโปรเจคตัดสิน (ต่างจากเมทริกซ์เดิม 1 ช่อง)
 
@@ -5332,7 +5348,7 @@ S-S5b: agy วาง `$discipline->update(['format' => ...])` ไว้**ก่�
 
 ## 2026-08-16 (ถึงเช้า 08-17) — ปิด Tier B + Tier D · ถอด Inertia ออกจากโปรเจคหมดแล้ว · เพิ่มสกิล agy
 
-### สถานะ: **เสร็จ · 3 commit ยังไม่ push** (`9082e594` `bcb478e8` `745f9e09`) · **⚠️ ยังไม่ได้รัน `npm run build`**
+### สถานะ: ✅ **เสร็จ · เข้า main แล้ว** (3 commit `9082e594` `bcb478e8` `745f9e09`, squash-merged — ดู §สถานะ git ด้านบน) · `npm run build` รอบนั้นเจ้าของรันเอง (moot แล้ว — มี PR ตามมาอีกหลายสิบตัวหลังจากนี้)
 
 > ปิด TODO ที่ค้างจาก 2026-08-10 ครบ 2 ข้อใหญ่: 🅱️ Tier B (9 ไฟล์) และ 🅳 ถอด Inertia ถาวร
 > **รวมทั้งเซสชัน +503 / −1,773 บรรทัด · 22 ไฟล์**
@@ -5454,7 +5470,7 @@ entry ก่อนหน้าเขียนวันที่ 2026-08-10 แ�
 
 ## 2026-08-10 — ตัดสินชะตา 51 ไฟล์ Inertia · ลบเกาะที่ตายแล้วออก 75 ไฟล์ (Tier A + C)
 
-### สถานะ: **เสร็จ · 8 commit** — Tier A (6 เกาะ) + Tier C · **⚠️ ยังไม่ได้รัน `npm run build`** · เหลือ Tier B 9 ไฟล์
+### สถานะ: ✅ **เสร็จ · เข้า main แล้ว** — Tier A (6 เกาะ) + Tier C (8 commit, squash-merged) · Tier B+D ปิดตามมา 2026-08-16 (ดู entry ด้านบน) ⇒ **ไม่เหลือ Tier ไหนค้าง**
 
 > ปิด TODO ที่ค้างมาจาก 2026-08-09 (ปิดท้าย): *"หน้าใต้ `Learn/Academy/[name]/Settings/*` และ `curriculum/*` เป็นโค้ด Inertia เก่า … ต้องตัดสินใจว่าจะรื้อหรือลบทิ้ง"* → **คำตอบคือลบ** เพราะเป็น orphan ล้วน
 
@@ -5465,9 +5481,9 @@ entry ก่อนหน้าเขียนวันที่ 2026-08-10 แ�
 | ชั้น | จำนวน | ชะตา | สถานะ |
 |---|---|---|---|
 | 🅰️ orphan ล้วน 0 inbound link | 75 ไฟล์ | ลบ | ✅ เสร็จ |
-| 🅱️ live แต่พังจริง | 9 ไฟล์ | เขียนใหม่ | ⏳ ยังไม่ทำ |
+| 🅱️ live แต่พังจริง | 9 ไฟล์ | เขียนใหม่ | ✅ เสร็จ 2026-08-16 (`bcb478e8`) |
 | 🅲 เศษ import บรรทัดเดียว | 1 ไฟล์ | ลบบรรทัด | ✅ เสร็จ |
-| 🅳 ตัว shim + alias | 3 จุด | ลบหลัง B จบ | ⏳ ยังไม่ทำ (ยังมีคนใช้ 9 ไฟล์) |
+| 🅳 ตัว shim + alias | 3 จุด | ลบหลัง B จบ | ✅ เสร็จ 2026-08-16 (`745f9e09`) — Inertia ถอดหมดแล้ว |
 
 **วิธีพิสูจน์ว่าเป็น orphan** (ทำครบ 6 ด้านก่อนลบสักไฟล์): สแกน `import`/`import()` ทุก `.vue/.ts/.js` · สแกน route-string · สแกน auto-import tag ทั้งชื่อสั้นและชื่อ prefix ของ Nuxt (`<PartialsNavbar>` ฯลฯ) · สแกน layout name ใน `definePageMeta` · ตรวจว่าเกาะลิงก์หากันเองล้วน · ยืนยันว่าของใหม่ที่แทนแล้วมีจริง
 ⇒ เจอเส้น inbound จากแอปจริง **เส้นเดียว** คือ `Learn/Courses/create.vue:2 → Learn/Course/CreateNewCourse.vue` (จึงกันไฟล์นั้นออกจากลิสต์ลบ)
@@ -5820,7 +5836,7 @@ grep -n "^post_max_size\|^upload_max_filesize" /c/wamp64/bin/php/php8.4.15/php.i
 
 ## 2026-08-08 (ต่อ) — เคลียร์ TODO ค้าง 3 ข้อจาก 2026-08-03 · ตัดสิน S-D2 · ล็อกสเปก S-S3e
 
-### สถานะ: **S-S3e เสร็จครบทั้ง backend + frontend · พิสูจน์กับข้อมูลจริง 2,143 คนแล้ว** · commit `02dc8e94` `d89f9796` `2a348218` · **ยังไม่ push**
+### สถานะ: **S-S3e เสร็จครบทั้ง backend + frontend · พิสูจน์กับข้อมูลจริง 2,143 คนแล้ว** · commit `02dc8e94` `d89f9796` `2a348218` · ~~**ยังไม่ push**~~ → เข้า main แล้ว (§สถานะ git)
 
 > ⚠️ **Codex เลิกใช้ถาวรแล้ว** (หมดอายุ ไม่ได้ต่อ) — agy เป็นผู้เขียนโค้ดคนเดียวจากนี้ไป
 
@@ -6078,7 +6094,7 @@ node -e "const {parse,compileTemplate,compileScript}=require('@vue/compiler-sfc'
 
 ## 2026-07-31 — 3 ฟีเจอร์เร่งด่วนของฝ่ายกิจการนักเรียน: เลือกตั้งสภานักเรียน / เช็คชื่อกิจกรรม / กีฬาสี
 
-### สถานะ: สเปกครบ 3 เมนู · **E-S1 + E-S2 ของเมนู #25 เสร็จและตรวจผ่าน** · E-S3 กำลังรัน · **ยังไม่ push** (4 commit ค้างบน main)
+### สถานะ: สเปกครบ 3 เมนู · **E-S1 + E-S2 ของเมนู #25 เสร็จและตรวจผ่าน** · E-S3 กำลังรัน · ~~**ยังไม่ push** (4 commit ค้างบน main)~~ → เข้า main แล้ว (§สถานะ git · สถานะ E-S3 ปัจจุบันดู `.agents/school-admin/25-elections.md`)
 
 เมนูใหม่ #25–#27 เพิ่มเข้า [OVERVIEW.md](school-admin/OVERVIEW.md) แล้ว · ลำดับที่ตกลง: **#25 ก่อน** → #26 → #27
 
