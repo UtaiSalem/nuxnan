@@ -725,8 +725,9 @@ class CourseController extends Controller
 
         $course->update($validated);
 
+        // คอร์สบางตัว (เช่น clone จากตลาด/legacy) อาจไม่มีแถว course_settings — กัน null ไม่ให้ 500 (G8)
         $course->courseSettings()->update([
-            'auto_accept_members' => $request->auto_accept_members ?? $course->courseSettings->auto_accept_members,
+            'auto_accept_members' => $request->auto_accept_members ?? $course->courseSettings?->auto_accept_members ?? 0,
         ]);
 
         if ($request->hasFile('cover')) {

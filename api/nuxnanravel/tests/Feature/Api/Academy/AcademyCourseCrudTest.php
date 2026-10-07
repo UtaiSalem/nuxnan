@@ -151,4 +151,28 @@ class AcademyCourseCrudTest extends TestCase
             'status' => Course::STATUS_DRAFT,
         ]);
     }
+
+    /** G8 / CO-S7: แก้คอร์สที่ไม่มีแถว course_settings (เช่น clone จากตลาด) ต้องไม่ 500 */
+    public function test_update_course_without_course_settings_does_not_error(): void
+    {
+        [$academy, $owner] = $this->academyOwnedBy();
+        $teacher = User::factory()->create();
+
+        // ตั้งใจไม่สร้าง courseSettings (ไม่ใช้ helper courseInAcademy)
+        $course = Course::factory()->create([
+            'academy_id' => $academy->id,
+            'user_id' => $teacher->id,
+            'instructor_id' => $teacher->id,
+            'name' => 'ไม่มี settings',
+        ]);
+
+        $this->actingAs($owner, 'api')
+            ->patchJson("/api/courses/{$course->id}", ['name' => 'แก้สำเร็จไม่ 500'])
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('courses', [
+            'id' => $course->id,
+            'name' => 'แก้สำเร็จไม่ 500',
+        ]);
+    }
 }
