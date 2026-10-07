@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
+use App\Models\Department;
 use App\Models\Position;
 use App\Models\StaffProfile;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class StaffController extends Controller
 {
@@ -28,27 +30,27 @@ class StaffController extends Controller
             ->with(['user:id,name,profile_photo_path', 'position:id,name', 'department:id,name']);
 
         // Filter by status
-        if ($request->has('status')) {
-            $query->byStatus($request->status);
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
         }
 
         // Filter by employment type
-        if ($request->has('type')) {
-            $query->byType($request->type);
+        if ($request->filled('type')) {
+            $query->byEmploymentType($request->type);
         }
 
         // Filter by department
-        if ($request->has('department_id')) {
+        if ($request->filled('department_id')) {
             $query->byDepartment($request->department_id);
         }
 
         // Filter by position
-        if ($request->has('position_id')) {
+        if ($request->filled('position_id')) {
             $query->where('position_id', $request->position_id);
         }
 
         // Search
-        if ($request->has('search')) {
+        if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('employee_id', 'like', "%{$search}%")
@@ -78,10 +80,6 @@ class StaffController extends Controller
             'user:id,name,email,profile_photo_path',
             'position',
             'department',
-            'supervisor.user:id,name',
-            'attendances' => fn ($q) => $q->latest()->limit(30),
-            'leaveRequests' => fn ($q) => $q->latest()->limit(10),
-            'performanceReviews' => fn ($q) => $q->latest()->limit(5),
         ]);
 
         return response()->json([
@@ -96,21 +94,35 @@ class StaffController extends Controller
     public function store(Request $request, Academy $academy): JsonResponse
     {
         $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'position_id' => 'required|exists:positions,id',
-            'department_id' => 'nullable|exists:departments,id',
-            'supervisor_id' => 'nullable|exists:staff_profiles,id',
+            // ผูกบัญชีสมาชิก — ชื่อ/รูปใช้จาก user (Q1) · กันซ้ำ 1 บัญชี 1 แฟ้มต่อโรงเรียน
+            'user_id' => [
+                'required',
+                'exists:users,id',
+                Rule::unique('staff_profiles')->where(fn ($q) => $q->where('academy_id', $academy->id)->whereNull('deleted_at')),
+            ],
+            'position_id' => ['required', Rule::exists('positions', 'id')->where('academy_id', $academy->id)],
+            'department_id' => ['nullable', Rule::exists('departments', 'id')->where('academy_id', $academy->id)],
             'employment_type' => 'required|in:full_time,part_time,contract,temporary',
             'hire_date' => 'required|date',
-            'probation_end_date' => 'nullable|date|after:hire_date',
-            'contract_end_date' => 'nullable|date|after:hire_date',
-            'base_salary' => 'nullable|numeric|min:0',
-            'work_location' => 'nullable|string|max:255',
-            'phone_extension' => 'nullable|string|max:20',
-            'emergency_contact' => 'nullable|array',
+            'contract_start_date' => 'nullable|date',
+            'contract_end_date' => 'nullable|date|after_or_equal:hire_date',
+            // ฟิลด์แฟ้มบุคลากร (ชื่อแยกเป็น optional — Q1 ให้ derive จาก user ได้)
+            'title_prefix' => 'nullable|string|max:20',
+            'first_name' => 'nullable|string|max:255',
+            'last_name' => 'nullable|string|max:255',
+            'nickname' => 'nullable|string|max:50',
+            'citizen_id' => 'nullable|string|max:13',
+            'gender' => 'nullable|in:male,female,other',
+            'date_of_birth' => 'nullable|date',
+            'phone' => 'nullable|string|max:20',
+            'emergency_contact_name' => 'nullable|string|max:255',
+            'emergency_contact_phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string',
             'education_history' => 'nullable|array',
             'work_history' => 'nullable|array',
             'certifications' => 'nullable|array',
+            'skills' => 'nullable|array',
+            'notes' => 'nullable|string',
         ]);
 
         $validated['academy_id'] = $academy->id;
@@ -143,20 +155,28 @@ class StaffController extends Controller
         $this->authorizeStaff($academy, $staff);
 
         $validated = $request->validate([
-            'position_id' => 'sometimes|exists:positions,id',
-            'department_id' => 'nullable|exists:departments,id',
-            'supervisor_id' => 'nullable|exists:staff_profiles,id',
+            'position_id' => ['sometimes', Rule::exists('positions', 'id')->where('academy_id', $academy->id)],
+            'department_id' => ['nullable', Rule::exists('departments', 'id')->where('academy_id', $academy->id)],
             'employment_type' => 'sometimes|in:full_time,part_time,contract,temporary',
             'hire_date' => 'sometimes|date',
-            'probation_end_date' => 'nullable|date',
+            'contract_start_date' => 'nullable|date',
             'contract_end_date' => 'nullable|date',
-            'base_salary' => 'nullable|numeric|min:0',
-            'work_location' => 'nullable|string|max:255',
-            'phone_extension' => 'nullable|string|max:20',
-            'emergency_contact' => 'nullable|array',
+            'title_prefix' => 'nullable|string|max:20',
+            'first_name' => 'nullable|string|max:255',
+            'last_name' => 'nullable|string|max:255',
+            'nickname' => 'nullable|string|max:50',
+            'citizen_id' => 'nullable|string|max:13',
+            'gender' => 'nullable|in:male,female,other',
+            'date_of_birth' => 'nullable|date',
+            'phone' => 'nullable|string|max:20',
+            'emergency_contact_name' => 'nullable|string|max:255',
+            'emergency_contact_phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string',
             'education_history' => 'nullable|array',
             'work_history' => 'nullable|array',
             'certifications' => 'nullable|array',
+            'skills' => 'nullable|array',
+            'notes' => 'nullable|string',
         ]);
 
         $staff->update($validated);
@@ -190,9 +210,10 @@ class StaffController extends Controller
 
         $oldStatus = $staff->status;
 
+        // schema จริงใช้ resignation_date/resignation_reason (ไม่มี termination_*)
         if (in_array($validated['status'], [StaffProfile::STATUS_RESIGNED, StaffProfile::STATUS_TERMINATED])) {
-            $staff->termination_date = $validated['effective_date'] ?? now();
-            $staff->termination_reason = $validated['reason'] ?? null;
+            $staff->resignation_date = $validated['effective_date'] ?? now();
+            $staff->resignation_reason = $validated['reason'] ?? null;
         }
 
         $staff->status = $validated['status'];
@@ -253,11 +274,29 @@ class StaffController extends Controller
             $query->active();
         }
 
-        $positions = $query->orderBy('name')->get();
+        $positions = $query->withCount('staffProfiles as staff_count')
+            ->orderBy('name')
+            ->get();
 
         return response()->json([
             'success' => true,
             'data' => $positions,
+        ]);
+    }
+
+    /**
+     * รายชื่อฝ่าย/แผนก (สำหรับ dropdown ในฟอร์มบุคลากร — Q4)
+     * gated ด้วย staff.view เพื่อให้หน้า staff ไม่ต้องพึ่งสิทธิ์ groups.view ของเมนู #9
+     */
+    public function departments(Academy $academy): JsonResponse
+    {
+        $departments = Department::where('academy_id', $academy->id)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $departments,
         ]);
     }
 
@@ -268,15 +307,16 @@ class StaffController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'code' => 'nullable|string|max:50|unique:positions,code',
-            'department_id' => 'nullable|exists:departments,id',
+            'code' => ['nullable', 'string', 'max:50', Rule::unique('positions', 'code')->where('academy_id', $academy->id)],
+            'department_id' => ['nullable', Rule::exists('departments', 'id')->where('academy_id', $academy->id)],
+            'level' => 'nullable|string|max:20',
             'description' => 'nullable|string',
             'min_salary' => 'nullable|numeric|min:0',
             'max_salary' => 'nullable|numeric|min:0',
             'responsibilities' => 'nullable|array',
-            'requirements' => 'nullable|array',
             'is_teaching_position' => 'nullable|boolean',
             'is_active' => 'nullable|boolean',
+            'display_order' => 'nullable|integer',
         ]);
 
         $validated['academy_id'] = $academy->id;
@@ -308,15 +348,16 @@ class StaffController extends Controller
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'code' => 'nullable|string|max:50|unique:positions,code,'.$position->id,
-            'department_id' => 'nullable|exists:departments,id',
+            'code' => ['nullable', 'string', 'max:50', Rule::unique('positions', 'code')->where('academy_id', $academy->id)->ignore($position->id)],
+            'department_id' => ['nullable', Rule::exists('departments', 'id')->where('academy_id', $academy->id)],
+            'level' => 'nullable|string|max:20',
             'description' => 'nullable|string',
             'min_salary' => 'nullable|numeric|min:0',
             'max_salary' => 'nullable|numeric|min:0',
             'responsibilities' => 'nullable|array',
-            'requirements' => 'nullable|array',
             'is_teaching_position' => 'nullable|boolean',
             'is_active' => 'nullable|boolean',
+            'display_order' => 'nullable|integer',
         ]);
 
         $position->update($validated);

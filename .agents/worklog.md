@@ -71,8 +71,16 @@ production ยังไม่ได้รัน migration บางชุด (�
 - **BE schema-drift:** B1 scope `byStatus`/`byType` ไม่มี → 500 · B2 `show()` โหลด `supervisor` ไม่มี relationship → 500 · B3 store validate 6 ฟิลด์ไม่มีคอลัมน์ + ไม่เก็บ first_name/last_name · B4 updateStatus เขียน `termination_*` (จริงคือ `resignation_*`) → 500 · B6 position `requirements`/`code` unique global
 - **Security/Test:** B7 write ทุกเส้นใช้แค่ `staff.view` (ควรแยก `staff.manage`) · B8 ไม่มีเทสต์
 
-### ค้าง — รอเคาะ Q1 (identity จาก user หรือเก็บชื่อแยก) · Q2 (ขอบเขต = ทะเบียน+ตำแหน่ง หรือรวม attendance/leave/payroll) · Q3 (สิทธิ์ view/manage + เปิดหน้าให้ staff.view) · Q4 (ฝ่าย free-text/department_id) · Q5 (enum canonical)
-แตกงาน ST-S1 (สิทธิ์) · ST-S2 (ซ่อม BE schema) · ST-S3 (ซ่อม FE contract) · ST-S4 (UI ตำแหน่ง) · ST-S5 (เปลี่ยนสถานะ) · ST-S6 (เทสต์)
+### เคาะ Q1–Q5 แล้ว → ST-S1–S6 โค้ด/เทสต์เสร็จครบ (2026-10-07)
+เจ้าของเคาะ: Q1 ชื่อ/รูปจาก user (first/last nullable) · Q2 ทะเบียน+ตำแหน่งล้วน · Q3 write=`staff.manage` read=`staff.view` เปิดหน้าให้ staff.view · Q4 ฝ่าย=`department_id` · Q5 enum ยืนยัน
+- **ST-S1** routes `academy.php` แยกสิทธิ์รายเส้น (read=staff.view 5 · write=staff.manage 7 · กลุ่มเหลือแค่ visibility ตามบทเรียน SM-S1) + `staff.vue` เปิดหน้าให้ `staff.view` · ปุ่มจัดการ gate ด้วย `canManage`
+- **ST-S2** `StaffController` ซ่อม scope (byStatus/byType) · ตัด supervisor · store/update ตรง schema จริง (scoped `Rule::exists` ต่อโรงเรียน · user_id unique/โรงเรียน) · updateStatus→resignation_* · position requirements ตัด + code unique/โรงเรียน · เพิ่ม `departments()` + staff_count · **migration** first_name/last_name nullable
+- **ST-S3** `staff.vue` ซ่อม contract: list อ่าน paginator · summary อ่าน by_status · query ใน URL · payload employment_type/department_id · PUT→PATCH · err.data (shape จริงของ useApi)
+- **ST-S4** modal ตำแหน่งมี CRUD เต็ม (สร้าง/แก้/ลบ) + empty-state ชี้สร้างตำแหน่งก่อน
+- **ST-S5** สถานะเป็น inline select (manage) เรียก updateStatus · badge 5 สี (view)
+- **ST-S6** `StaffAuthzTest.php` 14 เคส (authz view/manage split · tenant 403/404 · resigned ตั้ง resignation_date · create ไม่ต้องมี first_name)
+- หลักฐานที่รันเอง: `php -l` ผ่านทุกไฟล์ backend · SFC balanced · ไม่มี ref เก่าค้าง (employee_type/err.response = 0) · **vendor+node_modules ไม่มีใน container** ⇒ เหลือเจ้าของรัน migrate + `test -c phpunit.mysql.xml --filter=StaffAuthzTest` + pint + `npm run build`
+- PR: UtaiSalem/nuxnan#32 (branch `claude/gallant-hopper-iux8ft`)
 
 ---
 

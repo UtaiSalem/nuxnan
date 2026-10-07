@@ -98,15 +98,15 @@
 
 | Step | Title | Depends on | Deliverable | Status |
 |---|---|---|---|---|
-| ST-S1 | **ปิดช่องโหว่สิทธิ์ (B7)** — แยก write routes → `staff.manage` · เปิดหน้า FE ให้ `staff.view` (แก้ F1) | Q3 | `academy.php` · `staff.vue` | ⚪ |
-| ST-S2 | **ซ่อม backend schema-drift (B1–B4,B6)** — เพิ่ม/แก้ scope `byStatus` · ตัด/แก้ `supervisor` · store/update ให้ตรง schema จริง · updateStatus → resignation_* | Q1,Q5 | `StaffController` · `StaffProfile` | ⚪ |
-| ST-S3 | **ซ่อม FE contract (F2–F6)** — list อ่าน paginator · summary อ่าน by_status · query ใน URL · payload `employment_type`/`department_id` · PUT→PATCH | Q1,Q4,Q5 | `staff.vue` | ⚪ |
-| ST-S4 | **UI จัดการตำแหน่ง (F8)** — เพิ่มสร้าง/แก้/ลบ position ใน modal | Q3 | `staff.vue` | ⚪ |
-| ST-S5 | **เปลี่ยนสถานะ (F7)** — wire ปุ่ม updateStatus · map สถานะให้ครบ 5 ค่า | Q5 | `staff.vue` | ⚪ |
-| ST-S6 | เทสต์ authz (view/manage/non-member/cross-academy) + CRUD + schema (B8) | ST-S1–S3 | `StaffAuthzTest.php` | ⚪ |
+| ST-S1 | **ปิดช่องโหว่สิทธิ์ (B7)** — แยก write routes → `staff.manage` · เปิดหน้า FE ให้ `staff.view` (แก้ F1) | Q3 | `academy.php` · `staff.vue` | 🟡 โค้ดเสร็จ 2026-10-07 · php -l ผ่าน · รอ test MySQL |
+| ST-S2 | **ซ่อม backend schema-drift (B1–B4,B6)** — scope `byStatus`→`where` + `byType`→`byEmploymentType` · ตัด `supervisor` · store/update ตรง schema จริง + first_name/last_name nullable (migration) · updateStatus → resignation_* | Q1,Q5 | `StaffController` · migration | 🟡 โค้ดเสร็จ 2026-10-07 · php -l ผ่าน · รอ migrate + test MySQL |
+| ST-S3 | **ซ่อม FE contract (F2–F6)** — list อ่าน paginator · summary อ่าน by_status · query ใน URL · payload `employment_type`/`department_id` · PUT→PATCH · err.data | Q1,Q4,Q5 | `staff.vue` | 🟡 โค้ดเสร็จ 2026-10-07 · รอ `npm run build` + คลิกจริง |
+| ST-S4 | **UI จัดการตำแหน่ง (F8)** — สร้าง/แก้/ลบ position ใน modal + endpoint `GET /staff/departments` | Q3 | `staff.vue` · `StaffController` | 🟡 โค้ดเสร็จ 2026-10-07 |
+| ST-S5 | **เปลี่ยนสถานะ (F7)** — inline `<select>` เรียก updateStatus (PATCH) · map สถานะครบ 5 ค่า | Q5 | `staff.vue` | 🟡 โค้ดเสร็จ 2026-10-07 |
+| ST-S6 | เทสต์ authz (view/manage/non-member/cross-academy) + CRUD + schema (B8) | ST-S1–S3 | `StaffAuthzTest.php` (14 เคส) | 🟡 เขียนเสร็จ 2026-10-07 · php -l ผ่าน · รอรัน MySQL |
 
-**Rule:** ทุก step verify (build/test บน MySQL) ก่อน 🟢 · รายงาน agy เชื่อไม่ได้ ต้อง `git diff --stat` + `git diff` + รันเกณฑ์เอง
-UI ทุก step ต้องแปะกติกา **mobile-first** ในสเปค
+**Rule:** ทุก step verify (build/test บน MySQL) ก่อน 🟢 · UI ทุก step ยึดกติกา **mobile-first**
+**เหลือเจ้าของ verify:** `php artisan migrate` (dev — ก่อนรัน mysqldump) · `php artisan test -c phpunit.mysql.xml --filter=StaffAuthzTest` · `./vendor/bin/pint` · `npm run build` + คลิกจริง 375px
 
 ## 7. Codex/agy Prompt Template (ต่อ step)
 ```
@@ -120,4 +120,13 @@ Report back: diff + ผลเทสต์
 ```
 
 ## 8. Review Log
-- **2026-10-07** — ขั้น [1] สแกนโค้ด + [2] เขียนไฟล์รองนี้ เสร็จ · พบว่าโมดูลพังหลายชั้น (FE↔BE contract + schema-drift + ไม่มี UI สร้างตำแหน่ง + สิทธิ์ไม่แยก view/manage) · **รอเจ้าของเคาะ Q1–Q5 ก่อนเริ่ม ST-S1**
+- **2026-10-07** — ขั้น [1] สแกนโค้ด + [2] เขียนไฟล์รองนี้ เสร็จ · พบว่าโมดูลพังหลายชั้น (FE↔BE contract + schema-drift + ไม่มี UI สร้างตำแหน่ง + สิทธิ์ไม่แยก view/manage) · รอเจ้าของเคาะ Q1–Q5
+- **2026-10-07 (เคาะ Q1–Q5 + ST-S1–S6)** — เจ้าของเคาะ: Q1 ชื่อ/รูปจาก user (first/last nullable) · Q2 ทะเบียน+ตำแหน่งล้วน · Q3 write=`staff.manage` read=`staff.view` เปิดหน้าให้ staff.view (admin ถือ manage) · Q4 ฝ่าย=`department_id` dropdown · Q5 enum ยืนยัน
+  - **ST-S1 🟡** `academy.php:766–782` ย้ายคีย์จากระดับกลุ่มมาแขวนรายเส้น (กลุ่ม = `academy.visibility:content` เท่านั้น ตามบทเรียน SM-S1) — read 5 เส้น = `staff.view` · write 7 เส้น = `staff.manage` · FE `staff.vue` เปิดหน้าให้ `isAdmin || can('staff.view')` · ปุ่ม/คอลัมน์จัดการ gate ด้วย `canManage` (`isAdmin || can('staff.manage')`)
+  - **ST-S2 🟡** `StaffController`: index `byStatus()`→`where('status')` + `byType()`→`byEmploymentType()` + `has`→`filled` · show ตัด `supervisor.user` · store/update validate ตรง schema (ตัด supervisor_id/base_salary/work_location/phone_extension/probation_end_date/emergency_contact · เพิ่ม title_prefix/first_name/last_name nullable/citizen_id/gender/phone/emergency_contact_name,phone/address/skills/notes · position_id+department_id scoped per-academy ด้วย `Rule::exists`) · user_id unique per-academy · updateStatus `termination_*`→`resignation_*` · position `requirements` ตัดทิ้ง + `code` unique per-academy · เพิ่ม `departments()` + positions withCount `staff_count` · migration ทำ first_name/last_name nullable
+  - **ST-S3 🟡** `staff.vue`: list อ่าน paginator (`response.data.data` + pagination fields) · summary อ่าน `by_status.{active,on_leave}` · query ประกอบใน URL ด้วย URLSearchParams · payload `employment_type`/`department_id` (dropdown) · update/updateStatus/positions ใช้ `api.patch` · อ่าน error เป็น `err.data` (shape ที่ useApi throw จริง — เดิม `err.response.data` อ่านไม่เจอ)
+  - **ST-S4 🟡** modal ตำแหน่งเพิ่มฟอร์มสร้าง/แก้ + ปุ่มแก้/ลบรายรายการ (gate canManage) · empty-state ชี้ "สร้างตำแหน่งก่อน" เมื่อยังไม่มีตำแหน่ง
+  - **ST-S5 🟡** สถานะในตารางเป็น inline `<select>` (canManage) เรียก updateStatus · ผู้ถือ view เห็น badge สีตาม 5 สถานะ
+  - **ST-S6 🟡** `StaffAuthzTest.php` 14 เคส: owner/staff.manage สร้างได้ · staff.view สร้าง/แก้/ลบ/สร้างตำแหน่งไม่ได้ (403) · staff.view list ได้ · member ไม่มี view / คนนอก list ไม่ได้ (403) · admin แก้ได้ · resigned ตั้ง resignation_date · admin โรงเรียนอื่น list ไม่ได้ (403) · staff ข้ามโรงเรียน = 404
+  - ⚠️ **ยังไม่รัน test/pint/build ใน container** (ไม่มี vendor + node_modules) · php -l ผ่านทุกไฟล์ backend · โครงสร้าง SFC balanced
+  - 🎯 เมนู #14 โค้ด/เทสต์เสร็จครบ — เหลือเจ้าของ verify (migrate + MySQL test + pint + npm build)

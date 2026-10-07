@@ -764,19 +764,22 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // =====================================================
 
     // Staff - บุคลากร
-    Route::prefix('{academy}/staff')->middleware(['academy.visibility:content', 'academy.permission:staff.view'])->group(function () {
-        Route::get('/', [StaffController::class, 'index'])->name('api.academy.staff.index');
-        Route::post('/', [StaffController::class, 'store'])->name('api.academy.staff.store');
-        Route::get('/directory', [StaffController::class, 'directory'])->name('api.academy.staff.directory');
-        Route::get('/summary', [StaffController::class, 'summary'])->name('api.academy.staff.summary');
-        Route::get('/positions', [StaffController::class, 'positions'])->name('api.academy.staff.positions');
-        Route::post('/positions', [StaffController::class, 'storePosition'])->name('api.academy.staff.positions.store');
-        Route::patch('/positions/{position}', [StaffController::class, 'updatePosition'])->name('api.academy.staff.positions.update');
-        Route::delete('/positions/{position}', [StaffController::class, 'destroyPosition'])->name('api.academy.staff.positions.destroy');
-        Route::get('/{staff}', [StaffController::class, 'show'])->name('api.academy.staff.show');
-        Route::patch('/{staff}', [StaffController::class, 'update'])->name('api.academy.staff.update');
-        Route::patch('/{staff}/status', [StaffController::class, 'updateStatus'])->name('api.academy.staff.updateStatus');
-        Route::delete('/{staff}', [StaffController::class, 'destroy'])->name('api.academy.staff.destroy');
+    // ด่านสิทธิ์แยก view/manage รายเส้น (ST-S1): read = staff.view · write = staff.manage
+    // (ใส่คีย์ที่ระดับกลุ่มไม่ได้ เพราะ middleware กลุ่มกับรายเส้น "ซ้อนกัน" ไม่ใช่ "แทนที่กัน" — ดู SM-S1 เมนู #8)
+    Route::prefix('{academy}/staff')->middleware('academy.visibility:content')->group(function () {
+        Route::get('/', [StaffController::class, 'index'])->middleware('academy.permission:staff.view')->name('api.academy.staff.index');
+        Route::post('/', [StaffController::class, 'store'])->middleware('academy.permission:staff.manage')->name('api.academy.staff.store');
+        Route::get('/directory', [StaffController::class, 'directory'])->middleware('academy.permission:staff.view')->name('api.academy.staff.directory');
+        Route::get('/summary', [StaffController::class, 'summary'])->middleware('academy.permission:staff.view')->name('api.academy.staff.summary');
+        Route::get('/departments', [StaffController::class, 'departments'])->middleware('academy.permission:staff.view')->name('api.academy.staff.departments');
+        Route::get('/positions', [StaffController::class, 'positions'])->middleware('academy.permission:staff.view')->name('api.academy.staff.positions');
+        Route::post('/positions', [StaffController::class, 'storePosition'])->middleware('academy.permission:staff.manage')->name('api.academy.staff.positions.store');
+        Route::patch('/positions/{position}', [StaffController::class, 'updatePosition'])->middleware('academy.permission:staff.manage')->name('api.academy.staff.positions.update');
+        Route::delete('/positions/{position}', [StaffController::class, 'destroyPosition'])->middleware('academy.permission:staff.manage')->name('api.academy.staff.positions.destroy');
+        Route::get('/{staff}', [StaffController::class, 'show'])->middleware('academy.permission:staff.view')->name('api.academy.staff.show');
+        Route::patch('/{staff}', [StaffController::class, 'update'])->middleware('academy.permission:staff.manage')->name('api.academy.staff.update');
+        Route::patch('/{staff}/status', [StaffController::class, 'updateStatus'])->middleware('academy.permission:staff.manage')->name('api.academy.staff.updateStatus');
+        Route::delete('/{staff}', [StaffController::class, 'destroy'])->middleware('academy.permission:staff.manage')->name('api.academy.staff.destroy');
     });
 
     // Staff Attendance - การลงเวลาทำงาน
