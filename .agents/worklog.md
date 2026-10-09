@@ -57,6 +57,28 @@ production ยังไม่ได้รัน migration บางชุด (�
 
 ---
 
+## 2026-10-09 — เมนู #15 ทะเบียนนักเรียน: audit (ขั้น [1]+[2]) · เมนูสุก/เทสต์ครบ — ต่างจาก #12–#14
+
+### สถานะ: 🟢 audit เสร็จ · ไฟล์รอง `.agents/school-admin/15-students.md` · รอเจ้าของเคาะ Q1–Q4 (หลายข้ออาจปิด by-design)
+(ต่อจากลำดับ loop #12 → #13 → #14 บุคลากร → **#15 ทะเบียนนักเรียน**)
+
+### สแกนแล้ว
+- FE `admin/students/{index,import,intake,import-history}.vue` + `StudentDataTable` (595) + `useStudentEnrollmentActions`/`useStudentAccountService`
+- BE `StudentIntakeController` · `StudentImportController` · `StudentLifecycleController` · `StudentAccountController` · Master `StudentController`+6 ตัวย่อย
+- authz เป็นระบบ: `EnrollmentPolicy`(intake/import/lifecycle) + Gate + FormRequest::authorize + `scopeBindings()` tenant · route read ติด `students.view`/`students.export`
+- **เทสต์ครบ** (Lifecycle/Import/Intake/EnrollmentPolicy/StudentMaster/RosterImport/EnrollmentAudit...) · stats คืน `{stats:{...}}` ตรง FE
+
+### Gap (เล็ก/ไม่สอดคล้อง — ไม่ใช่ P0)
+- **G1 (หลัก)** `EnrollmentPolicy::isAcademyAdmin` เช็คแค่ `member.role∈{admin,director}`(+owner) ไม่อ่าน academy_role.permissions ⇒ custom role ถือ `students.manage` intake/import ได้ (ผ่าน hasAnyPermission) แต่ lifecycle (promote/graduate/drop/transfer) **ไม่ได้** — inconsistent
+- **G2** enrollment-history v1 (`groups.view`) ซ้ำ v2 (`enrollment.lifecycle`) · FE ใช้ v2 · v1 อาจ dead
+- **G3** permission แยกสองทาง (middleware `userCan`→role.permissions vs policy `member.role`+hasAnyPermission) เสี่ยง drift
+- **G4** registry ไม่มี edit/delete ตรง — แก้ผ่าน change-request flow · เอาออกผ่าน lifecycle (ยืนยันดีไซน์)
+
+### ค้าง — รอเคาะ Q1 (แก้ G1 ให้ students.manage ทำ lifecycle หรือปิด by-design) · Q2 (ลบ history v1?) · Q3 (ขอบเขต Student Master profile = #15/#6/#17) · Q4 (change-request flow by design?)
+ถ้า G1 by-design + G2 เก็บไว้ ⇒ **เมนู #15 ปิดได้เลยไม่ต้องแก้โค้ด** · ไม่งั้นแตก ST15-S1 (แก้ policy + เทสต์) · ST15-S2 (ลบ v1)
+
+---
+
 ## 2026-10-07 — เมนู #14 บุคลากร: audit (ขั้น [1]+[2]) · โมดูลพังหลายชั้น "สร้างไว้แต่ไม่เคยต่อ backend จริง"
 
 ### สถานะ: 🔴 audit เสร็จ · ไฟล์รอง `.agents/school-admin/14-staff.md` · รอเจ้าของเคาะ Q1–Q5 ก่อน ST-S1
