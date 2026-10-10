@@ -74,8 +74,19 @@ production ยังไม่ได้รัน migration บางชุด (�
 - **G4** legacy auth route `/student-card/profile|update/{card}` ได้ academy=null ⇒ ข้ามการตรวจ tenant/สิทธิ์ → อ่าน PII/แก้บัตรข้ามโรงเรียนได้ (เส้น academy-scoped ปลอดภัย)
 - G5 public complete ไม่สร้างบัตร (ต่างจาก auth complete) · G6 FE ซ้ำ 2 ชุด · G7 legacy search ข้ามโรงเรียน · G8 `card_admin` role ไม่มีแถวในฐาน
 
-### รอเคาะ — Q1 (import/export ทำรอบนี้ไหม + รูปแบบไฟล์) · Q2 (ปลดระวาง public เก่าไหม → ตัดสิน G3/G4/G6/G7) · Q3 (store vs บังคับผ่าน request flow) · Q4 (sync/audit legacy ยังมีบทบาทไหม)
-แตกงาน SCD-S1 (import) · S2 (export) · S3 (G2) · S4 (legacy routes) · S5 (card_admin) · S6 (เทสต์) · S7 (จอจริง)
+### เคาะแล้ว Q1–Q4 (2026-10-10): Q1 ทำ import+export (bulk defer) · Q2 ลบ public เก่า · Q3 เก็บ store+เติม enrollment · Q4 เก็บ sync/audit
+
+### ลงมือแล้ว (Claude เขียนในคลาวด์ · php -l ผ่าน · vendor ไม่ลง → เจ้าของรันเทสต์)
+- **✅ SCD-S2** `StudentCardsExport` + `export()` คืน .xlsx จริง · `format=template` คืนหัวคอลัมน์เปล่า (ปิด G1 ส่วน export)
+- **✅ SCD-S1** `StudentCardsImport` + `import()` — อ่านไฟล์/จับคู่หัวคอลัมน์(ไม่ยึดตำแหน่ง)/upsert Student+StudentCard รายคน + enroll ถ้าเจอห้อง · ตอบ summary+errors ตาม import.vue (ปิด G1 ส่วน import)
+- **✅ SCD-S3 (G2)** `store()` เติม enrollment (ClassroomStudent active + academic_year_id + level_and_room) + helper `resolveCurrentClassroom` ใช้ร่วม store/import · เปลี่ยน signature เป็น `Academy $academy` (bind by id)
+- commit บน branch `claude/jolly-goodall-cwgfja` · PR #33
+
+### 🔴 SCD-S4 (ลบ public เก่า) BLOCKED — blast radius ใหญ่ · รอเจ้าของ go/no-go
+เส้น legacy ยังต่อกับ UI แอดมินที่ใช้จริง: `StudentCardModal.vue` ยิง `/api/student-card/profile/{id}` · `StudentCardItem.vue` ยิง public-update/public-photo · `gradebook/students/index.vue` ไปหน้า public · มี 4 เทสต์คุม (PublicCardRequestTest ลบทั้งไฟล์ · ClassroomManagementTest ลบ/เขียนใหม่ · RoomRoster+SSOT retarget) · คลาวด์รันเทสต์/บิลด์ไม่ได้ → ควรทำบนเครื่องเจ้าของ หรือยืนยันให้ push ทั้งชุดแล้ว verify local (ดู 16-student-cards.md §9)
+- เหลือ **SCD-S6** เทสต์ (import/export + store+enroll) · **S7** จอจริง · G8 card_admin + bulk photos/update = defer
+
+แตกงาน SCD-S1 (import)✅ · S2 (export)✅ · S3 (G2)✅ · S4 (ลบ legacy)🔴blocked · S6 (เทสต์) · S7 (จอจริง)
 
 ---
 

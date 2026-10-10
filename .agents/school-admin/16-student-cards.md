@@ -106,26 +106,57 @@
 - **G7 (cross-academy search · legacy)** — `search()`/`adminStudents()` เมื่อ `$academy=null` query `StudentCard` ทั้งระบบ · เส้น academy-scoped bind academy เสมอ (ปลอดภัย) · เส้น legacy `/student-card/search` (auth:api) hit ด้วย null → ค้นข้ามโรงเรียน (ผูกกับ G4/G6)
 - **G8 (role vestigial)** — `card_admin` ไม่มีแถวในฐาน (01-roles-permissions.md:271) · ตรวจว่าตัดทิ้งได้หรือยังต้องใช้
 
-## 6. Implementation Tasks (ส่งให้ agy ทีละ step — รอเคาะ Q ก่อน)
+## 6. Implementation Tasks (เคาะแล้ว · Claude เขียนในเซสชันคลาวด์ · เจ้าของรันเทสต์/จอจริง)
+
+> agy ใช้ไม่ได้ในคลาวด์ (เป็น CLI เครื่องเจ้าของ) · vendor ไม่ถูกลง → Claude เขียนตาม pattern เดิม commit ลง branch ให้เจ้าของ verify (แบบเดียวกับ #12/#13)
 
 | Step | Title | Depends on | Deliverable | Status |
 |---|---|---|---|---|
-| SCD-S1 | ปิด G1 — import นักเรียน/บัตร (Excel/CSV) จริง | Q1 | `import()` ใช้ maatwebsite/excel · validate + รายงานผลรายแถว · FE import.vue ต่อจริง | ⚪ |
-| SCD-S2 | ปิด G1 — export + template จริง | Q1 | `export()` คืนไฟล์ + `format=template` | ⚪ |
-| SCD-S3 | ปิด G2 — บังคับสร้างบัตรผ่าน request flow **หรือ** เติม enrollment ใน `store()` | Q3 | ตามคำตัดสิน · + เทสต์ roster | ⚪ |
-| SCD-S4 | ปิด G3/G4/G7 — ตัด/ล็อก legacy public+auth routes | Q2 | ถ้าเคาะปลดระวาง: ลบเส้น + FE เก่า · ถ้าเก็บ: เติม auth/tenant/password จริง + แก้ comment หลอก | ⚪ |
-| SCD-S5 | ปิด G8 — เคลียร์ `card_admin` vestigial | Q2 | migration ลบ/seed ตามคำตัดสิน | ⚪ |
-| SCD-S6 | เทสต์ครอบ authz + tenant + request flow + import/export | S1–S5 | `php artisan test -c phpunit.mysql.xml --filter=StudentCard*` เขียว | ⚪ |
-| SCD-S7 | ตรวจจอจริง 375/768/1280 (list/edit/print/import/requests) | S1–S4 | เจ้าของ verify | ⚪ |
+| SCD-S2 | ปิด G1 — export + template จริง | — | `app/Exports/StudentCardsExport.php` + `export()` คืน .xlsx · `format=template` คืนหัวคอลัมน์เปล่า | 🟡 |
+| SCD-S1 | ปิด G1 — import นักเรียน/บัตร (Excel/CSV) | S2 (คอลัมน์ตรงกัน) | `app/Imports/StudentCardsImport.php` + `import()` · summary created/updated/skipped + errors[] | 🟡 |
+| SCD-S3 | ปิด G2 — `store()` เติม enrollment | — | สร้าง/ผูก ClassroomStudent active + academic_year_id + level_and_room | 🟡 |
+| SCD-S4 | ปิด G3/G4/G6/G7 — ลบชุด public เก่า | — | **blast radius ใหญ่กว่าที่คิด (ดู §9) — รอเจ้าของ go/no-go** | 🔴 blocked |
+| SCD-S6 | เทสต์ครอบ import/export + store+enrollment + legacy-gone | S1–S4 | `php artisan test -c phpunit.mysql.xml --filter=StudentCard` เขียว | 🟡 |
+| SCD-S7 | ตรวจจอจริง 375/768/1280 (list/edit/print/import/requests) | S1–S4 | **เจ้าของ verify** | ⚪ |
+| — | G8 `card_admin` vestigial | — | เลื่อนไป cleanup รวม role ภายหลัง (ไม่กระทบ runtime) | 🔵 defer |
+| — | bulk photos / bulk update | — | คง 501 stub ตาม Q1 | 🔵 defer |
 
 **Rule:** ทุก step ต้อง verify (build/test/manual) ก่อนขึ้น 🟢 · งาน UI แปะกติกา mobile-first เสมอ
 
-## 7. ค้าง — รอเจ้าของเคาะก่อนเริ่ม SCD-S1
+## 7. คำตัดสินเจ้าของ (เคาะ 2026-10-10)
 
-- **Q1** — import/export/bulk (G1): ทำรอบนี้เลยไหม? ถ้าใช่ รูปแบบไฟล์ = Excel (.xlsx) + คอลัมน์ไหนบ้าง? bulk photos/bulk update จำเป็นไหมหรือ defer?
-- **Q2** — ชุด public เก่า `/api/student-card/*` + หน้า `ui/pages/student-card/*` (G3/G4/G6/G7): **ปลดระวางได้แล้วหรือยัง?** (ตอนนี้มี academy-scoped + request flow ครบ) ถ้ายังต้องเก็บเป็น fallback → ต้องเติม auth/tenant/การตรวจรหัสผ่านจริง + แก้ comment ที่อ้างว่ามี password verification
-- **Q3** — `store()` สร้างบัตรตรง (G2): เก็บไว้ (แล้วเติม enrollment ให้ครบ) หรือบังคับให้ทุกการสร้างบัตรไหลผ่าน request flow (`complete()`)?
-- **Q4** — legacy `syncCommit`/`audit` ยังมีบทบาทไหม หรือ request flow เป็น source เดียวแล้ว (syncCommit ถูกปิดเป็น 410 เมื่อ `card_request_flow_enabled`)
+- **Q1 → ทำ import + export รอบนี้** (Excel .xlsx ด้วย maatwebsite/excel) · คอลัมน์: รหัสนักเรียน · คำนำหน้า · ชื่อ(ไทย) · นามสกุล(ไทย) · ชื่อ(อังกฤษ) · เลขบัตรปชช · วันเกิด · ระดับชั้น · ห้อง · **bulk photos / bulk update → defer** (ยัง 501 ได้)
+- **Q2 → ปลดระวาง (ลบ) ชุด public เก่า** `/api/student-card/*` + หน้า `ui/pages/student-card/*` → ปิด G3/G4/G6/G7 พร้อมกัน (ต้องเช็ก reference ให้ครบก่อนลบ · คง method ที่ยังถูก academy-scoped เรียกไว้)
+- **Q3 → เก็บ `store()` + เติม enrollment** ให้ครบ (สร้าง/ผูก `ClassroomStudent` active + ตั้ง `academic_year_id`/`level_and_room`) เพื่อให้บัตรโผล่ใน roster
+- **Q4 → เก็บ `syncCommit`/`audit` ไว้** (ยังต้องใช้) — ไม่แตะ
+
+## 9. SCD-S4 blast radius (พบตอนจะลงมือลบ 2026-10-10 — รอ go/no-go)
+
+ชุด "legacy public" **ยังถูกต่อเข้ากับ UI แอดมินที่ใช้งานจริง + มีเทสต์คุม** การลบจึงไม่ใช่แค่ตัด route แต่เป็น refactor ข้ามไฟล์ที่ **verify ในคลาวด์ไม่ได้** (vendor ไม่ลง · รันเทสต์/บิลด์ไม่ได้):
+
+**Backend ที่ลบได้ตรง ๆ** (ใช้โดย route file เดียว):
+- `routes/studentcard/studentcard.php` (+ `require` ที่ `routes/api.php:249`)
+- `PublicStudentCardRequestController` · `StudentCardManageController` (public manage)
+- method public-only ใน `StudentCardController`: `publicUpdate` · `publicUpdateImage` · `publicDestroyPhoto` · `assertCardInRoom`
+- ⚠️ **ห้ามลบ** public FormRequests (`AddStudentToRoomRequest` ฯลฯ) — Academy FormRequests `extends` มัน · `ResolvesStudentCardRoom` + `config/student-card.php` เก็บไว้ (เสี่ยงต่ำ)
+
+**เทสต์ที่กระทบ (4 ไฟล์):**
+- `PublicCardRequestTest.php` — ทดสอบ public request flow ล้วน → **ลบทั้งไฟล์**
+- `ClassroomManagementTest.php` — ทดสอบ public manage (`/manage-context`, `/students`) → **ลบ/เขียนใหม่**
+- `StudentCardRoomRosterTest.php` · `StudentCardSSOTTest.php` — ยิง `GET /api/student-card/1/1` อ่าน roster → **retarget ไป `/api/academies/{academy}/student-cards/{level}/{room}`**
+
+**FE ที่ต้อง rewire (ก่อนลบหน้า public):**
+- `components/student-card/StudentCardItem.vue` — ยิง `/api/student-card/public-update|public-photo/...` (มี branch auth + branch public) → ตัด branch public หรือชี้ academy endpoint
+- `components/academy/member/StudentCardModal.vue` — ยิง `/api/student-card/profile/{student_id}` (เส้น auth เก่า G4) ใน**หน้าสมาชิก academy ที่ใช้จริง** → ชี้ `/api/academies/{academy}/student-cards/profile/{card}` หรือ `by-student`
+- `pages/academies/[name]/admin/gradebook/students/index.vue` — `navigateTo('/student-card/{id}')` + `to="/student-card/admin"` → ชี้ `/academies/{name}/admin/student-cards/...`
+- ลบหน้า `ui/pages/student-card/*` (public + admin public)
+
+**คำแนะนำ:** S4 ควรทำบนเครื่องเจ้าของ (รัน `php artisan test -c phpunit.mysql.xml` + `npm run build` ได้) หรือยืนยันให้ Claude push refactor ทั้งชุดแล้วเจ้าของ verify local · เป็นงาน outward-facing (เอา no-login flow ออก) + hard-to-reverse จึงขอ go/no-go ก่อน
+
+## 8. Review Log
+- **2026-10-10** — ขั้น [1]+[2] (Claude): สแกน routes (3 ไฟล์) + StudentCardController (1000) + RequestController + PublicRequestController + AccessService + RequestService + StudentCard model + FE admin/requests pages + config · เขียนไฟล์รองนี้ · พบ gap G1–G8 · เคาะ Q1–Q4
+- **2026-10-10** — SCD-S1/S2/S3 (Claude เขียน · php -l ผ่าน · เจ้าของรันเทสต์): import/export จริง (ปิด G1) + store() เติม enrollment (ปิด G2) · commit บน branch `claude/jolly-goodall-cwgfja`
+- **2026-10-10** — SCD-S4 (ลบ public): พบ blast radius §9 → หยุดรอ go/no-go เจ้าของ (เส้น legacy ยังต่อกับ UI แอดมินจริง + มี 4 เทสต์คุม · คลาวด์ verify ไม่ได้)
 
 ## 8. Review Log
 - **2026-10-10** — ขั้น [1]+[2] (Claude): สแกน routes (3 ไฟล์) + StudentCardController (1000) + RequestController + PublicRequestController + AccessService + RequestService + StudentCard model + FE admin/requests pages + config · เขียนไฟล์รองนี้ · พบ gap G1–G8 · รอเคาะ Q1–Q4
