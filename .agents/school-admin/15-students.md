@@ -55,10 +55,9 @@
 
 ## 3. Gap Analysis — เล็กน้อย/ความไม่สอดคล้อง (ไม่ใช่ P0 แบบเมนูก่อน)
 
-- **G1 (finding หลัก — ต้องเคาะ) — authority model ของ lifecycle ไม่รับ `students.manage`**
-  `EnrollmentPolicy::isAcademyAdmin()` เช็คแค่ `member.role ∈ {admin,director}` (+owner) · **ไม่อ่าน academy_role.permissions เลย**
-  ⇒ custom role เช่น "นายทะเบียน" ที่ถือ `students.manage` **intake/import ได้** (เพราะ `hasAnyPermission`) แต่ **promote/graduate/drop/transfer ไม่ได้**
-  (lifecycle รับแค่ admin/director/owner/ครูประจำชั้น) · inconsistent กับ intake/import
+- **G1 — ✅ แก้แล้ว (ST15-S1, 2026-10-10)** — เดิม `EnrollmentPolicy::lifecycle()` รับแค่ admin/director/owner/ครูประจำชั้น ไม่อ่าน `students.manage`
+  ⇒ custom role "นายทะเบียน" intake/import ได้แต่ promote/graduate/drop/transfer ไม่ได้ · เจ้าของเคาะ Q1 = ให้ `students.manage` ทำ lifecycle ได้
+  · แก้: เพิ่ม `memberHasPermission($user,$academy,['students.manage'])` ใน `lifecycle()` (แพทเทิร์นเดียวกับ intake/import) + เทสต์ 2 เคส
 - **G2 — enrollment-history ซ้ำ 2 เส้น** `enrollment-history` (v1, `groups.view`, ClassroomController) vs `enrollment-history-v2` (`enrollment.lifecycle`, Lifecycle) · FE ใช้ v2 · v1 อาจ dead/stale
 - **G3 — permission model แยกสองทาง** middleware (`Academy::userCan` → academy_role.permissions) vs Policy (`member.role` column + `hasAnyPermission`) · สองแหล่งความจริง เสี่ยง drift (G1 คือตัวอย่างที่เห็นผล)
 - **G4 (verify ตา) — registry ไม่มี edit/delete นักเรียนตรง ๆ** การแก้ข้อมูลผ่าน change-request flow (ตั้งใจ?) · การ "เอาออก" ทำผ่าน lifecycle drop/graduate ไม่ใช่ hard delete — ยืนยันว่าตรงตามดีไซน์
@@ -83,12 +82,16 @@
 
 | Step | Title | Depends on | Deliverable | Status |
 |---|---|---|---|---|
-| ST15-S1 | (ถ้า Q1=ใช่) ให้ `students.manage` ทำ lifecycle ได้ — แก้ `EnrollmentPolicy` + เทสต์ | Q1 | `EnrollmentPolicy` · `EnrollmentPolicyTest` | ⚪ รอเคาะ |
-| ST15-S2 | (ถ้า Q2=ลบ) ถอด route `enrollment-history` v1 + ยืนยันไม่มีผู้ใช้ | Q2 | `academy.php` | ⚪ รอเคาะ |
+| ST15-S1 | ให้ `students.manage` ทำ lifecycle ได้ — แก้ `EnrollmentPolicy::lifecycle` + เทสต์ | Q1 ✅ | `EnrollmentPolicy` · `EnrollmentPolicyTest` | 🟡 โค้ด/เทสต์เสร็จ 2026-10-10 · php -l ผ่าน · รอรัน MySQL |
+| ST15-S2 | (ถ้า Q2=ลบ) ถอด route `enrollment-history` v1 + ยืนยันไม่มีผู้ใช้ | Q2 | `academy.php` | ⚪ รอเคาะ Q2 |
 
 > ถ้าเจ้าของเคาะว่า G1 เป็น by design และ G2 เก็บไว้ ⇒ **เมนู #15 ปิดได้เลย (มาตรฐานสูง + เทสต์ครบ)** ไม่มีงานต้องแก้
 
 **Rule:** ทุก step verify (test บน MySQL) ก่อน 🟢 · UI (ถ้ามี) ยึด **mobile-first**
 
 ## 7. Review Log
-- **2026-10-09** — ขั้น [1] สแกนโค้ด + [2] เขียนไฟล์รองนี้ เสร็จ · เมนูนี้สุก/มีเทสต์ครบ ต่างจาก #12/#13/#14 · finding หลัก = G1 (lifecycle ไม่รับ `students.manage`) · G2/G3/G4 เป็นความไม่สอดคล้อง/ยืนยันดีไซน์ · **รอเจ้าของเคาะ Q1–Q4** — หลายข้ออาจปิดเป็น "by design" โดยไม่ต้องแก้โค้ด
+- **2026-10-09** — ขั้น [1] สแกนโค้ด + [2] เขียนไฟล์รองนี้ เสร็จ · เมนูนี้สุก/มีเทสต์ครบ ต่างจาก #12/#13/#14 · finding หลัก = G1 (lifecycle ไม่รับ `students.manage`) · G2/G3/G4 เป็นความไม่สอดคล้อง/ยืนยันดีไซน์ · รอเจ้าของเคาะ Q1–Q4
+- **2026-10-10 (ST15-S1 — เจ้าของเคาะ Q1 = แก้ G1)** — `EnrollmentPolicy::lifecycle()` เพิ่มด่าน `memberHasPermission($user,$academy,['students.manage'])` (helper ใหม่ที่อ่าน academy_role.permissions ผ่าน `AcademyMember::hasAnyPermission` แบบเดียวกับ intake/import) วางถัดจาก isAcademyAdmin ก่อนด่านครูประจำชั้น ⇒ custom role ที่ถือ `students.manage` ทำ promote/graduate/drop/repeat/transfer ได้แล้ว · ขอบเขตจำกัดแค่ lifecycle (ไม่แตะ rollover commit/undo ที่ยังจำกัด admin/director/owner ตามเดิม)
+  - เทสต์ `EnrollmentPolicyTest` +2: `students.manage` → lifecycle ได้ · `students.view` อย่างเดียว → ไม่ได้ (403) · php -l ผ่าน
+  - เหลือเจ้าของ verify: `php artisan test -c phpunit.mysql.xml --filter=EnrollmentPolicyTest` + `pint`
+  - **ยังรอ Q2** (ลบ enrollment-history v1?) · **Q3** (ขอบเขต Student Master profile) · **Q4** (change-request flow by design?) — ถ้าปิดหมดเป็น by-design เมนู #15 ปิดได้
