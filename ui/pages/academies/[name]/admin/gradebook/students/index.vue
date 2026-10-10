@@ -121,7 +121,7 @@ const openStudentDetail = (student: any) => {
 
 const goToStudentCard = (student: any) => {
   if (student.student_card?.id) {
-    navigateTo(`/student-card/${student.student_card.id}`)
+    navigateTo(`/academies/${academyName.value}/admin/student-cards/${student.student_card.id}`)
   }
 }
 
@@ -173,7 +173,7 @@ const getStatusBadge = (status: string) => {
 
         <div class="flex gap-3">
           <NuxtLink
-            to="/student-card/admin"
+            :to="`/academies/${academyName}/admin/student-cards`"
             class="px-4 py-2 border border-purple-500 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg font-medium transition-colors flex items-center gap-2"
           >
             <Icon icon="fluent:card-ui-24-regular" class="w-5 h-5" />

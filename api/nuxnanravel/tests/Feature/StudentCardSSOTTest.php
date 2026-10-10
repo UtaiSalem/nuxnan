@@ -186,8 +186,8 @@ class StudentCardSSOTTest extends TestCase
     {
         [$owner, $admin, $academy, $student, $enrollment, $card] = $this->setupStudentAndAcademy();
 
-        // Access via public endpoint (no auth)
-        $response = $this->getJson('/api/student-card/1/1');
+        // Access via academy-scoped endpoint
+        $response = $this->actingAs($admin, 'api')->getJson("/api/academies/{$academy->id}/student-cards/1/1");
 
         $response->assertStatus(200);
 

@@ -43,27 +43,16 @@ async function fetchStudentCard() {
 
   try {
     try {
-      // Try academy-specific API first
+      // Academy-scoped student card API
       const response: any = await api.get(
         `/api/academies/${props.academyId}/student-cards/by-student/${props.member.student_id}`
       )
-      if (response.success) {
+      if (response.success && response.student) {
         student.value = response.student
         return
       }
     } catch (err) {
-      // Fallback to legacy API
-      try {
-        const response: any = await api.get(
-          `/api/student-card/profile/${props.member.student_id}`
-        )
-        if (response.student) {
-          student.value = response.student
-          return
-        }
-      } catch (legacyErr) {
-        // Both APIs failed
-      }
+      // fall through to inline fallback below
     }
 
     // If we also have student data inline, use that as fallback

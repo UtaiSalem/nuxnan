@@ -246,7 +246,8 @@ Route::middleware(['auth:api'])->prefix('student')->group(function () {
 // GUARD: Do NOT add new routes here. Use /learn/academy-home-visit.php or unified master profile instead.
 // TODO: Remove these in future version after frontend migration is complete
 require __DIR__.'/homevisit/homevisit.php';
-require __DIR__.'/studentcard/studentcard.php';
+// studentcard/studentcard.php (public no-auth เก่า) ปลดระวางแล้ว 2026-10-11 — ใช้ academy-scoped
+// /api/academies/{academy}/student-cards + /student-card-requests แทน (ดู 16-student-cards.md §9)
 
 // Note: Admin routes are loaded in bootstrap/app.php with /api/admin prefix
 // Do not include them here to avoid route conflicts
