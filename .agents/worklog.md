@@ -57,6 +57,42 @@ production ยังไม่ได้รัน migration บางชุด (�
 
 ---
 
+## 2026-10-10 — เมนู #16 บัตรนักเรียน: audit (ขั้น [1]+[2]) · ระบบหลักใช้ได้ แต่เจอ gap 8 ข้อ
+
+### สถานะ: 🟡 audit เสร็จ · ไฟล์รอง `.agents/school-admin/16-student-cards.md` · รอเจ้าของเคาะ Q1–Q4 ก่อน SCD-S1
+
+ต่อจากลูปเมนูโรงเรียน (ถัดจาก #13 หลักสูตร) · สแกน routes 3 ไฟล์ + StudentCardController (1000) + Request/PublicRequest controller + AccessService + RequestService + StudentCard model + FE admin/requests/import/edit pages + config/student-card.php
+
+### ค้นพบหลัก: มี 2 ระบบคู่ขนาน
+1. **academy-scoped (ใหม่)** `/api/academies/{academy}/student-cards/*` + คำร้อง `/student-card-requests/*` — กันสิทธิ์ 3 ชั้น (students.view / view+access-service รายห้อง / students.manage) + tenant + มีเทสต์ AcademyStudentCardAccessTest · ครูประจำชั้นแก้ได้เฉพาะห้องตน · request flow สร้างบัตรจริงตอน complete()
+2. **public เก่า (deprecated)** `/api/student-card/*` — ไม่ auth กันแค่ config flag (`PUBLIC_STUDENT_CARD_MANAGEMENT`/`_REQUESTS` default **false**) + throttle
+
+### Gap (รายละเอียดในไฟล์รอง §5)
+- **G1** import/export/bulkUploadPhotos/bulkUpdate = **501 stub** แต่ FE import.vue ยิงจริง → หน้านำเข้า/ดาวน์โหลด template ตาย
+- **G2** `store()` สร้างบัตรแต่ไม่สร้าง ClassroomStudent → บัตรไม่โผล่ใน roster (roster ขับด้วย classroom_students)
+- **G3** public `reviewRequest`/`publicUpdate`/`publicPhoto` **ไม่มี auth** ทั้งที่ comment route อ้างว่ามี "admin password verification" (ไม่มีจริง) · flag OFF จึงยังไม่ถูก exploit
+- **G4** legacy auth route `/student-card/profile|update/{card}` ได้ academy=null ⇒ ข้ามการตรวจ tenant/สิทธิ์ → อ่าน PII/แก้บัตรข้ามโรงเรียนได้ (เส้น academy-scoped ปลอดภัย)
+- G5 public complete ไม่สร้างบัตร (ต่างจาก auth complete) · G6 FE ซ้ำ 2 ชุด · G7 legacy search ข้ามโรงเรียน · G8 `card_admin` role ไม่มีแถวในฐาน
+
+### เคาะแล้ว Q1–Q4 (2026-10-10): Q1 ทำ import+export (bulk defer) · Q2 ลบ public เก่า · Q3 เก็บ store+เติม enrollment · Q4 เก็บ sync/audit
+
+### ลงมือแล้ว (Claude เขียนในคลาวด์ · php -l ผ่าน · vendor ไม่ลง → เจ้าของรันเทสต์)
+- **✅ SCD-S2** `StudentCardsExport` + `export()` คืน .xlsx จริง · `format=template` คืนหัวคอลัมน์เปล่า (ปิด G1 ส่วน export)
+- **✅ SCD-S1** `StudentCardsImport` + `import()` — อ่านไฟล์/จับคู่หัวคอลัมน์(ไม่ยึดตำแหน่ง)/upsert Student+StudentCard รายคน + enroll ถ้าเจอห้อง · ตอบ summary+errors ตาม import.vue (ปิด G1 ส่วน import)
+- **✅ SCD-S3 (G2)** `store()` เติม enrollment (ClassroomStudent active + academic_year_id + level_and_room) + helper `resolveCurrentClassroom` ใช้ร่วม store/import · เปลี่ยน signature เป็น `Academy $academy` (bind by id)
+- commit บน branch `claude/jolly-goodall-cwgfja` · PR #33
+
+### ✅ SCD-S6 เทสต์ (Claude เขียน · php -l ผ่าน · เจ้าของรัน `--filter=StudentCardImportExport`)
+`tests/Feature/StudentCardImportExportTest.php` 9 เคส: export (template/data/map heading/authz) · import (สร้าง+enroll · update_existing toggle · หัวคอลัมน์ผิด 422 · authz) · store (enroll เมื่อเจอห้อง · ไม่ enroll เมื่อไม่เจอ) · import ใช้ CSV จริงผ่าน `Excel::toArray`, export ใช้ `Excel::fake()`
+
+### ⏸️ SCD-S4 (ลบ public เก่า) — เจ้าของสั่งข้ามไปก่อน (ทำ S6 ก่อน) · blast radius ใหญ่ · รอ go/no-go รอบหน้า
+เส้น legacy ยังต่อกับ UI แอดมินที่ใช้จริง: `StudentCardModal.vue` ยิง `/api/student-card/profile/{id}` · `StudentCardItem.vue` ยิง public-update/public-photo · `gradebook/students/index.vue` ไปหน้า public · มี 4 เทสต์คุม (PublicCardRequestTest ลบทั้งไฟล์ · ClassroomManagementTest ลบ/เขียนใหม่ · RoomRoster+SSOT retarget) · คลาวด์รันเทสต์/บิลด์ไม่ได้ → ควรทำบนเครื่องเจ้าของ หรือยืนยันให้ push ทั้งชุดแล้ว verify local (ดู 16-student-cards.md §9)
+- เหลือ **SCD-S6** เทสต์ (import/export + store+enroll) · **S7** จอจริง · G8 card_admin + bulk photos/update = defer
+
+แตกงาน SCD-S1 (import)✅ · S2 (export)✅ · S3 (G2)✅ · S4 (ลบ legacy)🔴blocked · S6 (เทสต์) · S7 (จอจริง)
+
+---
+
 ## 2026-10-07 — เมนู #13 หลักสูตร: audit (ขั้น [1]+[2]) · ฟีเจอร์ครบ แต่เจอช่องโหว่สิทธิ์ P0
 
 ### สถานะ: 🔴 audit เสร็จ · ไฟล์รอง `.agents/school-admin/13-curriculums.md` · รอเจ้าของเคาะ Q1–Q3 ก่อน CR-S1
