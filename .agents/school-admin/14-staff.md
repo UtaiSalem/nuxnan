@@ -103,7 +103,8 @@
 | ST-S3 | **ซ่อม FE contract (F2–F6)** — list อ่าน paginator · summary อ่าน by_status · query ใน URL · payload `employment_type`/`department_id` · PUT→PATCH · err.data | Q1,Q4,Q5 | `staff.vue` | 🟡 โค้ดเสร็จ 2026-10-07 · รอ `npm run build` + คลิกจริง |
 | ST-S4 | **UI จัดการตำแหน่ง (F8)** — สร้าง/แก้/ลบ position ใน modal + endpoint `GET /staff/departments` | Q3 | `staff.vue` · `StaffController` | 🟡 โค้ดเสร็จ 2026-10-07 |
 | ST-S5 | **เปลี่ยนสถานะ (F7)** — inline `<select>` เรียก updateStatus (PATCH) · map สถานะครบ 5 ค่า | Q5 | `staff.vue` | 🟡 โค้ดเสร็จ 2026-10-07 |
-| ST-S6 | เทสต์ authz (view/manage/non-member/cross-academy) + CRUD + schema (B8) | ST-S1–S3 | `StaffAuthzTest.php` (14 เคส) | 🟡 เขียนเสร็จ 2026-10-07 · php -l ผ่าน · รอรัน MySQL |
+| ST-S6 | เทสต์ authz (view/manage/non-member/cross-academy) + CRUD + schema (B8) | ST-S1–S3 | `StaffAuthzTest.php` (17 เคส) | 🟡 เขียนเสร็จ · php -l ผ่าน · รอรัน MySQL |
+| ST-S7 | **ฝ่าย = AcademyGroup (เมนู #9) ไม่ใช่ตาราง orphan `departments`** (เจ้าของเคาะเลือก B) — ถอด FK → `departments` · relation/validation/endpoint ชี้ `academy_groups` (type=department) · ลบ `Department` model | — | migration + StaffProfile/Position + StaffController + test | 🟡 โค้ด/เทสต์เสร็จ 2026-10-10 · php -l ผ่าน · รอ migrate + MySQL |
 
 **Rule:** ทุก step verify (build/test บน MySQL) ก่อน 🟢 · UI ทุก step ยึดกติกา **mobile-first**
 **เหลือเจ้าของ verify:** `php artisan migrate` (dev — ก่อนรัน mysqldump) · `php artisan test -c phpunit.mysql.xml --filter=StaffAuthzTest` · `./vendor/bin/pint` · `npm run build` + คลิกจริง 375px
@@ -133,4 +134,11 @@ Report back: diff + ผลเทสต์
 - **2026-10-10 (fix หลังเจ้าของรันเทสต์ MySQL)** — เจ้าของรัน `--filter=StaffAuthzTest` ได้ **4 failed / 10 passed** · error `Class "App\Models\Department" not found`
   - รากปัญหา: ตาราง `departments` ถูกอ้างเป็น FK จาก `staff_profiles.department_id`/`positions.department_id` และ relation `StaffProfile::department()`/`Position::department()` ทำ `belongsTo(Department::class)` **แต่ไม่เคยมี `App\Models\Department`** (ทั้งไม่มี migration สร้างตาราง — หนี้ G25 schema-drift) · relation พังตอน store/update โหลด `department`
   - แก้: เพิ่ม `app/Models/Department.php` (`3079861`) map ตาราง `departments` + relation academy/staffProfiles/positions · php -l ผ่าน · คาดว่า 14/14 เขียว
-  - ⚠️ **คำถามค้าง:** ตาราง `departments` นี้เป็น orphan (ไม่มี migration · อาจว่าง) และ**คนละตัวกับเมนู #9 "ฝ่าย" ที่ใช้ `AcademyGroup`** ⇒ dropdown ฝ่ายในฟอร์มบุคลากร (Q4) อาจว่าง/ชี้ผิดแหล่ง — ต้องเคาะว่าจะให้ staff.department ผูก `AcademyGroup` (เมนู #9) แทนไหม (ต้องแก้ FK + relation) หรือ seed ตาราง `departments`
+  - ⚠️ **คำถามค้าง:** ตาราง `departments` นี้เป็น orphan (ไม่มี migration · อาจว่าง) และ**คนละตัวกับเมนู #9 "ฝ่าย" ที่ใช้ `AcademyGroup`** ⇒ dropdown ฝ่ายในฟอร์มบุคลากร (Q4) อาจว่าง/ชี้ผิดแหล่ง
+- **2026-10-10 (ST-S7 — เจ้าของเคาะเลือก B: ฝ่าย = AcademyGroup)** — เทียบข้อดีข้อเสีย A (สร้าง `Department`/ตารางเอง) vs B (ใช้ `AcademyGroup` type=department ของเมนู #9) → เลือก **B** (แหล่งความจริงเดียว · ครู 120 คนอยู่ในฝ่ายนั้นแล้ว · ตรง Q4 · ไม่ต้อง build CRUD ฝ่ายใหม่)
+  - migration `2026_10_10_000000_repoint_staff_department_to_academy_groups` — ถอด FK `department_id`→`departments` ออกจาก `staff_profiles`+`positions` แบบ defensive (mysql · information_schema · no-op ถ้าไม่มี FK) · คงคอลัมน์ไว้เป็น logical ref → `academy_groups` · ไม่เพิ่ม FK ใหม่ (low-risk บน schema drift) · department_id ไม่เคยมีข้อมูลจริงจึงไม่ต้อง migrate ข้อมูล
+  - `StaffProfile::department()` / `Position::department()` → `belongsTo(AcademyGroup::class, 'department_id')`
+  - `StaffController`: store/update validate `department_id` ด้วย `departmentRule()` = `Rule::exists('academy_groups','id')->where('academy_id')->where('type','department')` · `departments()` endpoint ดึงจาก `academyGroups()->where('type','department')`
+  - **ลบ `app/Models/Department.php`** (placeholder จากรอบก่อน ไม่ใช้แล้ว)
+  - `StaffAuthzTest` +3 เคส (create ด้วย department group · ปฏิเสธกลุ่มที่ไม่ใช่ department 422 · endpoint list เฉพาะ department) รวม **17 เคส** · php -l ผ่านทุกไฟล์
+  - เหลือเจ้าของ verify: `php artisan migrate` + `php artisan test -c phpunit.mysql.xml --filter=StaffAuthzTest` (คาด 17/17) + pint + `npm run build`

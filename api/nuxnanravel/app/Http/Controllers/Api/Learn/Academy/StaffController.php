@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
-use App\Models\Department;
 use App\Models\Position;
 use App\Models\StaffProfile;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Exists;
 
 class StaffController extends Controller
 {
@@ -101,7 +101,7 @@ class StaffController extends Controller
                 Rule::unique('staff_profiles')->where(fn ($q) => $q->where('academy_id', $academy->id)->whereNull('deleted_at')),
             ],
             'position_id' => ['required', Rule::exists('positions', 'id')->where('academy_id', $academy->id)],
-            'department_id' => ['nullable', Rule::exists('departments', 'id')->where('academy_id', $academy->id)],
+            'department_id' => ['nullable', $this->departmentRule($academy)],
             'employment_type' => 'required|in:full_time,part_time,contract,temporary',
             'hire_date' => 'required|date',
             'contract_start_date' => 'nullable|date',
@@ -156,7 +156,7 @@ class StaffController extends Controller
 
         $validated = $request->validate([
             'position_id' => ['sometimes', Rule::exists('positions', 'id')->where('academy_id', $academy->id)],
-            'department_id' => ['nullable', Rule::exists('departments', 'id')->where('academy_id', $academy->id)],
+            'department_id' => ['nullable', $this->departmentRule($academy)],
             'employment_type' => 'sometimes|in:full_time,part_time,contract,temporary',
             'hire_date' => 'sometimes|date',
             'contract_start_date' => 'nullable|date',
@@ -290,7 +290,9 @@ class StaffController extends Controller
      */
     public function departments(Academy $academy): JsonResponse
     {
-        $departments = Department::where('academy_id', $academy->id)
+        // ฝ่าย = academy_groups (type=department) ของเมนู #9 — แหล่งความจริงเดียว (ST-S7)
+        $departments = $academy->academyGroups()
+            ->where('type', 'department')
             ->orderBy('name')
             ->get(['id', 'name']);
 
@@ -298,6 +300,14 @@ class StaffController extends Controller
             'success' => true,
             'data' => $departments,
         ]);
+    }
+
+    /** rule: department_id ต้องเป็น academy_group ของโรงเรียนนี้และเป็นชนิด department */
+    private function departmentRule(Academy $academy): Exists
+    {
+        return Rule::exists('academy_groups', 'id')
+            ->where('academy_id', $academy->id)
+            ->where('type', 'department');
     }
 
     /**

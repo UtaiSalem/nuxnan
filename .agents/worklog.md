@@ -103,6 +103,7 @@ production ยังไม่ได้รัน migration บางชุด (�
 - **ST-S6** `StaffAuthzTest.php` 14 เคส (authz view/manage split · tenant 403/404 · resigned ตั้ง resignation_date · create ไม่ต้องมี first_name)
 - หลักฐานที่รันเอง: `php -l` ผ่านทุกไฟล์ backend · SFC balanced · ไม่มี ref เก่าค้าง (employee_type/err.response = 0) · **vendor+node_modules ไม่มีใน container** ⇒ เหลือเจ้าของรัน migrate + `test -c phpunit.mysql.xml --filter=StaffAuthzTest` + pint + `npm run build`
 - PR: UtaiSalem/nuxnan#32 (branch `claude/gallant-hopper-iux8ft`)
+- **2026-10-10 fix หลังเจ้าของรันเทสต์ MySQL (4 failed):** `Class App\Models\Department not found` — ตาราง `departments` ถูกอ้าง FK แต่ไม่มี model/migration (G25) → เติม `Department` model กัน 500 (`3079861`) แล้ว **ST-S7** เจ้าของเคาะเลือก B: ฝ่าย = `AcademyGroup`(type=department เมนู #9) ไม่ใช่ orphan `departments` → migration ถอด FK · relation/validation/endpoint ชี้ academy_groups · ลบ Department model · StaffAuthzTest 17 เคส · เหลือเจ้าของ migrate + test MySQL
 
 ---
 

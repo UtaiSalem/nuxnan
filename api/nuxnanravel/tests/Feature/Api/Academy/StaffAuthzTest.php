@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\Academy;
 
 use App\Models\Academy;
+use App\Models\AcademyGroup;
 use App\Models\AcademyMember;
 use App\Models\AcademyRole;
 use App\Models\Position;
@@ -57,6 +58,15 @@ class StaffAuthzTest extends TestCase
             'academy_id' => $academy->id,
             'name' => 'ครูผู้สอน',
             'is_active' => true,
+        ]);
+    }
+
+    private function departmentIn(Academy $academy, string $type = 'department'): AcademyGroup
+    {
+        return AcademyGroup::create([
+            'academy_id' => $academy->id,
+            'name' => 'ฝ่ายวิชาการ',
+            'type' => $type,
         ]);
     }
 
@@ -254,6 +264,62 @@ class StaffAuthzTest extends TestCase
             ->assertStatus(201);
 
         $this->assertDatabaseHas('positions', ['academy_id' => $academy->id, 'name' => 'ภารโรง']);
+    }
+
+    // ---- department = academy_groups(type=department) (ST-S7) ----
+
+    public function test_can_create_staff_with_academy_group_department(): void
+    {
+        [$academy, $owner] = $this->academyOwnedBy();
+        $position = $this->positionIn($academy);
+        $department = $this->departmentIn($academy);
+        $newMember = $this->memberOf($academy);
+
+        $this->actingAs($owner, 'api')
+            ->postJson("/api/academies/{$academy->id}/staff", [
+                'user_id' => $newMember->id,
+                'position_id' => $position->id,
+                'department_id' => $department->id,
+                'employment_type' => 'full_time',
+                'hire_date' => now()->toDateString(),
+            ])
+            ->assertStatus(201);
+
+        $this->assertDatabaseHas('staff_profiles', [
+            'user_id' => $newMember->id,
+            'department_id' => $department->id,
+        ]);
+    }
+
+    public function test_rejects_department_id_that_is_not_a_department_group(): void
+    {
+        [$academy, $owner] = $this->academyOwnedBy();
+        $position = $this->positionIn($academy);
+        $notDepartment = $this->departmentIn($academy, 'club'); // คนละชนิด
+        $newMember = $this->memberOf($academy);
+
+        $this->actingAs($owner, 'api')
+            ->postJson("/api/academies/{$academy->id}/staff", [
+                'user_id' => $newMember->id,
+                'position_id' => $position->id,
+                'department_id' => $notDepartment->id,
+                'employment_type' => 'full_time',
+                'hire_date' => now()->toDateString(),
+            ])
+            ->assertStatus(422);
+    }
+
+    public function test_staff_departments_endpoint_lists_only_department_groups(): void
+    {
+        [$academy] = $this->academyOwnedBy();
+        $this->departmentIn($academy);
+        $this->departmentIn($academy, 'club');
+        $viewer = $this->memberOf($academy, ['staff.view']);
+
+        $this->actingAs($viewer, 'api')
+            ->getJson("/api/academies/{$academy->id}/staff/departments")
+            ->assertStatus(200)
+            ->assertJsonCount(1, 'data');
     }
 
     // ---- tenant isolation ----
