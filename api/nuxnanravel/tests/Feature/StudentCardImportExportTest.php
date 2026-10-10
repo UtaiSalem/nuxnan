@@ -206,7 +206,7 @@ class StudentCardImportExportTest extends TestCase
     {
         $response = $this->actingAs($this->manager, 'api')
             ->postJson($this->cardUrl('/admin'), [
-                'student_number' => 'STU-STORE1',
+                'student_number' => 'S60001',
                 'title_name' => 'นาย',
                 'first_name_thai' => 'ตั้ง',
                 'last_name_thai' => 'บัตร',
@@ -214,12 +214,9 @@ class StudentCardImportExportTest extends TestCase
                 'class_section' => '1',
             ]);
 
-        if ($response->status() !== 201) {
-            $response->dump();
-        }
         $response->assertStatus(201)->assertJson(['success' => true, 'enrolled' => true]);
 
-        $student = Student::where('academy_id', $this->academy->id)->where('student_id', 'STU-STORE1')->first();
+        $student = Student::where('academy_id', $this->academy->id)->where('student_id', 'S60001')->first();
         $this->assertNotNull($student);
         $this->assertDatabaseHas('classroom_students', [
             'academy_id' => $this->academy->id,
@@ -238,19 +235,16 @@ class StudentCardImportExportTest extends TestCase
     {
         $response = $this->actingAs($this->manager, 'api')
             ->postJson($this->cardUrl('/admin'), [
-                'student_number' => 'STU-STORE2',
+                'student_number' => 'S30009',
                 'first_name_thai' => 'ไม่มี',
                 'last_name_thai' => 'ห้อง',
                 'class_level' => '3',   // ไม่มีห้อง ม.3 ในปีปัจจุบัน
                 'class_section' => '9',
             ]);
 
-        if ($response->status() !== 201) {
-            $response->dump();
-        }
         $response->assertStatus(201)->assertJson(['success' => true, 'enrolled' => false]);
 
-        $student = Student::where('academy_id', $this->academy->id)->where('student_id', 'STU-STORE2')->first();
+        $student = Student::where('academy_id', $this->academy->id)->where('student_id', 'S30009')->first();
         $this->assertNotNull($student);
         $this->assertDatabaseMissing('classroom_students', [
             'academy_id' => $this->academy->id,

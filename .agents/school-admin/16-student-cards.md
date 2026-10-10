@@ -157,6 +157,8 @@
 - **2026-10-10** — ขั้น [1]+[2] (Claude): สแกน routes (3 ไฟล์) + StudentCardController (1000) + RequestController + PublicRequestController + AccessService + RequestService + StudentCard model + FE admin/requests pages + config · เขียนไฟล์รองนี้ · พบ gap G1–G8 · เคาะ Q1–Q4
 - **2026-10-10** — SCD-S1/S2/S3 (Claude เขียน · php -l ผ่าน · เจ้าของรันเทสต์): import/export จริง (ปิด G1) + store() เติม enrollment (ปิด G2) · commit บน branch `claude/jolly-goodall-cwgfja`
 - **2026-10-10** — SCD-S4 (ลบ public): พบ blast radius §9 → เจ้าของสั่ง **ข้าม S4 ไป S6 ก่อน** (เก็บ public ไว้ flag OFF)
+- **2026-10-11** — SCD-S6 รันจริงบน MySQL: 8/10 เขียว · store 2 เคสแดง 500 = **test data ยาวเกิน** (`student_cards.student_number` เป็น `varchar(8)` · ใส่ `STU-STORE1` 10 ตัว) → แก้เป็นรหัสจริง `S60001`/`S30009` · ถอด `->dump()` · เพิ่ม `store()->load(...)` ก่อน serialize (ตาม update/profile)
+  - 🟨 **ข้อสังเกตนอกสโคป:** `store()`/`import()` validate `student_number` `max:255` แต่คอลัมน์จริง `varchar(8)` → ถ้าป้อน >8 ตัว store คืน 500 (import จับ per-row เป็น skipped) · ข้อมูลจริง ≤5 จึงไม่กระทบ · ถ้าจะกันให้เนียนค่อย cap validation ให้ตรงคอลัมน์ภายหลัง
 - **2026-10-10** — SCD-S6 (Claude เขียน · php -l ผ่าน · เจ้าของรันเทสต์): `tests/Feature/StudentCardImportExportTest.php` 9 เคส — export(template/data/map/authz) · import(สร้าง+enroll / update_existing toggle / หัวคอลัมน์ผิด 422 / authz) · store(enroll เมื่อเจอห้อง / ไม่ enroll เมื่อไม่เจอห้อง) · ใช้ CSV จริงผ่าน `Excel::toArray` (ไม่ fake) + `Excel::fake()` สำหรับ export
 
 ## 8. Review Log
