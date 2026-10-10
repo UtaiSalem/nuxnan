@@ -57,6 +57,28 @@ production ยังไม่ได้รัน migration บางชุด (�
 
 ---
 
+## 2026-10-10 — เมนู #16 บัตรนักเรียน: audit (ขั้น [1]+[2]) · ระบบหลักใช้ได้ แต่เจอ gap 8 ข้อ
+
+### สถานะ: 🟡 audit เสร็จ · ไฟล์รอง `.agents/school-admin/16-student-cards.md` · รอเจ้าของเคาะ Q1–Q4 ก่อน SCD-S1
+
+ต่อจากลูปเมนูโรงเรียน (ถัดจาก #13 หลักสูตร) · สแกน routes 3 ไฟล์ + StudentCardController (1000) + Request/PublicRequest controller + AccessService + RequestService + StudentCard model + FE admin/requests/import/edit pages + config/student-card.php
+
+### ค้นพบหลัก: มี 2 ระบบคู่ขนาน
+1. **academy-scoped (ใหม่)** `/api/academies/{academy}/student-cards/*` + คำร้อง `/student-card-requests/*` — กันสิทธิ์ 3 ชั้น (students.view / view+access-service รายห้อง / students.manage) + tenant + มีเทสต์ AcademyStudentCardAccessTest · ครูประจำชั้นแก้ได้เฉพาะห้องตน · request flow สร้างบัตรจริงตอน complete()
+2. **public เก่า (deprecated)** `/api/student-card/*` — ไม่ auth กันแค่ config flag (`PUBLIC_STUDENT_CARD_MANAGEMENT`/`_REQUESTS` default **false**) + throttle
+
+### Gap (รายละเอียดในไฟล์รอง §5)
+- **G1** import/export/bulkUploadPhotos/bulkUpdate = **501 stub** แต่ FE import.vue ยิงจริง → หน้านำเข้า/ดาวน์โหลด template ตาย
+- **G2** `store()` สร้างบัตรแต่ไม่สร้าง ClassroomStudent → บัตรไม่โผล่ใน roster (roster ขับด้วย classroom_students)
+- **G3** public `reviewRequest`/`publicUpdate`/`publicPhoto` **ไม่มี auth** ทั้งที่ comment route อ้างว่ามี "admin password verification" (ไม่มีจริง) · flag OFF จึงยังไม่ถูก exploit
+- **G4** legacy auth route `/student-card/profile|update/{card}` ได้ academy=null ⇒ ข้ามการตรวจ tenant/สิทธิ์ → อ่าน PII/แก้บัตรข้ามโรงเรียนได้ (เส้น academy-scoped ปลอดภัย)
+- G5 public complete ไม่สร้างบัตร (ต่างจาก auth complete) · G6 FE ซ้ำ 2 ชุด · G7 legacy search ข้ามโรงเรียน · G8 `card_admin` role ไม่มีแถวในฐาน
+
+### รอเคาะ — Q1 (import/export ทำรอบนี้ไหม + รูปแบบไฟล์) · Q2 (ปลดระวาง public เก่าไหม → ตัดสิน G3/G4/G6/G7) · Q3 (store vs บังคับผ่าน request flow) · Q4 (sync/audit legacy ยังมีบทบาทไหม)
+แตกงาน SCD-S1 (import) · S2 (export) · S3 (G2) · S4 (legacy routes) · S5 (card_admin) · S6 (เทสต์) · S7 (จอจริง)
+
+---
+
 ## 2026-10-07 — เมนู #13 หลักสูตร: audit (ขั้น [1]+[2]) · ฟีเจอร์ครบ แต่เจอช่องโหว่สิทธิ์ P0
 
 ### สถานะ: 🔴 audit เสร็จ · ไฟล์รอง `.agents/school-admin/13-curriculums.md` · รอเจ้าของเคาะ Q1–Q3 ก่อน CR-S1
