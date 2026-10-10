@@ -562,7 +562,6 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // Student enrollment management (new system)
     Route::post('{academy}/classrooms/transfer-student', [ClassroomController::class, 'transferStudent'])->middleware('academy.permission:groups.view')->name('api.academy.classrooms.transferStudent');
     Route::post('{academy}/classrooms/promote', [ClassroomController::class, 'promoteClassroom'])->middleware('academy.permission:groups.view')->name('api.academy.classrooms.promote');
-    Route::get('{academy}/students/{student}/enrollment-history', [ClassroomController::class, 'getStudentEnrollmentHistory'])->middleware('academy.permission:groups.view')->name('api.academy.students.enrollmentHistory');
 
     Route::scopeBindings()->group(function () {
         Route::post('{academy}/students/{student}/graduate', [StudentLifecycleController::class, 'graduate'])

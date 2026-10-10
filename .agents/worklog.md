@@ -74,7 +74,8 @@ production ยังไม่ได้รัน migration บางชุด (�
 - **G3** permission แยกสองทาง (middleware `userCan`→role.permissions vs policy `member.role`+hasAnyPermission) เสี่ยง drift
 - **G4** registry ไม่มี edit/delete ตรง — แก้ผ่าน change-request flow · เอาออกผ่าน lifecycle (ยืนยันดีไซน์)
 
-### ค้าง — รอเคาะ Q2 (ลบ history v1?) · Q3 (ขอบเขต Student Master profile = #15/#6/#17) · Q4 (change-request flow by design?)
+### ค้าง — รอเคาะ Q3 (ขอบเขต Student Master profile = #15/#6/#17) · Q4 (change-request flow by design?)
+- **ST15-S2 เสร็จ 2026-10-10** (เจ้าของเคาะ Q2 = ลบ v1): ลบ route `enrollment-history` v1 (`groups.view`) + method `ClassroomController::getStudentEnrollmentHistory` ที่ตายแล้ว · ยืนยัน FE ใช้ v2 เท่านั้น · ไม่มี test/caller อื่น · php -l ผ่าน
 - **ST15-S1 เสร็จ 2026-10-10** (เจ้าของเคาะ Q1 = แก้ G1): `EnrollmentPolicy::lifecycle()` เพิ่มด่าน `memberHasPermission(...,['students.manage'])` (อ่าน academy_role.permissions แบบเดียวกับ intake/import) ⇒ custom role นายทะเบียนทำ promote/graduate/drop/repeat/transfer ได้ · ไม่แตะ rollover commit/undo · เทสต์ `EnrollmentPolicyTest` +2 (manage ได้ · view อย่างเดียวไม่ได้) · php -l ผ่าน · เหลือเจ้าของรัน MySQL + pint
 
 ---
