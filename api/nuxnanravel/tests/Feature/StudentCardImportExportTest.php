@@ -214,6 +214,9 @@ class StudentCardImportExportTest extends TestCase
                 'class_section' => '1',
             ]);
 
+        if ($response->status() !== 201) {
+            $response->dump();
+        }
         $response->assertStatus(201)->assertJson(['success' => true, 'enrolled' => true]);
 
         $student = Student::where('academy_id', $this->academy->id)->where('student_id', 'STU-STORE1')->first();
@@ -242,6 +245,9 @@ class StudentCardImportExportTest extends TestCase
                 'class_section' => '9',
             ]);
 
+        if ($response->status() !== 201) {
+            $response->dump();
+        }
         $response->assertStatus(201)->assertJson(['success' => true, 'enrolled' => false]);
 
         $student = Student::where('academy_id', $this->academy->id)->where('student_id', 'STU-STORE2')->first();

@@ -921,6 +921,8 @@ class StudentCardController extends Controller
                 return StudentCard::create($data);
             });
 
+            $studentCard->load('student.classroomEnrollments.classroom.academicYear');
+
             return response()->json([
                 'success' => true,
                 'message' => 'สร้างบัตรนักเรียนสำเร็จ',
