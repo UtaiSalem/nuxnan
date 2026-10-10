@@ -130,3 +130,7 @@ Report back: diff + ผลเทสต์
   - **ST-S6 🟡** `StaffAuthzTest.php` 14 เคส: owner/staff.manage สร้างได้ · staff.view สร้าง/แก้/ลบ/สร้างตำแหน่งไม่ได้ (403) · staff.view list ได้ · member ไม่มี view / คนนอก list ไม่ได้ (403) · admin แก้ได้ · resigned ตั้ง resignation_date · admin โรงเรียนอื่น list ไม่ได้ (403) · staff ข้ามโรงเรียน = 404
   - ⚠️ **ยังไม่รัน test/pint/build ใน container** (ไม่มี vendor + node_modules) · php -l ผ่านทุกไฟล์ backend · โครงสร้าง SFC balanced
   - 🎯 เมนู #14 โค้ด/เทสต์เสร็จครบ — เหลือเจ้าของ verify (migrate + MySQL test + pint + npm build)
+- **2026-10-10 (fix หลังเจ้าของรันเทสต์ MySQL)** — เจ้าของรัน `--filter=StaffAuthzTest` ได้ **4 failed / 10 passed** · error `Class "App\Models\Department" not found`
+  - รากปัญหา: ตาราง `departments` ถูกอ้างเป็น FK จาก `staff_profiles.department_id`/`positions.department_id` และ relation `StaffProfile::department()`/`Position::department()` ทำ `belongsTo(Department::class)` **แต่ไม่เคยมี `App\Models\Department`** (ทั้งไม่มี migration สร้างตาราง — หนี้ G25 schema-drift) · relation พังตอน store/update โหลด `department`
+  - แก้: เพิ่ม `app/Models/Department.php` (`3079861`) map ตาราง `departments` + relation academy/staffProfiles/positions · php -l ผ่าน · คาดว่า 14/14 เขียว
+  - ⚠️ **คำถามค้าง:** ตาราง `departments` นี้เป็น orphan (ไม่มี migration · อาจว่าง) และ**คนละตัวกับเมนู #9 "ฝ่าย" ที่ใช้ `AcademyGroup`** ⇒ dropdown ฝ่ายในฟอร์มบุคลากร (Q4) อาจว่าง/ชี้ผิดแหล่ง — ต้องเคาะว่าจะให้ staff.department ผูก `AcademyGroup` (เมนู #9) แทนไหม (ต้องแก้ FK + relation) หรือ seed ตาราง `departments`
