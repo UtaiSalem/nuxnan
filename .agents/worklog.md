@@ -82,7 +82,10 @@ production ยังไม่ได้รัน migration บางชุด (�
 - **✅ SCD-S3 (G2)** `store()` เติม enrollment (ClassroomStudent active + academic_year_id + level_and_room) + helper `resolveCurrentClassroom` ใช้ร่วม store/import · เปลี่ยน signature เป็น `Academy $academy` (bind by id)
 - commit บน branch `claude/jolly-goodall-cwgfja` · PR #33
 
-### 🔴 SCD-S4 (ลบ public เก่า) BLOCKED — blast radius ใหญ่ · รอเจ้าของ go/no-go
+### ✅ SCD-S6 เทสต์ (Claude เขียน · php -l ผ่าน · เจ้าของรัน `--filter=StudentCardImportExport`)
+`tests/Feature/StudentCardImportExportTest.php` 9 เคส: export (template/data/map heading/authz) · import (สร้าง+enroll · update_existing toggle · หัวคอลัมน์ผิด 422 · authz) · store (enroll เมื่อเจอห้อง · ไม่ enroll เมื่อไม่เจอ) · import ใช้ CSV จริงผ่าน `Excel::toArray`, export ใช้ `Excel::fake()`
+
+### ⏸️ SCD-S4 (ลบ public เก่า) — เจ้าของสั่งข้ามไปก่อน (ทำ S6 ก่อน) · blast radius ใหญ่ · รอ go/no-go รอบหน้า
 เส้น legacy ยังต่อกับ UI แอดมินที่ใช้จริง: `StudentCardModal.vue` ยิง `/api/student-card/profile/{id}` · `StudentCardItem.vue` ยิง public-update/public-photo · `gradebook/students/index.vue` ไปหน้า public · มี 4 เทสต์คุม (PublicCardRequestTest ลบทั้งไฟล์ · ClassroomManagementTest ลบ/เขียนใหม่ · RoomRoster+SSOT retarget) · คลาวด์รันเทสต์/บิลด์ไม่ได้ → ควรทำบนเครื่องเจ้าของ หรือยืนยันให้ push ทั้งชุดแล้ว verify local (ดู 16-student-cards.md §9)
 - เหลือ **SCD-S6** เทสต์ (import/export + store+enroll) · **S7** จอจริง · G8 card_admin + bulk photos/update = defer
 

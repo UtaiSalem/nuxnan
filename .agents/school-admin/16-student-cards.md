@@ -116,7 +116,7 @@
 | SCD-S1 | ปิด G1 — import นักเรียน/บัตร (Excel/CSV) | S2 (คอลัมน์ตรงกัน) | `app/Imports/StudentCardsImport.php` + `import()` · summary created/updated/skipped + errors[] | 🟡 |
 | SCD-S3 | ปิด G2 — `store()` เติม enrollment | — | สร้าง/ผูก ClassroomStudent active + academic_year_id + level_and_room | 🟡 |
 | SCD-S4 | ปิด G3/G4/G6/G7 — ลบชุด public เก่า | — | **blast radius ใหญ่กว่าที่คิด (ดู §9) — รอเจ้าของ go/no-go** | 🔴 blocked |
-| SCD-S6 | เทสต์ครอบ import/export + store+enrollment + legacy-gone | S1–S4 | `php artisan test -c phpunit.mysql.xml --filter=StudentCard` เขียว | 🟡 |
+| SCD-S6 | เทสต์ครอบ import/export + store+enrollment | S1–S3 | `StudentCardImportExportTest` (9 เคส) · `php -l` ผ่าน · **เจ้าของรัน** `php artisan test -c phpunit.mysql.xml --filter=StudentCardImportExport` | 🟡 |
 | SCD-S7 | ตรวจจอจริง 375/768/1280 (list/edit/print/import/requests) | S1–S4 | **เจ้าของ verify** | ⚪ |
 | — | G8 `card_admin` vestigial | — | เลื่อนไป cleanup รวม role ภายหลัง (ไม่กระทบ runtime) | 🔵 defer |
 | — | bulk photos / bulk update | — | คง 501 stub ตาม Q1 | 🔵 defer |
@@ -156,7 +156,8 @@
 ## 8. Review Log
 - **2026-10-10** — ขั้น [1]+[2] (Claude): สแกน routes (3 ไฟล์) + StudentCardController (1000) + RequestController + PublicRequestController + AccessService + RequestService + StudentCard model + FE admin/requests pages + config · เขียนไฟล์รองนี้ · พบ gap G1–G8 · เคาะ Q1–Q4
 - **2026-10-10** — SCD-S1/S2/S3 (Claude เขียน · php -l ผ่าน · เจ้าของรันเทสต์): import/export จริง (ปิด G1) + store() เติม enrollment (ปิด G2) · commit บน branch `claude/jolly-goodall-cwgfja`
-- **2026-10-10** — SCD-S4 (ลบ public): พบ blast radius §9 → หยุดรอ go/no-go เจ้าของ (เส้น legacy ยังต่อกับ UI แอดมินจริง + มี 4 เทสต์คุม · คลาวด์ verify ไม่ได้)
+- **2026-10-10** — SCD-S4 (ลบ public): พบ blast radius §9 → เจ้าของสั่ง **ข้าม S4 ไป S6 ก่อน** (เก็บ public ไว้ flag OFF)
+- **2026-10-10** — SCD-S6 (Claude เขียน · php -l ผ่าน · เจ้าของรันเทสต์): `tests/Feature/StudentCardImportExportTest.php` 9 เคส — export(template/data/map/authz) · import(สร้าง+enroll / update_existing toggle / หัวคอลัมน์ผิด 422 / authz) · store(enroll เมื่อเจอห้อง / ไม่ enroll เมื่อไม่เจอห้อง) · ใช้ CSV จริงผ่าน `Excel::toArray` (ไม่ fake) + `Excel::fake()` สำหรับ export
 
 ## 8. Review Log
 - **2026-10-10** — ขั้น [1]+[2] (Claude): สแกน routes (3 ไฟล์) + StudentCardController (1000) + RequestController + PublicRequestController + AccessService + RequestService + StudentCard model + FE admin/requests pages + config · เขียนไฟล์รองนี้ · พบ gap G1–G8 · รอเคาะ Q1–Q4
