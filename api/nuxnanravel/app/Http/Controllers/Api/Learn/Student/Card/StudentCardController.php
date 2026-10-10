@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Api\Learn\Student\Card;
 
+use App\Exports\StudentCardsExport;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RoomStudentResource;
 use App\Http\Resources\StudentCardResource;
+use App\Imports\StudentCardsImport;
 use App\Models\AcademicYear;
 use App\Models\Academy;
 use App\Models\Classroom;
@@ -14,11 +16,13 @@ use App\Models\StudentCard;
 use App\Services\StudentCardAccessService;
 use App\Services\StudentCardAuditService;
 use App\Services\StudentCardSyncService;
+use App\Services\StudentEnrollmentService;
 use App\Services\StudentPhotoService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
 
 class StudentCardController extends Controller
 {
@@ -193,6 +197,26 @@ class StudentCardController extends Controller
                 fn ($a, $b) => ($a->student?->first_name_th ?? '') <=> ($b->student?->first_name_th ?? ''),
             ])
             ->values();
+    }
+
+    /**
+     * หาห้องปัจจุบันจาก level/room ภายในโรงเรียน — คืน null ถ้าไม่เจอ
+     *
+     * ใช้ร่วมกันโดย store() และ import() เพื่อผูก enrollment ให้บัตรที่สร้างใหม่
+     * โผล่ใน roster (roster ยึด classroom_students เป็น source of truth)
+     * ไม่สร้างห้องใหม่เอง — การสร้างห้องเป็นงานของเมนูห้องเรียน (#10)
+     */
+    private function resolveCurrentClassroom(Academy $academy, $level, $room): ?Classroom
+    {
+        $requested = (int) preg_replace('/\D+/', '', (string) $level);
+
+        return Classroom::query()
+            ->where('academy_id', $academy->id)
+            ->where('section', (string) $room)
+            ->where('status', Classroom::STATUS_ACTIVE)
+            ->whereHas('academicYear', fn ($year) => $year->where('is_current', true))
+            ->get(['id', 'grade_level', 'section', 'academy_id', 'academic_year_id'])
+            ->first(fn ($classroom) => (int) preg_replace('/\D+/', '', (string) $classroom->grade_level) === $requested);
     }
 
     /**
@@ -826,8 +850,12 @@ class StudentCardController extends Controller
 
     /**
      * Create new student card
+     *
+     * นอกจากสร้างบัตร ยังผูก enrollment ให้นักเรียนเข้าห้องตาม class_level/section
+     * (ถ้าเจอห้องในปีปัจจุบัน) เพื่อให้บัตรโผล่ใน roster — roster ยึด
+     * classroom_students เป็น source of truth ถ้าไม่ผูกบัตรจะหายจากจอ (gap G2)
      */
-    public function store($academy, Request $request)
+    public function store(Request $request, Academy $academy)
     {
         $request->validate([
             'student_number' => 'required|string|max:255',
@@ -841,48 +869,65 @@ class StudentCardController extends Controller
             'birth_date' => 'nullable|date',
         ]);
 
-        $academyId = $academy instanceof Academy ? $academy->id : $academy;
+        $academyId = $academy->id;
 
         try {
-            $data = $request->only([
-                'student_number', 'title_name', 'first_name_thai', 'last_name_thai',
-                'first_name_english', 'national_id', 'birth_date', 'class_level', 'class_section',
-            ]);
+            $classroom = $this->resolveCurrentClassroom($academy, $request->input('class_level'), $request->input('class_section'));
 
-            $student = Student::where('academy_id', $academyId)
-                ->where('student_id', $request->input('student_number'))
-                ->first();
-
-            if (! $student) {
-                $student = Student::create([
-                    'academy_id' => $academyId,
-                    'student_id' => $request->input('student_number'),
-                    'citizen_id' => $request->input('national_id'),
-                    'title_prefix_th' => $request->input('title_name'),
-                    'first_name_th' => $request->input('first_name_thai'),
-                    'last_name_th' => $request->input('last_name_thai'),
-                    'first_name_en' => $request->input('first_name_english'),
-                    'date_of_birth' => $request->input('birth_date'),
-                    'status' => 'active',
+            $studentCard = DB::transaction(function () use ($request, $academy, $academyId, $classroom) {
+                $data = $request->only([
+                    'student_number', 'title_name', 'first_name_thai', 'last_name_thai',
+                    'first_name_english', 'national_id', 'birth_date', 'class_level', 'class_section',
                 ]);
-            }
 
-            $data['student_id'] = $student->id;
-            $data['academy_id'] = $academyId;
-            $data['full_name_thai'] = trim(
-                ($data['title_name'] ?? '').' '.$data['first_name_thai'].' '.$data['last_name_thai']
-            );
-            $data['student_status'] = 'active';
+                $student = Student::where('academy_id', $academyId)
+                    ->where('student_id', $request->input('student_number'))
+                    ->first();
 
-            if (! empty($data['birth_date'])) {
-                $data['birth_date_string'] = $this->convertDateToThaiFormat($data['birth_date']);
-            }
+                if (! $student) {
+                    $student = Student::create([
+                        'academy_id' => $academyId,
+                        'student_id' => $request->input('student_number'),
+                        'citizen_id' => $request->input('national_id'),
+                        'title_prefix_th' => $request->input('title_name'),
+                        'first_name_th' => $request->input('first_name_thai'),
+                        'last_name_th' => $request->input('last_name_thai'),
+                        'first_name_en' => $request->input('first_name_english'),
+                        'date_of_birth' => $request->input('birth_date'),
+                        'status' => 'active',
+                    ]);
+                }
 
-            $studentCard = StudentCard::create($data);
+                // ผูก enrollment ถ้าเจอห้อง — ให้บัตรโผล่ใน roster
+                if ($classroom) {
+                    app(StudentEnrollmentService::class)->enrollStudent($student, $classroom, null, null, $request->user()?->id);
+                    $data['academic_year_id'] = $classroom->academic_year_id;
+                    $data['level_and_room'] = trim($classroom->grade_level.'/'.$classroom->section, '/');
+                } else {
+                    $data['level_and_room'] = trim(($data['class_level'] ?? '').'/'.($data['class_section'] ?? ''), '/');
+                }
+
+                $data['student_id'] = $student->id;
+                $data['academy_id'] = $academyId;
+                $data['full_name_thai'] = trim(
+                    ($data['title_name'] ?? '').' '.$data['first_name_thai'].' '.$data['last_name_thai']
+                );
+                $data['student_status'] = 'active';
+
+                if (! empty($data['birth_date'])) {
+                    $data['birth_date_string'] = $this->convertDateToThaiFormat($data['birth_date']);
+                }
+
+                return StudentCard::create($data);
+            });
 
             return response()->json([
                 'success' => true,
                 'message' => 'สร้างบัตรนักเรียนสำเร็จ',
+                'enrolled' => $classroom !== null,
+                'warning' => $classroom === null
+                    ? 'สร้างบัตรแล้วแต่ไม่พบห้องเรียนในปีปัจจุบัน นักเรียนจะยังไม่โผล่ในรายชื่อห้องจนกว่าจะจัดเข้าห้อง'
+                    : null,
                 'student' => new StudentCardResource($studentCard),
             ], 201);
         } catch (\Exception $e) {
@@ -956,24 +1001,209 @@ class StudentCardController extends Controller
 
     /**
      * Import student cards from CSV/Excel
+     *
+     * อ่านไฟล์ → จับคู่หัวคอลัมน์ (ไม่ยึดตำแหน่ง) → สร้าง/อัพเดท Student + StudentCard
+     * รายคน (ข้ามคนที่ error แทนที่จะล้มทั้งไฟล์) + ผูก enrollment ถ้าเจอห้อง
+     * ตอบ summary (created/updated/skipped) + errors[] ตามที่หน้า import.vue รองรับ
      */
-    public function import(Request $request, $academy = null)
+    public function import(Request $request, Academy $academy)
     {
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt,xlsx,xls|max:10240',
+            'update_existing' => 'nullable|boolean',
+            'class_level' => 'nullable|string|max:10',
+        ]);
+
+        $updateExisting = $request->boolean('update_existing');
+        $levelOverride = $request->filled('class_level') ? (string) $request->input('class_level') : null;
+
+        try {
+            $sheets = Excel::toArray(new StudentCardsImport, $request->file('file'));
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'อ่านไฟล์ไม่สำเร็จ กรุณาตรวจรูปแบบไฟล์',
+            ], 422);
+        }
+
+        $rows = $sheets[0] ?? [];
+        if (count($rows) < 2) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไฟล์ไม่มีข้อมูล (ต้องมีแถวหัวคอลัมน์ + ข้อมูลอย่างน้อย 1 แถว)',
+            ], 422);
+        }
+
+        $header = array_shift($rows);
+        $map = StudentCardsImport::headerIndexes($header);
+        $missing = StudentCardsImport::missingRequired($map);
+        if ($missing) {
+            return response()->json([
+                'success' => false,
+                'message' => 'หัวคอลัมน์ไม่ครบ กรุณาใช้เทมเพลตที่ดาวน์โหลดจากระบบ',
+                'errors' => ['หัวคอลัมน์ที่จำเป็นต้องมี: '.implode(', ', StudentCardsImport::expectedHeadings())],
+            ], 422);
+        }
+
+        $cell = fn (array $row, string $field) => isset($map[$field]) && isset($row[$map[$field]])
+            ? trim((string) $row[$map[$field]])
+            : '';
+
+        $created = $updated = $skipped = 0;
+        $errors = [];
+
+        foreach ($rows as $i => $row) {
+            $lineNo = $i + 2; // +1 header, +1 เป็น 1-indexed
+
+            if (count(array_filter($row, fn ($v) => trim((string) $v) !== '')) === 0) {
+                continue; // แถวว่างล้วน — ข้ามเงียบ
+            }
+
+            $studentNumber = $cell($row, 'student_number');
+            if ($studentNumber === '') {
+                $skipped++;
+                $errors[] = "แถว {$lineNo}: ไม่มีรหัสนักเรียน";
+
+                continue;
+            }
+
+            $classLevel = $levelOverride ?? $cell($row, 'class_level');
+            $classSection = $cell($row, 'class_section');
+
+            try {
+                DB::transaction(function () use (
+                    $request, $academy, $cell, $row, $studentNumber, $classLevel, $classSection,
+                    $updateExisting, &$created, &$updated, &$skipped
+                ) {
+                    $studentFields = array_filter([
+                        'citizen_id' => $cell($row, 'national_id') ?: null,
+                        'title_prefix_th' => $cell($row, 'title_name') ?: null,
+                        'first_name_th' => $cell($row, 'first_name_thai') ?: null,
+                        'last_name_th' => $cell($row, 'last_name_thai') ?: null,
+                        'first_name_en' => $cell($row, 'first_name_english') ?: null,
+                        'date_of_birth' => $cell($row, 'birth_date') ?: null,
+                    ], fn ($v) => $v !== null);
+
+                    $student = Student::where('academy_id', $academy->id)
+                        ->where('student_id', $studentNumber)
+                        ->first();
+
+                    $existingCard = $student
+                        ? StudentCard::where('academy_id', $academy->id)
+                            ->where('student_id', $student->id)
+                            ->where('student_status', 'active')
+                            ->first()
+                        : null;
+
+                    if ($existingCard && ! $updateExisting) {
+                        $skipped++;
+
+                        return;
+                    }
+
+                    if (! $student) {
+                        $student = Student::create(array_merge($studentFields, [
+                            'academy_id' => $academy->id,
+                            'student_id' => $studentNumber,
+                            'status' => 'active',
+                        ]));
+                    } elseif ($updateExisting && $studentFields) {
+                        $student->update($studentFields);
+                    }
+
+                    $classroom = $this->resolveCurrentClassroom($academy, $classLevel, $classSection);
+                    if ($classroom) {
+                        app(StudentEnrollmentService::class)->enrollStudent($student, $classroom, null, null, $request->user()?->id);
+                    }
+
+                    $cardData = [
+                        'student_id' => $student->id,
+                        'academy_id' => $academy->id,
+                        'academic_year_id' => $classroom?->academic_year_id,
+                        'student_number' => $studentNumber,
+                        'title_name' => $cell($row, 'title_name') ?: null,
+                        'first_name_thai' => $cell($row, 'first_name_thai') ?: null,
+                        'last_name_thai' => $cell($row, 'last_name_thai') ?: null,
+                        'first_name_english' => $cell($row, 'first_name_english') ?: null,
+                        'national_id' => $cell($row, 'national_id') ?: null,
+                        'birth_date' => $cell($row, 'birth_date') ?: null,
+                        'birth_date_string' => $this->convertDateToThaiFormat($cell($row, 'birth_date') ?: null),
+                        'class_level' => $classLevel ?: null,
+                        'class_section' => $classSection ?: null,
+                        'level_and_room' => $classroom
+                            ? trim($classroom->grade_level.'/'.$classroom->section, '/')
+                            : trim($classLevel.'/'.$classSection, '/'),
+                        'full_name_thai' => trim($cell($row, 'title_name').' '.$cell($row, 'first_name_thai').' '.$cell($row, 'last_name_thai')),
+                        'student_status' => 'active',
+                    ];
+
+                    if ($existingCard) {
+                        $existingCard->update(array_filter($cardData, fn ($v) => $v !== null));
+                        $updated++;
+                    } else {
+                        StudentCard::create($cardData);
+                        $created++;
+                    }
+                });
+            } catch (\Throwable $e) {
+                $skipped++;
+                $errors[] = "แถว {$lineNo} ({$studentNumber}): ".$e->getMessage();
+            }
+        }
+
         return response()->json([
-            'success' => false,
-            'message' => 'ฟีเจอร์นำเข้าข้อมูลยังอยู่ระหว่างการพัฒนา',
-        ], 501);
+            'success' => true,
+            'message' => "นำเข้าสำเร็จ: ใหม่ {$created} · อัปเดต {$updated} · ข้าม {$skipped}",
+            'summary' => ['created' => $created, 'updated' => $updated, 'skipped' => $skipped],
+            'errors' => $errors,
+        ]);
     }
 
     /**
-     * Export student cards to CSV/Excel
+     * Export student cards to Excel (หรือดาวน์โหลด template เปล่า)
+     *
+     * ?format=template → หัวคอลัมน์อย่างเดียว (ใช้กรอกแล้ว import กลับ)
+     * ไม่งั้น → ข้อมูลบัตรที่ active ของโรงเรียน (เคารพ filter level/section/search เหมือนหน้า list)
      */
-    public function export(Request $request, $academy = null)
+    public function export(Request $request, Academy $academy)
     {
-        return response()->json([
-            'success' => false,
-            'message' => 'ฟีเจอร์ส่งออกข้อมูลยังอยู่ระหว่างการพัฒนา',
-        ], 501);
+        $isTemplate = $request->input('format') === 'template';
+
+        $rows = [];
+
+        if (! $isTemplate) {
+            $query = $this->academyQuery($academy, $request->input('status', 'active'));
+
+            if ($request->search) {
+                $this->applyMasterSearch($query, $request->search);
+            }
+
+            $this->applyCurrentClassFilters($query, $request->level, $request->section);
+
+            $rows = $query->with('student')
+                ->orderBy('class_level')
+                ->orderBy('class_section')
+                ->orderBy('order_no')
+                ->get()
+                ->map(fn (StudentCard $card) => [
+                    'student_number' => $card->student_number ?: $card->student?->student_id,
+                    'title_name' => $card->title_name ?: $card->student?->title_prefix_th,
+                    'first_name_thai' => $card->first_name_thai ?: $card->student?->first_name_th,
+                    'last_name_thai' => $card->last_name_thai ?: $card->student?->last_name_th,
+                    'first_name_english' => $card->first_name_english ?: $card->student?->first_name_en,
+                    'national_id' => $card->national_id ?: $card->student?->citizen_id,
+                    'birth_date' => optional($card->birth_date ? Carbon::parse($card->birth_date) : null)->format('Y-m-d'),
+                    'class_level' => $card->class_level,
+                    'class_section' => $card->class_section,
+                ])
+                ->all();
+        }
+
+        $filename = $isTemplate
+            ? 'student-cards-template.xlsx'
+            : 'student-cards-'.now()->format('Ymd-His').'.xlsx';
+
+        return Excel::download(new StudentCardsExport($rows), $filename);
     }
 
     /**
