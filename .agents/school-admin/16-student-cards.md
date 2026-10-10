@@ -115,7 +115,7 @@
 | SCD-S2 | ปิด G1 — export + template จริง | — | `app/Exports/StudentCardsExport.php` + `export()` คืน .xlsx · `format=template` คืนหัวคอลัมน์เปล่า | 🟡 |
 | SCD-S1 | ปิด G1 — import นักเรียน/บัตร (Excel/CSV) | S2 (คอลัมน์ตรงกัน) | `app/Imports/StudentCardsImport.php` + `import()` · summary created/updated/skipped + errors[] | 🟡 |
 | SCD-S3 | ปิด G2 — `store()` เติม enrollment | — | สร้าง/ผูก ClassroomStudent active + academic_year_id + level_and_room | 🟡 |
-| SCD-S4 | ปิด G3/G4/G6/G7 — ลบชุด public เก่า | — | **blast radius ใหญ่กว่าที่คิด (ดู §9) — รอเจ้าของ go/no-go** | 🔴 blocked |
+| SCD-S4 | ปิด G3/G4/G6/G7 — ลบชุด public เก่า | — | ทำเสร็จแล้ว (`52a70bd`) แต่ **revert ออก (`1c36675`)** ตามคำขอเจ้าของ — ครูยังต้องใช้ no-login ต่อ · เลื่อนจนกว่าพร้อม (ดู §9) | ⏸️ deferred |
 | SCD-S6 | เทสต์ครอบ import/export + store+enrollment | S1–S3 | `StudentCardImportExportTest` (9 เคส) · `php -l` ผ่าน · **เจ้าของรัน** `php artisan test -c phpunit.mysql.xml --filter=StudentCardImportExport` | 🟡 |
 | SCD-S7 | ตรวจจอจริง 375/768/1280 (list/edit/print/import/requests) | S1–S4 | **เจ้าของ verify** | ⚪ |
 | — | G8 `card_admin` vestigial | — | เลื่อนไป cleanup รวม role ภายหลัง (ไม่กระทบ runtime) | 🔵 defer |
@@ -151,7 +151,9 @@
 - `pages/academies/[name]/admin/gradebook/students/index.vue` — `navigateTo('/student-card/{id}')` + `to="/student-card/admin"` → ชี้ `/academies/{name}/admin/student-cards/...`
 - ลบหน้า `ui/pages/student-card/*` (public + admin public)
 
-**คำแนะนำ:** S4 ควรทำบนเครื่องเจ้าของ (รัน `php artisan test -c phpunit.mysql.xml` + `npm run build` ได้) หรือยืนยันให้ Claude push refactor ทั้งชุดแล้วเจ้าของ verify local · เป็นงาน outward-facing (เอา no-login flow ออก) + hard-to-reverse จึงขอ go/no-go ก่อน
+**สถานะ:** ✅ ลงมือครบแล้ว (commit `52a70bd` — ลบ backend/pages + rewire FE + composable type-only + ลบ/retarget เทสต์) → **แต่ revert ออก (`1c36675`) ตามคำขอเจ้าของ 2026-10-11** เพราะครูยังต้องใช้หน้า no-login `/student-card/{level}/{room}` ต่ออีกระยะ · โค้ด public กลับมาครบแล้ว
+
+**เมื่อเจ้าของพร้อมเปลี่ยน:** ย้อน revert ด้วย `git revert 1c36675` (คืน diff ของ `52a70bd` ทั้งชุด) แล้ว `npm run build` + full student-card suite · หรือทำใหม่ตามรายการข้างบนถ้าโค้ดขยับไปมากแล้ว · อย่าลืมสื่อสารว่า no-login flow ของครูจะถูกเอาออก
 
 ## 8. Review Log
 - **2026-10-10** — ขั้น [1]+[2] (Claude): สแกน routes (3 ไฟล์) + StudentCardController (1000) + RequestController + PublicRequestController + AccessService + RequestService + StudentCard model + FE admin/requests pages + config · เขียนไฟล์รองนี้ · พบ gap G1–G8 · เคาะ Q1–Q4
@@ -161,6 +163,5 @@
   - ✅ **แก้แล้ว 2026-10-11 (เจ้าของสั่งรองรับถึง 10 หลัก):** migration `2026_10_11_000000_widen_student_cards_student_number` ขยาย `student_cards.student_number` `varchar(8)→varchar(20)` (เท่า `students.student_id` ต้นทาง · ครอบ 10 หลัก + headroom) · `down()` ปฏิเสธถ้ามีรหัส >8 ตัวค้าง (กันข้อมูลหาย) · cap `store()` validation `max:255→max:20` (กัน truncation 500 · >20 ได้ 422) · เทสต์เพิ่ม 2: รับ 10 หลัก (`6012345678`) · ปฏิเสธ 21 ตัว
   - ⚠️ **เจ้าของต้องรันบน dev ก่อนเทสต์:** `php artisan migrate` (dev) → `php artisan test:db:rebuild` (คัด schema ใหม่เข้า nuxnan_testing) → `php artisan test -c phpunit.mysql.xml --filter=StudentCardImportExport` · **production:** `mysqldump` ก่อน แล้ว `php artisan migrate`
 - **2026-10-10** — SCD-S6 (Claude เขียน · php -l ผ่าน · เจ้าของรันเทสต์): `tests/Feature/StudentCardImportExportTest.php` 9 เคส — export(template/data/map/authz) · import(สร้าง+enroll / update_existing toggle / หัวคอลัมน์ผิด 422 / authz) · store(enroll เมื่อเจอห้อง / ไม่ enroll เมื่อไม่เจอห้อง) · ใช้ CSV จริงผ่าน `Excel::toArray` (ไม่ fake) + `Excel::fake()` สำหรับ export
-
-## 8. Review Log
-- **2026-10-10** — ขั้น [1]+[2] (Claude): สแกน routes (3 ไฟล์) + StudentCardController (1000) + RequestController + PublicRequestController + AccessService + RequestService + StudentCard model + FE admin/requests pages + config · เขียนไฟล์รองนี้ · พบ gap G1–G8 · รอเคาะ Q1–Q4
+- **2026-10-11** — SCD-S6 ✅ เขียวครบ 12 เคส (เจ้าของรันบน MySQL จริง หลัง migrate+rebuild) · ปิด G1+G2 เรียบร้อย
+- **2026-10-11** — SCD-S4 (ลบ public): Claude ลงมือครบ commit `52a70bd` (ลบ backend/pages + rewire FE + composable type-only + ลบ 2 เทสต์ + retarget 2 เทสต์) → **เจ้าของขอ revert** เพราะครูยังต้องใช้หน้า no-login ต่อ → `git revert` เป็น `1c36675` (public กลับมาครบ) · **S4 เลื่อนจนกว่าเจ้าของพร้อม** (ย้อน `git revert 1c36675` เมื่อพร้อม)

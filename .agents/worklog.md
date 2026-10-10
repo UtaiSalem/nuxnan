@@ -90,7 +90,11 @@ production ยังไม่ได้รัน migration บางชุด (�
 `student_cards.student_number` เดิม `varchar(8)` (ข้อมูลจริง ≤5) แต่รหัสแต่ละโรงเรียนยาวไม่เท่ากัน → migration `2026_10_11_000000_widen_student_cards_student_number` ขยายเป็น `varchar(20)` (เท่า `students.student_id`) · `down()` กันข้อมูลหาย · `store()` validate `max:20` · `student_number_snapshot` เป็น varchar(64) อยู่แล้ว (ไม่ต้องแก้)
 ⚠️ **เจ้าของรันบน dev:** `php artisan migrate` → `php artisan test:db:rebuild` → test · **prod:** `mysqldump` ก่อน migrate
 
-### ⏸️ SCD-S4 (ลบ public เก่า) — เจ้าของสั่งข้ามไปก่อน (ทำ S6 ก่อน) · blast radius ใหญ่ · รอ go/no-go รอบหน้า
+### ⏸️ SCD-S4 (ลบ public เก่า) — ทำเสร็จแล้ว revert ออกตามคำขอเจ้าของ · เลื่อนจนกว่าพร้อม
+- 2026-10-11 Claude ลงมือครบ commit `52a70bd` (ลบ backend routes/controllers/public methods + หน้า FE `student-card/*` + rewire FE 3 จุด + composable 2 ตัว type-only + ลบ `PublicCardRequestTest`/`ClassroomManagementTest` + retarget `RoomRoster`/`SSOT`)
+- **เจ้าของขอ revert** เพราะครูยังต้องใช้หน้า no-login `/student-card/{level}/{room}` ต่ออีกระยะ ยังไม่พร้อมเปลี่ยน → `git revert` เป็น `1c36675` · โค้ด public กลับมาครบ ใช้งานได้เหมือนเดิม
+- **เมื่อเจ้าของพร้อม:** `git revert 1c36675` (คืน diff ทั้งชุด) แล้ว build+test · ดู 16-student-cards.md §9
+- สถานะเมนู #16: G1/G2 ปิด · student_number รองรับ 10 หลัก · S6 เทสต์เขียว 12 · **S4 เลื่อน · เหลือ S7 จอจริง**
 เส้น legacy ยังต่อกับ UI แอดมินที่ใช้จริง: `StudentCardModal.vue` ยิง `/api/student-card/profile/{id}` · `StudentCardItem.vue` ยิง public-update/public-photo · `gradebook/students/index.vue` ไปหน้า public · มี 4 เทสต์คุม (PublicCardRequestTest ลบทั้งไฟล์ · ClassroomManagementTest ลบ/เขียนใหม่ · RoomRoster+SSOT retarget) · คลาวด์รันเทสต์/บิลด์ไม่ได้ → ควรทำบนเครื่องเจ้าของ หรือยืนยันให้ push ทั้งชุดแล้ว verify local (ดู 16-student-cards.md §9)
 - เหลือ **SCD-S6** เทสต์ (import/export + store+enroll) · **S7** จอจริง · G8 card_admin + bulk photos/update = defer
 
