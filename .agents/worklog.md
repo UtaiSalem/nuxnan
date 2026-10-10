@@ -74,8 +74,10 @@ production ยังไม่ได้รัน migration บางชุด (�
 - **G3** permission แยกสองทาง (middleware `userCan`→role.permissions vs policy `member.role`+hasAnyPermission) เสี่ยง drift
 - **G4** registry ไม่มี edit/delete ตรง — แก้ผ่าน change-request flow · เอาออกผ่าน lifecycle (ยืนยันดีไซน์)
 
-### ค้าง — เหลือ G5 ข้อเดียว (align Master profile authz กับ students.view/manage แบบ Q1 ไหม · คุม PII) ⇒ เคาะแล้วปิดเมนู #15 ได้
+### 🎯 เมนู #15 ปิดครบทุก gap (G1–G5) — เหลือเจ้าของ verify MySQL เท่านั้น
 - **Q4 เคาะแล้ว 2026-10-10** (by-design): change-request flow (แก้ข้อมูลนักเรียน = ขอ→อนุมัติ) เป็นดีไซน์ที่ต้องการ · ปิด G4 ไม่ต้องแก้โค้ด
+- **ST15-S3 เสร็จ 2026-10-10** (เจ้าของเคาะ: แก้ G5 align authz): `StudentMasterProfilePolicy::view`(students.view/manage) · `update`/`approveRequests`(students.manage) ผ่าน helper `memberHasPermission` · `StudentProfileController::checkAccess()` manage→admin(เลขบัตรเต็ม) view→teacher(masked) · guardians คง guardians.* · เทสต์ `StudentMasterPolicyTest` +2 · php -l ผ่าน
+- **เหลือเจ้าของรัน MySQL:** `--filter=EnrollmentPolicyTest` (G1) + `--filter=StudentMasterPolicyTest` (G5) + `--filter=StaffAuthzTest` (#14) + pint
 - **ST15-S2 เสร็จ 2026-10-10** (เจ้าของเคาะ Q2 = ลบ v1): ลบ route `enrollment-history` v1 (`groups.view`) + method `ClassroomController::getStudentEnrollmentHistory` ที่ตายแล้ว · ยืนยัน FE ใช้ v2 เท่านั้น · ไม่มี test/caller อื่น · php -l ผ่าน
 - **Q3 เคาะแล้ว 2026-10-10** (Master profile = ส่วนหนึ่งของ #15): audit 8 controller (~2,100 บรรทัด) + route `student-profile.php` ที่มีแค่ `auth:api` → **guard ครบทุก method ไม่มีรูรั่ว PII** (profile=checkAccess · sections=authorize('update') · guardians=guardians.* · change-req=approveRequests · home-visit=abort_unless) · เจอ **G5**: profile view/update/approveRequests + checkAccess ยึด member.role ไม่รับ `students.view/manage` (เหมือน G1 แต่คุม PII) → รอเจ้าของเคาะว่าจะ align แบบ Q1 ไหม
 - **ST15-S1 เสร็จ 2026-10-10** (เจ้าของเคาะ Q1 = แก้ G1): `EnrollmentPolicy::lifecycle()` เพิ่มด่าน `memberHasPermission(...,['students.manage'])` (อ่าน academy_role.permissions แบบเดียวกับ intake/import) ⇒ custom role นายทะเบียนทำ promote/graduate/drop/repeat/transfer ได้ · ไม่แตะ rollover commit/undo · เทสต์ `EnrollmentPolicyTest` +2 (manage ได้ · view อย่างเดียวไม่ได้) · php -l ผ่าน · เหลือเจ้าของรัน MySQL + pint

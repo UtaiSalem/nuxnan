@@ -69,10 +69,10 @@
 - **G2 — ✅ แก้แล้ว (ST15-S2, 2026-10-10)** — ลบ route `enrollment-history` v1 (`groups.view`) + method `ClassroomController::getStudentEnrollmentHistory` ที่ตายแล้ว (ยืนยัน FE ใช้ v2 เท่านั้น · ไม่มี test/route() helper/caller อื่น) · เหลือ v2 (`enrollment.lifecycle`) ที่ FE ใช้จริง
 - **G3 — permission model แยกสองทาง** middleware (`Academy::userCan` → academy_role.permissions) vs Policy (`member.role` column + `hasAnyPermission`) · สองแหล่งความจริง เสี่ยง drift (G1 คือตัวอย่างที่เห็นผล)
 - **G4 — ✅ ปิด by-design (เจ้าของเคาะ Q4, 2026-10-10)** — การแก้ข้อมูลนักเรียนผ่าน change-request flow (ขอ→อนุมัติ) เป็นดีไซน์ที่ต้องการ · การ "เอาออก" ทำผ่าน lifecycle drop/graduate ไม่ใช่ hard delete — ยืนยันตามดีไซน์ ไม่ต้องแก้
-- **G5 (ใหม่ จาก audit Q3 — ต้องเคาะ) — Master profile authz ไม่รับ `students.view`/`students.manage`** (G1 เวอร์ชันฝั่งโปรไฟล์)
-  `StudentMasterProfilePolicy::view/update/approveRequests` และ `StudentProfileController::checkAccess()` ยึด `member.role ∈ {admin,teacher,director}` + owner + ครูประจำชั้น + ผู้ปกครอง — **ไม่อ่าน academy_role.permissions**
-  ⇒ custom role "นายทะเบียน" ที่ถือ `students.manage` (ซึ่งเพิ่งให้ทำ intake/import/lifecycle ได้ใน Q1) **ดู/แก้แฟ้มประวัตินักเรียนไม่ได้** · `students.view` holder ก็ดูไม่ได้ · inconsistent กับทิศทางที่เจ้าของเลือกใน Q1
-  - ⚠️ ข้อนี้คุม **PII** (สุขภาพ · เลขบัตรปชช · ที่อยู่ · ผู้ติดต่อ) การเปิดกว้าง = ตัดสินใจอ่อนไหว → **ต้องเคาะก่อนแก้**
+- **G5 — ✅ แก้แล้ว (ST15-S3, 2026-10-10)** — align Master profile authz ให้รับ `students.view`/`students.manage` (เจ้าของเคาะ)
+  · `StudentMasterProfilePolicy::view` รับ `students.view`/`students.manage` · `update`/`approveRequests` รับ `students.manage` (helper `memberHasPermission` อ่าน academy_role.permissions · status=2)
+  · `StudentProfileController::checkAccess()`: `students.manage` → level `admin` (เห็นเลขบัตรเต็ม) · `students.view` → level `teacher` (เลขบัตร masked · sensitive ยัง gate ด้วย `canViewSensitive`) · guardians คง `guardians.*` ตามเดิม
+  · นายทะเบียน (`students.manage`) ดู/แก้/อนุมัติ change-request แฟ้มประวัติได้ครบ สอดคล้องกับ Q1 (intake/import/lifecycle)
 
 ## 4. Permission Matrix (ปัจจุบัน — ยืนยัน Q1/Q2)
 
@@ -96,6 +96,7 @@
 |---|---|---|---|---|
 | ST15-S1 | ให้ `students.manage` ทำ lifecycle ได้ — แก้ `EnrollmentPolicy::lifecycle` + เทสต์ | Q1 ✅ | `EnrollmentPolicy` · `EnrollmentPolicyTest` | 🟡 โค้ด/เทสต์เสร็จ 2026-10-10 · php -l ผ่าน · รอรัน MySQL |
 | ST15-S2 | ถอด route `enrollment-history` v1 + method ตาย + ยืนยันไม่มีผู้ใช้ | Q2 ✅ | `academy.php` · `ClassroomController` | 🟢 เสร็จ 2026-10-10 · php -l ผ่าน (dead-code ล้วน ไม่มี test ต้องรัน) |
+| ST15-S3 | align Master profile authz ให้รับ `students.view`/`students.manage` (G5) | G5 ✅ | `StudentMasterProfilePolicy` · `StudentProfileController::checkAccess` · `StudentMasterPolicyTest` (+2) | 🟡 โค้ด/เทสต์เสร็จ 2026-10-10 · php -l ผ่าน · รอรัน MySQL |
 
 > ถ้าเจ้าของเคาะว่า G1 เป็น by design และ G2 เก็บไว้ ⇒ **เมนู #15 ปิดได้เลย (มาตรฐานสูง + เทสต์ครบ)** ไม่มีงานต้องแก้
 
@@ -110,4 +111,5 @@
 - **2026-10-10 (ST15-S2 — เจ้าของเคาะ Q2 = ลบ v1)** — ลบ route `{academy}/students/{student}/enrollment-history` (v1, `groups.view`) + method `ClassroomController::getStudentEnrollmentHistory` (dead code) · ยืนยันก่อนลบ: FE ใช้ `enrollment-history-v2` เท่านั้น (`useStudentEnrollmentActions.ts:59`) · ไม่มี test/route() helper/caller อื่น · php -l ผ่านทั้ง route + controller · **เหลือ Q3, Q4**
 - **2026-10-10 (Q3 — เจ้าของเคาะ: Master profile = ส่วนหนึ่งของ #15)** — audit subsystem (8 controller ~2,100 บรรทัด + route `student-profile.php`): **guard ครบทุก method ไม่มีรูรั่ว PII** (รายละเอียด §2) · เจอ finding ใหม่ **G5** (profile view/update/approveRequests + checkAccess ไม่รับ `students.view`/`students.manage` — เหมือน G1 แต่ฝั่งโปรไฟล์ · คุม PII) → **รอเจ้าของเคาะว่าจะ align สิทธิ์แบบ Q1 ไหม**
 - **2026-10-10 (Q4 — เจ้าของเคาะ: by-design)** — change-request flow (แก้ข้อมูลนักเรียน = ขอ→อนุมัติ) เป็นดีไซน์ที่ต้องการ · ปิด G4 ไม่ต้องแก้โค้ด
-- **สถานะเมนู #15:** G1 ✅ (ST15-S1) · G2 ✅ (ST15-S2) · G4 ✅ by-design · G3 info · **เหลือ G5 ข้อเดียว** (align Master profile authz — รอเคาะ) ⇒ เคาะ G5 แล้วปิดเมนูได้
+- **2026-10-10 (ST15-S3 — เจ้าของเคาะ: แก้ G5)** — align Master profile authz: policy `view`(students.view/manage) · `update`/`approveRequests`(students.manage) + `checkAccess()` (manage→admin level · view→teacher level) · guardians คง `guardians.*` · เทสต์ `StudentMasterPolicyTest` +2 (manage ครบ · view ดูได้แก้ไม่ได้) · php -l ผ่าน · รอเจ้าของรัน `--filter=StudentMasterPolicyTest` + pint
+- **🎯 สถานะเมนู #15 — ปิดครบทุก gap:** G1 ✅ (ST15-S1) · G2 ✅ (ST15-S2) · G4 ✅ by-design · G5 ✅ (ST15-S3) · G3 = in-scope audit (guard ครบ ไม่มีรูรั่ว) · **เหลือเจ้าของ verify MySQL เท่านั้น** (`EnrollmentPolicyTest` + `StudentMasterPolicyTest` + pint)
