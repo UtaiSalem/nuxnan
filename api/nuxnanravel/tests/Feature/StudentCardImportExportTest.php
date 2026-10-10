@@ -252,6 +252,38 @@ class StudentCardImportExportTest extends TestCase
         ]);
     }
 
+    public function test_store_accepts_ten_digit_student_number(): void
+    {
+        $this->actingAs($this->manager, 'api')
+            ->postJson($this->cardUrl('/admin'), [
+                'student_number' => '6012345678', // 10 หลัก — รหัสของบางโรงเรียน
+                'first_name_thai' => 'สิบ',
+                'last_name_thai' => 'หลัก',
+                'class_level' => '6',
+                'class_section' => '1',
+            ])
+            ->assertStatus(201)
+            ->assertJson(['success' => true]);
+
+        $this->assertDatabaseHas('student_cards', [
+            'academy_id' => $this->academy->id,
+            'student_number' => '6012345678',
+        ]);
+    }
+
+    public function test_store_rejects_over_long_student_number(): void
+    {
+        $this->actingAs($this->manager, 'api')
+            ->postJson($this->cardUrl('/admin'), [
+                'student_number' => str_repeat('9', 21), // เกิน varchar(20)
+                'first_name_thai' => 'ยาว',
+                'last_name_thai' => 'เกิน',
+                'class_level' => '6',
+                'class_section' => '1',
+            ])
+            ->assertStatus(422);
+    }
+
     // ── helpers ──────────────────────────────────────────────────────
 
     /**

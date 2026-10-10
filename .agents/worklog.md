@@ -82,8 +82,13 @@ production ยังไม่ได้รัน migration บางชุด (�
 - **✅ SCD-S3 (G2)** `store()` เติม enrollment (ClassroomStudent active + academic_year_id + level_and_room) + helper `resolveCurrentClassroom` ใช้ร่วม store/import · เปลี่ยน signature เป็น `Academy $academy` (bind by id)
 - commit บน branch `claude/jolly-goodall-cwgfja` · PR #33
 
-### ✅ SCD-S6 เทสต์ (Claude เขียน · php -l ผ่าน · เจ้าของรัน `--filter=StudentCardImportExport`)
-`tests/Feature/StudentCardImportExportTest.php` 9 เคส: export (template/data/map heading/authz) · import (สร้าง+enroll · update_existing toggle · หัวคอลัมน์ผิด 422 · authz) · store (enroll เมื่อเจอห้อง · ไม่ enroll เมื่อไม่เจอ) · import ใช้ CSV จริงผ่าน `Excel::toArray`, export ใช้ `Excel::fake()`
+### ✅ SCD-S6 เทสต์ เขียวครบบน MySQL จริง (2026-10-11)
+`tests/Feature/StudentCardImportExportTest.php` — export (template/data/map/authz) · import (สร้าง+enroll · update_existing · หัวคอลัมน์ผิด 422 · authz) · store (enroll/ไม่ enroll · **รับ 10 หลัก** · ปฏิเสธ 21 ตัว) · import ใช้ CSV จริงผ่าน `Excel::toArray`, export ใช้ `Excel::fake()`
+(ระหว่างทางเจอ test data เดิมยาวเกิน varchar(8) → นำไปสู่การขยายคอลัมน์ด้านล่าง)
+
+### ✅ ขยาย student_number รองรับ 10 หลัก (เจ้าของสั่ง 2026-10-11)
+`student_cards.student_number` เดิม `varchar(8)` (ข้อมูลจริง ≤5) แต่รหัสแต่ละโรงเรียนยาวไม่เท่ากัน → migration `2026_10_11_000000_widen_student_cards_student_number` ขยายเป็น `varchar(20)` (เท่า `students.student_id`) · `down()` กันข้อมูลหาย · `store()` validate `max:20` · `student_number_snapshot` เป็น varchar(64) อยู่แล้ว (ไม่ต้องแก้)
+⚠️ **เจ้าของรันบน dev:** `php artisan migrate` → `php artisan test:db:rebuild` → test · **prod:** `mysqldump` ก่อน migrate
 
 ### ⏸️ SCD-S4 (ลบ public เก่า) — เจ้าของสั่งข้ามไปก่อน (ทำ S6 ก่อน) · blast radius ใหญ่ · รอ go/no-go รอบหน้า
 เส้น legacy ยังต่อกับ UI แอดมินที่ใช้จริง: `StudentCardModal.vue` ยิง `/api/student-card/profile/{id}` · `StudentCardItem.vue` ยิง public-update/public-photo · `gradebook/students/index.vue` ไปหน้า public · มี 4 เทสต์คุม (PublicCardRequestTest ลบทั้งไฟล์ · ClassroomManagementTest ลบ/เขียนใหม่ · RoomRoster+SSOT retarget) · คลาวด์รันเทสต์/บิลด์ไม่ได้ → ควรทำบนเครื่องเจ้าของ หรือยืนยันให้ push ทั้งชุดแล้ว verify local (ดู 16-student-cards.md §9)

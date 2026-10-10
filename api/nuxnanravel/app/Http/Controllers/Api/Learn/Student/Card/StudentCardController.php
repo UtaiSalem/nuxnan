@@ -858,7 +858,7 @@ class StudentCardController extends Controller
     public function store(Request $request, Academy $academy)
     {
         $request->validate([
-            'student_number' => 'required|string|max:255',
+            'student_number' => 'required|string|max:20', // ตรงกับคอลัมน์ student_cards.student_number varchar(20)
             'first_name_thai' => 'required|string|max:255',
             'last_name_thai' => 'required|string|max:255',
             'class_level' => 'required|string|max:10',
