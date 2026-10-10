@@ -28,7 +28,12 @@ class StudentMasterProfilePolicy
             return true;
         }
 
-        return $this->isStaff($user, $student->academy_id);
+        if ($this->isStaff($user, $student->academy_id)) {
+            return true;
+        }
+
+        // registrar-style role ที่ถือ students.view/manage (G5 align, ST15-S3)
+        return $this->memberHasPermission($user, $student->academy_id, ['students.view', 'students.manage']);
     }
 
     /**
@@ -50,10 +55,15 @@ class StudentMasterProfilePolicy
             return true;
         }
 
-        return AcademyMember::where('user_id', $user->id)
+        if (AcademyMember::where('user_id', $user->id)
             ->where('academy_id', $student->academy_id)
             ->whereIn('role', ['admin', 'director'])
-            ->exists();
+            ->exists()) {
+            return true;
+        }
+
+        // registrar-style role ที่ถือ students.manage (G5 align, ST15-S3)
+        return $this->memberHasPermission($user, $student->academy_id, ['students.manage']);
     }
 
     /**
@@ -100,10 +110,28 @@ class StudentMasterProfilePolicy
             return true;
         }
 
-        return AcademyMember::where('user_id', $user->id)
+        if (AcademyMember::where('user_id', $user->id)
             ->where('academy_id', $academy_id)
             ->whereIn('role', ['admin', 'director'])
-            ->exists();
+            ->exists()) {
+            return true;
+        }
+
+        // registrar-style role ที่ถือ students.manage (G5 align, ST15-S3)
+        return $this->memberHasPermission($user, $academy_id, ['students.manage']);
+    }
+
+    /**
+     * สมาชิกที่อนุมัติของโรงเรียน ถือสิทธิ์ใด ๆ ในรายการหรือไม่ (ผ่าน academy_role.permissions)
+     */
+    protected function memberHasPermission(User $user, $academy_id, array $permissions): bool
+    {
+        return AcademyMember::where('user_id', $user->id)
+            ->where('academy_id', $academy_id)
+            ->where('status', 2)
+            ->with('academyRole')
+            ->first()
+            ?->hasAnyPermission($permissions) ?? false;
     }
 
     /**
