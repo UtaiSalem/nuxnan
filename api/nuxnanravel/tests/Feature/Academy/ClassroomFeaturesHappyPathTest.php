@@ -13,7 +13,7 @@ use Tests\TestCase;
 
 /**
  * CL-S5 — เมนู #10 ห้องเรียน: happy-path ฟีเจอร์ที่ยังไม่มีเทสต์เดิม
- * (roster/transfer/renumber มี AcademyStudentCardAccessTest + ClassroomRenumberTest ครอบแล้ว)
+ * (roster/transfer/renumber มี ClassroomManagementTest + ClassroomRenumberTest ครอบแล้ว)
  * รอบนี้เก็บ: ClassroomGroup CRUD · ClassroomInvitation · promoteClassroom
  */
 class ClassroomFeaturesHappyPathTest extends TestCase

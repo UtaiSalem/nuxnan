@@ -1,10 +1,5 @@
-/**
- * สัญญา (type) ของการจัดการรายชื่อในห้อง — ใช้ร่วมกันโดยโมดัลเพิ่ม/ย้ายนักเรียน
- *
- * หมายเหตุ: เส้นทางสาธารณะเดิม (/api/student-card/{level}/{room}) ถูกปลดระวางแล้ว
- * 2026-10-11 · การจัดการจริงใช้ useAcademyClassroomRoster (ยิง academy-scoped
- * /api/academies/{academy}/student-cards/{level}/{room}) และส่งตัวจัดการเข้าโมดัลเป็น prop
- */
+import { ref, computed, type Ref } from 'vue'
+
 export interface ManageClassroomOption {
     id: number
     name: string
@@ -34,4 +29,73 @@ export interface AvailableStudent {
     current_classroom: string | null
     current_classroom_id: number | null
     enrollment_status: 'unassigned' | 'already_in_room' | 'in_other_room'
+}
+
+export function useClassroomManagement(level: Ref<string>, room: Ref<string>) {
+    const config = useRuntimeConfig()
+    const apiBase = config.public.apiBase
+    const base = computed(() => `${apiBase}/api/student-card/${level.value}/${room.value}`)
+
+    const manageContext = ref<ManageContext | null>(null)
+
+    async function fetchManageContext(): Promise<void> {
+        try {
+            manageContext.value = await $fetch<ManageContext>(`${base.value}/manage-context`)
+        } catch {
+            manageContext.value = { can_manage: false }
+        }
+    }
+
+    async function searchAvailableStudents(search: string): Promise<AvailableStudent[]> {
+        const response = await $fetch<{ students: AvailableStudent[] }>(
+            `${base.value}/available-students`,
+            { query: { search } }
+        )
+        return response.students || []
+    }
+
+    async function addStudent(studentId: number, studentNumber?: number | null) {
+        return await $fetch<{ success: boolean; message: string; student_count: number }>(
+            `${base.value}/students`,
+            {
+                method: 'POST',
+                body: {
+                    student_id: studentId,
+                    student_number: studentNumber || null,
+                },
+            }
+        )
+    }
+
+    async function transferStudent(studentId: number, toClassroomId: number, reason: string | null) {
+        return await $fetch<{ success: boolean; message: string; student_count: number }>(
+            `${base.value}/students/${studentId}/transfer`,
+            {
+                method: 'POST',
+                body: {
+                    to_classroom_id: toClassroomId,
+                    reason,
+                },
+            }
+        )
+    }
+
+    async function removeStudent(studentId: number, reason: string | null) {
+        return await $fetch<{ success: boolean; message: string; student_count: number }>(
+            `${base.value}/students/${studentId}`,
+            {
+                method: 'DELETE',
+                body: { reason },
+            }
+        )
+    }
+
+    return {
+        manageContext,
+        fetchManageContext,
+        searchAvailableStudents,
+        addStudent,
+        transferStudent,
+        removeStudent,
+    }
 }

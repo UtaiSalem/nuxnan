@@ -1,0 +1,536 @@
+<script setup>
+import { ref, computed } from 'vue'
+import QRCodeVue3 from "qrcode-vue3"
+import { Icon } from '@iconify/vue'
+import Swal from 'sweetalert2'
+
+definePageMeta({ layout: false })
+
+const route = useRoute()
+const config = useRuntimeConfig()
+const apiBase = config.public.apiBase
+
+const level = computed(() => route.params.level)
+const room = computed(() => route.params.room)
+
+useHead({ title: computed(() => `ข้อมูลนักเรียน - ชั้น ม.${level.value}/${room.value}`) })
+
+const students = ref([])
+const isLoading = ref(true)
+const searchTerm = ref('')
+const requestFilter = ref('with_request') // 'all' | 'with_request' | 'without_request'
+
+const REQUEST_STATUS_META = {
+    pending: { label: 'รออนุมัติ', cls: 'bg-amber-100 text-amber-800 border-amber-200' },
+    approved: { label: 'อนุมัติแล้ว', cls: 'bg-blue-100 text-blue-800 border-blue-200' },
+    in_progress: { label: 'กำลังจัดทำ', cls: 'bg-violet-100 text-violet-800 border-violet-200' },
+    completed: { label: 'เสร็จสิ้น', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+    rejected: { label: 'ถูกปฏิเสธ', cls: 'bg-red-100 text-red-800 border-red-200' },
+    cancelled: { label: 'ยกเลิก', cls: 'bg-gray-100 text-gray-700 border-gray-200' },
+}
+const requestStatusMeta = (status) => REQUEST_STATUS_META[status] || { label: status || '-', cls: 'bg-gray-100 text-gray-700 border-gray-200' }
+
+const reviewRequest = async (student, action) => {
+    const request = student.active_card_request
+    if (!request?.id) return
+    const confirmation = await Swal.fire({
+        icon: action === 'approve' ? 'question' : 'warning',
+        title: action === 'approve' ? 'อนุมัติคำขอทำบัตรหรือไม่?' : action === 'reject' ? 'ปฏิเสธคำขอทำบัตรหรือไม่?' : action === 'start' ? 'เริ่มจัดทำบัตรหรือไม่?' : 'ยืนยันว่าทำและส่งมอบบัตรแล้วหรือไม่?',
+        showCancelButton: true,
+        confirmButtonText: action === 'approve' ? 'อนุมัติ' : action === 'reject' ? 'ปฏิเสธ' : action === 'start' ? 'เริ่มจัดทำ' : 'ทำเสร็จและส่งมอบแล้ว',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: action === 'reject' ? '#dc2626' : '#2563eb',
+        // heightAuto:true (ค่าเริ่มต้น) จะไปตั้ง height ของ html/body เป็น auto !important
+        // ทำให้หน้าเด้งขึ้นบนสุดทุกครั้งที่เปิด/ปิดกล่อง — ปิดไว้เพื่อคง scroll เดิม
+        heightAuto: false,
+    })
+    if (!confirmation.isConfirmed) return
+    try {
+        await $fetch(`${apiBase}/api/student-card/${level.value}/${room.value}/requests/${request.id}/${action}`, {
+            method: 'POST',
+        })
+        // รีเฟรชแบบเงียบ + คงตำแหน่ง scroll ไว้ ไม่งั้นทุกครั้งที่กดปุ่ม หน้าจะเด้งขึ้นบนสุด
+        // (เมื่อมีนักเรียนหลายคน การอนุมัติคนล่าง ๆ จะต้องเลื่อนลงมาใหม่ทุกครั้ง)
+        const scrollY = typeof window !== 'undefined' ? window.scrollY : 0
+        await fetchStudents({ silent: true })
+        await nextTick()
+        if (typeof window !== 'undefined') window.scrollTo({ top: scrollY })
+        Swal.fire({ icon: 'success', title: action === 'approve' ? 'อนุมัติคำขอแล้ว' : action === 'reject' ? 'ปฏิเสธคำขอแล้ว' : action === 'start' ? 'บันทึกว่าเริ่มจัดทำบัตรแล้ว' : 'บันทึกว่าทำและส่งมอบบัตรแล้ว', timer: 1500, showConfirmButton: false, heightAuto: false })
+    } catch (error) {
+        Swal.fire({ icon: 'error', title: 'ดำเนินการไม่สำเร็จ', text: error?.data?.message || 'กรุณาลองใหม่อีกครั้ง', heightAuto: false })
+    }
+}
+
+const withRequestStudents = computed(() => students.value.filter(s => s.active_card_request))
+const withoutRequestStudents = computed(() => students.value.filter(s => !s.active_card_request))
+
+const filteredStudents = computed(() => {
+    let list = students.value
+    if (requestFilter.value === 'with_request') list = withRequestStudents.value
+    else if (requestFilter.value === 'without_request') list = withoutRequestStudents.value
+
+    if (!searchTerm.value) return list
+    const term = searchTerm.value.toLowerCase()
+    return list.filter(s =>
+        (s.first_name_thai && s.first_name_thai.toLowerCase().includes(term)) ||
+        (s.student_number && s.student_number.toString().includes(term))
+    )
+})
+
+// silent = true → ไม่สลับหน้าเป็นสปินเนอร์เต็มจอ (ใช้ตอนรีเฟรชหลังกดปุ่มในการ์ด)
+// เพื่อไม่ให้ list ถูก unmount/remount ซึ่งเป็นสาเหตุที่ทำให้ scroll เด้งขึ้นบนสุด
+const fetchStudents = async ({ silent = false } = {}) => {
+    if (!silent) isLoading.value = true
+    try {
+        const response = await $fetch(`${apiBase}/api/student-card/admin/students/${level.value}/${room.value}`)
+        students.value = response.students || []
+    } catch (error) {
+        console.error('Error fetching students:', error)
+        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถโหลดข้อมูลนักเรียนได้', heightAuto: false })
+    } finally {
+        if (!silent) isLoading.value = false
+    }
+}
+
+onMounted(() => fetchStudents())
+
+onMounted(() => {
+    document.fonts?.ready?.then(() => { fontsReady.value = true })
+})
+
+// การ์ดเลย์เอาต์ที่ 1248x768 เสมอ แล้วย่อทั้งใบด้วย transform ให้พอดีที่ว่าง
+// (ขนาดข้างในเป็น px ตายตัวทั้งหมด ถ้าปล่อยให้กล่องหดตาม % ทุกอย่างจะชนกัน)
+const CARD_W = 1248
+const CARD_H = 768
+const cardsWrap = ref(null)
+const cardScale = ref(1)
+let cardScaleObserver = null
+
+const measureCardScale = () => {
+    const el = cardsWrap.value
+    if (!el) return
+    const width = el.clientWidth
+    if (width > 0) cardScale.value = width / CARD_W
+}
+
+watch(cardsWrap, (el) => {
+    cardScaleObserver?.disconnect()
+    cardScaleObserver = null
+    if (!el || typeof ResizeObserver === 'undefined') return
+    cardScaleObserver = new ResizeObserver(measureCardScale)
+    cardScaleObserver.observe(el)
+    measureCardScale()
+})
+
+onBeforeUnmount(() => {
+    cardScaleObserver?.disconnect()
+    cardScaleObserver = null
+})
+
+const cardScaleWrapStyle = computed(() => ({ height: `${CARD_H * cardScale.value}px` }))
+
+const cardScaleStyle = computed(() => ({
+    width: `${CARD_W}px`,
+    height: `${CARD_H}px`,
+    transform: `scale(${cardScale.value})`,
+    transformOrigin: 'top left',
+}))
+
+// รูปบนบัตรต้องเป็น same-origin ทั้งหมด ไม่งั้น html2canvas จะข้ามไปเงียบ ๆ ตอนดาวน์โหลด
+// (/storage/** ถูก proxy ไป backend โดย ui/server/middleware/storage-proxy.ts)
+const sameOriginStorage = (url) => {
+    if (!url) return ''
+    if (url.startsWith('/')) return url
+    if (apiBase && url.startsWith(apiBase)) return url.slice(apiBase.length)
+    return url
+}
+
+const logoUrl = '/storage/jsm_logo.png'
+
+const cardBgStyle = computed(() => ({
+    background: `url('/storage/images/std_card_bg2.png') center center / 1400px no-repeat`
+}))
+
+const formattedIdNumber = (idNumber) => {
+    if (!idNumber) return ''
+    const s = String(idNumber).replace(/\D/g, '')
+    if (s.length !== 13) return s
+    return s.replace(/(\d)(\d{4})(\d{5})(\d{2})(\d{1})/, '$1-$2-$3-$4-$5')
+}
+
+// ---- คำนำหน้าชื่อ: สลับเป็น นาย/นางสาว เองเมื่ออายุครบ 15 ปี ----
+const TITLE_GENDER = {
+    'เด็กชาย': 'male', 'ด.ช.': 'male', 'นาย': 'male',
+    'เด็กหญิง': 'female', 'ด.ญ.': 'female', 'นางสาว': 'female', 'น.ส.': 'female', 'นาง': 'female',
+}
+
+const studentAge = (student) => {
+    if (!student?.birth_date) return null
+    const birth = new Date(student.birth_date)
+    if (isNaN(birth.getTime())) return null
+    const now = new Date()
+    let age = now.getFullYear() - birth.getFullYear()
+    const monthDiff = now.getMonth() - birth.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) age--
+    return age
+}
+
+// gender จาก DB เชื่อได้กว่าคำนำหน้า (1 = ชาย, 0 = หญิง · ตรวจแล้วไม่ขัดกับคำนำหน้าเลยสักเคสใน 2,222 คน)
+const studentGender = (student) => {
+    const g = student?.gender
+    if (g === 1 || g === '1') return 'male'
+    if (g === 0 || g === '0') return 'female'
+    return TITLE_GENDER[student?.title_name] || null
+}
+
+const studentTitle = (student) => {
+    const gender = studentGender(student)
+    if (!gender) return { full: student?.title_name || '', short: student?.title_name || '', gender: null }
+    const age = studentAge(student)
+    // ไม่มีวันเกิด (492 คนใน DB) ค่อยไล่ลงไปดูคำนำหน้าเดิม แล้วสุดท้ายใช้ระดับชั้น
+    const isAdult = age !== null
+        ? age >= 15
+        : (['นาย', 'นางสาว', 'น.ส.', 'นาง'].includes(student?.title_name) || Number(student?.class_level) >= 4)
+    if (gender === 'male') {
+        return isAdult ? { full: 'นาย', short: 'นาย', gender } : { full: 'เด็กชาย', short: 'ด.ช.', gender }
+    }
+    return isAdult ? { full: 'นางสาว', short: 'น.ส.', gender } : { full: 'เด็กหญิง', short: 'ด.ญ.', gender }
+}
+
+// ---- ชื่อต้องอยู่บรรทัดเดียวเสมอ ----
+// ถ้าตกบรรทัด แถวข้อมูลที่เหลือจะถูกดันลงจนล้นออกนอกบัตร
+// ลำดับการย่อ: คำนำหน้าเต็ม -> คำนำหน้าย่อ (ด.ช./ด.ญ./น.ส.) -> ลดขนาดตัวอักษรทีละ 1px
+const NAME_MAX_WIDTH = 505      // px ที่เหลือให้ชื่อ ในระบบพิกัด 1248 (จากขอบขวาของ ":" ถึงขอบขวาคอลัมน์)
+const fontsReady = ref(false)
+let nameMeasureCtx = null
+
+const measureNameWidth = (text, weight, size) => {
+    if (typeof document === 'undefined' || !text) return 0
+    if (!nameMeasureCtx) nameMeasureCtx = document.createElement('canvas').getContext('2d')
+    nameMeasureCtx.font = `${weight} ${size}px "Noto Sans Thai", sans-serif`
+    return nameMeasureCtx.measureText(text).width
+}
+
+const fitNameSize = (text, weight, maxSize, minSize) => {
+    for (let size = maxSize; size > minSize; size--) {
+        if (measureNameWidth(text, weight, size) <= NAME_MAX_WIDTH) return size
+    }
+    return minSize
+}
+
+const studentThaiName = (student) => {
+    void fontsReady.value        // วัดใหม่เมื่อฟอนต์โหลดเสร็จ (ก่อนหน้านั้น measureText ใช้ฟอนต์ fallback)
+    if (!student?.first_name_thai) return { text: '', size: 46 }
+    const title = studentTitle(student)
+    const name = `${student.first_name_thai || ''} ${student.last_name_thai || ''}`.trim()
+    const withFullTitle = `${title.full}${name}`
+    if (measureNameWidth(withFullTitle, 700, 46) <= NAME_MAX_WIDTH) return { text: withFullTitle, size: 46 }
+    const withShortTitle = `${title.short}${name}`
+    if (measureNameWidth(withShortTitle, 700, 46) <= NAME_MAX_WIDTH) return { text: withShortTitle, size: 46 }
+    return { text: withShortTitle, size: fitNameSize(withShortTitle, 700, 46, 28) }
+}
+
+const studentEnglishName = (student) => {
+    void fontsReady.value
+    if (!student?.first_name_english) return { text: '', size: 36 }
+    const gender = studentTitle(student).gender
+    const prefix = gender === 'female' ? 'Ms.' : gender === 'male' ? 'Mr.' : ''
+    const text = `${prefix}${student.full_name_english || student.first_name_english}`
+    return { text, size: fitNameSize(text, 400, 36, 22) }
+}
+
+const formatDate = (dateStr, locale) => {
+    if (!dateStr) return '-'
+    try {
+        const d = new Date(dateStr)
+        if (isNaN(d.getTime())) return '-'
+        return d.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
+    } catch {
+        return '-'
+    }
+}
+
+const downloadCard = async (index, studentNumber) => {
+    if (process.server) return
+    const { default: html2canvas } = await import('html2canvas')
+    const el = document.getElementById(`card-${index}`)
+    if (!el) return
+    try {
+        const canvas = await html2canvas(el, {
+            backgroundColor: '#ffffff',
+            scale: 2,
+            useCORS: true,
+            imageTimeout: 20000,
+            // การ์ดบนจอถูกย่อด้วย transform ต้องล้างบนสำเนาที่ html2canvas โคลนไป
+            // ไม่งั้นไฟล์ที่ได้จะเล็กตามจอ (บนจอจริงไม่กระพริบ เพราะแก้แค่สำเนา)
+            width: CARD_W,
+            height: CARD_H,
+            onclone: (clonedDoc) => {
+                const clonedCard = clonedDoc.getElementById(`card-${index}`)
+                if (clonedCard) clonedCard.style.transform = 'none'
+            },
+        })
+        const link = document.createElement('a')
+        link.href = canvas.toDataURL('image/png')
+        link.download = `student_card_${level.value}_${room.value}_${studentNumber}.png`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+    } catch {
+        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถดาวน์โหลดบัตรนักเรียนได้', heightAuto: false })
+    }
+}
+</script>
+
+<template>
+    <div class="min-h-screen bg-gray-100">
+        <div class="max-w-7xl mx-auto px-0 sm:px-4 py-4">
+            <!-- Header -->
+            <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 mb-6">
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div class="space-y-2">
+                        <h1 class="text-2xl font-bold text-gray-800">ข้อมูลนักเรียน</h1>
+                        <div class="flex gap-4">
+                            <span class="px-3 py-2 bg-blue-100 text-blue-800 rounded-lg font-bold">
+                                ชั้น ม.{{ level }}/{{ room }}
+                            </span>
+                            <div class="flex items-center gap-2 text-gray-600">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                                <span class="font-medium">{{ students.length }} คน</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto">
+                        <div class="flex gap-2 flex-wrap">
+                            <button @click="requestFilter = 'with_request'"
+                                :class="requestFilter === 'with_request' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'"
+                                class="min-h-[44px] sm:min-h-0 px-3 py-2 border rounded-lg text-sm font-medium transition">
+                                มีคำร้อง ({{ withRequestStudents.length }})
+                            </button>
+                            <button @click="requestFilter = 'without_request'"
+                                :class="requestFilter === 'without_request' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'"
+                                class="min-h-[44px] sm:min-h-0 px-3 py-2 border rounded-lg text-sm font-medium transition">
+                                ไม่มีคำร้อง ({{ withoutRequestStudents.length }})
+                            </button>
+                            <button @click="requestFilter = 'all'"
+                                :class="requestFilter === 'all' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'"
+                                class="min-h-[44px] sm:min-h-0 px-3 py-2 border rounded-lg text-sm font-medium transition">
+                                ทั้งหมด ({{ students.length }})
+                            </button>
+                        </div>
+                        <div class="relative w-full sm:w-80">
+                            <input type="text" v-model="searchTerm" placeholder="ค้นหาชื่อหรือรหัสนักเรียน..."
+                                class="w-full px-4 py-2 pr-10 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                            <svg class="w-5 h-5 text-gray-400 absolute right-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                        <NuxtLink to="/student-card/admin"
+                            class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                            </svg>
+                            กลับ
+                        </NuxtLink>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div v-if="isLoading" class="flex items-center justify-center py-20">
+                <div class="text-center">
+                    <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p class="text-gray-600">กำลังโหลดข้อมูล...</p>
+                </div>
+            </div>
+
+            <!-- Empty -->
+            <div v-else-if="students.length === 0" class="flex flex-col items-center justify-center bg-white rounded-2xl shadow-xl p-4 sm:p-12">
+                <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                <p class="mt-4 text-gray-500 text-lg">ไม่พบข้อมูลนักเรียน</p>
+            </div>
+
+            <!-- Cards -->
+            <div v-else-if="filteredStudents.length === 0" class="flex flex-col items-center justify-center bg-white rounded-2xl shadow-xl p-4 sm:p-12">
+                <Icon icon="fluent:filter-24-regular" class="w-16 h-16 text-gray-300" />
+                <p class="mt-4 text-gray-500 text-lg">ไม่มีนักเรียนตรงตามตัวกรอง</p>
+            </div>
+            <div v-else ref="cardsWrap" class="grid grid-cols-1 gap-4">
+                <div v-for="(student, index) in filteredStudents" :key="student.uid">
+                    <div v-if="student.active_card_request" class="mb-2 flex items-center justify-center gap-2">
+                        <span :class="requestStatusMeta(student.active_card_request.status).cls"
+                            class="px-3 py-1 border rounded-full text-sm font-medium">
+                            คำร้อง: {{ requestStatusMeta(student.active_card_request.status).label }}
+                        </span>
+                        <span class="text-sm text-gray-500">{{ student.active_card_request.request_type }}</span>
+                        <template v-if="student.active_card_request.status === 'pending'">
+                            <button @click="reviewRequest(student, 'approve')" class="min-h-[44px] sm:min-h-0 px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">อนุมัติ</button>
+                            <button @click="reviewRequest(student, 'reject')" class="min-h-[44px] sm:min-h-0 px-3 py-1 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700">ปฏิเสธ</button>
+                        </template>
+                        <button v-else-if="student.active_card_request.status === 'approved'" @click="reviewRequest(student, 'start')" class="min-h-[44px] sm:min-h-0 px-3 py-1 bg-violet-600 text-white rounded-lg text-sm hover:bg-violet-700">เริ่มจัดทำบัตร</button>
+                        <button v-else-if="student.active_card_request.status === 'in_progress'" @click="reviewRequest(student, 'complete')" class="min-h-[44px] sm:min-h-0 px-3 py-1 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700">ทำเสร็จ/ส่งมอบแล้ว</button>
+                    </div>
+                    <div class="w-full overflow-hidden" :style="cardScaleWrapStyle">
+                        <div :id="`card-${index}`" :style="[cardBgStyle, cardScaleStyle]"
+                            class="relative overflow-hidden rounded-2xl shadow-lg border border-gray-300">
+
+                            <!-- Top Section -->
+                            <div class="h-[20%] -ml-8 flex items-center relative"
+                                style="background: linear-gradient(135deg, transparent 45%, #4a90e2 0%);">
+                                <div class="w-[22%] aspect-square flex items-center justify-center">
+                                    <img :src="logoUrl" alt="School Logo"
+                                        class="w-[56%] h-[56%] mt-[34px] object-cover rounded-full">
+                                </div>
+                                <div class="-ml-10 -mt-[14px]">
+                                    <div class="text-6xl font-semibold text-gray-800">โรงเรียนจริยธรรมศึกษามูลนิธิ</div>
+                                    <div class="text-[34px] mt-2 font-semibold text-gray-800">CHARIYATHAMSUKSA FOUNDATION SCHOOL</div>
+                                    <div class="text-3xl -mt-1.5 text-gray-800">148 ม.8 ต.สะกอม อ.จะนะ จ.สงขลา 90130 โทร.081-5412281</div>
+                                </div>
+                                <div class="absolute z-10 top-[113px] right-[20px] text-white bg-blue-700 px-[14px] pt-0 pb-[19.5px] text-end rounded-md">
+                                    <div class="text-[26px] leading-tight font-semibold -mt-[1.5px]">บัตรประจำตัวนักเรียน</div>
+                                    <div class="text-[18px] leading-tight opacity-90">STUDENT CARD</div>
+                                </div>
+                            </div>
+
+                            <!-- Main Content -->
+                            <div class="flex px-[2%] pt-[2.45%] pb-[2%] gap-[2%] h-[80%]">
+                                <!-- Photo -->
+                                <div class="w-[30%] h-[80%] rounded-xl overflow-hidden flex-shrink-0">
+                                    <img v-if="student.profile_image_url"
+                                        :src="sameOriginStorage(student.profile_image_url)"
+                                        alt="Student Photo" class="w-full h-full object-fill rounded-xl" />
+                                    <div v-else class="w-full h-full flex items-center justify-center bg-gray-300">
+                                        <Icon icon="tabler:photo-plus" class="w-10 h-10 text-gray-600/60" />
+                                    </div>
+                                </div>
+
+                                <!-- Info -->
+                                <div class="flex-1 relative">
+                                    <!-- Name -->
+                                    <div>
+                                        <div class="flex items-center">
+                                            <div class="w-[284px] text-[38px] font-bold text-gray-600 leading-tight mt-2">ชื่อ</div>
+                                            <div class="text-[42px] font-bold text-gray-800 leading-tight mr-3 mt-1">:</div>
+                                            <div :style="{ fontSize: `${studentThaiName(student).size}px` }"
+                                                class="font-bold text-gray-800 leading-tight -mt-1 whitespace-nowrap">
+                                                {{ studentThaiName(student).text }}
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center -mt-3">
+                                            <div class="w-[284px] text-[32px] text-gray-700 leading-tight">Name</div>
+                                            <div class="text-[42px] text-transparent leading-tight mr-4">:</div>
+                                            <div :style="{ fontSize: `${studentEnglishName(student).size}px` }"
+                                                class="text-gray-700 leading-tight whitespace-nowrap">
+                                                {{ studentEnglishName(student).text }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- Student ID -->
+                                    <div class="-mt-2">
+                                        <div class="flex items-center">
+                                            <div class="w-[284px] text-[38px] font-bold text-gray-600 leading-tight">รหัสประจำตัว</div>
+                                            <div class="text-[42px] font-bold text-gray-700 leading-tight mr-3">:</div>
+                                            <div class="text-[44px] font-bold text-gray-800 leading-tight">{{ student.student_number }}</div>
+                                        </div>
+                                        <div class="flex items-center -mt-4">
+                                            <div class="w-[284px] text-[32px] text-gray-700 leading-tight">Student ID</div>
+                                            <div class="text-[42px] text-transparent leading-tight mr-4">:</div>
+                                        </div>
+                                    </div>
+                                    <!-- ID Card -->
+                                    <div class="-mt-2">
+                                        <div class="flex">
+                                            <div class="w-[284px] text-[38px] font-bold text-gray-600 leading-tight">เลขบัตรประชาชน</div>
+                                            <div class="text-[42px] font-bold text-gray-700 leading-tight mr-3">:</div>
+                                            <div class="text-[44px] font-bold text-gray-800 leading-tight">{{ formattedIdNumber(student.national_id) }}</div>
+                                        </div>
+                                        <div class="flex -mt-4">
+                                            <div class="w-[284px] text-[32px] text-gray-700 leading-tight">ID Card Number</div>
+                                            <div class="text-[42px] text-transparent leading-tight mr-4">:</div>
+                                        </div>
+                                    </div>
+                                    <!-- Level -->
+                                    <div class="-mt-2">
+                                        <div class="flex">
+                                            <div class="w-[284px] text-[38px] font-bold text-gray-600 leading-tight">ระดับ</div>
+                                            <div class="text-[42px] font-bold text-gray-700 leading-tight mr-3">:</div>
+                                            <div class="text-[44px] font-bold text-gray-800 leading-tight">
+                                                {{ student.class_level < 4 ? 'มัธยมศึกษาตอนต้น' : 'มัธยมศึกษาตอนปลาย' }}
+                                            </div>
+                                        </div>
+                                        <div class="flex -mt-3">
+                                            <div class="w-[284px] text-[32px] text-gray-700 leading-tight">Level</div>
+                                            <div class="text-[42px] text-transparent leading-tight mr-4">:</div>
+                                            <div class="text-[36px] text-gray-700 leading-tight">
+                                                {{ student.class_level < 4 ? 'Lower Secondary' : 'Upper Secondary' }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- Date of Birth -->
+                                    <div class="-mt-2">
+                                        <div class="flex">
+                                            <div class="w-[284px] text-[38px] font-bold text-gray-600 leading-tight">วัน/เดือน/ปี เกิด</div>
+                                            <div class="text-[42px] font-bold text-gray-700 leading-tight mr-3">:</div>
+                                            <div class="text-[44px] font-bold text-gray-800 leading-tight">{{ formatDate(student.birth_date, 'th-TH') }}</div>
+                                        </div>
+                                        <div class="flex -mt-3">
+                                            <div class="w-[284px] text-[32px] text-gray-700 leading-tight">Date of Birth</div>
+                                            <div class="text-[42px] text-transparent leading-tight mr-4">:</div>
+                                            <div class="text-[36px] text-gray-700 leading-tight">{{ formatDate(student.birth_date, 'en-GB') }}</div>
+                                        </div>
+                                    </div>
+                                    <!-- Expiry Date -->
+                                    <div class="-mt-2">
+                                        <div class="flex">
+                                            <div class="w-[284px] text-[38px] font-bold text-gray-600 leading-tight">วันหมดอายุบัตร</div>
+                                            <div class="text-[42px] font-bold text-gray-700 leading-tight mr-3">:</div>
+                                            <div class="text-[44px] font-bold text-gray-800 leading-tight">{{ formatDate(student.card_expiry_date, 'th-TH') }}</div>
+                                        </div>
+                                        <div class="flex -mt-3">
+                                            <div class="w-[284px] text-[32px] text-gray-700 leading-tight">Expiry Date</div>
+                                            <div class="text-[42px] text-transparent leading-tight mr-4">:</div>
+                                            <div class="text-[36px] text-gray-700 leading-tight">{{ formatDate(student.card_expiry_date, 'en-GB') }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- QR Code -->
+                            <div class="absolute bottom-10 right-10 w-[192px]">
+                                <QRCodeVue3 :value="student.student_number || ''"
+                                    :cornersSquareOptions="{ type: 'extra-rounded', color: '#000' }"
+                                    :dotsOptions="{ type: 'dots', color: '#000' }"
+                                    :cornersDotOptions="{ type: 'square', color: '#000' }" />
+                            </div>
+
+                            <!-- Bottom bar -->
+                            <div class="absolute bottom-0 left-0 w-full h-8 rounded-b-2xl"
+                                style="background: linear-gradient(135deg, #4a90e2 72%, transparent 0%);" />
+                        </div>
+                    </div>
+
+                    <!-- Download Button -->
+                    <div class="flex justify-center w-full mt-2">
+                        <div class="w-full text-end">
+                            <button @click="downloadCard(index, student.student_number)"
+                                class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                                ดาวน์โหลดบัตรนักเรียน
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@100..900&display=swap');
+* { font-family: "Noto Sans Thai", sans-serif; }
+</style>

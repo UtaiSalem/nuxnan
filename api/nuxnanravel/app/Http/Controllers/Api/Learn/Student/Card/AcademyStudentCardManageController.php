@@ -19,7 +19,8 @@ use Illuminate\Http\Request;
  * จัดการรายชื่อนักเรียนในห้อง จากหน้าบัตรนักเรียนของโรงเรียน
  * Prefix: /api/academies/{academy}/student-cards/{level}/{room}
  *
- * ห้องถูกจำกัดอยู่ในโรงเรียนของ URL และทุกการเขียนต้องผ่าน StudentCardAccessService
+ * ต่างจาก StudentCardManageController (เส้นทางสาธารณะชั่วคราว) ตรงที่ห้องถูก
+ * จำกัดอยู่ในโรงเรียนของ URL และทุกการเขียนต้องผ่าน StudentCardAccessService
  * ซึ่งอนุญาตผู้จัดการระดับโรงเรียน หรือครูประจำชั้นของห้องนั้นเท่านั้น
  */
 class AcademyStudentCardManageController extends Controller

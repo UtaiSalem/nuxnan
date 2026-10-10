@@ -39,7 +39,7 @@ Route::middleware(['auth:api'])->group(function () {
 // =====================================
 // STUDENT ROUTES GROUP
 // =====================================
-// Note: Student Card routes are academy-scoped at /routes/learn/academy-student-card.php (auth:api + academy.permission)
+// Note: Student Card routes have been moved to /routes/studentcard/studentcard.php with independent authentication
 
 // Note: Home Visit routes have been moved to /routes/homevisit/homevisit.php
 
@@ -49,4 +49,4 @@ Route::middleware(['auth:api'])->group(function () {
 // =====================================
 // ADMIN ROUTES GROUP
 // =====================================
-// Note: Admin Student Card routes are academy-scoped at /routes/learn/academy-student-card.php
+// Note: Admin Student Card routes have been moved to /routes/studentcard/studentcard.php with independent authentication

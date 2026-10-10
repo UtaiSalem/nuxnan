@@ -10,12 +10,13 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Collection;
 
 /**
- * การจัดการรายชื่อนักเรียนในห้อง (เพิ่ม / ย้าย / นำออก) ของเส้นทางโรงเรียน
+ * การจัดการรายชื่อนักเรียนในห้อง (เพิ่ม / ย้าย / นำออก) ที่ใช้ร่วมกัน
+ * ระหว่างเส้นทางสาธารณะชั่วคราว (/api/student-card/...) กับเส้นทางของโรงเรียน
  * (/api/academies/{academy}/student-cards/...)
  *
  * ตรรกะการ "ตรวจก่อนเขียน" อยู่ที่นี่ที่เดียว ส่วนการตรวจสิทธิ์เป็นหน้าที่ของ
- * controller ผ่าน StudentCardAccessService
- * (เส้นทางสาธารณะเดิมถูกปลดระวางแล้ว 2026-10-11)
+ * controller แต่ละตัว (ฝั่งสาธารณะใช้ config flag ฝั่งโรงเรียนใช้
+ * StudentCardAccessService) — ข้อความและรหัส error ต้องเหมือนกันทั้งสองเส้น
  */
 trait ManagesClassroomRoster
 {

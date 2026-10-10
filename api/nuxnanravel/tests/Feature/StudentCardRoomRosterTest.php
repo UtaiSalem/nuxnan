@@ -108,7 +108,7 @@ class StudentCardRoomRosterTest extends TestCase
 
         // ไม่สร้าง student_cards ให้เลย
 
-        $response = $this->actingAs($admin, 'api')->getJson("/api/academies/{$academy->id}/student-cards/1/1");
+        $response = $this->getJson('/api/student-card/1/1');
         $response->assertStatus(200);
 
         $students = $response->json('students');
@@ -138,7 +138,7 @@ class StudentCardRoomRosterTest extends TestCase
             'student_status' => 'expired',
         ]);
 
-        $response = $this->actingAs($admin, 'api')->getJson("/api/academies/{$academy->id}/student-cards/1/1");
+        $response = $this->getJson('/api/student-card/1/1');
         $response->assertStatus(200);
 
         $students = $response->json('students');
@@ -225,7 +225,7 @@ class StudentCardRoomRosterTest extends TestCase
             'student_number' => '4',
         ]);
 
-        $response = $this->actingAs($admin, 'api')->getJson("/api/academies/{$academy->id}/student-cards/1/1");
+        $response = $this->getJson('/api/student-card/1/1');
         $response->assertStatus(200);
 
         $students = $response->json('students');

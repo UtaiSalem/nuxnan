@@ -14,7 +14,7 @@ const props = defineProps({
     selectMode: { type: Boolean, default: false },
     selected: { type: Boolean, default: false },
     school: { type: Object, default: () => ({}) },
-    // ตัวเรียก API (บังคับส่งจากหน้า academy ที่ใช้งานบัตร) — ใช้แก้ข้อมูล/อัพโหลด/ลบรูป
+    // ตัวเรียก API — ถ้าไม่ส่งมาจะใช้เส้นทางสาธารณะเดิม (หน้าชั่วคราว)
     updateCard: { type: Function, default: null },
     uploadPhoto: { type: Function, default: null },
     deletePhoto: { type: Function, default: null },
@@ -168,8 +168,12 @@ const handlePhotoUploadToServer = async (id, studentNumber, file) => {
     const formData = new FormData()
     formData.append('photo', file)
     try {
-        if (!props.uploadPhoto) throw new Error('ไม่มีตัวจัดการอัพโหลดรูปภาพ')
-        const response = await props.uploadPhoto(formData, props.studentInfo)
+        const response = props.uploadPhoto
+            ? await props.uploadPhoto(formData, props.studentInfo)
+            : await $fetch(`${apiBase}/api/student-card/public-photo/${props.studentInfo.class_level}/${props.studentInfo.class_section}/${id}`, {
+                method: 'POST',
+                body: formData,
+            })
         if (response.success) {
             Swal.fire({ icon: 'success', title: 'อัพโหลดรูปภาพสำเร็จ', text: response.message, confirmButtonText: 'ตกลง' })
             if (response.photo) {
@@ -206,8 +210,12 @@ const handleSubmit = async () => {
 
     try {
         isSaving.value = true
-        if (!props.updateCard) throw new Error('ไม่มีตัวจัดการบันทึกข้อมูลบัตร')
-        const response = await props.updateCard(payload, props.studentInfo)
+        const response = props.updateCard
+            ? await props.updateCard(payload, props.studentInfo)
+            : await $fetch(`${apiBase}/api/student-card/public-update/${props.studentInfo.class_level}/${props.studentInfo.class_section}/${editForm.id}`, {
+                method: 'PUT',
+                body: payload,
+            })
         if (response.success) {
             editForm.full_name_thai = [editForm.title_name, editForm.first_name_thai, editForm.last_name_thai].filter(p => p?.trim()).join(' ')
             Swal.fire({ title: 'บันทึกข้อมูลสำเร็จ', icon: 'success', confirmButtonText: 'ตกลง' })
@@ -234,8 +242,9 @@ const handleDeletePhoto = async () => {
     if (!result.isConfirmed) return
     try {
         isDeletingStudentPhoto.value = true
-        if (!props.deletePhoto) throw new Error('ไม่มีตัวจัดการลบรูปภาพ')
-        const response = await props.deletePhoto(props.studentInfo)
+        const response = props.deletePhoto
+            ? await props.deletePhoto(props.studentInfo)
+            : await $fetch(`${apiBase}/api/student-card/public-photo/${props.studentInfo.class_level}/${props.studentInfo.class_section}/${props.studentInfo.id}`, { method: 'DELETE' })
         if (response.success) {
             previewImage.value = null
             tempPhoto.value = null

@@ -115,7 +115,7 @@
 | SCD-S2 | ปิด G1 — export + template จริง | — | `app/Exports/StudentCardsExport.php` + `export()` คืน .xlsx · `format=template` คืนหัวคอลัมน์เปล่า | 🟡 |
 | SCD-S1 | ปิด G1 — import นักเรียน/บัตร (Excel/CSV) | S2 (คอลัมน์ตรงกัน) | `app/Imports/StudentCardsImport.php` + `import()` · summary created/updated/skipped + errors[] | 🟡 |
 | SCD-S3 | ปิด G2 — `store()` เติม enrollment | — | สร้าง/ผูก ClassroomStudent active + academic_year_id + level_and_room | 🟡 |
-| SCD-S4 | ปิด G3/G4/G6/G7 — ลบชุด public เก่า | — | ลบครบ (ดู §9) + rewire FE + retarget/ลบเทสต์ · php -l ผ่าน · **เจ้าของ build+test** | 🟡 |
+| SCD-S4 | ปิด G3/G4/G6/G7 — ลบชุด public เก่า | — | **blast radius ใหญ่กว่าที่คิด (ดู §9) — รอเจ้าของ go/no-go** | 🔴 blocked |
 | SCD-S6 | เทสต์ครอบ import/export + store+enrollment | S1–S3 | `StudentCardImportExportTest` (9 เคส) · `php -l` ผ่าน · **เจ้าของรัน** `php artisan test -c phpunit.mysql.xml --filter=StudentCardImportExport` | 🟡 |
 | SCD-S7 | ตรวจจอจริง 375/768/1280 (list/edit/print/import/requests) | S1–S4 | **เจ้าของ verify** | ⚪ |
 | — | G8 `card_admin` vestigial | — | เลื่อนไป cleanup รวม role ภายหลัง (ไม่กระทบ runtime) | 🔵 defer |
@@ -151,20 +151,12 @@
 - `pages/academies/[name]/admin/gradebook/students/index.vue` — `navigateTo('/student-card/{id}')` + `to="/student-card/admin"` → ชี้ `/academies/{name}/admin/student-cards/...`
 - ลบหน้า `ui/pages/student-card/*` (public + admin public)
 
-**✅ ลงมือแล้ว 2026-10-11 (เจ้าของสั่งลุย):**
-- Backend: ลบ `require studentcard.php` + ไฟล์ route + `PublicStudentCardRequestController` + `StudentCardManageController` + method `publicUpdate/publicUpdateImage/publicDestroyPhoto/assertCardInRoom` · เก็บ FormRequests (parent), `ResolvesStudentCardRoom`, `config/student-card.php` · แก้ comment ที่อ้าง path เก่า
-- FE rewire: `StudentCardModal` (ตัด fallback legacy) · `StudentCardItem` (ตัด public `$fetch` → บังคับใช้ prop) · `gradebook/students/index` (ลิงก์→academy) · composable `useClassroomManagement`+`usePublicCardRequest` เหลือ **type-only** (ตัด function ยิง endpoint ที่ลบ · modal ใช้แต่ type)
-- ลบหน้า FE `ui/pages/student-card/*` ทั้งหมด
-- เทสต์: ลบ `PublicCardRequestTest` + `ClassroomManagementTest` (coverage roster ย้ายไป `AcademyStudentCardAccessTest`/`ClassroomStudentCardReactivationTest`/`FormRequestValidationTest`) · retarget `StudentCardRoomRosterTest`(3) + `StudentCardSSOTTest`(1) → `GET /api/academies/{id}/student-cards/1/1` + `actingAs($admin)`
-- php -l ผ่านทุกไฟล์ · ไม่มี reference ค้างถึง public surface
-- ⚠️ **เจ้าของ verify (คลาวด์รันไม่ได้):** `npm run build` (ui) + `php artisan test -c phpunit.mysql.xml --filter=StudentCard` + คลิกจริงหน้า roster/การ์ดสมาชิก/gradebook
-- หมายเหตุ: **no-login flow ของครูถูกเอาออกแล้ว** — ครูต้องล็อกอิน + มีสิทธิ์ academy
+**คำแนะนำ:** S4 ควรทำบนเครื่องเจ้าของ (รัน `php artisan test -c phpunit.mysql.xml` + `npm run build` ได้) หรือยืนยันให้ Claude push refactor ทั้งชุดแล้วเจ้าของ verify local · เป็นงาน outward-facing (เอา no-login flow ออก) + hard-to-reverse จึงขอ go/no-go ก่อน
 
 ## 8. Review Log
 - **2026-10-10** — ขั้น [1]+[2] (Claude): สแกน routes (3 ไฟล์) + StudentCardController (1000) + RequestController + PublicRequestController + AccessService + RequestService + StudentCard model + FE admin/requests pages + config · เขียนไฟล์รองนี้ · พบ gap G1–G8 · เคาะ Q1–Q4
 - **2026-10-10** — SCD-S1/S2/S3 (Claude เขียน · php -l ผ่าน · เจ้าของรันเทสต์): import/export จริง (ปิด G1) + store() เติม enrollment (ปิด G2) · commit บน branch `claude/jolly-goodall-cwgfja`
 - **2026-10-10** — SCD-S4 (ลบ public): พบ blast radius §9 → เจ้าของสั่ง **ข้าม S4 ไป S6 ก่อน** (เก็บ public ไว้ flag OFF)
-- **2026-10-11** — SCD-S4 **ลงมือลบชุด public ครบ** (เจ้าของสั่งลุย): backend routes/controllers/methods + FE pages + rewire FE 3 จุด + composable 2 ตัว type-only + ลบ 2 เทสต์ + retarget 2 เทสต์ · php -l ผ่าน · ไม่มี ref ค้าง · ปิด G3/G4/G6/G7 · รอเจ้าของ `npm run build` + full suite
 - **2026-10-11** — SCD-S6 รันจริงบน MySQL: 8/10 เขียว · store 2 เคสแดง 500 = **test data ยาวเกิน** (`student_cards.student_number` เป็น `varchar(8)` · ใส่ `STU-STORE1` 10 ตัว) → แก้เป็นรหัสจริง `S60001`/`S30009` · ถอด `->dump()` · เพิ่ม `store()->load(...)` ก่อน serialize (ตาม update/profile)
   - ✅ **แก้แล้ว 2026-10-11 (เจ้าของสั่งรองรับถึง 10 หลัก):** migration `2026_10_11_000000_widen_student_cards_student_number` ขยาย `student_cards.student_number` `varchar(8)→varchar(20)` (เท่า `students.student_id` ต้นทาง · ครอบ 10 หลัก + headroom) · `down()` ปฏิเสธถ้ามีรหัส >8 ตัวค้าง (กันข้อมูลหาย) · cap `store()` validation `max:255→max:20` (กัน truncation 500 · >20 ได้ 422) · เทสต์เพิ่ม 2: รับ 10 หลัก (`6012345678`) · ปฏิเสธ 21 ตัว
   - ⚠️ **เจ้าของต้องรันบน dev ก่อนเทสต์:** `php artisan migrate` (dev) → `php artisan test:db:rebuild` (คัด schema ใหม่เข้า nuxnan_testing) → `php artisan test -c phpunit.mysql.xml --filter=StudentCardImportExport` · **production:** `mysqldump` ก่อน แล้ว `php artisan migrate`
