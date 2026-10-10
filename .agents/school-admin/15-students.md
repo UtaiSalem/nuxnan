@@ -14,10 +14,18 @@
 - วงจรชีวิต: graduate / drop / repeat / promote / transfer (+ enrollment-history)
 - เปิดบัญชี/ส่งลิงก์เปิดบัญชี (`StudentAccountController`) · ส่งออกรายชื่อ/คำเชิญ
 
-**อยู่ติดกัน — ต้องเคาะ Q3 ว่านับเป็นเมนูนี้ไหม:**
+**อยู่ในขอบเขต #15 ด้วย (เจ้าของเคาะ Q3 = ใช่, 2026-10-10):**
 - Student Master profile: `academic-info` / `addresses` / `contacts` / `health` / `guardian` / `home-visit`
-  (`Api/Learn/Student/Master/*` · route `academy-home-visit.php` + `student-profile.php`) — คาบเกี่ยว **#6 ผู้ปกครอง** และ **#17 เยี่ยมบ้าน**
+  (`Api/Learn/Student/Master/*` · `Profile/StudentProfileController` · route `student-profile.php` + `academy-home-visit.php`)
+  - หมายเหตุ: guardian ยังคาบเกี่ยว #6 (ใช้ `guardians.*` + `GuardianAccessService`) · home-visit คาบเกี่ยว #17 — audit ส่วนลึกของสองเมนูนั้นทำที่ไฟล์ของมันเอง · ที่นี่ดูเฉพาะ profile กลาง
 - แก้ข้อมูลนักเรียนใช้ **change-request flow** (`ChangeRequestController` · StudentController `listRequests/approveRequest/rejectRequest/updatePersonal`)
+
+### Student Master profile — ผล audit (2026-10-10, หลัง Q3)
+- **authz guard ครบทุก method · ไม่มีรูรั่ว PII** แม้ route `student-profile.php` มีแค่ `auth:api` (ไม่มี `academy.permission`) เพราะ**ทุก controller บังคับสิทธิ์เองครบ**:
+  - `StudentProfileController::show/summary` → `checkAccess()` (self/owner/admin/director/homeroom/parent · คนนอก = 403 · scoped academy)
+  - `AcademicInfo/Address/Contact/Health` ทุก method (index/show/store/update/destroy/set-*) → `$this->authorize('update', $student)` ครบ
+  - `Guardian` → `viewGuardians`/`manageGuardians` (ผ่าน `guardians.*`) · `ChangeRequest` → `approveRequests` · `HomeVisit` → `abort_unless(isStaff/canManage)`
+  - มีเทสต์ `StudentMasterPolicyTest` อยู่แล้ว
 
 ## 2. Current State (จากการสแกนโค้ดจริง 2026-10-09)
 
@@ -61,6 +69,10 @@
 - **G2 — ✅ แก้แล้ว (ST15-S2, 2026-10-10)** — ลบ route `enrollment-history` v1 (`groups.view`) + method `ClassroomController::getStudentEnrollmentHistory` ที่ตายแล้ว (ยืนยัน FE ใช้ v2 เท่านั้น · ไม่มี test/route() helper/caller อื่น) · เหลือ v2 (`enrollment.lifecycle`) ที่ FE ใช้จริง
 - **G3 — permission model แยกสองทาง** middleware (`Academy::userCan` → academy_role.permissions) vs Policy (`member.role` column + `hasAnyPermission`) · สองแหล่งความจริง เสี่ยง drift (G1 คือตัวอย่างที่เห็นผล)
 - **G4 (verify ตา) — registry ไม่มี edit/delete นักเรียนตรง ๆ** การแก้ข้อมูลผ่าน change-request flow (ตั้งใจ?) · การ "เอาออก" ทำผ่าน lifecycle drop/graduate ไม่ใช่ hard delete — ยืนยันว่าตรงตามดีไซน์
+- **G5 (ใหม่ จาก audit Q3 — ต้องเคาะ) — Master profile authz ไม่รับ `students.view`/`students.manage`** (G1 เวอร์ชันฝั่งโปรไฟล์)
+  `StudentMasterProfilePolicy::view/update/approveRequests` และ `StudentProfileController::checkAccess()` ยึด `member.role ∈ {admin,teacher,director}` + owner + ครูประจำชั้น + ผู้ปกครอง — **ไม่อ่าน academy_role.permissions**
+  ⇒ custom role "นายทะเบียน" ที่ถือ `students.manage` (ซึ่งเพิ่งให้ทำ intake/import/lifecycle ได้ใน Q1) **ดู/แก้แฟ้มประวัตินักเรียนไม่ได้** · `students.view` holder ก็ดูไม่ได้ · inconsistent กับทิศทางที่เจ้าของเลือกใน Q1
+  - ⚠️ ข้อนี้คุม **PII** (สุขภาพ · เลขบัตรปชช · ที่อยู่ · ผู้ติดต่อ) การเปิดกว้าง = ตัดสินใจอ่อนไหว → **ต้องเคาะก่อนแก้**
 
 ## 4. Permission Matrix (ปัจจุบัน — ยืนยัน Q1/Q2)
 
@@ -96,3 +108,4 @@
   - เหลือเจ้าของ verify: `php artisan test -c phpunit.mysql.xml --filter=EnrollmentPolicyTest` + `pint`
   - **ยังรอ Q2** (ลบ enrollment-history v1?) · **Q3** (ขอบเขต Student Master profile) · **Q4** (change-request flow by design?) — ถ้าปิดหมดเป็น by-design เมนู #15 ปิดได้
 - **2026-10-10 (ST15-S2 — เจ้าของเคาะ Q2 = ลบ v1)** — ลบ route `{academy}/students/{student}/enrollment-history` (v1, `groups.view`) + method `ClassroomController::getStudentEnrollmentHistory` (dead code) · ยืนยันก่อนลบ: FE ใช้ `enrollment-history-v2` เท่านั้น (`useStudentEnrollmentActions.ts:59`) · ไม่มี test/route() helper/caller อื่น · php -l ผ่านทั้ง route + controller · **เหลือ Q3, Q4**
+- **2026-10-10 (Q3 — เจ้าของเคาะ: Master profile = ส่วนหนึ่งของ #15)** — audit subsystem (8 controller ~2,100 บรรทัด + route `student-profile.php`): **guard ครบทุก method ไม่มีรูรั่ว PII** (รายละเอียด §2) · เจอ finding ใหม่ **G5** (profile view/update/approveRequests + checkAccess ไม่รับ `students.view`/`students.manage` — เหมือน G1 แต่ฝั่งโปรไฟล์ · คุม PII) → **รอเจ้าของเคาะว่าจะ align สิทธิ์แบบ Q1 ไหม** · **ยังเหลือ Q4** (change-request flow by design?)
