@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Academy;
 use App\Models\AcademyMember;
+use App\Models\AcademyRole;
 use App\Models\Student;
 use App\Models\StudentHomeVisit;
 use App\Models\User;
@@ -79,6 +80,52 @@ class StudentHomeVisitApiTest extends TestCase
                 'visit_status' => 'completed',
             ])
             ->assertForbidden();
+    }
+
+    /**
+     * HV-S3/G7 — custom role ที่ถือ home_visits.manage (ไม่ใช่ owner/admin/director/teacher)
+     * และเป็นสมาชิกอนุมัติแล้ว (status=2 canonical) ต้อง สร้าง/ดู observations/ลบ ได้
+     */
+    public function test_custom_role_with_home_visits_manage_can_create_and_see_observations(): void
+    {
+        [, , $academy, $student] = $this->context();
+
+        $role = AcademyRole::create([
+            'academy_id' => $academy->id,
+            'name' => 'registrar-'.uniqid(),
+            'display_name_th' => 'นายทะเบียนเยี่ยมบ้าน',
+            'permissions' => ['home_visits.view', 'home_visits.manage'],
+        ]);
+        $staff = $this->makeUser('registrar');
+        AcademyMember::create([
+            'academy_id' => $academy->id,
+            'user_id' => $staff->id,
+            'academy_role_id' => $role->id,
+            'status' => 2,
+        ]);
+
+        $create = $this->actingAs($staff, 'api')
+            ->postJson("/api/academies/{$academy->id}/students/{$student->id}/home-visits", [
+                'visit_date' => '2026-07-03',
+                'visitor_name' => 'Registrar',
+                'visitor_position' => 'Registrar',
+                'visit_status' => 'completed',
+                'observations' => 'Visible to staff only',
+            ]);
+        $create->assertCreated()->assertJsonPath('data.observations', 'Visible to staff only');
+        $visitId = $create->json('data.id');
+
+        // list → เห็น observations (ระดับ staff)
+        $this->actingAs($staff, 'api')
+            ->getJson("/api/academies/{$academy->id}/students/{$student->id}/home-visits")
+            ->assertOk()
+            ->assertJsonPath('data.data.0.observations', 'Visible to staff only');
+
+        // manage → ลบได้
+        $this->actingAs($staff, 'api')
+            ->deleteJson("/api/academies/{$academy->id}/students/{$student->id}/home-visits/{$visitId}")
+            ->assertOk();
+        $this->assertDatabaseMissing('student_home_visits', ['id' => $visitId]);
     }
 
     private function context(): array

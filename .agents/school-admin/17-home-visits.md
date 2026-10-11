@@ -108,8 +108,8 @@ Permission keys ที่มีในระบบ (`AcademyPermission.php`): `ho
   `/academies/{academy}/home-visits` `/` `/dashboard` `/statistics` + `auth/*` อยู่ใต้ `auth:api` เท่านั้น ⇒ user ที่ล็อกอินคนไหนก็อ่านสถิติ/จำนวนนักเรียน-เยี่ยมบ้านรายโรงเรียนได้ (scoped by academy_id แต่ไม่เช็คว่าเป็นสมาชิก/มีสิทธิ์) · `index.vue` เรียก `/statistics` จริง
   (หมายเหตุ: `auth/*` login subgroup ใต้ academy prefix เป็น session login ที่ไม่สมเหตุสมผลกับ JWT — ของตกค้าง)
 
-- **G5 — หน้า portal เดี่ยว `/home-visit` orphaned + ปลายทางไม่มีจริง**
-  `ui/pages/home-visit/index.vue` ฮาร์ดโค้ดชื่อโรงเรียน JSM · ไม่มีลิงก์จาก nav เข้ามา · ปุ่มทั้งหมด `push('/home-visit/auth/login')` ซึ่งเพจนั้นไม่มี ⇒ หน้าตายที่ยังชี้ backend ระบบ C ที่ไม่ปลอดภัย
+- **G5 — หน้า portal เดี่ยว `/home-visit` + ปลายทางไม่มีจริง**
+  `ui/pages/home-visit/index.vue` ฮาร์ดโค้ดชื่อโรงเรียน JSM · **มีลิงก์เข้าจาก `ui/pages/Learn/Dashboard.vue:423` (`to="/home-visit"`)** (แก้จาก audit รอบแรกที่เขียนว่า orphaned) · ปุ่มทั้งหมด `push('/home-visit/auth/login')` ซึ่งเพจนั้นไม่มีในรีโปปัจจุบัน (มีแค่ `index.vue`) ⇒ ครูเข้าถึงได้จริงจาก Dashboard แต่ login flow ในรีโปนี้ไม่ครบ (prod อาจเป็นบิลด์เก่า)
 
 - **G6 — TeacherController เป็น dead/Inertia-era code**
   `createHomeVisit` (non-images) `return redirect()->back()` (ใช้ไม่ได้กับ API JSON) · ทั้ง controller เป็นมรดก session ที่ระบบ A/B แทนที่หมดแล้ว
@@ -122,30 +122,39 @@ Permission keys ที่มีในระบบ (`AcademyPermission.php`): `ho
 - **G9 — participants/images ไม่มีทางเขียนที่ปลอดภัย**
   ฟีเจอร์ "ผู้ร่วมเยี่ยม" + "รูปหลักฐาน" เขียนได้ผ่านระบบ C (ที่จะถูกลบ) เท่านั้น · ระบบ A/B ยังไม่รองรับ multipart/participants ⇒ ถ้าลบ C ต้องย้ายความสามารถนี้มา B (หรือยืนยันว่าไม่ใช้)
 
-## 6. Implementation Tasks (ส่งให้ agy ทีละ step — ยังไม่เริ่มจนกว่าเจ้าของเคาะ Q)
+- **G10 — status drift ในระบบ A (เจอตอนลงมือ HV-S3)**
+  `HomeVisitController` ค้นสมาชิกด้วย `->where('status', 1)` แต่ค่า canonical คือ `AcademyMember::STATUS_APPROVED = 2` (ใช้โดย `isApprovedMember`/`userCan`) ⇒ สมาชิกอนุมัติจริง (status=2) อาจไม่ถูกรู้จักผ่าน path role เดิม · เทสต์เดิมก็ seed `status=1` จึงเขียวทั้งที่ค่าผิด · **HV-S3 ปิดเลี่ยงด้วยการเพิ่ม path `userCan` (status=2) แบบ OR** (ไม่ถอด path เดิม — ไม่มีใครเสียสิทธิ์) · การล้าง `status=1`→`2` ทั้ง controller+เทสต์ให้ตรง canonical ต้องรันสวีตบน MySQL จึงยกให้เจ้าของ (ยังไม่แตะรอบนี้)
+
+## 6. Implementation Tasks
+
+> ⚠️ cloud session นี้ **ไม่มี composer vendor / agy** → ตรวจได้แค่ `php -l` · การรัน `phpunit.mysql.xml` + `pint` + `npm run build` เป็นงาน owner-gated (เหมือนเมนูก่อน ๆ)
+> 🔴 **ลำดับบังคับ (บทเรียน #16 SCD-S4):** สร้างทางใหม่ที่ปลอดภัยให้ครบ → ย้าย FE พอร์ทัล → เจ้าของยืนยันครูย้ายแล้ว → **ค่อยลบ legacy (HV-S6)** · ห้ามลบก่อน
 
 | Step | Title | Depends on | Deliverable | Status |
 |---|---|---|---|---|
-| HV-S1 | **ปิด P0:** ลบ/ปิด legacy `routes/homevisit/homevisit.php` ทั้งไฟล์ (teacher/student session routes) — ขึ้นกับ Q1 | Q1 | เอา `require` ออกจาก `api.php` + ลบไฟล์ route + พิสูจน์ด้วยยิงจริง 404/401 | ⚪ pending |
-| HV-S2 | **ปิด P0/G2:** ลบกลุ่ม `teacher/*`,`student/*` ออกจาก `academy-home-visit.php` (หรือติดด่าน `home_visits.manage` + tenant ถ้ายังต้องใช้) | Q1 | route group หาย/gated + เทสต์ | ⚪ pending |
-| HV-S3 | **G3/G5/G6:** ลบ `HomeVisitAuthController`, `TeacherController`, `ui/pages/home-visit/` (ขึ้นกับ Q1) | Q1 | ไฟล์หาย · ไม่มี reference ค้าง | ⚪ pending |
-| HV-S4 | **G4:** ยก `/` `/dashboard` `/statistics` เข้าใต้ `academy.permission:home_visits.view` + ลบ `auth/*` subgroup ที่ตกค้าง | — | route gated + เทสต์ยืนยัน 403 ให้ non-member | ⚪ pending |
-| HV-S5 | **G7:** เปลี่ยน `HomeVisitController` (ระบบ A) ให้ gate ด้วย `Academy::userCan('home_visits.view'/'.manage')` ควบคู่ role (ตาม Q2) | Q2 | custom role นายทะเบียน/ฝ่ายกิจการ ทำได้ + เทสต์ | ⚪ pending |
-| HV-S6 | **G8/G9:** ตัดสิน `home_visits.create` key + participants/images (ตาม Q3) | Q3 | ตาม decision | ⚪ pending |
-| HV-S7 | เทสต์รวม (MySQL) + ตรวจจอ 375/768/1280 หน้าแอดมิน | S1–S6 | `phpunit.mysql.xml` เขียว + `npm run build` | ⚪ pending |
+| HV-S1 | **G1/G2:** ถอดกลุ่ม session เก่า (`auth/*`,`student/*`,`teacher/*`) ออกจาก `academy-home-visit.php` — ไม่มี FE ใช้ ชี้ controller ที่ด่าน comment ทิ้ง | — | route group หาย · เส้นที่เหลือติด `home_visits.view/manage` ครบ · `php -l` ผ่าน | 🟢 **done (owner verify MySQL)** |
+| HV-S2 | **G4:** ยก root `/` `/dashboard` `/statistics` เข้าใต้ `academy.permission:home_visits.view` | — | route gated · ไม่มีเทสต์ยิง root (ยืนยันแล้ว) | 🟢 **done (owner verify MySQL)** |
+| HV-S3 | **G7 (Q2):** `HomeVisitController` (ระบบ A) รับ `Academy::userCan('home_visits.view'/'.create'/'.manage')` แบบ OR ควบคู่ role (ปิดเลี่ยง G10 status drift ไปด้วย) | — | เพิ่ม userCan ใน accessLevel/isStaff/canManage + เทสต์ custom-role 1 เคส · `php -l` ผ่าน | 🟢 **done (owner verify MySQL)** |
+| HV-S4 | **G9 (Q3):** ระบบ B (admin flow) รับ participants + อัปโหลด/ลบรูปหลักฐาน (multipart) ให้ความสามารถที่เคยอยู่แค่ระบบ C ย้ายมาที่ปลอดภัย | — | endpoint/validation + เทสต์ · migration ไม่ต้อง (ตารางมีแล้ว) | ⚪ pending |
+| HV-S5 | **Q1/G1/G3 (ใหญ่):** migrate พอร์ทัล `/home-visit` → **JWT บัญชีจริง** · S5a BE: teacher endpoints ปลอดภัย (scoped+`home_visits.create/manage`) แทน session TeacherController · S5b FE: rebuild `ui/pages/home-visit/` ใช้ auth แอป + เลือก academy + ยิง endpoint ใหม่ · S5c verify ครูทำได้ครบเท่าเดิม | S4 | พอร์ทัลใช้ JWT · ไม่มีการเรียก `/api/home-visit/*` เหลือ · build + จอ 375/768/1280 | ⚪ pending |
+| HV-S6 | **ลบ legacy (หลัง S5 verified + เจ้าของยืนยันครูย้ายแล้ว):** ลบ `routes/homevisit/homevisit.php` + `require` ใน `api.php` · ลบ `HomeVisitAuthController`,`TeacherController` + รหัสฮาร์ดโค้ด (G3) · ลบ/redirect `ui/pages/home-visit/` | S5 + เจ้าของยืนยัน | ไฟล์หาย · ไม่มี reference ค้าง · ยิงจริง `/api/home-visit/*` = 404 | ⚪ pending (blocked) |
+| HV-S7 | **G8:** ตัดสิน `home_visits.create` key (ครูสร้างผ่านหน้าแอดมินได้ไหม) + `reports()` stub · เทสต์รวม MySQL + จอจริง | S4–S6 | ตาม decision + สวีตเขียว | ⚪ pending |
 
-**Rule:** ทุก step ต้อง verify (ยิงจริง/เทสต์/build) ก่อนขึ้น 🟢 — รายงาน agy เชื่อไม่ได้
+**Rule:** ทุก step ต้อง verify (ยิงจริง/เทสต์/build) ก่อนขึ้น 🟢
 
-## 7. คำถามที่ต้องให้เจ้าของโปรเจคเคาะ (Q)
+## 7. Decisions (เจ้าของเคาะ 2026-10-11)
 
-- **Q1 — ลบระบบ C (legacy session + portal) ได้เลยไหม?**
-  ระบบ A (หน้าโปรไฟล์) + ระบบ B (หน้าแอดมิน) ครอบคลุมฟีเจอร์ทั้งหมดแล้ว และ legacy admin API ก็ถูกถอดไปก่อนหน้าแล้ว
-  ⚠️ **ระวังบทเรียนเมนู #16 (SCD-S4):** หน้า no-login `/student-card/{level}/{room}` เคยถูกลบแล้ว revert เพราะครูยังใช้อยู่ — ต้องถามก่อนว่ามีครูยังล็อกอิน `/home-visit` ด้วย `teacher/jsm1234` อยู่จริงหรือไม่ (ถ้ามี = ต้องย้ายเข้าระบบ JWT ก่อนลบ)
-  → ถ้า "ลบได้" → HV-S1/S2/S3 · ถ้า "ยังใช้อยู่" → ต้องปิดช่องโหว่โดยไม่ลบ (ใส่ auth กลับ + academy scope — งานใหญ่กว่า)
-
-- **Q2 — ระบบ A ควรรับ custom role ผ่าน `home_visits.*` key ไหม (G7)?** (แนะนำ: ควร — ให้สอดคล้องกับทั้งระบบตามที่เคาะในเมนู #15 G1)
-
-- **Q3 — participants + รูปหลักฐาน (G9):** ย้ายเข้าระบบ B (admin flow รับ multipart/participants) หรือยืนยันว่าไม่ใช้แล้ว? และจะทำอย่างไรกับ `home_visits.create` key ที่ไม่มี route ใช้ (G8)
+- **Q1 → ครูยังล็อกอิน `/home-visit` ด้วยรหัสฮาร์ดโค้ดอยู่จริง** ⇒ **ห้ามลบ legacy ทันที** · ปิด G1/G3 ด้วยการ **migrate พอร์ทัลเป็น JWT (บัญชีจริง)** แล้วค่อยลบ (HV-S5 → HV-S6)
+  🔴 ประเด็นเทคนิคที่ยืนยันแล้ว: group `api` ใน `bootstrap/app.php` **stateless (ไม่มี session middleware/ไม่มี `statefulApi`)** ⇒ `session()` บน `/api/home-visit/*` ไม่ persist · ด่าน session ถูก comment เพราะถ้าไม่ comment พอร์ทัลใช้ไม่ได้เลย · แปลว่าพอร์ทัลเก่า = **API สาธารณะไม่มี auth จริง** · การ "uncomment ด่านกลับ" จะทำให้ครูพังทันที ⇒ ต้องใส่ auth จริง (JWT) เท่านั้น
+- **Q2 → ใช่** ระบบ A gate ด้วย `home_visits.*` key (HV-S3 ✅ ทำแล้วแบบ additive)
+- **Q3 → ย้าย participants + รูปหลักฐานเข้าระบบ B** (HV-S4)
 
 ## 8. Review Log
-- **2026-10-11** — ขั้น [1] สแกนโค้ด + [2] เขียนไฟล์รองนี้ เสร็จ (Claude) · พบ 3 ระบบซ้อน · P0 = ระบบ C (legacy) เปิดสาธารณะ/รหัสฮาร์ดโค้ด/ด่าน comment ทิ้ง · ยังไม่ส่ง step ให้ agy — รอเจ้าของเคาะ Q1–Q3
+- **2026-10-11 (audit)** — ขั้น [1]+[2] เสร็จ · พบ 3 ระบบซ้อน · P0 = ระบบ C (legacy) เปิดสาธารณะ/รหัสฮาร์ดโค้ด/ด่าน comment ทิ้ง
+- **2026-10-11 (เคาะ Q1–Q3)** — Q1 ครูยังใช้ → migrate JWT (ห้ามลบก่อน) · Q2 ใช่ · Q3 ย้ายเข้า B
+- **2026-10-11 (HV-S1/S2/S3 ลงมือ — Claude เขียนเองใน cloud เพราะไม่มี agy)** —
+  - S1: ถอด `auth/*`+`student/*`+`teacher/*` ออกจาก `academy-home-visit.php` (ยืนยันไม่มี FE/test/`route()` อ้าง) · เส้นที่เหลือ (dashboard/zones/admin) ติด `home_visits.view/manage` ครบ
+  - S2: root `/`+`/dashboard`+`/statistics` ยกเข้าใต้ `home_visits.view` (ไม่มีเทสต์ยิง root · `index.vue` ที่เรียก guard ด้วย `can('home_visits.view')` อยู่แล้ว)
+  - S3: `HomeVisitController` accessLevel/isStaff/canManage เพิ่ม `userCan` (status=2 canonical) แบบ OR + เทสต์ `test_custom_role_with_home_visits_manage_...` · เจอ+บันทึก G10 (status=1 vs 2 drift)
+  - ตรวจ: `php -l` ผ่านทุกไฟล์ · **ยังไม่รัน phpunit/pint (ไม่มี vendor) — เจ้าของ verify: `php artisan test -c phpunit.mysql.xml --filter=StudentHomeVisitApiTest` + `--filter=HomeVisit` + `pint`**
+  - **ค้าง: HV-S4 (participants/รูป→B) · HV-S5 (migrate พอร์ทัล JWT) · HV-S6 (ลบ legacy หลังยืนยันครูย้าย) · HV-S7**

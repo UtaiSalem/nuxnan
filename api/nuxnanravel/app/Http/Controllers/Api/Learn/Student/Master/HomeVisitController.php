@@ -133,6 +133,11 @@ class HomeVisitController extends Controller
             return 'self';
         }
 
+        // HV-S3/G7 — รองรับ custom role ผ่านคีย์สิทธิ์ (userCan ใช้ STATUS_APPROVED=2 เป็น canonical)
+        if ($academy->userCan($user, 'home_visits.manage')) {
+            return 'admin';
+        }
+
         $member = AcademyMember::query()
             ->where('academy_id', $academy->id)
             ->where('user_id', $user->id)
@@ -145,16 +150,29 @@ class HomeVisitController extends Controller
             return $this->isHomeroom($student, $user->id) ? 'homeroom' : 'teacher';
         }
 
+        // ผู้ถือ home_visits.view (custom role) เห็นระดับเจ้าหน้าที่ — HV-S3/G7
+        if ($academy->userCan($user, 'home_visits.view')) {
+            return 'teacher';
+        }
+
         return app(GuardianAccessService::class)->isGuardianOf($user, $student) ? 'parent' : null;
     }
 
     private function isStaff(Academy $academy): bool
     {
-        $userId = auth('api')->id();
+        $user = auth('api')->user();
+        if (! $user) {
+            return false;
+        }
 
-        return $userId && AcademyMember::query()
+        // HV-S3/G7 — custom role ที่ถือสิทธิ์สร้าง/จัดการ เยี่ยมบ้าน ก็บันทึกได้
+        if ($academy->userCan($user, 'home_visits.create', 'home_visits.manage')) {
+            return true;
+        }
+
+        return AcademyMember::query()
             ->where('academy_id', $academy->id)
-            ->where('user_id', $userId)
+            ->where('user_id', $user->id)
             ->where('status', 1)
             ->whereIn('role', ['owner', 'admin', 'director', 'teacher', 'co_teacher'])
             ->exists();
@@ -162,11 +180,17 @@ class HomeVisitController extends Controller
 
     private function canManage(Academy $academy, Student $student): bool
     {
-        $userId = auth('api')->id();
-        if (! $userId) {
+        $user = auth('api')->user();
+        if (! $user) {
             return false;
         }
 
+        // HV-S3/G7 — custom role ที่ถือ home_visits.manage จัดการ/ลบได้
+        if ($academy->userCan($user, 'home_visits.manage')) {
+            return true;
+        }
+
+        $userId = $user->id;
         $isAdmin = AcademyMember::query()
             ->where('academy_id', $academy->id)
             ->where('user_id', $userId)

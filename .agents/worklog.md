@@ -21,6 +21,20 @@
 
 OVERVIEW.md #17: ⚪ → 🔴 · **ยังไม่ส่ง step ให้ agy**
 
+### เคาะ Q1–Q3 + ลงมือ HV-S1/S2/S3 (ต่อ 2026-10-11)
+
+เจ้าของเคาะ: **Q1 ครูยังล็อกอิน `/home-visit` ด้วยรหัสฮาร์ดโค้ดอยู่จริง** → ปิดช่องโหว่โดย **migrate เป็น JWT บัญชีจริง** (🔴 ห้ามลบ legacy ก่อน — บทเรียน #16 SCD-S4) · **Q2 ใช่** ระบบ A gate ด้วย `home_visits.*` key · **Q3 ย้าย** participants+รูปหลักฐานเข้าระบบ B
+
+🔴 ยืนยันเทคนิค: group `api` **stateless (ไม่มี session middleware)** ⇒ `session()` บน `/api/home-visit/*` ไม่ persist · ด่าน session ถูก comment เพราะถ้าไม่ comment พอร์ทัลใช้ไม่ได้เลย ⇒ **พอร์ทัลเก่า = API สาธารณะไม่มี auth จริง** · uncomment ด่านกลับ = ครูพังทันที → ต้อง JWT เท่านั้น
+
+cloud session นี้ **ไม่มี composer vendor/agy** → Claude เขียนเอง ตรวจ `php -l` (phpunit/pint owner-gated):
+- **✅ HV-S1 (G1/G2)** `routes/learn/academy-home-visit.php` — ถอดกลุ่ม session เก่า `auth/*`+`student/*`+`teacher/*` (ไม่มี FE/test/`route()` อ้าง · ชี้ TeacherController ที่ด่าน comment ทิ้ง) · เส้นที่เหลือ (dashboard/zones/admin) ติด `home_visits.view/manage` ครบ
+- **✅ HV-S2 (G4)** root `/`+`/dashboard`+`/statistics` ยกเข้าใต้ `academy.permission:home_visits.view` (ไม่มีเทสต์ยิง root · `index.vue` guard `can('home_visits.view')` อยู่แล้ว)
+- **✅ HV-S3 (G7)** `Master/HomeVisitController` accessLevel/isStaff/canManage เพิ่ม `userCan('home_visits.*')` (status=2 canonical) แบบ OR + เทสต์ `test_custom_role_with_home_visits_manage_...` · เจอ **G10** (ระบบ A ใช้ `status=1` แต่ canonical=`STATUS_APPROVED=2` — ปิดเลี่ยงด้วย userCan แล้ว · ล้างทั้ง controller+test ยกให้เจ้าของรันบน MySQL)
+
+**ยังเปิดช่องโหว่อยู่จนจบ HV-S5/S6:** legacy `routes/homevisit/homevisit.php` (require ใน `api.php:248` ไม่มี middleware) + รหัสฮาร์ดโค้ด `teacher/jsm1234`+`admin/jsm_admin2025` · HV-S1/S2/S3 ปิดเฉพาะฝั่ง academy flow + เสริม custom-role · **ยังต้อง HV-S4 (participants/รูป→B) → HV-S5 (migrate พอร์ทัล JWT) → HV-S6 (ลบ legacy หลังเจ้าของยืนยันครูย้าย) → HV-S7**
+PR: UtaiSalem/nuxnan#39 (branch `claude/funny-meitner-06is0f`)
+
 ---
 
 ## ✅ 2026-10-11 — PR #33 merge เข้า `main` แล้ว (เมนู #16 บัตรนักเรียน + #15 เสริม)
