@@ -53,8 +53,23 @@ FE participants/image UI → รวมใน HV-S5 (teacher portal rebuild แ�
 
 **HV-S5 ครบแล้ว (a+b+c)** → teacher บันทึกเยี่ยมบ้าน+ผู้ร่วม+รูป ผ่าน JWT (student profile → HomeVisitTab) ได้เท่าพอร์ทัลเก่า
 
-**เหลือ: HV-S6 (ลบ legacy `homevisit.php`+`HomeVisitAuthController`/`TeacherController`+รหัสฮาร์ดโค้ด) → บล็อกจนเจ้าของ `npm run build` + ยืนยันครูใช้ JWT ได้จริง (บทเรียน #16: ห้ามลบก่อนยืนยัน) · HV-S7 (`home_visits.create` key + เทสต์รวม + จอจริง)**
-🔴 legacy backend `/api/home-visit/*` + รหัสฮาร์ดโค้ด ยังเปิดอยู่ (FE เลิกใช้แล้ว — ปิดจริงตอน HV-S6)
+### 🔁 เปลี่ยนทิศ (เจ้าของเคาะย้ำ 2026-10-11) — 2 ระบบคู่ขนาน · public แบบ hardcoded เหมือนเดิม
+
+เจ้าของสั่ง: **"ทำ 2 ระบบควบคู่กัน ทั้งแบบล็อกอินผ่านระบบจัดการโรงเรียน และแบบสาธารณะชั่วคราว"** → ตอนแรกตีความว่าเลียนแบบบัตรนักเรียน (config-gated/room-scoped) เริ่มร่าง `config/home-visit.php` แล้ว **เจ้าของ interrupt: "ทำแบบฮาร์ดโค้ดเหมือนเดิม ไม่ต้องเลียนแบบระบบบัตรนักเรียน"** + "คง legacy ไว้เหมือนเดิมทุกอย่าง"
+
+การกระทำ:
+- ลบ `config/home-visit.php` ที่ร่างไว้ (ไม่เคย commit) · ไม่สร้าง `PublicHomeVisitController`
+- **ถอน HV-S5b:** `git checkout 2824381 -- ui/pages/home-visit/index.vue` → คืน portal เก่า (role-chooser + hardcoded login เดิม)
+- **ยกเลิก HV-S6:** ไม่ลบ legacy · `homevisit.php`/`HomeVisitAuthController`/`TeacherController`/รหัสฮาร์ดโค้ด `teacher/jsm1234`+`admin/jsm_admin2025` **คงเดิมทุกอย่าง** (ไม่เคยแตะในเซสชันนี้)
+
+**ผล: เมนู #17 มี 2 ระบบคู่ขนานพร้อมใช้**
+1. **JWT** (ระบบจัดการโรงเรียน) — academy admin menu + student-profile HomeVisitTab · gate `home_visits.*` · academy-scoped · participants/รูป ครบ · มีเทสต์ (HV-S1–S4 + S5a + S5c)
+2. **public hardcoded** — `/home-visit` portal + `/api/home-visit/*` เดิม (เจ้าของเลือกคงไว้ชั่วคราว)
+
+🔴 **ความเสี่ยงที่เจ้าของรับทราบ+เลือกคงไว้:** `/api/home-visit/*` ไม่มี middleware + ด่าน comment ทิ้ง + api stateless ⇒ เขียน/ลบ + PII ได้โดยไม่ต้องรหัสจริง เปิดโล่งข้ามโรงเรียน · ควรปิด/ย้าย JWT เมื่อครูพร้อม (บันทึกใน 17-home-visits.md §7)
+
+**เหลือ: HV-S7** (G8 `home_visits.create` key + `reports()` stub + เทสต์รวม + จอจริง)
+เจ้าของ verify (JWT side): `phpunit.mysql.xml --filter=StudentHomeVisitApiTest`+`AdminControllerTest`+`HomeVisit` + pint + `npm run build`
 PR: UtaiSalem/nuxnan#39 (branch `claude/funny-meitner-06is0f`)
 
 ---

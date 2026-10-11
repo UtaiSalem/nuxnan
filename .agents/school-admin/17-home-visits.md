@@ -140,19 +140,23 @@ Permission keys ที่มีในระบบ (`AcademyPermission.php`): `ho
 | HV-S3 | **G7 (Q2):** `HomeVisitController` (ระบบ A) รับ `Academy::userCan('home_visits.view'/'.create'/'.manage')` แบบ OR ควบคู่ role (ปิดเลี่ยง G10 status drift ไปด้วย) | — | เพิ่ม userCan ใน accessLevel/isStaff/canManage + เทสต์ custom-role 1 เคส · `php -l` ผ่าน | 🟢 **done (owner verify MySQL)** |
 | HV-S4 | **G9 (Q3):** ระบบ B (admin flow) รับ participants + อัปโหลด/ลบรูปหลักฐาน (multipart) ให้ความสามารถที่เคยอยู่แค่ระบบ C ย้ายมาที่ปลอดภัย | — | storeVisit/updateVisit/showVisit + validation + helpers + เทสต์ 1 เคส (fake upload) · fix G11 ด้วย · FE consumption → HV-S5 | 🟢 **BE done (owner verify MySQL)** |
 | HV-S5a | **Q1/G1:** ระบบ A (`Master/HomeVisitController`) รับ participants+images (parity กับ legacy) · trait `HandlesHomeVisitAttachments` ใช้ร่วม AdminController (เลิก dup) · `StoreHomeVisitRequest` + serialize + load relations | S4 | store/update/show/index + เทสต์ ระบบ A 1 เคส · `php -l` ผ่าน | 🟢 **done (owner verify MySQL)** |
-| HV-S5b | **Q1/G5:** rebuild `ui/pages/home-visit/index.vue` → JWT landing (`middleware:['auth']`) · ดึง `membered-academies` · การ์ดลิงก์เข้า `/academies/{name}/admin/home-visits` · เลิกพึ่ง `/api/home-visit/*` + เลิก role-chooser/รหัสฮาร์ดโค้ด | S5a | พอร์ทัลไม่เรียก `/api/home-visit/*` · mobile-first | 🟢 **done (owner verify build+375px)** |
+| HV-S5b | ~~rebuild `/home-visit` → JWT landing~~ **↩️ REVERTED 2026-10-11** — เจ้าของเคาะ "ทำ 2 ระบบคู่กัน · portal สาธารณะแบบ hardcoded เหมือนเดิม" ⇒ คืนหน้า portal เก่า (role-chooser + hardcoded) ด้วย `git checkout 2824381 -- ui/pages/home-visit/index.vue` · JWT อยู่คนละทาง (academy admin menu + HomeVisitTab) | — | portal เดิมกลับมา | ↩️ reverted (by design) |
 | HV-S5c | **parity UI:** เพิ่ม participants repeater + อัปโหลด/ลบรูป (multipart) ใน `HomeVisitTab.vue` + `useHomeVisit.ts` ให้ครูแนบรูป/ผู้ร่วมได้เท่าพอร์ทัลเก่า | S5a | FormData multipart (POST+`_method=PUT` spoof เมื่อมีรูป) + preview · รูปผ่าน `/storage/**` proxy · จอจริง | 🟢 **done (owner verify build+375px)** |
-| HV-S6 | **ลบ legacy (หลัง S5 verified + เจ้าของยืนยันครูย้ายแล้ว):** ลบ `routes/homevisit/homevisit.php` + `require` ใน `api.php` · ลบ `HomeVisitAuthController`,`TeacherController` + รหัสฮาร์ดโค้ด (G3) · ลบ/redirect `ui/pages/home-visit/` | S5 + เจ้าของยืนยัน | ไฟล์หาย · ไม่มี reference ค้าง · ยิงจริง `/api/home-visit/*` = 404 | ⚪ pending (blocked) |
-| HV-S7 | **G8:** ตัดสิน `home_visits.create` key (ครูสร้างผ่านหน้าแอดมินได้ไหม) + `reports()` stub · เทสต์รวม MySQL + จอจริง | S4–S6 | ตาม decision + สวีตเขียว | ⚪ pending |
+| HV-S6 | ~~ลบ legacy~~ **❌ CANCELLED 2026-10-11** — เจ้าของเคาะเก็บ legacy ไว้เป็น **ระบบสาธารณะชั่วคราว (hardcoded เหมือนเดิมทุกอย่าง)** คู่ขนานกับ JWT · `homevisit.php` + `HomeVisitAuthController` + `TeacherController` + รหัสฮาร์ดโค้ด **คงไว้ตามเดิม ไม่แตะ** | — | — | ❌ cancelled (เจ้าของสั่งเก็บ) |
+| HV-S7 | **G8:** ตัดสิน `home_visits.create` key (ครูสร้างผ่านหน้าแอดมินได้ไหม) + `reports()` stub · เทสต์รวม MySQL + จอจริง | S4 | ตาม decision + สวีตเขียว | ⚪ pending |
 
 **Rule:** ทุก step ต้อง verify (ยิงจริง/เทสต์/build) ก่อนขึ้น 🟢
 
 ## 7. Decisions (เจ้าของเคาะ 2026-10-11)
 
-- **Q1 → ครูยังล็อกอิน `/home-visit` ด้วยรหัสฮาร์ดโค้ดอยู่จริง** ⇒ **ห้ามลบ legacy ทันที** · ปิด G1/G3 ด้วยการ **migrate พอร์ทัลเป็น JWT (บัญชีจริง)** แล้วค่อยลบ (HV-S5 → HV-S6)
-  🔴 ประเด็นเทคนิคที่ยืนยันแล้ว: group `api` ใน `bootstrap/app.php` **stateless (ไม่มี session middleware/ไม่มี `statefulApi`)** ⇒ `session()` บน `/api/home-visit/*` ไม่ persist · ด่าน session ถูก comment เพราะถ้าไม่ comment พอร์ทัลใช้ไม่ได้เลย · แปลว่าพอร์ทัลเก่า = **API สาธารณะไม่มี auth จริง** · การ "uncomment ด่านกลับ" จะทำให้ครูพังทันที ⇒ ต้องใส่ auth จริง (JWT) เท่านั้น
-- **Q2 → ใช่** ระบบ A gate ด้วย `home_visits.*` key (HV-S3 ✅ ทำแล้วแบบ additive)
-- **Q3 → ย้าย participants + รูปหลักฐานเข้าระบบ B** (HV-S4)
+- **Q1 (รอบแรก) → ครูยังล็อกอิน `/home-visit` ด้วยรหัสฮาร์ดโค้ดอยู่จริง**
+- **Q2 → ใช่** ระบบ A gate ด้วย `home_visits.*` key (HV-S3 ✅ additive)
+- **Q3 → ย้าย participants + รูปหลักฐานเข้าระบบ B** (HV-S4 ✅)
+- **🔁 ทิศทางสุดท้าย (เจ้าของเคาะย้ำ 2026-10-11): ทำ 2 ระบบคู่ขนาน**
+  1. **ระบบ JWT** (ผ่าน login ระบบจัดการโรงเรียน) — academy admin pages + student-profile `HomeVisitTab` · gate `home_visits.*` · academy-scoped · มีเทสต์ **(ทำครบแล้ว: HV-S1–S4 + S5a + S5c)**
+  2. **ระบบสาธารณะชั่วคราว (hardcoded เหมือนเดิมทุกอย่าง)** — `/home-visit` portal + `/api/home-visit/*` · เจ้าของสั่ง **"ทำแบบฮาร์ดโค้ดเหมือนเดิม ไม่เลียนแบบบัตรนักเรียน"** และ **"คงด่าน auth/รหัส legacy ไว้เหมือนเดิมทุกอย่าง"**
+  - ⇒ **HV-S5b ถอนกลับ** (คืน portal เดิม) · **HV-S6 ยกเลิก** (ไม่ลบ legacy) · แนวทาง config-gated แบบบัตรนักเรียนที่เคยเริ่ม **ยกเลิกทั้งหมด** (ลบ `config/home-visit.php` ที่ร่างไว้ · ไม่สร้าง `PublicHomeVisitController`)
+  - 🔴 **บันทึกความเสี่ยงที่เจ้าของรับทราบและยอมรับ:** พอร์ทัล public นี้ `/api/home-visit/*` ไม่มี middleware + ด่าน session ถูก comment + route `api` stateless ⇒ **เขียน/ลบข้อมูล + PII ได้โดยไม่ต้องรหัสจริง (เปิดโล่งทั้ง DB ข้ามโรงเรียน)** · เจ้าของเลือกคงไว้ตามเดิมเป็นการชั่วคราว (ครูยังใช้) — ควรปิด/ย้ายเข้า JWT เมื่อครูพร้อม
 
 ## 8. Review Log
 - **2026-10-11 (audit)** — ขั้น [1]+[2] เสร็จ · พบ 3 ระบบซ้อน · P0 = ระบบ C (legacy) เปิดสาธารณะ/รหัสฮาร์ดโค้ด/ด่าน comment ทิ้ง
@@ -178,3 +182,9 @@ Permission keys ที่มีในระบบ (`AcademyPermission.php`): `ho
   - `HomeVisitTab.vue`: participants repeater (เพิ่ม/ลบแถว) · อัปโหลดรูปหลายไฟล์ + preview (object URL) · รูปเดิม toggle ลบ (เข้า `images_to_delete`) · openEdit นำ participants/images เดิมมาแสดง (round-trip) · แสดง participants chips + รูป thumbnail ในรายการ · รูปผ่าน `/storage/${image_path}` (Nuxt storage-proxy เหมือนรูปอื่นในแอป)
   - cloud ไม่มี ui/node_modules → compile-check ไม่ได้ · เจ้าของ `npm run build` + ตรวจ 375px (บันทึกเยี่ยม+แนบรูป+ผู้ร่วม ครบวงผ่านแท็บ)
   - **HV-S5 ครบแล้ว (a+b+c)** → เหลือ **HV-S6 (ลบ legacy หลังเจ้าของยืนยันครูใช้ JWT ได้จริง) → HV-S7**
+- **2026-10-11 (เปลี่ยนทิศ: 2 ระบบคู่ขนาน — hardcoded เหมือนเดิม)** — เจ้าของเคาะ "ทำ 2 ระบบคู่กัน · public แบบ hardcoded เหมือนเดิม ไม่เลียนแบบบัตรนักเรียน · คง legacy ไว้ทุกอย่าง" ·
+  - เริ่มร่างแนวทาง config-gated (`config/home-visit.php`) แล้ว **เจ้าของ interrupt ให้หยุด** → ลบไฟล์ร่างทิ้ง (ไม่เคย commit)
+  - **ถอน HV-S5b:** `git checkout 2824381 -- ui/pages/home-visit/index.vue` คืน portal role-chooser + hardcoded เดิม (JWT อยู่คนละทาง: academy admin menu + HomeVisitTab)
+  - **ยกเลิก HV-S6:** ไม่ลบ legacy — `homevisit.php`/`HomeVisitAuthController`/`TeacherController`/รหัสฮาร์ดโค้ด คงเดิมทุกอย่าง (ไม่เคยถูกแตะในเซสชันนี้)
+  - คงไว้ที่ทำแล้ว (JWT side): HV-S1/S2/S3/S4 (academy-flow hardening + custom-role + participants→B) · HV-S5a (ระบบ A parity + trait) · HV-S5c (HomeVisitTab participants/image UI) — ทั้งหมดไม่กระทบ legacy
+  - **สถานะเมนู #17: ทั้งสองระบบพร้อมคู่ขนาน** · เหลือ HV-S7 (G8 `home_visits.create` key + reports stub + เทสต์รวม/จอจริง) · 🔴 legacy public ยังเปิดโล่งตามที่เจ้าของเลือก (บันทึกความเสี่ยงไว้ §7)
