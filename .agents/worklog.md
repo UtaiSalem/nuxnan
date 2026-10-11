@@ -1,5 +1,23 @@
 # Work Log — nuxnan project
 
+## 🔍 2026-10-11 — เมนู #18 การเข้าเรียน: audit เสร็จ (ขั้น [1]+[2]) — รอเจ้าของเคาะ Q
+
+ไฟล์รอง: [`.agents/school-admin/18-attendance.md`](school-admin/18-attendance.md) · branch `claude/funny-meitner-06is0f`
+
+**เมนูนี้สุก/authz แน่น/มีเทสต์ — ไม่มี P0** (ต่างจาก #12–#14, #17) · `SchoolAttendanceController`:
+tenant 404 ทุก method · `authorizeManager`=`userCan('school_attendance.manage')` (ครูเช็กชื่อได้จริง ไม่ใช่ isAdmin ล้วน) · data-depth gating (`show` ไม่มี `.view` → own-record-only · `studentHistory` คนอื่นต้อง `.view`) · QR ผูก session open/closed + กันเช็คซ้ำ · enrichment batched (ไม่ N+1) · มีเทสต์ `SchoolAttendanceRosterScopeTest` (5 เคส: enrich/remark/scope)
+
+🔑 **แก้ความเข้าใจสำคัญ:** เมนูนี้ใช้คีย์ **`school_attendance.*`** ไม่ใช่ `attendance.*` (OVERVIEW เขียนไว้คลาด) · `attendance.*` = เช็คชื่อรายคาบ (course · คนละโดเมน #12/#19) · `staff-attendance` = ลงเวลาบุคลากร (#14) · activity attendance = #26
+
+**gap เล็ก (ไม่มี P0):**
+- G1 (P2 integrity) `storeRecords` validate `student_id => exists:users,id` (user ใดก็ได้) ไม่ผูก academy → ผู้ถือ `.manage` ใส่ record อ้าง user id มั่วได้ (จำกัดในคาบโรงเรียนตัวเอง)
+- G2 (P2 FE) nav `admin.vue:180` gate `can('attendance.view')||can('academy.view')` ผิดคีย์ → ควร `school_attendance.view/manage` (backend gate แล้ว เป็น UX)
+- G3 (P3 test) ไม่มีเทสต์ authz/data-depth (403 non-member · own-only · write ต้อง manage · history)
+
+แตกเป็น AT-S1 (G1 scope student_id) · AT-S2 (G2 แก้ nav 1 บรรทัด) · AT-S3 (G3 เทสต์) · AT-S4 (export รายงาน — optional) · **ยังไม่ส่ง step — รอเจ้าของเคาะ Q1–Q3**
+
+---
+
 ## 🔍 2026-10-11 — เมนู #17 เยี่ยมบ้าน: audit เสร็จ (ขั้น [1]+[2]) — รอเจ้าของเคาะ Q
 
 **branch:** `claude/funny-meitner-06is0f` · ไฟล์รอง: [`.agents/school-admin/17-home-visits.md`](school-admin/17-home-visits.md)
