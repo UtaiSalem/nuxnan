@@ -51,7 +51,8 @@ class EnrollmentPolicy
     /**
      * Determine whether the user can manage the per-student enrollment lifecycle
      * (graduate/drop/repeat/promote/transfer) for a given student in an academy.
-     * Allowed: Academy admins, directors, owners, OR the student's active homeroom teacher.
+     * Allowed: Academy admins, directors, owners, members holding students.manage,
+     * OR the student's active homeroom teacher.
      */
     public function lifecycle(User $user, Academy $academy, Student $student): bool
     {
@@ -64,7 +65,13 @@ class EnrollmentPolicy
             return true;
         }
 
-        // 2. Homeroom teacher of the student's active classroom can also perform operations
+        // 2. Member holding students.manage (e.g. a registrar role) — consistent with
+        //    intake/import which already honor this permission (G1 fix, ST15-S1)
+        if ($this->memberHasPermission($user, $academy, ['students.manage'])) {
+            return true;
+        }
+
+        // 3. Homeroom teacher of the student's active classroom can also perform operations
         return ClassroomStudent::where('student_id', $student->id)
             ->where('status', ClassroomStudent::STATUS_ACTIVE)
             ->whereHas('classroom', function ($q) use ($user) {
@@ -123,6 +130,18 @@ class EnrollmentPolicy
     }
 
     // === Authorization Helpers ===
+
+    /** สมาชิกที่อนุมัติของโรงเรียน ถือสิทธิ์ใด ๆ ในรายการหรือไม่ (ผ่าน academy_role.permissions) */
+    protected function memberHasPermission(User $user, Academy $academy, array $permissions): bool
+    {
+        return AcademyMember::query()
+            ->where('user_id', $user->id)
+            ->where('academy_id', $academy->id)
+            ->where('status', 2)
+            ->with('academyRole')
+            ->first()
+            ?->hasAnyPermission($permissions) ?? false;
+    }
 
     protected function isAcademyAdmin(User $user, Academy $academy): bool
     {

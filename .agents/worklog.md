@@ -130,6 +130,98 @@ production ยังไม่ได้รัน migration บางชุด (�
 
 แตกงาน SCD-S1 (import)✅ · S2 (export)✅ · S3 (G2)✅ · S4 (ลบ legacy)🔴blocked · S6 (เทสต์) · S7 (จอจริง)
 
+## 2026-10-11 — Economy admin: หน้า Points จริง · มอบแต้ม · Blacklist ระงับแต้ม/Wallet · audit log · test
+
+### สถานะ: 🟢 เข้า `main` ครบ (PR #18–#22 squash-merged) · เหลือเจ้าของรัน migration + test บน dev
+
+ลำดับงาน (ทำทีละ PR ตามที่เจ้าของสั่ง merge ทีละตัว):
+
+- **#18 หน้า `/nuxnan-admin/points` ใช้งานจริง** — เดิมเป็นเปลือก UI + mock ล้วน
+  - สาเหตุที่พัง: route `GET /api/admin/points-transactions` eager-load `targetUser` ที่ไม่มีในโมเดล → 500 → FE ตก catch โชว์ mock เสมอ · ตาราง map field ผิด schema
+  - แก้ BE (`routes/admin/admin.php`): ลบ `targetUser` · เพิ่ม filter type/status/search(user)/user_id · คืน `summary` จริง
+  - แก้ FE: ลบ mock + ตัวเลขฮาร์ดโค้ด · map field ตรง schema (`transaction_type/amount/description/status/created_at/user`) · filter + ค้นหา debounce + pagination · mobile-first
+  - summary earned/spent: คิดทิศทางจาก **balance delta** (`balance_after` vs `before`) จึงนับ `admin_adjust`/`conversion` ถูก · นับเฉพาะ `status=completed`
+
+- **#19 เพิ่มเมนู "ธุรกรรมทั้งหมด"** ใน `NuxnanAdminLayout.vue` (href `/nuxnan-admin/transactions` ซึ่งมีหน้าอยู่แล้วแต่ไม่มีลิงก์)
+
+- **#20 มอบ Points + ระบบ Blacklist (กันทุจริต)** — แช่แข็งเศรษฐกิจบัญชี แต่ยังเรียนได้
+  - migration: เพิ่มคอลัมน์ users `points_suspended` · `wallet_suspended` · `economy_suspended_reason` · `economy_suspended_at` · `economy_suspended_by`
+  - `AccountEconomyRestrictedException` + render JSON 403 ใน `bootstrap/app.php` · User model `pointsFrozen()`/`walletFrozen()` + relation `economySuspendedBy()`
+  - **บังคับใช้ที่ service chokepoint** (ครอบทุก caller รวมงานเบื้องหลัง ~30 จุดที่เรียก `earn()`):
+    - `PointsService`: earn → ข้าม+log `cancelled` · awardGoverned/awardByRule → null · spend/transfer/convertPointsToWallet → throw
+    - `WalletService`: deposit/withdraw/transfer/deductForPurchase/convertWalletToPoints/purchaseCourse → throw เมื่อ wallet_suspended
+    - `adminAdjust` + `refund` ไม่ถูกบล็อก (admin/system corrective)
+  - Admin API (`/api/admin`): `POST users/{id}/award-points` (ผ่าน adminAdjust) · `suspend-economy` · `restore-economy` · `GET economy-suspensions`
+  - FE: modal "มอบ Points" ในหน้า points · แผงระงับ/ปลดระงับในหน้า user detail · หน้า `/nuxnan-admin/blacklist` + เมนู sidebar · `EconomySuspendedBanner` บนหน้า Earn/Points + Earn/Wallet
+  - หมายเหตุ: controller เดิม catch `\Exception` คืน `$e->getMessage()` 400 → ผู้ใช้เห็นข้อความไทยชัดเจน (บล็อกก่อนเขียน DB ไม่มี partial write)
+
+- **#21 audit log แยกสำหรับการระงับบัญชี** (ใช้รูปแบบเดียวกับ `AdminUserDeletionAudit`)
+  - model + migration `account_suspension_audits` (user_id/email snapshot · action suspend|restore · points/wallet flags · reason · performed_by · ip · user_agent)
+  - เขียน audit ใน suspend/restore · `GET /api/admin/suspension-audits` (รวม) · `GET /api/admin/users/{id}/suspension-audits` (รายคน)
+  - FE: หน้า `/nuxnan-admin/blacklist/audit` (ลิงก์ปุ่ม "ประวัติ") · ส่วน "ประวัติการระงับ" ในหน้า user detail
+
+- **#22 feature test** `tests/Feature/AccountSuspensionTest.php` — ครอบ enforcement: earn ถูกบล็อก+cancelled · spend/transfer/convert/withdraw/deduct throw · บัญชีปกติยังทำงาน · helper · audit model
+
+### ⏳ เหลือเจ้าของทำบน dev (owner-gated — รันในคลาวด์คอนเทนเนอร์ไม่ได้: ไม่มี vendor/node_modules · composer install ติด proxy)
+- `php artisan migrate` (สร้างคอลัมน์ suspension #20 + ตาราง `account_suspension_audits` #21)
+- `php artisan test --filter=AccountSuspensionTest` (+ `-c phpunit.mysql.xml` ตาม G26) · `./vendor/bin/pint`
+- ทดสอบด้วยมือ: endpoint suspend/restore (ขึ้นกับ role/permission seeding · test อัตโนมัติไม่ครอบ) · แบนเนอร์ฝั่งผู้ใช้ · ยืนยันเข้าเรียนได้ปกติ
+
+---
+
+## 2026-10-09 — เมนู #15 ทะเบียนนักเรียน: audit (ขั้น [1]+[2]) · เมนูสุก/เทสต์ครบ — ต่างจาก #12–#14
+
+### สถานะ: 🟢 audit เสร็จ · ไฟล์รอง `.agents/school-admin/15-students.md` · รอเจ้าของเคาะ Q1–Q4 (หลายข้ออาจปิด by-design)
+(ต่อจากลำดับ loop #12 → #13 → #14 บุคลากร → **#15 ทะเบียนนักเรียน**)
+
+### สแกนแล้ว
+- FE `admin/students/{index,import,intake,import-history}.vue` + `StudentDataTable` (595) + `useStudentEnrollmentActions`/`useStudentAccountService`
+- BE `StudentIntakeController` · `StudentImportController` · `StudentLifecycleController` · `StudentAccountController` · Master `StudentController`+6 ตัวย่อย
+- authz เป็นระบบ: `EnrollmentPolicy`(intake/import/lifecycle) + Gate + FormRequest::authorize + `scopeBindings()` tenant · route read ติด `students.view`/`students.export`
+- **เทสต์ครบ** (Lifecycle/Import/Intake/EnrollmentPolicy/StudentMaster/RosterImport/EnrollmentAudit...) · stats คืน `{stats:{...}}` ตรง FE
+
+### Gap (เล็ก/ไม่สอดคล้อง — ไม่ใช่ P0)
+- **G1 (หลัก)** `EnrollmentPolicy::isAcademyAdmin` เช็คแค่ `member.role∈{admin,director}`(+owner) ไม่อ่าน academy_role.permissions ⇒ custom role ถือ `students.manage` intake/import ได้ (ผ่าน hasAnyPermission) แต่ lifecycle (promote/graduate/drop/transfer) **ไม่ได้** — inconsistent
+- **G2** enrollment-history v1 (`groups.view`) ซ้ำ v2 (`enrollment.lifecycle`) · FE ใช้ v2 · v1 อาจ dead
+- **G3** permission แยกสองทาง (middleware `userCan`→role.permissions vs policy `member.role`+hasAnyPermission) เสี่ยง drift
+- **G4** registry ไม่มี edit/delete ตรง — แก้ผ่าน change-request flow · เอาออกผ่าน lifecycle (ยืนยันดีไซน์)
+
+### 🎯 เมนู #15 ปิดครบทุก gap (G1–G5) — เหลือเจ้าของ verify MySQL เท่านั้น
+- **Q4 เคาะแล้ว 2026-10-10** (by-design): change-request flow (แก้ข้อมูลนักเรียน = ขอ→อนุมัติ) เป็นดีไซน์ที่ต้องการ · ปิด G4 ไม่ต้องแก้โค้ด
+- **ST15-S3 เสร็จ 2026-10-10** (เจ้าของเคาะ: แก้ G5 align authz): `StudentMasterProfilePolicy::view`(students.view/manage) · `update`/`approveRequests`(students.manage) ผ่าน helper `memberHasPermission` · `StudentProfileController::checkAccess()` manage→admin(เลขบัตรเต็ม) view→teacher(masked) · guardians คง guardians.* · เทสต์ `StudentMasterPolicyTest` +2 · php -l ผ่าน
+- **เหลือเจ้าของรัน MySQL:** `--filter=EnrollmentPolicyTest` (G1) + `--filter=StudentMasterPolicyTest` (G5) + `--filter=StaffAuthzTest` (#14) + pint
+- **ST15-S2 เสร็จ 2026-10-10** (เจ้าของเคาะ Q2 = ลบ v1): ลบ route `enrollment-history` v1 (`groups.view`) + method `ClassroomController::getStudentEnrollmentHistory` ที่ตายแล้ว · ยืนยัน FE ใช้ v2 เท่านั้น · ไม่มี test/caller อื่น · php -l ผ่าน
+- **Q3 เคาะแล้ว 2026-10-10** (Master profile = ส่วนหนึ่งของ #15): audit 8 controller (~2,100 บรรทัด) + route `student-profile.php` ที่มีแค่ `auth:api` → **guard ครบทุก method ไม่มีรูรั่ว PII** (profile=checkAccess · sections=authorize('update') · guardians=guardians.* · change-req=approveRequests · home-visit=abort_unless) · เจอ **G5**: profile view/update/approveRequests + checkAccess ยึด member.role ไม่รับ `students.view/manage` (เหมือน G1 แต่คุม PII) → รอเจ้าของเคาะว่าจะ align แบบ Q1 ไหม
+- **ST15-S1 เสร็จ 2026-10-10** (เจ้าของเคาะ Q1 = แก้ G1): `EnrollmentPolicy::lifecycle()` เพิ่มด่าน `memberHasPermission(...,['students.manage'])` (อ่าน academy_role.permissions แบบเดียวกับ intake/import) ⇒ custom role นายทะเบียนทำ promote/graduate/drop/repeat/transfer ได้ · ไม่แตะ rollover commit/undo · เทสต์ `EnrollmentPolicyTest` +2 (manage ได้ · view อย่างเดียวไม่ได้) · php -l ผ่าน · เหลือเจ้าของรัน MySQL + pint
+
+---
+
+## 2026-10-07 — เมนู #14 บุคลากร: audit (ขั้น [1]+[2]) · โมดูลพังหลายชั้น "สร้างไว้แต่ไม่เคยต่อ backend จริง"
+
+### สถานะ: 🔴 audit เสร็จ · ไฟล์รอง `.agents/school-admin/14-staff.md` · รอเจ้าของเคาะ Q1–Q5 ก่อน ST-S1
+(ต่อจากลำดับ loop #12 คอร์ส → #13 หลักสูตร → **#14 บุคลากร**)
+
+### สแกนแล้ว (ยิง schema/route/model จริง)
+- FE `staff.vue` (738 บรรทัด) · BE `StaffController` (439) · route `academy.php:767–824` · migration `2026_02_04_100003_create_staff_system_tables.php`
+- ต่างจาก #13 (ฟีเจอร์ครบ เหลือ authz) — **#14 พังตั้งแต่ contract FE↔BE จนถึง schema-drift** คล้าย Expense เมนู #8
+
+### 🔴 Gap (รายละเอียดครบในไฟล์รอง)
+- **FE contract:** F1 gate `isAdmin` แต่เมนูโชว์เมื่อ `staff.view` (เด้งออก · G21 ซ้ำ) · F2 list อ่าน paginator เป็น array · F3 summary อ่านผิดชั้น (การ์ด 0) · F4 query ไม่เข้า URL (กรอง/แบ่งหน้าตาย) · F5 create ส่ง `employee_type`/`department` free-text + ไม่ส่ง first_name/last_name NOT NULL (พังถาวร) · F6 PUT ชน PATCH 405 · F7 ปุ่มเปลี่ยนสถานะไม่มี · F8 ไม่มี UI สร้างตำแหน่งแต่ create บังคับ position (dead-end)
+- **BE schema-drift:** B1 scope `byStatus`/`byType` ไม่มี → 500 · B2 `show()` โหลด `supervisor` ไม่มี relationship → 500 · B3 store validate 6 ฟิลด์ไม่มีคอลัมน์ + ไม่เก็บ first_name/last_name · B4 updateStatus เขียน `termination_*` (จริงคือ `resignation_*`) → 500 · B6 position `requirements`/`code` unique global
+- **Security/Test:** B7 write ทุกเส้นใช้แค่ `staff.view` (ควรแยก `staff.manage`) · B8 ไม่มีเทสต์
+
+### เคาะ Q1–Q5 แล้ว → ST-S1–S6 โค้ด/เทสต์เสร็จครบ (2026-10-07)
+เจ้าของเคาะ: Q1 ชื่อ/รูปจาก user (first/last nullable) · Q2 ทะเบียน+ตำแหน่งล้วน · Q3 write=`staff.manage` read=`staff.view` เปิดหน้าให้ staff.view · Q4 ฝ่าย=`department_id` · Q5 enum ยืนยัน
+- **ST-S1** routes `academy.php` แยกสิทธิ์รายเส้น (read=staff.view 5 · write=staff.manage 7 · กลุ่มเหลือแค่ visibility ตามบทเรียน SM-S1) + `staff.vue` เปิดหน้าให้ `staff.view` · ปุ่มจัดการ gate ด้วย `canManage`
+- **ST-S2** `StaffController` ซ่อม scope (byStatus/byType) · ตัด supervisor · store/update ตรง schema จริง (scoped `Rule::exists` ต่อโรงเรียน · user_id unique/โรงเรียน) · updateStatus→resignation_* · position requirements ตัด + code unique/โรงเรียน · เพิ่ม `departments()` + staff_count · **migration** first_name/last_name nullable
+- **ST-S3** `staff.vue` ซ่อม contract: list อ่าน paginator · summary อ่าน by_status · query ใน URL · payload employment_type/department_id · PUT→PATCH · err.data (shape จริงของ useApi)
+- **ST-S4** modal ตำแหน่งมี CRUD เต็ม (สร้าง/แก้/ลบ) + empty-state ชี้สร้างตำแหน่งก่อน
+- **ST-S5** สถานะเป็น inline select (manage) เรียก updateStatus · badge 5 สี (view)
+- **ST-S6** `StaffAuthzTest.php` 14 เคส (authz view/manage split · tenant 403/404 · resigned ตั้ง resignation_date · create ไม่ต้องมี first_name)
+- หลักฐานที่รันเอง: `php -l` ผ่านทุกไฟล์ backend · SFC balanced · ไม่มี ref เก่าค้าง (employee_type/err.response = 0) · **vendor+node_modules ไม่มีใน container** ⇒ เหลือเจ้าของรัน migrate + `test -c phpunit.mysql.xml --filter=StaffAuthzTest` + pint + `npm run build`
+- PR: UtaiSalem/nuxnan#32 (branch `claude/gallant-hopper-iux8ft`)
+- **2026-10-10 fix หลังเจ้าของรันเทสต์ MySQL (4 failed):** `Class App\Models\Department not found` — ตาราง `departments` ถูกอ้าง FK แต่ไม่มี model/migration (G25) → เติม `Department` model กัน 500 (`3079861`) แล้ว **ST-S7** เจ้าของเคาะเลือก B: ฝ่าย = `AcademyGroup`(type=department เมนู #9) ไม่ใช่ orphan `departments` → migration ถอด FK · relation/validation/endpoint ชี้ academy_groups · ลบ Department model · StaffAuthzTest 17 เคส · เหลือเจ้าของ migrate + test MySQL
+
 ---
 
 ## 2026-10-07 — เมนู #13 หลักสูตร: audit (ขั้น [1]+[2]) · ฟีเจอร์ครบ แต่เจอช่องโหว่สิทธิ์ P0

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Academy;
 use App\Models\AcademyMember;
+use App\Models\AcademyRole;
 use App\Models\Student;
 use App\Models\User;
 use App\Policies\StudentMasterProfilePolicy;
@@ -114,5 +115,71 @@ class StudentMasterPolicyTest extends TestCase
         $this->assertTrue($policy->view($teacher, $student));
         $this->assertFalse($policy->update($teacher, $student));
         $this->assertFalse($policy->approveRequests($teacher, $academy->id));
+    }
+
+    /** custom role ที่ถือ students.manage ทำได้ครบ (G5 align, ST15-S3) */
+    public function test_registrar_with_students_manage_can_view_update_approve()
+    {
+        $owner = $this->makeUser('o');
+        $registrar = $this->makeUser('reg');
+        $academy = Academy::create(['name' => 'A', 'user_id' => $owner->id]);
+        $role = AcademyRole::create([
+            'academy_id' => $academy->id,
+            'name' => 'registrar-'.uniqid(),
+            'display_name_th' => 'นายทะเบียน',
+            'permissions' => ['students.manage'],
+        ]);
+        AcademyMember::create([
+            'user_id' => $registrar->id,
+            'academy_id' => $academy->id,
+            'academy_role_id' => $role->id,
+            'status' => 2,
+        ]);
+        $student = Student::create([
+            'academy_id' => $academy->id,
+            'user_id' => $owner->id,
+            'student_id' => 'S5',
+            'citizen_id' => '5234567890123',
+            'first_name_th' => 'a',
+            'last_name_th' => 'b',
+        ]);
+
+        $policy = new StudentMasterProfilePolicy;
+        $this->assertTrue($policy->view($registrar, $student));
+        $this->assertTrue($policy->update($registrar, $student));
+        $this->assertTrue($policy->approveRequests($registrar, $academy->id));
+    }
+
+    /** custom role ที่ถือ students.view อย่างเดียว ดูได้ แต่แก้/อนุมัติไม่ได้ (G5 align, ST15-S3) */
+    public function test_registrar_with_students_view_can_view_but_not_update_or_approve()
+    {
+        $owner = $this->makeUser('o');
+        $viewer = $this->makeUser('vw');
+        $academy = Academy::create(['name' => 'A', 'user_id' => $owner->id]);
+        $role = AcademyRole::create([
+            'academy_id' => $academy->id,
+            'name' => 'viewer-'.uniqid(),
+            'display_name_th' => 'ผู้ดูทะเบียน',
+            'permissions' => ['students.view'],
+        ]);
+        AcademyMember::create([
+            'user_id' => $viewer->id,
+            'academy_id' => $academy->id,
+            'academy_role_id' => $role->id,
+            'status' => 2,
+        ]);
+        $student = Student::create([
+            'academy_id' => $academy->id,
+            'user_id' => $owner->id,
+            'student_id' => 'S6',
+            'citizen_id' => '6234567890123',
+            'first_name_th' => 'a',
+            'last_name_th' => 'b',
+        ]);
+
+        $policy = new StudentMasterProfilePolicy;
+        $this->assertTrue($policy->view($viewer, $student));
+        $this->assertFalse($policy->update($viewer, $student));
+        $this->assertFalse($policy->approveRequests($viewer, $academy->id));
     }
 }

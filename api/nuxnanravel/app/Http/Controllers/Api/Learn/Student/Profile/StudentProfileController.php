@@ -410,6 +410,11 @@ class StudentProfileController extends Controller
             return 'admin';
         }
 
+        // 4b. Registrar-style role holding students.manage — full access (G5 align, ST15-S3)
+        if ($academyMember->hasAnyPermission(['students.manage'])) {
+            return 'admin';
+        }
+
         // 5. Check if teacher is homeroom teacher/co-teacher of student's classroom
         if (in_array($academyMember->role, ['teacher', 'co_teacher'])) {
             if (ClassroomMember::isHomeroomStaffOf($user->id, $student)) {
@@ -427,6 +432,11 @@ class StudentProfileController extends Controller
         // 7. Regular academy member (student role) - limited access
         if ($academyMember->role === 'student') {
             return null;
+        }
+
+        // 8. Registrar-style role holding students.view — staff-level view (masked PII) (G5, ST15-S3)
+        if ($academyMember->hasAnyPermission(['students.view'])) {
+            return 'teacher';
         }
 
         return null;

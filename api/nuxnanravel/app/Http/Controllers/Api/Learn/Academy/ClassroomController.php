@@ -621,26 +621,6 @@ class ClassroomController extends Controller
     }
 
     /**
-     * Get enrollment history for a student
-     */
-    public function getStudentEnrollmentHistory(int $academyId, int $studentId): JsonResponse
-    {
-        $academy = Academy::findOrFail($academyId);
-
-        if (! $this->canView($academy)) {
-            return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
-        }
-
-        $student = Student::where('academy_id', $academyId)->findOrFail($studentId);
-        $history = $this->enrollmentService->getStudentHistory($student);
-
-        return response()->json([
-            'success' => true,
-            'data' => $history,
-        ]);
-    }
-
-    /**
      * Promote all students from one classroom to another (new academic year)
      */
     public function promoteClassroom(Request $request, int $academyId): JsonResponse

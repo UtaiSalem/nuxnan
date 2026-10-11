@@ -45,7 +45,8 @@ class Position extends Model
 
     public function department(): BelongsTo
     {
-        return $this->belongsTo(Department::class);
+        // ฝ่าย = academy_groups (type=department) ของเมนู #9 (ST-S7) · department_id ชี้ academy_groups.id
+        return $this->belongsTo(AcademyGroup::class, 'department_id');
     }
 
     public function staffProfiles(): HasMany

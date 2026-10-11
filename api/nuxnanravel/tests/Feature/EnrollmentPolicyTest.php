@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AcademicYear;
 use App\Models\Academy;
 use App\Models\AcademyMember;
+use App\Models\AcademyRole;
 use App\Models\Classroom;
 use App\Models\ClassroomStudent;
 use App\Models\RolloverBatch;
@@ -106,6 +107,46 @@ class EnrollmentPolicyTest extends TestCase
         ]);
 
         $this->assertTrue(Gate::forUser($directorUser)->allows('enrollment.lifecycle', [$this->academy, $this->student]));
+    }
+
+    public function test_member_with_students_manage_can_manage_enrollment_lifecycle(): void
+    {
+        // custom role (เช่น นายทะเบียน) ที่ไม่ใช่ admin/director และไม่ใช่ครูประจำชั้น
+        // แต่ถือ students.manage ต้องทำ lifecycle ได้ (G1 fix, ST15-S1 — สอดคล้องกับ intake/import)
+        $registrarRole = AcademyRole::create([
+            'academy_id' => $this->academy->id,
+            'name' => 'registrar-'.uniqid(),
+            'display_name_th' => 'นายทะเบียน',
+            'permissions' => ['students.manage'],
+        ]);
+        $registrar = User::factory()->create();
+        AcademyMember::create([
+            'academy_id' => $this->academy->id,
+            'user_id' => $registrar->id,
+            'academy_role_id' => $registrarRole->id,
+            'status' => 2,
+        ]);
+
+        $this->assertTrue(Gate::forUser($registrar)->allows('enrollment.lifecycle', [$this->academy, $this->student]));
+    }
+
+    public function test_member_with_only_students_view_cannot_manage_enrollment_lifecycle(): void
+    {
+        $viewerRole = AcademyRole::create([
+            'academy_id' => $this->academy->id,
+            'name' => 'viewer-'.uniqid(),
+            'display_name_th' => 'ผู้ดูทะเบียน',
+            'permissions' => ['students.view'],
+        ]);
+        $viewer = User::factory()->create();
+        AcademyMember::create([
+            'academy_id' => $this->academy->id,
+            'user_id' => $viewer->id,
+            'academy_role_id' => $viewerRole->id,
+            'status' => 2,
+        ]);
+
+        $this->assertFalse(Gate::forUser($viewer)->allows('enrollment.lifecycle', [$this->academy, $this->student]));
     }
 
     public function test_homeroom_teacher_can_manage_lifecycle_of_their_active_student(): void
