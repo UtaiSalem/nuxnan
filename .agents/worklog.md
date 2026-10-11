@@ -57,6 +57,45 @@ production ยังไม่ได้รัน migration บางชุด (�
 
 ---
 
+## 2026-10-11 — Economy admin: หน้า Points จริง · มอบแต้ม · Blacklist ระงับแต้ม/Wallet · audit log · test
+
+### สถานะ: 🟢 เข้า `main` ครบ (PR #18–#22 squash-merged) · เหลือเจ้าของรัน migration + test บน dev
+
+ลำดับงาน (ทำทีละ PR ตามที่เจ้าของสั่ง merge ทีละตัว):
+
+- **#18 หน้า `/nuxnan-admin/points` ใช้งานจริง** — เดิมเป็นเปลือก UI + mock ล้วน
+  - สาเหตุที่พัง: route `GET /api/admin/points-transactions` eager-load `targetUser` ที่ไม่มีในโมเดล → 500 → FE ตก catch โชว์ mock เสมอ · ตาราง map field ผิด schema
+  - แก้ BE (`routes/admin/admin.php`): ลบ `targetUser` · เพิ่ม filter type/status/search(user)/user_id · คืน `summary` จริง
+  - แก้ FE: ลบ mock + ตัวเลขฮาร์ดโค้ด · map field ตรง schema (`transaction_type/amount/description/status/created_at/user`) · filter + ค้นหา debounce + pagination · mobile-first
+  - summary earned/spent: คิดทิศทางจาก **balance delta** (`balance_after` vs `before`) จึงนับ `admin_adjust`/`conversion` ถูก · นับเฉพาะ `status=completed`
+
+- **#19 เพิ่มเมนู "ธุรกรรมทั้งหมด"** ใน `NuxnanAdminLayout.vue` (href `/nuxnan-admin/transactions` ซึ่งมีหน้าอยู่แล้วแต่ไม่มีลิงก์)
+
+- **#20 มอบ Points + ระบบ Blacklist (กันทุจริต)** — แช่แข็งเศรษฐกิจบัญชี แต่ยังเรียนได้
+  - migration: เพิ่มคอลัมน์ users `points_suspended` · `wallet_suspended` · `economy_suspended_reason` · `economy_suspended_at` · `economy_suspended_by`
+  - `AccountEconomyRestrictedException` + render JSON 403 ใน `bootstrap/app.php` · User model `pointsFrozen()`/`walletFrozen()` + relation `economySuspendedBy()`
+  - **บังคับใช้ที่ service chokepoint** (ครอบทุก caller รวมงานเบื้องหลัง ~30 จุดที่เรียก `earn()`):
+    - `PointsService`: earn → ข้าม+log `cancelled` · awardGoverned/awardByRule → null · spend/transfer/convertPointsToWallet → throw
+    - `WalletService`: deposit/withdraw/transfer/deductForPurchase/convertWalletToPoints/purchaseCourse → throw เมื่อ wallet_suspended
+    - `adminAdjust` + `refund` ไม่ถูกบล็อก (admin/system corrective)
+  - Admin API (`/api/admin`): `POST users/{id}/award-points` (ผ่าน adminAdjust) · `suspend-economy` · `restore-economy` · `GET economy-suspensions`
+  - FE: modal "มอบ Points" ในหน้า points · แผงระงับ/ปลดระงับในหน้า user detail · หน้า `/nuxnan-admin/blacklist` + เมนู sidebar · `EconomySuspendedBanner` บนหน้า Earn/Points + Earn/Wallet
+  - หมายเหตุ: controller เดิม catch `\Exception` คืน `$e->getMessage()` 400 → ผู้ใช้เห็นข้อความไทยชัดเจน (บล็อกก่อนเขียน DB ไม่มี partial write)
+
+- **#21 audit log แยกสำหรับการระงับบัญชี** (ใช้รูปแบบเดียวกับ `AdminUserDeletionAudit`)
+  - model + migration `account_suspension_audits` (user_id/email snapshot · action suspend|restore · points/wallet flags · reason · performed_by · ip · user_agent)
+  - เขียน audit ใน suspend/restore · `GET /api/admin/suspension-audits` (รวม) · `GET /api/admin/users/{id}/suspension-audits` (รายคน)
+  - FE: หน้า `/nuxnan-admin/blacklist/audit` (ลิงก์ปุ่ม "ประวัติ") · ส่วน "ประวัติการระงับ" ในหน้า user detail
+
+- **#22 feature test** `tests/Feature/AccountSuspensionTest.php` — ครอบ enforcement: earn ถูกบล็อก+cancelled · spend/transfer/convert/withdraw/deduct throw · บัญชีปกติยังทำงาน · helper · audit model
+
+### ⏳ เหลือเจ้าของทำบน dev (owner-gated — รันในคลาวด์คอนเทนเนอร์ไม่ได้: ไม่มี vendor/node_modules · composer install ติด proxy)
+- `php artisan migrate` (สร้างคอลัมน์ suspension #20 + ตาราง `account_suspension_audits` #21)
+- `php artisan test --filter=AccountSuspensionTest` (+ `-c phpunit.mysql.xml` ตาม G26) · `./vendor/bin/pint`
+- ทดสอบด้วยมือ: endpoint suspend/restore (ขึ้นกับ role/permission seeding · test อัตโนมัติไม่ครอบ) · แบนเนอร์ฝั่งผู้ใช้ · ยืนยันเข้าเรียนได้ปกติ
+
+---
+
 ## 2026-10-09 — เมนู #15 ทะเบียนนักเรียน: audit (ขั้น [1]+[2]) · เมนูสุก/เทสต์ครบ — ต่างจาก #12–#14
 
 ### สถานะ: 🟢 audit เสร็จ · ไฟล์รอง `.agents/school-admin/15-students.md` · รอเจ้าของเคาะ Q1–Q4 (หลายข้ออาจปิด by-design)
