@@ -11,6 +11,8 @@ use App\Models\Student;
 use App\Models\StudentHomeVisit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AdminControllerTest extends TestCase
@@ -502,6 +504,56 @@ class AdminControllerTest extends TestCase
         $this->actingAs($admin, 'api')
             ->getJson('/api/home-visit/admin/visits')
             ->assertNotFound();
+    }
+
+    public function test_admin_visit_stores_participants_and_images_then_update_replaces_and_deletes(): void
+    {
+        Storage::fake('public');
+        [$admin, $academy, $student] = $this->setupAcademy('hv_s4');
+
+        // สร้าง: participants 2 คน + รูป 1 ใบ (multipart)
+        $created = $this->actingAs($admin, 'api')
+            ->post("/api/academies/{$academy->id}/home-visits/admin/visits", [
+                'student_id' => $student->id,
+                'visit_date' => '2026-07-09',
+                'status' => 'completed',
+                'participants' => [
+                    ['participant_name' => 'ครูประจำชั้น', 'notes' => 'หัวหน้าทีม'],
+                    ['participant_name' => 'ครูแนะแนว'],
+                ],
+                'images' => [UploadedFile::fake()->image('evidence.jpg')],
+            ])
+            ->assertCreated()
+            ->assertJsonCount(2, 'visit.participants')
+            ->assertJsonCount(1, 'visit.images');
+
+        $visitId = $created->json('visit.id');
+        $imageId = $created->json('visit.images.0.id');
+        $imagePath = $created->json('visit.images.0.image_path');
+
+        $this->assertDatabaseHas('home_visit_participants', ['home_visit_id' => $visitId, 'participant_name' => 'ครูประจำชั้น']);
+        Storage::disk('public')->assertExists($imagePath);
+
+        // แก้ไข: participants แทนที่ทั้งชุด (เหลือ 1) + ลบรูปเดิม + เพิ่มรูปใหม่ 1
+        $this->actingAs($admin, 'api')
+            ->post("/api/academies/{$academy->id}/home-visits/admin/visits/{$visitId}", [
+                '_method' => 'PUT',
+                'visit_date' => '2026-07-10',
+                'status' => 'completed',
+                'participants' => [
+                    ['participant_name' => 'ผู้อำนวยการ'],
+                ],
+                'images' => [UploadedFile::fake()->image('evidence2.jpg')],
+                'images_to_delete' => [$imageId],
+            ])
+            ->assertOk()
+            ->assertJsonCount(1, 'visit.participants')
+            ->assertJsonPath('visit.participants.0.participant_name', 'ผู้อำนวยการ')
+            ->assertJsonCount(1, 'visit.images');
+
+        $this->assertDatabaseMissing('home_visit_images', ['id' => $imageId]);
+        $this->assertDatabaseMissing('home_visit_participants', ['home_visit_id' => $visitId, 'participant_name' => 'ครูประจำชั้น']);
+        Storage::disk('public')->assertMissing($imagePath);
     }
 
     private function setupAcademy(string $tag): array

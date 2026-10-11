@@ -32,7 +32,14 @@ cloud session นี้ **ไม่มี composer vendor/agy** → Claude เ�
 - **✅ HV-S2 (G4)** root `/`+`/dashboard`+`/statistics` ยกเข้าใต้ `academy.permission:home_visits.view` (ไม่มีเทสต์ยิง root · `index.vue` guard `can('home_visits.view')` อยู่แล้ว)
 - **✅ HV-S3 (G7)** `Master/HomeVisitController` accessLevel/isStaff/canManage เพิ่ม `userCan('home_visits.*')` (status=2 canonical) แบบ OR + เทสต์ `test_custom_role_with_home_visits_manage_...` · เจอ **G10** (ระบบ A ใช้ `status=1` แต่ canonical=`STATUS_APPROVED=2` — ปิดเลี่ยงด้วย userCan แล้ว · ล้างทั้ง controller+test ยกให้เจ้าของรันบน MySQL)
 
-**ยังเปิดช่องโหว่อยู่จนจบ HV-S5/S6:** legacy `routes/homevisit/homevisit.php` (require ใน `api.php:248` ไม่มี middleware) + รหัสฮาร์ดโค้ด `teacher/jsm1234`+`admin/jsm_admin2025` · HV-S1/S2/S3 ปิดเฉพาะฝั่ง academy flow + เสริม custom-role · **ยังต้อง HV-S4 (participants/รูป→B) → HV-S5 (migrate พอร์ทัล JWT) → HV-S6 (ลบ legacy หลังเจ้าของยืนยันครูย้าย) → HV-S7**
+**ยังเปิดช่องโหว่อยู่จนจบ HV-S5/S6:** legacy `routes/homevisit/homevisit.php` (require ใน `api.php:248` ไม่มี middleware) + รหัสฮาร์ดโค้ด `teacher/jsm1234`+`admin/jsm_admin2025` · HV-S1/S2/S3 ปิดเฉพาะฝั่ง academy flow + เสริม custom-role
+
+### HV-S4 (ต่อ 2026-10-11) — ครูมีบัญชี nuxnan ครบแล้ว (ปลดล็อก HV-S5)
+
+**✅ HV-S4 (G9+G11)** `AdminController` (ระบบ B): `storeVisit`/`updateVisit` รับ `participants[]` + `images[]` (multipart) + `images_to_delete[]` · helper `syncParticipants` (ส่งมา=แทนที่ทั้งชุด · null=คงเดิม) + `handleImages` (ลบ scoped ต่อ visit + อัปโหลด disk public, `uploaded_by`=auth id) · `showVisit` โหลด participants/images/zone · `validateVisit` เพิ่มกติกาแบบ optional (contract JSON เดิมไม่พัง) · แก้ **G11** (`getAllVisitsForReports` eager-load คอลัมน์ผี `participant_position`/`participant_role`/`image_description` → dashboard เสี่ยง 500) · เทสต์ `test_admin_visit_stores_participants_and_images_...` (Storage::fake+UploadedFile::fake+PUT spoof) · `php -l` ผ่าน
+FE participants/image UI → รวมใน HV-S5 (teacher portal rebuild แตะหน้าจอชุดเดียวกัน)
+
+**เหลือ: HV-S5 (migrate พอร์ทัล `/home-visit`→JWT · ครูมีบัญชีครบ) → HV-S6 (ลบ legacy หลังเจ้าของยืนยันครูย้าย) → HV-S7**
 PR: UtaiSalem/nuxnan#39 (branch `claude/funny-meitner-06is0f`)
 
 ---

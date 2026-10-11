@@ -122,6 +122,9 @@ Permission keys ที่มีในระบบ (`AcademyPermission.php`): `ho
 - **G9 — participants/images ไม่มีทางเขียนที่ปลอดภัย**
   ฟีเจอร์ "ผู้ร่วมเยี่ยม" + "รูปหลักฐาน" เขียนได้ผ่านระบบ C (ที่จะถูกลบ) เท่านั้น · ระบบ A/B ยังไม่รองรับ multipart/participants ⇒ ถ้าลบ C ต้องย้ายความสามารถนี้มา B (หรือยืนยันว่าไม่ใช้)
 
+- **G11 — dashboard eager-load คอลัมน์ผี (เจอตอนลงมือ HV-S4)**
+  `getAllVisitsForReports()` (เรียกจาก `dashboard()`) `with(['participants:...,participant_position,participant_role', 'images:...,image_description'])` — 3 คอลัมน์นี้ไม่มีจริง (ตารางมีแค่ `participant_name,notes` / `description`) ⇒ dashboard มีโอกาส 500 (unknown column) เมื่อมีข้อมูล · **HV-S4 แก้ select ให้ตรงคอลัมน์จริงแล้ว**
+
 - **G10 — status drift ในระบบ A (เจอตอนลงมือ HV-S3)**
   `HomeVisitController` ค้นสมาชิกด้วย `->where('status', 1)` แต่ค่า canonical คือ `AcademyMember::STATUS_APPROVED = 2` (ใช้โดย `isApprovedMember`/`userCan`) ⇒ สมาชิกอนุมัติจริง (status=2) อาจไม่ถูกรู้จักผ่าน path role เดิม · เทสต์เดิมก็ seed `status=1` จึงเขียวทั้งที่ค่าผิด · **HV-S3 ปิดเลี่ยงด้วยการเพิ่ม path `userCan` (status=2) แบบ OR** (ไม่ถอด path เดิม — ไม่มีใครเสียสิทธิ์) · การล้าง `status=1`→`2` ทั้ง controller+เทสต์ให้ตรง canonical ต้องรันสวีตบน MySQL จึงยกให้เจ้าของ (ยังไม่แตะรอบนี้)
 
@@ -135,7 +138,7 @@ Permission keys ที่มีในระบบ (`AcademyPermission.php`): `ho
 | HV-S1 | **G1/G2:** ถอดกลุ่ม session เก่า (`auth/*`,`student/*`,`teacher/*`) ออกจาก `academy-home-visit.php` — ไม่มี FE ใช้ ชี้ controller ที่ด่าน comment ทิ้ง | — | route group หาย · เส้นที่เหลือติด `home_visits.view/manage` ครบ · `php -l` ผ่าน | 🟢 **done (owner verify MySQL)** |
 | HV-S2 | **G4:** ยก root `/` `/dashboard` `/statistics` เข้าใต้ `academy.permission:home_visits.view` | — | route gated · ไม่มีเทสต์ยิง root (ยืนยันแล้ว) | 🟢 **done (owner verify MySQL)** |
 | HV-S3 | **G7 (Q2):** `HomeVisitController` (ระบบ A) รับ `Academy::userCan('home_visits.view'/'.create'/'.manage')` แบบ OR ควบคู่ role (ปิดเลี่ยง G10 status drift ไปด้วย) | — | เพิ่ม userCan ใน accessLevel/isStaff/canManage + เทสต์ custom-role 1 เคส · `php -l` ผ่าน | 🟢 **done (owner verify MySQL)** |
-| HV-S4 | **G9 (Q3):** ระบบ B (admin flow) รับ participants + อัปโหลด/ลบรูปหลักฐาน (multipart) ให้ความสามารถที่เคยอยู่แค่ระบบ C ย้ายมาที่ปลอดภัย | — | endpoint/validation + เทสต์ · migration ไม่ต้อง (ตารางมีแล้ว) | ⚪ pending |
+| HV-S4 | **G9 (Q3):** ระบบ B (admin flow) รับ participants + อัปโหลด/ลบรูปหลักฐาน (multipart) ให้ความสามารถที่เคยอยู่แค่ระบบ C ย้ายมาที่ปลอดภัย | — | storeVisit/updateVisit/showVisit + validation + helpers + เทสต์ 1 เคส (fake upload) · fix G11 ด้วย · FE consumption → HV-S5 | 🟢 **BE done (owner verify MySQL)** |
 | HV-S5 | **Q1/G1/G3 (ใหญ่):** migrate พอร์ทัล `/home-visit` → **JWT บัญชีจริง** · S5a BE: teacher endpoints ปลอดภัย (scoped+`home_visits.create/manage`) แทน session TeacherController · S5b FE: rebuild `ui/pages/home-visit/` ใช้ auth แอป + เลือก academy + ยิง endpoint ใหม่ · S5c verify ครูทำได้ครบเท่าเดิม | S4 | พอร์ทัลใช้ JWT · ไม่มีการเรียก `/api/home-visit/*` เหลือ · build + จอ 375/768/1280 | ⚪ pending |
 | HV-S6 | **ลบ legacy (หลัง S5 verified + เจ้าของยืนยันครูย้ายแล้ว):** ลบ `routes/homevisit/homevisit.php` + `require` ใน `api.php` · ลบ `HomeVisitAuthController`,`TeacherController` + รหัสฮาร์ดโค้ด (G3) · ลบ/redirect `ui/pages/home-visit/` | S5 + เจ้าของยืนยัน | ไฟล์หาย · ไม่มี reference ค้าง · ยิงจริง `/api/home-visit/*` = 404 | ⚪ pending (blocked) |
 | HV-S7 | **G8:** ตัดสิน `home_visits.create` key (ครูสร้างผ่านหน้าแอดมินได้ไหม) + `reports()` stub · เทสต์รวม MySQL + จอจริง | S4–S6 | ตาม decision + สวีตเขียว | ⚪ pending |
@@ -158,3 +161,7 @@ Permission keys ที่มีในระบบ (`AcademyPermission.php`): `ho
   - S3: `HomeVisitController` accessLevel/isStaff/canManage เพิ่ม `userCan` (status=2 canonical) แบบ OR + เทสต์ `test_custom_role_with_home_visits_manage_...` · เจอ+บันทึก G10 (status=1 vs 2 drift)
   - ตรวจ: `php -l` ผ่านทุกไฟล์ · **ยังไม่รัน phpunit/pint (ไม่มี vendor) — เจ้าของ verify: `php artisan test -c phpunit.mysql.xml --filter=StudentHomeVisitApiTest` + `--filter=HomeVisit` + `pint`**
   - **ค้าง: HV-S4 (participants/รูป→B) · HV-S5 (migrate พอร์ทัล JWT) · HV-S6 (ลบ legacy หลังยืนยันครูย้าย) · HV-S7**
+- **2026-10-11 (HV-S4 ลงมือ)** — เจ้าของเคาะ "ลุยต่อ · ครูมีบัญชี nuxnan ครบแล้ว" (ปลดล็อก HV-S5) ·
+  `AdminController`: `storeVisit`/`updateVisit` รับ `participants[]`+`images[]`(multipart)+`images_to_delete[]` · helper `syncParticipants` (ส่งมา=แทนที่ทั้งชุด · null=คงเดิม) + `handleImages` (ลบ scoped ต่อ visit + อัปโหลด disk public) · `showVisit` โหลด participants/images/zone · `validateVisit` เพิ่มกติกา (ทั้งหมด optional — contract JSON เดิมไม่พัง) · แก้ **G11** select คอลัมน์ผีใน `getAllVisitsForReports` · เทสต์ `test_admin_visit_stores_participants_and_images_then_update_replaces_and_deletes` (Storage::fake + UploadedFile::fake + PUT spoof) · `php -l` ผ่าน
+  - **FE consumption (participants/image UI) → รวมใน HV-S5** (teacher portal rebuild แตะหน้าจอชุดเดียวกัน · แอดมินไม่ค่อยแนบรูปเอง)
+  - เจ้าของ verify: `php artisan test -c phpunit.mysql.xml --filter=AdminControllerTest`
