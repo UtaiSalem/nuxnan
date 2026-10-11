@@ -676,7 +676,8 @@ class ClassroomController extends Controller
 
     protected function canView(Academy $academy): bool
     {
-        return $academy->userCan(auth()->user(), 'groups.view');
+        // ทะเบียนนักเรียนรับทั้ง students.view (ฝ่ายทะเบียน) และ groups.view (ครูที่ดูห้องเรียน)
+        return $academy->userCan(auth()->user(), 'students.view', 'groups.view');
     }
 
     /**

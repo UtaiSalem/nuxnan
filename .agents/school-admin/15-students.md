@@ -71,23 +71,23 @@
 - **G5 (feature)** — ไม่มีฟอร์มเพิ่มนักเรียนรายคนแบบเต็ม/ลบถาวรในหน้าทะเบียนตรง ๆ (ใช้ intake/import + lifecycle drop) · ยืนยันว่าเป็น by design
 - **G6 (ตรวจเพิ่ม)** — `StudentIntakeController::store` / `StudentDataTable` ยังไม่อ่าน authz ละเอียด (ยืนยันว่า gate `students.view` ครอบพอ และ store มีด่าน manage)
 
-## 6. ค้าง — รอเจ้าของเคาะก่อนแตก step
-- **Q1** — รายชื่อ/รายละเอียดทะเบียนควรผูกคีย์อะไร? เปลี่ยน `canView` เป็น `students.view` (ให้ตรงเมนู) หรือคง `groups.view` ตั้งใจให้ครูที่ดูห้องเห็นทะเบียน? และ `getStudent` ควร mask ข้อมูลอ่อนไหว (health/เลขบัตร) ตาม graded access เหมือนหน้าโปรไฟล์ไหม (G1+G2)
-- **Q2** — โมเดลสิทธิ์ "ฝ่ายทะเบียน": นิยาม `students.view/manage/export/activate_account/import/lifecycle` ในแคตาล็อก + ผูกให้ role ไหนบ้าง (admin/director default?) · import ใช้คีย์อะไร (G4)
-- **Q3** — ต้องมีฟอร์มเพิ่มนักเรียนรายคน + ลบถาวรไหม หรือใช้ intake/import + lifecycle พอ (G5)
-- **Q4** — lifecycle เติม `academy.permission` ที่ route ด้วยไหม (defense-in-depth) หรือเชื่อ FormRequest::authorize อย่างเดียว (G3)
+## 6. คำตัดสินเจ้าของ (เคาะ 2026-10-11)
+- **Q1 (G1) → รับทั้งสองคีย์**: list/detail gate ด้วย `students.view` **หรือ** `groups.view` (OR) — ✅ `canView` แก้แล้ว
+- **Q2 (G2) → คงข้อมูลเต็ม**: `getStudent` คืน PII เต็มตามเดิม (คนที่ผ่าน gate มีสิทธิ์อยู่แล้ว) — **won't-fix / by design** (ไม่ต้อง mask)
+- **Q3 (G4) → นิยาม + ผูกให้ฝ่ายทะเบียน**: คีย์ `students.*` มีในแคตาล็อกครบแล้ว · ผูกเพิ่มให้ role `registrar`/`director`/`admin` — ✅ migration แล้ว
+- **Q4 (G3 + G5) → เติม route middleware lifecycle (defense-in-depth) + เพิ่มฟอร์มเพิ่มนักเรียนรายคน + ลบถาวร**
 
 ## 7. Implementation Tasks (ร่าง — เปิดใช้เมื่อเคาะ Q)
 
 | Step | Title | Dep | Status |
 |---|---|---|---|
-| ST-S1 | ปิด G1 — รวมคีย์ read ทะเบียนให้ตรง (students.view) + gate ให้สอดคล้อง | Q1 | ⚪ |
-| ST-S2 | ปิด G2 — getStudent mask/จำกัดข้อมูลอ่อนไหวตาม access level | Q1 | ⚪ |
-| ST-S3 | ปิด G4 — นิยาม students.* ในแคตาล็อก + migration ผูก role ฝ่ายทะเบียน | Q2 | ⚪ |
-| ST-S4 | ปิด G3 — เติม route middleware lifecycle (ถ้าเคาะ) + ยืนยัน FormRequest authorize ครบ | Q4 | ⚪ |
-| ST-S5 | (ถ้าเคาะ Q3) ฟอร์มเพิ่มรายคน/ลบถาวร | Q3 | ⚪ |
-| ST-S6 | เทสต์ authz + tenant + permission matrix | S1–S4 | ⚪ |
-| ST-S7 | ตรวจจอจริง 375/768/1280 | S1–S5 | ⚪ |
+| ST-S1 | ปิด G1 — `canView` รับ `students.view` OR `groups.view` | Q1 | 🟡 โค้ดเสร็จ (php -l) |
+| ST-S2 | G2 — getStudent mask | — | ❌ won't-fix (Q2 คงข้อมูลเต็ม) |
+| ST-S3 | ปิด G4 — migration ผูก students.* ให้ registrar/director/admin | Q2 | 🟡 โค้ดเสร็จ · เจ้าของ migrate |
+| ST-S4 | ปิด G3 — lifecycle route `academy.permission` (members-only defense-in-depth · ไม่ regress ครูประจำชั้นเพราะ EnrollmentPolicy ยังตัดสินจริง) | Q4 | 🟡 โค้ดเสร็จ |
+| ST-S5 | ฟอร์มเพิ่มนักเรียนรายคน + ลบถาวร (BE store/destroy + policy create/delete + route gate students.create/students.delete + FE) | Q4 | ⚪ กำลังทำ |
+| ST-S6 | เทสต์ authz + tenant + permission matrix + create/delete | S1–S5 | ⚪ |
+| ST-S7 | ตรวจจอจริง 375/768/1280 | S1–S5 | ⚪ (เจ้าของ) |
 
 **Rule:** Claude วางแผน+ตรวจ · agy เขียนโค้ด (ถ้าใช้ได้) · งาน UI แปะกติกา mobile-first · verify build/test ก่อนขึ้น 🟢
 
