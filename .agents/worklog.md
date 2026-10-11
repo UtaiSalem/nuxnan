@@ -1,5 +1,15 @@
 # Work Log — nuxnan project
 
+## ✅ 2026-10-11 — PR #33 merge เข้า `main` แล้ว (เมนู #16 บัตรนักเรียน + #15 เสริม)
+
+- **merged:** `main` HEAD = `fa13c4f` (squash) · branch `claude/jolly-goodall-cwgfja`
+- PR #33 แตกจาก main ก่อน PR #32 (#14/#15) จึงต้องรวม main เข้า branch ก่อน (merge commit `852bf1e`) แล้วแก้ conflict เอกสาร 3 ไฟล์ (`OVERVIEW.md` / `15-students.md` / `worklog.md` — เก็บ audit ทั้งสองรอบ)
+- โค้ด auto-merge สะอาด · `php -l` ผ่านทุกไฟล์ · งาน #15 สองเซสชัน**เสริมกัน** (main = policy รับ `students.manage` · PR #33 = migration grant `students.*` ให้ role → ปิด G4 ที่ PR #32 เปิดค้าง)
+- **เข้า main แล้ว:** เมนู #16 (import/export จริง G1 · store เติม enrollment G2 · `student_number` varchar8→20 · `StudentCardImportExportTest`) + เมนู #15 เสริม (canView `students.view` OR `groups.view` · grant `students.*` · lifecycle middleware · ลบถาวร guarded · `StudentRegistryTest`)
+- **ค้าง owner-gated (ไม่เกี่ยวกับ push/merge):** verify local (`migrate` → `test:db:rebuild` → `test --filter=StudentRegistry`/`StudentCardImportExport` → `npm run build`) · prod migrate หลัง `mysqldump` · **SCD-S4** (ลบ public) เลื่อน — ย้อน `git revert 1c36675` เมื่อพร้อม · #16 เหลือ S7 ตรวจจอจริง
+
+---
+
 ## 🧭 สถานะ git — ยืนยัน 2026-10-07 (อ่านก่อนเชื่อคำว่า "ยังไม่ push/ยังไม่ merge" ในบันทึกเก่า)
 
 บันทึกด้านล่างเป็น log ประวัติ หลาย entry เขียน "ยังไม่ push" / "ยังไม่ merge" / "⏳ ยังไม่ทำ" ตามสภาพ ณ ตอนนั้น
