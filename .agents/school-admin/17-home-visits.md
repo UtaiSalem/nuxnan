@@ -2,7 +2,7 @@
 
 > ไฟล์รองของเมนู `17 เยี่ยมบ้าน` (`admin/home-visits/`)
 > อ่านคู่กับ [OVERVIEW.md](OVERVIEW.md)
-> **สถานะ:** 🔴 audit เสร็จ 2026-10-11 — ฟีเจอร์แอดมินสุก/มีเทสต์ แต่มี **ระบบเก่าค้าง (legacy subsystem) ที่เป็นช่องโหว่ P0** ขนานอยู่
+> **สถานะ:** 🟡 2026-10-11 — **2 ระบบคู่ขนานพร้อมใช้** · (1) JWT (HV-S1–S7 ทำครบ · gate/scoped/เทสต์ · เหลือเจ้าของ verify MySQL+build) · (2) public hardcoded (เจ้าของสั่งคงไว้เหมือนเดิม — เปิดโล่ง ดู §7) · **ไม่ลบ legacy** (HV-S6 ยกเลิก)
 
 ## 1. Scope & Purpose
 
@@ -143,7 +143,7 @@ Permission keys ที่มีในระบบ (`AcademyPermission.php`): `ho
 | HV-S5b | ~~rebuild `/home-visit` → JWT landing~~ **↩️ REVERTED 2026-10-11** — เจ้าของเคาะ "ทำ 2 ระบบคู่กัน · portal สาธารณะแบบ hardcoded เหมือนเดิม" ⇒ คืนหน้า portal เก่า (role-chooser + hardcoded) ด้วย `git checkout 2824381 -- ui/pages/home-visit/index.vue` · JWT อยู่คนละทาง (academy admin menu + HomeVisitTab) | — | portal เดิมกลับมา | ↩️ reverted (by design) |
 | HV-S5c | **parity UI:** เพิ่ม participants repeater + อัปโหลด/ลบรูป (multipart) ใน `HomeVisitTab.vue` + `useHomeVisit.ts` ให้ครูแนบรูป/ผู้ร่วมได้เท่าพอร์ทัลเก่า | S5a | FormData multipart (POST+`_method=PUT` spoof เมื่อมีรูป) + preview · รูปผ่าน `/storage/**` proxy · จอจริง | 🟢 **done (owner verify build+375px)** |
 | HV-S6 | ~~ลบ legacy~~ **❌ CANCELLED 2026-10-11** — เจ้าของเคาะเก็บ legacy ไว้เป็น **ระบบสาธารณะชั่วคราว (hardcoded เหมือนเดิมทุกอย่าง)** คู่ขนานกับ JWT · `homevisit.php` + `HomeVisitAuthController` + `TeacherController` + รหัสฮาร์ดโค้ด **คงไว้ตามเดิม ไม่แตะ** | — | — | ❌ cancelled (เจ้าของสั่งเก็บ) |
-| HV-S7 | **G8:** ตัดสิน `home_visits.create` key (ครูสร้างผ่านหน้าแอดมินได้ไหม) + `reports()` stub · เทสต์รวม MySQL + จอจริง | S4 | ตาม decision + สวีตเขียว | ⚪ pending |
+| HV-S7 | **G8:** ตัดสิน `home_visits.create` key + `reports()` stub · เทสต์รวม MySQL + จอจริง | S4 | create รับ `create`OR`manage` · ลบ stub `/reports` · เทสต์ gate · `php -l` ผ่าน | 🟢 **done (owner verify MySQL)** |
 
 **Rule:** ทุก step ต้อง verify (ยิงจริง/เทสต์/build) ก่อนขึ้น 🟢
 
@@ -188,3 +188,9 @@ Permission keys ที่มีในระบบ (`AcademyPermission.php`): `ho
   - **ยกเลิก HV-S6:** ไม่ลบ legacy — `homevisit.php`/`HomeVisitAuthController`/`TeacherController`/รหัสฮาร์ดโค้ด คงเดิมทุกอย่าง (ไม่เคยถูกแตะในเซสชันนี้)
   - คงไว้ที่ทำแล้ว (JWT side): HV-S1/S2/S3/S4 (academy-flow hardening + custom-role + participants→B) · HV-S5a (ระบบ A parity + trait) · HV-S5c (HomeVisitTab participants/image UI) — ทั้งหมดไม่กระทบ legacy
   - **สถานะเมนู #17: ทั้งสองระบบพร้อมคู่ขนาน** · เหลือ HV-S7 (G8 `home_visits.create` key + reports stub + เทสต์รวม/จอจริง) · 🔴 legacy public ยังเปิดโล่งตามที่เจ้าของเลือก (บันทึกความเสี่ยงไว้ §7)
+- **2026-10-11 (HV-S7 ลงมือ — ปิด step ฝั่ง JWT)** —
+  - **G8 แก้แล้ว:** route `POST /home-visits/admin/visits` เปลี่ยน gate `home_visits.manage` → `home_visits.create,home_visits.manage` (OR) ⇒ ครู (ถือ `home_visits.create`) สร้างเยี่ยมบ้านผ่านหน้าแอดมินได้ · admin/director (ถือ `manage`) ก็ยังสร้างได้ · update/delete/status ยังคง `manage` เท่านั้น ⇒ key `home_visits.create` มีความหมายจริงแล้ว (เลิกเป็น orphan)
+  - ลบ stub ตาย `reports()`/`exportReports()` + route `/admin/reports`,`/admin/reports/export` (ไม่มี FE ใช้ · รายงานจริงคือ `/admin/export/visits` CSV/PDF)
+  - เทสต์ `test_store_visit_allows_home_visits_create_but_update_delete_need_manage` (viewer-only สร้างไม่ได้ · creator สร้างได้แต่แก้/ลบไม่ได้) + helper `memberWithPermissions`
+  - `php -l` ผ่านทุกไฟล์ · เจ้าของ verify: `php artisan test -c phpunit.mysql.xml --filter=AdminControllerTest`
+  - **เมนู #17 ปิด step ฝั่ง JWT ครบ (HV-S1–S7)** · ระบบ public hardcoded คงไว้ตามเจ้าของสั่ง (เปิดโล่ง §7) · เหลือเพียงเจ้าของ verify MySQL+build+จอจริง

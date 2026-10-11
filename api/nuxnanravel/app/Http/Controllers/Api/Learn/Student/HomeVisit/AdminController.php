@@ -807,22 +807,6 @@ class AdminController extends Controller
     }
 
     /**
-     * Reports summary stub
-     */
-    public function reports(Academy $academy)
-    {
-        return response()->json(['message' => 'Reports not implemented yet']);
-    }
-
-    /**
-     * Export reports stub
-     */
-    public function exportReports(Request $request, Academy $academy)
-    {
-        return response()->json(['message' => 'Export reports not implemented yet']);
-    }
-
-    /**
      * Logout Admin
      */
     public function logout(Academy $academy)

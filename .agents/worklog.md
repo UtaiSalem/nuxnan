@@ -68,8 +68,12 @@ FE participants/image UI → รวมใน HV-S5 (teacher portal rebuild แ�
 
 🔴 **ความเสี่ยงที่เจ้าของรับทราบ+เลือกคงไว้:** `/api/home-visit/*` ไม่มี middleware + ด่าน comment ทิ้ง + api stateless ⇒ เขียน/ลบ + PII ได้โดยไม่ต้องรหัสจริง เปิดโล่งข้ามโรงเรียน · ควรปิด/ย้าย JWT เมื่อครูพร้อม (บันทึกใน 17-home-visits.md §7)
 
-**เหลือ: HV-S7** (G8 `home_visits.create` key + `reports()` stub + เทสต์รวม + จอจริง)
-เจ้าของ verify (JWT side): `phpunit.mysql.xml --filter=StudentHomeVisitApiTest`+`AdminControllerTest`+`HomeVisit` + pint + `npm run build`
+### HV-S7 (ต่อ 2026-10-11) — ปิด step ฝั่ง JWT
+
+**✅ HV-S7 (G8):** route `POST /home-visits/admin/visits` gate `home_visits.manage` → `home_visits.create,home_visits.manage` (OR) ⇒ ครู (ถือ create) สร้างเยี่ยมบ้านผ่านหน้าแอดมินได้ · admin/director (manage) ก็ยังได้ · update/delete/status ยังคง manage ⇒ key `home_visits.create` มีความหมายจริง (เลิก orphan) · ลบ stub ตาย `reports()`/`exportReports()` + route `/admin/reports*` (ไม่มี FE ใช้ · รายงานจริง = `/admin/export/visits`) · เทสต์ `test_store_visit_allows_home_visits_create_but_update_delete_need_manage` + helper `memberWithPermissions` · `php -l` ผ่าน
+
+**🏁 เมนู #17 ปิด step ฝั่ง JWT ครบ (HV-S1–S7)** · ระบบ public hardcoded คงไว้ตามเจ้าของสั่ง (เปิดโล่ง — §7 ของ 17-home-visits.md)
+เจ้าของ verify (JWT side): `phpunit.mysql.xml --filter=StudentHomeVisitApiTest`+`AdminControllerTest`+`HomeVisit` + pint + `npm run build` + จอ 375px (portal เดิม + HomeVisitTab)
 PR: UtaiSalem/nuxnan#39 (branch `claude/funny-meitner-06is0f`)
 
 ---

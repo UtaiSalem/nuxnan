@@ -61,7 +61,8 @@ Route::middleware(['auth:api'])->prefix('/academies/{academy}')->group(function 
             Route::get('/students/{id}', [AdminController::class, 'showStudent'])->name('students.show');
             Route::middleware('academy.permission:home_visits.manage')->put('/students/{id}', [AdminController::class, 'updateStudent'])->name('students.update');
             Route::get('/visits', [AdminController::class, 'visits'])->name('visits');
-            Route::middleware('academy.permission:home_visits.manage')->post('/visits', [AdminController::class, 'storeVisit'])->name('visits.store');
+            // HV-S7/G8 — สร้างได้ด้วย home_visits.create (ครู) หรือ home_visits.manage (admin/director)
+            Route::middleware('academy.permission:home_visits.create,home_visits.manage')->post('/visits', [AdminController::class, 'storeVisit'])->name('visits.store');
             Route::get('/visits/{id}', [AdminController::class, 'showVisit'])->name('visits.show');
             Route::middleware('academy.permission:home_visits.manage')->group(function () {
                 Route::put('/visits/{id}', [AdminController::class, 'updateVisit'])->name('visits.update');
@@ -71,10 +72,8 @@ Route::middleware(['auth:api'])->prefix('/academies/{academy}')->group(function 
             Route::get('/export/visits', [AdminController::class, 'exportVisits'])->name('export.visits');
             Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
 
-            // Statistics and Reports
+            // Statistics (รายงานจริงใช้ /export/visits — HV-S7 ลบ stub /reports ที่ไม่ได้ทำจริงทิ้ง)
             Route::get('/statistics', [AdminController::class, 'statistics'])->name('statistics');
-            Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
-            Route::get('/reports/export', [AdminController::class, 'exportReports'])->name('reports.export');
         });
     });
 });
