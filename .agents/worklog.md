@@ -1,5 +1,28 @@
 # Work Log — nuxnan project
 
+## 🔍 2026-10-11 — เมนู #17 เยี่ยมบ้าน: audit เสร็จ (ขั้น [1]+[2]) — รอเจ้าของเคาะ Q
+
+**branch:** `claude/funny-meitner-06is0f` · ไฟล์รอง: [`.agents/school-admin/17-home-visits.md`](school-admin/17-home-visits.md)
+
+สแกนแล้วเจอว่าเมนูนี้มี **3 ระบบซ้อนกัน** คุณภาพคนละชั้น:
+- **ระบบ A — JWT master-profile** (`Master/HomeVisitController` + `student-profile.php` → `/academies/{a}/students/{s}/home-visits`) ✅ authz ครบ (self/admin/homeroom/teacher/parent) + tenant scope + gate observations · FE = `useHomeVisit.ts` + `HomeVisitTab.vue`
+- **ระบบ B — academy admin** (`AdminController`/`ZoneController` + `academy-home-visit.php`) ✅ `academy.permission:home_visits.view/manage` + academy_id scoped + มีเทสต์ 16 เคส · FE = `admin/home-visits/*`
+- **ระบบ C — legacy session 🔴 P0** (`homevisit.php` + `TeacherController` + `HomeVisitAuthController` + portal `ui/pages/home-visit/`)
+
+🔴 **P0 ที่เจอ (ยังไม่แตะโค้ด — รอเคาะ):**
+- **G1** `routes/homevisit/homevisit.php` ถูก `require` ใน `api.php:248` **ไม่มี middleware เลย** + `TeacherController` เมธอดเขียน/ลบ **comment ด่าน session ทิ้งหมด** ⇒ ใครก็ได้ (ไม่ล็อกอิน) `DELETE/PUT /api/home-visit/teacher/...` ลบ/แก้เยี่ยมบ้าน + PII นักเรียน (ชื่อ/เลขบัตร/ชั้น) ทั้ง DB ข้ามโรงเรียน
+- **G2** กลุ่ม `teacher/*`,`student/*` ใน `academy-home-visit.php` ติดแค่ `auth:api` (ไม่มี permission) + ชี้ controller ระบบ C ที่พัง
+- **G3** รหัสฮาร์ดโค้ด `teacher/jsm1234` + `admin/jsm_admin2025` ในซอร์ส · สมมติโรงเรียนเดียว (JSM)
+- G4 root `/statistics`,`/dashboard` ไม่ติด `home_visits.view` · G5 portal `/home-visit` orphaned ปลายทาง `/home-visit/auth/login` ไม่มีจริง · G6 TeacherController เป็น Inertia-era dead code · G7 ระบบ A ใช้ role literal ไม่ใช่ `userCan` (เหมือน #15 G1) · G8 `home_visits.create` เป็น orphan key · G9 participants/images เขียนได้แค่ผ่านระบบ C
+
+**⏸️ ต้องเคาะก่อนส่ง agy:**
+- **Q1 — ลบระบบ C (legacy + portal) ได้ไหม?** ระบบ A+B ครอบคลุมหมดแล้ว · ⚠️ ระวังบทเรียน **#16 SCD-S4** (ลบ public แล้วต้อง revert เพราะครูยังใช้) — ต้องถามก่อนว่ามีครูยังล็อกอิน `/home-visit` ด้วยรหัสฮาร์ดโค้ดอยู่จริงไหม
+- Q2 ระบบ A ควร gate ด้วย `home_visits.*` key (ปิด G7) ไหม · Q3 participants/รูปหลักฐาน ย้ายเข้า B หรือเลิกใช้
+
+OVERVIEW.md #17: ⚪ → 🔴 · **ยังไม่ส่ง step ให้ agy**
+
+---
+
 ## ✅ 2026-10-11 — PR #33 merge เข้า `main` แล้ว (เมนู #16 บัตรนักเรียน + #15 เสริม)
 
 - **merged:** `main` HEAD = `fa13c4f` (squash) · branch `claude/jolly-goodall-cwgfja`
