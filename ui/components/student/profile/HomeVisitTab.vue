@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { AcademyInfo, HomeVisitInfo, StudentProfile } from '~/composables/useStudentProfile'
-import type { HomeVisitPayload, HomeVisitRecord, HomeVisitStatus } from '~/composables/useHomeVisit'
+import type { HomeVisitImage, HomeVisitPayload, HomeVisitRecord, HomeVisitStatus } from '~/composables/useHomeVisit'
 
 const props = defineProps<{
   homeVisit: HomeVisitInfo | null
@@ -47,6 +47,32 @@ const emptyForm = (): HomeVisitPayload => ({
 
 const form = reactive<HomeVisitPayload>(emptyForm())
 
+// HV-S5c — ผู้ร่วมเยี่ยม + รูปหลักฐาน
+const participants = ref<Array<{ participant_name: string, notes: string }>>([])
+const newImages = ref<File[]>([])
+const existingImages = ref<HomeVisitImage[]>([])
+const imagesToDelete = ref<number[]>([])
+const fileInput = ref<HTMLInputElement | null>(null)
+
+const addParticipant = () => participants.value.push({ participant_name: '', notes: '' })
+const removeParticipant = (index: number) => participants.value.splice(index, 1)
+
+const onFilesSelected = (event: Event) => {
+  const files = (event.target as HTMLInputElement).files
+  if (files) newImages.value.push(...Array.from(files))
+  if (fileInput.value) fileInput.value.value = ''
+}
+const removeNewImage = (index: number) => newImages.value.splice(index, 1)
+const isMarkedForDelete = (id: number) => imagesToDelete.value.includes(id)
+const toggleDeleteExisting = (image: HomeVisitImage) => {
+  const index = imagesToDelete.value.indexOf(image.id)
+  if (index >= 0) imagesToDelete.value.splice(index, 1)
+  else imagesToDelete.value.push(image.id)
+}
+const previewUrl = (file: File) => URL.createObjectURL(file)
+// ผ่าน Nuxt storage-proxy (/storage/**) เหมือนรูปอื่นในแอป
+const imageSrc = (image: HomeVisitImage) => image.image_path ? `/storage/${image.image_path}` : (image.image_url ?? '')
+
 const canCreate = computed(() => ['admin', 'homeroom', 'teacher'].includes(props.accessLevel))
 const canDelete = computed(() => ['admin', 'homeroom'].includes(props.accessLevel))
 const canSeeObservations = computed(() => ['admin', 'homeroom', 'teacher'].includes(props.accessLevel))
@@ -86,6 +112,10 @@ const resetForm = () => {
   Object.assign(form, emptyForm())
   editingId.value = null
   formError.value = null
+  participants.value = []
+  newImages.value = []
+  existingImages.value = []
+  imagesToDelete.value = []
 }
 
 const openCreate = () => {
@@ -107,6 +137,11 @@ const openEdit = (visit: HomeVisitRecord) => {
     follow_up: visit.follow_up,
     next_visit: visit.next_visit,
   })
+  // HV-S5c — นำ participants/images เดิมมาแสดงเพื่อให้แก้ไขแบบ round-trip
+  participants.value = (visit.participants ?? []).map(p => ({ participant_name: p.participant_name, notes: p.notes ?? '' }))
+  existingImages.value = [...(visit.images ?? [])]
+  newImages.value = []
+  imagesToDelete.value = []
   formError.value = null
   showForm.value = true
 }
@@ -118,9 +153,17 @@ const closeForm = () => {
 
 const saveVisit = async () => {
   formError.value = null
+  const payload: HomeVisitPayload = {
+    ...form,
+    participants: participants.value
+      .filter(p => p.participant_name.trim() !== '')
+      .map(p => ({ participant_name: p.participant_name.trim(), notes: p.notes.trim() || null })),
+    images: newImages.value.length ? newImages.value : undefined,
+    images_to_delete: imagesToDelete.value.length ? imagesToDelete.value : undefined,
+  }
   try {
-    if (editingId.value) await updateVisit(editingId.value, { ...form })
-    else await createVisit({ ...form })
+    if (editingId.value) await updateVisit(editingId.value, payload)
+    else await createVisit(payload)
     closeForm()
     await loadVisits(currentPage.value)
     emit('saved')
@@ -206,6 +249,55 @@ watch(() => [props.academy?.name, props.student.id], () => loadVisits(), { immed
           <textarea v-model="form.recommendations" rows="2" maxlength="2000" class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm" />
         </label>
 
+        <!-- HV-S5c — ผู้ร่วมเยี่ยม -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs font-medium text-gray-700">ผู้ร่วมเยี่ยม</span>
+            <button type="button" class="flex-shrink-0 whitespace-nowrap text-xs font-medium text-blue-600 hover:text-blue-800" @click="addParticipant">+ เพิ่มผู้ร่วม</button>
+          </div>
+          <div v-for="(participant, index) in participants" :key="index" class="flex items-start gap-2">
+            <div class="min-w-0 flex-1 space-y-1">
+              <input v-model="participant.participant_name" maxlength="255" placeholder="ชื่อผู้ร่วมเยี่ยม" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm" />
+              <input v-model="participant.notes" maxlength="2000" placeholder="หมายเหตุ (ถ้ามี)" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs" />
+            </div>
+            <button type="button" class="flex-shrink-0 mt-2 text-xs font-medium text-red-500 hover:text-red-700" @click="removeParticipant(index)">ลบ</button>
+          </div>
+          <p v-if="participants.length === 0" class="text-xs text-gray-400">ยังไม่มีผู้ร่วมเยี่ยม</p>
+        </div>
+
+        <!-- HV-S5c — รูปหลักฐาน -->
+        <div class="space-y-2">
+          <span class="block text-xs font-medium text-gray-700">รูปหลักฐาน</span>
+
+          <div v-if="existingImages.length" class="flex flex-wrap gap-2">
+            <div v-for="image in existingImages" :key="image.id" class="relative">
+              <img
+                :src="imageSrc(image)"
+                :alt="image.image_name || 'รูปหลักฐาน'"
+                :class="['h-20 w-20 rounded-lg border object-cover', isMarkedForDelete(image.id) ? 'opacity-40 grayscale' : 'border-gray-200']"
+              >
+              <button
+                type="button"
+                :class="['absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full text-xs text-white shadow', isMarkedForDelete(image.id) ? 'bg-gray-500' : 'bg-red-500 hover:bg-red-600']"
+                :title="isMarkedForDelete(image.id) ? 'ยกเลิกการลบ' : 'ลบรูปนี้'"
+                @click="toggleDeleteExisting(image)"
+              >{{ isMarkedForDelete(image.id) ? '↺' : '×' }}</button>
+            </div>
+          </div>
+
+          <div v-if="newImages.length" class="flex flex-wrap gap-2">
+            <div v-for="(file, index) in newImages" :key="index" class="relative">
+              <img :src="previewUrl(file)" :alt="file.name" class="h-20 w-20 rounded-lg border border-blue-200 object-cover">
+              <button type="button" class="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs text-white shadow hover:bg-red-600" @click="removeNewImage(index)">×</button>
+            </div>
+          </div>
+
+          <label class="inline-flex min-h-[44px] sm:min-h-0 cursor-pointer items-center gap-2 rounded-lg border border-dashed border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-600 hover:border-blue-300 hover:text-blue-600">
+            <span>+ เพิ่มรูป</span>
+            <input ref="fileInput" type="file" accept="image/jpeg,image/png,image/jpg,image/gif" multiple class="hidden" @change="onFilesSelected" />
+          </label>
+        </div>
+
         <p v-if="formError" class="text-xs text-red-600">{{ formError }}</p>
         <div class="flex justify-end gap-2">
           <button type="button" class="min-h-[44px] sm:min-h-0 rounded-lg bg-gray-100 px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-200" @click="closeForm">ยกเลิก</button>
@@ -237,6 +329,18 @@ watch(() => [props.academy?.name, props.student.id], () => loadVisits(), { immed
               <p class="mt-1 text-xs text-gray-500">{{ visit.visitor_name }} · {{ visit.visitor_position || 'ไม่ระบุตำแหน่ง' }}</p>
               <p v-if="canSeeObservations && visit.observations" class="mt-2 whitespace-pre-line text-xs text-gray-700">{{ visit.observations }}</p>
               <p v-if="visit.recommendations" class="mt-2 text-xs text-gray-600"><span class="font-medium">ข้อเสนอแนะ:</span> {{ visit.recommendations }}</p>
+              <div v-if="visit.participants && visit.participants.length" class="mt-2 flex flex-wrap gap-1.5">
+                <span v-for="participant in visit.participants" :key="participant.id" class="rounded-full bg-white px-2 py-0.5 text-xs text-gray-600 ring-1 ring-gray-200">{{ participant.participant_name }}</span>
+              </div>
+              <div v-if="visit.images && visit.images.length" class="mt-2 flex flex-wrap gap-2">
+                <img
+                  v-for="image in visit.images"
+                  :key="image.id"
+                  :src="imageSrc(image)"
+                  :alt="image.image_name || 'รูปหลักฐาน'"
+                  class="h-16 w-16 rounded-lg border border-gray-200 object-cover"
+                >
+              </div>
             </div>
             <div v-if="canCreate" class="flex gap-2">
               <button type="button" class="text-xs font-medium text-blue-600 hover:text-blue-800" @click="openEdit(visit)">แก้ไข</button>

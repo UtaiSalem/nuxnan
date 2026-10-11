@@ -47,8 +47,14 @@ FE participants/image UI → รวมใน HV-S5 (teacher portal rebuild แ�
 
 `php -l` ผ่านทุกไฟล์ BE · teacher บันทึกเยี่ยมบ้านผ่าน JWT ได้แล้ว (student profile → HomeVisitTab, ระบบ A)
 
-**เหลือ: HV-S5c (participants/image UI ใน HomeVisitTab — parity สุดท้าย) → HV-S6 (ลบ legacy `homevisit.php`+รหัสฮาร์ดโค้ด หลังเจ้าของยืนยันครูย้าย) → HV-S7**
-🔴 legacy backend `/api/home-visit/*` ยังเปิดอยู่ (FE เลิกใช้แล้ว แต่ route ยังรับ — ปิดจริงตอน HV-S6)
+### HV-S5c (ต่อ 2026-10-11) — participants/image UI ในแท็บครู
+
+**✅ HV-S5c:** `useHomeVisit.ts` — create/update เลือก multipart เฉพาะเมื่อมีรูป (POST+`_method=PUT` spoof สำหรับ update · PHP แกะ multipart ได้เฉพาะ POST) · `buildFormData` ส่ง `participants[i][...]`+`images[]`+`images_to_delete[]` · `HomeVisitTab.vue` — participants repeater + อัปโหลดรูปหลายไฟล์+preview + รูปเดิม toggle ลบ + openEdit round-trip + แสดง chips/thumbnails ในรายการ · รูปผ่าน `/storage/${image_path}` (Nuxt storage-proxy)
+
+**HV-S5 ครบแล้ว (a+b+c)** → teacher บันทึกเยี่ยมบ้าน+ผู้ร่วม+รูป ผ่าน JWT (student profile → HomeVisitTab) ได้เท่าพอร์ทัลเก่า
+
+**เหลือ: HV-S6 (ลบ legacy `homevisit.php`+`HomeVisitAuthController`/`TeacherController`+รหัสฮาร์ดโค้ด) → บล็อกจนเจ้าของ `npm run build` + ยืนยันครูใช้ JWT ได้จริง (บทเรียน #16: ห้ามลบก่อนยืนยัน) · HV-S7 (`home_visits.create` key + เทสต์รวม + จอจริง)**
+🔴 legacy backend `/api/home-visit/*` + รหัสฮาร์ดโค้ด ยังเปิดอยู่ (FE เลิกใช้แล้ว — ปิดจริงตอน HV-S6)
 PR: UtaiSalem/nuxnan#39 (branch `claude/funny-meitner-06is0f`)
 
 ---
