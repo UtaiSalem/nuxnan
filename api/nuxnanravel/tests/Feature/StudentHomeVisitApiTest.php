@@ -9,6 +9,8 @@ use App\Models\Student;
 use App\Models\StudentHomeVisit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class StudentHomeVisitApiTest extends TestCase
@@ -126,6 +128,56 @@ class StudentHomeVisitApiTest extends TestCase
             ->deleteJson("/api/academies/{$academy->id}/students/{$student->id}/home-visits/{$visitId}")
             ->assertOk();
         $this->assertDatabaseMissing('student_home_visits', ['id' => $visitId]);
+    }
+
+    /**
+     * HV-S5 — โฟลว์ master-profile (ระบบ A) ต้องรับ participants + รูปหลักฐาน
+     * ให้ครู (พอร์ทัล JWT) บันทึกได้เทียบเท่าพอร์ทัลเก่า
+     */
+    public function test_staff_can_attach_participants_and_images_via_master_flow(): void
+    {
+        Storage::fake('public');
+        [, $admin, $academy, $student] = $this->context();
+
+        $create = $this->actingAs($admin, 'api')
+            ->post("/api/academies/{$academy->id}/students/{$student->id}/home-visits", [
+                'visit_date' => '2026-07-03',
+                'visitor_name' => 'ครูประจำชั้น',
+                'visitor_position' => 'ครู',
+                'visit_status' => 'completed',
+                'participants' => [
+                    ['participant_name' => 'ครูประจำชั้น'],
+                    ['participant_name' => 'ครูแนะแนว', 'notes' => 'ผู้ช่วย'],
+                ],
+                'images' => [UploadedFile::fake()->image('ev.jpg')],
+            ])
+            ->assertCreated()
+            ->assertJsonCount(2, 'data.participants')
+            ->assertJsonCount(1, 'data.images');
+
+        $visitId = $create->json('data.id');
+        $imagePath = $create->json('data.images.0.image_path');
+        Storage::disk('public')->assertExists($imagePath);
+
+        // update: participants แทนที่ (เหลือ 1) + ลบรูปเดิม (PUT spoof)
+        $imageId = $create->json('data.images.0.id');
+        $this->actingAs($admin, 'api')
+            ->post("/api/academies/{$academy->id}/students/{$student->id}/home-visits/{$visitId}", [
+                '_method' => 'PUT',
+                'visit_date' => '2026-07-03',
+                'visitor_name' => 'ครูประจำชั้น',
+                'visitor_position' => 'ครู',
+                'visit_status' => 'completed',
+                'participants' => [
+                    ['participant_name' => 'ผู้อำนวยการ'],
+                ],
+                'images_to_delete' => [$imageId],
+            ])
+            ->assertOk()
+            ->assertJsonCount(1, 'data.participants')
+            ->assertJsonCount(0, 'data.images');
+
+        Storage::disk('public')->assertMissing($imagePath);
     }
 
     private function context(): array

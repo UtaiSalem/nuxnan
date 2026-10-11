@@ -5,23 +5,23 @@ namespace App\Http\Controllers\Api\Learn\Student\HomeVisit;
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\Classroom;
-use App\Models\HomeVisitImage;
-use App\Models\HomeVisitParticipant;
 use App\Models\HomeVisitZone;
 use App\Models\Student;
 use App\Models\StudentCard;
 use App\Models\StudentHomeVisit;
 use App\Services\GuardianService;
 use App\Services\StudentEnrollmentService;
+use App\Traits\HandlesHomeVisitAttachments;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Mpdf\Mpdf;
 use Mpdf\Output\Destination;
 
 class AdminController extends Controller
 {
+    use HandlesHomeVisitAttachments;
+
     /**
      * Get statistics for academy admin dashboard
      */
@@ -512,8 +512,8 @@ class AdminController extends Controller
         $visit = StudentHomeVisit::create($this->visitPayload($validated, $academy, $student));
 
         // HV-S4 — participants + รูปหลักฐาน ย้ายมาจากระบบ session เดิมเข้าโฟลว์แอดมินที่ gate แล้ว
-        $this->syncParticipants($visit, $validated['participants'] ?? null);
-        $this->handleImages($request, $visit);
+        $this->syncHomeVisitParticipants($visit, $validated['participants'] ?? null);
+        $this->handleHomeVisitImages($request, $visit);
 
         return response()->json([
             'success' => true,
@@ -529,69 +529,13 @@ class AdminController extends Controller
         $visit->update($this->visitPayload($validated, $academy));
 
         // HV-S4 — ส่ง participants มา = แทนที่ทั้งชุด · ไม่ส่ง = คงเดิม · images จัดการแยกเพิ่ม/ลบ
-        $this->syncParticipants($visit, $validated['participants'] ?? null);
-        $this->handleImages($request, $visit);
+        $this->syncHomeVisitParticipants($visit, $validated['participants'] ?? null);
+        $this->handleHomeVisitImages($request, $visit);
 
         return response()->json([
             'success' => true,
             'visit' => $visit->fresh()->load(['student', 'participants', 'images']),
         ]);
-    }
-
-    /**
-     * HV-S4 — แทนที่รายชื่อผู้ร่วมเยี่ยมทั้งชุด (null = ไม่ส่งมา → คงเดิม)
-     */
-    private function syncParticipants(StudentHomeVisit $visit, ?array $participants): void
-    {
-        if ($participants === null) {
-            return;
-        }
-
-        $visit->participants()->delete();
-
-        foreach ($participants as $participant) {
-            $name = trim((string) ($participant['participant_name'] ?? ''));
-            if ($name === '') {
-                continue;
-            }
-            HomeVisitParticipant::create([
-                'home_visit_id' => $visit->id,
-                'participant_name' => $name,
-                'notes' => $participant['notes'] ?? null,
-            ]);
-        }
-    }
-
-    /**
-     * HV-S4 — ลบรูปตาม id (scoped ต่อ visit) + อัปโหลดรูปใหม่ (multipart `images[]`)
-     */
-    private function handleImages(Request $request, StudentHomeVisit $visit): void
-    {
-        foreach ((array) $request->input('images_to_delete', []) as $imageId) {
-            $image = HomeVisitImage::where('home_visit_id', $visit->id)->find($imageId);
-            if ($image) {
-                if ($image->image_path) {
-                    Storage::disk('public')->delete($image->image_path);
-                }
-                $image->delete();
-            }
-        }
-
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $index => $image) {
-                $imageName = time().'_'.$index.'.'.$image->getClientOriginalExtension();
-                $imagePath = $image->storeAs('home_visit_images/'.$visit->id, $imageName, 'public');
-
-                HomeVisitImage::create([
-                    'home_visit_id' => $visit->id,
-                    'image_path' => $imagePath,
-                    'image_name' => $imageName,
-                    'image_type' => 'evidence',
-                    'description' => 'รูปภาพหลักฐานการเยี่ยมบ้าน',
-                    'uploaded_by' => auth('api')->id(),
-                ]);
-            }
-        }
     }
 
     public function destroyVisit(Academy $academy, $id)

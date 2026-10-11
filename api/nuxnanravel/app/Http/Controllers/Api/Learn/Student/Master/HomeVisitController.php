@@ -10,12 +10,15 @@ use App\Models\ClassroomMember;
 use App\Models\Student;
 use App\Models\StudentHomeVisit;
 use App\Services\GuardianAccessService;
+use App\Traits\HandlesHomeVisitAttachments;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class HomeVisitController extends Controller
 {
+    use HandlesHomeVisitAttachments;
+
     public function index(Academy $academy, Student $student): JsonResponse
     {
         $this->ensureStudentScope($academy, $student);
@@ -23,7 +26,7 @@ class HomeVisitController extends Controller
         abort_unless($accessLevel, 403, 'ไม่มีสิทธิ์ดูข้อมูลการเยี่ยมบ้าน');
 
         $visits = $student->homeVisits()
-            ->with(['zone:id,zone_name', 'creator:id,name'])
+            ->with(['zone:id,zone_name', 'creator:id,name', 'participants', 'images'])
             ->orderByDesc('visit_date')
             ->orderByDesc('id')
             ->paginate(20);
@@ -40,15 +43,19 @@ class HomeVisitController extends Controller
         abort_unless($this->isStaff($academy), 403, 'เฉพาะเจ้าหน้าที่โรงเรียนเท่านั้นที่บันทึกการเยี่ยมบ้านได้');
 
         $visit = $student->homeVisits()->create([
-            ...$request->validated(),
+            ...$this->visitAttributes($request),
             'academy_id' => $academy->id,
             'created_by' => auth('api')->id(),
         ]);
 
+        // HV-S5 — participants + รูปหลักฐาน (optional) ให้ parity กับพอร์ทัลเก่า
+        $this->syncHomeVisitParticipants($visit, $request->validated()['participants'] ?? null);
+        $this->handleHomeVisitImages($request, $visit);
+
         return response()->json([
             'success' => true,
             'message' => 'บันทึกการเยี่ยมบ้านเรียบร้อยแล้ว',
-            'data' => $this->serializeVisit($visit->load(['zone:id,zone_name', 'creator:id,name']), true),
+            'data' => $this->serializeVisit($visit->load(['zone:id,zone_name', 'creator:id,name', 'participants', 'images']), true),
         ], 201);
     }
 
@@ -61,7 +68,7 @@ class HomeVisitController extends Controller
         return response()->json([
             'success' => true,
             'data' => $this->serializeVisit(
-                $homeVisit->load(['zone:id,zone_name', 'creator:id,name']),
+                $homeVisit->load(['zone:id,zone_name', 'creator:id,name', 'participants', 'images']),
                 in_array($accessLevel, ['admin', 'homeroom', 'teacher'], true),
             ),
         ]);
@@ -72,12 +79,16 @@ class HomeVisitController extends Controller
         $this->ensureVisitScope($academy, $student, $homeVisit);
         abort_unless($this->isStaff($academy), 403, 'เฉพาะเจ้าหน้าที่โรงเรียนเท่านั้นที่แก้ไขการเยี่ยมบ้านได้');
 
-        $homeVisit->update($request->validated());
+        $homeVisit->update($this->visitAttributes($request));
+
+        // HV-S5 — ส่ง participants = แทนที่ทั้งชุด · ไม่ส่ง = คงเดิม · images เพิ่ม/ลบแยก
+        $this->syncHomeVisitParticipants($homeVisit, $request->validated()['participants'] ?? null);
+        $this->handleHomeVisitImages($request, $homeVisit);
 
         return response()->json([
             'success' => true,
             'message' => 'แก้ไขการเยี่ยมบ้านเรียบร้อยแล้ว',
-            'data' => $this->serializeVisit($homeVisit->fresh()->load(['zone:id,zone_name', 'creator:id,name']), true),
+            'data' => $this->serializeVisit($homeVisit->fresh()->load(['zone:id,zone_name', 'creator:id,name', 'participants', 'images']), true),
         ]);
     }
 
@@ -106,6 +117,16 @@ class HomeVisitController extends Controller
             'message' => 'เปลี่ยนสถานะเรียบร้อยแล้ว',
             'data' => $this->serializeVisit($homeVisit->fresh(), true),
         ]);
+    }
+
+    /**
+     * HV-S5 — เฉพาะคอลัมน์ของ visit (ตัด participants/images ที่จัดการแยกผ่าน trait)
+     */
+    private function visitAttributes(StoreHomeVisitRequest $request): array
+    {
+        return collect($request->validated())
+            ->except(['participants', 'images', 'images_to_delete'])
+            ->all();
     }
 
     private function ensureStudentScope(Academy $academy, Student $student): void
@@ -229,6 +250,8 @@ class HomeVisitController extends Controller
             'visit_status' => $publicStatus,
             'zone_id' => $visit->zone_id,
             'zone' => $visit->relationLoaded('zone') ? $visit->zone : null,
+            'participants' => $visit->relationLoaded('participants') ? $visit->participants : null,
+            'images' => $visit->relationLoaded('images') ? $visit->images : null,
             'observations' => $includeObservations ? $visit->observations : null,
             'recommendations' => $visit->recommendations,
             'follow_up' => $visit->follow_up,

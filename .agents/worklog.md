@@ -39,7 +39,16 @@ cloud session นี้ **ไม่มี composer vendor/agy** → Claude เ�
 **✅ HV-S4 (G9+G11)** `AdminController` (ระบบ B): `storeVisit`/`updateVisit` รับ `participants[]` + `images[]` (multipart) + `images_to_delete[]` · helper `syncParticipants` (ส่งมา=แทนที่ทั้งชุด · null=คงเดิม) + `handleImages` (ลบ scoped ต่อ visit + อัปโหลด disk public, `uploaded_by`=auth id) · `showVisit` โหลด participants/images/zone · `validateVisit` เพิ่มกติกาแบบ optional (contract JSON เดิมไม่พัง) · แก้ **G11** (`getAllVisitsForReports` eager-load คอลัมน์ผี `participant_position`/`participant_role`/`image_description` → dashboard เสี่ยง 500) · เทสต์ `test_admin_visit_stores_participants_and_images_...` (Storage::fake+UploadedFile::fake+PUT spoof) · `php -l` ผ่าน
 FE participants/image UI → รวมใน HV-S5 (teacher portal rebuild แตะหน้าจอชุดเดียวกัน)
 
-**เหลือ: HV-S5 (migrate พอร์ทัล `/home-visit`→JWT · ครูมีบัญชีครบ) → HV-S6 (ลบ legacy หลังเจ้าของยืนยันครูย้าย) → HV-S7**
+### HV-S5a + HV-S5b (ต่อ 2026-10-11) — migrate พอร์ทัลเป็น JWT
+
+**✅ HV-S5a (BE parity ระบบ A):** แยก trait `app/Traits/HandlesHomeVisitAttachments.php` ใช้ร่วม AdminController (refactor ลบ dup + ลบ import ที่ไม่ใช้) · `Master/HomeVisitController` store/update รับ participants+images (`visitAttributes()` ตัดคีย์ attachment ก่อน save) · index/show/serialize เพิ่ม participants/images · `StoreHomeVisitRequest` กติกา optional · เทสต์ `test_staff_can_attach_participants_and_images_via_master_flow`
+
+**✅ HV-S5b (FE portal):** `ui/pages/home-visit/index.vue` เขียนใหม่ — role-chooser session (ปุ่มไปหน้า login ที่ไม่มีจริง) → **JWT landing** `middleware:['auth']` · ดึง `membered-academies` · การ์ดโรงเรียน → `/academies/{name}/admin/home-visits` · **FE เลิกเรียก `/api/home-visit/*` แล้ว** · mobile-first · (cloud ไม่มี ui/node_modules → เจ้าของ `npm run build`+ตรวจ 375px)
+
+`php -l` ผ่านทุกไฟล์ BE · teacher บันทึกเยี่ยมบ้านผ่าน JWT ได้แล้ว (student profile → HomeVisitTab, ระบบ A)
+
+**เหลือ: HV-S5c (participants/image UI ใน HomeVisitTab — parity สุดท้าย) → HV-S6 (ลบ legacy `homevisit.php`+รหัสฮาร์ดโค้ด หลังเจ้าของยืนยันครูย้าย) → HV-S7**
+🔴 legacy backend `/api/home-visit/*` ยังเปิดอยู่ (FE เลิกใช้แล้ว แต่ route ยังรับ — ปิดจริงตอน HV-S6)
 PR: UtaiSalem/nuxnan#39 (branch `claude/funny-meitner-06is0f`)
 
 ---
