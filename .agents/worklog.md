@@ -73,7 +73,16 @@ production ยังไม่ได้รัน migration บางชุด (�
 - **G4** permission `students.manage/export/activate_account/import/lifecycle/...` ถูกอ้างแต่ไม่ถูก assign ให้ role ไหน → มอบสิทธิ์ฝ่ายทะเบียนไม่ได้ (มีแต่ owner/admin bypass)
 - G5 ไม่มีฟอร์มเพิ่มรายคน/ลบถาวรตรง ๆ (ใช้ intake/import + lifecycle) · G6 ยืนยัน intake store/DataTable authz
 
-### รอเคาะ — Q1 (คีย์ read ทะเบียน=students.view? + mask PII ใน getStudent) · Q2 (นิยาม+ผูก students.* ให้ฝ่ายทะเบียน) · Q3 (ต้องมี create/delete รายคนไหม) · Q4 (เติม middleware lifecycle ไหม)
+### เคาะ Q1–Q4 + ลงมือครบ 2026-10-11 (Claude เขียน · php -l ผ่าน · เจ้าของรันเทสต์/build)
+- **Q1/ST-S1 (G1):** `ClassroomController::canView` รับ `students.view` OR `groups.view`
+- **Q2/G2:** `getStudent` คงข้อมูลเต็ม (won't-fix ตามคำตัดสิน)
+- **Q3/ST-S3 (G4):** migration `2026_10_11_000001_grant_student_registry_permissions` ผูก students.* (view/manage/create/import/lifecycle/activate_account/export/delete) ให้ role template `registrar`/`director`/`admin` (idempotent · แตะเฉพาะ academy_id IS NULL)
+- **Q4/ST-S4 (G3):** lifecycle route group เติม `academy.permission` (members-only defense-in-depth · EnrollmentPolicy ยังตัดสินจริง ไม่ regress ครูประจำชั้น)
+- **Q4/ST-S5:** create ใช้ intake wizard เดิม (ไม่ทำซ้ำ) · **ลบถาวร guarded** `StudentController::destroy` — tenant + policy `delete`(students.delete) + route middleware · บล็อก 409 ถ้ามีประวัติ (บัตร/ความประพฤติ/ผลการเรียน) · ลบ RESTRICT-FK ก่อน (student_change_requests/cardRequests) แล้ว cascade · FE ปุ่มถังขยะแดงใน StudentDataTable + Swal confirm
+- **ST-S6:** `tests/Feature/StudentRegistryTest.php` 7 เคส (canView OR 2 เส้น + no-key 403 · delete no-history/blocked-by-card/no-perm/owner/other-academy)
+- ⚠️ **เจ้าของ:** `php artisan migrate` (dev) → `php artisan test:db:rebuild` → `php artisan test -c phpunit.mysql.xml --filter=StudentRegistry` + `npm run build` · prod: migrate หลัง mysqldump
+- **เหลือ ST-S7 ตรวจจอจริง** (งานฝั่งเจ้าของ) · G5 create ปิดด้วย intake เดิม
+
 แตกร่าง ST-S1..S7
 
 ---

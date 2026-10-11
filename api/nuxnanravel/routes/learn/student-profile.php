@@ -49,6 +49,11 @@ Route::middleware(['auth:api'])->prefix('/academies/{academy}')->group(function 
         // Sectional edit endpoints (Phase 7)
         Route::patch('/personal', [StudentController::class, 'updatePersonal'])->name('personal.update');
 
+        // ลบนักเรียนถาวร (เฉพาะคนไม่มีประวัติ — controller กันไว้) · ST-S5
+        Route::delete('/', [StudentController::class, 'destroy'])
+            ->middleware('academy.permission:students.delete')
+            ->name('destroy');
+
         // Address routes
         Route::get('/addresses', [AddressController::class, 'index'])->name('addresses.index');
         Route::post('/addresses', [AddressController::class, 'store'])->name('addresses.store');

@@ -57,6 +57,15 @@ class StudentMasterProfilePolicy
     }
 
     /**
+     * ลบนักเรียนถาวร — เฉพาะผู้มีสิทธิ์ students.delete (owner/admin bypass · registrar/director)
+     * ตัวควบคุม "ลบได้เฉพาะคนไม่มีประวัติ" อยู่ใน controller (StudentController::destroy)
+     */
+    public function delete(User $user, Student $student): bool
+    {
+        return Academy::find($student->academy_id)?->userCan($user, 'students.delete') ?? false;
+    }
+
+    /**
      * Read a student's guardian records.
      *
      * Homeroom staff and the student themselves keep the access they already had;

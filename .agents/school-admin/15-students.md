@@ -85,11 +85,16 @@
 | ST-S2 | G2 — getStudent mask | — | ❌ won't-fix (Q2 คงข้อมูลเต็ม) |
 | ST-S3 | ปิด G4 — migration ผูก students.* ให้ registrar/director/admin | Q2 | 🟡 โค้ดเสร็จ · เจ้าของ migrate |
 | ST-S4 | ปิด G3 — lifecycle route `academy.permission` (members-only defense-in-depth · ไม่ regress ครูประจำชั้นเพราะ EnrollmentPolicy ยังตัดสินจริง) | Q4 | 🟡 โค้ดเสร็จ |
-| ST-S5 | ฟอร์มเพิ่มนักเรียนรายคน + ลบถาวร (BE store/destroy + policy create/delete + route gate students.create/students.delete + FE) | Q4 | ⚪ กำลังทำ |
-| ST-S6 | เทสต์ authz + tenant + permission matrix + create/delete | S1–S5 | ⚪ |
+| ST-S5 | ลบถาวร (guarded) · **create ใช้ intake เดิม ไม่ทำซ้ำ** (เจ้าของเคาะ) | Q4 | 🟡 โค้ดเสร็จ |
+| ST-S6 | เทสต์ `StudentRegistryTest` (canView OR + delete guard/authz/tenant) | S1–S5 | 🟡 โค้ดเสร็จ · เจ้าของรัน |
 | ST-S7 | ตรวจจอจริง 375/768/1280 | S1–S5 | ⚪ (เจ้าของ) |
+
+### ST-S5 ที่ลงจริง (เจ้าของเคาะ: create ใช้ intake · delete เฉพาะคนไม่มีประวัติ)
+- **create:** ไม่ทำซ้ำ — หน้า `intake` ("รับนักเรียนใหม่" · IntakeWizard → `StudentIntakeController::store`) คือฟอร์มเพิ่มรายคนอยู่แล้ว
+- **delete (guarded hard-delete):** `StudentController::destroy(Academy,Student)` — tenant check + `authorize('delete')` (policy `delete`=userCan `students.delete`) + route middleware `students.delete` · **บล็อก 409 ถ้ามีประวัติ** (บัตร/คำร้องบัตร · ความประพฤติ · ผลการเรียน) ให้ใช้ drop แทน · ลบสำเร็จ: ลบ RESTRICT-FK (student_change_requests, cardRequests) ก่อน แล้ว `$student->delete()` (cascade จัดการที่เหลือ) ใน transaction + try/catch → 409 ถ้า FK ยังชน · FE: ปุ่มถังขยะแดงใน `StudentDataTable` + Swal confirm + 409 handling
 
 **Rule:** Claude วางแผน+ตรวจ · agy เขียนโค้ด (ถ้าใช้ได้) · งาน UI แปะกติกา mobile-first · verify build/test ก่อนขึ้น 🟢
 
 ## 8. Review Log
+- **2026-10-11** — เคาะ Q1–Q4 + ลงมือ ST-S1/S3/S4 (authz wiring · php -l) + ST-S5 (ลบถาวร guarded + FE ปุ่มลบ · create ใช้ intake เดิม) + ST-S6 (`StudentRegistryTest` 7 เคส) · **เจ้าของต้องรัน:** `php artisan migrate` (dev · grant students.* ให้ registrar/director/admin) → `php artisan test:db:rebuild` → `php artisan test -c phpunit.mysql.xml --filter=StudentRegistry` + `npm run build` · prod: migrate หลัง mysqldump
 - **2026-10-11** — ขั้น [1]+[2] (Claude): สแกน FE (students.vue/index/import/intake + StudentDataTable) + BE (ClassroomController getAllStudents/getStudent · StudentProfile/Master controllers · Intake/Import/Account/Lifecycle · StudentMasterProfilePolicy · CheckAcademyPermission) + routes academy.php/student-profile.php · เขียนไฟล์รองนี้ · พบ gap G1–G6 · รอเคาะ Q1–Q4
