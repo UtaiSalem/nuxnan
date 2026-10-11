@@ -57,6 +57,27 @@ production ยังไม่ได้รัน migration บางชุด (�
 
 ---
 
+## 2026-10-11 — เมนู #15 ทะเบียนนักเรียน: audit (ขั้น [1]+[2]) · โมดูลแข็งแรง เจอ gap 6 ข้อ (ส่วนใหญ่เป็นเรื่องโมเดลสิทธิ์)
+
+### สถานะ: 🟡 audit เสร็จ · ไฟล์รอง `.agents/school-admin/15-students.md` · รอเจ้าของเคาะ Q1–Q4 ก่อนแตก step
+ต่อจาก #16 (เจ้าของเลือกไป #15 ก่อน #14) · สแกน FE (students.vue wrapper + index/import/intake + StudentDataTable) + BE (ClassroomController getAllStudents/getStudent · StudentProfileController · Master controllers address/contact/health/guardian/academic/change-request · Intake/Import/Account/Lifecycle · StudentMasterProfilePolicy · CheckAcademyPermission) + routes academy.php/student-profile.php
+
+### ค้นพบ: โมเดลสิทธิ์เป็น controller-level (ไม่ใช่ route middleware ล้วน) — แข็งแรงกว่า #13
+- โปรไฟล์ read/write ผ่าน `StudentMasterProfilePolicy` (view=staff/self · update=self/owner/ครูประจำชั้น/admin·director) + tenant check ทุกเมธอด + change-request approval
+- import ทุก method `authorizeImport`/`authorizeBatch` · lifecycle ผ่าน FormRequest::authorize + Gate `enrollment.lifecycle`
+
+### Gap (รายละเอียดในไฟล์รอง §5)
+- **G1** list/detail (`ClassroomController::canView`) gate ด้วย `groups.view` **ไม่ใช่ `students.view`** → role students.view เข้าทะเบียนไม่ได้ · role groups.view เห็นนักเรียนเต็ม
+- **G2** `getStudent` คืน PII เต็ม (health/guardian/contact/address) กันแค่ groups.view · ไม่ mask แบบ `StudentProfileController` (ที่มี graded checkAccess + mask เลขบัตร) — สองเส้นอ่านไม่สอดคล้อง
+- **G3** lifecycle (graduate/drop/repeat/promote/transfer) ไม่มี route middleware · พึ่ง FormRequest::authorize ล้วน
+- **G4** permission `students.manage/export/activate_account/import/lifecycle/...` ถูกอ้างแต่ไม่ถูก assign ให้ role ไหน → มอบสิทธิ์ฝ่ายทะเบียนไม่ได้ (มีแต่ owner/admin bypass)
+- G5 ไม่มีฟอร์มเพิ่มรายคน/ลบถาวรตรง ๆ (ใช้ intake/import + lifecycle) · G6 ยืนยัน intake store/DataTable authz
+
+### รอเคาะ — Q1 (คีย์ read ทะเบียน=students.view? + mask PII ใน getStudent) · Q2 (นิยาม+ผูก students.* ให้ฝ่ายทะเบียน) · Q3 (ต้องมี create/delete รายคนไหม) · Q4 (เติม middleware lifecycle ไหม)
+แตกร่าง ST-S1..S7
+
+---
+
 ## 2026-10-10 — เมนู #16 บัตรนักเรียน: audit (ขั้น [1]+[2]) · ระบบหลักใช้ได้ แต่เจอ gap 8 ข้อ
 
 ### สถานะ: 🟡 audit เสร็จ · ไฟล์รอง `.agents/school-admin/16-student-cards.md` · รอเจ้าของเคาะ Q1–Q4 ก่อน SCD-S1
