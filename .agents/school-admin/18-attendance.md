@@ -2,7 +2,7 @@
 
 > ไฟล์รองของเมนู `18 การเข้าเรียน` (`admin/school-attendance/`)
 > อ่านคู่กับ [OVERVIEW.md](OVERVIEW.md)
-> **สถานะ:** 🟡 audit เสร็จ 2026-10-11 — **เมนูสุก/authz แน่น/มีเทสต์** (ต่างจาก #12–#14, #17) · พบ gap เล็กน้อย 3 ข้อ (ไม่มี P0)
+> **สถานะ:** 🟢 audit + ปิด gap ครบ 2026-10-11 (AT-S1–S4) — **เมนูสุก/authz แน่น/มีเทสต์** · G1/G2/G3 ปิดแล้ว + เพิ่ม export CSV/PDF · เหลือเจ้าของ verify (MySQL + build)
 
 ## 1. Scope & Purpose
 
@@ -87,10 +87,10 @@ Keys จริงของเมนูนี้ = **`school_attendance.view` / `
 
 | Step | Title | Deliverable | Status |
 |---|---|---|---|
-| AT-S1 | **G1:** `storeRecords` validate `student_id` เป็นสมาชิก/นักเรียนของ academy (เทียบ resolver) + เทสต์ | validation rule scoped + 1 เคส | ⚪ pending |
-| AT-S2 | **G2:** แก้ nav `admin.vue` → `can('school_attendance.view'|'.manage')` | 1 บรรทัด FE | ⚪ pending |
-| AT-S3 | **G3:** เติมเทสต์ authz/data-depth (403 non-member · own-only ไม่มี `.view` · write ต้อง `.manage` · history คนอื่นต้อง `.view`) | ~4 เคส | ⚪ pending |
-| AT-S4 | (ถ้าเจ้าของต้องการ) export รายงาน school-attendance CSV/PDF (G-feature #8) | endpoint + FE ปุ่ม | ⚪ optional |
+| AT-S1 | **G1:** `storeRecords` validate `student_id` เป็นสมาชิก approved ของ academy | `Rule::exists('academy_members',...)->where(academy_id,status=2)` + เทสต์ | 🟢 **done (owner verify MySQL)** |
+| AT-S2 | **G2:** แก้ nav `admin.vue:180` → `can('school_attendance.view')‖'.manage'` | 1 บรรทัด FE | 🟢 **done** |
+| AT-S3 | **G3:** เทสต์ authz/data-depth | 4 เคส (403 non-member · own-only ไม่มี `.view` · write ต้อง `.manage` · history คนอื่นต้อง `.view`) + G1 + export | 🟢 **done (owner verify MySQL)** |
+| AT-S4 | export รายงาน school-attendance CSV/PDF | `GET /{attendance}/export?format=csv\|pdf` (gate `.view`) + blade `exports.school-attendance-pdf` + ปุ่มในหน้า `[id].vue` | 🟢 **done (owner verify build+MySQL)** |
 
 **Rule:** ทุก step verify (เทสต์/จอจริง) ก่อน 🟢 · cloud รันเทสต์ไม่ได้ (ไม่มี vendor) → เจ้าของ verify MySQL
 
@@ -100,4 +100,11 @@ Keys จริงของเมนูนี้ = **`school_attendance.view` / `
 - **Q3 — ต้องการ export รายงาน school-attendance (AT-S4) ไหม?** (ตอนนี้ไม่มี)
 
 ## 8. Review Log
-- **2026-10-11 (audit)** — ขั้น [1]+[2] เสร็จ · เมนูสุก/authz แน่น (G18 hardening ยืนยันแล้ว)/มีเทสต์ · ไม่มี P0 · พบ G1 (storeRecords student_id ไม่ scoped) · G2 (nav mis-key `attendance.view`/`academy.view` แทน `school_attendance.*`) · G3 (test gap authz) · แก้ความเข้าใจ: เมนูนี้ใช้คีย์ `school_attendance.*` ไม่ใช่ `attendance.*` (OVERVIEW ควรปรับ) · course-attendance/staff-attendance เป็นคนละโดเมน · **รอเจ้าของเคาะ Q1–Q3 ก่อนส่ง step**
+- **2026-10-11 (audit)** — ขั้น [1]+[2] เสร็จ · เมนูสุก/authz แน่น (G18 hardening ยืนยันแล้ว)/มีเทสต์ · ไม่มี P0 · พบ G1/G2/G3 · แก้ความเข้าใจคีย์ `school_attendance.*`
+- **2026-10-11 (ลงมือ AT-S1–S4 — เจ้าของเคาะ Q1=ใช่ Q2=ใช่ Q3=ต้องการ export)** — Claude เขียนเอง (cloud ไม่มี vendor/agy) ตรวจ `php -l`:
+  - **AT-S1/G1:** `storeRecords` เปลี่ยน `student_id => exists:users,id` → `Rule::exists('academy_members','user_id')->where('academy_id',..)->where('status',STATUS_APPROVED)` ⇒ ใส่ record ได้เฉพาะสมาชิกอนุมัติของโรงเรียนนี้
+  - **AT-S2/G2:** `admin.vue:180` → `can('school_attendance.view') || can('school_attendance.manage')` (เดิม `attendance.view`/`academy.view`)
+  - **AT-S3/G3:** เพิ่ม 6 เคสใน `SchoolAttendanceRosterScopeTest`: non-member 403 · member ไม่มี `.view` ได้ own-record-only (summary null) · member ไม่มี `.manage` โดน 403 ที่ records · history คนอื่นต้อง `.view` · G1 reject non-member student_id (422) · export CSV 200 text/csv
+  - **AT-S4 export:** `export()` + `exportCsv`/`exportPdf` (mPDF garuda) · route `GET /{attendance}/export?format=csv|pdf` gate `school_attendance.view` · blade `resources/views/exports/school-attendance-pdf.blade.php` · FE ปุ่ม CSV/PDF ใน `[id].vue` (ใช้ `api.getBlob` + download) · mobile-first
+  - ตรวจ `php -l` ผ่านทุกไฟล์ BE · เจ้าของ verify: `php artisan test -c phpunit.mysql.xml --filter=SchoolAttendanceRosterScopeTest` + `pint` + `npm run build` + กดปุ่ม export จริง
+  - **เมนู #18 ปิด gap ครบ (G1–G3) + ได้ฟีเจอร์ export** 🟢

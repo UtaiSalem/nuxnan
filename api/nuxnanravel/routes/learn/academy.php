@@ -1070,6 +1070,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
         Route::get('/', [SchoolAttendanceController::class, 'index'])->middleware('academy.permission')->name('api.academy.schoolAttendance.index');
         Route::post('/', [SchoolAttendanceController::class, 'store'])->middleware('academy.permission:school_attendance.manage')->name('api.academy.schoolAttendance.store');
         Route::get('/student/{student}', [SchoolAttendanceController::class, 'studentHistory'])->middleware('academy.permission')->name('api.academy.schoolAttendance.studentHistory');
+        Route::get('/{attendance}/export', [SchoolAttendanceController::class, 'export'])->middleware('academy.permission:school_attendance.view')->name('api.academy.schoolAttendance.export');
         Route::get('/{attendance}', [SchoolAttendanceController::class, 'show'])->middleware('academy.permission')->name('api.academy.schoolAttendance.show');
         Route::post('/{attendance}/check-in', [SchoolAttendanceController::class, 'checkIn'])->middleware('academy.permission')->name('api.academy.schoolAttendance.checkIn');
         Route::post('/{attendance}/refresh-qr', [SchoolAttendanceController::class, 'refreshQr'])->middleware('academy.permission:school_attendance.manage')->name('api.academy.schoolAttendance.refreshQr');

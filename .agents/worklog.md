@@ -14,7 +14,18 @@ tenant 404 ทุก method · `authorizeManager`=`userCan('school_attendance.ma
 - G2 (P2 FE) nav `admin.vue:180` gate `can('attendance.view')||can('academy.view')` ผิดคีย์ → ควร `school_attendance.view/manage` (backend gate แล้ว เป็น UX)
 - G3 (P3 test) ไม่มีเทสต์ authz/data-depth (403 non-member · own-only · write ต้อง manage · history)
 
-แตกเป็น AT-S1 (G1 scope student_id) · AT-S2 (G2 แก้ nav 1 บรรทัด) · AT-S3 (G3 เทสต์) · AT-S4 (export รายงาน — optional) · **ยังไม่ส่ง step — รอเจ้าของเคาะ Q1–Q3**
+แตกเป็น AT-S1 (G1 scope student_id) · AT-S2 (G2 แก้ nav 1 บรรทัด) · AT-S3 (G3 เทสต์) · AT-S4 (export รายงาน)
+
+### ✅ ลงมือ AT-S1–S4 (เจ้าของเคาะ Q1/Q2/Q3 = ใช่ทั้งหมด) 2026-10-11
+
+Claude เขียนเอง (cloud ไม่มี vendor/agy) ตรวจ `php -l`:
+- **AT-S1/G1:** `storeRecords` `student_id => exists:users,id` → `Rule::exists('academy_members','user_id')->where('academy_id',..)->where('status',STATUS_APPROVED)` ⇒ ใส่ record ได้เฉพาะสมาชิกอนุมัติของโรงเรียน
+- **AT-S2/G2:** `admin.vue:180` → `can('school_attendance.view')||can('school_attendance.manage')`
+- **AT-S3/G3:** +6 เคสใน `SchoolAttendanceRosterScopeTest` (non-member 403 · own-record-only ไม่มี `.view` · write ต้อง `.manage` · history คนอื่นต้อง `.view` · G1 reject non-member 422 · export CSV 200)
+- **AT-S4 export:** `export()`+`exportCsv`/`exportPdf` (mPDF garuda) · route `GET /{attendance}/export?format=csv|pdf` gate `school_attendance.view` · blade `exports/school-attendance-pdf.blade.php` · FE ปุ่ม CSV/PDF ใน `admin/school-attendance/[id].vue` (`api.getBlob`+download) · mobile-first
+
+**เมนู #18 ปิด gap ครบ (G1–G3) + ได้ export** 🟢 · เจ้าของ verify: `phpunit.mysql.xml --filter=SchoolAttendanceRosterScopeTest` + pint + `npm run build` + กดปุ่ม export จริง
+PR: UtaiSalem/nuxnan#39 (branch `claude/funny-meitner-06is0f`)
 
 ---
 

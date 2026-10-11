@@ -21,6 +21,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Mpdf\Mpdf;
+use Mpdf\Output\Destination;
 
 class SchoolAttendanceController extends Controller
 {
@@ -252,7 +254,13 @@ class SchoolAttendanceController extends Controller
         $validated = $request->validate([
             'records' => 'required|array|min:1',
             'records.*' => ['array', new OnlyKnownKeys(['student_id', 'status', 'remarks'])],
-            'records.*.student_id' => 'required|exists:users,id',
+            // AT-S1/G1 — student_id ต้องเป็นสมาชิกอนุมัติของโรงเรียนนี้ (กันใส่ user id มั่วข้ามโรงเรียน)
+            'records.*.student_id' => [
+                'required',
+                Rule::exists('academy_members', 'user_id')
+                    ->where('academy_id', $academy->id)
+                    ->where('status', AcademyMember::STATUS_APPROVED),
+            ],
             'records.*.status' => ['required', Rule::in(['present', 'absent', 'late', 'leave'])],
             'records.*.remarks' => 'nullable|string|max:200',
         ]);
@@ -481,6 +489,108 @@ class SchoolAttendanceController extends Controller
             'data' => $records,
             'summary' => $summary,
         ]);
+    }
+
+    // GET /academies/{academy}/school-attendances/{attendance}/export?format=csv|pdf  (AT-S4)
+    public function export(Academy $academy, SchoolAttendance $attendance, Request $request)
+    {
+        $this->authorizeAttendance($academy, $attendance);
+        abort_unless($academy->userCan($request->user(), 'school_attendance.view'), 403, 'Unauthorized');
+
+        $attendance->load(['records.student:id,name']);
+        $this->enrichRecordsWithClassroomInfo($attendance->records, $academy->id);
+
+        $statusLabels = [
+            'present' => 'มาเรียน',
+            'late' => 'มาสาย',
+            'absent' => 'ขาด',
+            'leave' => 'ลา',
+        ];
+
+        $rows = $attendance->records
+            ->sortBy(fn ($record) => [$record->classroom_name ?? 'zzz', (int) ($record->student_number ?? 9999)])
+            ->values()
+            ->map(fn ($record) => [
+                'student_number' => $record->student_number ?? '-',
+                'student_name' => $record->student?->name ?? 'N/A',
+                'classroom' => $record->classroom_name ?? '-',
+                'status_label' => $statusLabels[$record->status] ?? $record->status,
+                'checked_in_at' => $record->checked_in_at
+                    ? Carbon::parse($record->checked_in_at)->format('H:i')
+                    : '-',
+                'remarks' => $record->remarks ?? '',
+            ])
+            ->all();
+
+        if (strtolower((string) $request->input('format', 'csv')) === 'pdf') {
+            return $this->exportPdf($academy, $attendance, $rows);
+        }
+
+        return $this->exportCsv($attendance, $rows);
+    }
+
+    private function exportCsv(SchoolAttendance $attendance, array $rows)
+    {
+        $filename = 'school-attendance-'.$attendance->date->format('Y-m-d').'.csv';
+
+        return response()->stream(function () use ($rows) {
+            $file = fopen('php://output', 'w');
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF)); // UTF-8 BOM
+            fputcsv($file, ['เลขที่', 'ชื่อ-นามสกุล', 'ชั้นเรียน', 'สถานะ', 'เวลาเช็คชื่อ', 'หมายเหตุ']);
+            foreach ($rows as $row) {
+                fputcsv($file, [
+                    $row['student_number'],
+                    $row['student_name'],
+                    $row['classroom'],
+                    $row['status_label'],
+                    $row['checked_in_at'],
+                    $row['remarks'],
+                ]);
+            }
+            fclose($file);
+        }, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename={$filename}",
+        ]);
+    }
+
+    private function exportPdf(Academy $academy, SchoolAttendance $attendance, array $rows)
+    {
+        $html = view('exports.school-attendance-pdf', [
+            'academyName' => $academy->name,
+            'title' => $attendance->title,
+            'date' => $attendance->date->format('d/m/Y'),
+            'rows' => $rows,
+            'generatedAt' => now()->format('d/m/Y H:i'),
+        ])->render();
+
+        $tempDir = storage_path('app/mpdf');
+        if (! is_dir($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+
+        $mpdf = new Mpdf([
+            'mode' => 'utf-8',
+            'format' => 'A4',
+            'default_font' => 'garuda',
+            'margin_left' => 12,
+            'margin_right' => 12,
+            'margin_top' => 14,
+            'margin_bottom' => 12,
+            'tempDir' => $tempDir,
+        ]);
+        $mpdf->WriteHTML($html);
+
+        $filename = 'school-attendance-'.$attendance->date->format('Y-m-d').'.pdf';
+
+        return response(
+            $mpdf->Output($filename, Destination::STRING_RETURN),
+            200,
+            [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => "attachment; filename={$filename}",
+            ]
+        );
     }
 
     /**
