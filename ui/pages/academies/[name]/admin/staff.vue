@@ -1,7 +1,9 @@
 <script setup lang="ts">
 /**
  * Academy Admin - Staff Management
- * หน้าจัดการบุคลากร
+ * หน้าจัดการบุคลากร (เมนู #14)
+ * - อ่าน = staff.view · จัดการ = staff.manage (ST-S1)
+ * - ชื่อ/รูปจากบัญชี user ที่ผูก (Q1) · ฝ่ายผูก department_id (Q4)
  */
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
@@ -18,6 +20,7 @@ const academyName = computed(() => route.params.name as string)
 const academy = ref<any>(null)
 const staff = ref<any[]>([])
 const positions = ref<any[]>([])
+const departments = ref<any[]>([])
 const summary = ref<any>(null)
 const isLoading = ref(true)
 const isLoadingStaff = ref(false)
@@ -44,35 +47,49 @@ const selectedStaff = ref<any>(null)
 // Academy Role
 const academyId = ref<number | null>(null)
 const { can, isAdmin, fetchMyRole } = useAcademyRole(academyId)
+const canManage = computed(() => isAdmin.value || can('staff.manage'))
 
-// Form
+// Form (ตรงกับ schema จริง: employment_type / department_id)
 const staffForm = ref({
   user_id: null as number | null,
   position_id: null as number | null,
-  employee_type: 'full_time',
-  status: 'active',
-  hire_date: '',
-  department: ''
+  department_id: null as number | null,
+  employment_type: 'full_time',
+  hire_date: ''
 })
 const isSubmitting = ref(false)
 const formErrors = ref<Record<string, string[]>>({})
 
+// Position form (ST-S4)
+const positionForm = ref({
+  id: null as number | null,
+  name: '',
+  code: '',
+  department_id: null as number | null,
+  is_teaching_position: false,
+  is_active: true
+})
+const isSubmittingPosition = ref(false)
+const positionErrors = ref<Record<string, string[]>>({})
+
 // Available members (for adding staff)
 const availableMembers = ref<any[]>([])
 
-// Status options
+// Status options (ตรงกับ enum จริง — ST-S5 / Q5)
 const statusOptions = [
-  { value: 'active', label: 'ทำงาน', color: 'green' },
-  { value: 'on_leave', label: 'ลาพัก', color: 'amber' },
+  { value: 'active', label: 'ปฏิบัติงาน', color: 'green' },
+  { value: 'on_leave', label: 'ลา', color: 'amber' },
+  { value: 'suspended', label: 'พักงาน', color: 'orange' },
   { value: 'resigned', label: 'ลาออก', color: 'gray' },
-  { value: 'retired', label: 'เกษียณ', color: 'blue' }
+  { value: 'terminated', label: 'เลิกจ้าง', color: 'red' }
 ]
 
+// Employment types (ตรงกับ enum จริง — Q5, ตัด intern ใส่ temporary)
 const employeeTypes = [
   { value: 'full_time', label: 'พนักงานประจำ' },
-  { value: 'part_time', label: 'พนักงานพาร์ทไทม์' },
+  { value: 'part_time', label: 'พนักงานไม่เต็มเวลา' },
   { value: 'contract', label: 'พนักงานสัญญาจ้าง' },
-  { value: 'intern', label: 'นักศึกษาฝึกงาน' }
+  { value: 'temporary', label: 'พนักงานชั่วคราว' }
 ]
 
 onMounted(async () => {
@@ -82,15 +99,17 @@ onMounted(async () => {
       academy.value = response.academy
       academyId.value = response.academy.id
       await fetchMyRole()
-      
-      if (!isAdmin.value) {
+
+      // เปิดหน้าให้ผู้ถือ staff.view (ไม่ใช่แค่ admin) — Q3
+      if (!isAdmin.value && !can('staff.view')) {
         navigateTo(`/academies/${academyName.value}/admin`)
         return
       }
-      
+
       await Promise.all([
         fetchStaff(),
         fetchPositions(),
+        fetchDepartments(),
         fetchSummary()
       ])
     }
@@ -101,24 +120,30 @@ onMounted(async () => {
   }
 })
 
-// Fetch staff
+// Fetch staff (query params ต้องอยู่ใน URL — ST-S3 F4)
 const fetchStaff = async () => {
   if (!academyId.value) return
-  
+
   isLoadingStaff.value = true
   try {
-    const response: any = await api.get(`/api/academies/${academyId.value}/staff`, {
-      search: searchQuery.value || undefined,
-      status: filterStatus.value || undefined,
-      position_id: filterPosition.value || undefined,
-      page: pagination.value.current_page,
-      per_page: pagination.value.per_page
-    })
-    
+    const params = new URLSearchParams()
+    if (searchQuery.value) params.set('search', searchQuery.value)
+    if (filterStatus.value) params.set('status', filterStatus.value)
+    if (filterPosition.value) params.set('position_id', String(filterPosition.value))
+    params.set('page', String(pagination.value.current_page))
+    params.set('per_page', String(pagination.value.per_page))
+
+    const response: any = await api.get(`/api/academies/${academyId.value}/staff?${params.toString()}`)
+
     if (response.success) {
-      staff.value = response.data || []
-      if (response.pagination) {
-        pagination.value = response.pagination
+      // backend คืน paginator object ใน data — ST-S3 F2
+      const pageData = response.data || {}
+      staff.value = pageData.data || []
+      pagination.value = {
+        current_page: pageData.current_page || 1,
+        last_page: pageData.last_page || 1,
+        per_page: pageData.per_page || pagination.value.per_page,
+        total: pageData.total || 0
       }
     }
   } catch (err) {
@@ -131,7 +156,7 @@ const fetchStaff = async () => {
 // Fetch positions
 const fetchPositions = async () => {
   if (!academyId.value) return
-  
+
   try {
     const response: any = await api.get(`/api/academies/${academyId.value}/staff/positions`)
     if (response.success) {
@@ -142,10 +167,24 @@ const fetchPositions = async () => {
   }
 }
 
-// Fetch summary
+// Fetch departments (สำหรับ dropdown — Q4)
+const fetchDepartments = async () => {
+  if (!academyId.value) return
+
+  try {
+    const response: any = await api.get(`/api/academies/${academyId.value}/staff/departments`)
+    if (response.success) {
+      departments.value = response.data || []
+    }
+  } catch (err) {
+    console.error('Failed to fetch departments:', err)
+  }
+}
+
+// Fetch summary (counts ซ้อนใต้ by_status — ST-S3 F3)
 const fetchSummary = async () => {
   if (!academyId.value) return
-  
+
   try {
     const response: any = await api.get(`/api/academies/${academyId.value}/staff/summary`)
     if (response.success) {
@@ -159,12 +198,9 @@ const fetchSummary = async () => {
 // Fetch available members
 const fetchAvailableMembers = async () => {
   if (!academyId.value) return
-  
+
   try {
-    const response: any = await api.get(`/api/academies/${academyId.value}/members`, {
-      status: 2,
-      per_page: 100
-    })
+    const response: any = await api.get(`/api/academies/${academyId.value}/members?status=2&per_page=100`)
     if (response.success) {
       // Filter out members who are already staff
       const staffUserIds = staff.value.map(s => s.user_id)
@@ -192,10 +228,9 @@ const openCreateModal = async () => {
   staffForm.value = {
     user_id: null,
     position_id: null,
-    employee_type: 'full_time',
-    status: 'active',
-    hire_date: new Date().toISOString().split('T')[0],
-    department: ''
+    department_id: null,
+    employment_type: 'full_time',
+    hire_date: new Date().toISOString().split('T')[0]
   }
   formErrors.value = {}
   await fetchAvailableMembers()
@@ -208,30 +243,34 @@ const openEditModal = (staffMember: any) => {
   staffForm.value = {
     user_id: staffMember.user_id,
     position_id: staffMember.position_id,
-    employee_type: staffMember.employee_type || 'full_time',
-    status: staffMember.status || 'active',
-    hire_date: staffMember.hire_date?.split('T')[0] || '',
-    department: staffMember.department || ''
+    department_id: staffMember.department_id ?? null,
+    employment_type: staffMember.employment_type || 'full_time',
+    hire_date: staffMember.hire_date?.split('T')[0] || ''
   }
   formErrors.value = {}
   showEditModal.value = true
 }
 
+const closeStaffModal = () => {
+  showCreateModal.value = false
+  showEditModal.value = false
+}
+
 // Create staff
 const createStaff = async () => {
   if (!academyId.value) return
-  
+
   isSubmitting.value = true
   formErrors.value = {}
-  
+
   try {
     const response: any = await api.post(`/api/academies/${academyId.value}/staff`, staffForm.value)
-    
+
     if (response.success) {
-      showCreateModal.value = false
+      closeStaffModal()
       await fetchStaff()
       await fetchSummary()
-      
+
       Swal.fire({
         icon: 'success',
         title: 'เพิ่มบุคลากรสำเร็จ',
@@ -240,13 +279,13 @@ const createStaff = async () => {
       })
     }
   } catch (err: any) {
-    if (err.response?.data?.errors) {
-      formErrors.value = err.response.data.errors
+    if (err.data?.errors) {
+      formErrors.value = err.data.errors
     } else {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถเพิ่มบุคลากรได้'
+        text: err.data?.message || 'ไม่สามารถเพิ่มบุคลากรได้'
       })
     }
   } finally {
@@ -254,23 +293,23 @@ const createStaff = async () => {
   }
 }
 
-// Update staff
+// Update staff (PATCH — ST-S3 F6)
 const updateStaff = async () => {
   if (!academyId.value || !selectedStaff.value) return
-  
+
   isSubmitting.value = true
   formErrors.value = {}
-  
+
   try {
-    const response: any = await api.put(
+    const response: any = await api.patch(
       `/api/academies/${academyId.value}/staff/${selectedStaff.value.id}`,
       staffForm.value
     )
-    
+
     if (response.success) {
-      showEditModal.value = false
+      closeStaffModal()
       await fetchStaff()
-      
+
       Swal.fire({
         icon: 'success',
         title: 'อัปเดตสำเร็จ',
@@ -279,13 +318,13 @@ const updateStaff = async () => {
       })
     }
   } catch (err: any) {
-    if (err.response?.data?.errors) {
-      formErrors.value = err.response.data.errors
+    if (err.data?.errors) {
+      formErrors.value = err.data.errors
     } else {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถอัปเดตได้'
+        text: err.data?.message || 'ไม่สามารถอัปเดตได้'
       })
     }
   } finally {
@@ -293,18 +332,20 @@ const updateStaff = async () => {
   }
 }
 
-// Update status
+// Update status (PATCH — ST-S3 F6 / ST-S5)
 const updateStatus = async (staffMember: any, newStatus: string) => {
+  if (newStatus === staffMember.status) return
+
   try {
-    const response: any = await api.put(
+    const response: any = await api.patch(
       `/api/academies/${academyId.value}/staff/${staffMember.id}/status`,
       { status: newStatus }
     )
-    
+
     if (response.success) {
       await fetchStaff()
       await fetchSummary()
-      
+
       Swal.fire({
         icon: 'success',
         title: 'อัปเดตสถานะสำเร็จ',
@@ -316,8 +357,9 @@ const updateStatus = async (staffMember: any, newStatus: string) => {
     Swal.fire({
       icon: 'error',
       title: 'เกิดข้อผิดพลาด',
-      text: err.response?.data?.message || 'ไม่สามารถอัปเดตสถานะได้'
+      text: err.data?.message || 'ไม่สามารถอัปเดตสถานะได้'
     })
+    await fetchStaff()
   }
 }
 
@@ -332,17 +374,17 @@ const deleteStaff = async (staffMember: any) => {
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#ef4444'
   })
-  
+
   if (result.isConfirmed) {
     try {
       const response: any = await api.delete(
         `/api/academies/${academyId.value}/staff/${staffMember.id}`
       )
-      
+
       if (response.success) {
         await fetchStaff()
         await fetchSummary()
-        
+
         Swal.fire({
           icon: 'success',
           title: 'ลบสำเร็จ',
@@ -354,15 +396,128 @@ const deleteStaff = async (staffMember: any) => {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถลบได้'
+        text: err.data?.message || 'ไม่สามารถลบได้'
       })
     }
+  }
+}
+
+// --- Position management (ST-S4) ---
+const openPositionModal = () => {
+  resetPositionForm()
+  showPositionModal.value = true
+}
+
+const resetPositionForm = () => {
+  positionForm.value = {
+    id: null,
+    name: '',
+    code: '',
+    department_id: null,
+    is_teaching_position: false,
+    is_active: true
+  }
+  positionErrors.value = {}
+}
+
+const editPosition = (pos: any) => {
+  positionForm.value = {
+    id: pos.id,
+    name: pos.name || '',
+    code: pos.code || '',
+    department_id: pos.department_id ?? null,
+    is_teaching_position: !!pos.is_teaching_position,
+    is_active: pos.is_active ?? true
+  }
+  positionErrors.value = {}
+}
+
+const savePosition = async () => {
+  if (!academyId.value) return
+
+  isSubmittingPosition.value = true
+  positionErrors.value = {}
+
+  const payload = {
+    name: positionForm.value.name,
+    code: positionForm.value.code || null,
+    department_id: positionForm.value.department_id,
+    is_teaching_position: positionForm.value.is_teaching_position,
+    is_active: positionForm.value.is_active
+  }
+
+  try {
+    const response: any = positionForm.value.id
+      ? await api.patch(`/api/academies/${academyId.value}/staff/positions/${positionForm.value.id}`, payload)
+      : await api.post(`/api/academies/${academyId.value}/staff/positions`, payload)
+
+    if (response.success) {
+      resetPositionForm()
+      await fetchPositions()
+
+      Swal.fire({
+        icon: 'success',
+        title: positionForm.value.id ? 'อัปเดตตำแหน่งสำเร็จ' : 'เพิ่มตำแหน่งสำเร็จ',
+        timer: 1500,
+        showConfirmButton: false
+      })
+    }
+  } catch (err: any) {
+    if (err.data?.errors) {
+      positionErrors.value = err.data.errors
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'เกิดข้อผิดพลาด',
+        text: err.data?.message || 'ไม่สามารถบันทึกตำแหน่งได้'
+      })
+    }
+  } finally {
+    isSubmittingPosition.value = false
+  }
+}
+
+const deletePosition = async (pos: any) => {
+  const result = await Swal.fire({
+    icon: 'warning',
+    title: 'ยืนยันการลบตำแหน่ง',
+    text: `ลบตำแหน่ง "${pos.name}" หรือไม่?`,
+    showCancelButton: true,
+    confirmButtonText: 'ลบ',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#ef4444'
+  })
+  if (!result.isConfirmed) return
+
+  try {
+    const response: any = await api.delete(`/api/academies/${academyId.value}/staff/positions/${pos.id}`)
+    if (response.success) {
+      await fetchPositions()
+      Swal.fire({ icon: 'success', title: 'ลบตำแหน่งสำเร็จ', timer: 1500, showConfirmButton: false })
+    }
+  } catch (err: any) {
+    Swal.fire({
+      icon: 'error',
+      title: 'เกิดข้อผิดพลาด',
+      text: err.data?.message || 'ไม่สามารถลบตำแหน่งได้'
+    })
   }
 }
 
 // Helper functions
 const getStatusInfo = (status: string) => {
   return statusOptions.find(s => s.value === status) || statusOptions[0]
+}
+const statusBadgeClass = (status: string) => {
+  const color = getStatusInfo(status).color
+  const map: Record<string, string> = {
+    green: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300',
+    amber: 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300',
+    orange: 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300',
+    red: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300',
+    gray: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+  }
+  return map[color] || map.gray
 }
 </script>
 
@@ -375,21 +530,21 @@ const getStatusInfo = (status: string) => {
     <div v-else class="space-y-6">
       <!-- Header -->
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
+        <div class="min-w-0">
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">จัดการบุคลากร</h1>
           <p class="text-gray-600 dark:text-gray-400 mt-1">จัดการข้อมูลครูและบุคลากรของโรงเรียน</p>
         </div>
-        <div class="flex gap-2">
+        <div v-if="canManage" class="flex flex-wrap gap-2 flex-shrink-0">
           <button
-            @click="showPositionModal = true"
-            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            @click="openPositionModal"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
           >
             <Icon icon="fluent:tag-24-regular" class="w-5 h-5" />
             <span>ตำแหน่ง</span>
           </button>
           <button
             @click="openCreateModal"
-            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
+            class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors whitespace-nowrap"
           >
             <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
             <span>เพิ่มบุคลากร</span>
@@ -401,10 +556,10 @@ const getStatusInfo = (status: string) => {
       <div v-if="summary" class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
-            <div class="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-xl">
+            <div class="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-xl flex-shrink-0">
               <Icon icon="fluent:people-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
-            <div>
+            <div class="min-w-0">
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ summary.total || 0 }}</p>
               <p class="text-sm text-gray-500 dark:text-gray-400">บุคลากรทั้งหมด</p>
             </div>
@@ -413,34 +568,34 @@ const getStatusInfo = (status: string) => {
 
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
-            <div class="p-3 bg-green-100 dark:bg-green-900/50 rounded-xl">
+            <div class="p-3 bg-green-100 dark:bg-green-900/50 rounded-xl flex-shrink-0">
               <Icon icon="fluent:person-available-24-filled" class="w-6 h-6 text-green-600 dark:text-green-400" />
             </div>
-            <div>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ summary.active || 0 }}</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400">ทำงานอยู่</p>
+            <div class="min-w-0">
+              <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ summary.by_status?.active || 0 }}</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">ปฏิบัติงาน</p>
             </div>
           </div>
         </div>
 
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
-            <div class="p-3 bg-amber-100 dark:bg-amber-900/50 rounded-xl">
+            <div class="p-3 bg-amber-100 dark:bg-amber-900/50 rounded-xl flex-shrink-0">
               <Icon icon="fluent:person-clock-24-filled" class="w-6 h-6 text-amber-600 dark:text-amber-400" />
             </div>
-            <div>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ summary.on_leave || 0 }}</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400">ลาพัก</p>
+            <div class="min-w-0">
+              <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ summary.by_status?.on_leave || 0 }}</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">ลา</p>
             </div>
           </div>
         </div>
 
         <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <div class="flex items-center gap-4">
-            <div class="p-3 bg-purple-100 dark:bg-purple-900/50 rounded-xl">
+            <div class="p-3 bg-purple-100 dark:bg-purple-900/50 rounded-xl flex-shrink-0">
               <Icon icon="fluent:briefcase-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
-            <div>
+            <div class="min-w-0">
               <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ positions.length }}</p>
               <p class="text-sm text-gray-500 dark:text-gray-400">ตำแหน่ง</p>
             </div>
@@ -451,7 +606,7 @@ const getStatusInfo = (status: string) => {
       <!-- Filters -->
       <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
         <div class="flex flex-col sm:flex-row gap-4">
-          <div class="relative flex-1">
+          <div class="relative flex-1 min-w-0">
             <Icon icon="fluent:search-24-regular" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               v-model="searchQuery"
@@ -492,13 +647,16 @@ const getStatusInfo = (status: string) => {
       <div v-else-if="staff.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-12 text-center shadow-sm border border-gray-100 dark:border-gray-700">
         <Icon icon="fluent:people-24-regular" class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
         <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">ยังไม่มีบุคลากร</h3>
-        <p class="text-gray-500 dark:text-gray-400 mb-4">เริ่มต้นเพิ่มบุคลากรคนแรก</p>
+        <p class="text-gray-500 dark:text-gray-400 mb-4">
+          {{ positions.length === 0 ? 'เริ่มจากสร้างตำแหน่งก่อน แล้วค่อยเพิ่มบุคลากร' : 'เริ่มต้นเพิ่มบุคลากรคนแรก' }}
+        </p>
         <button
-          @click="openCreateModal"
+          v-if="canManage"
+          @click="positions.length === 0 ? openPositionModal() : openCreateModal()"
           class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
         >
           <Icon icon="fluent:add-24-filled" class="w-5 h-5" />
-          <span>เพิ่มบุคลากร</span>
+          <span>{{ positions.length === 0 ? 'สร้างตำแหน่ง' : 'เพิ่มบุคลากร' }}</span>
         </button>
       </div>
 
@@ -507,11 +665,11 @@ const getStatusInfo = (status: string) => {
           <table class="w-full">
             <thead class="bg-gray-50 dark:bg-gray-700/50">
               <tr>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">บุคลากร</th>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">ตำแหน่ง</th>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">ประเภท</th>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">สถานะ</th>
-                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">จัดการ</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap">บุคลากร</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap">ตำแหน่ง</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap">ประเภท</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap">สถานะ</th>
+                <th v-if="canManage" class="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase whitespace-nowrap">จัดการ</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -521,37 +679,40 @@ const getStatusInfo = (status: string) => {
                     <img
                       :src="member.user?.avatar || '/images/default-avatar.png'"
                       :alt="member.user?.name"
-                      class="w-10 h-10 rounded-full object-cover"
+                      class="w-10 h-10 rounded-full object-cover flex-shrink-0"
                     />
-                    <div>
-                      <p class="font-medium text-gray-900 dark:text-white">{{ member.user?.name }}</p>
+                    <div class="min-w-0">
+                      <p class="font-medium text-gray-900 dark:text-white break-words">{{ member.user?.name }}</p>
                       <p class="text-sm text-gray-500 dark:text-gray-400">{{ member.employee_id }}</p>
                     </div>
                   </div>
                 </td>
                 <td class="px-4 py-3">
-                  <p class="text-gray-900 dark:text-white">{{ member.position?.name || '-' }}</p>
-                  <p v-if="member.department" class="text-sm text-gray-500 dark:text-gray-400">{{ member.department }}</p>
+                  <p class="text-gray-900 dark:text-white break-words">{{ member.position?.name || '-' }}</p>
+                  <p v-if="member.department" class="text-sm text-gray-500 dark:text-gray-400 break-words">{{ member.department?.name }}</p>
                 </td>
                 <td class="px-4 py-3">
-                  <span class="text-gray-600 dark:text-gray-400">
-                    {{ employeeTypes.find(t => t.value === member.employee_type)?.label || member.employee_type }}
+                  <span class="text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                    {{ employeeTypes.find(t => t.value === member.employment_type)?.label || member.employment_type }}
                   </span>
                 </td>
                 <td class="px-4 py-3">
+                  <select
+                    v-if="canManage"
+                    :value="member.status"
+                    @change="updateStatus(member, ($event.target as HTMLSelectElement).value)"
+                    class="min-h-[44px] sm:min-h-0 px-2.5 py-1 rounded-lg text-xs font-medium border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                  >
+                    <option v-for="s in statusOptions" :key="s.value" :value="s.value">{{ s.label }}</option>
+                  </select>
                   <span
-                    :class="[
-                      'inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium',
-                      getStatusInfo(member.status).color === 'green' ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' :
-                      getStatusInfo(member.status).color === 'amber' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300' :
-                      getStatusInfo(member.status).color === 'blue' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' :
-                      'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                    ]"
+                    v-else
+                    :class="['inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap', statusBadgeClass(member.status)]"
                   >
                     {{ getStatusInfo(member.status).label }}
                   </span>
                 </td>
-                <td class="px-4 py-3 text-right">
+                <td v-if="canManage" class="px-4 py-3 text-right">
                   <div class="flex items-center justify-end gap-2">
                     <button
                       @click="openEditModal(member)"
@@ -573,7 +734,7 @@ const getStatusInfo = (status: string) => {
             </tbody>
           </table>
         </div>
-        
+
         <!-- Pagination -->
         <div v-if="pagination.last_page > 1" class="flex items-center justify-center gap-2 py-4 border-t border-gray-100 dark:border-gray-700">
           <button
@@ -583,7 +744,7 @@ const getStatusInfo = (status: string) => {
           >
             ก่อนหน้า
           </button>
-          <span class="text-gray-600 dark:text-gray-400">
+          <span class="text-gray-600 dark:text-gray-400 whitespace-nowrap">
             หน้า {{ pagination.current_page }} / {{ pagination.last_page }}
           </span>
           <button
@@ -600,17 +761,17 @@ const getStatusInfo = (status: string) => {
     <!-- Create/Edit Modal -->
     <Teleport to="body">
       <div v-if="showCreateModal || showEditModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/50" @click="showCreateModal = false; showEditModal = false"></div>
+        <div class="absolute inset-0 bg-black/50" @click="closeStaffModal"></div>
         <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
           <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
               {{ showEditModal ? 'แก้ไขข้อมูลบุคลากร' : 'เพิ่มบุคลากร' }}
             </h3>
-            <button @click="showCreateModal = false; showEditModal = false" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+            <button @click="closeStaffModal" class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
               <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
-          
+
           <form @submit.prevent="showEditModal ? updateStaff() : createStaff()" class="p-5 space-y-4">
             <!-- Select Member (Create only) -->
             <div v-if="showCreateModal">
@@ -625,8 +786,9 @@ const getStatusInfo = (status: string) => {
                   {{ member.user?.name }} ({{ member.user?.email }})
                 </option>
               </select>
+              <p v-if="formErrors.user_id" class="text-sm text-red-500 mt-1">{{ formErrors.user_id[0] }}</p>
             </div>
-            
+
             <!-- Position -->
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">ตำแหน่ง *</label>
@@ -640,13 +802,28 @@ const getStatusInfo = (status: string) => {
                   {{ pos.name }}
                 </option>
               </select>
+              <p v-if="formErrors.position_id" class="text-sm text-red-500 mt-1">{{ formErrors.position_id[0] }}</p>
             </div>
-            
+
+            <!-- Department -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">ฝ่าย/แผนก</label>
+              <select
+                v-model="staffForm.department_id"
+                class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+              >
+                <option :value="null">ไม่ระบุ</option>
+                <option v-for="dept in departments" :key="dept.id" :value="dept.id">
+                  {{ dept.name }}
+                </option>
+              </select>
+            </div>
+
             <!-- Employee Type -->
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">ประเภท</label>
               <select
-                v-model="staffForm.employee_type"
+                v-model="staffForm.employment_type"
                 class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
               >
                 <option v-for="type in employeeTypes" :key="type.value" :value="type.value">
@@ -654,7 +831,7 @@ const getStatusInfo = (status: string) => {
                 </option>
               </select>
             </div>
-            
+
             <!-- Hire Date -->
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">วันที่เริ่มงาน</label>
@@ -664,22 +841,11 @@ const getStatusInfo = (status: string) => {
                 class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
               />
             </div>
-            
-            <!-- Department -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">ฝ่าย/แผนก</label>
-              <input
-                v-model="staffForm.department"
-                type="text"
-                placeholder="เช่น ฝ่ายวิชาการ"
-                class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-              />
-            </div>
-            
+
             <div class="flex items-center gap-3 pt-4">
               <button
                 type="button"
-                @click="showCreateModal = false; showEditModal = false"
+                @click="closeStaffModal"
                 class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 ยกเลิก
@@ -709,25 +875,95 @@ const getStatusInfo = (status: string) => {
               <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5 text-gray-500" />
             </button>
           </div>
-          
-          <div class="p-5">
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              รายการตำแหน่งที่มีอยู่ในระบบ
-            </p>
-            
+
+          <div class="p-5 space-y-5">
+            <!-- Create / Edit form -->
+            <form v-if="canManage" @submit.prevent="savePosition" class="space-y-3 pb-4 border-b border-gray-100 dark:border-gray-700">
+              <p class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {{ positionForm.id ? 'แก้ไขตำแหน่ง' : 'เพิ่มตำแหน่งใหม่' }}
+              </p>
+              <div>
+                <input
+                  v-model="positionForm.name"
+                  type="text"
+                  required
+                  placeholder="ชื่อตำแหน่ง เช่น ครูผู้สอน *"
+                  class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                />
+                <p v-if="positionErrors.name" class="text-sm text-red-500 mt-1">{{ positionErrors.name[0] }}</p>
+              </div>
+              <div class="flex flex-col sm:flex-row gap-3">
+                <input
+                  v-model="positionForm.code"
+                  type="text"
+                  placeholder="รหัส (ไม่บังคับ)"
+                  class="flex-1 min-w-0 px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                />
+                <select
+                  v-model="positionForm.department_id"
+                  class="flex-1 min-w-0 px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                >
+                  <option :value="null">ไม่ระบุฝ่าย</option>
+                  <option v-for="dept in departments" :key="dept.id" :value="dept.id">{{ dept.name }}</option>
+                </select>
+              </div>
+              <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 min-h-[44px] sm:min-h-0">
+                <input v-model="positionForm.is_teaching_position" type="checkbox" class="rounded border-gray-300" />
+                <span>เป็นตำแหน่งสายการสอน</span>
+              </label>
+              <p v-if="positionErrors.code" class="text-sm text-red-500">{{ positionErrors.code[0] }}</p>
+              <div class="flex items-center gap-2">
+                <button
+                  v-if="positionForm.id"
+                  type="button"
+                  @click="resetPositionForm"
+                  class="min-h-[44px] sm:min-h-0 px-4 py-2.5 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  :disabled="isSubmittingPosition"
+                  class="min-h-[44px] sm:min-h-0 flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <div v-if="isSubmittingPosition" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                  <span>{{ positionForm.id ? 'บันทึกการแก้ไข' : 'เพิ่มตำแหน่ง' }}</span>
+                </button>
+              </div>
+            </form>
+
+            <!-- List -->
             <div v-if="positions.length === 0" class="text-center py-8">
               <Icon icon="fluent:tag-24-regular" class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
               <p class="text-gray-500 dark:text-gray-400">ยังไม่มีตำแหน่ง</p>
             </div>
-            
+
             <ul v-else class="space-y-2">
               <li
                 v-for="pos in positions"
                 :key="pos.id"
-                class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl"
+                class="flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl"
               >
-                <span class="text-gray-900 dark:text-white">{{ pos.name }}</span>
-                <span class="text-xs text-gray-500 dark:text-gray-400">{{ pos.staff_count || 0 }} คน</span>
+                <div class="min-w-0">
+                  <span class="text-gray-900 dark:text-white break-words">{{ pos.name }}</span>
+                  <span class="block text-xs text-gray-500 dark:text-gray-400">{{ pos.staff_count || 0 }} คน</span>
+                </div>
+                <div v-if="canManage" class="flex items-center gap-1 flex-shrink-0">
+                  <button
+                    @click="editPosition(pos)"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg"
+                    title="แก้ไข"
+                  >
+                    <Icon icon="fluent:edit-24-regular" class="w-4 h-4 text-gray-500" />
+                  </button>
+                  <button
+                    @click="deletePosition(pos)"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg"
+                    title="ลบ"
+                  >
+                    <Icon icon="fluent:delete-24-regular" class="w-4 h-4 text-red-500" />
+                  </button>
+                </div>
               </li>
             </ul>
           </div>
