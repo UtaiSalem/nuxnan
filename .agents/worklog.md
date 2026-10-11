@@ -57,6 +57,79 @@ production ยังไม่ได้รัน migration บางชุด (�
 
 ---
 
+## 2026-10-11 — เมนู #15 ทะเบียนนักเรียน: audit (ขั้น [1]+[2]) · โมดูลแข็งแรง เจอ gap 6 ข้อ (ส่วนใหญ่เป็นเรื่องโมเดลสิทธิ์)
+
+### สถานะ: 🟡 audit เสร็จ · ไฟล์รอง `.agents/school-admin/15-students.md` · รอเจ้าของเคาะ Q1–Q4 ก่อนแตก step
+ต่อจาก #16 (เจ้าของเลือกไป #15 ก่อน #14) · สแกน FE (students.vue wrapper + index/import/intake + StudentDataTable) + BE (ClassroomController getAllStudents/getStudent · StudentProfileController · Master controllers address/contact/health/guardian/academic/change-request · Intake/Import/Account/Lifecycle · StudentMasterProfilePolicy · CheckAcademyPermission) + routes academy.php/student-profile.php
+
+### ค้นพบ: โมเดลสิทธิ์เป็น controller-level (ไม่ใช่ route middleware ล้วน) — แข็งแรงกว่า #13
+- โปรไฟล์ read/write ผ่าน `StudentMasterProfilePolicy` (view=staff/self · update=self/owner/ครูประจำชั้น/admin·director) + tenant check ทุกเมธอด + change-request approval
+- import ทุก method `authorizeImport`/`authorizeBatch` · lifecycle ผ่าน FormRequest::authorize + Gate `enrollment.lifecycle`
+
+### Gap (รายละเอียดในไฟล์รอง §5)
+- **G1** list/detail (`ClassroomController::canView`) gate ด้วย `groups.view` **ไม่ใช่ `students.view`** → role students.view เข้าทะเบียนไม่ได้ · role groups.view เห็นนักเรียนเต็ม
+- **G2** `getStudent` คืน PII เต็ม (health/guardian/contact/address) กันแค่ groups.view · ไม่ mask แบบ `StudentProfileController` (ที่มี graded checkAccess + mask เลขบัตร) — สองเส้นอ่านไม่สอดคล้อง
+- **G3** lifecycle (graduate/drop/repeat/promote/transfer) ไม่มี route middleware · พึ่ง FormRequest::authorize ล้วน
+- **G4** permission `students.manage/export/activate_account/import/lifecycle/...` ถูกอ้างแต่ไม่ถูก assign ให้ role ไหน → มอบสิทธิ์ฝ่ายทะเบียนไม่ได้ (มีแต่ owner/admin bypass)
+- G5 ไม่มีฟอร์มเพิ่มรายคน/ลบถาวรตรง ๆ (ใช้ intake/import + lifecycle) · G6 ยืนยัน intake store/DataTable authz
+
+### เคาะ Q1–Q4 + ลงมือครบ 2026-10-11 (Claude เขียน · php -l ผ่าน · เจ้าของรันเทสต์/build)
+- **Q1/ST-S1 (G1):** `ClassroomController::canView` รับ `students.view` OR `groups.view`
+- **Q2/G2:** `getStudent` คงข้อมูลเต็ม (won't-fix ตามคำตัดสิน)
+- **Q3/ST-S3 (G4):** migration `2026_10_11_000001_grant_student_registry_permissions` ผูก students.* (view/manage/create/import/lifecycle/activate_account/export/delete) ให้ role template `registrar`/`director`/`admin` (idempotent · แตะเฉพาะ academy_id IS NULL)
+- **Q4/ST-S4 (G3):** lifecycle route group เติม `academy.permission` (members-only defense-in-depth · EnrollmentPolicy ยังตัดสินจริง ไม่ regress ครูประจำชั้น)
+- **Q4/ST-S5:** create ใช้ intake wizard เดิม (ไม่ทำซ้ำ) · **ลบถาวร guarded** `StudentController::destroy` — tenant + policy `delete`(students.delete) + route middleware · บล็อก 409 ถ้ามีประวัติ (บัตร/ความประพฤติ/ผลการเรียน) · ลบ RESTRICT-FK ก่อน (student_change_requests/cardRequests) แล้ว cascade · FE ปุ่มถังขยะแดงใน StudentDataTable + Swal confirm
+- **ST-S6:** `tests/Feature/StudentRegistryTest.php` 7 เคส (canView OR 2 เส้น + no-key 403 · delete no-history/blocked-by-card/no-perm/owner/other-academy)
+- ⚠️ **เจ้าของ:** `php artisan migrate` (dev) → `php artisan test:db:rebuild` → `php artisan test -c phpunit.mysql.xml --filter=StudentRegistry` + `npm run build` · prod: migrate หลัง mysqldump
+- **เหลือ ST-S7 ตรวจจอจริง** (งานฝั่งเจ้าของ) · G5 create ปิดด้วย intake เดิม
+
+แตกร่าง ST-S1..S7
+
+---
+
+## 2026-10-10 — เมนู #16 บัตรนักเรียน: audit (ขั้น [1]+[2]) · ระบบหลักใช้ได้ แต่เจอ gap 8 ข้อ
+
+### สถานะ: 🟡 audit เสร็จ · ไฟล์รอง `.agents/school-admin/16-student-cards.md` · รอเจ้าของเคาะ Q1–Q4 ก่อน SCD-S1
+
+ต่อจากลูปเมนูโรงเรียน (ถัดจาก #13 หลักสูตร) · สแกน routes 3 ไฟล์ + StudentCardController (1000) + Request/PublicRequest controller + AccessService + RequestService + StudentCard model + FE admin/requests/import/edit pages + config/student-card.php
+
+### ค้นพบหลัก: มี 2 ระบบคู่ขนาน
+1. **academy-scoped (ใหม่)** `/api/academies/{academy}/student-cards/*` + คำร้อง `/student-card-requests/*` — กันสิทธิ์ 3 ชั้น (students.view / view+access-service รายห้อง / students.manage) + tenant + มีเทสต์ AcademyStudentCardAccessTest · ครูประจำชั้นแก้ได้เฉพาะห้องตน · request flow สร้างบัตรจริงตอน complete()
+2. **public เก่า (deprecated)** `/api/student-card/*` — ไม่ auth กันแค่ config flag (`PUBLIC_STUDENT_CARD_MANAGEMENT`/`_REQUESTS` default **false**) + throttle
+
+### Gap (รายละเอียดในไฟล์รอง §5)
+- **G1** import/export/bulkUploadPhotos/bulkUpdate = **501 stub** แต่ FE import.vue ยิงจริง → หน้านำเข้า/ดาวน์โหลด template ตาย
+- **G2** `store()` สร้างบัตรแต่ไม่สร้าง ClassroomStudent → บัตรไม่โผล่ใน roster (roster ขับด้วย classroom_students)
+- **G3** public `reviewRequest`/`publicUpdate`/`publicPhoto` **ไม่มี auth** ทั้งที่ comment route อ้างว่ามี "admin password verification" (ไม่มีจริง) · flag OFF จึงยังไม่ถูก exploit
+- **G4** legacy auth route `/student-card/profile|update/{card}` ได้ academy=null ⇒ ข้ามการตรวจ tenant/สิทธิ์ → อ่าน PII/แก้บัตรข้ามโรงเรียนได้ (เส้น academy-scoped ปลอดภัย)
+- G5 public complete ไม่สร้างบัตร (ต่างจาก auth complete) · G6 FE ซ้ำ 2 ชุด · G7 legacy search ข้ามโรงเรียน · G8 `card_admin` role ไม่มีแถวในฐาน
+
+### เคาะแล้ว Q1–Q4 (2026-10-10): Q1 ทำ import+export (bulk defer) · Q2 ลบ public เก่า · Q3 เก็บ store+เติม enrollment · Q4 เก็บ sync/audit
+
+### ลงมือแล้ว (Claude เขียนในคลาวด์ · php -l ผ่าน · vendor ไม่ลง → เจ้าของรันเทสต์)
+- **✅ SCD-S2** `StudentCardsExport` + `export()` คืน .xlsx จริง · `format=template` คืนหัวคอลัมน์เปล่า (ปิด G1 ส่วน export)
+- **✅ SCD-S1** `StudentCardsImport` + `import()` — อ่านไฟล์/จับคู่หัวคอลัมน์(ไม่ยึดตำแหน่ง)/upsert Student+StudentCard รายคน + enroll ถ้าเจอห้อง · ตอบ summary+errors ตาม import.vue (ปิด G1 ส่วน import)
+- **✅ SCD-S3 (G2)** `store()` เติม enrollment (ClassroomStudent active + academic_year_id + level_and_room) + helper `resolveCurrentClassroom` ใช้ร่วม store/import · เปลี่ยน signature เป็น `Academy $academy` (bind by id)
+- commit บน branch `claude/jolly-goodall-cwgfja` · PR #33
+
+### ✅ SCD-S6 เทสต์ เขียวครบบน MySQL จริง (2026-10-11)
+`tests/Feature/StudentCardImportExportTest.php` — export (template/data/map/authz) · import (สร้าง+enroll · update_existing · หัวคอลัมน์ผิด 422 · authz) · store (enroll/ไม่ enroll · **รับ 10 หลัก** · ปฏิเสธ 21 ตัว) · import ใช้ CSV จริงผ่าน `Excel::toArray`, export ใช้ `Excel::fake()`
+(ระหว่างทางเจอ test data เดิมยาวเกิน varchar(8) → นำไปสู่การขยายคอลัมน์ด้านล่าง)
+
+### ✅ ขยาย student_number รองรับ 10 หลัก (เจ้าของสั่ง 2026-10-11)
+`student_cards.student_number` เดิม `varchar(8)` (ข้อมูลจริง ≤5) แต่รหัสแต่ละโรงเรียนยาวไม่เท่ากัน → migration `2026_10_11_000000_widen_student_cards_student_number` ขยายเป็น `varchar(20)` (เท่า `students.student_id`) · `down()` กันข้อมูลหาย · `store()` validate `max:20` · `student_number_snapshot` เป็น varchar(64) อยู่แล้ว (ไม่ต้องแก้)
+⚠️ **เจ้าของรันบน dev:** `php artisan migrate` → `php artisan test:db:rebuild` → test · **prod:** `mysqldump` ก่อน migrate
+
+### ⏸️ SCD-S4 (ลบ public เก่า) — ทำเสร็จแล้ว revert ออกตามคำขอเจ้าของ · เลื่อนจนกว่าพร้อม
+- 2026-10-11 Claude ลงมือครบ commit `52a70bd` (ลบ backend routes/controllers/public methods + หน้า FE `student-card/*` + rewire FE 3 จุด + composable 2 ตัว type-only + ลบ `PublicCardRequestTest`/`ClassroomManagementTest` + retarget `RoomRoster`/`SSOT`)
+- **เจ้าของขอ revert** เพราะครูยังต้องใช้หน้า no-login `/student-card/{level}/{room}` ต่ออีกระยะ ยังไม่พร้อมเปลี่ยน → `git revert` เป็น `1c36675` · โค้ด public กลับมาครบ ใช้งานได้เหมือนเดิม
+- **เมื่อเจ้าของพร้อม:** `git revert 1c36675` (คืน diff ทั้งชุด) แล้ว build+test · ดู 16-student-cards.md §9
+- สถานะเมนู #16: G1/G2 ปิด · student_number รองรับ 10 หลัก · S6 เทสต์เขียว 12 · **S4 เลื่อน · เหลือ S7 จอจริง**
+เส้น legacy ยังต่อกับ UI แอดมินที่ใช้จริง: `StudentCardModal.vue` ยิง `/api/student-card/profile/{id}` · `StudentCardItem.vue` ยิง public-update/public-photo · `gradebook/students/index.vue` ไปหน้า public · มี 4 เทสต์คุม (PublicCardRequestTest ลบทั้งไฟล์ · ClassroomManagementTest ลบ/เขียนใหม่ · RoomRoster+SSOT retarget) · คลาวด์รันเทสต์/บิลด์ไม่ได้ → ควรทำบนเครื่องเจ้าของ หรือยืนยันให้ push ทั้งชุดแล้ว verify local (ดู 16-student-cards.md §9)
+- เหลือ **SCD-S6** เทสต์ (import/export + store+enroll) · **S7** จอจริง · G8 card_admin + bulk photos/update = defer
+
+แตกงาน SCD-S1 (import)✅ · S2 (export)✅ · S3 (G2)✅ · S4 (ลบ legacy)🔴blocked · S6 (เทสต์) · S7 (จอจริง)
+
 ## 2026-10-11 — Economy admin: หน้า Points จริง · มอบแต้ม · Blacklist ระงับแต้ม/Wallet · audit log · test
 
 ### สถานะ: 🟢 เข้า `main` ครบ (PR #18–#22 squash-merged) · เหลือเจ้าของรัน migration + test บน dev

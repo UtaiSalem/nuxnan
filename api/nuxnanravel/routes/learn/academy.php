@@ -563,7 +563,10 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::post('{academy}/classrooms/transfer-student', [ClassroomController::class, 'transferStudent'])->middleware('academy.permission:groups.view')->name('api.academy.classrooms.transferStudent');
     Route::post('{academy}/classrooms/promote', [ClassroomController::class, 'promoteClassroom'])->middleware('academy.permission:groups.view')->name('api.academy.classrooms.promote');
 
-    Route::scopeBindings()->group(function () {
+    // ด่าน defense-in-depth: ต้องเป็นสมาชิกที่อนุมัติแล้วของโรงเรียนนี้ก่อน (ไม่มีคีย์ = members-only)
+    // การตัดสินจริงยังอยู่ที่ EnrollmentPolicy::lifecycle (admin/director/owner หรือครูประจำชั้นของนักเรียน)
+    // ผ่าน FormRequest::authorize — จึงไม่บล็อกครูประจำชั้น
+    Route::scopeBindings()->middleware('academy.permission')->group(function () {
         Route::post('{academy}/students/{student}/graduate', [StudentLifecycleController::class, 'graduate'])
             ->name('api.academy.students.graduate');
         Route::post('{academy}/students/{student}/drop', [StudentLifecycleController::class, 'drop'])

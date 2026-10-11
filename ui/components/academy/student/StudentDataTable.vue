@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import Swal from 'sweetalert2'
 import type { StudentListItem } from '~/types/studentIntake'
 import { useStudentIntakeService } from '~/services/studentIntakeService'
 import { useStudentEnrollmentActions } from '~/composables/useStudentEnrollmentActions'
@@ -337,6 +338,32 @@ const onActivateAccount = (student: StudentListItem) => {
   activationModalOpen.value = true
 }
 
+// ลบนักเรียนถาวร — ใช้ได้เฉพาะคนไม่มีประวัติ (backend กันไว้ · มีประวัติจะตอบ 409)
+const onDeleteStudent = async (student: StudentListItem) => {
+  const confirm = await Swal.fire({
+    title: 'ลบนักเรียนถาวร?',
+    html: `ลบ <b>${student.first_name_th ?? ''} ${student.last_name_th ?? ''}</b> (${student.student_id ?? ''}) ออกถาวร<br><span class="text-sm text-gray-500">ใช้ได้เฉพาะนักเรียนที่ยังไม่มีประวัติ (เกรด/บัตร/ความประพฤติ) · ถ้ามีประวัติให้ใช้การจำหน่ายแทน</span>`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'ลบถาวร',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#dc2626',
+  })
+  if (!confirm.isConfirmed) return
+
+  try {
+    await api.delete(`/api/academies/${props.academyId}/students/${student.id}`)
+    await Swal.fire({ icon: 'success', title: 'ลบนักเรียนเรียบร้อยแล้ว', timer: 1500, showConfirmButton: false })
+    fetchData()
+  } catch (e: any) {
+    Swal.fire({
+      icon: 'error',
+      title: 'ลบไม่สำเร็จ',
+      text: e?.data?.message || 'เกิดข้อผิดพลาดในการลบนักเรียน',
+    })
+  }
+}
+
 const filterUnassigned = () => {
   lazyParams.value.gradeLevel = ''
   lazyParams.value.classroomId = 'none'
@@ -526,6 +553,13 @@ watch(() => props.academyId, (id) => {
                     title="ดูประวัติการลงห้อง"
                   >
                     <Icon icon="mdi:history" class="w-4 h-4" />
+                  </button>
+                  <button
+                    @click.stop="onDeleteStudent(student)"
+                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1.5 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                    title="ลบนักเรียนถาวร (เฉพาะคนไม่มีประวัติ)"
+                  >
+                    <Icon icon="fluent:delete-24-regular" class="w-4 h-4" />
                   </button>
                   <StudentActionMenu
                     :student="toStudentSummary(student)"

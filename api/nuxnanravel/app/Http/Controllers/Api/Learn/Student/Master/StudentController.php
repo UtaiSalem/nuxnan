@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Student\UpdatePersonalRequest;
 use App\Http\Resources\StudentResource;
 use App\Models\Academy;
+use App\Models\AnnualTranscript;
 use App\Models\Student;
 use App\Models\StudentAcademicInfo;
 use App\Models\StudentAddress;
@@ -19,6 +20,7 @@ use App\Services\GuardianAccessService;
 use App\Services\GuardianAuditLogger;
 use App\Traits\HandlesStudentUpdates;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class StudentController extends Controller
 {
@@ -327,6 +329,64 @@ class StudentController extends Controller
             'data' => $student->fresh(),
             'updated_fields' => $updated,
             'pending_fields' => $pending,
+        ]);
+    }
+
+    /**
+     * ลบนักเรียนถาวร — เฉพาะคน "ไม่มีประวัติสำคัญ" เท่านั้น (ST-S5 · G5)
+     *
+     * Student ไม่มี SoftDeletes และ FK ส่วนใหญ่ cascade ⇒ ลบคนที่มีเกรด/บัตร/
+     * ความประพฤติจะทำลายข้อมูลถาวรกู้ไม่ได้ · จึงกันไว้: ถ้ามีประวัติให้ใช้การ
+     * จำหน่าย (drop ใน lifecycle) แทน · ใช้กับเคส "เพิ่มผิด/ซ้ำ" ที่ยังไม่มีประวัติ
+     */
+    public function destroy(Academy $academy, Student $student)
+    {
+        if ($student->academy_id !== $academy->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ข้อมูลนักเรียนไม่ได้อยู่ในสถาบันการศึกษานี้',
+            ], 403);
+        }
+
+        $this->authorize('delete', $student);
+
+        $blockers = [];
+        if ($student->studentCard()->exists() || $student->cardRequests()->exists()) {
+            $blockers[] = 'บัตร/คำร้องทำบัตร';
+        }
+        if ($student->behaviorRecords()->exists() || $student->behaviorScores()->exists()) {
+            $blockers[] = 'บันทึกความประพฤติ';
+        }
+        if (AnnualTranscript::where('student_id', $student->id)->exists()) {
+            $blockers[] = 'ผลการเรียน';
+        }
+
+        if ($blockers !== []) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ลบถาวรไม่ได้เพราะนักเรียนมีประวัติแล้ว ('.implode(' · ', $blockers).') — ให้ใช้การจำหน่ายนักเรียน (drop) แทน',
+                'blockers' => $blockers,
+            ], 409);
+        }
+
+        try {
+            DB::transaction(function () use ($student) {
+                // ตารางที่ FK เป็น RESTRICT (ไม่ cascade) ต้องลบก่อน ไม่งั้นชน constraint
+                StudentChangeRequest::where('student_id', $student->id)->delete();
+                $student->cardRequests()->delete();
+                // ที่เหลือ (enrollment/address/contact/health/guardian-link) FK cascade จัดการเอง
+                $student->delete();
+            });
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ลบไม่สำเร็จ — นักเรียนยังมีข้อมูลเชื่อมโยงอยู่ ให้ใช้การจำหน่าย (drop) แทน',
+            ], 409);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'ลบนักเรียนถาวรเรียบร้อยแล้ว',
         ]);
     }
 
