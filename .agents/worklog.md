@@ -1,5 +1,23 @@
 # Work Log — nuxnan project
 
+## 2026-10-12 — เมนู #18 การเข้าเรียน: audit (ขั้น [1]+[2]) · โมดูลสุก เจอ gap FE↔BE key split
+
+### สถานะ: 🟡 audit เสร็จ · ไฟล์รอง `.agents/school-admin/18-attendance.md` · รอเจ้าของเคาะ Q1–Q3
+สแกน FE (admin/school-attendance index+[id] · attendance/check-in + history · SchoolAttendanceWidget/QRDisplay) + BE (`SchoolAttendanceController` 577 บรรทัด · academy.php §1059–1078 · SchoolAttendance+Record model · CheckAcademyPermission)
+
+### ค้นพบ: โมดูลสุก/tenant-safe/graded-access (คล้าย #15 ไม่ใช่ #17)
+- routes: reads = bare `academy.permission` (= เป็นสมาชิก) + คุมความลึกข้อมูลใน controller ด้วย `school_attendance.view` · writes = `school_attendance.manage`
+- controller tenant-safe ทุกเมธอด (`where('academy_id')` + route-model-bind) · teacher ได้ `school_attendance.manage` จาก backfill G18 แล้ว
+- route attendance เก่าถูกถอด (academy.php:528 "replaced by school-attendances")
+
+### Gap: **G1 (P1) FE↔BE key split** — เมนู `admin.vue` + picker `roles.vue` ใช้คีย์เก่า `attendance.*` แต่ BE บังคับ `school_attendance.*` → มอบสิทธิ์ผ่าน UI ไม่มีผล + เห็นเมนูแต่ใช้ไม่ได้ (ซ้ำรอย F1 #14) · G2 OVERVIEW scope stale · G3 `attendance.*` orphan key · G4 (adjacent #14) staff-attendance writes ใช้ `staff.view`
+รอเคาะ: Q1 ย้าย FE→`school_attendance.*` + deprecate/alias `attendance.*` (+ migrate role เก่า) · Q2 อัปเดต OVERVIEW scope · Q3 ยืนยันขอบเขต = school attendance อย่างเดียว (course/staff/activity แยกโดเมน)
+มีเทสต์ `SchoolAttendanceRosterScopeTest` อยู่แล้ว
+
+> หมายเหตุ: PR #40 (branch นี้) ตอนนี้ครอบ audit **#17 + #18** (เอกสารล้วน · #17 ยังรอ Q1–Q5, #18 รอ Q1–Q3)
+
+---
+
 ## 2026-10-12 — เมนู #17 เยี่ยมบ้าน: audit (ขั้น [1]+[2]) · พบ gap 9 ข้อ (P0 สามข้อ — ด้านความปลอดภัย)
 
 ### สถานะ: 🔴 audit เสร็จ · ไฟล์รอง `.agents/school-admin/17-home-visits.md` · รอเจ้าของเคาะ Q1–Q5 ก่อนแตก step
