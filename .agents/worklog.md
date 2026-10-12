@@ -1,5 +1,27 @@
 # Work Log — nuxnan project
 
+## 🔍 2026-10-12 — เมนู #19 ผลการเรียน: audit เสร็จ (ขั้น [1]+[2]) — รอเจ้าของเคาะ Q
+
+ไฟล์รอง: [`.agents/school-admin/19-grades.md`](school-admin/19-grades.md) · branch `claude/funny-meitner-06is0f`
+
+**ฟีเจอร์ครบ · tenant-scoped ครบ · writes role-guarded (ไม่มี P0)** — `admin/gradebook/*` (grade-scales/transcripts/rollover/classrooms/students/subjects/academic-years)
+- controllers (`Api/Learn/Academy/`): `GradeScaleController`/`TranscriptController`/`RolloverController` + `GradebookController` (มีทั้ง course+academy)
+- route group แม่ = `auth:api` ล้วน (line 168) · กลุ่ม grade-scales/transcripts/students **ไม่มี `academy.permission` ที่ route** → authz อยู่ใน controller
+- **rollover ทำดีสุด:** `Gate::allows('enrollment.*')` + `scopeBindings` + มีเทสต์ (Read/Write/Service)
+
+🔑 **gap หลัก (ไม่ใช่ P0):**
+- **G1 (P2 consistency):** `GradeScaleController::canManage` + `TranscriptController::canManage/canView` ใช้ **role-literal** `{owner,director,admin[,teacher]}` ไม่ใช่ `userCan('grades.*')` ⇒ custom role (ฝ่ายวิชาการ/นายทะเบียน) ที่ถือ `grades.manage` ทำไม่ได้ · key เป็นสวิตช์หลอก (โรคเดียวกับ #15 G1/#17 G7) · **ต้นแบบถูกอยู่ไฟล์เดียวกัน: `ClassroomController::canView`=`userCan('students.view','groups.view')`**
+- **G2 (P2 FE):** nav `admin.vue:186` `can('grades.view')||can('academy.view')` → ควร `grades.view/manage`
+- **G3 (P2/P3):** `GradeScaleController::index/show/getCategories` ไม่มี guard (แค่ tenant+auth:api) → ใครล็อกอินอ่านเกณฑ์เกรดโรงเรียนอื่นได้ (sensitivity ต่ำ)
+- **G4 (P3):** route grade-scales/transcripts ไม่มี `academy.permission` (พึ่ง controller ล้วน · ต่างจากพี่น้อง academic-years/subjects/classrooms)
+- **G5 (P2 feature):** parent ดู transcript บุตรไม่ได้ (`canViewTranscript` ไม่มี guardian logic · key `children.grades.view` ไม่ถูกอ่าน)
+- test gap: มีแต่ rollover · GradeScale/Transcript authz ไม่มีเทสต์
+
+course gradebook (`gradebook.*` · `Courses/[id]/gradebook/*`) = คนละโดเมน (คอร์ส)
+แตกเป็น GR-S1 (G1 userCan) · GR-S2 (G2 nav) · GR-S3 (G3+G4 route gate) · GR-S4 (G5 parent) · GR-S5 (เทสต์) · **ยังไม่ส่ง step — รอเจ้าของเคาะ Q1–Q4**
+
+---
+
 ## 🔍 2026-10-11 — เมนู #18 การเข้าเรียน: audit เสร็จ (ขั้น [1]+[2]) — รอเจ้าของเคาะ Q
 
 ไฟล์รอง: [`.agents/school-admin/18-attendance.md`](school-admin/18-attendance.md) · branch `claude/funny-meitner-06is0f`
