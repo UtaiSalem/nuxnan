@@ -95,18 +95,30 @@ Model: `SchoolAnnouncement` (`academy_id`, `scope_type`, `scope_id`, `created_by
 
 ---
 
-## 7. Implementation Tasks (ร่าง — ยังไม่ลงมือจนกว่าจะเคาะ Q1–Q3)
+## 7. Implementation Tasks
+
+เจ้าของเคาะ 2026-10-12: **Q1** = ย้ายไป `userCan('announcements.manage')` (เหมือน #19) · **Q2** = `announcements.view` เปิดหน้าดูได้ · ปุ่มจัดการ gate ด้วย manage · **Q3** = เลื่อน create.own ไปทำแยก (โฟกัส G1/G2)
 
 | Step | Title | Depends on | Deliverable | Status |
 |---|---|---|---|---|
-| AN-S1 | ย้าย write authz เป็น `userCan('announcements.manage')` (G1/G3-partial) | Q1 | AnnouncementController: isAcademyAdmin→userCan | ⚪ |
-| AN-S2 | FE page guard + ปุ่มจัดการ ให้ตรงคีย์ (G2) | Q1,Q2 | announcements.vue guard/ปุ่ม | ⚪ |
-| AN-S3 | wire create.own (ครูประกาศ scope ห้อง/ฝ่ายตน) (G3) | Q3 | authz store/update/delete ตาม scope+homeroom | ⚪ |
-| AN-S4 | เทสต์ authz (G4) | AN-S1–S3 | AnnouncementAuthzTest | ⚪ |
+| AN-S1 | write authz → `userCan('announcements.manage')` (G1) | Q1 | `canManageAnnouncements` (เดิม `isAcademyAdmin`) delegate `userCan` | 🟡 code done |
+| AN-S2 | FE guard + ปุ่มจัดการ ตรงคีย์ (G2) | Q1,Q2 | announcements.vue: guard = view\|\|manage · ปุ่มสร้าง/แก้/เผยแพร่/ลบ `v-if="canManage"` · stats ข้ามถ้าไม่มี manage | 🟡 code done |
+| AN-S3 | wire create.own (ครูประกาศ scope ห้อง/ฝ่ายตน) (G3) | Q3 | — | ⏸️ **เลื่อน (เจ้าของเคาะ)** |
+| AN-S4 | เทสต์ authz (G4) | AN-S1,S2 | `AnnouncementAuthzTest` 6 เคส (custom role manage, view-only, owner, delete, cross-tenant) | 🟡 เขียนแล้ว |
+
+**การเปลี่ยนแปลงจริง (branch `claude/wonderful-maxwell-hfve3x`):**
+- `AnnouncementController` — rename `isAcademyAdmin`→`canManageAnnouncements` (10 call sites) · body `$academy->isAdmin()` → `$academy->userCan($user, 'announcements.manage')` (ครอบทั้ง write + read-scope override)
+- `ui/pages/academies/[name]/admin/announcements.vue` — guard `can('announcements.view')||can('announcements.manage')` · `canManage` computed · ปุ่มจัดการ gate · `fetchStatistics` ข้ามถ้าไม่มี manage · ถอด `isAdmin` ที่ไม่ใช้
+- `tests/Feature/AnnouncementAuthzTest.php` — ใหม่
 
 **Rule:** เทสต์รันบน MySQL จริง (`phpunit.mysql.xml`) ก่อนขึ้น 🟢
+
+### 🔴 residual debt
+- **G3 (create.own)** เลื่อนตามที่เจ้าของเคาะ — ครูยังประกาศเข้าห้อง/ฝ่ายตนเองไม่ได้ (ฝั่งอ่าน scope classroom/department มีครบแล้ว) · ทำเป็นงานแยกภายหลัง
+- `announcements.create` (non-own) key ยังไม่มีผู้ใช้ — ผูกกับ create.own
 
 ---
 
 ## 8. Review Log
-- **2026-10-12** — audit แรก (Claude สแกนโค้ดจริง): ยืนยัน G1–G4 · `announcements.manage` เป็น dead key (ด่านจริง `isAdmin` ทั้ง FE+BE) · G2 หน้าเด้ง non-admin (ซ้ำ #14 F1) · รอเจ้าของเคาะ Q1–Q3
+- **2026-10-12** — audit แรก (Claude สแกนโค้ดจริง): ยืนยัน G1–G4 · `announcements.manage` เป็น dead key (ด่านจริง `isAdmin` ทั้ง FE+BE) · G2 หน้าเด้ง non-admin (ซ้ำ #14 F1) · เจ้าของเคาะ Q1–Q3
+- **2026-10-12 (ต่อ)** — ลงมือ AN-S1/S2/S4: BE ย้ายไป `userCan` · FE เปิดหน้าให้ view + gate ปุ่มด้วย manage · เขียน `AnnouncementAuthzTest` 6 เคส · php -l ผ่าน · ⏳ รันเทสต์ในคลาวด์ไม่ได้ (PHP 8.3.6 vs lock 8.4) → **เหลือเจ้าของรัน `php artisan test -c phpunit.mysql.xml --filter=AnnouncementAuthzTest` + `npm run build`** · AN-S3 (create.own) เลื่อน

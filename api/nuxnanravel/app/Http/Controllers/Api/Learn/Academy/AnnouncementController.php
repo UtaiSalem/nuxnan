@@ -48,7 +48,7 @@ class AnnouncementController extends Controller
             if (! $group) {
                 abort(404);
             }
-            if (! $this->isAcademyAdmin($user, $academy)) {
+            if (! $this->canManageAnnouncements($user, $academy)) {
                 $isMember = \DB::table('academy_group_members')
                     ->where('academy_group_id', $group->id)
                     ->where('user_id', $user->id)
@@ -71,7 +71,7 @@ class AnnouncementController extends Controller
             if (! $classroom) {
                 abort(404);
             }
-            if (! $this->isAcademyAdmin($user, $academy)) {
+            if (! $this->canManageAnnouncements($user, $academy)) {
                 $isHomeroomTeacher = $classroom->homeroom_teacher_id === $user->id;
                 $isStudent = false;
                 $student = Student::where('user_id', $user->id)
@@ -104,7 +104,7 @@ class AnnouncementController extends Controller
         }
 
         // For non-admins, only show published and non-expired announcements
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canManageAnnouncements($user, $academy)) {
             $query->where('is_published', true)
                 ->where(function ($q) {
                     $q->whereNull('expires_at')
@@ -172,7 +172,7 @@ class AnnouncementController extends Controller
         $user = $request->user();
 
         // Check access for unpublished announcements
-        if (! $announcement->is_published && ! $this->isAcademyAdmin($user, $academy)) {
+        if (! $announcement->is_published && ! $this->canManageAnnouncements($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Announcement not found'], 404);
         }
 
@@ -202,7 +202,7 @@ class AnnouncementController extends Controller
     {
         $user = $request->user();
 
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canManageAnnouncements($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -289,7 +289,7 @@ class AnnouncementController extends Controller
 
         $user = $request->user();
 
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canManageAnnouncements($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -358,7 +358,7 @@ class AnnouncementController extends Controller
 
         $user = $request->user();
 
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canManageAnnouncements($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -391,7 +391,7 @@ class AnnouncementController extends Controller
 
         $user = $request->user();
 
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canManageAnnouncements($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -424,7 +424,7 @@ class AnnouncementController extends Controller
 
         $user = $request->user();
 
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canManageAnnouncements($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -453,7 +453,7 @@ class AnnouncementController extends Controller
     {
         $user = $request->user();
 
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canManageAnnouncements($user, $academy)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -480,10 +480,11 @@ class AnnouncementController extends Controller
     /**
      * Check if user is academy admin
      */
-    private function isAcademyAdmin($user, Academy $academy): bool
+    private function canManageAnnouncements($user, Academy $academy): bool
     {
-        // Canonical check: owner (user_id/owner_id), academy_admins, or super admin.
-        // The academy_members pivot `role` is not the source of truth for admin rights.
-        return $academy->isAdmin($user);
+        // สิทธิ์ตัดสินที่คีย์ announcements.manage ผ่าน Academy::userCan
+        // (ครอบ owner/academy_admins/superadmin ผ่าน isAdmin + role/custom ที่ถือคีย์)
+        // ดู .agents/school-admin/20-announcements.md G1/Q1
+        return $academy->userCan($user, 'announcements.manage');
     }
 }

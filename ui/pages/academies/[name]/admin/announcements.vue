@@ -42,7 +42,9 @@ const selectedAnnouncement = ref<any>(null)
 
 // Academy Role
 const academyId = ref<number | null>(null)
-const { can, isAdmin, fetchMyRole } = useAcademyRole(academyId)
+const { can, fetchMyRole } = useAcademyRole(academyId)
+// สิทธิ์จัดการ (สร้าง/แก้/เผยแพร่/ลบ) ตัดสินที่คีย์ announcements.manage — ดู 20-announcements.md Q1/Q2
+const canManage = computed(() => can('announcements.manage'))
 
 // Form
 const announcementForm = ref({
@@ -81,7 +83,9 @@ onMounted(async () => {
       academyId.value = response.academy.id
       await fetchMyRole()
       
-      if (!isAdmin.value) {
+      // เปิดหน้าให้ผู้ถือ announcements.view (ดูอย่างเดียว) หรือ announcements.manage (จัดการ)
+      // ปุ่มสร้าง/แก้/เผยแพร่/ลบ gate แยกด้วย canManage — ดู 20-announcements.md G2/Q2
+      if (!can('announcements.view') && !can('announcements.manage')) {
         navigateTo(`/academies/${academyName.value}/admin`)
         return
       }
@@ -128,7 +132,9 @@ const fetchAnnouncements = async () => {
 // Fetch statistics
 const fetchStatistics = async () => {
   if (!academyId.value) return
-  
+  // /stats ต้องมี announcements.manage — ผู้ดูอย่างเดียวข้ามไป (กัน 403)
+  if (!canManage.value) return
+
   try {
     const response: any = await api.get(`/api/academies/${academyId.value}/announcements/stats`)
     if (response.success) {
@@ -386,6 +392,7 @@ const formatDate = (dateString: string) => {
           <p class="text-gray-600 dark:text-gray-400 mt-1">สร้างและจัดการประกาศของโรงเรียน</p>
         </div>
         <button
+          v-if="canManage"
           @click="openCreateModal"
           class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
         >
@@ -488,8 +495,9 @@ const formatDate = (dateString: string) => {
       <div v-else-if="announcements.length === 0" class="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-12 text-center shadow-sm border border-gray-100 dark:border-gray-700">
         <Icon icon="fluent:megaphone-24-regular" class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
         <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">ยังไม่มีประกาศ</h3>
-        <p class="text-gray-500 dark:text-gray-400 mb-4">เริ่มต้นสร้างประกาศแรกของโรงเรียน</p>
+        <p class="text-gray-500 dark:text-gray-400 mb-4">{{ canManage ? 'เริ่มต้นสร้างประกาศแรกของโรงเรียน' : 'ยังไม่มีประกาศในขณะนี้' }}</p>
         <button
+          v-if="canManage"
           @click="openCreateModal"
           class="min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-colors"
         >
@@ -584,6 +592,7 @@ const formatDate = (dateString: string) => {
                 >
                   <Icon icon="fluent:eye-24-regular" class="w-5 h-5 text-gray-500" />
                 </button>
+                <template v-if="canManage">
                 <button
                   @click="openEditModal(announcement)"
                   class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
@@ -616,6 +625,7 @@ const formatDate = (dateString: string) => {
                 >
                   <Icon icon="fluent:delete-24-regular" class="w-5 h-5 text-red-500" />
                 </button>
+                </template>
               </div>
             </div>
           </div>
