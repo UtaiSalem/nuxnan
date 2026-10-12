@@ -1,5 +1,23 @@
 # Work Log — nuxnan project
 
+## 2026-10-12 — เมนู #17 เยี่ยมบ้าน: audit (ขั้น [1]+[2]) · พบ gap 9 ข้อ (P0 สามข้อ — ด้านความปลอดภัย)
+
+### สถานะ: 🔴 audit เสร็จ · ไฟล์รอง `.agents/school-admin/17-home-visits.md` · รอเจ้าของเคาะ Q1–Q5 ก่อนแตก step
+สแกน FE (admin/home-visits/ 6 หน้า + HomeVisitTab + useHomeVisit composable + legacy pages/home-visit) + BE (3 route files + AdminController 887 บรรทัด/TeacherController 509/ZoneController/HomeVisitAuthController + Master\HomeVisitController + 4 model + 7 migration)
+
+### ค้นพบ: มี **3 พื้นผิวคู่ขนาน** (pattern เดียวกับเมนู #16)
+- **(A) academy-scoped** `/api/academies/{academy}/home-visits/*` — admin/* + zones/* gate `home_visits.view|manage` + tenant-safe ✅ · แต่ top-level statistics/dashboard + teacher/student sub-routes ไม่ gate
+- **(B) legacy public** `/api/home-visit/*` — ไม่มี `auth:api` ทั้งกลุ่ม (register ที่ `api.php:248`) 🔴
+- **(C) master profile** `/students/{student}/home-visits` (`Master\HomeVisitController`) — guard ครบ (เมนู #15 คุมแล้ว) ✅ เป็นตัวที่ FE จริงใช้
+
+### Gap (P0): G1 รหัสฮาร์ดโค้ด (`teacher`/`jsm1234`, `admin`/`jsm_admin2025`) · G2 legacy ไม่มี auth → PII write/delete เปิดโล่ง · G3 teacher/student academy-scoped ไม่ scope tenant (controller ไม่รับ Academy) · G5 `TeacherController` คอมเมนต์ session-check ออก
+### Gap (P1–P2): G4 top-level statistics ไม่ gate (FE ใช้ตัวนี้) · G6 `home_visits.*` ไม่ assign ให้ role · G7 `visit_status` ไม่ตรง 3 ที่ · G8 ระบบคู่ขนาน · G9 `uploaded_by` default user 1
+
+รอเคาะ: Q1 ปลดระวาง subsystem เก่าไหม (เทียบเคส #16) · Q2 ยุบ teacher/student academy-scoped ให้ใช้ master แทนไหม · Q3 `home_visits.*` ผูก role ไหน · Q4 gate statistics/dashboard · Q5 SSOT ของ `visit_status`
+มีเทสต์เดิม `StudentHomeVisitApiTest` + `tests/Feature/HomeVisit/` (ยังไม่ประเมินความครอบคลุม)
+
+---
+
 ## ✅ 2026-10-11 — PR #33 merge เข้า `main` แล้ว (เมนู #16 บัตรนักเรียน + #15 เสริม)
 
 - **merged:** `main` HEAD = `fa13c4f` (squash) · branch `claude/jolly-goodall-cwgfja`
