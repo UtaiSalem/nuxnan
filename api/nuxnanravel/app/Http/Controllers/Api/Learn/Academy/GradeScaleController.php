@@ -255,20 +255,10 @@ class GradeScaleController extends Controller
     }
 
     // Helper Methods
+    // สิทธิ์ตัดสินที่คีย์ grades.manage ผ่าน Academy::userCan (รองรับ custom role)
+    // ดู .agents/school-admin/19-grades.md G1/Q1
     protected function canManage(Academy $academy): bool
     {
-        $user = auth()->user();
-        if (! $user) {
-            return false;
-        }
-
-        if ($academy->user_id === $user->id) {
-            return true;
-        }
-
-        return $academy->members()
-            ->where('user_id', $user->id)
-            ->whereIn('role', ['owner', 'director', 'admin'])
-            ->exists();
+        return $academy->userCan(auth()->user(), 'grades.manage');
     }
 }

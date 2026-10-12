@@ -215,21 +215,10 @@ class AcademicYearController extends Controller
     }
 
     // Helper Methods
+    // ปีการศึกษาใช้ร่วมกับคอร์ส/ตารางเรียนและผลการเรียน — รับทั้งสองคีย์ (ตรงกับ route · ดู 19-grades.md Q2)
     protected function canManage(Academy $academy): bool
     {
-        $user = auth()->user();
-        if (! $user) {
-            return false;
-        }
-
-        if ($academy->user_id === $user->id) {
-            return true;
-        }
-
-        return $academy->members()
-            ->where('user_id', $user->id)
-            ->whereIn('role', ['owner', 'director', 'admin'])
-            ->exists();
+        return $academy->userCan(auth()->user(), 'grades.manage', 'courses.manage');
     }
 
     protected function createDefaultSemesters(AcademicYear $academicYear): void

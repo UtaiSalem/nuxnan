@@ -9,6 +9,7 @@ use App\Models\AnnualTranscript;
 use App\Models\Semester;
 use App\Models\SemesterTranscript;
 use App\Models\Student;
+use App\Services\GuardianAccessService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -297,7 +298,8 @@ class TranscriptController extends Controller
     {
         $academy = Academy::findOrFail($academyId);
 
-        if (! $this->canManageTranscripts($academy)) {
+        // ภาพรวมเป็น "อ่าน" — ผู้ถือ grades.view (รวมครู ดู Q3) หรือ grades.manage เข้าได้
+        if (! $academy->userCan(auth()->user(), 'grades.view', 'grades.manage')) {
             return response()->json(['success' => false, 'message' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
         }
 
@@ -346,6 +348,8 @@ class TranscriptController extends Controller
     }
 
     // Helper Methods
+    // สิทธิ์ตัดสินที่คีย์ grades.* ผ่าน Academy::userCan (รองรับ custom role)
+    // ดู .agents/school-admin/19-grades.md G1/G6/Q1/Q5/Q6
     protected function canViewTranscript(Student $student): bool
     {
         $user = auth()->user();
@@ -353,38 +357,23 @@ class TranscriptController extends Controller
             return false;
         }
 
-        // Student viewing own transcript
-        if ($student->user_id === $user->id) {
+        // นักเรียนดู transcript ของตนเอง (ต้องถือ grades.view.own)
+        if ($student->user_id === $user->id && $student->academy->userCan($user, 'grades.view.own')) {
             return true;
         }
 
-        // Parent viewing child's transcript
-        // (Add guardian logic if needed)
+        // ผู้ปกครองดูของบุตรหลาน (ตรวจความสัมพันธ์ผ่าน GuardianAccessService — เหมือน ParentDashboard)
+        if (app(GuardianAccessService::class)->isGuardianOf($user, $student)) {
+            return true;
+        }
 
-        // Academy admin/teacher
-        $isMember = $student->academy->members()
-            ->where('user_id', $user->id)
-            ->whereIn('role', ['owner', 'director', 'admin', 'teacher'])
-            ->exists();
-
-        return $isMember;
+        // ฝ่ายวิชาการ/ครู/ผู้ดูแล — ถือ grades.view (เห็นทั้งโรงเรียน ดู Q3)
+        return $student->academy->userCan($user, 'grades.view');
     }
 
     protected function canManageTranscripts(Academy $academy): bool
     {
-        $user = auth()->user();
-        if (! $user) {
-            return false;
-        }
-
-        if ($academy->user_id === $user->id) {
-            return true;
-        }
-
-        return $academy->members()
-            ->where('user_id', $user->id)
-            ->whereIn('role', ['owner', 'director', 'admin'])
-            ->exists();
+        return $academy->userCan(auth()->user(), 'grades.manage');
     }
 
     /**

@@ -125,19 +125,32 @@ Models (`app/Models/`): `AcademicYear`, `Semester`, `GradeScale`, `GradeScaleIte
 
 ---
 
-## 7. Implementation Tasks (ร่าง — ยังไม่ส่ง agy จนกว่าจะเคาะ Q1–Q6)
+## 7. Implementation Tasks
+
+เจ้าของเคาะแล้ว 2026-10-12: **Q1** = ย้ายไป `userCan('grades.*')` · **Q2** = academic-years รับ `grades.manage` OR `courses.manage` · **Q3** = teacher เห็นผลทั้งโรงเรียน (`grades.view`) · **Q5** = ผู้ปกครองทำรอบนี้เลย · (Q4/Q6 ใช้ default: read ต้องถือ `grades.view`, นักเรียนผ่าน `grades.view.own`)
 
 | Step | Title | Depends on | Deliverable | Status |
 |---|---|---|---|---|
-| GR-S1 | ย้าย authz เป็น `Academy::userCan('grades.*')` ทุก controller (G1/G4) | Q1–Q3 | helper/policy แทน role-hardcode | ⚪ |
-| GR-S2 | เติมด่าน `academy.permission` ที่ route group + ปิด read ของ grade-scales (G2/G3) | Q4 | middleware + ตรวจ index/show | ⚪ |
-| GR-S3 | ซิงก์เมนู/เพจ FE ให้ตรง backend (G5) | Q1,Q3 | `show:` + per-page gate | ⚪ |
-| GR-S4 | นักเรียน/ผู้ปกครอง (G6) | Q5,Q6 | `grades.view.own` + guardian path | ⚪ |
-| GR-S5 | เทสต์ authz (G7) | GR-S1–S4 | GradesAuthzTest (custom role, cross-tenant, read gate) | ⚪ |
+| GR-S1 | ย้าย authz เป็น `Academy::userCan('grades.*')` ทุก controller (G1/G4) | Q1–Q3 | GradeScale/Transcript/AcademicYear canManage→userCan | 🟡 code done |
+| GR-S2 | เติมด่าน `academy.permission` ที่ route group + ปิด read ของ grade-scales (G2/G3) | Q4 | grade-scales/assessment-categories/transcripts group gate `grades.view,grades.manage` + write `grades.manage` | 🟡 code done |
+| GR-S3 | ซิงก์เมนู FE ให้ตรง backend (G5) | Q1,Q3 | `admin.vue` `show: can('grades.view')||can('grades.manage')` (ตัด `academy.view`) | 🟡 code done |
+| GR-S4 | นักเรียน/ผู้ปกครอง (G6) | Q5,Q6 | `canViewTranscript`: student `grades.view.own` + guardian ผ่าน `GuardianAccessService::isGuardianOf` | 🟡 code done |
+| GR-S5 | เทสต์ authz (G7) | GR-S1–S4 | `tests/Feature/GradesAuthzTest.php` 9 เคส (custom role manage/view, cross-tenant, read gate, courses.manage, overview, owner) | 🟡 เขียนแล้ว |
 
-**Rule:** ทุก step ต้องมี verification (build/test/manual) ก่อนขึ้น 🟢 · เทสต์รันบน MySQL จริง (`phpunit.mysql.xml`)
+**การเปลี่ยนแปลงจริง (commit บน branch `claude/wonderful-maxwell-hfve3x`):**
+- `routes/learn/academy.php` — academic-years write `grades.manage,courses.manage` · grade-scales/assessment-categories/transcripts group `grades.view,grades.manage` (read) + write `grades.manage`
+- `GradeScaleController::canManage` · `TranscriptController::canManageTranscripts`/`canViewTranscript`/overview · `AcademicYearController::canManage` → `Academy::userCan`
+- `ui/pages/academies/[name]/admin.vue:186` — menu gate
+- `tests/Feature/GradesAuthzTest.php` — ใหม่
+
+**Rule:** เทสต์ต้องรันบน MySQL จริง (`phpunit.mysql.xml`) ก่อนขึ้น 🟢
+
+### 🔴 residual debt (ยังไม่ปิดรอบนี้ — นอกขอบ Q ที่เคาะ)
+- `GradeScaleController::index` ยัง **สร้าง default scale เป็น side-effect ของ GET** (ตอนนี้ปลอดภัยขึ้นเพราะถูก gate ด้วย `grades.view` + ผูก academy เดียวกันแล้ว ไม่รั่วข้ามโรงเรียน) — ถ้าจะให้สะอาดควรย้ายไป action เขียนแยก
+- `{academy}/students` + `{academy}/rollover` ยังไม่มี `academy.permission` ที่ route (rollover พึ่ง `Gate::enrollment.*` ของ #15) — เป็นของ #15/#18 ไม่ใช่ #19 โดยตรง
 
 ---
 
 ## 8. Review Log
-- **2026-10-12** — audit แรก (Claude สแกนโค้ดจริง): ยืนยัน G1–G7 · คีย์ `grades.*` เป็น dead keys · G3 (cross-tenant read + write-on-GET ของ grade-scales) เป็น P0 · รอเจ้าของเคาะ Q1–Q6
+- **2026-10-12** — audit แรก (Claude สแกนโค้ดจริง): ยืนยัน G1–G7 · คีย์ `grades.*` เป็น dead keys · G3 (cross-tenant read + write-on-GET ของ grade-scales) เป็น P0 · เจ้าของเคาะ Q1–Q6
+- **2026-10-12 (ต่อ)** — ลงมือ GR-S1–S5: ย้าย authz ทุก controller ไป `userCan` · เติมด่าน route · ซิงก์เมนู FE · เพิ่ม student/guardian path · เขียน `GradesAuthzTest` 9 เคส · **php -l ผ่านทุกไฟล์** · ⏳ รันเทสต์ในคลาวด์ไม่ได้ (PHP 8.3.6 แต่ composer.lock ต้องการ 8.4 · vendor ติดตั้งไม่ได้) → **เหลือเจ้าของรัน `php artisan test -c phpunit.mysql.xml --filter=GradesAuthzTest` + `pint` + `npm run build`**
