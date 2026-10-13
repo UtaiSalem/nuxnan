@@ -11,9 +11,12 @@ Claude เขียนเอง (cloud ไม่มี vendor/agy) `php -l`:
 - **G3 (P3) แก้แล้ว:** `store` เพิ่ม `validateScopeBelongsToAcademy` → scope_id (ฝ่าย/ห้อง) ต้องอยู่ในโรงเรียน ไม่งั้น 422
 - **test gap ปิด:** `AnnouncementAuthzTest` 5 เคส (custom role manage สร้างได้ · view-only 403 · non-member 403 · cross-academy show 404 · scope_id นอกโรงเรียน 422)
 
-🔴 **เหลือ G2 (feature, รอเคาะ):** `announcements.create`/`create.own` เป็น orphan key — ครู (ถือ `create.own`) สร้างประกาศห้อง/วิชาตนไม่ได้ (store ติด `.manage`) · เปิดต้องออกแบบ: route รับ create.own + บังคับ scope=ห้องที่ครูรับผิดชอบ → **AN-S2 รอ Q1**
+**✅ G2 ปิดแล้ว (AN-S2 — เจ้าของเคาะ "เปิดเลย"):** เปิดครู (`announcements.create.own`) สร้าง/จัดการประกาศ**เฉพาะห้องที่ตนเป็นครูประจำชั้น**
+- BE: route store/update/publish/unpublish/destroy รับ `create.own,create,manage` (stats คง manage) · store บังคับ scope=classroom + `teacherOwnsClassroom` (homeroom_teacher_id===user) · `canModifyAnnouncement` (ผู้จัดการ หรือ ครูเจ้าของประกาศ+ห้องตน) ใน update/publish/unpublish/destroy
+- FE `admin/announcements.vue`: gate ครูเข้าได้ · `canManageAll`/`canCreateOwn`/`canModifyItem` · `fetchMyClassrooms` + select ห้องตนในฟอร์มสร้าง · ส่ง scope=classroom · ปุ่มแก้/เผยแพร่/ลบ เฉพาะ `canManageAll || created_by===ตน` · stats ไม่ยิงสำหรับครู
+- เทสต์เพิ่มใน `AnnouncementAuthzTest` (ครูสร้างห้องตนได้ · academy-scope 403 · ห้องคนอื่น 403 · แก้ของตน/ลบของผู้บริหารไม่ได้)
 
-เจ้าของ verify: `phpunit.mysql.xml --filter=AnnouncementAuthzTest` + pint
+**เมนู #20 ปิด gap ครบ (G1/G2/G3)** 🟢 · เจ้าของ verify: `phpunit.mysql.xml --filter=AnnouncementAuthzTest` + pint + `npm run build`
 PR: UtaiSalem/nuxnan#39 (branch `claude/funny-meitner-06is0f`)
 
 ---

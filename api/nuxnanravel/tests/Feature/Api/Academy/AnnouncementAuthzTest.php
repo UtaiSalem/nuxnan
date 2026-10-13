@@ -2,9 +2,11 @@
 
 namespace Tests\Feature\Api\Academy;
 
+use App\Models\AcademicYear;
 use App\Models\Academy;
 use App\Models\AcademyMember;
 use App\Models\AcademyRole;
+use App\Models\Classroom;
 use App\Models\SchoolAnnouncement;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -128,5 +130,110 @@ class AnnouncementAuthzTest extends TestCase
                 'scope_id' => 999999,
             ])
             ->assertStatus(422);
+    }
+
+    // ===== AN-S2/G2 — ครู create.own =====
+
+    private function classroomWithHomeroom(Academy $academy, User $teacher): Classroom
+    {
+        $year = AcademicYear::create([
+            'academy_id' => $academy->id,
+            'name' => '2569',
+            'start_date' => '2026-05-01',
+            'end_date' => '2027-03-31',
+            'is_current' => true,
+        ]);
+
+        return Classroom::create([
+            'academy_id' => $academy->id,
+            'academic_year_id' => $year->id,
+            'grade_level' => 'ม.1',
+            'section' => '1',
+            'name' => 'ม.1/1',
+            'homeroom_teacher_id' => $teacher->id,
+            'status' => 'active',
+        ]);
+    }
+
+    public function test_teacher_create_own_can_create_for_own_classroom(): void
+    {
+        [$academy] = $this->academyOwnedBy();
+        $teacher = $this->memberOf($academy, ['announcements.view', 'announcements.create.own']);
+        $classroom = $this->classroomWithHomeroom($academy, $teacher);
+
+        $this->actingAs($teacher, 'api')
+            ->postJson("/api/academies/{$academy->id}/announcements", [
+                'title' => 'ประกาศห้อง ม.1/1',
+                'content' => 'พรุ่งนี้มาสาย',
+                'scope_type' => 'classroom',
+                'scope_id' => $classroom->id,
+            ])
+            ->assertCreated();
+    }
+
+    public function test_teacher_create_own_cannot_create_academy_scope(): void
+    {
+        [$academy] = $this->academyOwnedBy();
+        $teacher = $this->memberOf($academy, ['announcements.view', 'announcements.create.own']);
+        $this->classroomWithHomeroom($academy, $teacher);
+
+        $this->actingAs($teacher, 'api')
+            ->postJson("/api/academies/{$academy->id}/announcements", [
+                'title' => 'ประกาศทั้งโรงเรียน',
+                'content' => '...',
+                'scope_type' => 'academy',
+            ])
+            ->assertForbidden();
+    }
+
+    public function test_teacher_create_own_cannot_create_for_other_classroom(): void
+    {
+        [$academy] = $this->academyOwnedBy();
+        $teacher = $this->memberOf($academy, ['announcements.view', 'announcements.create.own']);
+        $otherTeacher = $this->memberOf($academy, ['announcements.view', 'announcements.create.own']);
+        $otherClassroom = $this->classroomWithHomeroom($academy, $otherTeacher);
+
+        $this->actingAs($teacher, 'api')
+            ->postJson("/api/academies/{$academy->id}/announcements", [
+                'title' => 'แอบประกาศห้องคนอื่น',
+                'content' => '...',
+                'scope_type' => 'classroom',
+                'scope_id' => $otherClassroom->id,
+            ])
+            ->assertForbidden();
+    }
+
+    public function test_teacher_can_modify_own_but_not_others_announcement(): void
+    {
+        [$academy, $owner] = $this->academyOwnedBy();
+        $teacher = $this->memberOf($academy, ['announcements.view', 'announcements.create.own']);
+        $classroom = $this->classroomWithHomeroom($academy, $teacher);
+
+        // ประกาศห้องของครูเอง
+        $own = SchoolAnnouncement::create([
+            'academy_id' => $academy->id,
+            'scope_type' => 'classroom',
+            'scope_id' => $classroom->id,
+            'created_by' => $teacher->id,
+            'title' => 'ของครูเอง',
+            'content' => '...',
+        ]);
+        // ประกาศระดับโรงเรียนที่ owner สร้าง
+        $others = SchoolAnnouncement::create([
+            'academy_id' => $academy->id,
+            'scope_type' => 'academy',
+            'scope_id' => $academy->id,
+            'created_by' => $owner->id,
+            'title' => 'ของผู้บริหาร',
+            'content' => '...',
+        ]);
+
+        $this->actingAs($teacher, 'api')
+            ->patchJson("/api/academies/{$academy->id}/announcements/{$own->id}", ['title' => 'แก้ของตัวเอง'])
+            ->assertOk();
+
+        $this->actingAs($teacher, 'api')
+            ->deleteJson("/api/academies/{$academy->id}/announcements/{$others->id}")
+            ->assertForbidden();
     }
 }

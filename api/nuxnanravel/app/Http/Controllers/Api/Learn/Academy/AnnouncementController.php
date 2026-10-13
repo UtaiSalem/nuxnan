@@ -202,7 +202,10 @@ class AnnouncementController extends Controller
     {
         $user = $request->user();
 
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        // AN-S2/G2 — ผู้จัดการ (manage/create) สร้างได้ทุก scope · ครู (create.own) สร้างได้เฉพาะห้องของตน
+        $canManageAll = $this->isAcademyAdmin($user, $academy) || $academy->userCan($user, 'announcements.create');
+        $canCreateOwn = $academy->userCan($user, 'announcements.create.own');
+        if (! $canManageAll && ! $canCreateOwn) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -239,6 +242,18 @@ class AnnouncementController extends Controller
         );
         if ($scopeError) {
             return $scopeError;
+        }
+
+        // AN-S2/G2 — ครู (create.own ไม่มี manage) สร้างได้เฉพาะ scope=classroom ของห้องที่ตนเป็นครูประจำชั้น
+        if (! $canManageAll) {
+            $scopeType = $request->get('scope_type');
+            $scopeId = $request->get('scope_id');
+            if ($scopeType !== 'classroom' || ! $this->teacherOwnsClassroom($user, $academy, $scopeId)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'สร้างได้เฉพาะประกาศของห้องเรียนที่คุณเป็นครูประจำชั้น',
+                ], 403);
+            }
         }
 
         DB::beginTransaction();
@@ -299,7 +314,7 @@ class AnnouncementController extends Controller
 
         $user = $request->user();
 
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canModifyAnnouncement($user, $academy, $announcement)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -368,7 +383,7 @@ class AnnouncementController extends Controller
 
         $user = $request->user();
 
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canModifyAnnouncement($user, $academy, $announcement)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -401,7 +416,7 @@ class AnnouncementController extends Controller
 
         $user = $request->user();
 
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canModifyAnnouncement($user, $academy, $announcement)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -434,7 +449,7 @@ class AnnouncementController extends Controller
 
         $user = $request->user();
 
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canModifyAnnouncement($user, $academy, $announcement)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -508,6 +523,36 @@ class AnnouncementController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * AN-S2/G2 — ครูเป็นครูประจำชั้นของห้องนี้จริงไหม (ในโรงเรียนนี้)
+     */
+    private function teacherOwnsClassroom($user, Academy $academy, $classroomId): bool
+    {
+        if (! $classroomId) {
+            return false;
+        }
+
+        return Classroom::where('id', $classroomId)
+            ->where('academy_id', $academy->id)
+            ->where('homeroom_teacher_id', $user->id)
+            ->exists();
+    }
+
+    /**
+     * AN-S2/G2 — ใครแก้/เผยแพร่/ลบ ประกาศนี้ได้: ผู้จัดการทั้งหมด หรือครูเจ้าของประกาศห้องตน
+     */
+    private function canModifyAnnouncement($user, Academy $academy, SchoolAnnouncement $announcement): bool
+    {
+        if ($this->isAcademyAdmin($user, $academy) || $academy->userCan($user, 'announcements.create')) {
+            return true;
+        }
+
+        return $academy->userCan($user, 'announcements.create.own')
+            && (int) $announcement->created_by === (int) $user->id
+            && $announcement->scope_type === 'classroom'
+            && $this->teacherOwnsClassroom($user, $academy, $announcement->scope_id);
     }
 
     private function isAcademyAdmin($user, Academy $academy): bool

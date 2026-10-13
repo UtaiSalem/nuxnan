@@ -841,13 +841,14 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // Announcements - ประกาศ
     Route::prefix('{academy}/announcements')->middleware(['academy.visibility:content', 'academy.permission'])->group(function () {
         Route::get('/', [AnnouncementController::class, 'index'])->middleware('academy.visibility:content')->name('api.academy.announcements.index');
-        Route::post('/', [AnnouncementController::class, 'store'])->middleware('academy.permission:announcements.manage')->name('api.academy.announcements.store');
+        // AN-S2/G2 — เขียนได้ถ้าถือ create.own/create/manage (controller บังคับว่าครูทำได้เฉพาะห้องตน) · stats = manage เท่านั้น
+        Route::post('/', [AnnouncementController::class, 'store'])->middleware('academy.permission:announcements.create.own,announcements.create,announcements.manage')->name('api.academy.announcements.store');
         Route::get('/stats', [AnnouncementController::class, 'stats'])->middleware('academy.permission:announcements.manage')->name('api.academy.announcements.stats');
         Route::get('/{announcement}', [AnnouncementController::class, 'show'])->name('api.academy.announcements.show');
-        Route::patch('/{announcement}', [AnnouncementController::class, 'update'])->middleware('academy.permission:announcements.manage')->name('api.academy.announcements.update');
-        Route::post('/{announcement}/publish', [AnnouncementController::class, 'publish'])->middleware('academy.permission:announcements.manage')->name('api.academy.announcements.publish');
-        Route::post('/{announcement}/unpublish', [AnnouncementController::class, 'unpublish'])->middleware('academy.permission:announcements.manage')->name('api.academy.announcements.unpublish');
-        Route::delete('/{announcement}', [AnnouncementController::class, 'destroy'])->middleware('academy.permission:announcements.manage')->name('api.academy.announcements.destroy');
+        Route::patch('/{announcement}', [AnnouncementController::class, 'update'])->middleware('academy.permission:announcements.create.own,announcements.create,announcements.manage')->name('api.academy.announcements.update');
+        Route::post('/{announcement}/publish', [AnnouncementController::class, 'publish'])->middleware('academy.permission:announcements.create.own,announcements.create,announcements.manage')->name('api.academy.announcements.publish');
+        Route::post('/{announcement}/unpublish', [AnnouncementController::class, 'unpublish'])->middleware('academy.permission:announcements.create.own,announcements.create,announcements.manage')->name('api.academy.announcements.unpublish');
+        Route::delete('/{announcement}', [AnnouncementController::class, 'destroy'])->middleware('academy.permission:announcements.create.own,announcements.create,announcements.manage')->name('api.academy.announcements.destroy');
     });
 
     // School Events - กิจกรรมโรงเรียน
