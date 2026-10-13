@@ -266,6 +266,11 @@ class GradeScaleController extends Controller
             return true;
         }
 
+        // GR-S1/G1 — รองรับ custom role ผ่านคีย์ `grades.manage` (ไม่ใช่เช็ค role ตรง ๆ อย่างเดียว)
+        if ($academy->userCan($user, 'grades.manage')) {
+            return true;
+        }
+
         return $academy->members()
             ->where('user_id', $user->id)
             ->whereIn('role', ['owner', 'director', 'admin'])

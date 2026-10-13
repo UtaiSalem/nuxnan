@@ -183,7 +183,7 @@ const menuItems = computed(() => [
         name: 'ผลการเรียน',
         icon: 'fluent:star-24-regular',
         to: `/academies/${academyName.value}/admin/gradebook`,
-        show: can('grades.view') || can('academy.view'),
+        show: can('grades.view') || can('grades.manage'),
       },
       {
         name: 'เยี่ยมบ้าน',

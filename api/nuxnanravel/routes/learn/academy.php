@@ -478,24 +478,29 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     });
 
     // Grade Scales & Assessment Categories
-    Route::prefix('{academy}/grade-scales')->group(function () {
+    // GR-S3/G3+G4 — ด่าน 2 ชั้น: อ่าน=grades.view · เขียน=grades.manage (เดิมไม่มีด่านที่ route เลย)
+    Route::prefix('{academy}/grade-scales')->middleware(['academy.visibility:content', 'academy.permission:grades.view'])->group(function () {
         Route::get('/', [GradeScaleController::class, 'index'])->name('api.academy.grade-scales.index');
-        Route::post('/', [GradeScaleController::class, 'store'])->name('api.academy.grade-scales.store');
         Route::get('/{gradeScale}', [GradeScaleController::class, 'show'])->name('api.academy.grade-scales.show');
-        Route::put('/{gradeScale}', [GradeScaleController::class, 'update'])->name('api.academy.grade-scales.update');
-        Route::delete('/{gradeScale}', [GradeScaleController::class, 'destroy'])->name('api.academy.grade-scales.destroy');
+        Route::middleware('academy.permission:grades.manage')->group(function () {
+            Route::post('/', [GradeScaleController::class, 'store'])->name('api.academy.grade-scales.store');
+            Route::put('/{gradeScale}', [GradeScaleController::class, 'update'])->name('api.academy.grade-scales.update');
+            Route::delete('/{gradeScale}', [GradeScaleController::class, 'destroy'])->name('api.academy.grade-scales.destroy');
+        });
     });
-    Route::prefix('{academy}/assessment-categories')->group(function () {
+    Route::prefix('{academy}/assessment-categories')->middleware(['academy.visibility:content', 'academy.permission:grades.view'])->group(function () {
         Route::get('/', [GradeScaleController::class, 'getCategories'])->name('api.academy.assessment-categories.index');
-        Route::post('/', [GradeScaleController::class, 'storeCategory'])->name('api.academy.assessment-categories.store');
+        Route::post('/', [GradeScaleController::class, 'storeCategory'])->middleware('academy.permission:grades.manage')->name('api.academy.assessment-categories.store');
     });
 
-    // Transcripts (academy-level)
-    Route::prefix('{academy}/transcripts')->group(function () {
-        Route::post('/semester/generate', [TranscriptController::class, 'generateSemesterTranscript'])->name('api.academy.transcripts.semester.generate');
-        Route::post('/semester/publish', [TranscriptController::class, 'publishSemesterTranscripts'])->name('api.academy.transcripts.semester.publish');
-        Route::post('/annual/generate', [TranscriptController::class, 'generateAnnualTranscript'])->name('api.academy.transcripts.annual.generate');
+    // Transcripts (academy-level) — overview=grades.view · generate/publish=grades.manage
+    Route::prefix('{academy}/transcripts')->middleware(['academy.visibility:content', 'academy.permission:grades.view'])->group(function () {
         Route::get('/overview', [TranscriptController::class, 'getAcademyTranscriptOverview'])->name('api.academy.transcripts.overview');
+        Route::middleware('academy.permission:grades.manage')->group(function () {
+            Route::post('/semester/generate', [TranscriptController::class, 'generateSemesterTranscript'])->name('api.academy.transcripts.semester.generate');
+            Route::post('/semester/publish', [TranscriptController::class, 'publishSemesterTranscripts'])->name('api.academy.transcripts.semester.publish');
+            Route::post('/annual/generate', [TranscriptController::class, 'generateAnnualTranscript'])->name('api.academy.transcripts.annual.generate');
+        });
     });
 
     // Academy Students (listing/detail via ClassroomController)

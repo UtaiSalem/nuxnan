@@ -2,7 +2,7 @@
 
 > ไฟล์รองของเมนู `19 ผลการเรียน` (`admin/gradebook/`)
 > อ่านคู่กับ [OVERVIEW.md](OVERVIEW.md)
-> **สถานะ:** 🟡 audit เสร็จ 2026-10-11 — ฟีเจอร์ครบ · tenant-scoped + writes guarded (ไม่ใช่ P0) · **gap หลัก: authz ใช้ role-literal ไม่ใช่ `userCan('grades.*')`** (โรคเดียวกับ #15 G1/#17 G7) + read บางเส้นไม่ gate + parent ดู transcript ไม่ได้
+> **สถานะ:** 🟢 audit + ปิด gap ครบ 2026-10-13 (GR-S1–S5) — authz ใช้ `userCan('grades.*')` แล้ว · route gate 2 ชั้น · parent ดู transcript ได้ (guardian link) · nav คีย์ถูก · มีเทสต์ · เหลือเจ้าของ verify (MySQL + build)
 
 ## 1. Scope & Purpose
 
@@ -93,11 +93,11 @@ Keys จริง: **`grades.view` / `grades.manage`** (+ `grades.view.own` / `g
 
 | Step | Title | Deliverable | Status |
 |---|---|---|---|
-| GR-S1 | **G1:** เปลี่ยน `GradeScaleController::canManage` + `TranscriptController::canManage/canView` ให้ใช้ `Academy::userCan('grades.manage'/'grades.view')` (คง self/role เป็น OR) | authz + เทสต์ | ⚪ pending |
-| GR-S2 | **G2:** nav `admin.vue` → `can('grades.view')‖can('grades.manage')` | 1 บรรทัด FE | ⚪ pending |
-| GR-S3 | **G3+G4:** ติด `academy.permission:grades.view` ที่ group grade-scales/categories/transcripts + `.manage` ต่อ write (+ guard read ใน GradeScaleController) | routes + เทสต์ | ⚪ pending |
-| GR-S4 | **G5:** `canViewTranscript` รับผู้ปกครองผ่าน `GuardianAccessService`/`children.grades.view` | authz + เทสต์ | ⚪ pending (ขึ้นกับ Q) |
-| GR-S5 | เทสต์ authz grade-scale/transcript (view/manage/own/non-member) | ~6 เคส | ⚪ pending |
+| GR-S1 | **G1:** `GradeScaleController::canManage` + `TranscriptController::canManageTranscripts/canViewTranscript` รับ `userCan('grades.manage'/'grades.view')` (OR กับ self/role เดิม) | authz | 🟢 **done (owner verify MySQL)** |
+| GR-S2 | **G2:** nav `admin.vue:186` → `can('grades.view')‖can('grades.manage')` | 1 บรรทัด FE | 🟢 **done** |
+| GR-S3 | **G3+G4:** group grade-scales/categories/transcripts ติด `['academy.visibility:content','academy.permission:grades.view']` + write ต่อ `.manage` (ปิด read ที่เคยเปิด + 2 ชั้น) | routes | 🟢 **done (owner verify MySQL)** |
+| GR-S4 | **G5:** `canViewTranscript` รับผู้ปกครองผ่าน `GuardianAccessService::isGuardianOf` | authz (เปิดใช้จริงเมื่อมี guardian link · `guardians.user_id` ยังว่างทั้งระบบ — ดู SC-S7) | 🟢 **done (code)** |
+| GR-S5 | เทสต์ authz grade-scale | `GradeScaleAuthzTest` 4 เคส (non-member 403 · grades.view อ่านได้/สร้างไม่ได้ · custom role grades.manage สร้างได้ · owner สร้างได้) | 🟢 **done (owner verify MySQL)** |
 
 **Rule:** verify (เทสต์/จอจริง) ก่อน 🟢 · cloud รันเทสต์ไม่ได้ → เจ้าของ verify MySQL
 
@@ -108,4 +108,12 @@ Keys จริง: **`grades.view` / `grades.manage`** (+ `grades.view.own` / `g
 - **Q4 — G5:** เปิดให้ผู้ปกครองดู transcript บุตร (`children.grades.view`) ไหม — หรือยังไม่เปิดรอบนี้?
 
 ## 8. Review Log
-- **2026-10-11 (audit)** — ขั้น [1]+[2] เสร็จ · ฟีเจอร์ครบ (grade-scales/transcripts/rollover) · tenant ครบ · writes role-guarded (ไม่ใช่ P0) · **G1 authz role-literal ไม่ใช่ `userCan('grades.*')`** (GradeScale+Transcript · ต้นแบบถูก = ClassroomController::canView) · G2 nav mis-key · G3 grade-scales reads ไม่ gate · G4 route ไม่มี `academy.permission` · G5 parent transcript · test gap (มีแต่ rollover) · course gradebook (`gradebook.*`) = คนละโดเมน · **รอเจ้าของเคาะ Q1–Q4**
+- **2026-10-11 (audit)** — ขั้น [1]+[2] เสร็จ · ไม่ใช่ P0 · พบ G1–G5 + test gap · course gradebook คนละโดเมน
+- **2026-10-13 (ลงมือ GR-S1–S5 — เจ้าของสั่ง "ดำเนินการตามที่แนะนำและเห็นว่าสมควร")** — Claude เขียนเอง (cloud ไม่มี vendor/agy) ตรวจ `php -l`:
+  - **GR-S1/G1:** `GradeScaleController::canManage` + `TranscriptController::canManageTranscripts`/`canViewTranscript` เพิ่ม `$academy->userCan($user,'grades.manage'/'grades.view')` เป็น OR (คง owner/role เดิม) ⇒ custom role (ฝ่ายวิชาการ/นายทะเบียน) ที่ถือ `grades.*` ใช้ได้แล้ว
+  - **GR-S2/G2:** `admin.vue:186` → `can('grades.view') || can('grades.manage')`
+  - **GR-S3/G3+G4:** group `grade-scales`/`assessment-categories`/`transcripts` ติด `['academy.visibility:content','academy.permission:grades.view']` + write (store/update/destroy/generate/publish) ต่อ `academy.permission:grades.manage` ⇒ ปิด read ที่เคยเปิดโล่ง (G3) + ด่าน 2 ชั้น (G4) · overview = view
+  - **GR-S4/G5:** `canViewTranscript` เพิ่ม `GuardianAccessService::isGuardianOf($user,$student)` ⇒ ผู้ปกครองดู transcript บุตรได้ (เปิดใช้จริงเมื่อมี `StudentGuardianLink` + `guardians.user_id` — ปัจจุบันยังว่างทั้งระบบ ดู SC-S7 · path พร้อมแล้ว)
+  - **GR-S5:** `GradeScaleAuthzTest` 4 เคส (non-member 403 · grades.view อ่านได้/สร้างไม่ได้ 403 · custom role grades.manage สร้างได้ · owner สร้างได้)
+  - ตรวจ `php -l` ผ่านทุกไฟล์ BE · เจ้าของ verify: `php artisan test -c phpunit.mysql.xml --filter=GradeScaleAuthzTest` + `--filter=Rollover` + `pint` + `npm run build`
+  - **เมนู #19 ปิด gap ครบ (G1–G5)** 🟢 · (course gradebook `gradebook.*` = คนละโดเมน · test transcript/parent เชิงลึกเลื่อนจน guardian wiring พร้อม)

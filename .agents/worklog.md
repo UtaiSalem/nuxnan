@@ -18,7 +18,19 @@
 - test gap: มีแต่ rollover · GradeScale/Transcript authz ไม่มีเทสต์
 
 course gradebook (`gradebook.*` · `Courses/[id]/gradebook/*`) = คนละโดเมน (คอร์ส)
-แตกเป็น GR-S1 (G1 userCan) · GR-S2 (G2 nav) · GR-S3 (G3+G4 route gate) · GR-S4 (G5 parent) · GR-S5 (เทสต์) · **ยังไม่ส่ง step — รอเจ้าของเคาะ Q1–Q4**
+แตกเป็น GR-S1 (G1 userCan) · GR-S2 (G2 nav) · GR-S3 (G3+G4 route gate) · GR-S4 (G5 parent) · GR-S5 (เทสต์)
+
+### ✅ ลงมือ GR-S1–S5 (เจ้าของสั่ง "ดำเนินการตามที่แนะนำและเห็นว่าสมควร") 2026-10-13
+
+Claude เขียนเอง (cloud ไม่มี vendor/agy) ตรวจ `php -l`:
+- **GR-S1/G1:** `GradeScaleController::canManage` + `TranscriptController::canManageTranscripts`/`canViewTranscript` เพิ่ม `userCan('grades.manage'/'grades.view')` เป็น OR (คง owner/role เดิม) ⇒ custom role ถือ `grades.*` ใช้ได้
+- **GR-S2/G2:** `admin.vue:186` → `can('grades.view')||can('grades.manage')`
+- **GR-S3/G3+G4:** group grade-scales/assessment-categories/transcripts ติด `['academy.visibility:content','academy.permission:grades.view']` + write ต่อ `grades.manage` ⇒ ปิด read ที่เปิดโล่ง (G3) + ด่าน 2 ชั้น (G4) · overview=view
+- **GR-S4/G5:** `canViewTranscript` เพิ่ม `GuardianAccessService::isGuardianOf` ⇒ ผู้ปกครองดู transcript บุตรได้ (เปิดจริงเมื่อมี guardian link · `guardians.user_id` ยังว่างทั้งระบบ — path พร้อม)
+- **GR-S5:** `GradeScaleAuthzTest` 4 เคส (non-member 403 · grades.view อ่านได้/สร้างไม่ได้ · custom role grades.manage สร้างได้ · owner สร้างได้)
+
+**เมนู #19 ปิด gap ครบ (G1–G5)** 🟢 · เจ้าของ verify: `phpunit.mysql.xml --filter=GradeScaleAuthzTest`+`Rollover` + pint + `npm run build`
+PR: UtaiSalem/nuxnan#39 (branch `claude/funny-meitner-06is0f`)
 
 ---
 
