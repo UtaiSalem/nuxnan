@@ -20,12 +20,17 @@
 - G4 หน้าไม่มี guard ระดับ page (พึ่งเมนู show + backend) · G5 analytics เชิงลึกเข้าไม่ถึงจากหน้า
 - G6 `dashboardStats` ไม่คืน total_staff/total_classrooms · G7 report builder อยู่ใต้ #8 (ชื่อเมนูคือ #21)
 
-### รอเจ้าของเคาะก่อนแตก step (R-S1 security ไม่ต้องรอ)
-- **Q1** หน้า #21 คง hub-ลิงก์ (ซ่อม G1/G2/G3) หรือยกเครื่องเป็นแดชบอร์ดสถิติจริง (ดึง analytics ที่มี)?
-- **Q2** report builder (#8) ให้โผล่ใต้ #21 ไหม (ย้าย/แสดงซ้ำ/คงที่ #8 แล้วลิงก์)?
-- **Q3** ยืนยันการ์ดสรุป 4 ตัว + แหล่งข้อมูล (รวมใน dashboardStats หรือ endpoint ใหม่ `reports/summary` gate reports.view)?
-- **R-S1 (ไม่ต้องรอ Q):** อุด G1 — ติดด่าน `members/stats`
-- ยังไม่แตะโค้ด (รอบนี้ audit อย่างเดียว) · push ไฟล์ audit + OVERVIEW + worklog
+### เคาะ Q1–Q3 + ลงมือ R-S1/S2/S3/S5 แล้ว (2026-10-13 · Claude เขียนคลาวด์ · php -l ผ่าน · เจ้าของรันเทสต์/build)
+- **Q1 = คง hub-ลิงก์** (ซ่อม G1/G2/G3 · ไม่ทำแดชบอร์ด analytics เชิงลึก → R-S4 ตัดทิ้ง)
+- **Q2 = report builder โผล่ใต้ #21** · **Q3 = endpoint ใหม่ `reports/summary`**
+- **✅ R-S1 (G1):** route `members/stats` เติม `academy.permission:members.view` — ปิด cross-tenant leak
+- **✅ R-S2 (G6):** `ReportController::summary` + `GET /{academy}/reports/summary` (gate reports.view)
+  คืน students(members role=student)/staff(StaffProfile)/classrooms(Classroom)/courses — try/catch กันตารางหาย
+- **✅ R-S3 (G2/G3):** reports.vue เรียก summary เดียว ผูกการ์ด 4 ตัวตรงฟิลด์ (เดิม staff อ่าน `stats.by_role` ผิด=0 · "ห้องเรียน" โชว์ classes_today)
+- **✅ R-S5 (G7):** ฝัง `<SchoolReportsTab :academy-id>` ใต้หน้า (border-t · ไม่ซ้อนหัว)
+- **เหลือ R-S6 เจ้าของ:** `php artisan test -c phpunit.mysql.xml --filter=ReportsSummary` (ถ้าเขียนเทสต์) · `pint` · `npm run build` · ตรวจจอ 375/768/1280
+- **หนี้ข้ามเมนู:** `members/search`·`filter-options`·`invitations` มีรูเดียวกับ G1 (กลุ่ม `auth:api` เปล่า) → ฝากเมนู #2 ปิด (ไม่ขยาย PR นี้)
+- PR [#42](https://github.com/UtaiSalem/nuxnan/pull/42) (draft) — push เพิ่มโค้ดรอบนี้
 
 ---
 

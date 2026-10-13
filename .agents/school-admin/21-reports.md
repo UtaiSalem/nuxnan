@@ -2,7 +2,12 @@
 
 > ไฟล์รองของเมนู `21 สถิติและรายงาน` (`admin/reports.vue` · `reports.view`)
 > อ่านคู่กับ [OVERVIEW.md](OVERVIEW.md)
-> สถานะ: 🟡 audit ขั้น [1]+[2] เสร็จ 2026-10-13 · รอเจ้าของเคาะ Q1–Q3 ก่อนแตก step
+> สถานะ: 🟡 audit [1]+[2] + เคาะ Q1–Q3 + โค้ด R-S1/R-S2/R-S3/R-S5 เสร็จ 2026-10-13 (คลาวด์ · php -l ผ่าน · เจ้าของรันเทสต์ MySQL + build)
+
+### เคาะแล้ว 2026-10-13
+- **Q1 = คง hub-ลิงก์** (แค่ซ่อม G1/G2/G3) → ไม่ทำแดชบอร์ด analytics เชิงลึกบนหน้า (R-S4 ตัดทิ้ง)
+- **Q2 = report builder โผล่ใต้ #21 ด้วย** → ฝัง `SchoolReportsTab` ใต้หน้า (R-S5)
+- **Q3 = ทำ endpoint ใหม่ `GET /{academy}/reports/summary`** (gate `reports.view`) คืนการ์ด 4 ตัว
 
 ---
 
@@ -122,22 +127,20 @@ teacher/staff/student/guardian **ไม่ได้** `reports.view`
 
 | Step | Title | Depends on | Deliverable | Status |
 |---|---|---|---|---|
-| R-S1 | อุด G1 — `members/stats` ติดด่าน | — | ย้าย route เข้าด่าน `academy.permission:members.view` **หรือ** `reports.view` + tenant-safe · เทสต์ 403 non-member/ไม่มีสิทธิ์ | ⚪ pending |
-| R-S2 | ปิด G6 — endpoint สรุป 4 ตัวครบ | Q3 | เพิ่ม `total_staff`+`total_classrooms` ใน `dashboardStats` (หรือ endpoint ใหม่ `reports/summary` gate `reports.view`) | ⚪ รอ Q3 |
-| R-S3 | ปิด G2/G3 — FE การ์ดอ่านถูก | R-S2 | reports.vue ผูกการ์ดกับฟิลด์ที่ถูก + label ถูก (mobile-first) | ⚪ รอ Q3 |
-| R-S4 | ปิด G5 — ฝังสถิติจริงบนหน้า | Q1 | (ถ้า Q1=ยกเครื่อง) วิดเจ็ต trends/at-risk/pending/KPI บนหน้า #21 ดึง analytics endpoint จริง | ⚪ รอ Q1 |
-| R-S5 | ปิด G7 — report builder เข้าถึงได้จาก #21 | Q2 | (ถ้า Q2=ย้าย/แสดงซ้ำ) นำ SchoolReportsTab มาแสดงใต้ #21 | ⚪ รอ Q2 |
-| R-S6 | เทสต์ + verify | ทุก step | `ReportsHub*Test` + build + ตรวจจอ 375/768/1280 | ⚪ pending |
+| R-S1 | อุด G1 — `members/stats` ติดด่าน | — | route เติม `academy.permission:members.view` | 🟢 โค้ดเสร็จ (เจ้าของรันเทสต์) |
+| R-S2 | ปิด G6 — endpoint สรุป 4 ตัวครบ | Q3 | `GET /{academy}/reports/summary` (gate reports.view) คืน students/staff/classrooms/courses จากแหล่งถูก | 🟢 โค้ดเสร็จ |
+| R-S3 | ปิด G2/G3 — FE การ์ดอ่านถูก | R-S2 | reports.vue เรียก `reports/summary` + ผูกการ์ดฟิลด์ถูก + label ถูก | 🟢 โค้ดเสร็จ |
+| R-S4 | ~~ปิด G5 — ฝังสถิติจริงบนหน้า~~ | Q1 | **ตัดทิ้ง** — Q1 เคาะว่าคง hub-ลิงก์ | ⚫ dropped |
+| R-S5 | ปิด G7 — report builder ใต้ #21 | Q2 | ฝัง `SchoolReportsTab :academy-id` ใต้หน้า reports.vue | 🟢 โค้ดเสร็จ |
+| R-S6 | เทสต์ + verify | ทุก step | `ReportsSummaryTest` (403 non-member/no-perm · 200 นับถูก) + `npm run build` + ตรวจจอ 375/768/1280 | ⚪ รอเจ้าของ |
 
 **Rule:** ทุก step ต้อง verify (build/test/manual) ก่อนขึ้น 🟢 · งาน UI ทุกชิ้นบังคับ mobile-first
 
-### ❓ Q ที่ต้องเคาะก่อนลงมือ (R-S2 เป็นต้นไป)
-- **Q1 — บทบาทของหน้า #21:** คง "หน้า hub ลิงก์" เฉย ๆ (แค่ซ่อม G1/G2/G3) **หรือ** ยกเครื่องเป็น
-  "แดชบอร์ดสถิติจริง" ที่ดึง analytics backend ที่มีอยู่ (overview/trends/at-risk/KPI) มาโชว์บนหน้า?
-- **Q2 — report builder:** ให้ report module (definitions/saved/schedules/export ที่อยู่ใน #8) โผล่ใต้เมนู #21 ด้วยไหม
-  (ย้าย · แสดงซ้ำ · หรือคงไว้ที่ #8 แล้ว #21 แค่ลิงก์ไป)?
-- **Q3 — การ์ดสรุป:** ยืนยัน 4 ตัว (นักเรียน/บุคลากร/ห้องเรียน/คอร์ส) และแหล่งข้อมูล — ให้รวมใน `dashboardStats`
-  หรือทำ endpoint สรุปใหม่ `reports/summary` (gate `reports.view`)? ต้องการเพิ่มการ์ดอะไรอีก (เช่น at-risk/ค้างตรวจ)?
+### ค้างให้เจ้าของ verify (R-S6)
+- `php artisan test -c phpunit.mysql.xml --filter=ReportsSummary` (ถ้าเขียนเทสต์แล้ว) · `./vendor/bin/pint`
+- `npm run build` (ไม่มี node_modules ในคลาวด์) · ตรวจจอ 375/768/1280 โดยเฉพาะ report builder ที่ฝังใหม่
+- G4 (page guard) + G5 (analytics เชิงลึก) = เคาะว่าไม่ทำรอบนี้ (คง hub) · หนี้ข้ามเมนู: siblings `members/search`·`filter-options`·`invitations`
+  มีรูเดียวกับ G1 (อยู่ในกลุ่ม `auth:api` เปล่า) → ฝาก **เมนู #2** ปิด (นอกสโคป #21 · ไม่ขยาย PR นี้)
 
 ---
 
@@ -155,4 +158,10 @@ Report back: diff summary + test output (claude ตรวจ diff เอง)
 ## 8. Review Log
 - **2026-10-13 audit [1]+[2]** — Claude สแกน FE (`admin/reports.vue` + เมนู admin.vue + SchoolReportsTab) + BE
   (AnalyticsController 993 บรรทัด · ReportController · routes analytics/reports/members·stats · CheckAcademyPermission · AcademyRole templates)
-  → พบ gap G1–G7 · เขียนไฟล์รองนี้ · รอเจ้าของเคาะ Q1–Q3 ก่อนแตก R-S2+
+  → พบ gap G1–G7 · เขียนไฟล์รองนี้
+- **2026-10-13 เคาะ Q1–Q3 + ลงมือ R-S1/S2/S3/S5** (Claude เขียนในคลาวด์ · php -l ผ่าน · เจ้าของรันเทสต์/build)
+  - R-S1: `members/stats` เติม `academy.permission:members.view` (ปิด cross-tenant leak G1)
+  - R-S2: `ReportController::summary` + route `GET /{academy}/reports/summary` (gate reports.view) — students=members role=student · courses=academy->courses · staff=StaffProfile · classrooms=Classroom (try/catch กันตารางหาย)
+  - R-S3: reports.vue เรียก summary endpoint เดียว ผูกการ์ด 4 ตัวตรงฟิลด์ (ปิด G2 staff=0 · G3 ห้องเรียนโชว์คาบวันนี้)
+  - R-S5: ฝัง `<SchoolReportsTab :academy-id="academyId" />` ใต้หน้า (border-t separator · ไม่ซ้อนหัว) → report builder เข้าถึงจาก #21 (ปิด G7)
+  - เหลือ R-S6 (เทสต์ MySQL + build + ตรวจจอ) ฝั่งเจ้าของ
