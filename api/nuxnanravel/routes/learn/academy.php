@@ -210,7 +210,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // Enhanced Member Management Routes
     // ============================================
     Route::get('/{academy}/members/search', [AcademyMemberController::class, 'searchMembers'])->name('api.academy.members.search');
-    Route::get('/{academy}/members/stats', [AcademyMemberController::class, 'getMemberStats'])->name('api.academy.members.stats');
+    Route::get('/{academy}/members/stats', [AcademyMemberController::class, 'getMemberStats'])->middleware('academy.permission:members.view')->name('api.academy.members.stats');
     Route::get('/{academy}/members/filter-options', [AcademyMemberController::class, 'getFilterOptions'])->name('api.academy.members.filter-options');
     Route::get('/{academy}/members/invitations', [AcademyMemberController::class, 'invitationHistory'])->name('api.academy.members.invitations');
 
@@ -936,6 +936,9 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
 
     // Report Definitions
     Route::prefix('/{academy}/reports')->middleware(['academy.visibility:content', 'academy.permission:reports.view'])->group(function () {
+        // Overview summary (การ์ดสรุป 4 ตัวบนหน้า #21 สถิติและรายงาน)
+        Route::get('/summary', [ReportController::class, 'summary'])->name('api.academy.reports.summary');
+
         // Report Definitions
         Route::get('/definitions', [ReportController::class, 'listDefinitions'])->name('api.academy.reports.definitions');
         Route::post('/definitions', [ReportController::class, 'createDefinition'])->name('api.academy.reports.definitions.create');

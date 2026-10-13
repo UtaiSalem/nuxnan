@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
+use App\Models\Classroom;
 use App\Models\ReportDefinition;
 use App\Models\ReportExport;
 use App\Models\ReportSchedule;
 use App\Models\SavedReport;
+use App\Models\StaffProfile;
 use App\Services\AuditLogService;
 use App\Services\ReportExportService;
 use Illuminate\Http\JsonResponse;
@@ -24,6 +26,47 @@ class ReportController extends Controller
     public function __construct(AuditLogService $auditLog)
     {
         $this->auditLog = $auditLog;
+    }
+
+    /**
+     * สรุปตัวเลขหลักของโรงเรียนสำหรับการ์ดบนหน้า "สถิติและรายงาน" (#21)
+     *
+     * คืนค่าครบทั้ง 4 การ์ด (นักเรียน/บุคลากร/ห้องเรียน/คอร์ส) จากแหล่งที่ถูกต้อง
+     * ในด่านเดียว (gate `reports.view`) แทนที่หน้าจะไปรวมจากหลาย endpoint ที่ shape ไม่ตรงกัน
+     */
+    public function summary(Academy $academy): JsonResponse
+    {
+        // นักเรียน: นับจากสมาชิกที่บทบาท student (คง consistent กับ analytics/dashboard-stats)
+        $totalStudents = $academy->members()->where('role', 'student')->count();
+
+        // คอร์สเรียนของโรงเรียน
+        $totalCourses = $academy->courses()->count();
+
+        // บุคลากร: จากตาราง staff_profiles (แหล่งเดียวกับเมนู #14 บุคลากร)
+        $totalStaff = 0;
+        try {
+            $totalStaff = StaffProfile::where('academy_id', $academy->id)->count();
+        } catch (\Throwable $e) {
+            // ตารางอาจยังไม่มีบนบางฐาน
+        }
+
+        // ห้องเรียน: จากตาราง classrooms (แหล่งเดียวกับเมนู #10 ห้องเรียน)
+        $totalClassrooms = 0;
+        try {
+            $totalClassrooms = Classroom::where('academy_id', $academy->id)->count();
+        } catch (\Throwable $e) {
+            // ตารางอาจยังไม่มีบนบางฐาน
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total_students' => $totalStudents,
+                'total_staff' => $totalStaff,
+                'total_classrooms' => $totalClassrooms,
+                'total_courses' => $totalCourses,
+            ],
+        ]);
     }
 
     // ==================== REPORT DEFINITIONS ====================
