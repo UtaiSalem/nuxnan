@@ -231,6 +231,16 @@ class AnnouncementController extends Controller
             ], 422);
         }
 
+        // AN-S1/G3 — scope_id ต้องอยู่ในโรงเรียนนี้ (กัน announcement ชี้ห้อง/ฝ่ายข้ามโรงเรียน)
+        $scopeError = $this->validateScopeBelongsToAcademy(
+            $academy,
+            $request->get('scope_type', 'academy'),
+            $request->get('scope_id'),
+        );
+        if ($scopeError) {
+            return $scopeError;
+        }
+
         DB::beginTransaction();
         try {
             $announcement = SchoolAnnouncement::create([
@@ -480,10 +490,31 @@ class AnnouncementController extends Controller
     /**
      * Check if user is academy admin
      */
+    /**
+     * AN-S1/G3 — ตรวจว่า scope_id (ฝ่าย/ห้องเรียน) อยู่ในโรงเรียนนี้จริง · คืน JsonResponse ถ้าไม่ผ่าน
+     */
+    private function validateScopeBelongsToAcademy(Academy $academy, ?string $scopeType, $scopeId): ?\Illuminate\Http\JsonResponse
+    {
+        if (! $scopeId || ! in_array($scopeType, ['department', 'classroom'], true)) {
+            return null;
+        }
+
+        $exists = $scopeType === 'department'
+            ? AcademyGroup::where('id', $scopeId)->where('academy_id', $academy->id)->exists()
+            : Classroom::where('id', $scopeId)->where('academy_id', $academy->id)->exists();
+
+        if (! $exists) {
+            return response()->json(['success' => false, 'message' => 'scope_id ไม่อยู่ในโรงเรียนนี้'], 422);
+        }
+
+        return null;
+    }
+
     private function isAcademyAdmin($user, Academy $academy): bool
     {
-        // Canonical check: owner (user_id/owner_id), academy_admins, or super admin.
-        // The academy_members pivot `role` is not the source of truth for admin rights.
-        return $academy->isAdmin($user);
+        // GR/AN-S1/G1 — ให้ตรงกับด่าน route `academy.permission:announcements.manage`
+        // userCan ครอบ isAdmin อยู่แล้ว + รับ custom role/director ที่ถือคีย์ `announcements.manage`
+        // (เดิมเช็ค isAdmin ล้วน ⇒ director ที่ถือคีย์ผ่าน route แต่โดน controller 403)
+        return $academy->userCan($user, 'announcements.manage');
     }
 }

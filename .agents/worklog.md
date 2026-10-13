@@ -1,5 +1,23 @@
 # Work Log — nuxnan project
 
+## 🔍 2026-10-13 — เมนู #20 ประกาศ: audit + ปิด gap ที่ตัดสินได้ (AN-S1)
+
+ไฟล์รอง: [`.agents/school-admin/20-announcements.md`](school-admin/20-announcements.md) · branch `claude/funny-meitner-06is0f`
+
+**เมนูสุก · tenant+authz ครบ — ไม่มี P0** · `AnnouncementController` (academy) · scope academy/department/classroom + targeting · routes gated (member + writes `announcements.manage`) · tenant check (`academy_id!==→404`) ทุก write+show · index มี scope-authz (ฝ่าย=สมาชิกฝ่าย · ห้อง=ครูประจำชั้น/นักเรียนในห้อง) · nav `admin.vue:220` ถูกแล้ว (`announcements.view/manage`)
+
+Claude เขียนเอง (cloud ไม่มี vendor/agy) `php -l`:
+- **G1 (P2) แก้แล้ว:** controller `isAcademyAdmin` เดิม=`$academy->isAdmin()` (owner/academy_admins เท่านั้น) **ขัดกับ route `announcements.manage`** (ผ่าน userCan) ⇒ director/custom role ที่ถือคีย์ผ่าน route แต่โดน controller 403 · แก้เป็น `userCan('announcements.manage')` (ครอบ isAdmin · ไม่มีใครเสียสิทธิ์)
+- **G3 (P3) แก้แล้ว:** `store` เพิ่ม `validateScopeBelongsToAcademy` → scope_id (ฝ่าย/ห้อง) ต้องอยู่ในโรงเรียน ไม่งั้น 422
+- **test gap ปิด:** `AnnouncementAuthzTest` 5 เคส (custom role manage สร้างได้ · view-only 403 · non-member 403 · cross-academy show 404 · scope_id นอกโรงเรียน 422)
+
+🔴 **เหลือ G2 (feature, รอเคาะ):** `announcements.create`/`create.own` เป็น orphan key — ครู (ถือ `create.own`) สร้างประกาศห้อง/วิชาตนไม่ได้ (store ติด `.manage`) · เปิดต้องออกแบบ: route รับ create.own + บังคับ scope=ห้องที่ครูรับผิดชอบ → **AN-S2 รอ Q1**
+
+เจ้าของ verify: `phpunit.mysql.xml --filter=AnnouncementAuthzTest` + pint
+PR: UtaiSalem/nuxnan#39 (branch `claude/funny-meitner-06is0f`)
+
+---
+
 ## 🔍 2026-10-12 — เมนู #19 ผลการเรียน: audit เสร็จ (ขั้น [1]+[2]) — รอเจ้าของเคาะ Q
 
 ไฟล์รอง: [`.agents/school-admin/19-grades.md`](school-admin/19-grades.md) · branch `claude/funny-meitner-06is0f`
