@@ -1,5 +1,30 @@
 # Work Log — nuxnan project
 
+## 🟡 2026-10-13 — เมนู #22 ประวัติกิจกรรม: audit [1]+[2] เสร็จ · โมดูลแข็งแรง ไม่มี P0 · รอเจ้าของเคาะ Q1–Q3
+
+### สถานะ: ไฟล์รอง [`.agents/school-admin/22-activity-log.md`](school-admin/22-activity-log.md) · OVERVIEW #22 ⚪→🟡
+สแกน FE `activity-log/index.vue` (370 บรรทัด timeline + stats 4 การ์ด + filter + pagination) + BE `MemberActivityLogController` (285 บรรทัด) + routes + MemberActivityLog scopes
+
+### ค้นพบหลัก: ต่างจาก #12–14 — เมนูนี้โตเต็มวัยและปลอดภัย
+- **security ปิดแล้ว (G29):** group `{academy}/activity-log` ติด `academy.permission:members.view,reports.view` (เดิม auth:api เปล่า)
+- controller ใช้ `forAcademy()` scope ทุกเมธอด (tenant-safe) · eager-load user/targetUser (กัน N+1) · filter ครบ (action/category/user/target/department/date) · response shape ตรง FE
+- ไม่มี gap P0 · finding เป็น **FE polish + feature เสริม**
+
+### Gap (รายละเอียดใน 22-activity-log.md §5)
+- **G1 🟡** FE ใช้ `useNuxtApp().$api` ตรง + refetch academy by name แทน `useApi`+inject academyId (ผิดแนว CLAUDE.md + ยิงเกิน)
+- **G2 🟠** หน้า hardcode สีสว่าง (`bg-white`/`text-gray-900`) ไม่มี `dark:` เลย → dark mode พัง
+- **G3 🟡** การ์ด "กิจกรรมทั้งหมด" = `stats.total` ซึ่งเป็นยอด 30 วันล่าสุด (label ลวง)
+- **G4 🟡** avatar bind `profile_photo_path` (relative) → รูปแตก (หนี้ photo-path ทั้งระบบ)
+- **G5 ⚪** feature เสริม: drill-down รายคน (`getMemberLogs` มี backend แต่ FE ไม่เรียก) · กราฟ by_day · ท็อป active_users · export · ค้นหาผู้ทำ/เป้าหมาย
+- **G7 🟡** "ประวัติการแก้ไข" (AuditLog entity) เป็นคนละระบบ อยู่ #8/platform — เคาะว่า #22 รวมด้วยไหม
+
+### รอเจ้าของเคาะก่อนลงมือ
+- **Q1** ขอบเขตงาน: แค่ polish (G1/G2/G3) หรือ +feature (G5)?
+- **Q2** #22 รวม audit entity trail (#8) ด้วยไหม? · **Q3** avatar แก้เฉพาะเมนูหรือรอ migration รูปรวม?
+- รอบนี้ audit อย่างเดียว · push ไฟล์ audit + OVERVIEW + worklog (branch เดียวกับ PR #42)
+
+---
+
 ## 🟡 2026-10-13 — เมนู #21 สถิติและรายงาน: audit ขั้น [1]+[2] เสร็จ · พบ gap 7 ข้อ · รอเจ้าของเคาะ Q1–Q3
 
 ### สถานะ: ไฟล์รอง [`.agents/school-admin/21-reports.md`](school-admin/21-reports.md) · OVERVIEW #21 ⚪→🟡
