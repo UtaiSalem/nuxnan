@@ -1,5 +1,34 @@
 # Work Log — nuxnan project
 
+## 🟡 2026-10-13 — เมนู #21 สถิติและรายงาน: audit ขั้น [1]+[2] เสร็จ · พบ gap 7 ข้อ · รอเจ้าของเคาะ Q1–Q3
+
+### สถานะ: ไฟล์รอง [`.agents/school-admin/21-reports.md`](school-admin/21-reports.md) · OVERVIEW #21 ⚪→🟡
+ต่อจากลูป school-admin (ถัดจาก #16) · สแกน FE `admin/reports.vue` (153 บรรทัด) + เมนู `admin.vue` + `SchoolReportsTab`
++ BE `AnalyticsController` (993 บรรทัด) · `ReportController` · routes analytics/reports/members·stats · `CheckAcademyPermission` · `AcademyRole` templates
+
+### ค้นพบหลัก: backend รวยกว่าหน้าจอมาก
+- หน้า #21 เป็น **hub บาง ๆ** (การ์ดสรุป 4 + 4 กล่องลิงก์ไปเมนูอื่น) เรียกแค่ 2 endpoint: `analytics/dashboard-stats` + `members/stats`
+- backend analytics เต็มชุด (overview/snapshots/KPI/trends/comparisons/alert-rules) + report module #2 (definitions/saved/schedules/exports)
+  มีอยู่ gate `reports.view` แล้ว **แต่หน้า #21 เข้าไม่ถึงเลย** · report builder ปัจจุบันฝังใน **เมนู #8** ไม่ใช่ #21
+- `reports.view` ผูก role: director/admin/registrar/owner (teacher ไม่ได้ — สมเหตุผล)
+
+### Gap (รายละเอียดใน 21-reports.md §5)
+- **G1 🔴** `GET /{academy}/members/stats` อยู่ในกลุ่ม `auth:api` เปล่า ไม่มี `academy.permission` + ในเมธอดไม่มี tenant check
+  → ใครล็อกอินก็อ่านสถิติสมาชิก/การกระจายบทบาทของโรงเรียนไหนก็ได้ (คลาสเดียวกับ #8 G1)
+- **G2 🟠** การ์ด "บุคลากร" อ่าน `stats.by_role.teacher` แต่ BE คืน `role_distribution.teacher` → **staff = 0 เสมอ**
+- **G3 🟠** การ์ด "ห้องเรียน" ผูก `classes_today` (คาบวันนี้) ไม่ใช่จำนวนห้อง · `pending_grading` ดึงมาแต่ไม่โชว์
+- G4 หน้าไม่มี guard ระดับ page (พึ่งเมนู show + backend) · G5 analytics เชิงลึกเข้าไม่ถึงจากหน้า
+- G6 `dashboardStats` ไม่คืน total_staff/total_classrooms · G7 report builder อยู่ใต้ #8 (ชื่อเมนูคือ #21)
+
+### รอเจ้าของเคาะก่อนแตก step (R-S1 security ไม่ต้องรอ)
+- **Q1** หน้า #21 คง hub-ลิงก์ (ซ่อม G1/G2/G3) หรือยกเครื่องเป็นแดชบอร์ดสถิติจริง (ดึง analytics ที่มี)?
+- **Q2** report builder (#8) ให้โผล่ใต้ #21 ไหม (ย้าย/แสดงซ้ำ/คงที่ #8 แล้วลิงก์)?
+- **Q3** ยืนยันการ์ดสรุป 4 ตัว + แหล่งข้อมูล (รวมใน dashboardStats หรือ endpoint ใหม่ `reports/summary` gate reports.view)?
+- **R-S1 (ไม่ต้องรอ Q):** อุด G1 — ติดด่าน `members/stats`
+- ยังไม่แตะโค้ด (รอบนี้ audit อย่างเดียว) · push ไฟล์ audit + OVERVIEW + worklog
+
+---
+
 ## ✅ 2026-10-11 — PR #33 merge เข้า `main` แล้ว (เมนู #16 บัตรนักเรียน + #15 เสริม)
 
 - **merged:** `main` HEAD = `fa13c4f` (squash) · branch `claude/jolly-goodall-cwgfja`
