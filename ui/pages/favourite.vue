@@ -57,6 +57,7 @@
 </template>
 
 <script setup>
+import CourseCard from '~/components/learn/course/CourseCard.vue'
 import { courseService } from '~/services/courseService'
 import { Icon } from '@iconify/vue'
 

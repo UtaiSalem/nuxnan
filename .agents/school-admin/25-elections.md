@@ -1451,12 +1451,42 @@ const unwrap = (r) => r?.data?.data ?? r?.data ?? r
 
 สคริปต์เทียบ "ชื่อแท็กที่ใช้" กับ "ชื่อที่ Nuxt ลงทะเบียน" ทั้ง `pages/` + `components/` + `layouts/`
 (หัก `defineAsyncComponent` / `import` ตรง / self-reference / PrimeVue ออกแล้ว) เหลือ **25 จุด**
-ยืนยันด้วยเบราว์เซอร์แล้ว 9 จุด (ของเมนู #25) · ที่เหลือ **ยังไม่ได้เปิดจอ อย่าเพิ่งเชื่อ**:
+9 จุดของเมนู #25 ยืนยันไปแล้วใน §15.2
 
-- `admin/gradebook/rollover/index.vue` — 7 จุด (`Rollover*`) · ไม่มี import ในไฟล์ ⇒ น่าจะอาการเดียวกัน
-- `admin/revenue.vue` — 3 จุด (`Academy*`)
-- `pages/badges|members|overview|quests|Play/Streams` — `<BaseCard>` (auto-import คือ `AtomsBaseCard`)
-- `pages/favourite.vue` — `<CourseCard>` · `components/landing/ModernTestimonialsSection.vue` — `<TestimonialCard>`
+**อัปเดต 2026-08-27 — เปิดจอที่เหลือครบทุกหน้าแล้ว: พังจริงทั้งหมด ไม่มี false positive สักจุด**
+17 จุดใน 8 ไฟล์ (นับตามคู่ ไฟล์×ชื่อคอมโพเนนต์ — มากกว่า 25−9=16 อยู่หนึ่ง เพราะวิธีนับของสคริปต์เดิมต่างกันเล็กน้อย)
+
+#### หลักฐานตอนยังพัง (วัดจาก DOM จริงทุกบรรทัด)
+
+| ไฟล์ | จุด | สิ่งที่วัดได้ |
+|---|---|---|
+| `admin/gradebook/rollover/index.vue` | 7 | `<rolloverstepindicator>` และ `<rolloveryearpicker>` — `children:0 · h:0` ทั้งคู่ · หน้ามีแต่หัวเรื่อง `Year Rollover Wizard` · **อีก 5 ตัวเป็น `v-else-if` ที่ `state.step >= 2` และทางเดียวที่จะขึ้น step 2 คือ `@next` ของ year picker ⇒ วิซาร์ดทั้งตัวเข้าไม่ถึงเลย ไม่ใช่แค่หน้าตาเพี้ยน** |
+| `admin/revenue.vue` | 3 | กดครบทั้ง 3 แท็บ — `academyadminrevenuewidget` / `academysupportreviewtable` / `academycampaignmanagementtable` ทุกตัว `children:0 · h:0` · **แท็บที่ 4 (`AcademyRevenueActivity`) ชื่อตรงทะเบียน เรนเดอร์ปกติ ⇒ เป็นตัวควบคุมยืนยันว่าปัญหาอยู่ที่ชื่อ ไม่ใช่ที่ auth/ข้อมูล** |
+| `badges` · `members` · `overview` · `quests` · `Play/Streams` | 5 | `<basecard>` — `display:inline · children:3 · h:0` · สล็อตรอดมาแต่เนื้อหาเละ: `<h2>` วัดได้ **กว้าง 0px สูง 140px** · `<p>` **0px × 1176px** ⇒ ข้อความไทยแตกเป็นแนวตั้ง (อาการเป๊ะตามที่ CLAUDE.md เตือน) |
+| `favourite.vue` | 1 | `<coursecard>` 3 ตัว `children:0 · h:0` ⇒ คอร์สโปรด 3 รายการหายไปทั้งหมด |
+| `landing/ModernTestimonialsSection.vue` | 1 | `<testimonialcard>` **12 ตัว** `children:0 · h:0` ⇒ marquee ทั้งสองแถวเป็นกล่องเปล่า |
+
+#### ทางแก้ที่ลงจริง
+
+`import` ตรงใน `<script setup>` ตามที่ §15.2 แนะนำ — **9 ไฟล์ · +17 บรรทัด · ลบ 0 บรรทัด · ไม่แตะ `components:` ใน `nuxt.config.ts`**
+
+#### ยืนยันหลังแก้ (เปิดจอซ้ำทุกหน้า)
+
+**ไม่เหลือ custom element ที่หาไม่เจอสักตัวเดียวในทุกหน้า**
+
+- **rollover** — แถบ 6 ขั้นขึ้นครบ · `<select>` ปีต้นทาง/ปลายทางครบ 2 ตัว · ปุ่ม `ถัดไป: ตรวจห้องปลายทาง` กดได้ ⇒ วิซาร์ดเข้าได้แล้ว · ที่ **375px**: `scrollWidth === 375` (ไม่เลื่อนแนวนอน) · ไม่มีปุ่ม/select ตัวไหนต่ำกว่า 44px
+- **revenue** — ทั้ง 3 แท็บมีเนื้อจริง (`ยอดคงเหลือ 0 แต้ม` · `รายการสนับสนุน` · `จัดการแคมเปญโฆษณา`)
+- **BaseCard 5 หน้า** — การ์ดจริง `744×270` · `<h2>` กลับมาเป็น `710×28` (จากเดิม `0×140`)
+- **favourite** — การ์ด 3 ใบ `294×416` พร้อมชื่อคอร์สจริง
+- **testimonials** — 6 ใบต่อแถว สูง 198px · section สูง 902px (เดิมเป็นเปลือกเปล่า)
+- console เหลือแต่ 500 ของ `/api/notifications/recent` ที่เป็นของ layout ตาม §15.4 — ไม่เกี่ยวกับ F1
+
+#### 🔴 กับดักการวัดที่เจอรอบนี้ (สำคัญกว่าที่คิด)
+
+probe รอบแรกบน `/members` และ `/admin/revenue` **คืน array ว่าง** ซึ่งอ่านผิดได้ง่ายมากว่า "ไม่พัง"
+พอ query ซ้ำอีกครั้งถึงเจอ element ที่พัง — **probe วิ่งก่อนเรนเดอร์เสร็จ**
+⇒ ต้องหน่วงให้หน้านิ่งก่อนเสมอ แล้วถ้าได้ 0 ให้ยิงซ้ำอีกรอบก่อนสรุปว่าผ่าน
+**"นับได้ 0" ไม่เท่ากับ "ไม่มีปัญหา" ถ้ายังไม่ได้ยืนยันว่าหน้าเรนเดอร์เสร็จแล้ว**
 
 ### 15.6 ข้อมูลทดสอบที่ยังคาไว้ในฐาน dev (ยังไม่ลบ — ต้องใช้ตรวจซ้ำหลังแก้ F1/F2)
 
