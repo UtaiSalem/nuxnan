@@ -1,5 +1,24 @@
 # Work Log — nuxnan project
 
+## 🟡 2026-10-14 — เมนู #23 รายได้: audit [1]+[2] เสร็จ · security แข็งแรง · เจอ authz inconsistency · รอเจ้าของเคาะ Q1–Q3
+
+### สถานะ: ไฟล์รอง [`.agents/school-admin/23-revenue.md`](school-admin/23-revenue.md) · OVERVIEW #23 "Phase 1 done"→🟡 (มีรายละเอียด)
+สแกน FE `revenue.vue` (109 บรรทัด · 4 แท็บ + page guard) + 4 component (`academy/revenue/`) + `useAcademyRevenue` + BE `AcademyRevenueController` (389 บรรทัด) + routes revenue group
+
+### ค้นพบ: ปลอดภัย แต่โมเดลสิทธิ์ขัดกัน
+- **security แข็งแรง:** tenant check (`academy_id` → 403) ทุก mutating method · per-route gate finance.view/manage · page guard redirect · G18 (support-summary privacy) ปิดแล้ว · ไม่มี P0
+- **authz inconsistency (finding หลัก):** controller บังคับ `$academy->isAdmin($user)` ขัดกับ route + FE ที่ใช้ `finance.view`/`finance.manage`
+  - **G1** `campaignsIndex` ต้อง isAdmin แต่ route+tab gate finance.view → finance.view (non-admin) เห็นแท็บแคมเปญแต่โหลด 403
+  - **G2** approve/reject/campaigns store/update ต้อง isAdmin ไม่รับ `finance.manage` → **สิทธิ์ finance.manage ใช้ไม่ได้จริง** (มอบงานการเงินให้ฝ่ายไม่ได้) · FE โชว์ปุ่มตาม can('finance.manage') → กด 403 · คลาสเดียวกับ EnrollmentPolicy G1
+  - G3 FE `visibleTabs`/ปุ่มไม่ตรงกับ API · G4 resolve academyId by name (ไม่ inject) · G5 การเงินอื่น (fee/tuition/payments/expenses/budgets) อยู่ #8
+
+### รอเจ้าของเคาะ
+- **Q1** แก้ authz: ให้ finance.view ดูแคมเปญ + finance.manage จัดการได้ (แนะนำ ตรง route+FE+catalog) หรือคง owner/admin เท่านั้น (แล้วซ่อน tab/ปุ่ม)?
+- **Q2** #23 รวมการเงินอื่น (#8) เข้ามาไหม? · **Q3** Phase 2 (export/กราฟ/filter) หรือปิดที่ parity หลังแก้ G1/G2?
+- audit อย่างเดียว · push ไฟล์ audit + OVERVIEW + worklog (branch เดียวกับ PR #42)
+
+---
+
 ## 🟡 2026-10-13 — เมนู #22 ประวัติกิจกรรม: audit [1]+[2] เสร็จ · โมดูลแข็งแรง ไม่มี P0 · รอเจ้าของเคาะ Q1–Q3
 
 ### สถานะ: ไฟล์รอง [`.agents/school-admin/22-activity-log.md`](school-admin/22-activity-log.md) · OVERVIEW #22 ⚪→🟡
