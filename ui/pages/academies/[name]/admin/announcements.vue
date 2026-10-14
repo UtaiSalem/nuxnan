@@ -5,6 +5,7 @@
  */
 import { Icon } from '@iconify/vue'
 import Swal from 'sweetalert2'
+import { useAuthStore } from '~/stores/auth'
 
 definePageMeta({
   layout: 'main'
@@ -43,6 +44,15 @@ const selectedAnnouncement = ref<any>(null)
 // Academy Role
 const academyId = ref<number | null>(null)
 const { can, isAdmin, fetchMyRole } = useAcademyRole(academyId)
+const authStore = useAuthStore()
+const currentUserId = computed(() => authStore.user?.id ?? null)
+
+// AN-S2/G2 — ผู้จัดการประกาศทั้งหมด vs ครูที่สร้างได้เฉพาะห้องตน
+const canManageAll = computed(() => isAdmin.value || can('announcements.manage') || can('announcements.create'))
+const canCreateOwn = computed(() => can('announcements.create.own'))
+const myClassrooms = ref<any[]>([])
+// AN-S2/G2 — ครูแก้/เผยแพร่/ลบได้เฉพาะประกาศที่ตนสร้าง · ผู้จัดการทำได้ทุกอัน
+const canModifyItem = (a: any) => canManageAll.value || a?.created_by === currentUserId.value
 
 // Form
 const announcementForm = ref({
@@ -52,7 +62,8 @@ const announcementForm = ref({
   priority: 'normal',
   is_pinned: false,
   is_published: false,
-  expires_at: null as string | null
+  expires_at: null as string | null,
+  scope_id: null as number | null
 })
 const isSubmitting = ref(false)
 const formErrors = ref<Record<string, string[]>>({})
@@ -80,16 +91,20 @@ onMounted(async () => {
       academy.value = response.academy
       academyId.value = response.academy.id
       await fetchMyRole()
-      
-      if (!isAdmin.value) {
+
+      // AN-S2/G2 — ผู้จัดการ หรือ ครู (create.own) เข้าได้ · อื่น ๆ เด้งกลับ
+      if (!canManageAll.value && !canCreateOwn.value) {
         navigateTo(`/academies/${academyName.value}/admin`)
         return
       }
-      
-      await Promise.all([
-        fetchAnnouncements(),
-        fetchStatistics()
-      ])
+
+      const tasks: Promise<any>[] = [fetchAnnouncements()]
+      if (canManageAll.value) {
+        tasks.push(fetchStatistics()) // stats = manage เท่านั้น (ครูไม่ต้องยิง กัน 403)
+      } else {
+        tasks.push(fetchMyClassrooms()) // ครู: โหลดห้องที่ตนเป็นครูประจำชั้น ไว้เลือก scope
+      }
+      await Promise.all(tasks)
     }
   } catch (err) {
     console.error('Failed to load:', err)
@@ -149,6 +164,19 @@ const handleSearch = () => {
   }, 300)
 }
 
+// AN-S2/G2 — ห้องที่ครูเป็นครูประจำชั้น (ไว้เลือก scope ตอนสร้างประกาศห้อง)
+const fetchMyClassrooms = async () => {
+  if (!academyId.value) return
+  try {
+    const response: any = await api.get(`/api/academies/${academyId.value}/classrooms`)
+    const list = response?.data || response?.classrooms?.data || response?.classrooms || []
+    myClassrooms.value = (Array.isArray(list) ? list : [])
+      .filter((c: any) => c.homeroom_teacher_id === currentUserId.value)
+  } catch {
+    myClassrooms.value = []
+  }
+}
+
 // Open create modal
 const openCreateModal = () => {
   announcementForm.value = {
@@ -158,7 +186,8 @@ const openCreateModal = () => {
     priority: 'normal',
     is_pinned: false,
     is_published: false,
-    expires_at: null
+    expires_at: null,
+    scope_id: canManageAll.value ? null : (myClassrooms.value[0]?.id ?? null)
   }
   formErrors.value = {}
   showCreateModal.value = true
@@ -174,7 +203,8 @@ const openEditModal = (announcement: any) => {
     priority: announcement.priority || 'normal',
     is_pinned: announcement.is_pinned || false,
     is_published: announcement.is_published || false,
-    expires_at: announcement.expires_at ? announcement.expires_at.split('T')[0] : null
+    expires_at: announcement.expires_at ? announcement.expires_at.split('T')[0] : null,
+    scope_id: announcement.scope_id ?? null
   }
   formErrors.value = {}
   showEditModal.value = true
@@ -194,7 +224,7 @@ const createAnnouncement = async () => {
   formErrors.value = {}
   
   try {
-    const response: any = await api.post(`/api/academies/${academyId.value}/announcements`, {
+    const payload: Record<string, any> = {
       title: announcementForm.value.title,
       content: announcementForm.value.content,
       announcement_type: announcementForm.value.announcement_type,
@@ -202,7 +232,13 @@ const createAnnouncement = async () => {
       is_pinned: announcementForm.value.is_pinned,
       is_published: announcementForm.value.is_published,
       expires_at: announcementForm.value.expires_at || undefined
-    })
+    }
+    // AN-S2/G2 — ครู (ไม่ใช่ผู้จัดการ) สร้างได้เฉพาะ scope=ห้องของตน
+    if (!canManageAll.value) {
+      payload.scope_type = 'classroom'
+      payload.scope_id = announcementForm.value.scope_id
+    }
+    const response: any = await api.post(`/api/academies/${academyId.value}/announcements`, payload)
     
     if (response.success) {
       showCreateModal.value = false
@@ -585,6 +621,7 @@ const formatDate = (dateString: string) => {
                   <Icon icon="fluent:eye-24-regular" class="w-5 h-5 text-gray-500" />
                 </button>
                 <button
+                  v-if="canModifyItem(announcement)"
                   @click="openEditModal(announcement)"
                   class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                   title="แก้ไข"
@@ -592,6 +629,7 @@ const formatDate = (dateString: string) => {
                   <Icon icon="fluent:edit-24-regular" class="w-5 h-5 text-gray-500" />
                 </button>
                 <button
+                  v-if="canModifyItem(announcement)"
                   @click="togglePublish(announcement)"
                   :class="[
                     'p-2 rounded-lg transition-colors',
@@ -610,6 +648,7 @@ const formatDate = (dateString: string) => {
                   />
                 </button>
                 <button
+                  v-if="canModifyItem(announcement)"
                   @click="deleteAnnouncement(announcement)"
                   class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                   title="ลบ"
@@ -657,6 +696,19 @@ const formatDate = (dateString: string) => {
           </div>
           
           <form @submit.prevent="createAnnouncement" class="p-5 space-y-4">
+            <!-- AN-S2/G2 — ครู (create.own): เลือกห้องที่ตนเป็นครูประจำชั้น -->
+            <div v-if="!canManageAll">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">ห้องเรียน (เฉพาะห้องที่คุณเป็นครูประจำชั้น) *</label>
+              <select
+                v-model="announcementForm.scope_id"
+                required
+                class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+              >
+                <option v-for="c in myClassrooms" :key="c.id" :value="c.id">{{ c.name }}</option>
+              </select>
+              <p v-if="myClassrooms.length === 0" class="mt-1 text-sm text-amber-600">คุณยังไม่ได้เป็นครูประจำชั้นห้องใด จึงยังสร้างประกาศไม่ได้</p>
+            </div>
+
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">หัวข้อ *</label>
               <input

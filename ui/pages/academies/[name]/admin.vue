@@ -177,13 +177,13 @@ const menuItems = computed(() => [
         name: 'การเข้าเรียน',
         icon: 'fluent:clipboard-task-24-regular',
         to: `/academies/${academyName.value}/admin/school-attendance`,
-        show: can('attendance.view') || can('academy.view'),
+        show: can('school_attendance.view') || can('school_attendance.manage'),
       },
       {
         name: 'ผลการเรียน',
         icon: 'fluent:star-24-regular',
         to: `/academies/${academyName.value}/admin/gradebook`,
-        show: can('grades.view') || can('academy.view'),
+        show: can('grades.view') || can('grades.manage'),
       },
       {
         name: 'เยี่ยมบ้าน',

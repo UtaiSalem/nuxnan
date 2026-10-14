@@ -11,6 +11,7 @@ use App\Models\StudentCard;
 use App\Models\StudentHomeVisit;
 use App\Services\GuardianService;
 use App\Services\StudentEnrollmentService;
+use App\Traits\HandlesHomeVisitAttachments;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
@@ -19,6 +20,8 @@ use Mpdf\Output\Destination;
 
 class AdminController extends Controller
 {
+    use HandlesHomeVisitAttachments;
+
     /**
      * Get statistics for academy admin dashboard
      */
@@ -217,8 +220,8 @@ class AdminController extends Controller
                     $query->select('id', 'first_name_th', 'last_name_th', 'nickname', 'student_id', 'citizen_id', 'email', 'phone');
                 },
                 'zone:id,zone_name,zone_code',
-                'participants:id,home_visit_id,participant_name,participant_position,participant_role',
-                'images:id,home_visit_id,image_path,image_type,image_description',
+                'participants:id,home_visit_id,participant_name,notes',
+                'images:id,home_visit_id,image_path,image_name,image_type,description',
                 'creator:id,name,email',
             ])
             ->withCount('images')
@@ -492,7 +495,9 @@ class AdminController extends Controller
      */
     public function showVisit(Academy $academy, $id)
     {
-        $visit = StudentHomeVisit::where('academy_id', $academy->id)->with('student')->findOrFail($id);
+        $visit = StudentHomeVisit::where('academy_id', $academy->id)
+            ->with(['student', 'participants', 'images', 'zone:id,zone_name,zone_code'])
+            ->findOrFail($id);
 
         return response()->json([
             'visit' => $visit,
@@ -506,9 +511,13 @@ class AdminController extends Controller
 
         $visit = StudentHomeVisit::create($this->visitPayload($validated, $academy, $student));
 
+        // HV-S4 — participants + รูปหลักฐาน ย้ายมาจากระบบ session เดิมเข้าโฟลว์แอดมินที่ gate แล้ว
+        $this->syncHomeVisitParticipants($visit, $validated['participants'] ?? null);
+        $this->handleHomeVisitImages($request, $visit);
+
         return response()->json([
             'success' => true,
-            'visit' => $visit->load('student'),
+            'visit' => $visit->load(['student', 'participants', 'images']),
         ], 201);
     }
 
@@ -519,9 +528,13 @@ class AdminController extends Controller
 
         $visit->update($this->visitPayload($validated, $academy));
 
+        // HV-S4 — ส่ง participants มา = แทนที่ทั้งชุด · ไม่ส่ง = คงเดิม · images จัดการแยกเพิ่ม/ลบ
+        $this->syncHomeVisitParticipants($visit, $validated['participants'] ?? null);
+        $this->handleHomeVisitImages($request, $visit);
+
         return response()->json([
             'success' => true,
-            'visit' => $visit->fresh()->load('student'),
+            'visit' => $visit->fresh()->load(['student', 'participants', 'images']),
         ]);
     }
 
@@ -545,6 +558,15 @@ class AdminController extends Controller
             'observations' => ['nullable', 'string', 'max:5000'],
             'recommendations' => ['nullable', 'string', 'max:2000'],
             'status' => ['required', Rule::in(['pending', 'rescheduled', 'scheduled', 'in-progress', 'completed', 'cancelled'])],
+
+            // HV-S4 — ผู้ร่วมเยี่ยม + รูปหลักฐาน (ทั้งหมด optional เพื่อไม่ทำ contract JSON เดิมพัง)
+            'participants' => ['nullable', 'array'],
+            'participants.*.participant_name' => ['required_with:participants', 'string', 'max:255'],
+            'participants.*.notes' => ['nullable', 'string', 'max:2000'],
+            'images' => ['nullable', 'array'],
+            'images.*' => ['image', 'mimes:jpeg,png,jpg,gif', 'max:20480'],
+            'images_to_delete' => ['nullable', 'array'],
+            'images_to_delete.*' => ['integer'],
         ]);
     }
 
@@ -782,22 +804,6 @@ class AdminController extends Controller
     public function settings(Academy $academy)
     {
         return response()->json(['success' => true]);
-    }
-
-    /**
-     * Reports summary stub
-     */
-    public function reports(Academy $academy)
-    {
-        return response()->json(['message' => 'Reports not implemented yet']);
-    }
-
-    /**
-     * Export reports stub
-     */
-    public function exportReports(Request $request, Academy $academy)
-    {
-        return response()->json(['message' => 'Export reports not implemented yet']);
     }
 
     /**

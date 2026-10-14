@@ -83,6 +83,165 @@
 - **เหลือ R-S6 เจ้าของ:** `php artisan test -c phpunit.mysql.xml --filter=ReportsSummary` (ถ้าเขียนเทสต์) · `pint` · `npm run build` · ตรวจจอ 375/768/1280
 - **หนี้ข้ามเมนู:** `members/search`·`filter-options`·`invitations` มีรูเดียวกับ G1 (กลุ่ม `auth:api` เปล่า) → ฝากเมนู #2 ปิด (ไม่ขยาย PR นี้)
 - PR [#42](https://github.com/UtaiSalem/nuxnan/pull/42) (draft) — push เพิ่มโค้ดรอบนี้
+## 🔍 2026-10-13 — เมนู #20 ประกาศ: audit + ปิด gap ที่ตัดสินได้ (AN-S1)
+
+ไฟล์รอง: [`.agents/school-admin/20-announcements.md`](school-admin/20-announcements.md) · branch `claude/funny-meitner-06is0f`
+
+**เมนูสุก · tenant+authz ครบ — ไม่มี P0** · `AnnouncementController` (academy) · scope academy/department/classroom + targeting · routes gated (member + writes `announcements.manage`) · tenant check (`academy_id!==→404`) ทุก write+show · index มี scope-authz (ฝ่าย=สมาชิกฝ่าย · ห้อง=ครูประจำชั้น/นักเรียนในห้อง) · nav `admin.vue:220` ถูกแล้ว (`announcements.view/manage`)
+
+Claude เขียนเอง (cloud ไม่มี vendor/agy) `php -l`:
+- **G1 (P2) แก้แล้ว:** controller `isAcademyAdmin` เดิม=`$academy->isAdmin()` (owner/academy_admins เท่านั้น) **ขัดกับ route `announcements.manage`** (ผ่าน userCan) ⇒ director/custom role ที่ถือคีย์ผ่าน route แต่โดน controller 403 · แก้เป็น `userCan('announcements.manage')` (ครอบ isAdmin · ไม่มีใครเสียสิทธิ์)
+- **G3 (P3) แก้แล้ว:** `store` เพิ่ม `validateScopeBelongsToAcademy` → scope_id (ฝ่าย/ห้อง) ต้องอยู่ในโรงเรียน ไม่งั้น 422
+- **test gap ปิด:** `AnnouncementAuthzTest` 5 เคส (custom role manage สร้างได้ · view-only 403 · non-member 403 · cross-academy show 404 · scope_id นอกโรงเรียน 422)
+
+**✅ G2 ปิดแล้ว (AN-S2 — เจ้าของเคาะ "เปิดเลย"):** เปิดครู (`announcements.create.own`) สร้าง/จัดการประกาศ**เฉพาะห้องที่ตนเป็นครูประจำชั้น**
+- BE: route store/update/publish/unpublish/destroy รับ `create.own,create,manage` (stats คง manage) · store บังคับ scope=classroom + `teacherOwnsClassroom` (homeroom_teacher_id===user) · `canModifyAnnouncement` (ผู้จัดการ หรือ ครูเจ้าของประกาศ+ห้องตน) ใน update/publish/unpublish/destroy
+- FE `admin/announcements.vue`: gate ครูเข้าได้ · `canManageAll`/`canCreateOwn`/`canModifyItem` · `fetchMyClassrooms` + select ห้องตนในฟอร์มสร้าง · ส่ง scope=classroom · ปุ่มแก้/เผยแพร่/ลบ เฉพาะ `canManageAll || created_by===ตน` · stats ไม่ยิงสำหรับครู
+- เทสต์เพิ่มใน `AnnouncementAuthzTest` (ครูสร้างห้องตนได้ · academy-scope 403 · ห้องคนอื่น 403 · แก้ของตน/ลบของผู้บริหารไม่ได้)
+
+**เมนู #20 ปิด gap ครบ (G1/G2/G3)** 🟢 · เจ้าของ verify: `phpunit.mysql.xml --filter=AnnouncementAuthzTest` + pint + `npm run build`
+PR: UtaiSalem/nuxnan#39 (branch `claude/funny-meitner-06is0f`)
+
+---
+
+## 🔍 2026-10-12 — เมนู #19 ผลการเรียน: audit เสร็จ (ขั้น [1]+[2]) — รอเจ้าของเคาะ Q
+
+ไฟล์รอง: [`.agents/school-admin/19-grades.md`](school-admin/19-grades.md) · branch `claude/funny-meitner-06is0f`
+
+**ฟีเจอร์ครบ · tenant-scoped ครบ · writes role-guarded (ไม่มี P0)** — `admin/gradebook/*` (grade-scales/transcripts/rollover/classrooms/students/subjects/academic-years)
+- controllers (`Api/Learn/Academy/`): `GradeScaleController`/`TranscriptController`/`RolloverController` + `GradebookController` (มีทั้ง course+academy)
+- route group แม่ = `auth:api` ล้วน (line 168) · กลุ่ม grade-scales/transcripts/students **ไม่มี `academy.permission` ที่ route** → authz อยู่ใน controller
+- **rollover ทำดีสุด:** `Gate::allows('enrollment.*')` + `scopeBindings` + มีเทสต์ (Read/Write/Service)
+
+🔑 **gap หลัก (ไม่ใช่ P0):**
+- **G1 (P2 consistency):** `GradeScaleController::canManage` + `TranscriptController::canManage/canView` ใช้ **role-literal** `{owner,director,admin[,teacher]}` ไม่ใช่ `userCan('grades.*')` ⇒ custom role (ฝ่ายวิชาการ/นายทะเบียน) ที่ถือ `grades.manage` ทำไม่ได้ · key เป็นสวิตช์หลอก (โรคเดียวกับ #15 G1/#17 G7) · **ต้นแบบถูกอยู่ไฟล์เดียวกัน: `ClassroomController::canView`=`userCan('students.view','groups.view')`**
+- **G2 (P2 FE):** nav `admin.vue:186` `can('grades.view')||can('academy.view')` → ควร `grades.view/manage`
+- **G3 (P2/P3):** `GradeScaleController::index/show/getCategories` ไม่มี guard (แค่ tenant+auth:api) → ใครล็อกอินอ่านเกณฑ์เกรดโรงเรียนอื่นได้ (sensitivity ต่ำ)
+- **G4 (P3):** route grade-scales/transcripts ไม่มี `academy.permission` (พึ่ง controller ล้วน · ต่างจากพี่น้อง academic-years/subjects/classrooms)
+- **G5 (P2 feature):** parent ดู transcript บุตรไม่ได้ (`canViewTranscript` ไม่มี guardian logic · key `children.grades.view` ไม่ถูกอ่าน)
+- test gap: มีแต่ rollover · GradeScale/Transcript authz ไม่มีเทสต์
+
+course gradebook (`gradebook.*` · `Courses/[id]/gradebook/*`) = คนละโดเมน (คอร์ส)
+แตกเป็น GR-S1 (G1 userCan) · GR-S2 (G2 nav) · GR-S3 (G3+G4 route gate) · GR-S4 (G5 parent) · GR-S5 (เทสต์)
+
+### ✅ ลงมือ GR-S1–S5 (เจ้าของสั่ง "ดำเนินการตามที่แนะนำและเห็นว่าสมควร") 2026-10-13
+
+Claude เขียนเอง (cloud ไม่มี vendor/agy) ตรวจ `php -l`:
+- **GR-S1/G1:** `GradeScaleController::canManage` + `TranscriptController::canManageTranscripts`/`canViewTranscript` เพิ่ม `userCan('grades.manage'/'grades.view')` เป็น OR (คง owner/role เดิม) ⇒ custom role ถือ `grades.*` ใช้ได้
+- **GR-S2/G2:** `admin.vue:186` → `can('grades.view')||can('grades.manage')`
+- **GR-S3/G3+G4:** group grade-scales/assessment-categories/transcripts ติด `['academy.visibility:content','academy.permission:grades.view']` + write ต่อ `grades.manage` ⇒ ปิด read ที่เปิดโล่ง (G3) + ด่าน 2 ชั้น (G4) · overview=view
+- **GR-S4/G5:** `canViewTranscript` เพิ่ม `GuardianAccessService::isGuardianOf` ⇒ ผู้ปกครองดู transcript บุตรได้ (เปิดจริงเมื่อมี guardian link · `guardians.user_id` ยังว่างทั้งระบบ — path พร้อม)
+- **GR-S5:** `GradeScaleAuthzTest` 4 เคส (non-member 403 · grades.view อ่านได้/สร้างไม่ได้ · custom role grades.manage สร้างได้ · owner สร้างได้)
+
+**เมนู #19 ปิด gap ครบ (G1–G5)** 🟢 · เจ้าของ verify: `phpunit.mysql.xml --filter=GradeScaleAuthzTest`+`Rollover` + pint + `npm run build`
+PR: UtaiSalem/nuxnan#39 (branch `claude/funny-meitner-06is0f`)
+
+---
+
+## 🔍 2026-10-11 — เมนู #18 การเข้าเรียน: audit เสร็จ (ขั้น [1]+[2]) — รอเจ้าของเคาะ Q
+
+ไฟล์รอง: [`.agents/school-admin/18-attendance.md`](school-admin/18-attendance.md) · branch `claude/funny-meitner-06is0f`
+
+**เมนูนี้สุก/authz แน่น/มีเทสต์ — ไม่มี P0** (ต่างจาก #12–#14, #17) · `SchoolAttendanceController`:
+tenant 404 ทุก method · `authorizeManager`=`userCan('school_attendance.manage')` (ครูเช็กชื่อได้จริง ไม่ใช่ isAdmin ล้วน) · data-depth gating (`show` ไม่มี `.view` → own-record-only · `studentHistory` คนอื่นต้อง `.view`) · QR ผูก session open/closed + กันเช็คซ้ำ · enrichment batched (ไม่ N+1) · มีเทสต์ `SchoolAttendanceRosterScopeTest` (5 เคส: enrich/remark/scope)
+
+🔑 **แก้ความเข้าใจสำคัญ:** เมนูนี้ใช้คีย์ **`school_attendance.*`** ไม่ใช่ `attendance.*` (OVERVIEW เขียนไว้คลาด) · `attendance.*` = เช็คชื่อรายคาบ (course · คนละโดเมน #12/#19) · `staff-attendance` = ลงเวลาบุคลากร (#14) · activity attendance = #26
+
+**gap เล็ก (ไม่มี P0):**
+- G1 (P2 integrity) `storeRecords` validate `student_id => exists:users,id` (user ใดก็ได้) ไม่ผูก academy → ผู้ถือ `.manage` ใส่ record อ้าง user id มั่วได้ (จำกัดในคาบโรงเรียนตัวเอง)
+- G2 (P2 FE) nav `admin.vue:180` gate `can('attendance.view')||can('academy.view')` ผิดคีย์ → ควร `school_attendance.view/manage` (backend gate แล้ว เป็น UX)
+- G3 (P3 test) ไม่มีเทสต์ authz/data-depth (403 non-member · own-only · write ต้อง manage · history)
+
+แตกเป็น AT-S1 (G1 scope student_id) · AT-S2 (G2 แก้ nav 1 บรรทัด) · AT-S3 (G3 เทสต์) · AT-S4 (export รายงาน)
+
+### ✅ ลงมือ AT-S1–S4 (เจ้าของเคาะ Q1/Q2/Q3 = ใช่ทั้งหมด) 2026-10-11
+
+Claude เขียนเอง (cloud ไม่มี vendor/agy) ตรวจ `php -l`:
+- **AT-S1/G1:** `storeRecords` `student_id => exists:users,id` → `Rule::exists('academy_members','user_id')->where('academy_id',..)->where('status',STATUS_APPROVED)` ⇒ ใส่ record ได้เฉพาะสมาชิกอนุมัติของโรงเรียน
+- **AT-S2/G2:** `admin.vue:180` → `can('school_attendance.view')||can('school_attendance.manage')`
+- **AT-S3/G3:** +6 เคสใน `SchoolAttendanceRosterScopeTest` (non-member 403 · own-record-only ไม่มี `.view` · write ต้อง `.manage` · history คนอื่นต้อง `.view` · G1 reject non-member 422 · export CSV 200)
+- **AT-S4 export:** `export()`+`exportCsv`/`exportPdf` (mPDF garuda) · route `GET /{attendance}/export?format=csv|pdf` gate `school_attendance.view` · blade `exports/school-attendance-pdf.blade.php` · FE ปุ่ม CSV/PDF ใน `admin/school-attendance/[id].vue` (`api.getBlob`+download) · mobile-first
+
+**เมนู #18 ปิด gap ครบ (G1–G3) + ได้ export** 🟢 · เจ้าของ verify: `phpunit.mysql.xml --filter=SchoolAttendanceRosterScopeTest` + pint + `npm run build` + กดปุ่ม export จริง
+PR: UtaiSalem/nuxnan#39 (branch `claude/funny-meitner-06is0f`)
+
+---
+
+## 🔍 2026-10-11 — เมนู #17 เยี่ยมบ้าน: audit เสร็จ (ขั้น [1]+[2]) — รอเจ้าของเคาะ Q
+
+**branch:** `claude/funny-meitner-06is0f` · ไฟล์รอง: [`.agents/school-admin/17-home-visits.md`](school-admin/17-home-visits.md)
+
+สแกนแล้วเจอว่าเมนูนี้มี **3 ระบบซ้อนกัน** คุณภาพคนละชั้น:
+- **ระบบ A — JWT master-profile** (`Master/HomeVisitController` + `student-profile.php` → `/academies/{a}/students/{s}/home-visits`) ✅ authz ครบ (self/admin/homeroom/teacher/parent) + tenant scope + gate observations · FE = `useHomeVisit.ts` + `HomeVisitTab.vue`
+- **ระบบ B — academy admin** (`AdminController`/`ZoneController` + `academy-home-visit.php`) ✅ `academy.permission:home_visits.view/manage` + academy_id scoped + มีเทสต์ 16 เคส · FE = `admin/home-visits/*`
+- **ระบบ C — legacy session 🔴 P0** (`homevisit.php` + `TeacherController` + `HomeVisitAuthController` + portal `ui/pages/home-visit/`)
+
+🔴 **P0 ที่เจอ (ยังไม่แตะโค้ด — รอเคาะ):**
+- **G1** `routes/homevisit/homevisit.php` ถูก `require` ใน `api.php:248` **ไม่มี middleware เลย** + `TeacherController` เมธอดเขียน/ลบ **comment ด่าน session ทิ้งหมด** ⇒ ใครก็ได้ (ไม่ล็อกอิน) `DELETE/PUT /api/home-visit/teacher/...` ลบ/แก้เยี่ยมบ้าน + PII นักเรียน (ชื่อ/เลขบัตร/ชั้น) ทั้ง DB ข้ามโรงเรียน
+- **G2** กลุ่ม `teacher/*`,`student/*` ใน `academy-home-visit.php` ติดแค่ `auth:api` (ไม่มี permission) + ชี้ controller ระบบ C ที่พัง
+- **G3** รหัสฮาร์ดโค้ด `teacher/jsm1234` + `admin/jsm_admin2025` ในซอร์ส · สมมติโรงเรียนเดียว (JSM)
+- G4 root `/statistics`,`/dashboard` ไม่ติด `home_visits.view` · G5 portal `/home-visit` orphaned ปลายทาง `/home-visit/auth/login` ไม่มีจริง · G6 TeacherController เป็น Inertia-era dead code · G7 ระบบ A ใช้ role literal ไม่ใช่ `userCan` (เหมือน #15 G1) · G8 `home_visits.create` เป็น orphan key · G9 participants/images เขียนได้แค่ผ่านระบบ C
+
+**⏸️ ต้องเคาะก่อนส่ง agy:**
+- **Q1 — ลบระบบ C (legacy + portal) ได้ไหม?** ระบบ A+B ครอบคลุมหมดแล้ว · ⚠️ ระวังบทเรียน **#16 SCD-S4** (ลบ public แล้วต้อง revert เพราะครูยังใช้) — ต้องถามก่อนว่ามีครูยังล็อกอิน `/home-visit` ด้วยรหัสฮาร์ดโค้ดอยู่จริงไหม
+- Q2 ระบบ A ควร gate ด้วย `home_visits.*` key (ปิด G7) ไหม · Q3 participants/รูปหลักฐาน ย้ายเข้า B หรือเลิกใช้
+
+OVERVIEW.md #17: ⚪ → 🔴 · **ยังไม่ส่ง step ให้ agy**
+
+### เคาะ Q1–Q3 + ลงมือ HV-S1/S2/S3 (ต่อ 2026-10-11)
+
+เจ้าของเคาะ: **Q1 ครูยังล็อกอิน `/home-visit` ด้วยรหัสฮาร์ดโค้ดอยู่จริง** → ปิดช่องโหว่โดย **migrate เป็น JWT บัญชีจริง** (🔴 ห้ามลบ legacy ก่อน — บทเรียน #16 SCD-S4) · **Q2 ใช่** ระบบ A gate ด้วย `home_visits.*` key · **Q3 ย้าย** participants+รูปหลักฐานเข้าระบบ B
+
+🔴 ยืนยันเทคนิค: group `api` **stateless (ไม่มี session middleware)** ⇒ `session()` บน `/api/home-visit/*` ไม่ persist · ด่าน session ถูก comment เพราะถ้าไม่ comment พอร์ทัลใช้ไม่ได้เลย ⇒ **พอร์ทัลเก่า = API สาธารณะไม่มี auth จริง** · uncomment ด่านกลับ = ครูพังทันที → ต้อง JWT เท่านั้น
+
+cloud session นี้ **ไม่มี composer vendor/agy** → Claude เขียนเอง ตรวจ `php -l` (phpunit/pint owner-gated):
+- **✅ HV-S1 (G1/G2)** `routes/learn/academy-home-visit.php` — ถอดกลุ่ม session เก่า `auth/*`+`student/*`+`teacher/*` (ไม่มี FE/test/`route()` อ้าง · ชี้ TeacherController ที่ด่าน comment ทิ้ง) · เส้นที่เหลือ (dashboard/zones/admin) ติด `home_visits.view/manage` ครบ
+- **✅ HV-S2 (G4)** root `/`+`/dashboard`+`/statistics` ยกเข้าใต้ `academy.permission:home_visits.view` (ไม่มีเทสต์ยิง root · `index.vue` guard `can('home_visits.view')` อยู่แล้ว)
+- **✅ HV-S3 (G7)** `Master/HomeVisitController` accessLevel/isStaff/canManage เพิ่ม `userCan('home_visits.*')` (status=2 canonical) แบบ OR + เทสต์ `test_custom_role_with_home_visits_manage_...` · เจอ **G10** (ระบบ A ใช้ `status=1` แต่ canonical=`STATUS_APPROVED=2` — ปิดเลี่ยงด้วย userCan แล้ว · ล้างทั้ง controller+test ยกให้เจ้าของรันบน MySQL)
+
+**ยังเปิดช่องโหว่อยู่จนจบ HV-S5/S6:** legacy `routes/homevisit/homevisit.php` (require ใน `api.php:248` ไม่มี middleware) + รหัสฮาร์ดโค้ด `teacher/jsm1234`+`admin/jsm_admin2025` · HV-S1/S2/S3 ปิดเฉพาะฝั่ง academy flow + เสริม custom-role
+
+### HV-S4 (ต่อ 2026-10-11) — ครูมีบัญชี nuxnan ครบแล้ว (ปลดล็อก HV-S5)
+
+**✅ HV-S4 (G9+G11)** `AdminController` (ระบบ B): `storeVisit`/`updateVisit` รับ `participants[]` + `images[]` (multipart) + `images_to_delete[]` · helper `syncParticipants` (ส่งมา=แทนที่ทั้งชุด · null=คงเดิม) + `handleImages` (ลบ scoped ต่อ visit + อัปโหลด disk public, `uploaded_by`=auth id) · `showVisit` โหลด participants/images/zone · `validateVisit` เพิ่มกติกาแบบ optional (contract JSON เดิมไม่พัง) · แก้ **G11** (`getAllVisitsForReports` eager-load คอลัมน์ผี `participant_position`/`participant_role`/`image_description` → dashboard เสี่ยง 500) · เทสต์ `test_admin_visit_stores_participants_and_images_...` (Storage::fake+UploadedFile::fake+PUT spoof) · `php -l` ผ่าน
+FE participants/image UI → รวมใน HV-S5 (teacher portal rebuild แตะหน้าจอชุดเดียวกัน)
+
+### HV-S5a + HV-S5b (ต่อ 2026-10-11) — migrate พอร์ทัลเป็น JWT
+
+**✅ HV-S5a (BE parity ระบบ A):** แยก trait `app/Traits/HandlesHomeVisitAttachments.php` ใช้ร่วม AdminController (refactor ลบ dup + ลบ import ที่ไม่ใช้) · `Master/HomeVisitController` store/update รับ participants+images (`visitAttributes()` ตัดคีย์ attachment ก่อน save) · index/show/serialize เพิ่ม participants/images · `StoreHomeVisitRequest` กติกา optional · เทสต์ `test_staff_can_attach_participants_and_images_via_master_flow`
+
+**✅ HV-S5b (FE portal):** `ui/pages/home-visit/index.vue` เขียนใหม่ — role-chooser session (ปุ่มไปหน้า login ที่ไม่มีจริง) → **JWT landing** `middleware:['auth']` · ดึง `membered-academies` · การ์ดโรงเรียน → `/academies/{name}/admin/home-visits` · **FE เลิกเรียก `/api/home-visit/*` แล้ว** · mobile-first · (cloud ไม่มี ui/node_modules → เจ้าของ `npm run build`+ตรวจ 375px)
+
+`php -l` ผ่านทุกไฟล์ BE · teacher บันทึกเยี่ยมบ้านผ่าน JWT ได้แล้ว (student profile → HomeVisitTab, ระบบ A)
+
+### HV-S5c (ต่อ 2026-10-11) — participants/image UI ในแท็บครู
+
+**✅ HV-S5c:** `useHomeVisit.ts` — create/update เลือก multipart เฉพาะเมื่อมีรูป (POST+`_method=PUT` spoof สำหรับ update · PHP แกะ multipart ได้เฉพาะ POST) · `buildFormData` ส่ง `participants[i][...]`+`images[]`+`images_to_delete[]` · `HomeVisitTab.vue` — participants repeater + อัปโหลดรูปหลายไฟล์+preview + รูปเดิม toggle ลบ + openEdit round-trip + แสดง chips/thumbnails ในรายการ · รูปผ่าน `/storage/${image_path}` (Nuxt storage-proxy)
+
+**HV-S5 ครบแล้ว (a+b+c)** → teacher บันทึกเยี่ยมบ้าน+ผู้ร่วม+รูป ผ่าน JWT (student profile → HomeVisitTab) ได้เท่าพอร์ทัลเก่า
+
+### 🔁 เปลี่ยนทิศ (เจ้าของเคาะย้ำ 2026-10-11) — 2 ระบบคู่ขนาน · public แบบ hardcoded เหมือนเดิม
+
+เจ้าของสั่ง: **"ทำ 2 ระบบควบคู่กัน ทั้งแบบล็อกอินผ่านระบบจัดการโรงเรียน และแบบสาธารณะชั่วคราว"** → ตอนแรกตีความว่าเลียนแบบบัตรนักเรียน (config-gated/room-scoped) เริ่มร่าง `config/home-visit.php` แล้ว **เจ้าของ interrupt: "ทำแบบฮาร์ดโค้ดเหมือนเดิม ไม่ต้องเลียนแบบระบบบัตรนักเรียน"** + "คง legacy ไว้เหมือนเดิมทุกอย่าง"
+
+การกระทำ:
+- ลบ `config/home-visit.php` ที่ร่างไว้ (ไม่เคย commit) · ไม่สร้าง `PublicHomeVisitController`
+- **ถอน HV-S5b:** `git checkout 2824381 -- ui/pages/home-visit/index.vue` → คืน portal เก่า (role-chooser + hardcoded login เดิม)
+- **ยกเลิก HV-S6:** ไม่ลบ legacy · `homevisit.php`/`HomeVisitAuthController`/`TeacherController`/รหัสฮาร์ดโค้ด `teacher/jsm1234`+`admin/jsm_admin2025` **คงเดิมทุกอย่าง** (ไม่เคยแตะในเซสชันนี้)
+
+**ผล: เมนู #17 มี 2 ระบบคู่ขนานพร้อมใช้**
+1. **JWT** (ระบบจัดการโรงเรียน) — academy admin menu + student-profile HomeVisitTab · gate `home_visits.*` · academy-scoped · participants/รูป ครบ · มีเทสต์ (HV-S1–S4 + S5a + S5c)
+2. **public hardcoded** — `/home-visit` portal + `/api/home-visit/*` เดิม (เจ้าของเลือกคงไว้ชั่วคราว)
+
+🔴 **ความเสี่ยงที่เจ้าของรับทราบ+เลือกคงไว้:** `/api/home-visit/*` ไม่มี middleware + ด่าน comment ทิ้ง + api stateless ⇒ เขียน/ลบ + PII ได้โดยไม่ต้องรหัสจริง เปิดโล่งข้ามโรงเรียน · ควรปิด/ย้าย JWT เมื่อครูพร้อม (บันทึกใน 17-home-visits.md §7)
+
+### HV-S7 (ต่อ 2026-10-11) — ปิด step ฝั่ง JWT
+
+**✅ HV-S7 (G8):** route `POST /home-visits/admin/visits` gate `home_visits.manage` → `home_visits.create,home_visits.manage` (OR) ⇒ ครู (ถือ create) สร้างเยี่ยมบ้านผ่านหน้าแอดมินได้ · admin/director (manage) ก็ยังได้ · update/delete/status ยังคง manage ⇒ key `home_visits.create` มีความหมายจริง (เลิก orphan) · ลบ stub ตาย `reports()`/`exportReports()` + route `/admin/reports*` (ไม่มี FE ใช้ · รายงานจริง = `/admin/export/visits`) · เทสต์ `test_store_visit_allows_home_visits_create_but_update_delete_need_manage` + helper `memberWithPermissions` · `php -l` ผ่าน
+
+**🏁 เมนู #17 ปิด step ฝั่ง JWT ครบ (HV-S1–S7)** · ระบบ public hardcoded คงไว้ตามเจ้าของสั่ง (เปิดโล่ง — §7 ของ 17-home-visits.md)
+เจ้าของ verify (JWT side): `phpunit.mysql.xml --filter=StudentHomeVisitApiTest`+`AdminControllerTest`+`HomeVisit` + pint + `npm run build` + จอ 375px (portal เดิม + HomeVisitTab)
+PR: UtaiSalem/nuxnan#39 (branch `claude/funny-meitner-06is0f`)
 
 ---
 

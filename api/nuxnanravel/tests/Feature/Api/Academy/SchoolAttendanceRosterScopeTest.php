@@ -201,6 +201,113 @@ class SchoolAttendanceRosterScopeTest extends TestCase
         ]);
     }
 
+    // ===== AT-S3 — authz / data-depth =====
+
+    public function test_non_member_cannot_view_attendance_session(): void
+    {
+        $stranger = User::factory()->create();
+
+        $this->actingAs($stranger, 'api')
+            ->getJson("/api/academies/{$this->academy->id}/school-attendances/{$this->attendance->id}")
+            ->assertForbidden();
+    }
+
+    public function test_member_without_view_sees_only_own_record_on_show(): void
+    {
+        [$me] = $this->makeMemberedStudent('ATD101', 'ตัวฉัน');
+        [$other] = $this->makeMemberedStudent('ATD102', 'คนอื่น');
+
+        foreach ([$me, $other] as $u) {
+            SchoolAttendanceRecord::create([
+                'attendance_id' => $this->attendance->id,
+                'academy_id' => $this->academy->id,
+                'student_id' => $u->id,
+                'status' => 'present',
+                'check_in_method' => 'manual',
+                'checked_in_at' => now(),
+                'recorded_by' => $this->owner->id,
+            ]);
+        }
+
+        // student (role student ⇒ ไม่มี school_attendance.view) เห็นเฉพาะแถวของตัวเอง + summary null
+        $response = $this->actingAs($me, 'api')
+            ->getJson("/api/academies/{$this->academy->id}/school-attendances/{$this->attendance->id}")
+            ->assertOk()
+            ->assertJsonPath('summary', null);
+
+        $records = $response->json('data.records');
+        $this->assertCount(1, $records);
+        $this->assertSame($me->id, $records[0]['student_id']);
+    }
+
+    public function test_member_without_manage_cannot_store_records(): void
+    {
+        [$me] = $this->makeMemberedStudent('ATD103', 'นักเรียน');
+
+        $this->actingAs($me, 'api')
+            ->postJson("/api/academies/{$this->academy->id}/school-attendances/{$this->attendance->id}/records", [
+                'records' => [['student_id' => $me->id, 'status' => 'present']],
+            ])
+            ->assertForbidden();
+    }
+
+    public function test_student_history_of_another_requires_view(): void
+    {
+        [$me] = $this->makeMemberedStudent('ATD104', 'เอ');
+        [$other] = $this->makeMemberedStudent('ATD105', 'บี');
+
+        // ดูของตัวเองได้
+        $this->actingAs($me, 'api')
+            ->getJson("/api/academies/{$this->academy->id}/school-attendances/student/{$me->id}")
+            ->assertOk();
+
+        // ดูของคนอื่นไม่ได้ (ไม่มี school_attendance.view)
+        $this->actingAs($me, 'api')
+            ->getJson("/api/academies/{$this->academy->id}/school-attendances/student/{$other->id}")
+            ->assertForbidden();
+    }
+
+    // ===== AT-S1/G1 — student_id ต้องเป็นสมาชิก academy =====
+
+    public function test_store_records_rejects_non_member_student_id(): void
+    {
+        $outsider = User::factory()->create(); // ไม่ได้เป็นสมาชิกโรงเรียนนี้
+
+        $this->actingAs($this->owner, 'api')
+            ->postJson("/api/academies/{$this->academy->id}/school-attendances/{$this->attendance->id}/records", [
+                'records' => [['student_id' => $outsider->id, 'status' => 'present']],
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('records.0.student_id');
+
+        $this->assertDatabaseMissing('school_attendance_records', [
+            'attendance_id' => $this->attendance->id,
+            'student_id' => $outsider->id,
+        ]);
+    }
+
+    // ===== AT-S4 — export =====
+
+    public function test_export_csv_returns_download(): void
+    {
+        [$user] = $this->makeMemberedStudent('ATD106', 'ส่งออก');
+        SchoolAttendanceRecord::create([
+            'attendance_id' => $this->attendance->id,
+            'academy_id' => $this->academy->id,
+            'student_id' => $user->id,
+            'status' => 'present',
+            'check_in_method' => 'manual',
+            'checked_in_at' => now(),
+            'recorded_by' => $this->owner->id,
+        ]);
+
+        $response = $this->actingAs($this->owner, 'api')
+            ->get("/api/academies/{$this->academy->id}/school-attendances/{$this->attendance->id}/export?format=csv");
+
+        $response->assertOk();
+        $this->assertStringContainsString('text/csv', $response->headers->get('content-type'));
+    }
+
     private function makeMemberedStudent(string $studentId, string $firstName): array
     {
         $user = User::factory()->create();

@@ -25,6 +25,15 @@ class StoreHomeVisitRequest extends FormRequest
             'recommendations' => ['nullable', 'string', 'max:2000'],
             'follow_up' => ['nullable', 'string', 'max:2000'],
             'next_visit' => ['nullable', 'date', 'after:visit_date'],
+
+            // HV-S5 — participants + รูปหลักฐาน (optional ทั้งหมด → contract เดิมไม่พัง)
+            'participants' => ['nullable', 'array'],
+            'participants.*.participant_name' => ['required_with:participants', 'string', 'max:255'],
+            'participants.*.notes' => ['nullable', 'string', 'max:2000'],
+            'images' => ['nullable', 'array'],
+            'images.*' => ['image', 'mimes:jpeg,png,jpg,gif', 'max:20480'],
+            'images_to_delete' => ['nullable', 'array'],
+            'images_to_delete.*' => ['integer'],
         ];
     }
 }

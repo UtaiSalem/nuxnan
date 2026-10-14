@@ -9,6 +9,7 @@ use App\Models\AnnualTranscript;
 use App\Models\Semester;
 use App\Models\SemesterTranscript;
 use App\Models\Student;
+use App\Services\GuardianAccessService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -358,16 +359,21 @@ class TranscriptController extends Controller
             return true;
         }
 
-        // Parent viewing child's transcript
-        // (Add guardian logic if needed)
+        // GR-S1/G1 — เจ้าหน้าที่ที่ถือคีย์ `grades.view` (รองรับ custom role)
+        if ($student->academy && $student->academy->userCan($user, 'grades.view')) {
+            return true;
+        }
 
-        // Academy admin/teacher
-        $isMember = $student->academy->members()
+        // GR-S4/G5 — ผู้ปกครองของนักเรียนคนนี้ (ยืนยันผ่าน StudentGuardianLink)
+        if (app(GuardianAccessService::class)->isGuardianOf($user, $student)) {
+            return true;
+        }
+
+        // Academy admin/teacher (role เดิม — คง OR ไว้กันข้อมูลสมาชิก status ไม่ตรง)
+        return $student->academy->members()
             ->where('user_id', $user->id)
             ->whereIn('role', ['owner', 'director', 'admin', 'teacher'])
             ->exists();
-
-        return $isMember;
     }
 
     protected function canManageTranscripts(Academy $academy): bool
@@ -378,6 +384,11 @@ class TranscriptController extends Controller
         }
 
         if ($academy->user_id === $user->id) {
+            return true;
+        }
+
+        // GR-S1/G1 — รองรับ custom role ผ่านคีย์ `grades.manage`
+        if ($academy->userCan($user, 'grades.manage')) {
             return true;
         }
 

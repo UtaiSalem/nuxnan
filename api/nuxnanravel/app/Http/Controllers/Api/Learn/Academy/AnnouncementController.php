@@ -202,7 +202,10 @@ class AnnouncementController extends Controller
     {
         $user = $request->user();
 
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        // AN-S2/G2 — ผู้จัดการ (manage/create) สร้างได้ทุก scope · ครู (create.own) สร้างได้เฉพาะห้องของตน
+        $canManageAll = $this->isAcademyAdmin($user, $academy) || $academy->userCan($user, 'announcements.create');
+        $canCreateOwn = $academy->userCan($user, 'announcements.create.own');
+        if (! $canManageAll && ! $canCreateOwn) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -229,6 +232,28 @@ class AnnouncementController extends Controller
                 'message' => 'Validation failed',
                 'errors' => $validator->errors(),
             ], 422);
+        }
+
+        // AN-S1/G3 — scope_id ต้องอยู่ในโรงเรียนนี้ (กัน announcement ชี้ห้อง/ฝ่ายข้ามโรงเรียน)
+        $scopeError = $this->validateScopeBelongsToAcademy(
+            $academy,
+            $request->get('scope_type', 'academy'),
+            $request->get('scope_id'),
+        );
+        if ($scopeError) {
+            return $scopeError;
+        }
+
+        // AN-S2/G2 — ครู (create.own ไม่มี manage) สร้างได้เฉพาะ scope=classroom ของห้องที่ตนเป็นครูประจำชั้น
+        if (! $canManageAll) {
+            $scopeType = $request->get('scope_type');
+            $scopeId = $request->get('scope_id');
+            if ($scopeType !== 'classroom' || ! $this->teacherOwnsClassroom($user, $academy, $scopeId)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'สร้างได้เฉพาะประกาศของห้องเรียนที่คุณเป็นครูประจำชั้น',
+                ], 403);
+            }
         }
 
         DB::beginTransaction();
@@ -289,7 +314,7 @@ class AnnouncementController extends Controller
 
         $user = $request->user();
 
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canModifyAnnouncement($user, $academy, $announcement)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -358,7 +383,7 @@ class AnnouncementController extends Controller
 
         $user = $request->user();
 
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canModifyAnnouncement($user, $academy, $announcement)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -391,7 +416,7 @@ class AnnouncementController extends Controller
 
         $user = $request->user();
 
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canModifyAnnouncement($user, $academy, $announcement)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -424,7 +449,7 @@ class AnnouncementController extends Controller
 
         $user = $request->user();
 
-        if (! $this->isAcademyAdmin($user, $academy)) {
+        if (! $this->canModifyAnnouncement($user, $academy, $announcement)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
@@ -480,10 +505,61 @@ class AnnouncementController extends Controller
     /**
      * Check if user is academy admin
      */
+    /**
+     * AN-S1/G3 — ตรวจว่า scope_id (ฝ่าย/ห้องเรียน) อยู่ในโรงเรียนนี้จริง · คืน JsonResponse ถ้าไม่ผ่าน
+     */
+    private function validateScopeBelongsToAcademy(Academy $academy, ?string $scopeType, $scopeId): ?\Illuminate\Http\JsonResponse
+    {
+        if (! $scopeId || ! in_array($scopeType, ['department', 'classroom'], true)) {
+            return null;
+        }
+
+        $exists = $scopeType === 'department'
+            ? AcademyGroup::where('id', $scopeId)->where('academy_id', $academy->id)->exists()
+            : Classroom::where('id', $scopeId)->where('academy_id', $academy->id)->exists();
+
+        if (! $exists) {
+            return response()->json(['success' => false, 'message' => 'scope_id ไม่อยู่ในโรงเรียนนี้'], 422);
+        }
+
+        return null;
+    }
+
+    /**
+     * AN-S2/G2 — ครูเป็นครูประจำชั้นของห้องนี้จริงไหม (ในโรงเรียนนี้)
+     */
+    private function teacherOwnsClassroom($user, Academy $academy, $classroomId): bool
+    {
+        if (! $classroomId) {
+            return false;
+        }
+
+        return Classroom::where('id', $classroomId)
+            ->where('academy_id', $academy->id)
+            ->where('homeroom_teacher_id', $user->id)
+            ->exists();
+    }
+
+    /**
+     * AN-S2/G2 — ใครแก้/เผยแพร่/ลบ ประกาศนี้ได้: ผู้จัดการทั้งหมด หรือครูเจ้าของประกาศห้องตน
+     */
+    private function canModifyAnnouncement($user, Academy $academy, SchoolAnnouncement $announcement): bool
+    {
+        if ($this->isAcademyAdmin($user, $academy) || $academy->userCan($user, 'announcements.create')) {
+            return true;
+        }
+
+        return $academy->userCan($user, 'announcements.create.own')
+            && (int) $announcement->created_by === (int) $user->id
+            && $announcement->scope_type === 'classroom'
+            && $this->teacherOwnsClassroom($user, $academy, $announcement->scope_id);
+    }
+
     private function isAcademyAdmin($user, Academy $academy): bool
     {
-        // Canonical check: owner (user_id/owner_id), academy_admins, or super admin.
-        // The academy_members pivot `role` is not the source of truth for admin rights.
-        return $academy->isAdmin($user);
+        // GR/AN-S1/G1 — ให้ตรงกับด่าน route `academy.permission:announcements.manage`
+        // userCan ครอบ isAdmin อยู่แล้ว + รับ custom role/director ที่ถือคีย์ `announcements.manage`
+        // (เดิมเช็ค isAdmin ล้วน ⇒ director ที่ถือคีย์ผ่าน route แต่โดน controller 403)
+        return $academy->userCan($user, 'announcements.manage');
     }
 }

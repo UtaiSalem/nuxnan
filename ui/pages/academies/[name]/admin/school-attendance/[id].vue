@@ -188,6 +188,28 @@ const closeSession = async () => {
   }
 }
 
+// AT-S4 — ส่งออกรายงานการเช็คชื่อ (CSV/PDF)
+const isExporting = ref(false)
+const exportSession = async (format: 'csv' | 'pdf') => {
+  if (!academyId.value || isExporting.value) return
+  isExporting.value = true
+  try {
+    const { blob, filename } = await api.getBlob(
+      `/api/academies/${academyId.value}/school-attendances/${sessionId.value}/export?format=${format}`,
+    )
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename || `school-attendance.${format}`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  } finally {
+    isExporting.value = false
+  }
+}
+
 const saveManualRecords = async () => {
   if (!academyId.value || isSaving.value) return
   isSaving.value = true
@@ -329,16 +351,36 @@ const summaryPercent = (count: number) => {
               </div>
             </div>
 
-            <button
-              v-if="session.status === 'open'"
-              class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-vikinger transition-all shadow disabled:opacity-50 disabled:pointer-events-none"
-              :disabled="isClosing"
-              @click="closeSession"
-            >
-              <Icon v-if="isClosing" icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
-              <Icon v-else icon="fluent:lock-closed-24-filled" class="w-4 h-4" />
-              ปิดการเช็คชื่อ
-            </button>
+            <div class="flex flex-wrap items-center gap-2">
+              <!-- AT-S4 — ส่งออกรายงาน -->
+              <button
+                class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-3 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-semibold rounded-vikinger transition-all hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:pointer-events-none"
+                :disabled="isExporting"
+                @click="exportSession('csv')"
+              >
+                <Icon icon="fluent:document-table-24-regular" class="w-4 h-4" />
+                <span class="whitespace-nowrap">CSV</span>
+              </button>
+              <button
+                class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-3 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-semibold rounded-vikinger transition-all hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:pointer-events-none"
+                :disabled="isExporting"
+                @click="exportSession('pdf')"
+              >
+                <Icon icon="fluent:document-pdf-24-regular" class="w-4 h-4" />
+                <span class="whitespace-nowrap">PDF</span>
+              </button>
+
+              <button
+                v-if="session.status === 'open'"
+                class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-vikinger transition-all shadow disabled:opacity-50 disabled:pointer-events-none"
+                :disabled="isClosing"
+                @click="closeSession"
+              >
+                <Icon v-if="isClosing" icon="fluent:spinner-ios-20-regular" class="w-4 h-4 animate-spin" />
+                <Icon v-else icon="fluent:lock-closed-24-filled" class="w-4 h-4" />
+                ปิดการเช็คชื่อ
+              </button>
+            </div>
           </div>
         </div>
       </div>
