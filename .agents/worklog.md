@@ -1,5 +1,91 @@
 # Work Log — nuxnan project
 
+## 🟡 2026-10-14 — เมนู #23 รายได้: audit [1]+[2] เสร็จ · security แข็งแรง · เจอ authz inconsistency · รอเจ้าของเคาะ Q1–Q3
+
+### สถานะ: ไฟล์รอง [`.agents/school-admin/23-revenue.md`](school-admin/23-revenue.md) · OVERVIEW #23 "Phase 1 done"→🟡 (มีรายละเอียด)
+สแกน FE `revenue.vue` (109 บรรทัด · 4 แท็บ + page guard) + 4 component (`academy/revenue/`) + `useAcademyRevenue` + BE `AcademyRevenueController` (389 บรรทัด) + routes revenue group
+
+### ค้นพบ: ปลอดภัย แต่โมเดลสิทธิ์ขัดกัน
+- **security แข็งแรง:** tenant check (`academy_id` → 403) ทุก mutating method · per-route gate finance.view/manage · page guard redirect · G18 (support-summary privacy) ปิดแล้ว · ไม่มี P0
+- **authz inconsistency (finding หลัก):** controller บังคับ `$academy->isAdmin($user)` ขัดกับ route + FE ที่ใช้ `finance.view`/`finance.manage`
+  - **G1** `campaignsIndex` ต้อง isAdmin แต่ route+tab gate finance.view → finance.view (non-admin) เห็นแท็บแคมเปญแต่โหลด 403
+  - **G2** approve/reject/campaigns store/update ต้อง isAdmin ไม่รับ `finance.manage` → **สิทธิ์ finance.manage ใช้ไม่ได้จริง** (มอบงานการเงินให้ฝ่ายไม่ได้) · FE โชว์ปุ่มตาม can('finance.manage') → กด 403 · คลาสเดียวกับ EnrollmentPolicy G1
+  - G3 FE `visibleTabs`/ปุ่มไม่ตรงกับ API · G4 resolve academyId by name (ไม่ inject) · G5 การเงินอื่น (fee/tuition/payments/expenses/budgets) อยู่ #8
+
+### รอเจ้าของเคาะ
+- **Q1** แก้ authz: ให้ finance.view ดูแคมเปญ + finance.manage จัดการได้ (แนะนำ ตรง route+FE+catalog) หรือคง owner/admin เท่านั้น (แล้วซ่อน tab/ปุ่ม)?
+- **Q2** #23 รวมการเงินอื่น (#8) เข้ามาไหม? · **Q3** Phase 2 (export/กราฟ/filter) หรือปิดที่ parity หลังแก้ G1/G2?
+- audit อย่างเดียว · push ไฟล์ audit + OVERVIEW + worklog (branch เดียวกับ PR #42)
+
+---
+
+## 🟡 2026-10-13 — เมนู #22 ประวัติกิจกรรม: audit [1]+[2] เสร็จ · โมดูลแข็งแรง ไม่มี P0 · รอเจ้าของเคาะ Q1–Q3
+
+### สถานะ: ไฟล์รอง [`.agents/school-admin/22-activity-log.md`](school-admin/22-activity-log.md) · OVERVIEW #22 ⚪→🟡
+สแกน FE `activity-log/index.vue` (370 บรรทัด timeline + stats 4 การ์ด + filter + pagination) + BE `MemberActivityLogController` (285 บรรทัด) + routes + MemberActivityLog scopes
+
+### ค้นพบหลัก: ต่างจาก #12–14 — เมนูนี้โตเต็มวัยและปลอดภัย
+- **security ปิดแล้ว (G29):** group `{academy}/activity-log` ติด `academy.permission:members.view,reports.view` (เดิม auth:api เปล่า)
+- controller ใช้ `forAcademy()` scope ทุกเมธอด (tenant-safe) · eager-load user/targetUser (กัน N+1) · filter ครบ (action/category/user/target/department/date) · response shape ตรง FE
+- ไม่มี gap P0 · finding เป็น **FE polish + feature เสริม**
+
+### Gap (รายละเอียดใน 22-activity-log.md §5)
+- **G1 🟡** FE ใช้ `useNuxtApp().$api` ตรง + refetch academy by name แทน `useApi`+inject academyId (ผิดแนว CLAUDE.md + ยิงเกิน)
+- **G2 🟠** หน้า hardcode สีสว่าง (`bg-white`/`text-gray-900`) ไม่มี `dark:` เลย → dark mode พัง
+- **G3 🟡** การ์ด "กิจกรรมทั้งหมด" = `stats.total` ซึ่งเป็นยอด 30 วันล่าสุด (label ลวง)
+- **G4 🟡** avatar bind `profile_photo_path` (relative) → รูปแตก (หนี้ photo-path ทั้งระบบ)
+- **G5 ⚪** feature เสริม: drill-down รายคน (`getMemberLogs` มี backend แต่ FE ไม่เรียก) · กราฟ by_day · ท็อป active_users · export · ค้นหาผู้ทำ/เป้าหมาย
+- **G7 🟡** "ประวัติการแก้ไข" (AuditLog entity) เป็นคนละระบบ อยู่ #8/platform — เคาะว่า #22 รวมด้วยไหม
+
+### เคาะ Q1–Q3 + ลงมือ AL-S1..S6 แล้ว (2026-10-14 · Claude เขียนคลาวด์ · php -l ผ่าน · เจ้าของรันเทสต์/build)
+- **Q1 = polish + feature · Q2 = รวม audit entity · Q3 = photo-path เฉพาะเมนู**
+- **BE:** migration `audit_logs.academy_id` (nullable/reversible/ไม่ backfill) · `AuditLog` fillable+scopeForAcademy
+  · `AuditLogService::log()` เติม academy_id อัตโนมัติจาก `entity->academy_id` · `AuditLogController::academyIndex` + `GET /{academy}/audit-logs` (reports.view)
+  · `MemberActivityLogController::export` (xlsx/csv) + `MemberActivityLogExport` + route export
+- **FE:** เขียน `activity-log/index.vue` ใหม่ — useApi+inject (G1) · dark mode ครบ (G2) · label "(30 วัน)" (G3)
+  · 2 แท็บ กิจกรรมสมาชิก/ประวัติการแก้ไข · กราฟ by_day (overflow-x) · ท็อป active_users · ปุ่ม export Excel/CSV (getBlob)
+  · drill-down = คลิกชื่อผู้ทำ/เป้าหมาย → โฟกัส filter `user_id`/`target_user_id` (แทน getMemberLogs เพราะ log มี user.id) · avatar ผ่าน `useAvatar` (G4)
+- **เทสต์:** `AcademyAuditLogTest` (academyIndex tenant-scope=2 · export 200 · non-member 403 ทั้งสองเส้น)
+- **Q2 ข้อจำกัด:** log เก่า academy_id=null → ประวัติการแก้ไขเริ่มนับจากนี้ · backfill log เก่า = งาน owner-gated แยก ถ้าต้องการย้อนหลัง
+- **เหลือ AL-S7 เจ้าของ:** `php artisan migrate` + `test -c phpunit.mysql.xml --filter=AcademyAuditLog` + pint + build + ตรวจจอ
+- push ชุด BE (commit ก่อน) + FE/test/docs · branch เดียวกับ PR #42
+
+---
+
+## 🟡 2026-10-13 — เมนู #21 สถิติและรายงาน: audit ขั้น [1]+[2] เสร็จ · พบ gap 7 ข้อ · รอเจ้าของเคาะ Q1–Q3
+
+### สถานะ: ไฟล์รอง [`.agents/school-admin/21-reports.md`](school-admin/21-reports.md) · OVERVIEW #21 ⚪→🟡
+ต่อจากลูป school-admin (ถัดจาก #16) · สแกน FE `admin/reports.vue` (153 บรรทัด) + เมนู `admin.vue` + `SchoolReportsTab`
++ BE `AnalyticsController` (993 บรรทัด) · `ReportController` · routes analytics/reports/members·stats · `CheckAcademyPermission` · `AcademyRole` templates
+
+### ค้นพบหลัก: backend รวยกว่าหน้าจอมาก
+- หน้า #21 เป็น **hub บาง ๆ** (การ์ดสรุป 4 + 4 กล่องลิงก์ไปเมนูอื่น) เรียกแค่ 2 endpoint: `analytics/dashboard-stats` + `members/stats`
+- backend analytics เต็มชุด (overview/snapshots/KPI/trends/comparisons/alert-rules) + report module #2 (definitions/saved/schedules/exports)
+  มีอยู่ gate `reports.view` แล้ว **แต่หน้า #21 เข้าไม่ถึงเลย** · report builder ปัจจุบันฝังใน **เมนู #8** ไม่ใช่ #21
+- `reports.view` ผูก role: director/admin/registrar/owner (teacher ไม่ได้ — สมเหตุผล)
+
+### Gap (รายละเอียดใน 21-reports.md §5)
+- **G1 🔴** `GET /{academy}/members/stats` อยู่ในกลุ่ม `auth:api` เปล่า ไม่มี `academy.permission` + ในเมธอดไม่มี tenant check
+  → ใครล็อกอินก็อ่านสถิติสมาชิก/การกระจายบทบาทของโรงเรียนไหนก็ได้ (คลาสเดียวกับ #8 G1)
+- **G2 🟠** การ์ด "บุคลากร" อ่าน `stats.by_role.teacher` แต่ BE คืน `role_distribution.teacher` → **staff = 0 เสมอ**
+- **G3 🟠** การ์ด "ห้องเรียน" ผูก `classes_today` (คาบวันนี้) ไม่ใช่จำนวนห้อง · `pending_grading` ดึงมาแต่ไม่โชว์
+- G4 หน้าไม่มี guard ระดับ page (พึ่งเมนู show + backend) · G5 analytics เชิงลึกเข้าไม่ถึงจากหน้า
+- G6 `dashboardStats` ไม่คืน total_staff/total_classrooms · G7 report builder อยู่ใต้ #8 (ชื่อเมนูคือ #21)
+
+### เคาะ Q1–Q3 + ลงมือ R-S1/S2/S3/S5 แล้ว (2026-10-13 · Claude เขียนคลาวด์ · php -l ผ่าน · เจ้าของรันเทสต์/build)
+- **Q1 = คง hub-ลิงก์** (ซ่อม G1/G2/G3 · ไม่ทำแดชบอร์ด analytics เชิงลึก → R-S4 ตัดทิ้ง)
+- **Q2 = report builder โผล่ใต้ #21** · **Q3 = endpoint ใหม่ `reports/summary`**
+- **✅ R-S1 (G1):** route `members/stats` เติม `academy.permission:members.view` — ปิด cross-tenant leak
+- **✅ R-S2 (G6):** `ReportController::summary` + `GET /{academy}/reports/summary` (gate reports.view)
+  คืน students(members role=student)/staff(StaffProfile)/classrooms(Classroom)/courses — try/catch กันตารางหาย
+- **✅ R-S3 (G2/G3):** reports.vue เรียก summary เดียว ผูกการ์ด 4 ตัวตรงฟิลด์ (เดิม staff อ่าน `stats.by_role` ผิด=0 · "ห้องเรียน" โชว์ classes_today)
+- **✅ R-S5 (G7):** ฝัง `<SchoolReportsTab :academy-id>` ใต้หน้า (border-t · ไม่ซ้อนหัว)
+- **เหลือ R-S6 เจ้าของ:** `php artisan test -c phpunit.mysql.xml --filter=ReportsSummary` (ถ้าเขียนเทสต์) · `pint` · `npm run build` · ตรวจจอ 375/768/1280
+- **หนี้ข้ามเมนู:** `members/search`·`filter-options`·`invitations` มีรูเดียวกับ G1 (กลุ่ม `auth:api` เปล่า) → ฝากเมนู #2 ปิด (ไม่ขยาย PR นี้)
+- PR [#42](https://github.com/UtaiSalem/nuxnan/pull/42) (draft) — push เพิ่มโค้ดรอบนี้
+
+---
+
 ## ✅ 2026-10-11 — PR #33 merge เข้า `main` แล้ว (เมนู #16 บัตรนักเรียน + #15 เสริม)
 
 - **merged:** `main` HEAD = `fa13c4f` (squash) · branch `claude/jolly-goodall-cwgfja`

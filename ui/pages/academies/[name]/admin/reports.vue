@@ -16,22 +16,20 @@ const fetchOverview = async () => {
   isLoading.value = true
   error.value = null
   try {
-    const [dashRes, memberRes] = await Promise.allSettled([
-      api.get(`/api/academies/${academyId.value}/analytics/dashboard-stats`),
-      api.get(`/api/academies/${academyId.value}/members/stats`),
-    ])
-    const dash = dashRes.status === 'fulfilled' ? (dashRes.value as any) : null
-    const members = memberRes.status === 'fulfilled' ? (memberRes.value as any) : null
+    // endpoint สรุปเดียว gate ด้วย reports.view — คืนการ์ดครบทั้ง 4 ตัวจากแหล่งที่ถูกต้อง
+    const res = await api.get<{ data?: Record<string, number> }>(
+      `/api/academies/${academyId.value}/reports/summary`,
+    )
+    const data = res?.data ?? {}
     stats.value = {
-      total_students: dash?.data?.total_students ?? members?.stats?.approved ?? 0,
-      total_staff: members?.stats?.by_role?.teacher ?? 0,
-      total_classrooms: dash?.data?.classes_today ?? 0,
-      total_courses: dash?.data?.total_courses ?? 0,
-      pending_grading: dash?.data?.pending_grading ?? 0,
+      total_students: data.total_students ?? 0,
+      total_staff: data.total_staff ?? 0,
+      total_classrooms: data.total_classrooms ?? 0,
+      total_courses: data.total_courses ?? 0,
     }
   } catch (e: any) {
     error.value = 'ไม่สามารถโหลดข้อมูลรายงานได้'
-    console.error('Failed to fetch analytics', e)
+    console.error('Failed to fetch report summary', e)
   } finally {
     isLoading.value = false
   }
@@ -106,19 +104,19 @@ const reportSections = computed(() => [
     <div v-else-if="stats" class="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-5 border border-blue-100 dark:border-blue-800">
         <p class="text-sm text-blue-600 dark:text-blue-400 font-medium">นักเรียนทั้งหมด</p>
-        <p class="text-3xl font-bold text-blue-700 dark:text-blue-300 mt-2">{{ stats.total_students ?? stats.students_count ?? '-' }}</p>
+        <p class="text-3xl font-bold text-blue-700 dark:text-blue-300 mt-2">{{ stats.total_students ?? '-' }}</p>
       </div>
       <div class="bg-green-50 dark:bg-green-900/20 rounded-xl p-5 border border-green-100 dark:border-green-800">
         <p class="text-sm text-green-600 dark:text-green-400 font-medium">บุคลากร</p>
-        <p class="text-3xl font-bold text-green-700 dark:text-green-300 mt-2">{{ stats.total_staff ?? stats.staff_count ?? '-' }}</p>
+        <p class="text-3xl font-bold text-green-700 dark:text-green-300 mt-2">{{ stats.total_staff ?? '-' }}</p>
       </div>
       <div class="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-5 border border-purple-100 dark:border-purple-800">
         <p class="text-sm text-purple-600 dark:text-purple-400 font-medium">ห้องเรียน</p>
-        <p class="text-3xl font-bold text-purple-700 dark:text-purple-300 mt-2">{{ stats.total_classrooms ?? stats.classrooms_count ?? '-' }}</p>
+        <p class="text-3xl font-bold text-purple-700 dark:text-purple-300 mt-2">{{ stats.total_classrooms ?? '-' }}</p>
       </div>
       <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-5 border border-amber-100 dark:border-amber-800">
         <p class="text-sm text-amber-600 dark:text-amber-400 font-medium">คอร์สเรียน</p>
-        <p class="text-3xl font-bold text-amber-700 dark:text-amber-300 mt-2">{{ stats.total_courses ?? stats.courses_count ?? '-' }}</p>
+        <p class="text-3xl font-bold text-amber-700 dark:text-amber-300 mt-2">{{ stats.total_courses ?? '-' }}</p>
       </div>
     </div>
 
@@ -147,6 +145,11 @@ const reportSections = computed(() => [
           </li>
         </ul>
       </div>
+    </div>
+
+    <!-- Report Builder (กำหนดรายงาน · บันทึก · ตั้งเวลา · ส่งออก) -->
+    <div v-if="academyId" class="border-t border-gray-100 dark:border-gray-700 pt-6">
+      <SchoolReportsTab :academy-id="academyId" />
     </div>
   </div>
 </template>

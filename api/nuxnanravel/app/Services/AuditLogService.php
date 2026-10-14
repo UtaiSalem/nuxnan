@@ -24,6 +24,7 @@ class AuditLogService
 
         return AuditLog::create([
             'user_id' => Auth::id(),
+            'academy_id' => $this->resolveAcademyId($entity, $metadata),
             'action' => $action,
             'entity_type' => $entity ? get_class($entity) : null,
             'entity_id' => $entity?->id,
@@ -37,6 +38,25 @@ class AuditLogService
             'method' => $request->method(),
             'created_at' => now(),
         ]);
+    }
+
+    /**
+     * หา academy_id ให้ log โดยอัตโนมัติ (เมนู #22 ประวัติการแก้ไข)
+     *
+     * ลำดับ: คอลัมน์ academy_id ของ entity → metadata['academy_id'] → null
+     * (ไม่ต้องแก้ call site เดิม · log ที่ไม่มีบริบทโรงเรียนจะเป็น null ตามเดิม)
+     */
+    private function resolveAcademyId(?Model $entity, ?array $metadata): ?int
+    {
+        if ($entity && ! empty($entity->academy_id)) {
+            return (int) $entity->academy_id;
+        }
+
+        if (is_array($metadata) && ! empty($metadata['academy_id'])) {
+            return (int) $metadata['academy_id'];
+        }
+
+        return null;
     }
 
     /**

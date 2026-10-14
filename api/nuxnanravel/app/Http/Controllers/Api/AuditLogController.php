@@ -118,6 +118,64 @@ class AuditLogController extends Controller
     /**
      * Get audit logs for a specific entity.
      */
+    /**
+     * ประวัติการแก้ไข entity ของทั้งโรงเรียน (เมนู #22 แท็บ "ประวัติการแก้ไข").
+     *
+     * ใช้ audit_logs.academy_id ที่ AuditLogService::log() เติมให้ (log ที่มีบริบทโรงเรียน)
+     * หมายเหตุ: log เก่าก่อนเพิ่มคอลัมน์จะ academy_id = null → ไม่โผล่ (ตั้งใจ · backfill เป็นงานแยก)
+     */
+    public function academyIndex(Academy $academy, Request $request)
+    {
+        $query = AuditLog::forAcademy($academy->id)
+            ->with('user:id,name,profile_photo_path')
+            ->orderBy('created_at', 'desc');
+
+        if ($request->filled('action')) {
+            $query->byAction($request->string('action'));
+        }
+        if ($request->filled('module')) {
+            $query->byModule($request->string('module'));
+        }
+        if ($request->filled('from_date')) {
+            $query->where('created_at', '>=', $request->date('from_date'));
+        }
+        if ($request->filled('to_date')) {
+            $query->where('created_at', '<=', $request->string('to_date').' 23:59:59');
+        }
+
+        $perPage = min((int) $request->get('per_page', 20), 100);
+        $logs = $query->paginate($perPage);
+
+        return response()->json([
+            'success' => true,
+            'logs' => $logs->getCollection()->map(function ($log) {
+                return [
+                    'id' => $log->id,
+                    'action' => $log->action,
+                    'module' => $log->module,
+                    'entity_type' => class_basename($log->entity_type ?? ''),
+                    'entity_id' => $log->entity_id,
+                    'description' => $log->description,
+                    'old_values' => $log->old_values,
+                    'new_values' => $log->new_values,
+                    'user' => $log->user ? [
+                        'id' => $log->user->id,
+                        'name' => $log->user->name,
+                        'avatar' => $log->user->profile_photo_path,
+                    ] : null,
+                    'created_at' => $log->created_at->toIso8601String(),
+                    'created_at_human' => $log->created_at->diffForHumans(),
+                ];
+            }),
+            'pagination' => [
+                'current_page' => $logs->currentPage(),
+                'last_page' => $logs->lastPage(),
+                'per_page' => $logs->perPage(),
+                'total' => $logs->total(),
+            ],
+        ], 200);
+    }
+
     public function getEntityLogs(Academy $academy, Request $request)
     {
         $request->validate([
