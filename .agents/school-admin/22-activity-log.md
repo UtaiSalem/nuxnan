@@ -2,7 +2,12 @@
 
 > ไฟล์รองของเมนู `22 ประวัติกิจกรรม` (`admin/activity-log/` · `reports.view`)
 > อ่านคู่กับ [OVERVIEW.md](OVERVIEW.md)
-> สถานะ: 🟡 audit [1]+[2] เสร็จ 2026-10-13 · โมดูลแข็งแรง (security ปิดแล้ว) · finding เป็น FE polish · รอเจ้าของเคาะ Q1–Q3
+> สถานะ: 🟡 audit [1]+[2] + เคาะ Q1–Q3 + โค้ด AL-S1..S6 เสร็จ 2026-10-14 (คลาวด์ · php -l ผ่าน · เจ้าของรันเทสต์/build)
+
+### เคาะแล้ว 2026-10-14
+- **Q1 = polish + เพิ่มฟีเจอร์** (G1/G2/G3 + G5: drill-down · กราฟแนวโน้ม · ท็อปผู้ใช้ · export · ค้นหาผู้ทำ/เป้าหมาย)
+- **Q2 = รวม "ประวัติการแก้ไข entity" (AuditLog) เข้า #22** → แท็บที่สอง + migration `audit_logs.academy_id`
+- **Q3 = แก้ photo-path เฉพาะเมนูนี้** → avatar ผ่าน `useAvatar.getAvatarUrl`
 
 ---
 
@@ -105,20 +110,26 @@
 
 | Step | Title | Depends on | Deliverable | Status |
 |---|---|---|---|---|
-| AL-S1 | G2 — dark mode + mobile-first polish | Q1 | ใส่ `dark:` variant ครบ · ตรวจ 375/768/1280 · touch target | ⚪ รอ Q1 |
-| AL-S2 | G1 — ใช้ useApi + inject academyId | Q1 | เปลี่ยน `$api`→`useApi` · inject academyId (ตัด refetch by name) | ⚪ รอ Q1 |
-| AL-S3 | G3 — label ช่วงเวลาให้ถูก | Q1 | การ์ดบอก "30 วันล่าสุด" หรือเพิ่มตัวเลือกช่วง | ⚪ รอ Q1 |
-| AL-S4 | G5 — drill-down + visualize (ถ้าเอา) | Q1 | คลิก member → getMemberLogs · กราฟ by_day · ท็อป active_users | ⚪ รอ Q1 |
-| AL-S5 | G4 — avatar path | Q3 | ใช้ full URL / useFiles — หรือรอ photo migration | ⚪ รอ Q3 |
-| AL-S6 | G7 — รวม audit entity trail (ถ้าเอา) | Q2 | แท็บ/ลิงก์ไป AuditLog entity ใน #22 | ⚪ รอ Q2 |
+| AL-S1 | G2 — dark mode + mobile-first polish | Q1 | ใส่ `dark:` variant ครบ · touch target 44px · ไม่มีเลื่อนแนวนอน | 🟢 โค้ดเสร็จ |
+| AL-S2 | G1 — ใช้ useApi + inject academyId | Q1 | เปลี่ยน `$api`→`useApi` · inject academyId (ตัด refetch by name) | 🟢 โค้ดเสร็จ |
+| AL-S3 | G3 — label ช่วงเวลา | Q1 | การ์ดบอก "(30 วัน)" + หัวกราฟ "30 วันล่าสุด" | 🟢 โค้ดเสร็จ |
+| AL-S4 | G5 — ฟีเจอร์เสริม | Q1 | export xlsx/csv (BE+FE) · กราฟ by_day · ท็อป active_users · drill-down/ค้นหาผู้ทำ-เป้าหมาย (filter user_id/target_user_id) | 🟢 โค้ดเสร็จ |
+| AL-S5 | G4 — avatar path | Q3 | avatar ทุกจุดผ่าน `useAvatar.getAvatarUrl` | 🟢 โค้ดเสร็จ |
+| AL-S6 | G7/Q2 — รวม audit entity trail | Q2 | migration `audit_logs.academy_id` + service เติมค่า + `GET /{academy}/audit-logs` + แท็บ "ประวัติการแก้ไข" | 🟢 โค้ดเสร็จ |
+| AL-S7 | เทสต์ + verify | ทุก step | `AcademyAuditLogTest` (scope+export gating) + build + ตรวจจอ | ⚪ รอเจ้าของ |
 
 **Rule:** งาน UI ทุกชิ้นบังคับ mobile-first + dark mode · verify build + ตรวจจอ ก่อนขึ้น 🟢
 
-### ❓ Q ที่ต้องเคาะ
-- **Q1 — ขอบเขตงาน:** แค่ polish (G2 dark mode + G1 convention + G3 label) พอ **หรือ** เพิ่มฟีเจอร์ด้วย
-  (G5: drill-down รายคน · กราฟ by_day · ท็อปผู้ใช้ · export · ค้นหาผู้ทำ/เป้าหมาย)?
-- **Q2 — ขอบเขตเมนู:** #22 ควรรวม "ประวัติการแก้ไข entity" (AuditLog ที่อยู่ #8) ด้วยไหม หรือคงเฉพาะ member activity?
-- **Q3 — avatar (G4):** แก้ photo-path เฉพาะเมนูนี้ หรือรอ migration รูปทั้งระบบ?
+### หมายเหตุการตัดสินใจ
+- **drill-down (G5):** ทำเป็น "คลิกชื่อผู้ทำ/เป้าหมาย → โฟกัส filter `user_id`/`target_user_id` ของ index เดิม" (ไม่ใช้ `getMemberLogs`
+  เพราะ log มี `user.id` ไม่ใช่ member id) → ได้ทั้ง drill-down + ค้นหาผู้ทำ/เป้าหมายในกลไกเดียว ไม่ต้องเพิ่ม endpoint
+- **Q2 ข้อจำกัดสถาปัตยกรรม:** `audit_logs` เดิมไม่มี `academy_id` → เพิ่มคอลัมน์ **nullable** (ปลอดภัย/ย้อนกลับได้ ไม่ backfill)
+  · `AuditLogService::log()` เติมค่าให้ log ใหม่จาก `entity->academy_id` อัตโนมัติ · **log เก่า = null → ไม่โผล่ในแท็บ**
+  (ประวัติการแก้ไขเริ่มนับจากนี้ · backfill log เก่า = งาน owner-gated แยก ถ้าต้องการย้อนหลัง)
+
+### ค้างเจ้าของ verify (AL-S7)
+- `php artisan migrate` (เพิ่ม `audit_logs.academy_id`) · `php artisan test -c phpunit.mysql.xml --filter=AcademyAuditLog` · `./vendor/bin/pint`
+- `npm run build` + ตรวจจอ 375/768/1280 (กราฟ by_day overflow-x · แท็บ · export)
 
 ## 7. Agy Prompt Template (ต่อ step)
 ```
@@ -136,3 +147,11 @@ Report back: diff summary + test output (claude ตรวจ diff เอง)
   (`MemberActivityLogController` 285 บรรทัด · routes activity-log/audit-logs · MemberActivityLog scopes)
   → โมดูลแข็งแรง (G29 ปิด tenant leak แล้ว · tenant scope + N+1 + filter ครบ) · finding G1–G5 เป็น FE polish/feature + G7 ขอบเขต
   · ไม่มีช่องโหว่ P0 · รอเจ้าของเคาะ Q1–Q3
+- **2026-10-14 เคาะ Q1–Q3 + ลงมือ AL-S1..S6** (Claude เขียนในคลาวด์ · php -l ผ่าน · เจ้าของรันเทสต์/build)
+  - **BE:** migration `audit_logs.academy_id` (nullable/reversible) · `AuditLog` fillable+scopeForAcademy · `AuditLogService::log()` เติม academy_id อัตโนมัติ
+    · `AuditLogController::academyIndex` + route `GET /{academy}/audit-logs` (reports.view) · `MemberActivityLogController::export` + `MemberActivityLogExport` + route export
+  - **FE:** เขียน `activity-log/index.vue` ใหม่ — useApi+inject (G1) · dark mode ครบ (G2) · label "(30 วัน)" (G3)
+    · 2 แท็บ (กิจกรรมสมาชิก / ประวัติการแก้ไข) · กราฟ by_day · ท็อป active_users · ปุ่ม export Excel/CSV
+    · คลิกชื่อ→โฟกัส user_id/target_user_id (drill-down+ค้นหา) · avatar ผ่าน `useAvatar` (G4)
+  - **เทสต์:** `AcademyAuditLogTest` (academyIndex tenant-scope · export 200 · non-member 403 ทั้งสองเส้น)
+  - เหลือ AL-S7 เจ้าของ verify (migrate + test MySQL + build + ตรวจจอ)

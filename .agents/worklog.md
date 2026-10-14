@@ -18,10 +18,18 @@
 - **G5 ⚪** feature เสริม: drill-down รายคน (`getMemberLogs` มี backend แต่ FE ไม่เรียก) · กราฟ by_day · ท็อป active_users · export · ค้นหาผู้ทำ/เป้าหมาย
 - **G7 🟡** "ประวัติการแก้ไข" (AuditLog entity) เป็นคนละระบบ อยู่ #8/platform — เคาะว่า #22 รวมด้วยไหม
 
-### รอเจ้าของเคาะก่อนลงมือ
-- **Q1** ขอบเขตงาน: แค่ polish (G1/G2/G3) หรือ +feature (G5)?
-- **Q2** #22 รวม audit entity trail (#8) ด้วยไหม? · **Q3** avatar แก้เฉพาะเมนูหรือรอ migration รูปรวม?
-- รอบนี้ audit อย่างเดียว · push ไฟล์ audit + OVERVIEW + worklog (branch เดียวกับ PR #42)
+### เคาะ Q1–Q3 + ลงมือ AL-S1..S6 แล้ว (2026-10-14 · Claude เขียนคลาวด์ · php -l ผ่าน · เจ้าของรันเทสต์/build)
+- **Q1 = polish + feature · Q2 = รวม audit entity · Q3 = photo-path เฉพาะเมนู**
+- **BE:** migration `audit_logs.academy_id` (nullable/reversible/ไม่ backfill) · `AuditLog` fillable+scopeForAcademy
+  · `AuditLogService::log()` เติม academy_id อัตโนมัติจาก `entity->academy_id` · `AuditLogController::academyIndex` + `GET /{academy}/audit-logs` (reports.view)
+  · `MemberActivityLogController::export` (xlsx/csv) + `MemberActivityLogExport` + route export
+- **FE:** เขียน `activity-log/index.vue` ใหม่ — useApi+inject (G1) · dark mode ครบ (G2) · label "(30 วัน)" (G3)
+  · 2 แท็บ กิจกรรมสมาชิก/ประวัติการแก้ไข · กราฟ by_day (overflow-x) · ท็อป active_users · ปุ่ม export Excel/CSV (getBlob)
+  · drill-down = คลิกชื่อผู้ทำ/เป้าหมาย → โฟกัส filter `user_id`/`target_user_id` (แทน getMemberLogs เพราะ log มี user.id) · avatar ผ่าน `useAvatar` (G4)
+- **เทสต์:** `AcademyAuditLogTest` (academyIndex tenant-scope=2 · export 200 · non-member 403 ทั้งสองเส้น)
+- **Q2 ข้อจำกัด:** log เก่า academy_id=null → ประวัติการแก้ไขเริ่มนับจากนี้ · backfill log เก่า = งาน owner-gated แยก ถ้าต้องการย้อนหลัง
+- **เหลือ AL-S7 เจ้าของ:** `php artisan migrate` + `test -c phpunit.mysql.xml --filter=AcademyAuditLog` + pint + build + ตรวจจอ
+- push ชุด BE (commit ก่อน) + FE/test/docs · branch เดียวกับ PR #42
 
 ---
 
