@@ -4207,3 +4207,31 @@ cf2de7a5 / f53f32da  docs: worklog + ข้อสรุปเรื่องต�
 - กดดาวน์โหลดจริงกับเคสหนักสุดของโรงเรียน (ม.2/7 `ด.ช.มูฮัมหมัดรอมฎอน แวดือราแม` 35px/27px)
   ได้ไฟล์ 2496×1536 ครบทุกแถว ไม่มีอะไรล้น
 - `./vendor/bin/pint --test` ผ่าน
+
+## 2026-10-11 — #14 บุคลากร: audit ขั้น [1]+[2] เสร็จ (พบ gap 15 ข้อ)
+
+### สถานะ: 🔴 สแกนโค้ด + เขียนไฟล์รอง [`14-staff.md`](school-admin/14-staff.md) เสร็จ · ยังไม่ส่ง step ให้ agy · รอเจ้าของเคาะ Q1–Q4
+
+ไล่ตามลำดับเมนูต่อจาก #12 คอร์ส / #13 หลักสูตร → เข้า **#14 บุคลากร** (เดิม ⚪)
+
+**ขอบเขตจริง:** backend มี 4 โมดูลย่อยครบ (staff profile+position · attendance · leave · payroll)
+แต่ **UI มีแค่ staff profile + position** (`admin/staff.vue`) — attendance/leave/payroll ไม่มีหน้า admin เลย (G15)
+
+**P0 สิทธิ์ (พิสูจน์จาก route + seed `2026_08_29_000002`):** กลุ่ม `staff`/`payroll` ทั้งก้อน + เส้นเขียนของ
+`staff-attendance`/`leave-requests` gate ด้วยแค่ `staff.view` ⇒ teacher/registrar (มีแค่ staff.view)
+**เพิ่ม/ลบบุคลากร · อ่าน/สร้าง/อนุมัติ/จ่ายเงินเดือน · อนุมัติใบลา** ได้ผ่าน API ตรง (G1–G4) — payroll อ่อนไหวสุด
+
+**P1 contract (เมนูใช้งานไม่ได้จริง):** index คืน LengthAwarePaginator ทั้งก้อนใต้ `data` แต่ FE อ่านเป็นอาเรย์+`pagination`
+แยก → ตารางวนคีย์ขยะ (G5) · create 422 เสมอ (FE ส่ง `employee_type` · BE validate `employment_type` G6 ·
+`department` string vs `department_id` G7) · update/status เป็น `api.put` ชน route `PATCH` → 405 (G8) ·
+filter สถานะ → 500 เพราะไม่มี `scopeByStatus`/`scopeByType` (G9) · การ์ด active/on_leave = 0 (summary คืน `by_status` map G10) ·
+vocab ไม่ตรง (FE `retired`/`intern` · BE `suspended`/`terminated`/`temporary` G11/G12) · prefill edit อ่านผิดฟิลด์ (G13) ·
+`pos.staff_count` ไม่มี withCount (G14)
+
+**หมายเหตุที่ตรวจแล้วว่า "ไม่ใช่ gap":** `user.avatar` เป็น accessor ที่ `$appends` อยู่ (โหลด `profile_photo_path` พอ) ·
+`{academy}` bind ด้วย id (default) ตรงกับที่ FE ส่ง id — ไม่ชนแบบ #11
+
+**Q ที่รอเคาะ:** Q1 สิทธิ์อ่าน/จ่าย payroll (staff.view/manage หรือ finance.*) · Q2 รูป response (`{data,pagination}` house style?) ·
+Q3 scope รอบนี้ (ปิด P0+P1 ของ staff ก่อน · G15 เฟสถัดไป?) · Q4 department เป็น select department_id (#9)?
+
+แตก step ไว้แล้ว ST-S1..S7 ใน [`14-staff.md`](school-admin/14-staff.md) §7 — เริ่มเมื่อ Q เคาะ
