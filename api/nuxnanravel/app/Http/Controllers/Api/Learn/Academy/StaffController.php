@@ -318,7 +318,7 @@ class StaffController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'code' => ['nullable', 'string', 'max:50', Rule::unique('positions', 'code')->where('academy_id', $academy->id)],
-            'department_id' => ['nullable', Rule::exists('departments', 'id')->where('academy_id', $academy->id)],
+            'department_id' => ['nullable', $this->departmentRule($academy)],
             'level' => 'nullable|string|max:20',
             'description' => 'nullable|string',
             'min_salary' => 'nullable|numeric|min:0',
@@ -359,7 +359,7 @@ class StaffController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'code' => ['nullable', 'string', 'max:50', Rule::unique('positions', 'code')->where('academy_id', $academy->id)->ignore($position->id)],
-            'department_id' => ['nullable', Rule::exists('departments', 'id')->where('academy_id', $academy->id)],
+            'department_id' => ['nullable', $this->departmentRule($academy)],
             'level' => 'nullable|string|max:20',
             'description' => 'nullable|string',
             'min_salary' => 'nullable|numeric|min:0',
