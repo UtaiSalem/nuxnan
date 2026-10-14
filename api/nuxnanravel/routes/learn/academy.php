@@ -391,6 +391,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::prefix('{academy}/activity-log')->middleware('academy.permission:members.view,reports.view')->group(function () {
         Route::get('/', [MemberActivityLogController::class, 'index'])->name('api.academy.activity-log.index');
         Route::get('statistics', [MemberActivityLogController::class, 'getStatistics'])->name('api.academy.activity-log.statistics');
+        Route::get('export', [MemberActivityLogController::class, 'export'])->name('api.academy.activity-log.export');
         Route::get('member/{member}', [MemberActivityLogController::class, 'getMemberLogs'])->name('api.academy.activity-log.member');
     });
 
@@ -1139,6 +1140,10 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // และไม่มีด่านสิทธิ์ · ไม่มีหน้าไหนใน ui/ เรียกใช้ ⇒ ลบทิ้ง
     // ============================================
     Route::prefix('{academy}/audit-logs')->group(function () {
+        // #22 — ประวัติการแก้ไข entity ของทั้งโรงเรียน (ใช้ audit_logs.academy_id)
+        Route::get('/', [AuditLogController::class, 'academyIndex'])
+            ->middleware('academy.permission:reports.view')
+            ->name('api.academy.audit-logs.index');
         Route::get('/entity', [AuditLogController::class, 'getEntityLogs'])
             ->middleware('academy.permission:students.view')
             ->name('api.academy.audit-logs.entity');

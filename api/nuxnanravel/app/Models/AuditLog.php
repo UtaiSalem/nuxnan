@@ -19,6 +19,7 @@ class AuditLog extends Model
      */
     protected $fillable = [
         'user_id',
+        'academy_id',
         'action',
         'entity_type',
         'entity_id',
@@ -101,6 +102,14 @@ class AuditLog extends Model
     public function scopeByUser($query, int $userId)
     {
         return $query->where('user_id', $userId);
+    }
+
+    /**
+     * Scope to logs belonging to an academy (เมนู #22 ประวัติการแก้ไข).
+     */
+    public function scopeForAcademy($query, int $academyId)
+    {
+        return $query->where('academy_id', $academyId);
     }
 
     /**

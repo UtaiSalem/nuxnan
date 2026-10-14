@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Api\Learn\Academy;
 
+use App\Exports\MemberActivityLogExport;
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\AcademyMember;
 use App\Models\MemberActivityLog;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Excel as ExcelWriter;
+use Maatwebsite\Excel\Facades\Excel;
 
 /**
  * Member Activity Log Controller - ระบบประวัติกิจกรรมสมาชิก
@@ -223,6 +226,42 @@ class MemberActivityLogController extends Controller
                 'period_days' => $days,
             ],
         ], 200);
+    }
+
+    /**
+     * ส่งออกประวัติกิจกรรม (xlsx/csv) ตาม filter เดียวกับหน้าจอ (#22 · AL-S4)
+     */
+    public function export(Academy $academy, Request $request)
+    {
+        $query = MemberActivityLog::forAcademy($academy->id)
+            ->with(['user:id,name', 'targetUser:id,name'])
+            ->orderBy('created_at', 'desc');
+
+        if ($request->filled('action')) {
+            $query->byAction($request->string('action'));
+        }
+        if ($request->filled('from_date')) {
+            $query->where('created_at', '>=', $request->string('from_date'));
+        }
+        if ($request->filled('to_date')) {
+            $query->where('created_at', '<=', $request->string('to_date').' 23:59:59');
+        }
+
+        $rows = $query->limit(5000)->get()->map(function ($log) {
+            return [
+                $log->created_at->format('Y-m-d H:i'),
+                $log->user?->name ?? 'ระบบ',
+                $log->action,
+                $log->description,
+                $log->targetUser?->name ?? '',
+            ];
+        })->toArray();
+
+        $isCsv = $request->get('format') === 'csv';
+        $writerType = $isCsv ? ExcelWriter::CSV : ExcelWriter::XLSX;
+        $filename = 'activity-log-'.$academy->id.'-'.now()->format('Ymd_His').($isCsv ? '.csv' : '.xlsx');
+
+        return Excel::download(new MemberActivityLogExport($rows), $filename, $writerType);
     }
 
     /**
