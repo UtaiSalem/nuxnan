@@ -3,9 +3,6 @@ import AcademyAdminRevenueWidget from '~/components/academy/revenue/AcademyAdmin
 import AcademyCampaignManagementTable from '~/components/academy/revenue/AcademyCampaignManagementTable.vue'
 import AcademySupportReviewTable from '~/components/academy/revenue/AcademySupportReviewTable.vue'
 import { Icon } from '@iconify/vue'
-import AcademyAdminRevenueWidget from '~/components/academy/revenue/AcademyAdminRevenueWidget.vue'
-import AcademyCampaignManagementTable from '~/components/academy/revenue/AcademyCampaignManagementTable.vue'
-import AcademySupportReviewTable from '~/components/academy/revenue/AcademySupportReviewTable.vue'
 
 definePageMeta({
   ssr: false
