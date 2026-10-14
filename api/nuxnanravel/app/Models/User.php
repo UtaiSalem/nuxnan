@@ -140,7 +140,11 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             'xp_for_next_level' => 'integer',
             'current_xp' => 'integer',
             'no_of_ref' => 'integer',
-            'pp' => 'decimal:2',
+            // pp = แต้ม (points) ใช้เป็นจำนวนเต็มเสมอ แม้คอลัมน์ใน DB จะเป็น decimal(10,2)
+            // cast decimal:2 ทำให้ Laravel serialize ออกมาเป็น string "1134596.00" ฝั่ง frontend
+            // จึงได้ string แทน number — cast เป็น integer เพื่อให้ทุก consumer ได้ตัวเลขจริง
+            // (wallet/locked_balance เป็นเงินจริง มีทศนิยม จึงคง decimal:2 ไว้)
+            'pp' => 'integer',
             'wallet' => 'decimal:2',
             'locked_balance' => 'decimal:2',
             'points_frozen_at' => 'datetime',

@@ -61,6 +61,8 @@ const gaugeDashOffset = computed(() => gaugeCircumference * (1 - gaugeFillPct.va
 
 <template>
   <div class="min-w-0">
+    <!-- Single root: การ์ดสรุป + รายการบริจาค ต้องอยู่ใน root เดียวกัน -->
+    <!-- ไม่งั้น class ที่ parent ส่งมา (เช่น mt-5) จะตกหล่นเพราะเป็น fragment root -->
     <section class="min-w-0 rounded-2xl border border-gray-200/80 bg-white shadow-sm dark:border-gray-700/50 dark:bg-vikinger-dark-200">
       <!-- Gradient top accent -->
       <div class="h-1 rounded-t-2xl bg-gradient-to-r from-violet-500 via-indigo-500 to-blue-500" />
