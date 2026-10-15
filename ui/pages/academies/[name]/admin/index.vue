@@ -13,7 +13,12 @@ definePageMeta({
 
 const route = useRoute()
 const api = useApi()
-const academyName = computed(() => route.params.name as string)
+const { getAvatarUrl } = useAvatar()
+
+// Academy is resolved once by the parent layout (admin.vue) and provided down.
+const academyId = inject<Ref<number | null>>('academyId', ref(null))
+const academyName = inject<ComputedRef<string>>('academyName', computed(() => route.params.name as string))
+const { can, fetchMyRole } = useAcademyRole(academyId)
 
 // State
 const stats = ref({
@@ -27,86 +32,68 @@ const stats = ref({
 const recentActivities = ref<any[]>([])
 const pendingRequests = ref<any[]>([])
 const isLoading = ref(true)
+const loadError = ref(false)
 
-// Academy Role
-const academyId = ref<number | null>(null)
-const { can } = useAcademyRole(academyId)
-
-onMounted(async () => {
+const loadDashboard = async () => {
+  if (!academyId.value) return
+  isLoading.value = true
+  loadError.value = false
   try {
-    // Get academy ID first
-    const response: any = await api.get(`/api/academies/${academyName.value}`)
-    if (response.success) {
-      academyId.value = response.academy.id
-      
-      // Fetch dashboard data
-      await Promise.all([
-        fetchStats(),
-        fetchPendingRequests(),
-        fetchRecentActivities(),
-      ])
-    }
+    await fetchMyRole()
+    await Promise.all([
+      fetchStats(),
+      fetchPendingRequests(),
+      fetchRecentActivities(),
+    ])
   } catch (err: any) {
     console.error('Failed to load dashboard data:', err)
+    loadError.value = true
   } finally {
     isLoading.value = false
   }
-})
+}
+
+// academyId มาจาก parent layout (อาจยังเป็น null ใน tick แรก) — react ด้วย immediate watch
+watch(academyId, (id) => {
+  if (id) loadDashboard()
+}, { immediate: true })
 
 const fetchStats = async () => {
   if (!academyId.value) return
-  
+
   try {
-    // Get member stats (includes role-based counts)
+    // member stats: role_distribution อยู่ระดับบนสุดของ response (ไม่ใช่ by_role ใต้ stats)
     const statsRes: any = await api.get(`/api/academies/${academyId.value}/members/stats`)
     if (statsRes.success) {
-      stats.value.totalStudents = statsRes.stats.approved || 0
-      stats.value.pendingRequests = statsRes.stats.pending || 0
-      // Get teacher count from role stats if available
-      if (statsRes.stats.by_role) {
-        stats.value.totalTeachers = statsRes.stats.by_role.teacher || 0
-      }
+      const roles = statsRes.role_distribution || {}
+      stats.value.totalStudents = roles.student || 0
+      stats.value.totalTeachers = roles.teacher || 0
+      stats.value.pendingRequests = statsRes.stats?.pending || 0
     }
-    
-    // Get courses
+
+    // courses count
     const coursesRes: any = await api.get(`/api/academies/${academyId.value}/courses`)
     if (coursesRes.success) {
       stats.value.totalCourses = coursesRes.courses?.length || 0
     }
-    
-    // Get groups
+
+    // groups count
     try {
       const groupsRes: any = await api.get(`/api/academies/${academyId.value}/groups`)
       if (groupsRes.success) {
         stats.value.totalGroups = groupsRes.groups?.length || 0
       }
     } catch (e) {
-      // Silently handle if groups endpoint fails
       console.warn('Groups endpoint unavailable')
-    }
-    
-    // Get teacher count directly if not in stats
-    if (!stats.value.totalTeachers) {
-      try {
-        const teachersRes: any = await api.get(`/api/academies/${academyId.value}/members`, {
-          params: { role: 'teacher', per_page: 1 }
-        })
-        if (teachersRes.success && teachersRes.meta?.total) {
-          stats.value.totalTeachers = teachersRes.meta.total
-        }
-      } catch (e) {
-        // Silently fail if this endpoint doesn't support role filter
-      }
     }
   } catch (err) {
     console.error('Failed to fetch stats:', err)
   }
 }
 
-
 const fetchPendingRequests = async () => {
   if (!academyId.value) return
-  
+
   try {
     const response: any = await api.get(`/api/academies/${academyId.value}/pending-requests`)
     if (response.success) {
@@ -119,7 +106,7 @@ const fetchPendingRequests = async () => {
 
 const fetchRecentActivities = async () => {
   if (!academyId.value) return
-  
+
   try {
     const response: any = await api.get(`/api/academies/${academyId.value}/activities`)
     if (response.success) {
@@ -129,6 +116,13 @@ const fetchRecentActivities = async () => {
   } catch (err) {
     console.error('Failed to fetch activities:', err)
   }
+}
+
+const formatActivityTime = (ts: string) => {
+  if (!ts) return ''
+  const d = new Date(ts)
+  if (isNaN(d.getTime())) return ts
+  return d.toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 const statCards = computed(() => [
@@ -205,7 +199,7 @@ const quickActions = computed(() => [
     icon: 'fluent:people-community-24-filled',
     to: `/academies/${academyName.value}/admin/classrooms`,
     color: 'from-purple-500 to-purple-600',
-    show: true,
+    show: can('groups.view') || can('academy.view'),
   },
   {
     title: 'ฝ่ายงาน/แผนก',
@@ -213,7 +207,7 @@ const quickActions = computed(() => [
     icon: 'heroicons:building-office',
     to: `/academies/${academyName.value}/admin/departments`,
     color: 'from-cyan-500 to-cyan-600',
-    show: true,
+    show: can('groups.view') || can('academy.view'),
   },
   {
     title: 'ประกาศใหม่',
@@ -227,7 +221,7 @@ const quickActions = computed(() => [
     title: 'ดูรายงาน',
     description: 'รายงานและสถิติ',
     icon: 'fluent:chart-multiple-24-filled',
-    to: `/academies/${academyName.value}/admin`,
+    to: `/academies/${academyName.value}/admin/reports`,
     color: 'from-cyan-500 to-cyan-600',
     show: can('reports.view'),
   },
@@ -253,8 +247,7 @@ const acceptRequest = async (memberId: number) => {
   try {
     await api.post(`/api/academies/${academyId.value}/members/${memberId}/accept`)
     pendingRequests.value = pendingRequests.value.filter(r => r.id !== memberId)
-    stats.value.pendingRequests--
-    stats.value.totalStudents++
+    await fetchStats()
   } catch (err) {
     console.error('Failed to accept:', err)
   }
@@ -264,7 +257,7 @@ const rejectRequest = async (memberId: number) => {
   try {
     await api.post(`/api/academies/${academyId.value}/members/${memberId}/reject`)
     pendingRequests.value = pendingRequests.value.filter(r => r.id !== memberId)
-    stats.value.pendingRequests--
+    await fetchStats()
   } catch (err) {
     console.error('Failed to reject:', err)
   }
@@ -275,6 +268,18 @@ const rejectRequest = async (memberId: number) => {
   <div>
     <div v-if="isLoading" class="flex items-center justify-center py-20">
       <div class="animate-spin rounded-full h-10 w-10 border-4 border-primary-500 border-t-transparent"></div>
+    </div>
+
+    <div v-else-if="loadError" class="flex flex-col items-center justify-center gap-4 py-16 text-center">
+      <Icon icon="fluent:error-circle-24-regular" class="h-12 w-12 text-red-500" />
+      <p class="text-gray-600 dark:text-gray-300">โหลดข้อมูลแดชบอร์ดไม่สำเร็จ</p>
+      <button
+        @click="loadDashboard"
+        class="inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-primary-500 px-4 py-2 font-medium text-white transition hover:bg-primary-600"
+      >
+        <Icon icon="fluent:arrow-clockwise-24-regular" class="h-5 w-5" />
+        ลองใหม่
+      </button>
     </div>
 
     <div v-else class="space-y-6">
@@ -359,7 +364,7 @@ const rejectRequest = async (memberId: number) => {
       </div>
 
       <!-- Revenue Summary -->
-      <div v-if="academyId" class="space-y-3">
+      <div v-if="academyId && can('finance.view')" class="space-y-3">
         <div class="flex items-center justify-between">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white">สรุปรายได้</h2>
           <NuxtLink
@@ -396,8 +401,8 @@ const rejectRequest = async (memberId: number) => {
           
           <div v-else class="divide-y divide-gray-100 dark:divide-gray-700">
             <div v-for="request in pendingRequests" :key="request.id" class="p-4 flex items-center gap-4">
-              <img 
-                :src="request.user?.profile_photo_url || '/images/default-avatar.png'" 
+              <img
+                :src="getAvatarUrl(request.user)"
                 :alt="request.user?.name"
                 class="w-10 h-10 rounded-full object-cover"
               />
@@ -450,7 +455,7 @@ const rejectRequest = async (memberId: number) => {
               </div>
               <div class="flex-1 min-w-0">
                 <p class="text-gray-900 dark:text-white">{{ activity.description || activity.title }}</p>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ activity.created_at }}</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ formatActivityTime(activity.created_at) }}</p>
               </div>
             </div>
           </div>

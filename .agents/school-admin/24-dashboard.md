@@ -110,17 +110,18 @@
 
 | Step | Title | Depends on | Deliverable | Status |
 |---|---|---|---|---|
-| **DB-S1** | inject academy + แก้นิยามการ์ด (G13+G2+G4) | — | เปลี่ยน index.vue มา `inject('academyId'/'academyName'/'academy')` + `useAcademyRole` ที่อิง academyId ที่ inject (ตัด `/api/academies/{name}` เอง) · "นักเรียน" = `role_distribution.student`, "ครู" = `role_distribution.teacher` (ตัด `stats.by_role` + fallback members?role ทิ้ง) · นับวิชา/กลุ่มจาก count/meta ชัด ๆ | ⚪ |
-| **DB-S2** | ซ่อมลิงก์ quick action + สิทธิ์ (G3+G6) | — | ลิงก์รายงาน→`/admin/reports`, "จัดการกลุ่ม"/"ฝ่ายงาน" gate ด้วย `can('groups.view')`/`can('academy.view')` แทน `show:true` (ให้ตรง sidebar parent) | ⚪ |
-| ~~DB-S3~~ | ~~page guard academy.view~~ | — | **ตัดทิ้ง** — parent `admin.vue:313` guard อยู่แล้ว (isAdmin‖isTeacher) · การ align เป็น key `academy.view` เป็น authz-model nuance priority ต่ำ แยกไปทำพร้อม #1 ถ้าจะทำ | ❌ ไม่ทำ |
-| **DB-S4** | gate widget รายได้ (G7) | — | ครอบ section "สรุปรายได้" ด้วย `can('finance.view')` ทั้งก้อน (ไม่ยิง endpoint/ไม่โชว์หัวข้อถ้าไม่มีสิทธิ์) | ⚪ |
-| **DB-S5** | optimistic + polish (G5+G8+G9+G10) | — | accept ไม่เดา role (refetch stats หรือไม่ ++), avatar ผ่าน `useAvatar`, ฟอร์แมต `created_at`, error/empty state ระดับหน้า | ⚪ |
+| **DB-S1** | inject academy + แก้นิยามการ์ด (G13+G2) | — | เปลี่ยน index.vue มา `inject('academyId'/'academyName')` + `useAcademyRole`+`fetchMyRole` + `watch(academyId,…,{immediate:true})` (ตัด `/api/academies/{name}` + onMounted เดิม) · "นักเรียน" = `role_distribution.student`, "ครู" = `role_distribution.teacher` (ตัด `stats.by_role` + fallback members?role) | 🟡 code+static ✅ · รอ build/375px |
+| **DB-S2** | ซ่อมลิงก์ quick action + สิทธิ์ (G3+G6) | — | ลิงก์รายงาน→`/admin/reports`, "จัดการกลุ่ม"/"ฝ่ายงาน" gate `can('groups.view')‖can('academy.view')` (ตรง sidebar parent) | 🟡 code+static ✅ · รอ build/375px |
+| ~~DB-S3~~ | ~~page guard academy.view~~ | — | **ตัดทิ้ง** — parent `admin.vue:313` guard อยู่แล้ว (isAdmin‖isTeacher) · align เป็น key `academy.view` = nuance priority ต่ำ แยกไป #1 | ❌ ไม่ทำ |
+| **DB-S4** | gate widget รายได้ (G7) | — | ครอบ section "สรุปรายได้" ด้วย `v-if="academyId && can('finance.view')"` | 🟡 code+static ✅ · รอ build/375px |
+| **DB-S5** | optimistic + polish (G5+G8+G9+G10) | — | accept/reject `await fetchStats()` (ไม่เดา role), avatar `getAvatarUrl`, `formatActivityTime`, error branch + ปุ่มลองใหม่ | 🟡 code+static ✅ · รอ build/375px |
+| **G4** | นับวิชา/กลุ่มแม่น (ไม่พึ่ง `.length`) | backend | ⏸️ ยกไปเฟสหลัง — endpoint courses/groups ไม่มี meta.total ให้ ต้องแตะ backend (ไม่อยู่ในคลื่น A ที่ FE-only) | ⏸️ deferred |
 | **DB-S6** | ตรวจจอจริง 375/768/1280 | DB-S1..S5 | banner `h-52` absolute ไม่ทับ stats, การ์ดไม่ล้น, touch target ครบ | ⚪ |
 | **DB-S7a** | กลไก `last_seen` (Q1) | — | ตรวจว่ามีคอลัมน์/middleware เก็บ `last_seen` อยู่แล้วไหม · ถ้าไม่มี → migration เพิ่มคอลัมน์ + middleware อัปเดตต่อ authenticated request (throttle ไม่ให้เขียน DB ทุก hit) | ⚪ |
 | **DB-S7b** | การ์ด "ใช้งานวันนี้" (G1) | DB-S7a | endpoint นับสมาชิก academy ที่ `last_seen` = วันนี้ + ต่อการ์ดให้อ่านค่าจริง | ⚪ |
 | **DB-S8** | รวม signal ชุดเล็ก (G11, Q2) | DB-S1 | endpoint รวมตัวเดียว (เลียน `reports/summary` #21) คืน: การเงินรอตรวจ (#23 `donations.pending`) + เข้าเรียนวันนี้ (#18) + ผลการเรียนค้างกรอก (#19) + การ์ด/แผง FE ตามสิทธิ์ key ปลายทาง | ⚪ |
 | **DB-S9** | note widget builder dormant (G12, Q3) | — | ไม่มีโค้ด — ทำ note ใน §2/README ว่า `DashboardWidgetController` dormant ไม่ผูกกับหน้านี้ | ⚪ |
-| **DB-S10** | เทสต์ | DB-S1..S8 | เทสต์ gate หน้า + endpoint รวม signal + endpoint last_seen บน MySQL จริง `phpunit.mysql.xml` | ⚪ |
+| **DB-S10** | เทสต์ | DB-S1..S8 | เทสต์ gate + endpoint รวม signal + last_seen บน MySQL จริง — **คลื่น A ไม่แตะ backend จึงยังไม่มีเทสต์ใหม่** · เริ่มจริงตอน DB-S7b/S8 | ⚪ (N/A คลื่น A) |
 
 **Rule:** ทุก step ต้อง verify (build/test/จอจริง) ก่อนขึ้น 🟢 · รายงาน agy/codex เชื่อไม่ได้ ต้อง `git diff --stat` + diff เอง
 
@@ -140,5 +141,6 @@ Report back: diff สรุป + ผลเทสต์ (เลข assert จร�
 
 ## 9. Review Log
 - **2026-10-15** — audit ขั้น [1]+[2] เสร็จ (Claude): สแกนโค้ดจริง, ยืนยันไม่มีหน้าซ้ำ, widget รายได้ไม่ใช่ leak (endpoint gate finance.view จริง), พบ 10 gap (G1–G10) + 2 ทิศทาง (G11/G12) + 1 หนี้ข้ามเมนู · แตก DB-S1..S10 (คลื่น A ส่งได้เลย · คลื่น B รอ Q1–Q3) · ยังไม่ส่ง step ให้ agy
+- **2026-10-15 คลื่น A (DB-S1/S2/S4/S5) — agy เขียน Claude ตรวจเอง** → ผ่าน static ครบ · agy (claude-opus-5-5-high) แตะไฟล์เดียว `index.vue` (+68/−60) · Claude ตรวจ: (1) `git status` ไฟล์เดียวไม่มี stray (2) อ่าน diff ทุกบรรทัด = ตรงสเปคเป๊ะ ไม่มีลบแอบ (60 ลบ = onMounted self-resolve + teacher fallback) (3) grep criteria 8/8 must-exist + 4/4 must-not-exist ผ่าน (4) SFC compile ผ่าน (@vue/compiler-sfc script+template) · **ยังไม่ verify: จอ 375px (DB-S6 ต้อง login academy-admin) + `npm run build` (เจ้าของ)** · G4 (count แม่น) ยกเฟสหลังเพราะต้องแตะ backend · รอบแรก agy exit 1: ชื่อโมเดล `gemini-3.1-pro-high` ในสกิลล้าสมัย → อัปเดต SKILL.md เป็น `claude-opus-5-5-high` + ให้เช็ค `agy models`
 - **2026-10-15 (แก้ audit ตอนเขียนสเปคคลื่น A)** — glob `[name]` รอบแรกตีเป็น char-class เลยพลาด **parent `admin.vue`** ซึ่งมีจริงและเป็นตัว provide academyId/Name/academy + guard (`isAdmin‖isTeacher`). แก้ 4 จุด: (1) §2 parent มีจริง+guard มีแล้ว (2) G6 ไม่ใช่ "ไม่มี guard" — เหลือ gap แค่ 2 quick action `show:true` (3) G2 คีย์ถูกคือ `role_distribution.*` ไม่ใช่ `stats.by_role` (4) เพิ่ม G13 double-fetch → inject แทน. ผล: **DB-S3 ตัดทิ้ง** (guard ซ้ำ), inject refactor รวมเข้า DB-S1. คลื่น A เหลือ DB-S1/S2/S4/S5 (+S6 verify, S10 test). ยังไม่ส่ง agy — รอเจ้าของ OK scope ที่ปรับ
 - **2026-10-15** — เจ้าของเคาะ Q1–Q3: **Q1=endpoint ใหม่นับ `last_seen`** (⇒ DB-S7 แตกเป็น S7a กลไก last_seen + S7b การ์ด) · **Q2=ชุดเล็ก action-ค้าง** (การเงินรอตรวจ+เข้าเรียนวันนี้+ผลการเรียนค้าง ⇒ DB-S8) · **Q3=ปล่อย widget builder ไว้ dormant** (⇒ DB-S9 เหลือแค่ note) · ทุก step ปลดล็อกแล้ว พร้อมส่ง agy (เริ่มคลื่น A: DB-S1..S6)
