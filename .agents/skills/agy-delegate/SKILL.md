@@ -80,6 +80,9 @@ git diff                     # อ่านของจริงทุกบร�
 
 แล้วรันเกณฑ์ผ่าน **ด้วยตัวเอง** ห้าม paste ตัวเลขจากรายงานของ agy:
 - backend: `./vendor/bin/pint --test` + `php artisan test --filter=...`
+  🔴 **เทสต์ที่แตะ schema จริงต้องรันบน MySQL** = `php artisan test:db:rebuild --force --no-interaction` ก่อน แล้ว `php artisan test -c phpunit.mysql.xml --filter=...`
+  **`test:db:rebuild` เด้ง prompt ยืนยัน** — รันแบบ background/non-interactive **ต้องใส่ `--force --no-interaction`** ไม่งั้นค้างรอ stdin เงียบ ๆ (เคยเสีย ~30 นาที) · rebuild copy ~382 ตารางใช้เวลาหลายนาที ให้รัน background **ห้าม pipe ผ่าน `tail`** (มันกลืน output จนดูเหมือนค้าง) อ่านไฟล์ output ตรง ๆ
+  (sqlite โกหกได้ — migrate-from-zero พัง · ดู memory `project_tests_sqlite_vs_mysql`)
 - frontend: compile SFC ที่แก้ (`@vue/compiler-sfc`) + ตรวจในเบราว์เซอร์จริงที่ **375px** ก่อน แล้วค่อย 768 / 1280
 - `npm run build` ผู้ใช้รันเอง — Claude ไม่ต้องรัน
 
