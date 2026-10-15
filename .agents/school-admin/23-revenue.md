@@ -89,11 +89,11 @@
 
 | Step | Title | Depends on | Deliverable | Status |
 |---|---|---|---|---|
-| RV-S1 | G1/G2 — align authz กับ finance.* | Q1 | campaignsIndex→finance.view · approve/reject/campaigns write→finance.manage (คง tenant check) · เทสต์ | ⚪ รอ Q1 |
-| RV-S2 | G3 — FE tab/ปุ่มตรงกับ API | Q1 | gate แท็บแคมเปญ + ปุ่มด้วยสิทธิ์จริงที่เคาะ | ⚪ รอ Q1 |
-| RV-S3 | G4 — useApi inject academyId | Q1 | ใช้ inject('academyId') | ⚪ รอ Q1 |
-| RV-S4 | G5 — รวมการเงินอื่น (ถ้าเอา) | Q2 | นำ fee/tuition/payments/expenses/budgets เข้า #23 | ⚪ รอ Q2 |
-| RV-S5 | Phase 2 features (ถ้าเอา) | Q3 | export · กราฟรายได้ · filter donations/campaigns | ⚪ รอ Q3 |
+| RV-S1 | G1/G2 — align authz กับ finance.* | Q1 | campaignsIndex→finance.view · approve/reject/campaigns write→finance.manage (คง tenant check) · เทสต์ | 🟡 **unblocked 2026-10-15** (Q1=ใช่ · พร้อมส่ง agy) |
+| RV-S2 | G3 — FE tab/ปุ่มตรงกับ API | Q1 | gate แท็บแคมเปญ + ปุ่มด้วยสิทธิ์จริงที่เคาะ | 🟡 **unblocked 2026-10-15** |
+| RV-S3 | G4 — useApi inject academyId | Q1 | ใช้ inject('academyId') | 🟡 **unblocked 2026-10-15** |
+| RV-S4 | G5 — รวมการเงินอื่น | Q2 | นำ fee/tuition/payments/expenses/budgets เข้า #23 | 🔵 **อนุมัติ-เลื่อน 2026-10-15** (Q2=รวม แต่รอ finance buildout ตาม #8 Q3) |
+| RV-S5 | Phase 2 features (optional) | Q3 | export · กราฟรายได้ · filter donations/campaigns | 🔵 **deferred 2026-10-15** (ปิดที่ parity ก่อน · ค่าเริ่มต้น รอ veto) |
 
 **Rule:** งาน UI บังคับ mobile-first + dark mode · verify build + test ก่อนขึ้น 🟢
 
@@ -102,6 +102,11 @@
   (= มอบงานการเงินให้ฝ่ายได้ · แนะนำ ตรงกับ route+FE+permission catalog) **หรือ** คงเป็น owner/admin เท่านั้น (แล้วแก้ FE ซ่อน tab/ปุ่มถ้าไม่ใช่ admin)?
 - **Q2 — ขอบเขต #23:** รวมการเงินอื่น (fee-structures/tuition/payments/expenses/budgets ที่อยู่ #8) เข้ามาด้วยไหม หรือคงเฉพาะ donations/campaigns/points?
 - **Q3 — Phase 2:** ต้องการฟีเจอร์เพิ่ม (export · กราฟรายได้ · filter) หรือปิด #23 ที่ parity หลังแก้ G1/G2?
+
+### ✅ เคาะแล้ว 2026-10-15 (เจ้าของโปรเจค ผ่าน AskUserQuestion)
+- **Q1 = ใช่** — `finance.view` ดูแคมเปญ + `finance.manage` อนุมัติบริจาค/จัดการแคมเปญ (คง tenant check) ⇒ RV-S1/S2/S3 unblocked ทำได้เลย
+- **Q2 = รวมการเงินอื่นด้วย** — #23 เป็นบ้านปลายทางของการเงินทั้งหมด (fee/tuition/payments/expenses/budgets) · **แต่เลื่อนไปทำพร้อม finance buildout** เพราะ #8 Q3 เคาะว่ายังไม่ใช้การเงินปีนี้ (ปิดกลุ่มด้วย settings.manage ก่อน) ⇒ RV-S4 = อนุมัติเชิงหลักการ, deferred
+- **Q3 (Phase 2)** — 🔶 _ค่าเริ่มต้นที่ Claude เสนอ รอเจ้าของ veto:_ **ปิด #23 ที่ parity หลังแก้ Q1 ก่อน** · เพิ่ม export/กราฟ/filter ทีหลังถ้าต้องการ ⇒ RV-S5 = optional/deferred
 
 ## 7. Agy Prompt Template (ต่อ step)
 ```
