@@ -324,7 +324,7 @@ Payroll ส่ง positional ผิด (TypeError) · TuitionFee/Budget ใช�
 | SM-S2 | **เคาะ Q3=เลื่อน finance → ปิดทั้งกลุ่มการเงินด้วย `settings.manage`** (ไม่แยกสิทธิ์ละเอียด) | S1 | 1 บรรทัด/group การเงิน + เทสต์ non-manage โดน 403 | 🟡 **unblocked 2026-10-15** (งานเล็ก พร้อมส่ง agy) |
 | SM-S3 | แก้ G5+G6 — ชื่อฟังก์ชันและ path ที่ชี้ผิด 8 จุด | — | UI เรียกได้จริงทุกปุ่ม | 🟢 **7/8 done 2026-09-09** · จุดที่ 8 (bookMeetingSlot) แยกไป SM-S7 |
 | SM-S4 | แก้ G8 — endpoint ที่ 500/พังถาวร | — | patch + เทสต์ (ไม่ต้อง migration) | 🟢 **done 2026-09-09** — Expense ทั้งโมดูล + KPI 2 บั๊ก |
-| SM-S5 | G3 — โหมดดูอย่างเดียวบนหน้า + ซ่อนปุ่มตามสิทธิ์จริง | S2 | ใช้ `can()` ที่ดึงมาแล้วแต่ไม่ได้ใช้ | 🟡 **unblocked 2026-10-15** (ทำต่อหลัง S2 minimal) |
+| SM-S5 | G3 — **minimal: เปิด settings.manage เข้า + ใช้ can()** | S2 | entry gate `!isAdmin && !can('settings.manage')` (เคาะ minimal · per-tab/button gating เลื่อน — backend การ์ดครบ) | 🟢 **done 2026-10-15** (diff 1/1 · SFC OK · จอ 375px เจ้าของ) |
 | SM-S6 | G9+G10 — สถิติหัวหน้าหน้าให้ถูก + ผูกแท็บกับ `?tab=` | — | ตัวเลขตรง · แชร์ลิงก์แท็บได้ | 🟢 **done 2026-09-09** |
 | SM-S7 | G7 — 3 แท็บเข้าไม่ถึง (แต้ม/ห้องสมุด/ทรัพย์สิน) | Q2 | **เคาะ: ไม่ขึ้นหน้า + ไม่ลบโค้ด** (ค่าเริ่มต้น รอ veto) | 🔵 **deferred 2026-10-15** (ข้อมูล 0 แถว) |
 | SM-S8 | G11 — audit log การเงิน/เงินเดือน | S1 | ใช้ระบบเดียวกับ SET-S9 | 🟢 **done 2026-09-09** — แก้ audit ที่เรียกพัง 6 controller |

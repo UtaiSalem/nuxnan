@@ -104,7 +104,7 @@ onMounted(async () => {
       academyId.value = response.academy.id
       await fetchMyRole()
       
-      if (!isAdmin.value) {
+      if (!isAdmin.value && !can('settings.manage')) {
         navigateTo(`/academies/${academyName.value}/admin`)
         return
       }
