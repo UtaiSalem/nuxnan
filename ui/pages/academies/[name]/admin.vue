@@ -395,19 +395,19 @@ const toggleSidebar = () => {
             <h3 class="mb-2 px-3 text-[13px] font-normal uppercase tracking-[.18rem] text-gray-900 dark:text-gray-100">
               {{ group.group }}
             </h3>
-            <ul class="space-y-0.5">
+            <ul class="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1">
               <li v-for="item in group.items" :key="item.name" v-show="item.show">
                 <NuxtLink
                   :to="item.to"
                   :class="[
-                    'flex items-center gap-3 rounded-lg px-4 py-2.5 transition-all duration-300 ease-in-out',
+                    'flex items-center gap-2 rounded-lg px-3 py-2.5 min-w-0 transition-all duration-300 ease-in-out',
                     isActiveRoute(item.to, item.exact)
                       ? 'bg-primary-500 text-white shadow-[0_10px_20px_-10px_rgba(14,165,233,0.6)]'
                       : 'text-gray-600 dark:text-gray-300 hover:bg-primary-500/10 hover:text-primary-600 dark:hover:text-primary-400'
                   ]"
                 >
                   <Icon :icon="item.icon" class="w-5 h-5 flex-shrink-0" />
-                  <span class="text-sm">{{ item.name }}</span>
+                  <span class="text-sm leading-tight break-words min-w-0">{{ item.name }}</span>
                   <span 
                     v-if="item.badge" 
                     class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full"
