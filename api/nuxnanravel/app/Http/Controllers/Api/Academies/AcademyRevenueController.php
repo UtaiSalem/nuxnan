@@ -73,14 +73,14 @@ class AcademyRevenueController extends Controller
     public function donations(Academy $academy, Request $request): JsonResponse
     {
         $user = $request->user();
-        $isAdmin = $academy->isAdmin($user);
+        $canManage = $academy->isAdmin($user) || $academy->userCan($user, 'finance.manage');
 
         $query = AcademyDonate::with(['academy', 'donor', 'transaction', 'reviewer'])
             ->where('academy_id', $academy->id)
             ->whereNull('deleted_at')
             ->latest();
 
-        if (! $isAdmin) {
+        if (! $canManage) {
             $query->whereIn('status', ['approved', 'completed']);
         }
 
@@ -92,7 +92,7 @@ class AcademyRevenueController extends Controller
         }
 
         $donations = $query->paginate($request->integer('per_page', 15));
-        $resource = $isAdmin
+        $resource = $canManage
             ? AcademyAdminDonationResource::class
             : AcademyPublicDonationResource::class;
 
@@ -254,7 +254,7 @@ class AcademyRevenueController extends Controller
     public function approveDonation(Academy $academy, AcademyDonate $donation, Request $request): JsonResponse
     {
         abort_if($donation->academy_id !== $academy->id, 403);
-        abort_if($academy->isAdmin($request->user()) === false, 403);
+        abort_if(! $academy->isAdmin($request->user()) && ! $academy->userCan($request->user(), 'finance.manage'), 403);
 
         $request->validate(['note' => 'nullable|string|max:1000']);
 
@@ -269,7 +269,7 @@ class AcademyRevenueController extends Controller
     public function rejectDonation(Academy $academy, AcademyDonate $donation, Request $request): JsonResponse
     {
         abort_if($donation->academy_id !== $academy->id, 403);
-        abort_if($academy->isAdmin($request->user()) === false, 403);
+        abort_if(! $academy->isAdmin($request->user()) && ! $academy->userCan($request->user(), 'finance.manage'), 403);
 
         $request->validate(['reason' => 'required|string|max:1000']);
 
@@ -283,7 +283,7 @@ class AcademyRevenueController extends Controller
 
     public function campaignsIndex(Academy $academy, Request $request): JsonResponse
     {
-        abort_if($academy->isAdmin($request->user()) === false, 403);
+        abort_if(! $academy->isAdmin($request->user()) && ! $academy->userCan($request->user(), 'finance.view'), 403);
 
         $campaigns = Advert::with(['advertiser', 'academy', 'course', 'beneficiary', 'reviewer'])
             ->where('academy_id', $academy->id)
@@ -306,7 +306,7 @@ class AcademyRevenueController extends Controller
 
     public function campaignsStore(Academy $academy, Request $request): JsonResponse
     {
-        abort_if($academy->isAdmin($request->user()) === false, 403);
+        abort_if(! $academy->isAdmin($request->user()) && ! $academy->userCan($request->user(), 'finance.manage'), 403);
 
         $request->validate([
             'campaign_type' => ['required', Rule::in(['advertisement'])],
@@ -370,7 +370,7 @@ class AcademyRevenueController extends Controller
     public function campaignsUpdate(Academy $academy, Advert $campaign, Request $request): JsonResponse
     {
         abort_if($campaign->academy_id !== $academy->id, 403);
-        abort_if($academy->isAdmin($request->user()) === false, 403);
+        abort_if(! $academy->isAdmin($request->user()) && ! $academy->userCan($request->user(), 'finance.manage'), 403);
 
         $request->validate([
             'title' => ['nullable', 'string', 'max:255'],
