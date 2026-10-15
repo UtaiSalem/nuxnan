@@ -20,8 +20,8 @@ const academy = ref<any>(null)
 const isLoading = ref(true)
 const activeTab = computed({
   get: () => {
-    const q = String(route.query.tab || 'members')
-    return tabs.some(t => t.id === q) ? q : 'members'
+    const q = String(route.query.tab || 'academic')
+    return tabs.some(t => t.id === q) ? q : 'academic'
   },
   set: (value: string) => router.replace({ query: { ...route.query, tab: value } }),
 })
@@ -30,70 +30,14 @@ const activeTab = computed({
 const academyId = ref<number | null>(null)
 const { can, isAdmin, fetchMyRole } = useAcademyRole(academyId)
 
-// Stats
-const stats = ref({
-  totalMembers: 0,
-  totalStudents: 0,
-  totalTeachers: 0,
-  totalStaff: 0,
-  pendingRequests: 0,
-})
-
 // Tabs
 const tabs = [
-  { id: 'members', name: 'สมาชิก', icon: 'fluent:people-24-regular' },
   { id: 'academic', name: 'วิชาการ', icon: 'fluent:hat-graduation-24-regular' },
   { id: 'finance', name: 'การเงิน', icon: 'fluent:money-24-regular' },
   { id: 'staff', name: 'บุคลากร', icon: 'fluent:people-team-24-regular' },
   { id: 'communication', name: 'สื่อสาร', icon: 'fluent:chat-24-regular' },
   { id: 'reports', name: 'รายงาน', icon: 'fluent:data-bar-horizontal-24-regular' },
 ]
-
-// Quick Actions for Members
-const memberQuickActions = computed(() => [
-  {
-    title: 'จัดการสมาชิก',
-    description: 'ดูและจัดการสมาชิกทั้งหมด',
-    icon: 'fluent:people-24-filled',
-    to: `/academies/${academyName.value}/admin/members`,
-    color: 'from-blue-500 to-blue-600',
-  },
-  {
-    title: 'ลิงก์เชิญสมาชิก',
-    description: 'สร้างลิงก์เชิญหรือ QR Code',
-    icon: 'fluent:link-24-filled',
-    to: `/academies/${academyName.value}/admin/invite-links`,
-    color: 'from-green-500 to-green-600',
-  },
-  {
-    title: 'แท็กสมาชิก',
-    description: 'จัดกลุ่มสมาชิกด้วยแท็ก',
-    icon: 'fluent:tag-24-filled',
-    to: `/academies/${academyName.value}/admin/member-tags`,
-    color: 'from-purple-500 to-purple-600',
-  },
-  {
-    title: 'บทบาทและสิทธิ์',
-    description: 'กำหนดบทบาทให้สมาชิก',
-    icon: 'fluent:shield-person-24-filled',
-    to: `/academies/${academyName.value}/admin/roles`,
-    color: 'from-amber-500 to-amber-600',
-  },
-  {
-    title: 'ผู้ปกครอง',
-    description: 'จัดการข้อมูลผู้ปกครอง',
-    icon: 'fluent:people-community-24-filled',
-    to: `/academies/${academyName.value}/admin/guardians`,
-    color: 'from-cyan-500 to-cyan-600',
-  },
-  {
-    title: 'ประวัติกิจกรรม',
-    description: 'ดูประวัติกิจกรรมของสมาชิก',
-    icon: 'fluent:history-24-filled',
-    to: `/academies/${academyName.value}/admin/activity-log`,
-    color: 'from-rose-500 to-rose-600',
-  },
-])
 
 // Quick Actions for Academic
 const academicQuickActions = computed(() => [
@@ -164,9 +108,6 @@ onMounted(async () => {
         navigateTo(`/academies/${academyName.value}/admin`)
         return
       }
-      
-      // Fetch stats
-      await fetchStats()
     }
   } catch (err) {
     console.error('Failed to load:', err)
@@ -174,23 +115,6 @@ onMounted(async () => {
     isLoading.value = false
   }
 })
-
-const fetchStats = async () => {
-  if (!academyId.value) return
-  
-  try {
-    const response: any = await api.get(`/api/academies/${academyId.value}/members/stats`)
-    if (response.success) {
-      stats.value.totalMembers = response.stats?.total || 0
-      stats.value.pendingRequests = response.stats?.pending || 0
-      stats.value.totalStudents = response.role_distribution?.student || 0
-      stats.value.totalTeachers = response.role_distribution?.teacher || 0
-      stats.value.totalStaff = response.role_distribution?.staff || 0
-    }
-  } catch (err) {
-    console.error('Failed to fetch stats:', err)
-  }
-}
 </script>
 
 <template>
@@ -230,111 +154,8 @@ const fetchStats = async () => {
 
       <!-- Tab Content -->
       <div class="tab-content">
-        <!-- Members Tab -->
-        <div v-if="activeTab === 'members'" class="space-y-6">
-          <!-- Stats Cards -->
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-              <div class="flex items-center gap-3">
-                <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                  <Icon icon="fluent:people-24-filled" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.totalMembers }}</p>
-                  <p class="text-sm text-gray-500 dark:text-gray-400">สมาชิกทั้งหมด</p>
-                </div>
-              </div>
-            </div>
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-              <div class="flex items-center gap-3">
-                <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                  <Icon icon="fluent:hat-graduation-24-filled" class="w-6 h-6 text-green-600 dark:text-green-400" />
-                </div>
-                <div>
-                  <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.totalStudents }}</p>
-                  <p class="text-sm text-gray-500 dark:text-gray-400">นักเรียน</p>
-                </div>
-              </div>
-            </div>
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-              <div class="flex items-center gap-3">
-                <div class="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-                  <Icon icon="fluent:clock-24-filled" class="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
-                </div>
-                <div>
-                  <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.pendingRequests }}</p>
-                  <p class="text-sm text-gray-500 dark:text-gray-400">รออนุมัติ</p>
-                </div>
-              </div>
-            </div>
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-              <div class="flex items-center gap-3">
-                <div class="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                  <Icon icon="fluent:person-board-24-filled" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                </div>
-                <div>
-                  <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.totalTeachers }}</p>
-                  <p class="text-sm text-gray-500 dark:text-gray-400">ครู/อาจารย์</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Quick Actions -->
-          <div>
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">จัดการสมาชิก</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <NuxtLink
-                v-for="action in memberQuickActions"
-                :key="action.to"
-                :to="action.to"
-                class="group bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all hover:border-primary-300 dark:hover:border-primary-600"
-              >
-                <div class="flex items-start gap-4">
-                  <div :class="['p-3 rounded-xl bg-gradient-to-br', action.color]">
-                    <Icon :icon="action.icon" class="w-6 h-6 text-white" />
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <h4 class="font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                      {{ action.title }}
-                    </h4>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ action.description }}</p>
-                  </div>
-                  <Icon icon="fluent:chevron-right-24-regular" class="w-5 h-5 text-gray-400 group-hover:text-primary-500 transition-colors" />
-                </div>
-              </NuxtLink>
-            </div>
-          </div>
-          
-          <!-- Student Actions -->
-          <div>
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">ข้อมูลนักเรียน</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <NuxtLink
-                v-for="action in studentQuickActions"
-                :key="action.to"
-                :to="action.to"
-                class="group bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all hover:border-primary-300 dark:hover:border-primary-600"
-              >
-                <div class="flex items-start gap-4">
-                  <div :class="['p-3 rounded-xl bg-gradient-to-br', action.color]">
-                    <Icon :icon="action.icon" class="w-6 h-6 text-white" />
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <h4 class="font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                      {{ action.title }}
-                    </h4>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ action.description }}</p>
-                  </div>
-                  <Icon icon="fluent:chevron-right-24-regular" class="w-5 h-5 text-gray-400 group-hover:text-primary-500 transition-colors" />
-                </div>
-              </NuxtLink>
-            </div>
-          </div>
-        </div>
-
         <!-- Academic Tab -->
-        <div v-else-if="activeTab === 'academic'" class="space-y-6">
+        <div v-if="activeTab === 'academic'" class="space-y-6">
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <NuxtLink
               v-for="action in academicQuickActions"
