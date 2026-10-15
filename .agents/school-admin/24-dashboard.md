@@ -24,8 +24,7 @@
   - วาด sidebar เมนูทั้งหมดพร้อม gate รายอันด้วย `can()` + `<NuxtPage/>`
 - Page: [`ui/pages/academies/[name]/admin/index.vue`](../../ui/pages/academies/[name]/admin/index.vue) — `layout: 'main'`, `ssr: false`
   - **ไม่มีหน้าซ้ำ** — `admin/dashboard/admin.vue` ไม่มีจริง (re-verify ด้วย glob ที่ถูกต้องแล้ว · ปิดข้อกังวล OVERVIEW §140)
-  - ⚠️ **ต่างจาก sibling (reports.vue ใช้ `inject('academyId')`)** — index.vue **resolve academy เอง** (`/api/academies/{name}` ซ้ำกับ parent) + `useAcademyRole(academyId)` ของตัวเอง (ยิง role ซ้ำอีกรอบ) ⇒ ดับเบิล fetch 2 เส้น
-  - โหลดใน `onMounted`: resolve academy → ยิง 3 กลุ่มขนาน (`fetchStats` / `fetchPendingRequests` / `fetchRecentActivities`)
+  - ✅ **หลังคลื่น A**: index.vue `inject('academyId'/'academyName')` จาก parent (เลิก resolve เอง) + `watch(academyId,…,{immediate:true})` → `loadDashboard` ยิง 4 กลุ่มขนาน (`fetchStats` / `fetchPendingRequests` / `fetchRecentActivities` / `fetchSummary`)
 - Component: [`AcademyAdminRevenueWidget.vue`](../../ui/components/academy/revenue/AcademyAdminRevenueWidget.vue) — 4 การ์ดรายได้ (แต้มคงเหลือ/รายได้โฆษณา/รอตรวจสอบ/แคมเปญเปิด)
 - Composable: `useAcademyRole(academyId)` (→ `can()`), `useAcademyRevenue(academyId)` (→ `fetchRevenueDashboard` ยิง `/revenue/revenue`)
 
@@ -42,9 +41,15 @@
 | `POST /{academy}/members/{member}/accept` | AcademyMemberController@acceptmember | (ในกลุ่ม members) | อนุมัติ |
 | `POST /{academy}/members/{member}/reject` | AcademyMemberController@rejectmember | (ในกลุ่ม members) | ปฏิเสธ |
 | `GET /{academy}/revenue/revenue` | AcademyRevenueController@revenue | `academy.permission:finance.view` | widget รายได้ |
+| `GET /{academy}/dashboard/summary` | **AcademyDashboardController@summary** (ใหม่ คลื่น B) | `academy.visibility:content` + `userCan` ต่อ signal | รวม signal 4 ตัว (active-today/donations/attendance/grades) |
+
+> หมายเหตุหลังคลื่น A/B: หน้านี้เลิกเรียก `GET /academies/{name}` เอง (parent resolve ให้) และตัด fallback `members?role=teacher` (ใช้ `role_distribution` จาก members/stats แทน)
+
+### DashboardWidgetController (ระบบ widget builder) — DORMANT ไม่ผูกกับหน้านี้ (Q3 · DB-S9)
+`routes/learn/academy.php` มีกลุ่ม `/{academy}/dashboard/widgets` + `/layout` (gate `settings.manage`/`academy.permission`) = ระบบ widget ลากวางตั้งค่าเอง **ที่หน้า admin/index.vue ไม่ได้ใช้เลย** · เจ้าของเคาะ Q3 = **ปล่อย dormant ไม่ผูก ไม่ลบ** · แดชบอร์ดใช้ layout hardcode (statCards/quickActions/signals) ต่อไป · ถ้าจะรื้อ/ผูกในอนาคตค่อยเปิดเป็นงานแยก
 
 ### Database
-ไม่มีตารางของตัวเอง — อ่าน aggregate จาก `academy_members`, `courses`, `academy_groups`, `academy_activities`, และ revenue domain
+ไม่มีตารางของตัวเอง — อ่าน aggregate จาก `academy_members`, `courses`, `academy_groups`, `academy_activities` (polymorphic ผ่าน `academy_posts`), `gradebook_scores`, `school_attendances`, และ revenue domain
 
 ## 3. Feature Checklist (ควรมี vs มี)
 
@@ -122,7 +127,7 @@
 | **DB-S8a** | รวม signal 2 ตัวที่ query สะอาด (G11, Q2) | DB-S1 | ✅ `GET /{academy}/dashboard/summary` (`AcademyDashboardController` · gate `academy.visibility:content` + `userCan` ต่อ signal) คืน `donations_pending` (#23 gate finance.view) + `attendance_today` (#18 gate school_attendance.view) + การ์ด FE โชว์เฉพาะ signal ที่มีสิทธิ์ | 🟡 code+static ✅ · รอ build/375px |
 | **DB-S8b** | signal active-today (#24 เอง) | DB-S8a | ✅ `Activity::whereHasMorph(AcademyPost, academy_id)->whereDate(created_at,today)->distinct()->count('user_id')` → `active_today` (member-level) ป้อนการ์ด "ใช้งานวันนี้" เดิม (ปิด G1) | 🟡 code+static ✅ · รอ build/375px |
 | **DB-S8c** | signal grades ค้างกรอก (#19) | DB-S8a | ✅ `GradebookScore::where(academy_id)->where(status,pending)->count()` (มี academy_id ตรง — **ไม่ต้อง join 4 hop** ตามที่กลัว) gate grades.view → การ์ด "คะแนนรอตรวจ" | 🟡 code+static ✅ · รอ build/375px |
-| **DB-S9** | note widget builder dormant (G12, Q3) | — | ไม่มีโค้ด — ทำ note ใน §2/README ว่า `DashboardWidgetController` dormant ไม่ผูกกับหน้านี้ | ⚪ |
+| **DB-S9** | note widget builder dormant (G12, Q3) | — | ✅ note ใน §2 ว่า `DashboardWidgetController` dormant ไม่ผูกกับหน้านี้ (ไม่มีโค้ด) | 🟢 done |
 | **DB-S10** | เทสต์ | DB-S1..S8 | เทสต์ gate + endpoint รวม signal + last_seen บน MySQL จริง — **คลื่น A ไม่แตะ backend จึงยังไม่มีเทสต์ใหม่** · เริ่มจริงตอน DB-S7b/S8 | ⚪ (N/A คลื่น A) |
 
 **Rule:** ทุก step ต้อง verify (build/test/จอจริง) ก่อนขึ้น 🟢 · รายงาน agy/codex เชื่อไม่ได้ ต้อง `git diff --stat` + diff เอง
@@ -146,5 +151,6 @@ Report back: diff สรุป + ผลเทสต์ (เลข assert จร�
 - **2026-10-15 คลื่น A (DB-S1/S2/S4/S5) — agy เขียน Claude ตรวจเอง** → ผ่าน static ครบ · agy (claude-opus-5-5-high) แตะไฟล์เดียว `index.vue` (+68/−60) · Claude ตรวจ: (1) `git status` ไฟล์เดียวไม่มี stray (2) อ่าน diff ทุกบรรทัด = ตรงสเปคเป๊ะ ไม่มีลบแอบ (60 ลบ = onMounted self-resolve + teacher fallback) (3) grep criteria 8/8 must-exist + 4/4 must-not-exist ผ่าน (4) SFC compile ผ่าน (@vue/compiler-sfc script+template) · **ยังไม่ verify: จอ 375px (DB-S6 ต้อง login academy-admin) + `npm run build` (เจ้าของ)** · G4 (count แม่น) ยกเฟสหลังเพราะต้องแตะ backend · รอบแรก agy exit 1: ชื่อโมเดล `gemini-3.1-pro-high` ในสกิลล้าสมัย → อัปเดต SKILL.md เป็น `claude-opus-5-5-high` + ให้เช็ค `agy models`
 - **2026-10-15 (แก้ audit ตอนเขียนสเปคคลื่น A)** — glob `[name]` รอบแรกตีเป็น char-class เลยพลาด **parent `admin.vue`** ซึ่งมีจริงและเป็นตัว provide academyId/Name/academy + guard (`isAdmin‖isTeacher`). แก้ 4 จุด: (1) §2 parent มีจริง+guard มีแล้ว (2) G6 ไม่ใช่ "ไม่มี guard" — เหลือ gap แค่ 2 quick action `show:true` (3) G2 คีย์ถูกคือ `role_distribution.*` ไม่ใช่ `stats.by_role` (4) เพิ่ม G13 double-fetch → inject แทน. ผล: **DB-S3 ตัดทิ้ง** (guard ซ้ำ), inject refactor รวมเข้า DB-S1. คลื่น A เหลือ DB-S1/S2/S4/S5 (+S6 verify, S10 test). ยังไม่ส่ง agy — รอเจ้าของ OK scope ที่ปรับ
 - **2026-10-15** — เจ้าของเคาะ Q1–Q3: **Q1=endpoint ใหม่นับ `last_seen`** (⇒ DB-S7 แตกเป็น S7a กลไก last_seen + S7b การ์ด) · **Q2=ชุดเล็ก action-ค้าง** (การเงินรอตรวจ+เข้าเรียนวันนี้+ผลการเรียนค้าง ⇒ DB-S8) · **Q3=ปล่อย widget builder ไว้ dormant** (⇒ DB-S9 เหลือแค่ note) · ทุก step ปลดล็อกแล้ว พร้อมส่ง agy (เริ่มคลื่น A: DB-S1..S6)
+- **2026-10-15 DB-S9 ปิด (doc-only)** — บันทึก §2 ว่า `DashboardWidgetController` (widget builder) dormant ไม่ผูกกับหน้า admin/index.vue ตาม Q3 (ปล่อยไว้ ไม่ลบ) · แก้ §2 ให้ตรงโค้ดหลังคลื่น A/B (inject + endpoint summary + ตัด fallback) · ไม่มีโค้ด
 - **2026-10-15 คลื่น B ต่อ (DB-S7b + DB-S8b + DB-S8c) — agy เขียน Claude ตรวจเอง** → ผ่าน static ครบ · trace พบ: active-today scope ผ่าน `whereHasMorph(AcademyPost, academy_id)` + distinct user วันนี้ · **grades `GradebookScore` มี academy_id ตรง — ไม่ต้อง join 4 hop ตามที่กลัว** · ขยาย endpoint summary เพิ่ม `active_today` (member-level ป้อนการ์ด G1 เดิม) + `grades_pending` (gate grades.view) · FE: การ์ด "คะแนนรอตรวจ" ใบ 3 + grid lg:grid-cols-3 · agy (opus-5-5-high) แตะ 2 ไฟล์ (controller +26 / index.vue +20) ไม่แตะ route/migration · Claude ตรวจ: diff ตรงสเปค · php -l · SFC compile · grep ครบ · **ยังไม่ verify จอ 375px + ค่าจริง seeded + build (เจ้าของ)** · ⇒ **signal รวมครบ 4 ตัว (donations/attendance/active-today/grades)** DB-S8 ปิด
 - **2026-10-15 คลื่น B บางส่วน (DB-S8a) — agy เขียน Claude ตรวจเอง** → ผ่าน static ครบ · เจ้าของเคาะ Q1 ใหม่ = ใช้ activities (ไม่เอา last_seen column+middleware ⇒ **DB-S7a ยกเลิก**) · สแกนพบ `Activity` ไม่มี academy_id (active-today ไม่ใช่ count ตรง) + grades ต้อง join 4 hop ⇒ รอบนี้เอาเฉพาะ 2 signal ที่สะอาด (`donations_pending` + `attendance_today`) · agy (opus-5-5-high) แตะ 3 ไฟล์ (controller ใหม่ + academy.php +4 add-only + index.vue +48) **ไม่มี migration** · Claude ตรวจ: diff ตรงสเปค · `php -l` ผ่าน · `route:list` ยืนยัน wire ถูก · SFC compile ผ่าน · grep 4/4 · **ยังไม่ verify จอ 375px (login) + ค่าจริง seeded + build (เจ้าของ)** · DB-S7b/S8b (active-today) + DB-S8c (grades) เลื่อนรอบหน้า (ต้อง trace join)
