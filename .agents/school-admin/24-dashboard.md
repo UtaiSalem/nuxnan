@@ -18,9 +18,14 @@
 ## 2. Current State (จากการสแกนโค้ดจริง)
 
 ### Frontend
-- Page: [`ui/pages/academies/[name]/admin/index.vue`](../../ui/pages/academies/[name]/admin/index.vue) — หน้าเดียว, `layout: 'main'`, `ssr: false`
-  - **ไม่มีหน้าซ้ำ** — `admin/dashboard/admin.vue` และ `admin.vue` (parent) ไม่มีจริง (ปิดข้อกังวล OVERVIEW §140)
-  - โหลดข้อมูลใน `onMounted`: resolve academy by name → ยิง 3 กลุ่มขนาน (`fetchStats` / `fetchPendingRequests` / `fetchRecentActivities`)
+- **Parent layout: [`ui/pages/academies/[name]/admin.vue`](../../ui/pages/academies/[name]/admin.vue)** ⚠️ **แก้ audit รอบแรก: ไฟล์นี้มีจริง** (รอบแรกใช้ glob `[name]` ผิด มันตีเป็น char-class เลยหาไม่เจอ) — เป็น layout ของ admin ทั้งหมด:
+  - `provide('academyId')` / `provide('academyName')` / `provide('academy')` ให้ลูกทุกหน้า (`admin.vue:39-41`) — resolve academy ครั้งเดียวที่นี่
+  - **มี page guard อยู่แล้ว**: `middleware: ['auth']` + หลัง `fetchMyRole()` ถ้า `!isAdmin && !isTeacher` → `navigateTo(.../academies/{name})` (`admin.vue:304-324`)
+  - วาด sidebar เมนูทั้งหมดพร้อม gate รายอันด้วย `can()` + `<NuxtPage/>`
+- Page: [`ui/pages/academies/[name]/admin/index.vue`](../../ui/pages/academies/[name]/admin/index.vue) — `layout: 'main'`, `ssr: false`
+  - **ไม่มีหน้าซ้ำ** — `admin/dashboard/admin.vue` ไม่มีจริง (re-verify ด้วย glob ที่ถูกต้องแล้ว · ปิดข้อกังวล OVERVIEW §140)
+  - ⚠️ **ต่างจาก sibling (reports.vue ใช้ `inject('academyId')`)** — index.vue **resolve academy เอง** (`/api/academies/{name}` ซ้ำกับ parent) + `useAcademyRole(academyId)` ของตัวเอง (ยิง role ซ้ำอีกรอบ) ⇒ ดับเบิล fetch 2 เส้น
+  - โหลดใน `onMounted`: resolve academy → ยิง 3 กลุ่มขนาน (`fetchStats` / `fetchPendingRequests` / `fetchRecentActivities`)
 - Component: [`AcademyAdminRevenueWidget.vue`](../../ui/components/academy/revenue/AcademyAdminRevenueWidget.vue) — 4 การ์ดรายได้ (แต้มคงเหลือ/รายได้โฆษณา/รอตรวจสอบ/แคมเปญเปิด)
 - Composable: `useAcademyRole(academyId)` (→ `can()`), `useAcademyRevenue(academyId)` (→ `fetchRevenueDashboard` ยิง `/revenue/revenue`)
 
@@ -69,19 +74,21 @@
 
 **correctness (แดชบอร์ดรายงานเลขผิด — ขัดหน้าที่เมนูโดยตรง):**
 - **G1** การ์ด "ใช้งานวันนี้" = 0 ตลอดกาล (`index.vue:176-182`) — ไม่มี fetch เขียนค่า ต้องมี endpoint จริงหรือถอดการ์ดทิ้ง → **ติด Q1**
-- **G2** การ์ด "นักเรียน" ใช้ `stats.approved` = สมาชิก approved ทั้งหมด (ครู+นักเรียน+บุคลากร) แต่ติดป้าย "นักเรียน" ทั้งที่ API ส่ง `by_role.student` มาให้แล้ว (`:63`)
+- **G2** การ์ด "นักเรียน" ใช้ `stats.approved` = สมาชิก approved ทั้งหมด (ครู+นักเรียน+บุคลากร) แต่ติดป้าย "นักเรียน" (`:63`)
+  ⚠️ **แก้ audit: คีย์ถูกคือ `role_distribution.student` ไม่ใช่ `stats.by_role.student`** — `getMemberStats` (`AcademyMemberController.php:1130-1134`) คืน `role_distribution` ที่ระดับบนสุดของ response (ไม่ใช่ใต้ `stats`) ⇒ index.vue:66 อ่าน `statsRes.stats.by_role.teacher` = `undefined` เสมอ ครูจึงมาจาก fallback query `members?role=teacher` ตลอด (ยิงเส้นที่ 5 ทุกครั้ง) — ใช้ `role_distribution.student`/`role_distribution.teacher` แล้วตัด fallback ทิ้งได้
 - **G3** quick action "ดูรายงาน" ลิงก์ `.../admin` (วนกลับตัวเอง) ควรเป็น `.../admin/reports` (เมนู #21 มีจริง) (`:230`)
 - **G4** นับวิชา/กลุ่มด้วย `.length` ของ array (`:74`, `:81`) — เปราะถ้า endpoint เปลี่ยนเป็น paginate; ควรใช้ count/meta.total ให้ชัด
 - **G5** optimistic accept เพิ่ม `totalStudents++` เสมอ แม้คนที่อนุมัติเป็นครู (`:257`)
 
 **authz / guard:**
-- **G6** หน้าไม่มี page guard — `definePageMeta` มีแค่ layout+ssr (`:9-12`) ไม่มี middleware `academy.view` · quick action "จัดการกลุ่ม" (`:208`) + "ฝ่ายงาน/แผนก" (`:216`) ตั้ง `show:true` ไม่ผ่าน `can()`
+- **G6** ⚠️ **แก้ audit: หน้า _มี_ guard อยู่แล้วที่ parent** `admin.vue:313` (`!isAdmin && !isTeacher` → redirect) ไม่ใช่ "ไม่มี guard เลย" ตามที่เขียนรอบแรก · guard เป็น `isAdmin||isTeacher` ไม่ใช่ key `academy.view` ตรง ๆ (nuance ของ authz-model — priority ต่ำ) · **ส่วนที่ยังเป็น gap จริง:** quick action "จัดการกลุ่ม" (`:208`) + "ฝ่ายงาน/แผนก" (`:216`) ตั้ง `show:true` ไม่ผ่าน `can()` → ควร gate `can('groups.view')` / `can('academy.view')` ให้ตรงกับ sidebar parent (`admin.vue:121,127`)
 - **G7** widget รายได้เรนเดอร์ด้วย `v-if="academyId"` เท่านั้น (`:362`) ไม่ gate `finance.view` ที่ FE — endpoint gate จริงแล้ว (`academy.php:1199`) จึง **ไม่ใช่ data leak** แต่ role ไม่มี finance จะเห็นหัวข้อ "สรุปรายได้" + ช่องว่าง + ยิง 403 ที่ถูกกลืน ควรครอบทั้ง section ด้วย `can('finance.view')` (ตอนนี้ครอบแค่ลิงก์ `:366`)
 
 **polish:**
 - **G8** avatar คำขอใช้ `<img :src="profile_photo_url">` ตรง ๆ (`:400`) ไม่ผ่าน `useAvatar` — เสี่ยงกับดัก storage URL
 - **G9** `activity.created_at` แสดงดิบ (`:453`) ไม่ฟอร์แมต/relative time
 - **G10** ไม่มี error state — resolve academy ไม่ success (`:39`) → `isLoading=false` แล้วจอว่างเงียบ
+- **G13** ⚠️ **(เจอตอนเขียนสเปค)** index.vue resolve academy + role เองซ้ำกับ parent — ควร `inject('academyId'/'academyName'/'academy')` (เหมือน reports.vue) แล้วตัด `/api/academies/{name}` + `useAcademyRole` instance ของตัวเองทิ้ง → ลด API ซ้ำ 2 เส้น + consistency + `can()` อิง role ที่ parent fetch แล้ว
 
 **ทิศทาง (ไม่ใช่บั๊ก แต่คือเหตุผลที่เมนูนี้ทำท้ายสุด):**
 - **G11** แดชบอร์ดยังไม่ดึง signal จากเมนูที่ปิดไปแล้ว (เข้าเรียนวันนี้ #18 / คาบสอนวันนี้ #11 / ผลการเรียนค้างกรอก #19 / เยี่ยมบ้านค้าง #17 / เลือกตั้งที่เปิดอยู่ #25 / รายการการเงินรอตรวจ #23) → **ติด Q2**
@@ -103,9 +110,9 @@
 
 | Step | Title | Depends on | Deliverable | Status |
 |---|---|---|---|---|
-| **DB-S1** | แก้นิยามการ์ดให้ตรงความหมาย (G2+G4) | — | ใช้ `by_role.student` เป็น "นักเรียน", `by_role.teacher` เป็น "ครู" (ตัด fallback members?role ทิ้ง), นับวิชา/กลุ่มจาก count/meta ชัด ๆ | ⚪ |
-| **DB-S2** | ซ่อมลิงก์ quick action + สิทธิ์ (G3+G6 บางส่วน) | — | ลิงก์รายงาน→`/admin/reports`, "จัดการกลุ่ม"/"ฝ่ายงาน" gate ด้วย `can('groups.view')`/`can('departments.view')` แทน `show:true` | ⚪ |
-| **DB-S3** | page guard `academy.view` (G6) | — | เพิ่ม middleware เข้าหน้า (เทียบหน้า admin เมนูอื่นว่า guard ยังไง) + redirect ถ้าไม่ผ่าน | ⚪ |
+| **DB-S1** | inject academy + แก้นิยามการ์ด (G13+G2+G4) | — | เปลี่ยน index.vue มา `inject('academyId'/'academyName'/'academy')` + `useAcademyRole` ที่อิง academyId ที่ inject (ตัด `/api/academies/{name}` เอง) · "นักเรียน" = `role_distribution.student`, "ครู" = `role_distribution.teacher` (ตัด `stats.by_role` + fallback members?role ทิ้ง) · นับวิชา/กลุ่มจาก count/meta ชัด ๆ | ⚪ |
+| **DB-S2** | ซ่อมลิงก์ quick action + สิทธิ์ (G3+G6) | — | ลิงก์รายงาน→`/admin/reports`, "จัดการกลุ่ม"/"ฝ่ายงาน" gate ด้วย `can('groups.view')`/`can('academy.view')` แทน `show:true` (ให้ตรง sidebar parent) | ⚪ |
+| ~~DB-S3~~ | ~~page guard academy.view~~ | — | **ตัดทิ้ง** — parent `admin.vue:313` guard อยู่แล้ว (isAdmin‖isTeacher) · การ align เป็น key `academy.view` เป็น authz-model nuance priority ต่ำ แยกไปทำพร้อม #1 ถ้าจะทำ | ❌ ไม่ทำ |
 | **DB-S4** | gate widget รายได้ (G7) | — | ครอบ section "สรุปรายได้" ด้วย `can('finance.view')` ทั้งก้อน (ไม่ยิง endpoint/ไม่โชว์หัวข้อถ้าไม่มีสิทธิ์) | ⚪ |
 | **DB-S5** | optimistic + polish (G5+G8+G9+G10) | — | accept ไม่เดา role (refetch stats หรือไม่ ++), avatar ผ่าน `useAvatar`, ฟอร์แมต `created_at`, error/empty state ระดับหน้า | ⚪ |
 | **DB-S6** | ตรวจจอจริง 375/768/1280 | DB-S1..S5 | banner `h-52` absolute ไม่ทับ stats, การ์ดไม่ล้น, touch target ครบ | ⚪ |
@@ -133,4 +140,5 @@ Report back: diff สรุป + ผลเทสต์ (เลข assert จร�
 
 ## 9. Review Log
 - **2026-10-15** — audit ขั้น [1]+[2] เสร็จ (Claude): สแกนโค้ดจริง, ยืนยันไม่มีหน้าซ้ำ, widget รายได้ไม่ใช่ leak (endpoint gate finance.view จริง), พบ 10 gap (G1–G10) + 2 ทิศทาง (G11/G12) + 1 หนี้ข้ามเมนู · แตก DB-S1..S10 (คลื่น A ส่งได้เลย · คลื่น B รอ Q1–Q3) · ยังไม่ส่ง step ให้ agy
+- **2026-10-15 (แก้ audit ตอนเขียนสเปคคลื่น A)** — glob `[name]` รอบแรกตีเป็น char-class เลยพลาด **parent `admin.vue`** ซึ่งมีจริงและเป็นตัว provide academyId/Name/academy + guard (`isAdmin‖isTeacher`). แก้ 4 จุด: (1) §2 parent มีจริง+guard มีแล้ว (2) G6 ไม่ใช่ "ไม่มี guard" — เหลือ gap แค่ 2 quick action `show:true` (3) G2 คีย์ถูกคือ `role_distribution.*` ไม่ใช่ `stats.by_role` (4) เพิ่ม G13 double-fetch → inject แทน. ผล: **DB-S3 ตัดทิ้ง** (guard ซ้ำ), inject refactor รวมเข้า DB-S1. คลื่น A เหลือ DB-S1/S2/S4/S5 (+S6 verify, S10 test). ยังไม่ส่ง agy — รอเจ้าของ OK scope ที่ปรับ
 - **2026-10-15** — เจ้าของเคาะ Q1–Q3: **Q1=endpoint ใหม่นับ `last_seen`** (⇒ DB-S7 แตกเป็น S7a กลไก last_seen + S7b การ์ด) · **Q2=ชุดเล็ก action-ค้าง** (การเงินรอตรวจ+เข้าเรียนวันนี้+ผลการเรียนค้าง ⇒ DB-S8) · **Q3=ปล่อย widget builder ไว้ dormant** (⇒ DB-S9 เหลือแค่ note) · ทุก step ปลดล็อกแล้ว พร้อมส่ง agy (เริ่มคลื่น A: DB-S1..S6)
