@@ -697,7 +697,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     // =====================================================
 
     // Fee Structure - โครงสร้างค่าธรรมเนียม
-    Route::prefix('{academy}/fee-structures')->middleware(['academy.visibility:content', 'academy.permission:finance.view'])->group(function () {
+    Route::prefix('{academy}/fee-structures')->middleware(['academy.visibility:content', 'academy.permission:settings.manage'])->group(function () {
         Route::get('/', [FeeStructureController::class, 'index'])->name('api.academy.feeStructures.index');
         Route::post('/', [FeeStructureController::class, 'store'])->name('api.academy.feeStructures.store');
         Route::get('/fee-types', [FeeStructureController::class, 'feeTypes'])->name('api.academy.feeStructures.feeTypes');
@@ -711,7 +711,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     });
 
     // Tuition Fee - ใบแจ้งหนี้ค่าเล่าเรียน
-    Route::prefix('{academy}/tuition-fees')->middleware(['academy.visibility:content', 'academy.permission:finance.view'])->group(function () {
+    Route::prefix('{academy}/tuition-fees')->middleware(['academy.visibility:content', 'academy.permission:settings.manage'])->group(function () {
         Route::get('/', [TuitionFeeController::class, 'index'])->name('api.academy.tuitionFees.index');
         Route::post('/', [TuitionFeeController::class, 'store'])->name('api.academy.tuitionFees.store');
         Route::post('/bulk-generate', [TuitionFeeController::class, 'bulkGenerate'])->name('api.academy.tuitionFees.bulkGenerate');
@@ -724,7 +724,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     });
 
     // Payments - การชำระเงิน
-    Route::prefix('{academy}/payments')->middleware(['academy.visibility:content', 'academy.permission:finance.view'])->group(function () {
+    Route::prefix('{academy}/payments')->middleware(['academy.visibility:content', 'academy.permission:settings.manage'])->group(function () {
         Route::get('/', [PaymentController::class, 'index'])->name('api.academy.payments.index');
         Route::post('/', [PaymentController::class, 'store'])->name('api.academy.payments.store');
         Route::get('/summary', [PaymentController::class, 'summary'])->name('api.academy.payments.summary');
@@ -736,7 +736,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     });
 
     // Expenses - รายจ่าย
-    Route::prefix('{academy}/expenses')->middleware(['academy.visibility:content', 'academy.permission:finance.view'])->group(function () {
+    Route::prefix('{academy}/expenses')->middleware(['academy.visibility:content', 'academy.permission:settings.manage'])->group(function () {
         Route::get('/', [ExpenseController::class, 'index'])->name('api.academy.expenses.index');
         Route::post('/', [ExpenseController::class, 'store'])->name('api.academy.expenses.store');
         Route::get('/summary', [ExpenseController::class, 'summary'])->name('api.academy.expenses.summary');
@@ -753,7 +753,7 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     });
 
     // Budgets - งบประมาณ
-    Route::prefix('{academy}/budgets')->middleware(['academy.visibility:content', 'academy.permission:finance.view'])->group(function () {
+    Route::prefix('{academy}/budgets')->middleware(['academy.visibility:content', 'academy.permission:settings.manage'])->group(function () {
         Route::get('/', [BudgetController::class, 'index'])->name('api.academy.budgets.index');
         Route::post('/', [BudgetController::class, 'store'])->name('api.academy.budgets.store');
         Route::get('/summary', [BudgetController::class, 'summary'])->name('api.academy.budgets.summary');
