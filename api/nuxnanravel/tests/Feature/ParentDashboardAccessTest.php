@@ -10,6 +10,8 @@ namespace Tests\Feature {
 
     use App\Models\Academy;
     use App\Models\ClassroomStudent;
+    use App\Models\SchoolAnnouncement;
+    use App\Models\SchoolEvent;
     use App\Models\Student;
     use App\Models\StudentGuardianLink;
     use App\Models\User;
@@ -162,6 +164,87 @@ namespace Tests\Feature {
             $ids = collect($response->json('children'))->pluck('id')->toArray();
             $this->assertContains($student1->id, $ids);
             $this->assertContains($student2->id, $ids);
+        }
+
+        public function test_parent_sees_published_announcement()
+        {
+            $academy = Academy::factory()->create();
+            [$student, $guardian] = $this->createStudentWithGuardian($academy);
+            $parentUser = User::factory()->create();
+            $owner = User::factory()->create();
+            $req = app(GuardianAccountLinkService::class)->createRequest($academy, $student, $parentUser, $owner, $guardian);
+            app(GuardianAccountLinkService::class)->accept($req, $parentUser);
+
+            SchoolAnnouncement::create([
+                'academy_id' => $academy->id,
+                'created_by' => $owner->id,
+                'title' => 'ประกาศถึงผู้ปกครอง',
+                'content' => 'เนื้อหาทดสอบ',
+                'target_audience' => ['all'],
+                'is_published' => true,
+                'published_at' => now()->subDay(),
+            ]);
+
+            $this->actingAs($parentUser, 'api')
+                ->getJson("/api/academies/{$academy->id}/parent/announcements")
+                ->assertOk()
+                ->assertJsonPath('success', true)
+                ->assertJsonCount(1, 'announcements');
+        }
+
+        public function test_parent_sees_upcoming_event()
+        {
+            $academy = Academy::factory()->create();
+            [$student, $guardian] = $this->createStudentWithGuardian($academy);
+            $parentUser = User::factory()->create();
+            $owner = User::factory()->create();
+            $req = app(GuardianAccountLinkService::class)->createRequest($academy, $student, $parentUser, $owner, $guardian);
+            app(GuardianAccountLinkService::class)->accept($req, $parentUser);
+
+            SchoolEvent::create([
+                'academy_id' => $academy->id,
+                'created_by' => $owner->id,
+                'title' => 'กิจกรรมวันพ่อ',
+                'start_datetime' => now()->addDays(3),
+                'end_datetime' => now()->addDays(3)->addHours(2),
+                'status' => 'published',
+            ]);
+
+            $this->actingAs($parentUser, 'api')
+                ->getJson("/api/academies/{$academy->id}/parent/events")
+                ->assertOk()
+                ->assertJsonPath('success', true)
+                ->assertJsonCount(1, 'events');
+        }
+
+        public function test_parent_fee_status_returns_ok()
+        {
+            $academy = Academy::factory()->create();
+            [$student, $guardian] = $this->createStudentWithGuardian($academy);
+            $parentUser = User::factory()->create();
+            $owner = User::factory()->create();
+            $req = app(GuardianAccountLinkService::class)->createRequest($academy, $student, $parentUser, $owner, $guardian);
+            app(GuardianAccountLinkService::class)->accept($req, $parentUser);
+
+            $this->actingAs($parentUser, 'api')
+                ->getJson("/api/academies/{$academy->id}/parent/fees")
+                ->assertOk()
+                ->assertJsonPath('success', true);
+        }
+
+        public function test_parent_child_attendance_returns_ok()
+        {
+            $academy = Academy::factory()->create();
+            [$student, $guardian] = $this->createStudentWithGuardian($academy);
+            $parentUser = User::factory()->create();
+            $owner = User::factory()->create();
+            $req = app(GuardianAccountLinkService::class)->createRequest($academy, $student, $parentUser, $owner, $guardian);
+            app(GuardianAccountLinkService::class)->accept($req, $parentUser);
+
+            $this->actingAs($parentUser, 'api')
+                ->getJson("/api/academies/{$academy->id}/parent/children/{$student->id}/attendance")
+                ->assertOk()
+                ->assertJsonPath('success', true);
         }
     }
 }
