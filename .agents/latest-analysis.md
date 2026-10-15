@@ -4837,3 +4837,58 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
   - UI Scope Tabs rendered above filter row: `[ กำลังเรียน (n) ] [ ที่ฉันสอน (n) ] [ ทั้งหมด (n) ]`. Hide teacher tab for non-teachers/admins.
   - `resetCourseFilters()` maintains `scope = suggested_scope` and `academic_year/semester = current_term.*`.
 
+
+---
+
+# 2026-10-14 — Work Plan: ปิดงานบริหารโรงเรียนให้ครบทั้ง 27 เมนู
+
+- **Status:** Work Plan (ยังไม่ลงมือ) — วางแผนจาก `.agents/school-admin/OVERVIEW.md` (sync 2026-10-14) + verify โค้ดจริง 3 จุด (#8/#11/#14)
+- **สถานะรวม:** 🟢 16/27 ปิดจริง · คงเหลือ 11 เมนูไม่เขียว (#6 เฟส C เหลือ G-S14, #8, #11, #12, #13, #14, #16, #17, #21, #22, #23, #24)
+- **cross-check:** agy วิเคราะห์อิสระ (`scratchpad/agy-REPORT.md`, VERIFIED-BY-GREP: 8) ตรงกับสรุป Claude ในแกนหลัก · discrepancy เดียว = OVERVIEW ติดป้าย 🔴 ให้ #12/#13/#14 ทั้งที่โค้ดเสร็จ → แก้เป็น 🟡 แล้ว (commit f1a34d63)
+
+## คลื่น 0 — ปิดได้ทันที "ไม่ต้องเขียนโค้ดเพิ่ม" (เจ้าของรัน verify) — 5 เมนู
+โค้ด+เทสต์เสร็จหมด ติดแค่รันบน MySQL จริง + build → ผ่าน = 🟢 ทันที
+- #12 คอร์ส: `php artisan test -c phpunit.mysql.xml --filter=AcademyCourseCrudTest` + คลิก 375px + `npm run build`
+- #13 หลักสูตร: `--filter=CurriculumAuthzTest`
+- #14 บุคลากร: `php artisan migrate` + `--filter=StaffAuthzTest` + `pint` + `npm run build`
+- #21 รายงาน: `--filter=ReportsSummary` + build + จอ 375/768/1280
+- #22 ประวัติกิจกรรม: `php artisan migrate` + test MySQL + build
+→ ทำก่อนสุด: ปิด 5 เมนูด้วยแรงน้อยสุด
+
+## คลื่น 1 — เจ้าของต้องเคาะก่อน (critical path, บล็อกการเขียนโค้ด)
+**#8 ระบบบริหารโรงเรียน (gap P0 ตัวจริงที่เหลือ):**
+- Q1 เมนู #8 คืออะไร: (ก)hub คงเดิม · (ข)ตัดแท็บสมาชิกซ้ำ · (ค)แตกเป็น 5 เมนูจริง → เปลี่ยนขอบเขต S5–S9 ทั้งหมด
+- Q2 3 แท็บเข้าไม่ถึง (แต้ม/ห้องสมุด/ทรัพย์สิน, ข้อมูล 0 แถว): ขึ้นหน้าจริง หรือลบ 791 บรรทัด
+- Q3 โมดูลการเงินใช้จริงเมื่อไหร่: ยังไม่ใช้ปีนี้→ปิดทั้งกลุ่ม `settings.manage` ก่อน (ถูกสุด) · ใช้เทอมนี้→SM-S2 ละเอียด + reconcile finance schema-drift ทั้งหมวด
+- Q4 `payments`/`tuition_fees` ผูก wallet/points ไหม
+**#23 รายได้:**
+- Q1 แก้ authz: `finance.view` ดูแคมเปญ + `finance.manage` อนุมัติบริจาค/จัดการแคมเปญ (คง tenant) — แนะนำ "ใช่"
+- Q2 รวมการเงินอื่น (fee/tuition/expense/budget จาก #8) เข้า #23 ไหม หรือคงเฉพาะ donations/campaigns
+- Q3 Phase 2 (export/กราฟ/filter) หรือปิดที่ parity หลังแก้ Q1
+
+## คลื่น 2 — เขียนโค้ด (บางส่วนทำได้เลยไม่ต้องรอ Q)
+- #8 ทำได้ทันที: SM-S3/S4/S6 (บั๊กชัด ไม่ขึ้นกับ Q) → ส่ง agy ได้เลย · SM-S2/S5/S7/S9 + finance schema-drift → รอ Q1/Q2/Q3
+- #23: หลัง Q1→RV-S1/S2/S3 (align authz, เล็ก) · Q2→RV-S4 · Q3→RV-S5
+- #6 เฟส C: G-S12a–e + G-S13 เสร็จ (แดชบอร์ดเปิดได้) · เหลือ **G-S14 เดียว** = ซ่อม 4 ส่วนแดชบอร์ด (ประกาศ/กิจกรรม/การเข้าเรียน/ค่าธรรมเนียม) ที่อ้างตารางไม่มีจริง (ตัดสินครบ §6.5) → ส่ง agy ได้เลย
+
+## คลื่น 3 — polish/deferred (ใช้งานได้แล้ว ไม่เร่ง)
+- #11 ตารางเรียน: SC-S10a (พิมพ์/export) · S10b (UI bulk) · S10c (คัดลอกข้ามภาคเรียน)
+- #16 บัตรนักเรียน: SCD-S4/S7 — owner-gated (คง public route) ทำเมื่อพร้อม
+- #17 เยี่ยมบ้าน: JWT ครบ · legacy public คงไว้ตามเจ้าของ → ไม่มีงานบังคับ
+
+## คลื่น 4 — ทำท้ายสุด
+- #24 แดชบอร์ด: รวม signal จากทุกเมนู (รอเมนูอื่นเสร็จก่อน)
+
+## หนี้ข้ามเมนู (track แยก ทำขนานได้)
+1. `guardians.user_id` ว่างทั้งตาราง → ฟีเจอร์ผู้ปกครองใช้ไม่ได้ (ตารางเรียน #11) — งานป้อนข้อมูล/ผูกบัญชี ไม่ใช่โค้ด
+2. G25 migrate-from-zero พัง (schema drift, FK 14 จุด, 5 ตารางไม่มี migration) — เจ้าของเคาะ "ยังไม่ซ่อม" คงไว้
+3. งานไม่ใช่โค้ด: ซ้อมเลือกตั้ง 1 ห้อง (#25 §9) · จัดครู 120 คนเข้า 5 ฝ่าย (#9, รอใบกรอกฝ่ายบุคคล)
+
+## ลำดับลงมือที่แนะนำ
+1. เจ้าของรัน verify คลื่น 0 → ปิด #12/#13/#14/#21/#22 (5 เมนูเขียวทันที)
+2. เจ้าของเคาะ Q (#8 Q1–Q4, #23 Q1–Q3)
+3. ส่ง agy ขนาน: #8 SM-S3/S4/S6 + #6 G-S14 (ไม่ต้องรอ Q)
+4. หลังเคาะ Q: #23 RV-S*, #8 SM-S2/S5/S7/S9 + finance
+5. คลื่น 3 polish #11 SC-S10a/b/c
+6. #24 แดชบอร์ด (ท้ายสุด)
+→ หลังทำครบ: เขียว 26/27 (เหลือ #16/#17 owner-gated คงสภาพ)
