@@ -10,6 +10,7 @@ const props = defineProps<Props>()
 const emit = defineEmits(['update:modelValue', 'submit', 'keydown'])
 
 const inputRef = ref<HTMLInputElement | null>(null)
+useKeyboardAwareInput(inputRef)
 
 function onInput(e: Event) {
   const target = e.target as HTMLInputElement

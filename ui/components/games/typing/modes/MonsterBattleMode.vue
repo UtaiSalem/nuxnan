@@ -34,6 +34,7 @@ const sharedState = reactive({
 })
 
 const inputRef   = ref<HTMLInputElement | null>(null)
+useKeyboardAwareInput(inputRef)
 
 async function initGame() {
   // โหลดคำศัพท์ก่อน

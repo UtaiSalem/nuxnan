@@ -33,6 +33,7 @@ const sharedState = reactive({
 })
 
 const inputRef = ref<HTMLInputElement | null>(null)
+useKeyboardAwareInput(inputRef)
 
 async function initGame() {
   const words = await fetchWords(props.lang, props.difficulty, 50)

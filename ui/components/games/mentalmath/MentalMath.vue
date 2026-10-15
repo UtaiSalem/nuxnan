@@ -59,6 +59,7 @@ const question = ref<Question>({ nums: [], answer: 0 })
 const answerInput = ref('')
 const isSubmitting = ref(false)
 const inputRef = ref<HTMLInputElement | null>(null)
+useKeyboardAwareInput(inputRef)
 
 // Scoring State
 const score = ref(0)

@@ -12,6 +12,8 @@ const message = ref('')
 const isGameOver = ref(false)
 const attempts = ref(0)
 const score = ref(0)
+const inputRef = ref(null)
+useKeyboardAwareInput(inputRef)
 
 function generateRandomNumber() {
   return Math.floor(Math.random() * 100) + 1
@@ -74,7 +76,7 @@ watch(isGameOver, (newValue) => {
 })
 </script>
 <template>
-  <div class="w-full h-full flex items-center justify-center min-h-[50vh]">
+  <div class="w-full h-full flex items-start justify-center min-h-[50vh] pt-4 sm:items-center sm:pt-0">
       <div class="bg-white dark:bg-vikinger-dark-100 rounded-2xl shadow-xl max-w-md w-full border border-gray-100 dark:border-vikinger-dark-50 overflow-hidden">
           <div class="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 text-center">
                <h1 class="text-3xl font-bold text-white mb-2">เกมทายตัวเลข</h1>
@@ -103,6 +105,7 @@ watch(isGameOver, (newValue) => {
 
               <div class="mb-6 relative">
                   <input 
+                      ref="inputRef"
                       v-model="guess" 
                       type="text"
                       inputmode="numeric"
