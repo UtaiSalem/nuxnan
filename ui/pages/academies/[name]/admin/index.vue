@@ -33,7 +33,7 @@ const recentActivities = ref<any[]>([])
 const pendingRequests = ref<any[]>([])
 const isLoading = ref(true)
 const loadError = ref(false)
-const summary = ref<{ donations_pending?: number; attendance_today?: number }>({})
+const summary = ref<{ active_today?: number; donations_pending?: number; attendance_today?: number; grades_pending?: number }>({})
 
 const loadDashboard = async () => {
   if (!academyId.value) return
@@ -127,6 +127,7 @@ const fetchSummary = async () => {
     const response: any = await api.get(`/api/academies/${academyId.value}/dashboard/summary`)
     if (response.success) {
       summary.value = response.summary || {}
+      stats.value.activeToday = summary.value.active_today ?? 0
     }
   } catch (err) {
     console.error('Failed to fetch summary:', err)
@@ -352,8 +353,8 @@ const rejectRequest = async (memberId: number) => {
 
       <!-- Action signals: งานค้างจากเมนูอื่น (รอบนี้ บริจาค + เข้าเรียน) -->
       <div
-        v-if="summary.donations_pending !== undefined || summary.attendance_today !== undefined"
-        class="grid grid-cols-1 gap-4 sm:grid-cols-2"
+        v-if="summary.donations_pending !== undefined || summary.attendance_today !== undefined || summary.grades_pending !== undefined"
+        class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
       >
         <NuxtLink
           v-if="summary.donations_pending !== undefined"
@@ -379,6 +380,19 @@ const rejectRequest = async (memberId: number) => {
           <div class="min-w-0 flex-1">
             <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ summary.attendance_today }}</p>
             <p class="text-sm text-gray-500 dark:text-gray-400 break-words">บันทึกการเข้าเรียนวันนี้</p>
+          </div>
+        </NuxtLink>
+        <NuxtLink
+          v-if="summary.grades_pending !== undefined"
+          :to="`/academies/${academyName}/admin/gradebook`"
+          class="flex items-center gap-4 rounded-lg bg-white p-5 shadow-sm transition hover:shadow-lg dark:bg-gray-800"
+        >
+          <div class="flex-shrink-0 rounded-xl bg-purple-500/10 p-3 text-purple-600 dark:text-purple-400">
+            <Icon icon="fluent:star-24-filled" class="h-6 w-6" />
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ summary.grades_pending }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 break-words">คะแนนรอตรวจ</p>
           </div>
         </NuxtLink>
       </div>
