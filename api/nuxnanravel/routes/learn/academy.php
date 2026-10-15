@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Learn\Academy\AcademicYearController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyActivityController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyCourseController;
+use App\Http\Controllers\Api\Learn\Academy\AcademyDashboardController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyGroupAdminController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyGroupController;
 use App\Http\Controllers\Api\Learn\Academy\AcademyGroupMuteController;
@@ -187,6 +188,9 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     Route::patch('/{academy}/posts/{post}', [AcademyPostController::class, 'update'])->name('api.academy.posts.update');
     Route::delete('/{academy}/posts/{post}', [AcademyPostController::class, 'destroy'])->name('api.academy.posts.destroy');
     Route::get('/{academy}/activities', [AcademyActivityController::class, 'getActivities'])->middleware('academy.visibility:content')->name('api.academy.activities.getActivities');
+    Route::get('/{academy}/dashboard/summary', [AcademyDashboardController::class, 'summary'])
+        ->middleware('academy.visibility:content')
+        ->name('api.academy.dashboard.summary');
     Route::get('/{academy}/groups', [AcademyGroupController::class, 'index'])->middleware('academy.visibility:content')->name('api.academy.groups.index');
     Route::post('/{academy}/groups', [AcademyGroupController::class, 'store'])->name('api.academy.groups.store');
 

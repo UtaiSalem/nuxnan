@@ -33,6 +33,7 @@ const recentActivities = ref<any[]>([])
 const pendingRequests = ref<any[]>([])
 const isLoading = ref(true)
 const loadError = ref(false)
+const summary = ref<{ donations_pending?: number; attendance_today?: number }>({})
 
 const loadDashboard = async () => {
   if (!academyId.value) return
@@ -44,6 +45,7 @@ const loadDashboard = async () => {
       fetchStats(),
       fetchPendingRequests(),
       fetchRecentActivities(),
+      fetchSummary(),
     ])
   } catch (err: any) {
     console.error('Failed to load dashboard data:', err)
@@ -115,6 +117,19 @@ const fetchRecentActivities = async () => {
     }
   } catch (err) {
     console.error('Failed to fetch activities:', err)
+  }
+}
+
+const fetchSummary = async () => {
+  if (!academyId.value) return
+
+  try {
+    const response: any = await api.get(`/api/academies/${academyId.value}/dashboard/summary`)
+    if (response.success) {
+      summary.value = response.summary || {}
+    }
+  } catch (err) {
+    console.error('Failed to fetch summary:', err)
   }
 }
 
@@ -333,6 +348,39 @@ const rejectRequest = async (memberId: number) => {
           <small class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ stat.caption }}</small>
         </div>
         </div>
+      </div>
+
+      <!-- Action signals: งานค้างจากเมนูอื่น (รอบนี้ บริจาค + เข้าเรียน) -->
+      <div
+        v-if="summary.donations_pending !== undefined || summary.attendance_today !== undefined"
+        class="grid grid-cols-1 gap-4 sm:grid-cols-2"
+      >
+        <NuxtLink
+          v-if="summary.donations_pending !== undefined"
+          :to="`/academies/${academyName}/admin/revenue`"
+          class="flex items-center gap-4 rounded-lg bg-white p-5 shadow-sm transition hover:shadow-lg dark:bg-gray-800"
+        >
+          <div class="flex-shrink-0 rounded-xl bg-amber-500/10 p-3 text-amber-600 dark:text-amber-400">
+            <Icon icon="fluent:money-hand-24-filled" class="h-6 w-6" />
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ summary.donations_pending }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 break-words">รายการบริจาครอตรวจสอบ</p>
+          </div>
+        </NuxtLink>
+        <NuxtLink
+          v-if="summary.attendance_today !== undefined"
+          :to="`/academies/${academyName}/admin/school-attendance`"
+          class="flex items-center gap-4 rounded-lg bg-white p-5 shadow-sm transition hover:shadow-lg dark:bg-gray-800"
+        >
+          <div class="flex-shrink-0 rounded-xl bg-blue-500/10 p-3 text-blue-600 dark:text-blue-400">
+            <Icon icon="fluent:clipboard-task-24-filled" class="h-6 w-6" />
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ summary.attendance_today }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 break-words">บันทึกการเข้าเรียนวันนี้</p>
+          </div>
+        </NuxtLink>
       </div>
 
       <!-- Quick Actions (HopeUI widget-card style) -->
