@@ -9,10 +9,9 @@ definePageMeta({
 })
 
 const route = useRoute()
-const api = useApi()
 const academyName = computed(() => route.params.name as string)
 
-const academyId = ref<number | null>(null)
+const academyId = inject<Ref<number | null>>('academyId', ref(null))
 const { can, isOwner, isAdmin, fetchMyRole } = useAcademyRole(academyId)
 const { canViewRevenue, canManageRevenue, fetchRevenueDashboard, revenueDashboard } = useAcademyRevenue(academyId)
 
@@ -28,27 +27,26 @@ const tabs = computed(() => [
 
 const visibleTabs = computed(() => tabs.value.filter(tab => can(tab.permission) || isOwner.value || isAdmin.value))
 
-onMounted(async () => {
+async function initRevenuePage() {
+  if (!academyId.value) return
   try {
-    const response: any = await api.get(`/api/academies/${academyName.value}`)
-    if (response.success) {
-      academyId.value = response.academy.id
-      await fetchMyRole()
-      
-      if (!can('finance.view') && !isOwner.value && !isAdmin.value) {
-        navigateTo(`/academies/${academyName.value}/admin`)
-        return
-      }
-      
-      await fetchRevenueDashboard()
+    await fetchMyRole()
+
+    if (!can('finance.view') && !isOwner.value && !isAdmin.value) {
+      navigateTo(`/academies/${academyName.value}/admin`)
+      return
     }
+
+    await fetchRevenueDashboard()
   } catch (err) {
     console.error('Failed to load revenue page:', err)
     navigateTo(`/academies/${academyName.value}/admin`)
   } finally {
     isLoading.value = false
   }
-})
+}
+
+watch(academyId, () => { initRevenuePage() }, { immediate: true })
 </script>
 
 <template>

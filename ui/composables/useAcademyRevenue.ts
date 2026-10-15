@@ -127,9 +127,9 @@ export const useAcademyRevenue = (academyId: MaybeRef<number | null>) => {
   const resolvedAcademyId = computed(() => toValue(academyId))
 
   const roleAcademyId = computed(() => resolvedAcademyId.value)
-  const { can } = useAcademyRole(roleAcademyId)
-  const canViewRevenue = computed(() => can('finance.view'))
-  const canManageRevenue = computed(() => can('finance.manage'))
+  const { can, isAdmin } = useAcademyRole(roleAcademyId)
+  const canViewRevenue = computed(() => can('finance.view') || isAdmin.value)
+  const canManageRevenue = computed(() => can('finance.manage') || isAdmin.value)
 
   const supportSummary = ref<AcademySupportSummary | null>(null)
   const donations = ref<AcademyPublicDonation[]>([])
