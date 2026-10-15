@@ -325,28 +325,26 @@ const rejectRequest = async (memberId: number) => {
         </div>
 
         <!-- Stats Cards (HopeUI card style, pulled up over the banner) -->
-        <div class="grid grid-cols-1 gap-4 px-1 sm:grid-cols-2 xl:grid-cols-3">
+        <div class="grid grid-cols-2 gap-3 px-1 sm:gap-4 lg:grid-cols-3">
         <div
           v-for="stat in statCards"
           :key="stat.label"
-          class="relative flex flex-col overflow-hidden rounded-lg bg-white p-5 shadow-md transition hover:shadow-lg dark:bg-gray-800"
+          class="relative flex flex-col overflow-hidden rounded-lg bg-white p-3 shadow-md transition hover:shadow-lg dark:bg-gray-800 sm:p-5"
         >
-          <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <div class="flex items-center gap-3">
-              <div :class="['rounded p-2.5', stat.tone]">
-                <Icon :icon="stat.icon" class="w-5 h-5" />
-              </div>
-              <p class="font-medium text-gray-900 dark:text-white">{{ stat.label }}</p>
+          <div class="mb-2 flex items-center justify-between gap-2">
+            <div :class="['flex-shrink-0 rounded p-2 sm:p-2.5', stat.tone]">
+              <Icon :icon="stat.icon" class="h-5 w-5" />
             </div>
             <NuxtLink
               :to="stat.to"
-              class="rounded-full bg-primary-500/10 px-2 py-1 text-xs font-semibold leading-none text-primary-600 transition hover:bg-primary-500/20 dark:text-primary-400"
+              class="flex-shrink-0 rounded-full bg-primary-500/10 px-2 py-1 text-xs font-semibold leading-none text-primary-600 transition hover:bg-primary-500/20 dark:text-primary-400"
             >
               ดู
             </NuxtLink>
           </div>
-          <h2 class="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">{{ stat.value }}</h2>
-          <small class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ stat.caption }}</small>
+          <p class="font-medium text-gray-900 dark:text-white text-sm sm:text-base break-words">{{ stat.label }}</p>
+          <h2 class="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl lg:text-3xl">{{ stat.value }}</h2>
+          <small class="mt-0.5 text-xs text-gray-500 dark:text-gray-400 break-words">{{ stat.caption }}</small>
         </div>
         </div>
       </div>
@@ -400,26 +398,26 @@ const rejectRequest = async (memberId: number) => {
       <!-- Quick Actions (HopeUI widget-card style) -->
       <div>
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">การดำเนินการด่วน</h2>
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
           <template v-for="action in quickActions" :key="action.title">
             <NuxtLink
               v-if="action.show"
               :to="action.to"
-              class="group relative flex flex-col overflow-hidden rounded-lg bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg dark:bg-gray-800"
+              class="group relative flex flex-col overflow-hidden rounded-lg bg-white p-3 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg dark:bg-gray-800 sm:p-5"
             >
-              <div class="mb-4 flex items-start justify-between">
-                <div :class="['flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br shadow-md', action.color]">
-                  <Icon :icon="action.icon" class="w-6 h-6 text-white" />
+              <div class="mb-3 flex items-start justify-between sm:mb-4">
+                <div :class="['flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br shadow-md sm:h-12 sm:w-12', action.color]">
+                  <Icon :icon="action.icon" class="h-5 w-5 text-white sm:h-6 sm:w-6" />
                 </div>
                 <Icon
                   icon="fluent:arrow-right-24-regular"
                   class="w-5 h-5 -translate-x-1 text-primary-500 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100"
                 />
               </div>
-              <h3 class="font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+              <h3 class="font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors text-sm sm:text-base break-words">
                 {{ action.title }}
               </h3>
-              <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ action.description }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 sm:text-sm break-words">{{ action.description }}</p>
             </NuxtLink>
           </template>
         </div>
