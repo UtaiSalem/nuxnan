@@ -52,11 +52,14 @@ git status --short          # ต้องสะอาด — ต้องมี
 agy --print "Read <spec path> and follow it exactly." \
   --add-dir "C:\wamp64\www\nuxnan" \
   --add-dir "<scratchpad dir>" \
-  --model gemini-3.1-pro-high \
+  --model claude-opus-5-5-high \
   --mode accept-edits \
   --print-timeout 20m
 ```
 
+- **ชื่อโมเดลเปลี่ยนตาม catalog — เช็คก่อนทุกครั้งด้วย `agy models`** (ล่าสุด 2026-10-15 ไม่มี `gemini-3.1-pro-high` แล้ว ยิงไปจะ exit 1 ทันที)
+  slug ปัจจุบัน: `claude-opus-5-5-high` / `-medium` / `-low` · `claude-sonnet-5-5-high/medium/low` · `gemini-3.8-flash-high/medium/low` · `gpt-oss-120b-medium`
+  **effort ฝังอยู่ใน slug แล้ว** (เช่น `-high`) — อย่าส่ง `--effort` แยก · เลือก opus-high สำหรับงานที่ instruction-following สำคัญ · flash/sonnet สำหรับ shard กลไกล้วนที่อยากเร็ว/ถูก
 - รันผ่าน Bash `run_in_background` เสมอ (งานกินเวลาหลายนาที)
 - `--mode accept-edits` เท่านั้น — **ห้าม** `--dangerously-skip-permissions`, `--mode plan` คือโหมดอ่านอย่างเดียว
 - `--add-dir` ต้องมีทั้ง repo และ scratchpad มิฉะนั้นมันอ่านสเปคไม่เจอ
