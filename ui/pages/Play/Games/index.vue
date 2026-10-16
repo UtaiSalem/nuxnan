@@ -106,6 +106,14 @@ const learningPath = [
     icon: 'fluent:calculator-24-filled',
     route: '/practice/abacus',
     gradient: 'from-emerald-400 to-teal-500'
+  },
+  {
+    step: 5,
+    title: 'คิดในใจ (Anzan)',
+    description: 'ตัวเลขโผล่ทีละตัว บวก/ลบในใจ แล้วตอบผลรวม',
+    icon: 'fluent:brain-circuit-24-filled',
+    route: '/practice/anzan',
+    gradient: 'from-fuchsia-500 to-purple-600'
   }
 ]
 
