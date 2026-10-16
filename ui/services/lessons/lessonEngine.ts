@@ -26,7 +26,8 @@ export const LESSON_STAGES: LessonStage[] = [
   { id: 'fingers', order: 1, title: 'ฝึกนิ้วมือ', route: '/practice/fingers' },
   { id: 'finger-math', order: 2, title: 'คิดเลขด้วยนิ้วมือ', route: '/practice/finger-math' },
   { id: 'bridge', order: 3, title: 'นิ้วมือ ↔ ลูกคิด', route: '/practice/bridge' },
-  { id: 'abacus', order: 4, title: 'ฝึกลูกคิด', route: '/practice/abacus' }
+  { id: 'abacus', order: 4, title: 'ฝึกลูกคิด', route: '/practice/abacus' },
+  { id: 'anzan', order: 5, title: 'คิดในใจ (Anzan)', route: '/practice/anzan' }
 ]
 
 /** จำนวนข้อขั้นต่ำก่อนประเมินความชำนาญ */

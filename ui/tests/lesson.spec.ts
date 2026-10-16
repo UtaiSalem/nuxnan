@@ -50,14 +50,17 @@ describe('lessonEngine — ปลดล็อกด่าน', () => {
     expect(isStageUnlocked('bridge', { fingers: stat(9, 10) })).toBe(false)
   })
 
-  it('ปลดล็อกไล่ต่อเนื่องจนด่านสุดท้าย', () => {
-    const full = {
+  it('ปลดล็อกไล่ต่อเนื่องจนด่านสุดท้าย (anzan)', () => {
+    const upToAbacus = {
       fingers: stat(9, 10),
       'finger-math': stat(9, 10),
       bridge: stat(9, 10)
     }
-    expect(isStageUnlocked('abacus', full)).toBe(true)
-    expect(stageLevel('abacus', full)).toBe('learning')
+    expect(isStageUnlocked('abacus', upToAbacus)).toBe(true)
+    expect(stageLevel('abacus', upToAbacus)).toBe('learning')
+    // anzan ยังล็อกจนกว่า abacus mastered
+    expect(isStageUnlocked('anzan', upToAbacus)).toBe(false)
+    expect(isStageUnlocked('anzan', { ...upToAbacus, abacus: stat(9, 10) })).toBe(true)
   })
 
   it('stageId ที่ไม่มีจริง = ไม่ปลดล็อก', () => {
@@ -74,7 +77,7 @@ describe('lessonEngine — recordAttempt', () => {
     expect(s).toEqual({ correct: 2, total: 3, bestStreak: 5 })
   })
 
-  it('เส้นทางมี 4 ด่านเรียงลำดับ', () => {
-    expect(LESSON_STAGES.map((s) => s.id)).toEqual(['fingers', 'finger-math', 'bridge', 'abacus'])
+  it('เส้นทางมี 5 ด่านเรียงลำดับ', () => {
+    expect(LESSON_STAGES.map((s) => s.id)).toEqual(['fingers', 'finger-math', 'bridge', 'abacus', 'anzan'])
   })
 })
