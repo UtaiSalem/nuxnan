@@ -82,6 +82,10 @@ const history = ref<HistoryItem[]>([])
 const feedbackState = ref<'correct' | 'wrong' | null>(null)
 const floatingNotice = ref('')
 const isNewHighScore = ref(false)
+// guard กันรับคำตอบซ้ำระหว่างช่วงแสดงผล 450ms (FIX #1)
+const isResolving = ref(false)
+// เหตุที่จบเกม ใช้เลือกข้อความหน้าสรุป (FIX #7)
+const endReason = ref<'timeup' | 'quit'>('timeup')
 
 const timeLeft = ref(60)
 const initialTime = ref(60)
@@ -89,6 +93,10 @@ const elapsedSeconds = ref(0)
 const sessionId = ref('')
 let gameTimer: ReturnType<typeof setInterval> | null = null
 let questionStartTime = 0
+// timestamp-based timer (FIX #2) + handle ของ setTimeout โจทย์ถัดไป (FIX #3)
+let deadlineMs = 0
+let startedAtMs = 0
+let pendingNext: ReturnType<typeof setTimeout> | null = null
 
 // --- Web Audio synth ---
 let audioCtx: AudioContext | null = null
@@ -170,7 +178,7 @@ function getModeLabel(mId: ModeId) {
 const currentHighScore = computed(() => highScores.value[timeMode.value] || 0)
 const difficultyNum = computed(() => (difficulty.value === 'easy' ? 1 : difficulty.value === 'medium' ? 2 : 3))
 const hasAnswer = computed(() =>
-  answerMode.value === 'abacus' ? abacusAnswer.value > 0 : currentInput.value.length > 0
+  answerMode.value === 'abacus' ? true : currentInput.value.length > 0
 )
 const answerDisplay = computed(() =>
   answerMode.value === 'abacus' ? String(abacusAnswer.value) : currentInput.value || '?'
@@ -231,6 +239,8 @@ function generateProblem() {
 // --- Gameplay ---
 function startGame() {
   if (selectedOps.value.length === 0) return
+  if (pendingNext) { clearTimeout(pendingNext); pendingNext = null }
+  isResolving.value = false
   score.value = 0
   streak.value = 0
   highestStreak.value = 0
@@ -254,18 +264,26 @@ function startGame() {
 }
 function startTimer() {
   if (gameTimer) clearInterval(gameTimer)
+  const now = Date.now()
+  startedAtMs = now
+  deadlineMs = now + initialTime.value * 1000
+  let lastTickSec = -1
   gameTimer = setInterval(() => {
     if (timeMode.value === 'endless') {
-      elapsedSeconds.value++
+      elapsedSeconds.value = Math.floor((Date.now() - startedAtMs) / 1000)
     } else {
-      timeLeft.value--
-      if (timeLeft.value <= 3 && timeLeft.value > 0) playSound('tick')
-      if (timeLeft.value <= 0) endGame()
+      const remaining = Math.max(0, Math.ceil((deadlineMs - Date.now()) / 1000))
+      timeLeft.value = remaining
+      if (remaining <= 3 && remaining > 0 && remaining !== lastTickSec) {
+        lastTickSec = remaining
+        playSound('tick')
+      }
+      if (remaining <= 0) endGame('timeup')
     }
-  }, 1000)
+  }, 250)
 }
 function appendDigit(digit: number) {
-  if (currentInput.value.length < 7) currentInput.value += digit.toString()
+  if (currentInput.value.length < 4) currentInput.value += digit.toString()
 }
 function deleteDigit() {
   currentInput.value = currentInput.value.slice(0, -1)
@@ -275,7 +293,9 @@ function clearInput() {
 }
 function checkAnswer() {
   if (gameState.value !== 'playing') return
+  if (isResolving.value) return
   if (answerMode.value === 'keypad' && !currentInput.value) return
+  isResolving.value = true
   const userAns = answerMode.value === 'abacus' ? abacusAnswer.value : parseInt(currentInput.value, 10)
   const isRight = userAns === currentProblem.value.answer
   const timeSpent = Math.max(100, Math.round(performance.now() - questionStartTime))
@@ -309,9 +329,11 @@ function checkAnswer() {
   }
 
   currentInput.value = ''
-  setTimeout(() => {
+  pendingNext = setTimeout(() => {
+    pendingNext = null
     feedbackState.value = null
     floatingNotice.value = ''
+    isResolving.value = false
     if (gameState.value === 'playing') generateProblem()
   }, 450)
 }
@@ -319,7 +341,7 @@ function triggerMiniConfetti() {
   try { confetti({ particleCount: 35, spread: 60, origin: { y: 0.6 } }) } catch (e) { /* noop */ }
 }
 function quitGame() {
-  endGame()
+  endGame('quit')
 }
 
 // --- End + persistence ---
@@ -353,8 +375,12 @@ async function saveScore() {
     console.error('Failed to save score:', e)
   }
 }
-function endGame() {
-  if (gameTimer) clearInterval(gameTimer)
+function endGame(reason: 'timeup' | 'quit' = 'timeup') {
+  if (gameState.value === 'summary') return
+  endReason.value = reason
+  if (gameTimer) { clearInterval(gameTimer); gameTimer = null }
+  if (pendingNext) { clearTimeout(pendingNext); pendingNext = null }
+  isResolving.value = false
   gameState.value = 'summary'
 
   const currentBest = highScores.value[timeMode.value] || 0
@@ -367,7 +393,9 @@ function endGame() {
   saveScore()
 }
 function goToMenu() {
-  if (gameTimer) clearInterval(gameTimer)
+  if (gameTimer) { clearInterval(gameTimer); gameTimer = null }
+  if (pendingNext) { clearTimeout(pendingNext); pendingNext = null }
+  isResolving.value = false
   gameState.value = 'menu'
 }
 
@@ -380,6 +408,10 @@ const avgSpeed = computed(() => {
   if (history.value.length === 0) return '0.0'
   const totalMs = history.value.reduce((acc, cur) => acc + cur.timeSpentMs, 0)
   return (totalMs / history.value.length / 1000).toFixed(1)
+})
+const summaryTitle = computed(() => {
+  if (timeMode.value === 'endless') return 'จบการฝึก! สรุปผลงาน'
+  return endReason.value === 'quit' ? 'จบเกม! สรุปผลงาน' : 'หมดเวลา! สรุปผลงาน'
 })
 
 // --- Keyboard (physical) ---
@@ -407,13 +439,20 @@ onMounted(() => {
     const savedScores = localStorage.getItem('mental_math_highscores')
     if (savedScores) highScores.value = JSON.parse(savedScores)
     const savedMode = localStorage.getItem('mental_math_answer_mode')
-    if (savedMode === 'abacus' || savedMode === 'keypad') answerMode.value = savedMode
+    if (savedMode === 'abacus' || savedMode === 'keypad') {
+      answerMode.value = savedMode
+      if (savedMode === 'abacus') {
+        const addSub = selectedOps.value.filter((o) => o === 'add' || o === 'sub')
+        selectedOps.value = addSub.length ? addSub : ['add']
+      }
+    }
   } catch (e) { /* noop */ }
   window.addEventListener('keydown', handleKeyDown)
 })
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown)
   if (gameTimer) clearInterval(gameTimer)
+  if (pendingNext) clearTimeout(pendingNext)
 })
 </script>
 
@@ -728,7 +767,7 @@ onUnmounted(() => {
         <div class="w-16 h-16 mx-auto rounded-vikinger-lg bg-gradient-to-tr from-amber-400 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/30 mb-3">
           <Icon icon="fluent:trophy-24-filled" class="w-9 h-9" />
         </div>
-        <h2 class="font-heading text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">หมดเวลา! สรุปผลงาน</h2>
+        <h2 class="font-heading text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">{{ summaryTitle }}</h2>
         <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
           {{ isNewHighScore ? '🎉 ยินดีด้วย! คุณทำลายสถิติสูงสุดใหม่!' : 'ฝึกฝนสม่ำเสมอจะช่วยให้คิดเลขได้ไวขึ้น' }}
         </p>
