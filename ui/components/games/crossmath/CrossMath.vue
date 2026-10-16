@@ -1,5 +1,5 @@
 <template>
-  <div class="cross-math-game min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 overflow-hidden">
+  <div class="cross-math-game min-h-screen bg-gradient-dark overflow-hidden">
     <!-- 3D Classroom Background with Props -->
     <div class="classroom-scene fixed inset-0 overflow-hidden pointer-events-none">
       <!-- Volumetric Light Effect -->
@@ -27,11 +27,11 @@
 
     <!-- Login Screen -->
     <div v-if="gameState === 'login'" class="relative z-10 min-h-screen flex flex-col items-center justify-center p-4">
-      <div class="login-card bg-gradient-to-br from-amber-600 to-amber-800 p-8 rounded-3xl shadow-2xl border-4 border-amber-400 transform perspective-1000 rotate-x-2">
+      <div class="login-card w-full max-w-md bg-gradient-to-br from-vikinger-dark-100 to-vikinger-dark-300 p-6 sm:p-8 rounded-vikinger-xl shadow-vikinger-lg border border-vikinger-purple/40 transform perspective-1000 rotate-x-2">
         <h1 class="text-4xl md:text-5xl font-bold text-white text-center mb-2 drop-shadow-lg">
           🦉 Cross Math
         </h1>
-        <p class="text-amber-100 text-center mb-6 text-lg">ปริศนาตัวเลขสำหรับเด็กฉลาด</p>
+        <p class="text-vikinger-cyan/80 text-center mb-6 text-base sm:text-lg">ปริศนาตัวเลขสำหรับเด็กฉลาด</p>
         
         <div class="space-y-4">
           <!-- Player card from auth -->
@@ -45,11 +45,11 @@
               >
               <div
                 v-else
-                class="w-14 h-14 rounded-full bg-gradient-to-br from-amber-300 to-amber-500 border-3 border-white shadow-lg flex items-center justify-center text-2xl font-black text-white"
+                class="w-14 h-14 rounded-full bg-gradient-vikinger border-3 border-white shadow-lg flex items-center justify-center text-2xl font-black text-white"
               >
                 {{ playerName.charAt(0).toUpperCase() }}
               </div>
-              <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-emerald-400 rounded-full border-2 border-amber-700"></div>
+              <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-vikinger-green rounded-full border-2 border-vikinger-dark-100"></div>
             </div>
             <div class="flex-1 min-w-0">
               <p class="text-white/70 text-xs font-medium mb-0.5">ผู้เล่น</p>
@@ -66,10 +66,10 @@
                 :key="option.value"
                 @click="selectedTime = option.value"
                 :class="[
-                  'py-3 px-4 rounded-xl font-bold text-lg transition-all transform',
+                  'min-h-[44px] py-3 px-4 rounded-vikinger font-bold text-base sm:text-lg transition-all transform',
                   selectedTime === option.value
-                    ? 'bg-emerald-500 text-white scale-105 shadow-lg ring-4 ring-emerald-300'
-                    : 'bg-white/80 text-slate-700 hover:bg-white'
+                    ? 'bg-gradient-vikinger text-white scale-105 shadow-vikinger ring-2 ring-vikinger-cyan/50'
+                    : 'bg-white/10 text-gray-200 hover:bg-white/20'
                 ]"
               >
                 {{ option.label }}
@@ -80,12 +80,12 @@
           <button
             @click="startGame"
             :disabled="!playerName.trim()"
-            class="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-2xl font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            class="w-full py-4 bg-gradient-vikinger text-white text-xl sm:text-2xl font-bold rounded-vikinger shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             🎮 เริ่มเกม / Start
           </button>
 
-          <p v-if="!authStore.user" class="text-amber-200/70 text-center text-xs font-medium">
+          <p v-if="!authStore.user" class="text-gray-400 text-center text-xs font-medium">
             💡 เข้าสู่ระบบเพื่อบันทึกคะแนนสะสมของคุณ
           </p>
         </div>
@@ -97,14 +97,14 @@
 
       <!-- Header -->
       <div class="w-full max-w-2xl grid grid-cols-3 gap-2 sm:flex sm:items-center">
-        <div class="min-w-0 sm:flex-1 bg-slate-800/90 px-3 py-2 rounded-2xl border-2 border-amber-500/60 shadow-lg text-center">
-          <p class="text-amber-400 font-bold text-sm truncate">{{ playerName }}</p>
+        <div class="min-w-0 sm:flex-1 bg-vikinger-dark-100/90 px-3 py-2 rounded-vikinger border border-vikinger-cyan/50 shadow-lg text-center">
+          <p class="text-vikinger-cyan font-bold text-sm truncate">{{ playerName }}</p>
         </div>
-        <div class="min-w-0 sm:flex-1 bg-slate-800/90 px-3 py-2 rounded-2xl border-2 border-emerald-500/60 shadow-lg text-center">
-          <p class="text-emerald-400 font-bold text-sm truncate">ระดับ {{ Math.ceil(currentLevel/10) }} / ด่าน {{ currentLevel }}</p>
+        <div class="min-w-0 sm:flex-1 bg-vikinger-dark-100/90 px-3 py-2 rounded-vikinger border border-vikinger-purple/50 shadow-lg text-center">
+          <p class="text-indigo-300 font-bold text-sm truncate">ระดับ {{ Math.ceil(currentLevel/10) }} / ด่าน {{ currentLevel }}</p>
         </div>
-        <div class="min-w-0 sm:flex-1 bg-slate-800/90 px-3 py-2 rounded-2xl border-2 border-yellow-500/60 shadow-lg text-center">
-          <p class="text-yellow-400 font-bold text-sm truncate">{{ score }} <span class="text-yellow-500/80 text-xs">แต้ม</span></p>
+        <div class="min-w-0 sm:flex-1 bg-vikinger-dark-100/90 px-3 py-2 rounded-vikinger border border-vikinger-yellow/50 shadow-lg text-center">
+          <p class="text-vikinger-yellow font-bold text-sm truncate">{{ score }} <span class="text-vikinger-yellow/80 text-xs">แต้ม</span></p>
         </div>
         <div class="col-span-3 grid grid-cols-2 gap-2 sm:ml-auto sm:flex sm:shrink-0 sm:gap-1">
           <button @click="fetchLeaderboard" class="min-h-[44px] sm:min-h-0 min-w-0 py-2 px-3 bg-indigo-700/80 text-white rounded-xl border border-indigo-600 shadow text-sm font-semibold whitespace-nowrap">🏆 อันดับ</button>
@@ -414,7 +414,7 @@
             :class="[
               'numpad-btn col-span-1 py-3.5 rounded-2xl text-lg font-bold select-none transition-all border',
               hintsRemaining > 0
-                ? 'bg-gradient-to-b from-amber-400 to-amber-600 text-white shadow-[0_5px_0_rgba(120,80,0,0.4)] border-amber-300/60 hover:from-amber-300 hover:to-amber-500 active:shadow-[0_1px_0_rgba(120,80,0,0.3)] active:translate-y-1'
+                ? 'bg-gradient-to-b from-vikinger-purple to-indigo-700 text-white shadow-[0_5px_0_rgba(49,46,129,0.5)] border-vikinger-purple/60 hover:from-indigo-500 hover:to-indigo-800 active:shadow-[0_1px_0_rgba(49,46,129,0.4)] active:translate-y-1'
                 : 'bg-gradient-to-b from-slate-500 to-slate-700 text-slate-400 border-slate-600 cursor-not-allowed opacity-60'
             ]"
             aria-label="ปุ่มใบ้"
@@ -446,7 +446,7 @@
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
       
       <div 
-        class="relative bg-gradient-to-br from-slate-800 to-slate-900 p-6 md:p-8 rounded-3xl shadow-2xl border-4 border-amber-400 max-w-md w-full animate-bounce-in"
+        class="relative bg-gradient-to-br from-vikinger-dark-100 to-vikinger-dark-300 p-6 md:p-8 rounded-vikinger-xl shadow-vikinger-lg border border-vikinger-purple/50 max-w-md w-full animate-bounce-in"
       >
         <!-- Result Icon -->
         <div class="text-center mb-4">
@@ -480,7 +480,7 @@
           </div>
           <div class="flex justify-between text-white border-t border-slate-600 pt-2 mt-2">
             <span>คะแนนรวม:</span>
-            <span class="font-bold text-amber-400 text-xl">{{ score }}</span>
+            <span class="font-bold text-vikinger-cyan text-xl">{{ score }}</span>
           </div>
         </div>
         
@@ -497,7 +497,7 @@
           <button 
             v-if="gameState === 'gameWin'"
             @click="restartGame"
-            class="flex-1 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-lg font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all"
+            class="flex-1 py-3 bg-gradient-vikinger text-white text-lg font-bold rounded-vikinger shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 active:scale-95 transition-all"
           >
             เล่นใหม่ 🔄
           </button>
