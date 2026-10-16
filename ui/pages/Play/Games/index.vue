@@ -120,6 +120,8 @@ const learningPath = [
 // ความก้าวหน้า + ปลดล็อกด่าน (stage id = ส่วนท้ายของ route)
 const { levelOf, unlocked, accuracyPct, statOf } = useLessonProgress()
 const stageId = (item) => item.route.split('/').pop()
+// resolve จริง: `<component :is="'NuxtLink'">` แบบสตริงจะไม่นำทาง ต้องใช้ตัว component
+const NuxtLinkComp = resolveComponent('NuxtLink')
 
 const LEVEL_META = {
   locked: { label: 'ล็อก', icon: 'fluent:lock-closed-24-filled', cls: 'bg-gray-100 text-gray-400 dark:bg-vikinger-dark-200 dark:text-gray-500' },
@@ -164,7 +166,7 @@ const LEVEL_META = {
 
       <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <component
-          :is="unlocked(stageId(item)) ? 'NuxtLink' : 'div'"
+          :is="unlocked(stageId(item)) ? NuxtLinkComp : 'div'"
           v-for="item in learningPath"
           :key="item.route"
           :to="unlocked(stageId(item)) ? item.route : undefined"
