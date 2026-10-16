@@ -5,143 +5,156 @@ definePageMeta({
   layout: 'main'
 })
 
-// Game data
-  const games = [
+// Game data — gradient = สีการ์ด (tailwind from/to), glow = สีเรืองตอน hover (rgba)
+const games = [
   {
     title: 'Cross Math',
     description: 'ปริศนาตัวเลข เติมตัวเลขให้สมการถูกต้องทั้งแนวนอนและแนวตั้ง',
     icon: 'fluent:calculator-24-regular',
     route: '/play/games/cross-math-game',
-    color: 'from-amber-500 to-amber-600'
+    gradient: 'from-amber-400 to-orange-500',
+    glow: 'rgba(255,149,0,0.35)'
   },
   {
     title: 'English Vocab Match',
     description: 'จับคู่คำศัพท์ภาษาอังกฤษกับความหมายภาษาไทย',
     icon: 'fluent:book-open-24-regular',
     route: '/play/games/english-vocab-game',
-    color: 'from-green-500 to-green-600'
+    gradient: 'from-emerald-400 to-green-500',
+    glow: 'rgba(0,230,118,0.35)'
   },
   {
     title: 'เกมทายตัวเลข',
     description: 'ทายตัวเลขระหว่าง 1-100 ในจำนวนครั้งน้อยที่สุด',
     icon: 'fluent:number-symbol-24-regular',
     route: '/play/games/guessing-number-game',
-    color: 'from-blue-500 to-blue-600'
+    gradient: 'from-indigo-500 to-blue-500',
+    glow: 'rgba(97,93,250,0.35)'
   },
   {
     title: 'เกม XO',
     description: 'เกม tic-tac-toe แบบคลาสสิกกับเพื่อนหรือ AI',
     icon: 'fluent:grid-24-regular',
     route: '/play/games/xo-game',
-    color: 'from-green-500 to-green-600'
+    gradient: 'from-cyan-400 to-sky-500',
+    glow: 'rgba(35,210,226,0.35)'
   },
   {
     title: 'เกมงู',
     description: 'ควบคุมงูให้กินอาหารและหลีกเลี่ยงกำแพง',
     icon: 'fluent:animal-turtle-24-regular',
     route: '/play/games/snake-game',
-    color: 'from-purple-500 to-purple-600'
+    gradient: 'from-violet-500 to-fuchsia-500',
+    glow: 'rgba(97,93,250,0.35)'
   },
   {
     title: 'Typing Master',
     description: 'ฝึกพิมพ์เร็วและแม่นยำ พร้อมโหมดท้าทายหลากหลาย',
     icon: 'fluent:keyboard-24-regular',
     route: '/play/games/typing',
-    color: 'from-pink-500 to-pink-600'
+    gradient: 'from-pink-500 to-rose-500',
+    glow: 'rgba(255,107,129,0.35)'
   },
   {
     title: 'Mental Math',
     description: 'ฝึกคำนวณเลขในหัว คิดเร็ว ตอบแม่น แข่งกับเวลา',
     icon: 'fluent:brain-circuit-24-filled',
     route: '/play/games/mental-math-game',
-    color: 'from-emerald-500 to-teal-600'
+    gradient: 'from-teal-400 to-cyan-500',
+    glow: 'rgba(35,210,226,0.35)'
   },
   {
     title: 'เกมจับคู่',
     description: 'จับคู่ภาพและคำเพื่อฝึกความจำและการคิด',
     icon: 'fluent:brain-circuit-24-regular',
     route: '/play/games/mental-match',
-    color: 'from-orange-500 to-orange-600'
+    gradient: 'from-orange-400 to-pink-500',
+    glow: 'rgba(255,149,0,0.35)'
   }
 ]
 </script>
 
 <template>
-  <div class="max-w-6xl mx-auto py-8 px-4 sm:px-0">
-    <!-- Header -->
-    <div class="text-center mb-12">
-      <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-        เกมส์สนุก ๆ
-      </h1>
-      <p class="text-lg text-gray-600 dark:text-gray-300">
-        เลือกเกมที่คุณต้องการเล่นและท้าทายตัวเอง
-      </p>
+  <div class="max-w-6xl mx-auto px-4 py-6 sm:py-10">
+    <!-- Hero band (Vikinger dark + glow) -->
+    <div class="relative overflow-hidden rounded-vikinger-xl bg-gradient-dark border border-vikinger-dark-50/40 p-6 sm:p-10 mb-6 sm:mb-10">
+      <div class="pointer-events-none absolute -top-16 -right-10 w-56 h-56 sm:w-72 sm:h-72 bg-glow-purple rounded-full blur-2xl"></div>
+      <div class="pointer-events-none absolute -bottom-20 -left-10 w-56 h-56 sm:w-72 sm:h-72 bg-glow-cyan rounded-full blur-2xl"></div>
+
+      <div class="relative flex flex-col items-start gap-3 sm:gap-4">
+        <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-vikinger-cyan text-xs font-bold uppercase tracking-widest">
+          <Icon icon="fluent:games-24-filled" class="w-4 h-4" />
+          Play Zone
+        </span>
+        <h1 class="font-heading text-3xl sm:text-5xl font-extrabold text-white leading-tight break-words">
+          เกมส์สนุก ๆ
+        </h1>
+        <p class="text-sm sm:text-lg text-gray-300 max-w-xl break-words">
+          เลือกเกมที่คุณต้องการเล่น ฝึกสมอง แข่งกับเวลา และไต่อันดับผู้นำ
+        </p>
+        <div class="flex items-center gap-2 mt-1 text-xs sm:text-sm text-gray-400">
+          <Icon icon="fluent:sparkle-24-filled" class="w-4 h-4 text-vikinger-yellow" />
+          <span>{{ games.length }} เกมให้เลือกเล่น</span>
+        </div>
+      </div>
     </div>
 
     <!-- Games Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
       <NuxtLink
         v-for="game in games"
         :key="game.route"
         :to="game.route"
-        class="group relative overflow-hidden rounded-2xl bg-white dark:bg-vikinger-dark-100 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 block border border-gray-100 dark:border-vikinger-dark-50"
+        class="group relative overflow-hidden rounded-vikinger-lg bg-white dark:bg-vikinger-dark-100 border border-gray-100 dark:border-vikinger-dark-50/40 shadow-card dark:shadow-card-dark hover:shadow-vikinger-lg transition-all duration-300 hover:-translate-y-1 block"
       >
-        <!-- Background Gradient on Hover -->
-        <div class="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transition-opacity duration-300"
-             :class="game.color"></div>
-        
-        <!-- Top Colored Line -->
-        <div class="h-1.5 w-full bg-gradient-to-r" :class="game.color"></div>
+        <!-- Top accent -->
+        <div class="h-1.5 w-full bg-gradient-to-r" :class="game.gradient"></div>
 
-        <!-- Content -->
-        <div class="relative p-8">
-          <div class="flex items-start justify-between mb-6">
-              <!-- Icon Box -->
-              <div class="w-14 h-14 rounded-xl bg-gradient-to-br flex items-center justify-center shadow-md transform group-hover:scale-110 transition-transform duration-300"
-                   :class="game.color">
-                <Icon :icon="game.icon" class="w-7 h-7 text-white" />
-              </div>
-              
-              <!-- Arrow Icon -->
-              <div class="p-2 rounded-full bg-gray-50 dark:bg-vikinger-dark-200 text-gray-400 group-hover:bg-vikinger-purple group-hover:text-white transition-colors duration-300">
-                  <Icon icon="fluent:arrow-right-24-filled" class="w-5 h-5 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
-              </div>
+        <!-- Hover glow -->
+        <div
+          class="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+          :style="{ background: `radial-gradient(circle at 80% 0%, ${game.glow} 0%, transparent 60%)` }"
+        ></div>
+
+        <div class="relative p-5 sm:p-6">
+          <div class="flex items-start justify-between gap-3 mb-4 sm:mb-5">
+            <div
+              class="w-14 h-14 rounded-vikinger bg-gradient-to-br flex items-center justify-center shadow-lg flex-shrink-0 transform group-hover:scale-110 transition-transform duration-300"
+              :class="game.gradient"
+            >
+              <Icon :icon="game.icon" class="w-7 h-7 text-white" />
+            </div>
+            <div class="w-9 h-9 flex items-center justify-center rounded-full bg-gray-50 dark:bg-vikinger-dark-200 text-gray-400 group-hover:bg-gradient-vikinger group-hover:text-white transition-all duration-300 flex-shrink-0">
+              <Icon icon="fluent:arrow-right-24-filled" class="w-5 h-5 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
+            </div>
           </div>
 
-          <!-- Title -->
-          <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3 group-hover:text-vikinger-purple dark:group-hover:text-vikinger-cyan transition-colors">
+          <h3 class="font-heading text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-2 break-words group-hover:text-vikinger-purple dark:group-hover:text-vikinger-cyan transition-colors">
             {{ game.title }}
           </h3>
-
-          <!-- Description -->
-          <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-4">
+          <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-4 break-words min-h-[40px]">
             {{ game.description }}
           </p>
-          
-          <!-- Play Badge -->
-          <div class="inline-flex items-center text-xs font-bold uppercase tracking-wider text-gray-400 group-hover:text-vikinger-purple dark:group-hover:text-vikinger-cyan transition-colors">
-              Play Now
-          </div>
+
+          <span class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gray-400 group-hover:text-vikinger-purple dark:group-hover:text-vikinger-cyan transition-colors">
+            เล่นเลย
+            <Icon icon="fluent:play-24-filled" class="w-3.5 h-3.5" />
+          </span>
         </div>
       </NuxtLink>
     </div>
 
-    <!-- Coming Soon Section -->
-    <div class="mt-16 text-center">
-      <div class="inline-block p-4 sm:p-8 px-12 rounded-2xl bg-gray-50 dark:bg-vikinger-dark-200/50 border-2 border-dashed border-gray-200 dark:border-vikinger-dark-50">
-        <Icon icon="fluent:games-24-regular" class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-        <h3 class="text-lg font-semibold text-gray-500 dark:text-gray-400 mb-1">
+    <!-- Coming Soon -->
+    <div class="mt-10 sm:mt-14">
+      <div class="relative overflow-hidden rounded-vikinger-lg border-2 border-dashed border-gray-200 dark:border-vikinger-dark-50/50 bg-gray-50/60 dark:bg-vikinger-dark-200/40 p-6 sm:p-10 text-center">
+        <Icon icon="fluent:rocket-24-regular" class="w-12 h-12 text-gray-300 dark:text-vikinger-dark-50 mx-auto mb-3" />
+        <h3 class="font-heading text-base sm:text-lg font-bold text-gray-500 dark:text-gray-300 mb-1">
           เกมใหม่กำลังมา
         </h3>
         <p class="text-sm text-gray-400 dark:text-gray-500">
-          ติดตามอัปเดตเกมใหม่ๆ ได้เร็วๆ นี้
+          ติดตามอัปเดตเกมใหม่ ๆ ได้เร็ว ๆ นี้
         </p>
       </div>
     </div>
   </div>
-
 </template>
-<style scoped>
-/* Additional styles if needed */
-</style>
-
