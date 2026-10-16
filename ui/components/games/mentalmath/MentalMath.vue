@@ -14,7 +14,7 @@ import VirtualAbacus from '~/components/games/abacus/VirtualAbacus.vue'
 
 type GameState = 'menu' | 'playing' | 'summary'
 type OpId = 'add' | 'sub' | 'mul' | 'div'
-type DiffId = 'easy' | 'medium' | 'hard'
+type DiffId = 'k4' | 'k9' | 'k19' | 'k49' | 'k99' | 'easy' | 'medium' | 'hard'
 type ModeId = '30s' | '60s' | '120s' | 'endless'
 
 interface Problem {
@@ -59,6 +59,22 @@ const difficulties = [
   { id: 'hard', label: 'ท้าทาย', desc: 'สอง/สามหลัก' }
 ] as const
 const difficulty = ref<DiffId>('medium')
+
+// โหมดเด็กเล็ก (อนุบาล/ป.1): แต่ละระดับล็อกคำตอบ (และตัวเลขในโจทย์) ไม่เกิน cap
+const kidTiers = [
+  { id: 'k4', label: 'ถึง 4', cap: 4 },
+  { id: 'k9', label: 'ถึง 9', cap: 9 },
+  { id: 'k19', label: 'ถึง 19', cap: 19 },
+  { id: 'k49', label: 'ถึง 49', cap: 49 },
+  { id: 'k99', label: 'ถึง 99', cap: 99 }
+] as const
+// เพดานของระดับเด็กปัจจุบัน (null = โหมดทั่วไป easy/medium/hard)
+const kidCap = computed<number | null>(() => kidTiers.find((t) => t.id === difficulty.value)?.cap ?? null)
+// เลข level ที่ส่งขึ้น leaderboard — แยกเด็ก (1–5) ออกจากทั่วไป (11–13) ไม่ให้สถิติปน
+const LEVEL_MAP: Record<DiffId, number> = {
+  k4: 1, k9: 2, k19: 3, k49: 4, k99: 5,
+  easy: 11, medium: 12, hard: 13
+}
 
 const timeModes = [
   { id: '30s', label: '30 วิ', seconds: 30 },
@@ -176,7 +192,7 @@ function getModeLabel(mId: ModeId) {
   return timeModes.find((m) => m.id === mId)?.label ?? mId
 }
 const currentHighScore = computed(() => highScores.value[timeMode.value] || 0)
-const difficultyNum = computed(() => (difficulty.value === 'easy' ? 1 : difficulty.value === 'medium' ? 2 : 3))
+const difficultyNum = computed(() => LEVEL_MAP[difficulty.value] ?? 12)
 const hasAnswer = computed(() =>
   answerMode.value === 'abacus' ? true : currentInput.value.length > 0
 )
@@ -205,7 +221,30 @@ function formatTime(totalSec: number) {
 }
 
 // --- Problem generator ---
+// โหมดเด็ก: สุ่มให้ "คำตอบ" และ "ตัวเลขทุกตัวในโจทย์" ไม่เกิน cap, ผลลบไม่ติดลบ, หารลงตัว
+function generateKidProblem(cap: number) {
+  const pool = answerMode.value === 'abacus'
+    ? selectedOps.value.filter((o) => o === 'add' || o === 'sub')
+    : selectedOps.value
+  const ops = pool.length ? pool : (['add'] as OpId[])
+  const opChoice = ops[Math.floor(Math.random() * ops.length)]
+  const r = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min
+  let n1 = 0, n2 = 0, ans = 0, sym = '+'
+  if (opChoice === 'add') {
+    ans = r(0, cap); n1 = r(0, ans); n2 = ans - n1; sym = '+'
+  } else if (opChoice === 'sub') {
+    ans = r(0, cap); n2 = r(0, cap - ans); n1 = ans + n2; sym = '−'
+  } else if (opChoice === 'mul') {
+    n1 = r(1, cap); n2 = r(1, Math.max(1, Math.floor(cap / n1))); ans = n1 * n2; sym = '×'
+  } else {
+    ans = r(1, cap); n2 = r(1, Math.max(1, Math.floor(cap / ans))); n1 = n2 * ans; sym = '÷'
+  }
+  currentProblem.value = { num1: n1, num2: n2, symbol: sym, answer: ans, problemText: `${n1} ${sym} ${n2}` }
+  abacusAnswer.value = 0
+  questionStartTime = performance.now()
+}
 function generateProblem() {
+  if (kidCap.value !== null) { generateKidProblem(kidCap.value); return }
   const pool = answerMode.value === 'abacus'
     ? selectedOps.value.filter((o) => o === 'add' || o === 'sub')
     : selectedOps.value
@@ -313,7 +352,7 @@ function checkAnswer() {
     correctCount.value++
     streak.value++
     if (streak.value > highestStreak.value) highestStreak.value = streak.value
-    const diffMultiplier = difficulty.value === 'easy' ? 10 : difficulty.value === 'medium' ? 20 : 35
+    const diffMultiplier = kidCap.value !== null ? 6 : difficulty.value === 'easy' ? 10 : difficulty.value === 'medium' ? 20 : 35
     const streakBonus = Math.min(streak.value * 2, 20)
     const earnedPoints = diffMultiplier + streakBonus
     score.value += earnedPoints
@@ -554,6 +593,31 @@ onUnmounted(() => {
       <!-- Difficulty -->
       <div class="mb-5">
         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">ระดับความยาก</label>
+
+        <!-- กลุ่มเด็กเล็ก -->
+        <p class="text-[11px] font-semibold text-vikinger-purple dark:text-vikinger-cyan mb-1.5 flex items-center gap-1">
+          <Icon icon="fluent:star-24-filled" class="w-3.5 h-3.5 shrink-0" />
+          <span class="min-w-0 break-words">เด็กเล็ก (อนุบาล/ป.1) · คำตอบไม่เกินเพดาน</span>
+        </p>
+        <div class="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-3">
+          <button
+            v-for="tier in kidTiers"
+            :key="tier.id"
+            @click="difficulty = tier.id"
+            type="button"
+            :class="[
+              'min-h-[44px] py-2 px-1 rounded-vikinger font-bold text-xs sm:text-sm text-center border transition-all flex items-center justify-center whitespace-nowrap',
+              difficulty === tier.id
+                ? 'bg-gradient-vikinger text-white border-transparent shadow-vikinger'
+                : 'bg-white/60 dark:bg-vikinger-dark-200/60 text-slate-700 dark:text-slate-300 border-gray-200 dark:border-vikinger-dark-50/50 hover:border-vikinger-cyan/50'
+            ]"
+          >
+            {{ tier.label }}
+          </button>
+        </div>
+
+        <!-- กลุ่มทั่วไป -->
+        <p class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1.5">ทั่วไป</p>
         <div class="grid grid-cols-3 gap-2">
           <button
             v-for="diff in difficulties"
