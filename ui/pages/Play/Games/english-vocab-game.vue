@@ -278,42 +278,49 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-[calc(100vh-100px)] w-full flex flex-col px-0 py-4 sm:px-4 bg-gray-50 dark:bg-gray-900">
+  <div class="min-h-[calc(100vh-100px)] w-full flex flex-col px-4 py-4 sm:px-4 bg-gray-50 dark:bg-vikinger-dark">
     <div class="max-w-4xl mx-auto w-full">
       <!-- Header -->
-      <div class="text-center mb-6">
-        <h1 class="text-4xl font-black text-gray-900 dark:text-white mb-2">
-          English Vocab Match
-        </h1>
-        <p class="text-gray-600 dark:text-gray-300 text-lg">
-          จับคู่คำศัพท์ภาษาอังกฤษกับความหมายไทย
-        </p>
-        <p class="text-gray-500 dark:text-gray-400 text-sm mt-2 font-black">
-          Level {{ currentLevel }} (Unlocked: {{ unlockedLevel }})
-        </p>
+      <div class="relative overflow-hidden rounded-vikinger-xl bg-gradient-dark border border-vikinger-dark-50/40 p-5 sm:p-7 mb-5 sm:mb-6">
+        <div class="pointer-events-none absolute -top-12 -right-8 w-44 h-44 bg-glow-purple rounded-full blur-2xl"></div>
+        <div class="pointer-events-none absolute -bottom-14 -left-8 w-44 h-44 bg-glow-cyan rounded-full blur-2xl"></div>
+        <div class="relative flex flex-col items-start gap-2">
+          <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-vikinger-cyan text-xs font-bold uppercase tracking-widest">
+            Vocab Match
+          </span>
+          <h1 class="font-heading text-2xl sm:text-4xl font-extrabold text-white break-words">
+            English Vocab Match
+          </h1>
+          <p class="text-sm sm:text-base text-gray-300 break-words">
+            จับคู่คำศัพท์ภาษาอังกฤษกับความหมายไทย
+          </p>
+          <span class="mt-1 inline-flex items-center gap-1.5 text-xs font-bold text-vikinger-yellow">
+            Level {{ currentLevel }} · ปลดล็อกถึง {{ unlockedLevel }}
+          </span>
+        </div>
       </div>
 
       <!-- Stats -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 mb-5 border-2 border-black">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+      <div class="bg-white dark:bg-vikinger-dark-100 rounded-vikinger-lg shadow-card dark:shadow-card-dark p-4 mb-5 border border-gray-100 dark:border-vikinger-dark-50/40">
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 items-center">
           <div class="text-center">
-            <p class="text-sm font-black text-gray-700 dark:text-gray-200 uppercase tracking-wider">
+            <p class="text-xs sm:text-sm font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Moves
             </p>
-            <p class="text-4xl font-black text-gray-900 dark:text-white">{{ moves }}</p>
+            <p class="text-3xl sm:text-4xl font-black text-vikinger-purple dark:text-vikinger-cyan">{{ moves }}</p>
           </div>
 
           <div class="text-center">
-            <p class="text-sm font-black text-gray-700 dark:text-gray-200 uppercase tracking-wider">
+            <p class="text-xs sm:text-sm font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Pairs
             </p>
-            <p class="text-4xl font-black text-gray-900 dark:text-white">
+            <p class="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white">
               {{ matchedPairs }}/{{ currentPairsTotal }}
             </p>
           </div>
 
-          <div class="text-center">
-            <p class="text-sm font-black text-gray-700 dark:text-gray-200 uppercase tracking-wider mb-2">
+          <div class="col-span-2 md:col-span-1 text-center">
+            <p class="text-xs sm:text-sm font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
               Level
             </p>
             <div class="flex justify-center gap-2 flex-wrap">
@@ -323,11 +330,11 @@ onMounted(() => {
                 :disabled="isLevelLocked(cfg.level)"
                 @click="changeLevel(cfg.level)"
                 :class="[
-                  'px-3 py-2 rounded-lg border-2 border-black font-black text-sm transition',
+                  'px-3 py-2 rounded-vikinger font-black text-sm transition-all',
                   currentLevel === cfg.level
-                    ? 'bg-green-300 text-black'
-                    : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-600',
-                  isLevelLocked(cfg.level) ? 'opacity-60 cursor-not-allowed hover:bg-white dark:hover:bg-gray-700' : ''
+                    ? 'bg-gradient-vikinger text-white shadow-vikinger'
+                    : 'bg-gray-100 dark:bg-vikinger-dark-200 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-vikinger-dark-300',
+                  isLevelLocked(cfg.level) ? 'opacity-50 cursor-not-allowed' : ''
                 ]"
               >
                 Level {{ cfg.level }}
@@ -338,36 +345,36 @@ onMounted(() => {
       </div>
 
       <!-- Board -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 border-2 border-black mb-5">
+      <div class="bg-white dark:bg-vikinger-dark-100 rounded-vikinger-lg shadow-card dark:shadow-card-dark p-3 sm:p-4 border border-gray-100 dark:border-vikinger-dark-50/40 mb-5 overflow-x-auto">
         <div
-          class="grid gap-3 mx-auto"
+          class="grid gap-2 sm:gap-3 mx-auto"
           :style="`grid-template-columns: repeat(${activeLevelConfig.gridCols}, minmax(0, 1fr)); max-width: ${activeLevelConfig.gridCols * 110}px;`"
         >
           <button
             v-for="card in cards"
             :key="card.id"
             @click="flipCard(card)"
-            class="aspect-[1/1] w-full flex items-center justify-center rounded-xl border-2 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] transition active:translate-x-[2px] active:translate-y-[2px]"
+            class="aspect-[1/1] w-full flex items-center justify-center rounded-vikinger border transition-all active:scale-95"
             :class="[
               card.isMatched
-                ? 'bg-green-200 cursor-default opacity-80'
+                ? 'bg-vikinger-green/20 border-vikinger-green/60 text-vikinger-green cursor-default'
                 : card.isFlipped
-                  ? 'bg-yellow-200'
-                  : 'bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
+                  ? 'bg-gradient-vikinger border-transparent text-white shadow-vikinger'
+                  : 'bg-gray-50 dark:bg-vikinger-dark-200 border-gray-200 dark:border-vikinger-dark-50/50 text-gray-400 dark:text-gray-500 hover:border-vikinger-purple/50 hover:text-vikinger-purple dark:hover:text-vikinger-cyan'
             ]"
             type="button"
             :disabled="!canFlip(card)"
           >
-            <div class="px-2 text-center">
-              <div v-if="card.isFlipped || card.isMatched" class="font-black text-gray-900 dark:text-white">
-                <div v-if="card.type === 'word'" class="text-lg leading-tight">
+            <div class="px-1 sm:px-2 text-center">
+              <div v-if="card.isFlipped || card.isMatched" class="font-heading font-bold">
+                <div v-if="card.type === 'word'" class="text-base sm:text-lg leading-tight break-words">
                   {{ card.word }}
                 </div>
-                <div v-else class="text-lg leading-tight">
+                <div v-else class="text-base sm:text-lg leading-tight break-words">
                   {{ card.meaning }}
                 </div>
               </div>
-              <div v-else class="font-black text-gray-900 dark:text-white">
+              <div v-else class="font-heading font-black text-xl">
                 ?
               </div>
             </div>
@@ -379,10 +386,10 @@ onMounted(() => {
       <div class="text-center">
         <button
           @click="initializeGame"
-          class="bg-black text-white font-black py-3 px-8 rounded-xl shadow-lg border-2 border-black hover:translate-x-0.5 hover:translate-y-0.5 active:translate-x-1 active:translate-y-1 transition active:shadow-md"
+          class="min-h-[44px] bg-gradient-vikinger text-white font-black py-3 px-8 rounded-vikinger shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 active:scale-95 transition-all"
           type="button"
         >
-          New Game
+          เริ่มเกมใหม่
         </button>
       </div>
     </div>
@@ -390,49 +397,48 @@ onMounted(() => {
     <!-- Victory -->
     <div
       v-if="!isGameActive && matchedPairs === currentPairsTotal"
-      class="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center z-50 p-4"
+      class="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
     >
-      <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-6 max-w-sm w-full text-center border-2 border-black">
+      <div class="bg-white dark:bg-vikinger-dark-100 rounded-vikinger-xl p-5 sm:p-6 max-w-sm w-full text-center border border-vikinger-purple/40 shadow-vikinger-lg">
         <div class="text-6xl mb-2">🎉</div>
-        <h2 class="text-3xl font-black text-gray-900 dark:text-white mb-1">
-          Congratulations!
+        <h2 class="font-heading text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-1">
+          ยินดีด้วย!
         </h2>
-        <p class="text-lg text-gray-700 dark:text-gray-200 mb-4">
-          You matched all words.
+        <p class="text-base sm:text-lg text-gray-600 dark:text-gray-300 mb-4">
+          จับคู่คำศัพท์ครบทุกคู่แล้ว
         </p>
 
-        <div class="bg-gray-100 dark:bg-gray-700 rounded-xl p-3 mb-4 border-2 border-black/0">
-          <p class="text-sm font-black text-gray-800 dark:text-gray-100">
-            Completed in
-            <span class="font-black text-green-700 dark:text-green-300">{{ moves }}</span>
-            moves
+        <div class="bg-gray-50 dark:bg-vikinger-dark-200 rounded-vikinger p-3 mb-4">
+          <p class="text-sm font-black text-gray-700 dark:text-gray-200">
+            ใช้ไป
+            <span class="font-black text-vikinger-purple dark:text-vikinger-cyan">{{ moves }}</span>
+            ครั้ง
           </p>
 
           <p
             v-if="lastEarnedPoints > 0"
-            class="text-sm font-black text-gray-800 dark:text-gray-100 mt-2"
+            class="text-sm font-black text-gray-700 dark:text-gray-200 mt-2"
           >
-            Earned XP
-            <span class="font-black text-green-700 dark:text-green-300">{{ lastEarnedPoints }}</span>
-            xp
+            ได้รับ
+            <span class="font-black text-vikinger-green">{{ lastEarnedPoints }}</span>
+            XP
           </p>
 
           <p
             v-if="pendingLevelUp"
-            class="text-sm font-black text-gray-800 dark:text-gray-100 mt-2"
+            class="text-sm font-black text-gray-700 dark:text-gray-200 mt-2"
           >
-            Level Up!
-            Now Level
-            <span class="font-black text-green-700 dark:text-green-300">{{ pendingLevelUp }}</span>
+            เลื่อนระดับ! ตอนนี้ Level
+            <span class="font-black text-vikinger-cyan">{{ pendingLevelUp }}</span>
           </p>
         </div>
 
         <button
           @click="initializeGame"
-          class="w-full bg-black text-white font-black py-3 px-6 rounded-xl border-2 border-black hover:translate-x-0.5 hover:translate-y-0.5 transition active:translate-x-1 active:translate-y-1"
+          class="w-full min-h-[44px] bg-gradient-vikinger text-white font-black py-3 px-6 rounded-vikinger shadow-vikinger hover:shadow-vikinger-lg hover:scale-105 active:scale-95 transition-all"
           type="button"
         >
-          Play Again
+          เล่นอีกครั้ง
         </button>
       </div>
     </div>
