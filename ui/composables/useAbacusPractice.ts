@@ -12,6 +12,7 @@ import {
   type AbacusExerciseService,
   type AbacusLevel
 } from '~/services/abacus/exerciseService'
+import { useLessonProgress } from '~/composables/useLessonProgress'
 
 export type PracticePhase = 'idle' | 'answering' | 'correct' | 'wrong'
 
@@ -29,6 +30,7 @@ export function useAbacusPractice(service: AbacusExerciseService = createMockExe
   const totalCount = ref(0)
   const streak = ref(0)
   const bestStreak = ref(0)
+  const progress = useLessonProgress()
 
   const columns = computed(() => exercise.value?.columns ?? 3)
   const accuracy = computed(() =>
@@ -67,6 +69,7 @@ export function useAbacusPractice(service: AbacusExerciseService = createMockExe
       )
       phase.value = 'wrong'
     }
+    progress.record('abacus', phase.value === 'correct', streak.value)
   }
 
   /** ตอบผิดแล้วลองใหม่ (คงคำใบ้ไว้ ไม่เพิ่มยอดนับ) */

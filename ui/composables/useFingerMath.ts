@@ -10,6 +10,7 @@ import {
   type FingerMathService,
   type FingerMathStage
 } from '~/services/fingers/fingerMathService'
+import { useLessonProgress } from '~/composables/useLessonProgress'
 
 export type FingerMathPhase = 'idle' | 'answering' | 'correct' | 'wrong'
 
@@ -25,6 +26,7 @@ export function useFingerMath(service: FingerMathService = createMockFingerMathS
   const totalCount = ref(0)
   const streak = ref(0)
   const bestStreak = ref(0)
+  const progress = useLessonProgress()
 
   const accuracy = computed(() =>
     totalCount.value === 0 ? 0 : Math.round((correctCount.value / totalCount.value) * 100)
@@ -57,6 +59,7 @@ export function useFingerMath(service: FingerMathService = createMockFingerMathS
       streak.value = 0
       phase.value = 'wrong'
     }
+    progress.record('finger-math', phase.value === 'correct', streak.value)
   }
 
   function setStage(s: FingerMathStage) {

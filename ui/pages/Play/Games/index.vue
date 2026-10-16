@@ -108,6 +108,17 @@ const learningPath = [
     gradient: 'from-emerald-400 to-teal-500'
   }
 ]
+
+// ความก้าวหน้า + ปลดล็อกด่าน (stage id = ส่วนท้ายของ route)
+const { levelOf, unlocked, accuracyPct, statOf } = useLessonProgress()
+const stageId = (item) => item.route.split('/').pop()
+
+const LEVEL_META = {
+  locked: { label: 'ล็อก', icon: 'fluent:lock-closed-24-filled', cls: 'bg-gray-100 text-gray-400 dark:bg-vikinger-dark-200 dark:text-gray-500' },
+  learning: { label: 'กำลังเรียน', icon: 'fluent:book-24-filled', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300' },
+  fluent: { label: 'คล่อง', icon: 'fluent:flash-24-filled', cls: 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300' },
+  mastered: { label: 'เชี่ยวชาญ', icon: 'fluent:trophy-24-filled', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' }
+}
 </script>
 
 <template>
@@ -144,33 +155,55 @@ const learningPath = [
       <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 break-words">เส้นทางฝึกจากนิ้วมือ ไปสู่ลูกคิด และคิดในใจ</p>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <NuxtLink
+        <component
+          :is="unlocked(stageId(item)) ? 'NuxtLink' : 'div'"
           v-for="item in learningPath"
           :key="item.route"
-          :to="item.route"
-          class="group relative overflow-hidden rounded-vikinger-lg bg-white dark:bg-vikinger-dark-100 border border-gray-100 dark:border-vikinger-dark-50/40 shadow-card dark:shadow-card-dark hover:shadow-vikinger-lg transition-all duration-300 hover:-translate-y-1 block"
+          :to="unlocked(stageId(item)) ? item.route : undefined"
+          class="group relative overflow-hidden rounded-vikinger-lg bg-white dark:bg-vikinger-dark-100 border border-gray-100 dark:border-vikinger-dark-50/40 shadow-card dark:shadow-card-dark transition-all duration-300 block"
+          :class="unlocked(stageId(item)) ? 'hover:shadow-vikinger-lg hover:-translate-y-1 cursor-pointer' : 'opacity-60 cursor-not-allowed'"
         >
           <div class="h-1.5 w-full bg-gradient-to-r" :class="item.gradient"></div>
           <div class="relative p-4 sm:p-5">
-            <div class="flex items-center gap-3 mb-3">
+            <div class="flex items-center gap-2 mb-3">
               <div
-                class="w-12 h-12 rounded-vikinger bg-gradient-to-br flex items-center justify-center shadow-lg flex-shrink-0 transform group-hover:scale-110 transition-transform duration-300"
-                :class="item.gradient"
+                class="w-12 h-12 rounded-vikinger bg-gradient-to-br flex items-center justify-center shadow-lg flex-shrink-0 transition-transform duration-300"
+                :class="[item.gradient, unlocked(stageId(item)) ? 'group-hover:scale-110' : 'grayscale']"
               >
-                <Icon :icon="item.icon" class="w-6 h-6 text-white" />
+                <Icon :icon="unlocked(stageId(item)) ? item.icon : 'fluent:lock-closed-24-filled'" class="w-6 h-6 text-white" />
               </div>
-              <span class="ml-auto shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-100 dark:bg-vikinger-dark-200 text-xs font-bold text-gray-500 dark:text-gray-300">
-                {{ item.step }}
+              <span
+                class="ml-auto shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap"
+                :class="LEVEL_META[levelOf(stageId(item))].cls"
+              >
+                <Icon :icon="LEVEL_META[levelOf(stageId(item))].icon" class="w-3 h-3" />
+                {{ LEVEL_META[levelOf(stageId(item))].label }}
               </span>
             </div>
-            <h3 class="font-heading text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-1 break-words group-hover:text-vikinger-purple dark:group-hover:text-vikinger-cyan transition-colors">
-              {{ item.title }}
+            <h3
+              class="font-heading text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-1 break-words transition-colors"
+              :class="unlocked(stageId(item)) ? 'group-hover:text-vikinger-purple dark:group-hover:text-vikinger-cyan' : ''"
+            >
+              {{ item.step }}. {{ item.title }}
             </h3>
             <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 leading-relaxed break-words min-h-[32px]">
               {{ item.description }}
             </p>
+            <div v-if="statOf(stageId(item)).total > 0" class="mt-2.5">
+              <div class="flex items-center justify-between text-[10px] font-medium text-gray-400 mb-1">
+                <span>ความแม่นยำ</span>
+                <span class="tabular-nums">{{ accuracyPct(stageId(item)) }}% · {{ statOf(stageId(item)).total }} ข้อ</span>
+              </div>
+              <div class="h-1.5 rounded-full bg-gray-100 dark:bg-vikinger-dark-200 overflow-hidden">
+                <div class="h-full rounded-full bg-gradient-to-r transition-all" :class="item.gradient" :style="{ width: accuracyPct(stageId(item)) + '%' }"></div>
+              </div>
+            </div>
+            <div v-else-if="!unlocked(stageId(item))" class="mt-2.5 flex items-center gap-1 text-[10px] text-gray-400">
+              <Icon icon="fluent:lock-closed-24-regular" class="w-3 h-3 shrink-0" />
+              ปลดล็อกเมื่อผ่านด่านก่อนหน้า (แม่นยำ ≥85%)
+            </div>
           </div>
-        </NuxtLink>
+        </component>
       </div>
     </div>
 

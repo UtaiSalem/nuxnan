@@ -12,6 +12,7 @@ import {
   type FingerExerciseService,
   type FingerStage
 } from '~/services/fingers/fingerExerciseService'
+import { useLessonProgress } from '~/composables/useLessonProgress'
 
 export type BridgePhase = 'idle' | 'answering' | 'correct' | 'wrong'
 
@@ -28,6 +29,7 @@ export function useAbacusBridge(service: FingerExerciseService = createMockFinge
   const totalCount = ref(0)
   const streak = ref(0)
   const bestStreak = ref(0)
+  const progress = useLessonProgress()
 
   const columns = computed(() => (stage.value === 2 ? 2 : 1))
   const accuracy = computed(() =>
@@ -72,6 +74,7 @@ export function useAbacusBridge(service: FingerExerciseService = createMockFinge
       hint.value = parts.length ? parts.join(' · ') : `ค่าควรเป็น ${target.value}`
       phase.value = 'wrong'
     }
+    progress.record('bridge', phase.value === 'correct', streak.value)
   }
 
   function retry() {
