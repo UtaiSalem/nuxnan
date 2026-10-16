@@ -94,6 +94,23 @@ export function earthRoom(col: Column): number {
   return 4 - clampEarth(col.earth)
 }
 
+/** แตะเม็ดบน: สลับสถานะชิดคาน (±5) */
+export function toggleHeaven(col: Column): Column {
+  return makeColumn(!col.heaven, col.earth)
+}
+
+/**
+ * แตะเม็ดล่างตำแหน่ง `p` (1..4 นับจากคานลงไป) ตามกฎ soroban:
+ *   - แตะเม็ดที่ "ยังไม่ชิดคาน" → ดันเม็ดนั้น + เม็ดที่อยู่เหนือมันขึ้นชิดคาน (earth = p)
+ *   - แตะเม็ดที่ "ชิดคานแล้ว"   → ถอนเม็ดนั้น + เม็ดที่อยู่ล่างมันลง (earth = p − 1)
+ */
+export function tapEarth(col: Column, p: number): Column {
+  const pos = Math.max(1, Math.min(4, Math.floor(p)))
+  const cur = clampEarth(col.earth)
+  const newEarth = pos <= cur ? pos - 1 : pos
+  return makeColumn(col.heaven, newEarth)
+}
+
 // ----------------------------------------------------------------------------
 // กฎการบวก 1 หลัก (คู่ 5 / คู่ 10)
 // ----------------------------------------------------------------------------
@@ -198,4 +215,113 @@ export function computeAnswer(a: number, op: '+' | '-' | '×' | '÷', b: number)
 /** ตรวจว่าค่าบนลูกคิดตรงกับคำตอบที่คาดหวังไหม */
 export function isAbacusCorrect(abacus: Abacus, expected: number): boolean {
   return abacusValue(abacus) === expected
+}
+
+// ----------------------------------------------------------------------------
+// การดำเนินการหลายหลัก (บวก/ลบ) พร้อมขั้นตอน — สำหรับโหมดเรียน/คำใบ้ (แผน §5.2)
+// ----------------------------------------------------------------------------
+
+export type Operation = '+' | '-'
+
+export interface OperationStep {
+  /** index หลัก (0 = หน่วย) */
+  place: number
+  /** จำนวนที่บวก/ลบที่หลักนี้ (รวมตัวทด/ยืมจากหลักก่อนหน้า) 1..10 */
+  amount: number
+  /** กฎที่ใช้ที่หลักนี้ */
+  rule: AddRule | SubRule
+  /** ทด (บวก) / ยืม (ลบ) ไปหลักถัดไป */
+  carry: 0 | 1
+  /** ค่าหลักนี้หลังทำ 0..9 */
+  result: number
+  /** คำอธิบายเชิงสอน */
+  hint: string
+}
+
+export interface OperationResult {
+  abacus: Abacus
+  steps: OperationStep[]
+  result: number
+  /** ผลบวกล้นจำนวนหลัก */
+  overflow: boolean
+  /** ผลติดลบ (ลบเกิน) */
+  underflow: boolean
+}
+
+const PLACE_NAMES = ['หน่วย', 'สิบ', 'ร้อย', 'พัน', 'หมื่น', 'แสน', 'ล้าน']
+function placeName(i: number): string {
+  return PLACE_NAMES[i] ?? `หลัก 10^${i}`
+}
+
+/**
+ * บวก/ลบจำนวนเต็มไม่ติดลบเข้ากับลูกคิด เดินทีละหลัก (หน่วย→สูง) พร้อมตัวทด/ยืม
+ * ใช้ planAddDigit/planSubDigit (ที่ทดสอบแล้ว) จำแนกกฎในแต่ละหลัก
+ */
+export function applyOperation(abacus: Abacus, op: Operation, operand: number): OperationResult {
+  const width = abacus.length
+  const next = abacus.map((c) => makeColumn(c.heaven, c.earth))
+  const steps: OperationStep[] = []
+  const digits = String(Math.max(0, Math.floor(operand))).split('').reverse().map(Number)
+  let carry = 0
+
+  for (let i = 0; i < width; i++) {
+    const amount = (digits[i] ?? 0) + carry
+    if (amount === 0) { carry = 0; continue }
+    const cur = columnValue(next[i])
+
+    if (amount === 10) {
+      // +10 / −10 ล้วน: ค่าหลักไม่เปลี่ยน แค่ทด/ยืม 1
+      next[i] = digitToColumn(cur)
+      carry = 1
+      steps.push({
+        place: i,
+        amount,
+        rule: 'big_friend',
+        carry: 1,
+        result: cur,
+        hint: `หลัก${placeName(i)}: ${op === '+' ? '+10 (ทด 1)' : '−10 (ยืม 1)'}`
+      })
+      continue
+    }
+
+    if (op === '+') {
+      const step = planAddDigit(cur, amount)
+      next[i] = digitToColumn(step.result)
+      carry = step.carry
+      steps.push({
+        place: i, amount, rule: step.rule, carry: step.carry, result: step.result,
+        hint: `หลัก${placeName(i)}: ${step.hint}${step.carry ? ' (ทด 1)' : ''}`
+      })
+    } else {
+      const step = planSubDigit(cur, amount)
+      next[i] = digitToColumn(step.result)
+      carry = step.borrow
+      steps.push({
+        place: i, amount, rule: step.rule, carry: step.borrow, result: step.result,
+        hint: `หลัก${placeName(i)}: ${step.hint}${step.borrow ? ' (ยืม 1)' : ''}`
+      })
+    }
+  }
+
+  const overflow = op === '+' && carry === 1
+  const underflow = op === '-' && carry === 1
+  // รักษาความถูกต้องปลายทางเมื่อ over/underflow (ไม่งั้น next = ค่าที่พันรอบ/ผิด)
+  const finalAbacus = underflow ? createAbacus(width) : next
+  return { abacus: finalAbacus, steps, result: abacusValue(finalAbacus), overflow, underflow }
+}
+
+/** คำใบ้ทีละขั้นของการบวก/ลบ (แผน §5.2 getHint) */
+export function getHint(abacus: Abacus, op: Operation, operand: number): string[] {
+  return applyOperation(abacus, op, operand).steps.map((s) => s.hint)
+}
+
+/** ตรวจว่าสถานะลูกคิดถูกกติกา (ไม่มีหลักที่เป็นไปไม่ได้) — แผน §5.2 validateState */
+export function validateState(abacus: Abacus): boolean {
+  return (
+    Array.isArray(abacus) &&
+    abacus.length > 0 &&
+    abacus.every(
+      (c) => typeof c.heaven === 'boolean' && Number.isInteger(c.earth) && c.earth >= 0 && c.earth <= 4
+    )
+  )
 }

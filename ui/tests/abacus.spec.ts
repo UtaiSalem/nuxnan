@@ -4,11 +4,26 @@ import {
   digitToColumn,
   abacusValue,
   setAbacusValue,
+  makeColumn,
+  createAbacus,
   planAddDigit,
   planSubDigit,
   computeAnswer,
-  isAbacusCorrect
+  isAbacusCorrect,
+  toggleHeaven,
+  tapEarth,
+  applyOperation,
+  getHint,
+  validateState
 } from '../components/games/abacus/abacusEngine'
+import {
+  createAbacusState,
+  setNumber as setNumberA,
+  readNumber,
+  moveBead,
+  applyOperation as applyOperationA,
+  validateState as validateStateA
+} from '../components/games/abacus/abacusAdapter'
 
 describe('abacus representation', () => {
   it('maps digits 0..9 to the right bead state', () => {
@@ -95,6 +110,35 @@ describe('planSubDigit — soroban subtraction rules', () => {
   })
 })
 
+describe('bead tapping — ตรรกะการแตะเม็ด (ใช้ใน VirtualAbacus.vue)', () => {
+  it('toggleHeaven สลับเม็ดบนโดยไม่แตะเม็ดล่าง', () => {
+    expect(toggleHeaven(makeColumn(false, 3))).toEqual(makeColumn(true, 3))
+    expect(toggleHeaven(makeColumn(true, 2))).toEqual(makeColumn(false, 2))
+  })
+
+  it('tapEarth เม็ดที่ยังไม่ชิดคาน → ดันเม็ดนั้น + ที่อยู่เหนือมันขึ้น (earth = p)', () => {
+    expect(tapEarth(makeColumn(false, 0), 3)).toEqual(makeColumn(false, 3)) // แตะเม็ด 3 → 1,2,3 ชิดคาน
+    expect(tapEarth(makeColumn(false, 2), 4)).toEqual(makeColumn(false, 4)) // แตะเม็ด 4 → ครบ 4
+    expect(tapEarth(makeColumn(true, 1), 2)).toEqual(makeColumn(true, 2)) // ไม่แตะเม็ดบน
+  })
+
+  it('tapEarth เม็ดที่ชิดคานแล้ว → ถอนเม็ดนั้น + ที่อยู่ล่างมันลง (earth = p − 1)', () => {
+    expect(tapEarth(makeColumn(false, 3), 3)).toEqual(makeColumn(false, 2)) // แตะเม็ด 3 ที่ active → เหลือ 2
+    expect(tapEarth(makeColumn(false, 4), 1)).toEqual(makeColumn(false, 0)) // แตะเม็ดบนสุด → ถอนหมด
+    expect(tapEarth(makeColumn(true, 2), 2)).toEqual(makeColumn(true, 1))
+  })
+
+  it('tapEarth clamp ตำแหน่งให้อยู่ 1..4 และไม่ทำให้ค่าหลักเกิน 0..9', () => {
+    for (let e = 0; e <= 4; e++) {
+      for (let p = 1; p <= 4; p++) {
+        const next = tapEarth(makeColumn(false, e), p)
+        expect(next.earth).toBeGreaterThanOrEqual(0)
+        expect(next.earth).toBeLessThanOrEqual(4)
+      }
+    }
+  })
+})
+
 describe('answer checking', () => {
   it('computes the four operations', () => {
     expect(computeAnswer(8, '+', 7)).toBe(15)
@@ -106,5 +150,82 @@ describe('answer checking', () => {
   it('validates an abacus against an expected value', () => {
     expect(isAbacusCorrect(setAbacusValue(3, 15), 15)).toBe(true)
     expect(isAbacusCorrect(setAbacusValue(3, 15), 16)).toBe(false)
+  })
+})
+
+describe('applyOperation — บวก/ลบหลายหลัก (แผน §5.4)', () => {
+  const W = 4
+  const run = (a: number, op: '+' | '-', b: number) =>
+    applyOperation(setAbacusValue(W, a), op, b).result
+
+  it('ผ่านชุดทดสอบมาตรฐาน §5.4', () => {
+    expect(run(2, '+', 3)).toBe(5)
+    expect(run(4, '+', 1)).toBe(5)
+    expect(run(8, '+', 7)).toBe(15)
+    expect(run(9, '+', 1)).toBe(10)
+    expect(run(47, '+', 38)).toBe(85)
+    expect(run(99, '+', 1)).toBe(100)
+    expect(run(10, '-', 1)).toBe(9)
+    expect(run(52, '-', 27)).toBe(25)
+    expect(run(100, '-', 1)).toBe(99)
+    expect(run(1000, '-', 999)).toBe(1)
+  })
+
+  it('ตรงกับคณิตปกติทุกคู่ที่ไล่ (บวก clamp ที่ 9999, ลบเฉพาะไม่ติดลบ)', () => {
+    for (let a = 0; a <= 999; a += 37) {
+      for (let b = 0; b <= 999; b += 53) {
+        expect(applyOperation(setAbacusValue(4, a), '+', b).result).toBe(Math.min(9999, a + b))
+        if (a >= b) expect(applyOperation(setAbacusValue(4, a), '-', b).result).toBe(a - b)
+      }
+    }
+  })
+
+  it('ตั้งธง overflow เมื่อผลบวกเกินจำนวนหลัก', () => {
+    expect(applyOperation(setAbacusValue(2, 99), '+', 1).overflow).toBe(true)
+  })
+
+  it('ตั้งธง underflow + ผลเป็น 0 เมื่อลบเกิน', () => {
+    const r = applyOperation(setAbacusValue(3, 5), '-', 9)
+    expect(r.underflow).toBe(true)
+    expect(r.result).toBe(0)
+  })
+
+  it('getHint คืนคำใบ้อย่างน้อย 1 ขั้นเมื่อมีการเปลี่ยนค่า', () => {
+    expect(getHint(setAbacusValue(2, 8), '+', 7).length).toBeGreaterThan(0)
+    expect(getHint(setAbacusValue(2, 5), '+', 0).length).toBe(0)
+  })
+
+  it('validateState จับสถานะผิดกติกา', () => {
+    expect(validateState(createAbacus(4))).toBe(true)
+    expect(validateState(setAbacusValue(3, 123))).toBe(true)
+    expect(validateState([{ heaven: true, earth: 7 }] as never)).toBe(false)
+  })
+})
+
+describe('abacusAdapter — API ชื่อตามแผน §5.2 (ครอบ engine เดิม)', () => {
+  it('setNumber/readNumber round-trip', () => {
+    expect(readNumber(setNumberA(4, 2580))).toBe(2580)
+    expect(readNumber(createAbacusState(4))).toBe(0)
+  })
+
+  it('moveBead upper/lower แก้ค่าถูกตามกฎ soroban', () => {
+    let s = createAbacusState(3)
+    s = moveBead(s, 0, 'upper') // หน่วย +5
+    s = moveBead(s, 0, 'lower', 1) // หน่วย +1 = 6
+    expect(readNumber(s)).toBe(6)
+    s = moveBead(s, 1, 'lower', 3) // สิบ = 3 → 36
+    expect(readNumber(s)).toBe(36)
+    s = moveBead(s, 0, 'upper') // ถอนเม็ดบนหน่วย → 31
+    expect(readNumber(s)).toBe(31)
+  })
+
+  it('applyOperation (adapter) ให้ผลเท่า engine + state อ่านกลับได้', () => {
+    const r = applyOperationA(setNumberA(4, 52), '-', 27)
+    expect(r.result).toBe(25)
+    expect(readNumber(r.state)).toBe(25)
+  })
+
+  it('validateState ครอบ engine', () => {
+    expect(validateStateA(createAbacusState(4))).toBe(true)
   })
 })
