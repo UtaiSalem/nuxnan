@@ -72,6 +72,42 @@ const games = [
     glow: 'rgba(255,149,0,0.35)'
   }
 ]
+
+// เส้นทางเรียนจินตคณิต (นิ้วมือ → ลูกคิด → คิดในใจ) — เรียงตามลำดับการเรียนรู้
+const learningPath = [
+  {
+    step: 1,
+    title: 'ฝึกนิ้วมือ',
+    description: 'แทนจำนวน 0–99 ด้วยนิ้วสองมือ (หัวแม่มือ=5)',
+    icon: 'fluent:hand-left-24-filled',
+    route: '/practice/fingers',
+    gradient: 'from-sky-400 to-blue-500'
+  },
+  {
+    step: 2,
+    title: 'คิดเลขด้วยนิ้วมือ',
+    description: 'บวก/ลบ แล้วเลือกท่ามือที่เป็นคำตอบ',
+    icon: 'fluent:hand-draw-24-filled',
+    route: '/practice/finger-math',
+    gradient: 'from-violet-500 to-purple-500'
+  },
+  {
+    step: 3,
+    title: 'นิ้วมือ ↔ ลูกคิด',
+    description: 'เชื่อมจำนวนจากนิ้วมือสู่ตำแหน่งบนลูกคิด',
+    icon: 'fluent:arrow-swap-24-filled',
+    route: '/practice/bridge',
+    gradient: 'from-amber-400 to-orange-500'
+  },
+  {
+    step: 4,
+    title: 'ฝึกลูกคิด',
+    description: 'เลื่อนเม็ด soroban + โหมดซ่อนลูกคิดฝึกในใจ',
+    icon: 'fluent:calculator-24-filled',
+    route: '/practice/abacus',
+    gradient: 'from-emerald-400 to-teal-500'
+  }
+]
 </script>
 
 <template>
@@ -99,7 +135,50 @@ const games = [
       </div>
     </div>
 
+    <!-- Learning path (จินตคณิต) -->
+    <div class="mb-8 sm:mb-10">
+      <div class="flex items-center gap-2 mb-1 flex-wrap">
+        <Icon icon="fluent:hat-graduation-24-filled" class="w-5 h-5 text-vikinger-purple dark:text-vikinger-cyan shrink-0" />
+        <h2 class="font-heading text-xl sm:text-2xl font-bold text-gray-900 dark:text-white break-words">เรียนจินตคณิต</h2>
+      </div>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 break-words">เส้นทางฝึกจากนิ้วมือ ไปสู่ลูกคิด และคิดในใจ</p>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <NuxtLink
+          v-for="item in learningPath"
+          :key="item.route"
+          :to="item.route"
+          class="group relative overflow-hidden rounded-vikinger-lg bg-white dark:bg-vikinger-dark-100 border border-gray-100 dark:border-vikinger-dark-50/40 shadow-card dark:shadow-card-dark hover:shadow-vikinger-lg transition-all duration-300 hover:-translate-y-1 block"
+        >
+          <div class="h-1.5 w-full bg-gradient-to-r" :class="item.gradient"></div>
+          <div class="relative p-4 sm:p-5">
+            <div class="flex items-center gap-3 mb-3">
+              <div
+                class="w-12 h-12 rounded-vikinger bg-gradient-to-br flex items-center justify-center shadow-lg flex-shrink-0 transform group-hover:scale-110 transition-transform duration-300"
+                :class="item.gradient"
+              >
+                <Icon :icon="item.icon" class="w-6 h-6 text-white" />
+              </div>
+              <span class="ml-auto shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-100 dark:bg-vikinger-dark-200 text-xs font-bold text-gray-500 dark:text-gray-300">
+                {{ item.step }}
+              </span>
+            </div>
+            <h3 class="font-heading text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-1 break-words group-hover:text-vikinger-purple dark:group-hover:text-vikinger-cyan transition-colors">
+              {{ item.title }}
+            </h3>
+            <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 leading-relaxed break-words min-h-[32px]">
+              {{ item.description }}
+            </p>
+          </div>
+        </NuxtLink>
+      </div>
+    </div>
+
     <!-- Games Grid -->
+    <div class="flex items-center gap-2 mb-4">
+      <Icon icon="fluent:games-24-filled" class="w-5 h-5 text-vikinger-purple dark:text-vikinger-cyan shrink-0" />
+      <h2 class="font-heading text-xl sm:text-2xl font-bold text-gray-900 dark:text-white break-words">เกมทั้งหมด</h2>
+    </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
       <NuxtLink
         v-for="game in games"
