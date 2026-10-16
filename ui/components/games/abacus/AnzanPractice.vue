@@ -11,7 +11,7 @@ const {
   count, level, speed, speeds,
   round, phase, countdownNum, flashTerm, termCount,
   input, correctCount, totalCount, streak, bestStreak, accuracy,
-  start, startRound, appendDigit, backspace, clearInput, submit, replay
+  start, startRound, appendDigit, backspace, clearInput, submit, replay, abort
 } = useAnzan()
 
 const counts = [3, 5, 7]
@@ -129,6 +129,13 @@ const recap = computed(() => {
         </p>
         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1 tabular-nums break-words">{{ recap }}</p>
       </template>
+    </div>
+
+    <!-- Cancel (ตอน countdown/flash) -->
+    <div v-if="phase === 'countdown' || phase === 'flash'" class="mb-3 text-center">
+      <button type="button" @click="abort" class="min-h-[40px] px-5 rounded-vikinger bg-gray-100 dark:bg-vikinger-dark-100 border border-gray-200 dark:border-vikinger-dark-50/60 text-slate-500 dark:text-slate-300 text-sm font-medium inline-flex items-center gap-1.5">
+        <Icon icon="fluent:dismiss-24-regular" class="w-4 h-4" /> ยกเลิก
+      </button>
     </div>
 
     <!-- Keypad (เฉพาะตอน input) -->
