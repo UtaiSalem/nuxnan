@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import confetti from 'canvas-confetti'
 import { useAuthStore } from '~/stores/auth'
+import VirtualAbacus from '~/components/games/abacus/VirtualAbacus.vue'
 
 /**
  * MENTAL MATH — เกมคิดเลขเร็ว
@@ -37,6 +38,11 @@ const authStore = useAuthStore()
 // --- App / game state ---
 const gameState = ref<GameState>('menu')
 const soundEnabled = ref(true)
+
+// วิธีตอบ: keypad (ปกติ) หรือ abacus (ลูกคิด — ใช้กับ + − เท่านั้น)
+const answerMode = ref<'keypad' | 'abacus'>('keypad')
+const abacusAnswer = ref(0)
+const abacusColumns = 4
 
 // --- Settings ---
 const operations = [
@@ -140,6 +146,7 @@ function playSound(type: 'correct' | 'wrong' | 'tick' | 'streak') {
 
 // --- Config helpers ---
 function toggleOperation(opId: OpId) {
+  if (answerMode.value === 'abacus' && (opId === 'mul' || opId === 'div')) return
   if (selectedOps.value.includes(opId)) {
     if (selectedOps.value.length > 1) {
       selectedOps.value = selectedOps.value.filter((id) => id !== opId)
@@ -148,11 +155,26 @@ function toggleOperation(opId: OpId) {
     selectedOps.value = [...selectedOps.value, opId]
   }
 }
+
+function setAnswerMode(mode: 'keypad' | 'abacus') {
+  answerMode.value = mode
+  if (mode === 'abacus') {
+    const addSub = selectedOps.value.filter((o) => o === 'add' || o === 'sub')
+    selectedOps.value = addSub.length ? addSub : ['add']
+  }
+  try { localStorage.setItem('mental_math_answer_mode', mode) } catch (e) { /* noop */ }
+}
 function getModeLabel(mId: ModeId) {
   return timeModes.find((m) => m.id === mId)?.label ?? mId
 }
 const currentHighScore = computed(() => highScores.value[timeMode.value] || 0)
 const difficultyNum = computed(() => (difficulty.value === 'easy' ? 1 : difficulty.value === 'medium' ? 2 : 3))
+const hasAnswer = computed(() =>
+  answerMode.value === 'abacus' ? abacusAnswer.value > 0 : currentInput.value.length > 0
+)
+const answerDisplay = computed(() =>
+  answerMode.value === 'abacus' ? String(abacusAnswer.value) : currentInput.value || '?'
+)
 
 // --- Timer visuals ---
 const timerBarColorClass = computed(() => {
@@ -176,7 +198,11 @@ function formatTime(totalSec: number) {
 
 // --- Problem generator ---
 function generateProblem() {
-  const opChoice = selectedOps.value[Math.floor(Math.random() * selectedOps.value.length)]
+  const pool = answerMode.value === 'abacus'
+    ? selectedOps.value.filter((o) => o === 'add' || o === 'sub')
+    : selectedOps.value
+  const ops = pool.length ? pool : (['add'] as OpId[])
+  const opChoice = ops[Math.floor(Math.random() * ops.length)]
   let n1 = 0, n2 = 0, ans = 0, sym = '+'
   const r = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min
 
@@ -198,6 +224,7 @@ function generateProblem() {
   }
 
   currentProblem.value = { num1: n1, num2: n2, symbol: sym, answer: ans, problemText: `${n1} ${sym} ${n2}` }
+  abacusAnswer.value = 0
   questionStartTime = performance.now()
 }
 
@@ -211,6 +238,7 @@ function startGame() {
   totalAnswered.value = 0
   history.value = []
   currentInput.value = ''
+  abacusAnswer.value = 0
   feedbackState.value = null
   isNewHighScore.value = false
   sessionId.value = uuid()
@@ -246,8 +274,9 @@ function clearInput() {
   currentInput.value = ''
 }
 function checkAnswer() {
-  if (!currentInput.value || gameState.value !== 'playing') return
-  const userAns = parseInt(currentInput.value, 10)
+  if (gameState.value !== 'playing') return
+  if (answerMode.value === 'keypad' && !currentInput.value) return
+  const userAns = answerMode.value === 'abacus' ? abacusAnswer.value : parseInt(currentInput.value, 10)
   const isRight = userAns === currentProblem.value.answer
   const timeSpent = Math.max(100, Math.round(performance.now() - questionStartTime))
 
@@ -356,6 +385,10 @@ const avgSpeed = computed(() => {
 // --- Keyboard (physical) ---
 function handleKeyDown(e: KeyboardEvent) {
   if (gameState.value !== 'playing') return
+  if (answerMode.value === 'abacus') {
+    if (e.key === 'Enter') { e.preventDefault(); checkAnswer() }
+    return
+  }
   if (e.key >= '0' && e.key <= '9') { e.preventDefault(); appendDigit(parseInt(e.key, 10)) }
   else if (e.key === 'Backspace') { e.preventDefault(); deleteDigit() }
   else if (e.key === 'Enter') { e.preventDefault(); checkAnswer() }
@@ -373,6 +406,8 @@ onMounted(() => {
     if (savedSound !== null) soundEnabled.value = savedSound === 'true'
     const savedScores = localStorage.getItem('mental_math_highscores')
     if (savedScores) highScores.value = JSON.parse(savedScores)
+    const savedMode = localStorage.getItem('mental_math_answer_mode')
+    if (savedMode === 'abacus' || savedMode === 'keypad') answerMode.value = savedMode
   } catch (e) { /* noop */ }
   window.addEventListener('keydown', handleKeyDown)
 })
@@ -426,8 +461,9 @@ onUnmounted(() => {
             :key="op.id"
             @click="toggleOperation(op.id)"
             type="button"
+            :disabled="answerMode === 'abacus' && (op.id === 'mul' || op.id === 'div')"
             :class="[
-              'min-h-[56px] rounded-vikinger flex flex-col items-center justify-center font-heading text-lg font-bold transition-all border',
+              'min-h-[56px] rounded-vikinger flex flex-col items-center justify-center font-heading text-lg font-bold transition-all border disabled:opacity-40 disabled:cursor-not-allowed',
               selectedOps.includes(op.id)
                 ? 'bg-vikinger-purple text-white border-vikinger-purple shadow-vikinger'
                 : 'bg-white/60 dark:bg-vikinger-dark-200/60 text-slate-700 dark:text-slate-300 border-gray-200 dark:border-vikinger-dark-50/50 hover:border-vikinger-purple/50'
@@ -437,6 +473,43 @@ onUnmounted(() => {
             <span class="text-[10px] font-normal opacity-80">{{ op.name }}</span>
           </button>
         </div>
+      </div>
+
+      <!-- Answer mode -->
+      <div class="mb-5">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">วิธีตอบ</label>
+        <div class="grid grid-cols-2 gap-2">
+          <button
+            @click="setAnswerMode('keypad')"
+            type="button"
+            :class="[
+              'min-h-[56px] rounded-vikinger flex items-center justify-center gap-2 font-medium text-sm border transition-all',
+              answerMode === 'keypad'
+                ? 'bg-gradient-vikinger text-white border-transparent shadow-vikinger'
+                : 'bg-white/60 dark:bg-vikinger-dark-200/60 text-slate-700 dark:text-slate-300 border-gray-200 dark:border-vikinger-dark-50/50 hover:border-vikinger-purple/50'
+            ]"
+          >
+            <Icon icon="fluent:keyboard-24-regular" class="w-5 h-5" />
+            แป้นตัวเลข
+          </button>
+          <button
+            @click="setAnswerMode('abacus')"
+            type="button"
+            :class="[
+              'min-h-[56px] rounded-vikinger flex items-center justify-center gap-2 font-medium text-sm border transition-all',
+              answerMode === 'abacus'
+                ? 'bg-gradient-vikinger text-white border-transparent shadow-vikinger'
+                : 'bg-white/60 dark:bg-vikinger-dark-200/60 text-slate-700 dark:text-slate-300 border-gray-200 dark:border-vikinger-dark-50/50 hover:border-vikinger-cyan/50'
+            ]"
+          >
+            <Icon icon="fluent:calculator-24-regular" class="w-5 h-5" />
+            ลูกคิด
+          </button>
+        </div>
+        <p v-if="answerMode === 'abacus'" class="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1">
+          <Icon icon="fluent:info-24-regular" class="w-3.5 h-3.5 shrink-0" />
+          โหมดลูกคิดใช้กับการบวก–ลบเท่านั้น
+        </p>
       </div>
 
       <!-- Difficulty -->
@@ -572,23 +645,29 @@ onUnmounted(() => {
           <span
             :class="[
               'inline-flex items-center justify-center min-w-[60px] sm:min-w-[70px] px-3 py-1 rounded-vikinger border-2 font-heading text-2xl sm:text-4xl transition-all',
-              currentInput.length > 0
+              hasAnswer
                 ? 'border-vikinger-purple bg-white dark:bg-vikinger-dark-200 text-vikinger-purple dark:text-vikinger-cyan shadow-inner'
                 : 'border-dashed border-slate-300 dark:border-vikinger-dark-50 text-slate-300 dark:text-slate-600'
             ]"
           >
-            {{ currentInput || '?' }}
+            {{ answerDisplay }}
           </span>
         </div>
 
         <p class="text-xs text-slate-400 dark:text-slate-500 mt-4">
-          กดปุ่มตัวเลขด้านล่าง หรือพิมพ์จากคีย์บอร์ดได้
+          {{ answerMode === 'abacus' ? 'เลื่อนเม็ดลูกคิดให้ได้คำตอบ แล้วกดส่งคำตอบ' : 'กดปุ่มตัวเลขด้านล่าง หรือพิมพ์จากคีย์บอร์ดได้' }}
         </p>
       </div>
 
-      <!-- Keypad -->
+      <!-- Input area -->
       <div class="glass-card rounded-vikinger-xl p-4 shadow-card dark:shadow-card-dark">
-        <div class="grid grid-cols-3 gap-2 sm:gap-3 max-w-sm mx-auto">
+        <!-- Abacus input (โหมดลูกคิด) -->
+        <div v-if="answerMode === 'abacus'" class="flex justify-center py-1">
+          <VirtualAbacus v-model="abacusAnswer" :columns="abacusColumns" show-values />
+        </div>
+
+        <!-- Keypad input -->
+        <div v-else class="grid grid-cols-3 gap-2 sm:gap-3 max-w-sm mx-auto">
           <button
             v-for="digit in [1, 2, 3, 4, 5, 6, 7, 8, 9]"
             :key="digit"
@@ -632,7 +711,7 @@ onUnmounted(() => {
           </button>
           <button
             @click="checkAnswer"
-            :disabled="currentInput.length === 0"
+            :disabled="answerMode === 'keypad' && currentInput.length === 0"
             type="button"
             class="col-span-3 min-h-[44px] py-3 rounded-vikinger bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold font-heading text-lg shadow-lg shadow-emerald-500/20 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
