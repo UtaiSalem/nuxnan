@@ -123,7 +123,8 @@ D production: จอมือถือ/แท็บเล็ต/คอม · ไ
 ### ✅ กติกาล็อกแล้ว (ผู้ใช้ยืนยัน 2026-10-16)
 ท่ามือ 0–9 ต่อมือ = **หัวแม่มือ=5, นิ้วชี้→ก้อย=1–4** (ตรงที่ผู้ใช้เรียน) — โครงสร้างเดียวกับ soroban (thumb≈heaven, extended≈earth)
 - ✅ **FingerGestureEngine เสร็จ:** `ui/components/games/fingers/fingerEngine.ts` — `HandGesture{thumb,extended}`, `handValue/digitToHand` (0–9), `fingersUp` (ชั้นแสดงผล, convention เป็น config `DEFAULT_CONVENTION` index→pinky), `validateHand` + PlaceValueEngine สองมือ `HandsState{tens,units}`/`handsValue/numberToHands` (0–99 ซ้าย=สิบ ขวา=หน่วย). เทสต์ `ui/tests/fingers.spec.ts` 9 เคส (รวม round-trip 0–99, fingersUp, custom convention)
-- ถัดไป: UI มือ (แสดง/เลือกท่ามือ) → เกมด่าน 1–2 (ดูแล้วตอบ/ดูเลขแล้วทำมือ/ฟังแล้วตอบ/ฝึกคำนวณ) → สะพานนิ้วมือ↔ลูกคิด (ด่าน 3) → LessonEngine ต่อยอด ExerciseService
+- ✅ **UI มือ + เกมด่านนิ้วมือ 1–2 เสร็จ** (Claude เขียนเอง เพราะ Codex blocked — ดู [[feedback_codex_agy_pipeline]]): `HandDisplay.vue` (มือ CSS, นิ้วกางจาก fingersUp, มือซ้าย mirror), `services/fingers/fingerExerciseService.ts` (mock สร้างโจทย์+ตัวเลือก 0–9/0–99), `composables/useFingerPractice.ts`, `components/games/fingers/FingerPractice.vue` (ด่าน1 มือเดียว/ด่าน2 สองมือ × โหมด read ดูมือ→ตอบเลข / make ดูเลข→เลือกมือ), `pages/practice/fingers.vue` (route `/practice/fingers`). สโมค 375px ครบ (read/make × ด่าน1/2, ตอบถูกเขียว, สองมือ mirror, สถิติเดิน) · เทสต์รวม 51/51 ผ่าน · สเปคที่ `.agents/abacus/spec-finger-ui.md`
+- ถัดไป: สะพานนิ้วมือ↔ลูกคิด (ด่าน 3 — แสดงจำนวนเดียวกันทั้งนิ้วมือ+ลูกคิด) · บวก/ลบด้วยนิ้วมือ (ด่าน 2.4/ด่าน 6) · LessonEngine + ปลดล็อกตามความแม่นยำ · เชื่อม backend (S6)
 
 ---
 ## สถานะปัจจุบันใน nuxnan (2026-10-16)
