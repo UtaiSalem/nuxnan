@@ -280,6 +280,9 @@ onMounted(() => {
 <template>
   <div class="min-h-[calc(100vh-100px)] w-full flex flex-col px-4 py-4 sm:px-4 bg-gray-50 dark:bg-vikinger-dark">
     <div class="max-w-4xl mx-auto w-full">
+      <NuxtLink to="/play/games" class="inline-flex items-center gap-1 mb-3 min-h-[36px] text-sm font-medium text-slate-500 hover:text-vikinger-purple dark:text-slate-400 dark:hover:text-vikinger-cyan transition-colors">
+        ← กลับหน้าเกม
+      </NuxtLink>
       <!-- Header -->
       <div class="relative overflow-hidden rounded-vikinger-xl bg-gradient-dark border border-vikinger-dark-50/40 p-5 sm:p-7 mb-5 sm:mb-6">
         <div class="pointer-events-none absolute -top-12 -right-8 w-44 h-44 bg-glow-purple rounded-full blur-2xl"></div>

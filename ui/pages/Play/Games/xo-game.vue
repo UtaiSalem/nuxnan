@@ -98,7 +98,10 @@ watch(gameMode, () => {
 </script>
 <template>
   <div class="min-h-[calc(100vh-100px)] py-6 flex flex-col justify-center sm:py-12">
-      <div class="relative py-3 sm:max-w-xl sm:mx-auto w-full px-0 sm:px-4">
+      <div class="relative py-3 sm:max-w-xl sm:mx-auto w-full px-4 sm:px-4">
+          <NuxtLink to="/play/games" class="relative z-10 inline-flex items-center gap-1 mb-3 min-h-[36px] text-sm font-medium text-slate-500 hover:text-vikinger-purple dark:text-slate-400 dark:hover:text-vikinger-cyan transition-colors">
+            ← กลับหน้าเกม
+          </NuxtLink>
           <div class="absolute inset-0 bg-gradient-to-r from-cyan-400 to-light-blue-500 shadow-lg transform -skew-y-6 sm:skew-y-0 sm:-rotate-6 sm:rounded-3xl opacity-75">
           </div>
           <div class="relative px-4 py-10 bg-white dark:bg-vikinger-dark-100 shadow-lg rounded-3xl sm:p-20 border border-gray-100 dark:border-vikinger-dark-50">

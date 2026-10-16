@@ -51,6 +51,9 @@ function start() {
 
 <template>
   <div class="max-w-6xl mx-auto py-12 px-0 sm:px-4 space-y-12">
+    <NuxtLink to="/play/games" class="inline-flex items-center gap-1 min-h-[36px] px-4 sm:px-0 text-sm font-medium text-slate-500 hover:text-vikinger-purple dark:text-slate-400 dark:hover:text-vikinger-cyan transition-colors">
+      ← กลับหน้าเกม
+    </NuxtLink>
     <!-- Header -->
     <div class="text-center space-y-4">
       <h1 class="text-5xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Typing Master</h1>

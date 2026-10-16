@@ -103,6 +103,9 @@ onMounted(() => {
 <template>
   <div class="min-h-screen flex flex-col px-0 py-4 sm:px-4 bg-gray-50 dark:bg-gray-900">
     <div class="max-w-4xl mx-auto w-full">
+      <NuxtLink to="/play/games" class="inline-flex items-center gap-1 mb-3 min-h-[36px] text-sm font-medium text-slate-500 hover:text-vikinger-purple dark:text-slate-400 dark:hover:text-vikinger-cyan transition-colors">
+        ← กลับหน้าเกม
+      </NuxtLink>
       <!-- Header -->
       <div class="text-center mb-8">
         <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-pink-500 mb-2 drop-shadow-sm">Mental Match Game</h1>

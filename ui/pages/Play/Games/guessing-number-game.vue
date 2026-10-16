@@ -76,7 +76,12 @@ watch(isGameOver, (newValue) => {
 })
 </script>
 <template>
-  <div class="w-full h-full flex items-start justify-center min-h-[50vh] pt-4 sm:items-center sm:pt-0">
+  <div class="w-full h-full flex flex-col items-center justify-center min-h-[50vh] pt-4 sm:pt-0">
+      <div class="w-full max-w-md mb-3">
+        <NuxtLink to="/play/games" class="inline-flex items-center gap-1 min-h-[36px] text-sm font-medium text-slate-500 hover:text-vikinger-purple dark:text-slate-400 dark:hover:text-vikinger-cyan transition-colors">
+          ← กลับหน้าเกม
+        </NuxtLink>
+      </div>
       <div class="bg-white dark:bg-vikinger-dark-100 rounded-2xl shadow-xl max-w-md w-full border border-gray-100 dark:border-vikinger-dark-50 overflow-hidden">
           <div class="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 text-center">
                <h1 class="text-3xl font-bold text-white mb-2">เกมทายตัวเลข</h1>
