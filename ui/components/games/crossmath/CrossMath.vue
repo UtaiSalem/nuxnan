@@ -106,10 +106,10 @@
         <div class="min-w-0 sm:flex-1 bg-vikinger-dark-100/90 px-3 py-2 rounded-vikinger border border-vikinger-yellow/50 shadow-lg text-center">
           <p class="text-vikinger-yellow font-bold text-sm truncate">{{ score }} <span class="text-vikinger-yellow/80 text-xs">แต้ม</span></p>
         </div>
-        <div class="col-span-3 grid grid-cols-2 gap-2 sm:ml-auto sm:flex sm:shrink-0 sm:gap-1">
-          <button @click="fetchLeaderboard" class="min-h-[44px] sm:min-h-0 min-w-0 py-2 px-3 bg-indigo-700/80 text-white rounded-xl border border-indigo-600 shadow text-sm font-semibold whitespace-nowrap">🏆 อันดับ</button>
-          <button @click="openStageList" class="min-h-[44px] sm:min-h-0 min-w-0 py-2 px-3 bg-slate-700/90 text-white rounded-xl border border-slate-600 shadow text-sm font-semibold whitespace-nowrap">รายการด่าน</button>
-          <button @click="showQuitConfirm = true" class="min-h-[44px] sm:min-h-0 min-w-0 py-2 px-3 bg-red-700/80 text-white rounded-xl border border-red-600 shadow text-sm font-semibold whitespace-nowrap">✕ ออก</button>
+        <div class="col-span-3 grid grid-cols-3 gap-2 sm:ml-auto sm:flex sm:shrink-0 sm:gap-1">
+          <button @click="fetchLeaderboard" class="min-h-[44px] sm:min-h-0 min-w-0 py-2 px-2 sm:px-3 bg-indigo-700/80 text-white rounded-xl border border-indigo-600 shadow text-xs sm:text-sm font-semibold whitespace-nowrap">🏆 อันดับ</button>
+          <button @click="openStageList" class="min-h-[44px] sm:min-h-0 min-w-0 py-2 px-2 sm:px-3 bg-slate-700/90 text-white rounded-xl border border-slate-600 shadow text-xs sm:text-sm font-semibold whitespace-nowrap">รายการด่าน</button>
+          <button @click="showQuitConfirm = true" class="min-h-[44px] sm:min-h-0 min-w-0 py-2 px-2 sm:px-3 bg-red-700/80 text-white rounded-xl border border-red-600 shadow text-xs sm:text-sm font-semibold whitespace-nowrap">✕ ออก</button>
         </div>
       </div>
 
