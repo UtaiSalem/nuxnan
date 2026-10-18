@@ -4892,3 +4892,22 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 5. คลื่น 3 polish #11 SC-S10a/b/c
 6. #24 แดชบอร์ด (ท้ายสุด)
 → หลังทำครบ: เขียว 26/27 (เหลือ #16/#17 owner-gated คงสภาพ)
+
+
+## 2026-10-18 — Cross Math small-screen controls
+- User requested implementation of complete button display on small screens; frontend-only scope. Preserved existing uncommitted header changes.
+- Updated `ui/components/games/crossmath/CrossMath.vue`: labelled responsive action grid, compact 48px keypad, mobile bottom-navigation clearance, 44px modal close/stage buttons, scrollable responsive stage list, bounded result dialog, visible keyboard focus.
+- Updated `ui/pages/Play/Games/cross-math-game.vue`: reduced mobile side padding and allowed shrinking containers.
+- HopeUI reference: Tailwind `dashboard/plugins/button-hover.html` + conversion guide; retained existing game styling. No gameplay/API changes.
+- Verification: Vue compiler parsed/compiled both templates; Chrome headless checked 375/768/1280px (11 keypad buttons >=44px, no document horizontal overflow, stage 100 reachable); 375x812 check confirmed delete/hint clear fixed bottom navigation. Screenshots inspected at 375px. `git diff --check` passed (line-ending warning only). Full production build and medium/large playable boards not tested; this change targets controls.
+
+
+## 2026-10-18 — Follow-up: keep Cross Math keypad visible between levels
+- User reported needing to scroll after each completed level. Previous bottom padding only allowed access; it did not keep controls visible.
+- CrossMath.vue now pins keypad above the 64px app bottom navigation below 1024px, including safe-area inset. Reserved content space and cell scroll margins keep selected cells reachable; focus uses preventScroll plus nearest explicit scrolling on mobile. Desktop retains inline keypad.
+- Verified Vue template/style compilation and git diff --check. Chrome checked 375x667, 375x812, 768x900, 1280x900: start plus two next-level transitions each. On mobile/tablet, all 11 buttons stayed within visible viewport above navigation and passed elementFromPoint hit testing without manual scrolling. Transitions simulated completion via Vue setup state then clicked real next-level button. Screenshot at 375x812 visually inspected.
+
+
+## 2026-10-18 — Compact pinned keypad
+- User requested a further size reduction. Mobile/tablet keypad now uses 44px buttons, 6px gaps, 8px panel padding, 320px maximum width and 20px labels. Height reduced from 242px to 212px (30px recovered for board); adjusted reserved space/scroll margins to match.
+- Chrome verified 375px and 768px start and next-level transition: all 11 buttons visible, hit-testable and >=44px. git diff --check passed with existing line-ending warnings. Desktop unchanged.

@@ -93,23 +93,27 @@
     </div>
 
     <!-- Game Screen -->
-    <div v-else-if="gameState === 'playing'" class="relative z-10 min-h-screen flex flex-col items-center px-3 pt-4 pb-6 gap-3">
+    <div v-else-if="gameState === 'playing'" class="relative z-10 min-h-screen flex flex-col items-center game-playing px-3 pt-4 pb-6 gap-3">
 
       <!-- Header -->
-      <div class="w-full max-w-2xl grid grid-cols-3 gap-2 sm:flex sm:items-center">
-        <div class="min-w-0 sm:flex-1 bg-vikinger-dark-100/90 px-3 py-2 rounded-vikinger border border-vikinger-cyan/50 shadow-lg text-center">
-          <p class="text-vikinger-cyan font-bold text-sm truncate">{{ playerName }}</p>
+      <div class="w-full min-w-0 max-w-2xl flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center">
+        <!-- Info chips -->
+        <div class="flex items-center gap-1.5 min-w-0 sm:flex-1">
+          <div class="min-w-0 flex-1 bg-vikinger-dark-100/90 px-2.5 py-1.5 rounded-xl border border-vikinger-cyan/50 shadow text-center">
+            <p class="text-vikinger-cyan font-bold text-xs truncate">{{ playerName }}</p>
+          </div>
+          <div class="shrink-0 bg-vikinger-dark-100/90 px-2.5 py-1.5 rounded-xl border border-vikinger-purple/50 shadow text-center">
+            <p class="text-indigo-300 font-bold text-xs whitespace-nowrap">ระดับ {{ Math.ceil(currentLevel/10) }} · ด่าน {{ currentLevel }}</p>
+          </div>
+          <div class="shrink-0 bg-vikinger-dark-100/90 px-2.5 py-1.5 rounded-xl border border-vikinger-yellow/50 shadow text-center">
+            <p class="text-vikinger-yellow font-bold text-xs whitespace-nowrap">{{ score }} <span class="text-vikinger-yellow/80 text-[10px]">แต้ม</span></p>
+          </div>
         </div>
-        <div class="min-w-0 sm:flex-1 bg-vikinger-dark-100/90 px-3 py-2 rounded-vikinger border border-vikinger-purple/50 shadow-lg text-center">
-          <p class="text-indigo-300 font-bold text-sm truncate">ระดับ {{ Math.ceil(currentLevel/10) }} / ด่าน {{ currentLevel }}</p>
-        </div>
-        <div class="min-w-0 sm:flex-1 bg-vikinger-dark-100/90 px-3 py-2 rounded-vikinger border border-vikinger-yellow/50 shadow-lg text-center">
-          <p class="text-vikinger-yellow font-bold text-sm truncate">{{ score }} <span class="text-vikinger-yellow/80 text-xs">แต้ม</span></p>
-        </div>
-        <div class="col-span-3 grid grid-cols-3 gap-2 sm:ml-auto sm:flex sm:shrink-0 sm:gap-1">
-          <button @click="fetchLeaderboard" class="min-h-[44px] sm:min-h-0 min-w-0 py-2 px-2 sm:px-3 bg-indigo-700/80 text-white rounded-xl border border-indigo-600 shadow text-xs sm:text-sm font-semibold whitespace-nowrap">🏆 อันดับ</button>
-          <button @click="openStageList" class="min-h-[44px] sm:min-h-0 min-w-0 py-2 px-2 sm:px-3 bg-slate-700/90 text-white rounded-xl border border-slate-600 shadow text-xs sm:text-sm font-semibold whitespace-nowrap">รายการด่าน</button>
-          <button @click="showQuitConfirm = true" class="min-h-[44px] sm:min-h-0 min-w-0 py-2 px-2 sm:px-3 bg-red-700/80 text-white rounded-xl border border-red-600 shadow text-xs sm:text-sm font-semibold whitespace-nowrap">✕ ออก</button>
+        <!-- Keep all actions labelled and reachable on narrow screens. -->
+        <div class="grid grid-cols-3 gap-2 w-full min-w-0 lg:w-auto lg:ml-auto">
+          <button @click="fetchLeaderboard" aria-label="อันดับ" title="อันดับ" class="min-h-[44px] min-w-0 inline-flex items-center justify-center gap-1 py-2 px-2.5 sm:px-3 bg-indigo-700/80 text-white rounded-xl border border-indigo-600 shadow text-xs sm:text-sm font-semibold whitespace-normal">🏆<span class="min-w-0">อันดับ</span></button>
+          <button @click="openStageList" aria-label="รายการด่าน" title="รายการด่าน" class="min-h-[44px] min-w-0 inline-flex items-center justify-center gap-1 py-2 px-2.5 sm:px-3 bg-slate-700/90 text-white rounded-xl border border-slate-600 shadow text-xs sm:text-sm font-semibold whitespace-normal">📋<span class="min-w-0">รายการด่าน</span></button>
+          <button @click="showQuitConfirm = true" aria-label="ออก" title="ออก" class="min-h-[44px] min-w-0 inline-flex items-center justify-center gap-1 py-2 px-2.5 sm:px-3 bg-red-700/80 text-white rounded-xl border border-red-600 shadow text-xs sm:text-sm font-semibold whitespace-normal">✕<span class="min-w-0">ออก</span></button>
         </div>
       </div>
 
@@ -117,11 +121,11 @@
       <div v-if="showLeaderboard" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click="showLeaderboard = false"></div>
         <div class="relative bg-slate-900 border-2 border-indigo-500 rounded-3xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col max-h-[90vh]">
-          <div class="p-5 bg-gradient-to-r from-indigo-600 to-purple-600 flex justify-between items-center shrink-0">
-            <h3 class="text-xl font-black text-white flex items-center gap-2">
+          <div class="p-3 sm:p-5 gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 flex justify-between items-center shrink-0">
+            <h3 class="text-base sm:text-xl min-w-0 font-black text-white flex items-center gap-2">
               <span class="text-2xl">🏆</span> กระดานผู้นำ / Leaderboard
             </h3>
-            <button @click="showLeaderboard = false" class="w-8 h-8 flex items-center justify-center rounded-full bg-black/20 text-white hover:bg-black/40 transition-all">✕</button>
+            <button @click="showLeaderboard = false" aria-label="ปิดกระดานผู้นำ" class="w-11 h-11 shrink-0 flex items-center justify-center rounded-full bg-black/20 text-white hover:bg-black/40 transition-all">✕</button>
           </div>
 
           <div class="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
@@ -203,15 +207,15 @@
       <!-- Stage list modal -->
       <div v-if="showStages" class="fixed inset-0 z-40 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/60" @click="closeStageList"></div>
-        <div class="relative bg-slate-900 p-4 rounded-2xl shadow-2xl max-w-3xl w-full">
+        <div class="relative bg-slate-900 p-3 sm:p-4 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85dvh] flex flex-col min-h-0">
           <div class="flex items-center justify-between mb-3">
             <h3 class="text-white font-bold">รายการด่านทั้งหมด</h3>
-            <button @click="closeStageList" class="text-slate-300">ปิด</button>
+            <button @click="closeStageList" aria-label="ปิดรายการด่าน" class="min-h-[44px] min-w-[44px] text-slate-300">ปิด</button>
           </div>
-          <div class="grid grid-cols-10 gap-2">
+          <div class="grid grid-cols-4 min-[375px]:grid-cols-5 sm:grid-cols-8 lg:grid-cols-10 gap-2 overflow-y-auto min-h-0">
             <button v-for="s in stages" :key="s.id" @click="goToStage(s.stage)"
               :class="[
-                'py-2 text-sm rounded-md',
+                'min-h-[44px] min-w-0 py-2 text-sm rounded-md',
                 s.status === 'completed' ? 'bg-emerald-500 text-white' : s.status === 'unlocked' ? 'bg-amber-400 text-slate-800' : 'bg-slate-700 text-slate-400 cursor-not-allowed'
               ]">
               {{ s.stage }}
@@ -392,14 +396,14 @@
         </div>
       </div>
 
-      <!-- Numpad -->
-      <div class="w-full max-w-xs mt-1">
+      <!-- Numpad: compact rows preserve board space without shrinking touch targets. -->
+      <div class="game-keypad w-full min-w-0 max-w-xs mt-1 pb-1" role="group" aria-label="แป้นตัวเลขและเครื่องมือ">
         <div class="grid grid-cols-3 gap-2">
           <button
             v-for="digit in 9"
             :key="digit"
             @click="handleDigitInput(digit)"
-            class="numpad-btn aspect-square rounded-2xl text-2xl font-bold select-none transition-all
+            class="numpad-btn min-w-0 min-h-[48px] h-12 sm:h-14 rounded-xl text-2xl font-bold select-none transition-all
                    bg-gradient-to-b from-slate-100 to-slate-250 text-slate-800
                    shadow-[0_5px_0_rgba(0,0,0,0.35)] border border-slate-300/80
                    hover:from-white hover:to-slate-100
@@ -412,7 +416,7 @@
             @click="useHint"
             :disabled="hintsRemaining <= 0"
             :class="[
-              'numpad-btn col-span-1 py-3.5 rounded-2xl text-lg font-bold select-none transition-all border',
+              'numpad-btn min-w-0 min-h-[48px] col-span-1 py-2 rounded-xl text-lg font-bold select-none transition-all border',
               hintsRemaining > 0
                 ? 'bg-gradient-to-b from-vikinger-purple to-indigo-700 text-white shadow-[0_5px_0_rgba(49,46,129,0.5)] border-vikinger-purple/60 hover:from-indigo-500 hover:to-indigo-800 active:shadow-[0_1px_0_rgba(49,46,129,0.4)] active:translate-y-1'
                 : 'bg-gradient-to-b from-slate-500 to-slate-700 text-slate-400 border-slate-600 cursor-not-allowed opacity-60'
@@ -423,7 +427,7 @@
           </button>
           <button
             @click="handleDelete"
-            class="numpad-btn col-span-2 py-3.5 rounded-2xl text-xl font-bold select-none transition-all
+            class="numpad-btn min-w-0 min-h-[48px] col-span-2 py-2 rounded-xl text-xl font-bold select-none transition-all
                    bg-gradient-to-b from-red-500 to-red-700 text-white
                    shadow-[0_5px_0_rgba(127,0,0,0.4)] border border-red-400/60
                    hover:from-red-400 hover:to-red-600
@@ -446,7 +450,7 @@
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
       
       <div 
-        class="relative bg-gradient-to-br from-vikinger-dark-100 to-vikinger-dark-300 p-6 md:p-8 rounded-vikinger-xl shadow-vikinger-lg border border-vikinger-purple/50 max-w-md w-full animate-bounce-in"
+        class="relative max-h-[90dvh] overflow-y-auto bg-gradient-to-br from-vikinger-dark-100 to-vikinger-dark-300 p-4 sm:p-6 md:p-8 rounded-vikinger-xl shadow-vikinger-lg border border-vikinger-purple/50 max-w-md w-full animate-bounce-in"
       >
         <!-- Result Icon -->
         <div class="text-center mb-4">
@@ -958,7 +962,12 @@ function selectCell(cellId) {
     activeCellId.value = cellId;
     nextTick(() => {
       const el = cellRefs.value[cellId];
-      if (el) el.focus();
+      if (el) {
+        el.focus({ preventScroll: true });
+        if (window.matchMedia('(max-width: 1023px)').matches) {
+          el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+        }
+      }
     });
   }
 }
@@ -1211,13 +1220,58 @@ watch(activeCellId, (newVal) => {
   if (newVal) {
     nextTick(() => {
       const el = cellRefs.value[newVal];
-      if (el) el.focus();
+      if (el) {
+        el.focus({ preventScroll: true });
+        if (window.matchMedia('(max-width: 1023px)').matches) {
+          el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+        }
+      }
     });
   }
 });
 </script>
 
 <style scoped>
+/* Keep controls above the app navigation through every level transition. */
+@media (max-width: 1023px) {
+  .game-playing {
+    padding-bottom: calc(296px + env(safe-area-inset-bottom));
+  }
+
+  .game-keypad {
+    position: fixed;
+    z-index: 30;
+    left: 50%;
+    bottom: calc(64px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    width: min(320px, calc(100% - 16px));
+    max-width: none;
+    margin-top: 0;
+    padding: 8px;
+    border: 1px solid rgb(100 116 139 / 0.5);
+    border-radius: 16px 16px 0 0;
+    background: #0f172a;
+    box-shadow: 0 -4px 16px rgb(0 0 0 / 0.25);
+  }
+
+  .game-keypad > .grid {
+    gap: 6px;
+  }
+
+  .game-keypad .numpad-btn {
+    min-height: 44px;
+    height: 44px;
+    padding-block: 4px;
+    font-size: 20px;
+    border-radius: 10px;
+  }
+
+  [tabindex="0"] {
+    scroll-margin-top: 96px;
+    scroll-margin-bottom: calc(296px + env(safe-area-inset-bottom));
+  }
+}
+
 @keyframes stripes {
   from { background-position: 0 0; }
   to { background-position: 40px 0; }
@@ -1289,6 +1343,11 @@ watch(activeCellId, (newVal) => {
 
 .rotate-x-2 {
   transform: rotateX(2deg);
+}
+
+.cross-math-game :where(button):focus-visible {
+  outline: 3px solid #fbbf24;
+  outline-offset: 3px;
 }
 
 .numpad-btn {
