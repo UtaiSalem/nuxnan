@@ -1,5 +1,15 @@
 <template>
   <div class="cross-math-game min-h-screen bg-gradient-dark overflow-hidden">
+    <!-- ===== TEMP DEBUG PANEL (Phase A diagnosis) — shows only with ?cmdebug=1 · remove after root-cause found ===== -->
+    <div v-if="DBG" class="fixed top-0 left-0 right-0 z-[9999] bg-black/90 text-emerald-300 text-[10px] font-mono p-2 max-h-[40vh] overflow-y-auto border-b-2 border-emerald-500">
+      <div class="flex items-center gap-2 mb-1 sticky top-0 bg-black/90 py-1">
+        <span class="text-amber-300 font-bold">CM-DEBUG · {{ debugLog.length }}</span>
+        <button @click="copyDebugLog" class="px-2 py-1 bg-emerald-600 text-white rounded">คัดลอก log</button>
+        <button @click="clearDebugLog" class="px-2 py-1 bg-slate-600 text-white rounded">ล้าง</button>
+      </div>
+      <div v-for="(l, i) in debugLog.slice(-14)" :key="i" class="whitespace-pre-wrap break-all leading-tight">{{ l.ts }} · {{ l.tag }}</div>
+    </div>
+
     <!-- 3D Classroom Background with Props -->
     <div class="classroom-scene fixed inset-0 overflow-hidden pointer-events-none">
       <!-- Volumetric Light Effect -->
@@ -548,6 +558,66 @@ const loadingLeaderboard = ref(false);
 const leaderboardData = ref([]);
 const userRankInfo = ref(null);
 
+// ===== TEMP DEBUG (Phase A diagnosis) — remove after root-cause confirmed. Enable with ?cmdebug=1 =====
+const DBG = ref(false);
+const debugLog = ref([]);
+function dlog(tag, data = {}) {
+  if (!DBG.value) return;
+  const entry = { ts: new Date().toISOString().slice(11, 23), tag, ...data };
+  debugLog.value.push(entry);
+  if (debugLog.value.length > 400) debugLog.value.shift();
+  try { console.log('[CM]', tag, JSON.stringify(data)); } catch (_) { console.log('[CM]', tag, data); }
+}
+function cellRectInfo(id) {
+  const el = cellRefs.value[id];
+  if (!el) return { el: false };
+  const r = el.getBoundingClientRect();
+  const kpEl = document.querySelector('.game-keypad');
+  const kp = kpEl ? kpEl.getBoundingClientRect() : null;
+  return {
+    top: Math.round(r.top),
+    bottom: Math.round(r.bottom),
+    behindKeypad: kp ? (r.bottom > kp.top && r.top < kp.bottom) : null,
+  };
+}
+function copyDebugLog() {
+  const meta = {
+    ua: navigator.userAgent,
+    vw: window.innerWidth,
+    vh: window.innerHeight,
+    dpr: window.devicePixelRatio,
+    level: currentLevel.value,
+    size: gridSize.value,
+    state: gameState.value,
+    activeCell: activeCellId.value,
+  };
+  const text = JSON.stringify({ meta, log: debugLog.value }, null, 2);
+  const done = () => { owlMessage.value = 'คัดลอก log แล้ว ✅ วางส่งให้ผมได้เลย'; };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => window.prompt('คัดลอกข้อความนี้:', text));
+  } else {
+    window.prompt('คัดลอกข้อความนี้:', text);
+  }
+}
+function clearDebugLog() { debugLog.value = []; dlog('log-cleared'); }
+function onDebugPointerDown(e) {
+  if (!DBG.value) return;
+  const x = e.clientX, y = e.clientY;
+  const el = document.elementFromPoint(x, y);
+  const btn = el && el.closest ? el.closest('button, [tabindex]') : null;
+  const inKeypad = !!(el && el.closest && el.closest('.game-keypad'));
+  const onCell = !!(el && el.closest && el.closest('[tabindex="0"]'));
+  dlog('pointerdown', {
+    x: Math.round(x),
+    y: Math.round(y),
+    hitTag: el ? el.tagName : null,
+    btnText: btn ? (btn.textContent || '').trim().slice(0, 14) : null,
+    inKeypad,
+    onCell,
+  });
+}
+// ===== END TEMP DEBUG =====
+
 const levelProgress = computed(() => {
   const stage = currentLevel.value;
   let start = 1, end = 10, size = 2, nextSize = 3;
@@ -714,6 +784,7 @@ function openStageList() { showStages.value = true; }
 function closeStageList() { showStages.value = false; }
 
 function goToStage(stageNum) {
+  dlog('goToStage', { stageNum, staleActive: activeCellId.value });
   if (!stageNum || stageNum < 1 || stageNum > 100) return;
   const s = stages.value[stageNum - 1];
   if (s.status === 'locked') return;
@@ -960,6 +1031,7 @@ function selectCell(cellId) {
   const cell = gridCells.value.find(c => c.id === cellId);
   if (cell && cell.type === 'number' && cell.blank) {
     activeCellId.value = cellId;
+    dlog('selectCell', { cellId });
     nextTick(() => {
       const el = cellRefs.value[cellId];
       if (el) {
@@ -967,28 +1039,36 @@ function selectCell(cellId) {
         if (window.matchMedia('(max-width: 1023px)').matches) {
           el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
         }
+        dlog('selectCell:after', { cellId, ...cellRectInfo(cellId) });
       }
     });
+  } else {
+    dlog('selectCell:reject', { cellId, found: !!cell, type: cell ? cell.type : null, blank: cell ? cell.blank : null });
   }
 }
 
 function handleDigitInput(digit) {
+  dlog('digit:in', { digit, active: activeCellId.value });
   if (!activeCellId.value) {
     const firstBlank = gridCells.value.find(c => c.type === 'number' && c.blank && !c.value);
     if (firstBlank) selectCell(firstBlank.id);
-    else return;
+    else { dlog('digit:ignored', { reason: 'no-active-no-empty-blank' }); return; }
   }
   const cell = gridCells.value.find(c => c.id === activeCellId.value);
   if (cell && cell.type === 'number' && cell.blank) {
     cell.value = digit;
+    dlog('digit:set', { cellId: cell.id, digit });
     checkAllLines();
     if (cell.status === 'correct') owlMessage.value = owlMessages.correct;
     else if (cell.status === 'incorrect') owlMessage.value = owlMessages.incorrect;
     moveToNextCell();
+  } else {
+    dlog('digit:ignored', { reason: 'active-not-blank', active: activeCellId.value, found: !!cell, type: cell ? cell.type : null, blank: cell ? cell.blank : null });
   }
 }
 
 function handleDelete() {
+  dlog('delete:in', { active: activeCellId.value });
   if (!activeCellId.value) return;
   const cell = gridCells.value.find(c => c.id === activeCellId.value);
   if (cell && cell.type === 'number' && cell.blank) {
@@ -1058,6 +1138,7 @@ function checkAllLines() {
     }
   }
 
+  dlog('check', { correctH, correctV, size, complete: correctH === size && correctV === size });
   if (correctH === size && correctV === size) levelComplete();
 }
 
@@ -1069,6 +1150,7 @@ function moveToNextCell() {
   } else {
     const firstEmpty = blankCells.find(c => !c.value);
     if (firstEmpty) selectCell(firstEmpty.id);
+    else dlog('move:stay-last', { active: activeCellId.value, note: 'all blanks filled, cannot auto-advance' });
   }
 }
 
@@ -1100,6 +1182,7 @@ function startTimer() {
 }
 
 function levelComplete() {
+  dlog('levelComplete', { level: currentLevel.value });
   clearInterval(timerInterval);
 
   // ===== CHANGE 4: Hint score penalty (-10 per hint used) =====
@@ -1128,6 +1211,7 @@ function levelComplete() {
 }
 
 function nextLevel() {
+  dlog('nextLevel', { from: currentLevel.value, staleActive: activeCellId.value });
   currentLevel.value++;
   elapsedTime.value = 0;
 
@@ -1209,10 +1293,20 @@ function handleKeydown(event) {
 onMounted(() => {
   createStages();
   window.addEventListener('keydown', handleKeydown);
+  // ===== TEMP DEBUG (Phase A) — enable via ?cmdebug=1 or localStorage cmdebug=1 =====
+  try {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get('cmdebug') === '1' || localStorage.getItem('cmdebug') === '1') DBG.value = true;
+  } catch (_) {}
+  if (DBG.value) {
+    window.addEventListener('pointerdown', onDebugPointerDown, true);
+    dlog('mounted', { vw: window.innerWidth, vh: window.innerHeight, dpr: window.devicePixelRatio });
+  }
 });
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown);
+  window.removeEventListener('pointerdown', onDebugPointerDown, true);
   if (timerInterval) clearInterval(timerInterval);
 });
 
