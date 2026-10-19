@@ -45,8 +45,31 @@ const tab = ref<'game' | 'path'>('game')
         </button>
       </div>
 
-      <MentalMath v-show="tab === 'game'" />
-      <JintakanitPath v-show="tab === 'path'" />
+      <!-- ครอบแต่ละแท็บด้วย error boundary: ถ้าคอมโพเนนต์ throw จะโชว์ข้อความแทนจอว่างทั้งหน้า -->
+      <div v-show="tab === 'game'">
+        <NuxtErrorBoundary>
+          <MentalMath />
+          <template #error="{ error, clearError }">
+            <div class="rounded-vikinger-xl border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 p-4 text-center">
+              <p class="font-bold text-rose-600 dark:text-rose-300 mb-1">เกิดข้อผิดพลาดในการแสดงผลเกม</p>
+              <pre class="text-[11px] text-rose-500 dark:text-rose-400 whitespace-pre-wrap break-words text-left mb-3">{{ error }}</pre>
+              <button type="button" @click="clearError" class="min-h-[44px] px-4 rounded-vikinger bg-gradient-vikinger text-white font-bold text-sm shadow-vikinger">ลองใหม่</button>
+            </div>
+          </template>
+        </NuxtErrorBoundary>
+      </div>
+      <div v-show="tab === 'path'">
+        <NuxtErrorBoundary>
+          <JintakanitPath />
+          <template #error="{ error, clearError }">
+            <div class="rounded-vikinger-xl border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 p-4 text-center">
+              <p class="font-bold text-rose-600 dark:text-rose-300 mb-1">เกิดข้อผิดพลาดในการแสดงเส้นทางเรียน</p>
+              <pre class="text-[11px] text-rose-500 dark:text-rose-400 whitespace-pre-wrap break-words text-left mb-3">{{ error }}</pre>
+              <button type="button" @click="clearError" class="min-h-[44px] px-4 rounded-vikinger bg-gradient-vikinger text-white font-bold text-sm shadow-vikinger">ลองใหม่</button>
+            </div>
+          </template>
+        </NuxtErrorBoundary>
+      </div>
     </div>
   </div>
 </template>

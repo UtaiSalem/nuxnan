@@ -2,7 +2,7 @@
  * useFingerMath — ด่าน 6: คิดเลขบวก/ลบ แล้วตอบด้วยท่ามือ
  * ใช้ FingerMathService (mock) — ไม่เรียก API ตรง
  */
-import { ref, computed } from 'vue'
+import { ref, computed, onScopeDispose } from 'vue'
 import type { Operation } from '~/components/games/abacus/abacusEngine'
 import {
   createMockFingerMathService,
@@ -32,7 +32,18 @@ export function useFingerMath(service: FingerMathService = createMockFingerMathS
     totalCount.value === 0 ? 0 : Math.round((correctCount.value / totalCount.value) * 100)
   )
 
+  // หน่วงเวลาไปข้อถัดไปอัตโนมัติเมื่อตอบถูก (เคลียร์เมื่อไปข้อถัดไปเอง/เลิกใช้งาน)
+  const AUTO_NEXT_MS = 900
+  let autoNextTimer: ReturnType<typeof setTimeout> | null = null
+  function clearAutoNext() {
+    if (autoNextTimer) {
+      clearTimeout(autoNextTimer)
+      autoNextTimer = null
+    }
+  }
+
   function nextExercise() {
+    clearAutoNext()
     exercise.value = service.next(stage.value, ops.value)
     selected.value = null
     phase.value = 'answering'
@@ -55,12 +66,17 @@ export function useFingerMath(service: FingerMathService = createMockFingerMathS
       streak.value += 1
       if (streak.value > bestStreak.value) bestStreak.value = streak.value
       phase.value = 'correct'
+      // ตอบถูก → ไปข้อถัดไปเองอัตโนมัติ
+      clearAutoNext()
+      autoNextTimer = setTimeout(() => nextExercise(), AUTO_NEXT_MS)
     } else {
       streak.value = 0
       phase.value = 'wrong'
     }
     progress.record('finger-math', phase.value === 'correct', streak.value)
   }
+
+  onScopeDispose(clearAutoNext)
 
   function setStage(s: FingerMathStage) {
     stage.value = s
