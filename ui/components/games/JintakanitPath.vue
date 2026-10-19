@@ -12,8 +12,8 @@ const learningPath = [
 
 const { levelOf, unlocked, accuracyPct, statOf } = useLessonProgress()
 const stageId = (item) => item.route.split('/').pop()
-// resolve จริง: `<component :is="'NuxtLink'">` แบบสตริงจะไม่นำทาง ต้องใช้ตัว component
-const NuxtLinkComp = resolveComponent('NuxtLink')
+// ใช้ <NuxtLink> ตรง ๆ (คอมไพเลอร์ผูกการนำทางให้เสมอ) — เลี่ยง <component :is="resolveComponent('NuxtLink')">
+// ที่บางบิลด์คืนสตริงแล้วการ์ด "ไม่นำทาง" · ด่านที่ล็อกส่ง to=undefined ให้ NuxtLink ไม่นำทาง
 
 const LEVEL_META = {
   locked: { label: 'ล็อก', icon: 'fluent:lock-closed-24-filled', cls: 'bg-gray-100 text-gray-400 dark:bg-vikinger-dark-200 dark:text-gray-500' },
@@ -32,11 +32,12 @@ const LEVEL_META = {
     <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 break-words">เส้นทางฝึกจากนิ้วมือ ไปสู่ลูกคิด และคิดในใจ</p>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <component
-        :is="unlocked(stageId(item)) ? NuxtLinkComp : 'div'"
+      <NuxtLink
         v-for="item in learningPath"
         :key="item.route"
         :to="unlocked(stageId(item)) ? item.route : undefined"
+        :aria-disabled="!unlocked(stageId(item))"
+        :tabindex="unlocked(stageId(item)) ? 0 : -1"
         class="group relative overflow-hidden rounded-vikinger-lg bg-white dark:bg-vikinger-dark-100 border border-gray-100 dark:border-vikinger-dark-50/40 shadow-card dark:shadow-card-dark transition-all duration-300 block"
         :class="unlocked(stageId(item)) ? 'hover:shadow-vikinger-lg hover:-translate-y-1 cursor-pointer' : 'opacity-60 cursor-not-allowed'"
       >
@@ -80,7 +81,7 @@ const LEVEL_META = {
             ปลดล็อกเมื่อผ่านด่านก่อนหน้า (แม่นยำ ≥85%)
           </div>
         </div>
-      </component>
+      </NuxtLink>
     </div>
   </div>
 </template>
