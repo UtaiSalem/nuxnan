@@ -1,5 +1,24 @@
 # Work Log — nuxnan project
 
+## 🟢 2026-10-20 — เกมพิมพ์ Play/Games/typing: รวมขั้นตอนตั้งค่าทุกโหมดให้เป็นรูปแบบเดียว (เสร็จ · commit `1509bd63`)
+
+### ปัญหา
+Key Training ตั้งค่าซ้ำ 2 ที่ (Lobby + หน้า play) และแต่ละโหมดวางการตั้งค่าคนละที่
+(5 โหมดตั้งใน Lobby, Key Training ตั้งในหน้า play) → ผู้ใช้สับสน · เจ้าของเคาะทิศ = "ตั้งค่าที่หน้า play ทุกโหมด"
+
+### สิ่งที่ทำ
+- **เพิ่ม [`ui/components/games/typing/TypingGameSetup.vue`](../ui/components/games/typing/TypingGameSetup.vue)** = setup gate ร่วมบนหน้า play
+  (header โหมด + Language + Lesson/Difficulty + START · mobile-first)
+- **[play.vue](../ui/pages/Play/Games/typing/play.vue):** `started` ref → โชว์ setup gate ก่อน แล้ว mount โหมดด้วย `:auto-start="true"` หลังกด START
+  → component โหมด mount **หลัง**เลือกค่าแล้ว เลี่ยงกับดัก `useTypingGame` ที่จับ lang/difficulty ครั้งเดียวตอน setup (แก้ค่าหลัง mount จะไม่ re-fetch)
+- **modes:** เพิ่ม prop `autoStart` (default false → ไม่กระทบ race.vue/daily.vue) — word/time/sentence เรียก `startCountdown()`, key training เรียก `start()` ข้าม idle configurator เดิม
+- **[index.vue](../ui/pages/Play/Games/typing/index.vue) (Lobby):** ตัด settings panel ออก เหลือสรุปโหมดที่เลือก + ปุ่มไปต่อ
+
+### ตรวจแล้ว (browser 375px + desktop)
+Key Training / Word Typing / Monster Battle (Phaser) ไหลผ่าน gate เหมือนกันครบ · ไม่มีหน้า "Ready?" ซ้ำ · console error มีแต่ 401 Guest (ไม่เกี่ยว)
+
+---
+
 ## 🟡 2026-10-14 — เมนู #23 รายได้: audit [1]+[2] เสร็จ · security แข็งแรง · เจอ authz inconsistency · รอเจ้าของเคาะ Q1–Q3
 
 ### สถานะ: ไฟล์รอง [`.agents/school-admin/23-revenue.md`](school-admin/23-revenue.md) · OVERVIEW #23 "Phase 1 done"→🟡 (มีรายละเอียด)
