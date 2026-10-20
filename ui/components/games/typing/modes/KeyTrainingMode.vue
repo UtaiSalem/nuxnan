@@ -16,6 +16,7 @@ import {
 // ── Language & Lesson selection ────────────────────────────────────────────
 
 const store = useTypingStore()
+const props = withDefaults(defineProps<{ autoStart?: boolean }>(), { autoStart: false })
 const emit = defineEmits<{ (e: 'finished', result: Record<string, unknown>): void }>()
 const selectedLang   = ref<TrainingLang>(store.selectedLang)
 const selectedLesson = ref<KeyLesson>(store.selectedKeyLesson)
@@ -52,7 +53,10 @@ const {
   init, start, handleKeyCode,
 } = useKeyTraining(selectedLesson, selectedLang, 30)
 
-onMounted(() => init())
+onMounted(() => {
+  init()
+  if (props.autoStart) start()
+})
 
 // ── Keyboard listener (uses e.code — physical key, language-agnostic) ─────
 function onKeyDown(e: KeyboardEvent) {

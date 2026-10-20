@@ -11,11 +11,13 @@ interface Props {
   difficulty: Difficulty
   raceMode?: boolean
   initialWords?: string[]
+  autoStart?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   raceMode: false,
-  initialWords: () => []
+  initialWords: () => [],
+  autoStart: false
 })
 
 const emit = defineEmits(['finished', 'progress'])
@@ -33,6 +35,7 @@ const {
 
 onMounted(async () => {
   await init(props.initialWords)
+  if (props.autoStart && words.value.length > 0) startCountdown()
 })
 
 watch(progress, (p) => {

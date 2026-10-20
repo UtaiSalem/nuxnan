@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { useTypingStore } from '~/stores/typing'
-import type { GameMode, Lang, Difficulty } from '~/stores/typing'
+import type { GameMode } from '~/stores/typing'
 import { useAuthStore } from '~/stores/auth'
-import { LESSON_INFO_BY_LANG, LESSON_ORDER, type KeyLesson } from '~/composables/useKeyTraining'
 
 definePageMeta({
   layout: 'main',
@@ -23,22 +22,7 @@ const modes = [
   // { id: 'letter_runner', name: 'Letter Runner', icon: 'heroicons:arrow-right-circle', description: 'วิ่งเก็บเหรียญ พิมพ์ตัวอักษรทำลายอุปสรรค!', color: 'bg-cyan-500', badge: 'New' },
 ]
 
-const isKeyTraining = computed(() => store.selectedMode === 'key_training')
-const keyLessons = computed(() => LESSON_ORDER.map(id => ({ id, ...LESSON_INFO_BY_LANG[store.selectedLang][id] })))
-
-const languages = [
-  { id: 'en', name: 'English',  flag: '🇬🇧' },
-  { id: 'th', name: 'Thai',     flag: '🇹🇭' },
-  { id: 'ar', name: 'Arabic',   flag: '🇸🇦' },
-]
-
-const difficulties = [
-  { id: 'beginner', name: 'Beginner', desc: 'คำสั้น ง่ายมาก' },
-  { id: 'easy',     name: 'Easy',     desc: 'คำพื้นฐาน'      },
-  { id: 'normal',   name: 'Normal',   desc: 'มีประโยค'       },
-  { id: 'hard',     name: 'Hard',     desc: 'คำยาว สัญลักษณ์' },
-  { id: 'expert',   name: 'Expert',   desc: 'ทุกภาษา จับเวลา' },
-]
+const selectedMode = computed(() => modes.find(m => m.id === store.selectedMode) ?? modes[0])
 
 function selectMode(modeId: GameMode) {
   store.selectedMode = modeId
@@ -113,71 +97,38 @@ function start() {
         </div>
       </div>
 
-      <!-- Settings -->
+      <!-- Selected mode summary + continue -->
       <div class="space-y-4 lg:space-y-6">
-        <h2 class="text-2xl font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider">Game Settings</h2>
-        
-        <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 lg:p-7 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6 lg:space-y-7">
+        <h2 class="text-2xl font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider">พร้อมเล่น</h2>
 
-          <!-- Key Training: language + lesson selection -->
-          <div v-if="isKeyTraining" class="space-y-5">
-            <div class="space-y-3">
-              <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Language</label>
-              <div class="grid grid-cols-3 gap-2">
-                <button v-for="lang in languages" :key="lang.id" @click="store.selectedLang = lang.id as Lang" class="py-3 px-2 rounded-xl border-2 font-bold transition-all text-xs" :class="store.selectedLang === lang.id ? 'border-primary-500 bg-primary-500 text-white' : 'border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400'">{{ lang.flag }} {{ lang.name }}</button>
-              </div>
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 lg:p-7 border border-slate-100 dark:border-slate-800 shadow-sm space-y-5">
+          <!-- Selected mode -->
+          <div class="flex items-center gap-4">
+            <div class="shrink-0 w-14 h-14 flex items-center justify-center rounded-2xl" :class="selectedMode.color">
+              <Icon :icon="selectedMode.icon" class="text-3xl text-white" />
             </div>
-            <div class="space-y-3">
-              <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Lesson</label>
-              <div class="space-y-2">
-                <button v-for="lesson in keyLessons" :key="lesson.id" @click="store.selectedKeyLesson = lesson.id as KeyLesson" class="w-full p-3 rounded-xl border-2 text-left transition-all" :class="store.selectedKeyLesson === lesson.id ? 'border-primary-500 bg-primary-500 text-white' : 'border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400'"><span class="font-bold">{{ lesson.emoji }} {{ lesson.name }}</span><span class="block text-xs opacity-70 mt-1">{{ lesson.desc }}</span></button>
-              </div>
+            <div class="min-w-0">
+              <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest">โหมดที่เลือก</p>
+              <h3 class="text-lg font-bold text-slate-800 dark:text-white break-words">{{ selectedMode.name }}</h3>
             </div>
           </div>
 
-          <!-- Language (hidden for key_training) -->
-          <div v-if="!isKeyTraining" class="space-y-3">
-            <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Language</label>
-            <div class="grid grid-cols-3 gap-2">
-              <button
-                v-for="lang in languages"
-                :key="lang.id"
-                @click="store.selectedLang = lang.id as Lang"
-                class="py-3 px-2 sm:px-4 rounded-xl border-2 font-bold transition-all whitespace-nowrap overflow-hidden text-xs sm:text-sm"
-                :class="store.selectedLang === lang.id
-                  ? 'border-primary-500 bg-primary-500 text-white shadow-lg shadow-primary-500/30'
-                  : 'border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400'"
-              >
-                {{ lang.flag }} {{ lang.name }}
-              </button>
-            </div>
+          <p class="text-sm text-slate-500 break-words">{{ selectedMode.description }}</p>
+
+          <!-- Hint: settings live on the next screen -->
+          <div class="flex items-start gap-3 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 p-4">
+            <Icon icon="heroicons:adjustments-horizontal" class="shrink-0 text-xl text-primary-500 mt-0.5" />
+            <p class="min-w-0 text-sm text-slate-600 dark:text-slate-300 break-words">
+              ตั้งค่า<span class="font-bold">ภาษา</span>และตัวเลือกของโหมดได้ในหน้าถัดไป ก่อนเริ่มเล่น
+            </p>
           </div>
 
-          <!-- Difficulty (hidden for key_training) -->
-          <div v-if="!isKeyTraining" class="space-y-3">
-            <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Difficulty</label>
-            <div class="grid gap-2 grid-cols-[repeat(auto-fill,minmax(80px,1fr))]">
-              <button
-                v-for="diff in difficulties"
-                :key="diff.id"
-                @click="store.selectedDifficulty = diff.id as Difficulty"
-                class="min-h-[44px] sm:min-h-0 py-2.5 px-1.5 rounded-xl border-2 font-bold transition-all flex flex-col items-center justify-center text-center min-h-[58px]"
-                :class="store.selectedDifficulty === diff.id
-                  ? 'border-primary-500 bg-primary-500 text-white shadow-lg shadow-primary-500/30'
-                  : 'border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400'"
-              >
-                <span class="text-xs font-bold leading-tight">{{ diff.name }}</span>
-                <span class="text-[9px] opacity-60 font-medium leading-tight mt-1 w-full text-center">{{ diff.desc }}</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Start Button -->
+          <!-- Continue Button -->
           <button
             @click="start"
             class="w-full py-4 sm:py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-base sm:text-xl rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all"
           >
-            {{ isKeyTraining ? '⌨️ START TRAINING' : 'PLAY NOW' }}
+            เลือก{{ selectedMode.name }} →
           </button>
         </div>
       </div>

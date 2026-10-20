@@ -8,6 +8,7 @@ import MonsterBattleMode from '~/components/games/typing/modes/MonsterBattleMode
 import FallingWordsMode from '~/components/games/typing/modes/FallingWordsMode.vue'
 import KeyTrainingMode from '~/components/games/typing/modes/KeyTrainingMode.vue'
 import LetterRunnerMode from '~/components/games/typing/modes/LetterRunnerMode.vue'
+import TypingGameSetup from '~/components/games/typing/TypingGameSetup.vue'
 import { useTypingApi } from '~/composables/useTypingApi'
 
 definePageMeta({
@@ -17,6 +18,10 @@ definePageMeta({
 const store = useTypingStore()
 const router = useRouter()
 const { submitSession } = useTypingApi()
+
+// Shared setup gate: every mode shows TypingGameSetup first, then mounts the
+// mode component (with chosen settings already in the store) on START.
+const started = ref(false)
 
 const isPhaserMode = computed(() =>
   ['monster_battle', 'falling_words'].includes(store.selectedMode)
@@ -72,8 +77,11 @@ const currentModeComponent = computed(() => {
 
       <!-- Game Stage -->
 
+      <!-- Setup gate — same for every mode -->
+      <TypingGameSetup v-if="!started" :mode="store.selectedMode" @start="started = true" />
+
       <!-- Key Training — standalone, no API words needed -->
-      <KeyTrainingMode v-if="isKeyTraining" @finished="onFinished" />
+      <KeyTrainingMode v-else-if="isKeyTraining" :auto-start="true" @finished="onFinished" />
 
       <!-- Phaser-based modes (Monster Battle, Falling Words) -->
       <ClientOnly v-else-if="isPhaserMode">
@@ -98,6 +106,7 @@ const currentModeComponent = computed(() => {
         :lang="store.selectedLang"
         :difficulty="store.selectedDifficulty"
         :time-limit="store.selectedTimeLimit"
+        :auto-start="true"
         @finished="onFinished"
       />
     </div>
