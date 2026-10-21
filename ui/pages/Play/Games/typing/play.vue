@@ -41,6 +41,8 @@ async function onFinished(result: any) {
     // Even if it fails to save, we show the local result
     store.setResult({
       ...result,
+      wpm: Math.round((result.correct_chars / 5) / (Math.max(1, result.time_elapsed) / 60)),
+      accuracy: result.total_chars > 0 ? Math.round(result.correct_chars / result.total_chars * 100) : 100,
       score: 0,
       xp_earned: 0,
       speed_bonus: 0,
@@ -65,11 +67,11 @@ const currentModeComponent = computed(() => {
 </script>
 
 <template>
-  <div class="min-h-screen py-12 px-0 sm:px-4 bg-slate-50/50 dark:bg-slate-950/50">
-    <div class="max-w-5xl mx-auto space-y-8">
+  <div class="min-h-screen pt-3 pb-6 px-2 sm:px-4 bg-slate-50/50 dark:bg-slate-950/50">
+    <div class="max-w-5xl mx-auto space-y-2 sm:space-y-3">
       <!-- Breadcrumbs / Back -->
       <div class="flex items-center gap-4">
-        <NuxtLink to="/play/games/typing" class="flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors group">
+        <NuxtLink to="/play/games/typing" class="flex min-h-[36px] items-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors group">
           <Icon icon="heroicons:arrow-left" class="text-xl group-hover:-translate-x-1 transition-transform" />
           <span class="font-bold uppercase tracking-widest text-xs">Back to Lobby</span>
         </NuxtLink>

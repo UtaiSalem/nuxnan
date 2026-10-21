@@ -2,6 +2,8 @@
 import { Icon } from '@iconify/vue'
 import { useTypingStore } from '~/stores/typing'
 import VirtualKeyboard from '../ui/VirtualKeyboard.vue'
+import FingerGuide from '../ui/FingerGuide.vue'
+import Hand3DOverlay from '../ui/Hand3DOverlay.vue'
 import {
   useKeyTraining,
   LESSON_INFO_BY_LANG,
@@ -16,6 +18,7 @@ import {
 // ── Language & Lesson selection ────────────────────────────────────────────
 
 const store = useTypingStore()
+const { t } = useI18n()
 const props = withDefaults(defineProps<{ autoStart?: boolean }>(), { autoStart: false })
 const emit = defineEmits<{ (e: 'finished', result: Record<string, unknown>): void }>()
 const selectedLang   = ref<TrainingLang>(store.selectedLang)
@@ -87,6 +90,16 @@ const charBoxClass = computed(() => {
 
 const isRTL = computed(() => selectedLang.value === 'ar')
 
+// Which finger should press the current target key (0–8, null if unmapped)
+const currentFingerIndex = computed(() => {
+  const idx = KEY_FINGER_BY_CODE[targetCode.value]
+  return idx !== undefined ? idx : null
+})
+
+// Pulse the 3D hand on every keypress
+const pressTick = ref(0)
+watch(() => attempts.value.length, () => { pressTick.value = Date.now() })
+
 // ── Results ────────────────────────────────────────────────────────────────
 const resultGrade = computed(() => {
   const a = accuracy.value
@@ -142,7 +155,7 @@ watch(gameState, (state) => {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto space-y-6">
+  <div class="training-studio max-w-4xl mx-auto space-y-6 rounded-3xl border border-slate-700/70 bg-slate-950 p-2 text-white shadow-2xl sm:p-3">
 
     <!-- ══ IDLE: Language + Lesson selection ══ -->
     <div v-if="gameState === 'idle'" class="space-y-8">
@@ -238,76 +251,77 @@ watch(gameState, (state) => {
     </div>
 
     <!-- ══ PLAYING ══ -->
-    <div v-else-if="gameState === 'playing'" class="space-y-5">
+    <div v-else-if="gameState === 'playing'" class="flex flex-col gap-2 sm:gap-3 xl:h-[calc(100dvh-12.5rem)] xl:min-h-0">
 
-      <!-- Stats bar -->
-      <div class="grid grid-cols-4 gap-3">
-        <div class="bg-slate-800/80 rounded-vikinger p-3 text-center border border-slate-700">
-          <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Accuracy</div>
-          <div class="text-2xl font-black"
-               :class="accuracy >= 90 ? 'text-green-400' : accuracy >= 70 ? 'text-amber-400' : 'text-red-400'">
-            {{ accuracy }}%
+      <!-- Header + stats (single compact strip) -->
+      <div class="shrink-0 space-y-2">
+        <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+          <div class="flex min-w-0 items-baseline gap-2">
+            <span class="text-[11px] font-bold tracking-widest text-cyan-300">KEY TRAINING</span>
+            <h2 class="truncate text-base font-black sm:text-lg">{{ currentLessonInfo.name }}</h2>
+          </div>
+          <div class="flex items-center gap-2 text-xs font-bold sm:text-sm">
+            <span class="text-slate-500">{{ LANG_OPTIONS.find(l => l.id === selectedLang)?.flag }}</span>
+            <span :class="accuracy >= 90 ? 'text-green-400' : accuracy >= 70 ? 'text-amber-400' : 'text-red-400'">{{ accuracy }}%</span>
+            <span class="tabular-nums text-white">{{ correctCount }}/{{ sequence.length }}</span>
+            <span class="flex items-center gap-0.5 text-amber-400"><Icon icon="heroicons:fire" class="text-sm" />{{ streak }}</span>
+            <span class="font-mono text-slate-300">{{ formatTime(elapsedSeconds) }}</span>
           </div>
         </div>
-        <div class="bg-slate-800/80 rounded-vikinger p-3 text-center border border-slate-700">
-          <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Keys</div>
-          <div class="text-2xl font-black text-white">{{ correctCount }}/{{ sequence.length }}</div>
+        <!-- Progress bar -->
+        <div class="h-1.5 w-full overflow-hidden rounded-full bg-slate-800" role="progressbar" :aria-label="t('typingStudio.progress')" :aria-valuenow="Math.round(progress)" :aria-valuemin="0" :aria-valuemax="100">
+          <div class="h-full bg-gradient-to-r transition-all duration-300" :class="currentLessonInfo.color" :style="{ width: `${progress}%` }"></div>
         </div>
-        <div class="bg-slate-800/80 rounded-vikinger p-3 text-center border border-slate-700">
-          <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Streak</div>
-          <div class="text-2xl font-black text-amber-400">{{ streak }}</div>
-        </div>
-        <div class="bg-slate-800/80 rounded-vikinger p-3 text-center border border-slate-700">
-          <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Time</div>
-          <div class="text-2xl font-black text-slate-300 font-mono">{{ formatTime(elapsedSeconds) }}</div>
-        </div>
-      </div>
-
-      <!-- Progress bar -->
-      <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-        <div
-          class="h-full bg-gradient-to-r transition-all duration-300"
-          :class="currentLessonInfo.color"
-          :style="{ width: `${progress}%` }"
-        ></div>
       </div>
 
       <!-- Current character display -->
-      <div class="flex flex-col items-center justify-center py-6 gap-4">
-        <!-- Language badge -->
-        <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold text-slate-400">
-          <span>{{ LANG_OPTIONS.find(l => l.id === selectedLang)?.flag }}</span>
-          <span>{{ currentLessonInfo.name }}</span>
-        </div>
-
+      <div class="target-stage relative flex shrink-0 flex-col items-center justify-center gap-1 rounded-3xl border border-white/10 py-1.5">
         <!-- Big character box -->
         <div
-          class="flex items-center justify-center w-48 h-48 rounded-vikinger-xl border-2 shadow-xl transition-all duration-150"
+          class="flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border-2 shadow-xl transition-all duration-150"
           :class="charBoxClass"
           style="background: rgba(15,23,42,0.85)"
         >
           <span
             class="font-mono font-black transition-all duration-150 select-none"
             :class="[charAnimClass, isRTL ? 'direction-rtl' : '']"
-            style="font-size: 6.5rem; line-height: 1"
+            style="font-size: clamp(2rem, 5vh, 3rem); line-height: 1"
           >
             {{ currentKey }}
           </span>
         </div>
 
-        <p class="text-slate-500 text-sm font-bold uppercase tracking-widest">
-          Press the highlighted key
-        </p>
+        <div class="flex min-h-5 items-center gap-2 text-xs font-bold" role="status" aria-live="polite">
+          <template v-if="lastStatus === 'incorrect'"><Icon icon="heroicons:arrow-path" class="text-amber-300" /><span class="text-amber-200">{{ t('typingStudio.retry') }}</span></template>
+          <template v-else-if="streak >= 5"><Icon icon="heroicons:fire" class="text-amber-300" /><span class="text-amber-200">{{ t('typingStudio.combo', { count: streak }) }}</span></template>
+          <template v-else><Icon icon="heroicons:sparkles" class="text-cyan-300" /><span class="text-cyan-200">{{ t('typingStudio.pressKey') }}</span></template>
+        </div>
+        <div class="flex max-w-full items-center gap-1.5 overflow-hidden px-3" aria-hidden="true" dir="ltr">
+          <span v-for="(key, index) in sequence.slice(currentIdx, currentIdx + 7)" :key="currentIdx + index" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border font-mono text-sm font-bold" :class="index === 0 ? 'border-cyan-300 bg-cyan-300/20 text-cyan-100' : 'border-slate-700 bg-slate-900/70 text-slate-500'">{{ key }}</span>
+        </div>
       </div>
 
-      <!-- Virtual Keyboard -->
-      <div class="bg-slate-900/80 rounded-vikinger-xl p-5 border border-slate-700">
+      <!-- Virtual Keyboard + 3D hand guide (dark panel, fills remaining height) -->
+      <div class="flex min-h-0 flex-1 flex-col gap-2 rounded-3xl border border-slate-700 bg-slate-900/80 p-2 sm:p-3">
         <VirtualKeyboard
+          class="shrink-0"
           :target-key="currentKey"
           :lang="selectedLang"
           :last-pressed-code="lastPressedCode"
           :last-status="lastStatus"
         />
+        <div class="flex shrink-0 flex-wrap items-center justify-between gap-2 px-2 text-[11px] font-bold text-slate-400">
+          <span>{{ t('typingStudio.handGuide') }}</span>
+          <span class="text-cyan-200">{{ t('typingStudio.matchColors') }}</span>
+        </div>
+        <div class="min-h-0 flex-1">
+          <ClientOnly>
+            <Hand3DOverlay :finger-index="currentFingerIndex" :press-tick="pressTick" :status="lastStatus" />
+            <template #fallback>
+              <FingerGuide :finger-index="currentFingerIndex" :status="lastStatus" />
+            </template>
+          </ClientOnly>
+        </div>
       </div>
     </div>
 
@@ -434,4 +448,13 @@ watch(gameState, (state) => {
 }
 .animate-shake { animation: shake 0.35s ease-in-out; }
 .direction-rtl { direction: rtl; }
+.training-studio {
+  background-image: radial-gradient(ellipse at 10% 0%, rgb(8 145 178 / 0.12), transparent 55%);
+}
+.target-stage {
+  background: radial-gradient(ellipse at 50% 50%, rgb(14 165 233 / 0.13), transparent 70%), rgb(15 23 42 / 0.6);
+}
+@media (prefers-reduced-motion: reduce) {
+  .training-studio :deep(*) { animation: none !important; transition: none !important; }
+}
 </style>

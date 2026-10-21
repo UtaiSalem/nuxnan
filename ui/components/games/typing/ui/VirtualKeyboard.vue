@@ -108,31 +108,11 @@ const isRTL       = computed(() => props.lang === 'ar')
 </script>
 
 <template>
-  <div class="space-y-4">
-
-    <!-- Finger hint banner -->
-    <div v-if="targetFinger" class="flex items-center justify-center gap-3">
-      <div
-        class="flex items-center gap-2 px-4 py-1.5 rounded-full border"
-        :class="targetFinger.border"
-        style="background: rgba(255,255,255,0.05)"
-      >
-        <span class="text-lg">
-          {{ targetFinger.hand === 'left' ? '🖐️' : targetFinger.hand === 'right' ? '✋' : '👍' }}
-        </span>
-        <span class="text-xs font-bold uppercase tracking-widest" :class="targetFinger.text">
-          {{ targetFinger.label }}
-        </span>
-        <!-- Show physical key hint -->
-        <span class="text-xs font-mono text-slate-400 ml-1">
-          [{{ EN_LABEL[targetCode] ?? '?' }}]
-        </span>
-      </div>
-    </div>
+  <div class="space-y-2">
 
     <!-- Keyboard rows — centered within the container -->
-    <div class="flex justify-center overflow-x-auto pb-2">
-      <div class="space-y-1">
+    <div class="flex overflow-x-auto py-1">
+      <div class="mx-auto w-max shrink-0 space-y-1 px-2">
 
         <!-- Letter / number rows -->
         <div
@@ -144,7 +124,7 @@ const isRTL       = computed(() => props.lang === 'ar')
           <div
             v-for="code in row"
             :key="code"
-            :class="[keyClasses(code), 'w-8 h-9 sm:w-10 sm:h-11 md:w-11 md:h-12']"
+            :class="[keyClasses(code), 'w-8 sm:w-10 md:w-11 h-[clamp(24px,3.6vh,44px)]']"
           >
             <!-- Dual-label: EN tiny top-left + lang char large center -->
             <template v-if="isDualLabel">
@@ -179,7 +159,7 @@ const isRTL       = computed(() => props.lang === 'ar')
 
         <!-- Space bar — centered under the keyboard block -->
         <div class="flex justify-center">
-          <div :class="[keyClasses('Space'), 'h-8 sm:h-9 md:h-10 w-48 sm:w-56 md:w-64 tracking-widest']">
+          <div :class="[keyClasses('Space'), 'h-[clamp(22px,3.4vh,36px)] w-48 sm:w-56 md:w-64 tracking-widest']">
             <span
               class="text-[10px] sm:text-xs font-bold"
               :class="keyState('Space') === 'idle' ? 'text-slate-500' : 'text-white'"
@@ -190,11 +170,11 @@ const isRTL       = computed(() => props.lang === 'ar')
     </div>
 
     <!-- Finger legend -->
-    <div class="flex flex-wrap justify-center gap-2 pt-1">
+    <div class="flex flex-wrap justify-center gap-1 pt-0.5">
       <div
         v-for="(f, i) in FINGER_STYLES.slice(0, 8)"
         :key="i"
-        class="flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide transition-colors"
+        class="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide transition-colors"
         :class="targetFinger?.label === f.label
           ? `${f.bg} text-white shadow-sm`
           : 'bg-slate-800/60 text-slate-500'"
