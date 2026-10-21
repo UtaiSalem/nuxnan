@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import Hand3DOverlay from './ui/Hand3DOverlay.vue'
+import FingerGuide from './ui/FingerGuide.vue'
 import { useTypingStore } from '~/stores/typing'
 import type { GameMode, Lang, Difficulty } from '~/stores/typing'
 import {
@@ -15,6 +17,7 @@ const props = defineProps<{ mode: GameMode }>()
 const emit = defineEmits<{ (e: 'start'): void }>()
 
 const store = useTypingStore()
+const { t } = useI18n()
 
 const isKeyTraining = computed(() => props.mode === 'key_training')
 
@@ -59,7 +62,7 @@ const isRTL = computed(() => store.selectedLang === 'ar')
 <template>
   <div class="max-w-2xl mx-auto px-4 sm:px-0 space-y-6 sm:space-y-8">
     <!-- Mode header -->
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-4 rounded-3xl border border-primary-200/60 bg-gradient-to-br from-primary-50 via-white to-white p-4 shadow-sm dark:border-primary-500/20 dark:from-primary-900 dark:via-slate-900 dark:to-slate-900 sm:p-6">
       <div class="shrink-0 w-14 h-14 flex items-center justify-center rounded-2xl" :class="meta.color">
         <Icon :icon="meta.icon" class="text-3xl text-white" />
       </div>
@@ -69,6 +72,15 @@ const isRTL = computed(() => store.selectedLang === 'ar')
         </h2>
         <p class="text-sm text-slate-500 break-words">{{ meta.desc }}</p>
       </div>
+    </div>
+
+    <div v-if="isKeyTraining" class="overflow-hidden rounded-3xl border border-slate-700 bg-gradient-to-br from-slate-900 to-slate-950 px-4 pb-4 text-center shadow-xl">
+      <ClientOnly>
+        <Hand3DOverlay :finger-index="null" />
+        <template #fallback><FingerGuide :finger-index="null" /></template>
+      </ClientOnly>
+      <p class="text-sm font-bold text-cyan-200">{{ t('typingStudio.encourage') }}</p>
+      <p class="mt-1 text-xs text-slate-400">{{ t('typingStudio.handGuide') }}</p>
     </div>
 
     <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-7 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
