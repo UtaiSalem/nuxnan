@@ -4911,3 +4911,13 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 ## 2026-10-18 — Compact pinned keypad
 - User requested a further size reduction. Mobile/tablet keypad now uses 44px buttons, 6px gaps, 8px panel padding, 320px maximum width and 20px labels. Height reduced from 242px to 212px (30px recovered for board); adjusted reserved space/scroll margins to match.
 - Chrome verified 375px and 768px start and next-level transition: all 11 buttons visible, hit-testable and >=44px. git diff --check passed with existing line-ending warnings. Desktop unchanged.
+
+## 2026-10-21 — Typing modes Vikinger redesign (complete)
+- User explicitly authorized implementation after the plan; Vikinger overrides HopeUI for game screens.
+- Preserving pre-existing KeyTrainingMode, TypingGameSetup, virtual keyboard/hand overlays and dependency changes.
+- Updated word/time/sentence presentation, shared stats/input/combo/word display; added TypingModeHeader; arcade headers/HUD/loading recovery and result replay goals.
+- Input correctness: removed v-model double assignment before onInput and premature clearing before submit; added IME protection; countdown timers cleaned up.
+- Verified: 13 Vue SFC script/template/style compilations, TH/EN JSON, 4 focused input integration tests, git diff --check.
+- Chrome real-data smoke: Word, Time Attack, Sentences, Monster Battle and Falling Words at 375/768/1280px, no horizontal overflow or page errors. 20 correct words -> 100% accuracy -> local result (save deliberately intercepted) -> replay. Sentence spaces/Enter checked. Both arcade modes scored actual targets with combo increases.
+- Chrome recovery/dark smoke: sentence + both arcade modes failed requests -> retry -> playable; dark rendering checked. Reviewed screenshots and fixed artificial character spacing/natural word wrapping; compacted mobile combo. Responsive Vue HP HUD replaces duplicate canvas HP.
+- Full build not run. Commit authorized by the user. Existing concurrent Key Training work was committed externally during the task; translations and measured-result fallback are already included in that updated baseline. No user changes reverted.

@@ -7,6 +7,9 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const { t } = useI18n()
+const submitKey = computed(() => props.submitOn === 'enter' ? t('typingArena.enter') : props.submitOn === 'space' ? t('typingArena.space') : `${t('typingArena.space')} ${t('typingArena.or')} ${t('typingArena.enter')}`)
+
 const emit = defineEmits(['update:modelValue', 'submit', 'keydown'])
 
 const inputRef = ref<HTMLInputElement | null>(null)
@@ -18,6 +21,7 @@ function onInput(e: Event) {
 }
 
 function onKeydown(e: KeyboardEvent) {
+  if (e.isComposing || e.keyCode === 229 || props.disabled) return
   emit('keydown', e)
   const submitOn = props.submitOn ?? 'both'
   const isSpace = e.key === ' '
@@ -29,8 +33,6 @@ function onKeydown(e: KeyboardEvent) {
 
   if (shouldSubmit) {
     e.preventDefault()
-    ;(e.target as HTMLInputElement).value = ''
-    emit('update:modelValue', '')
     emit('submit')
   }
 }
@@ -55,8 +57,9 @@ defineExpose({ focus })
       type="text"
       :value="modelValue"
       :disabled="disabled"
-      class="w-full px-4 sm:px-6 py-4 text-2xl font-mono text-center bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 outline-none transition-all duration-200"
-      placeholder="Type here..."
+      class="w-full px-4 sm:px-6 py-4 text-2xl font-mono text-center text-vikinger-dark dark:text-white bg-vikinger-light-200 dark:bg-vikinger-dark-300 border-2 border-vikinger-purple/25 rounded-vikinger-lg focus:border-vikinger-purple focus:ring-4 focus:ring-vikinger-purple/15 outline-none transition-all duration-200"
+      :placeholder="t('typingArena.input')"
+      :aria-label="t('typingArena.inputLabel')"
       autocomplete="off"
       autocorrect="off"
       autocapitalize="off"
@@ -65,9 +68,9 @@ defineExpose({ focus })
       @keydown="onKeydown"
     />
     
-    <div class="mt-4 flex justify-center gap-4 text-xs font-bold text-slate-400 uppercase tracking-widest">
-      <span class="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded">Space</span>
-      <span>to submit word</span>
+    <div class="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300">
+      <kbd class="rounded-md border border-vikinger-purple/20 bg-vikinger-purple/10 px-2 py-1">{{ submitKey }}</kbd>
+      <span>{{ t(submitOn === 'enter' ? 'typingArena.submitSentence' : 'typingArena.submitWord') }}</span>
     </div>
   </div>
 </template>

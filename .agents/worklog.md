@@ -4254,3 +4254,11 @@ vocab ไม่ตรง (FE `retired`/`intern` · BE `suspended`/`terminated`/`
 Q3 scope รอบนี้ (ปิด P0+P1 ของ staff ก่อน · G15 เฟสถัดไป?) · Q4 department เป็น select department_id (#9)?
 
 แตก step ไว้แล้ว ST-S1..S7 ใน [`14-staff.md`](school-admin/14-staff.md) §7 — เริ่มเมื่อ Q เคาะ
+
+## 2026-10-21 — Typing other modes Vikinger refresh (complete; branch main)
+- User authorized implementation; game identity uses Vikinger per explicit instruction.
+- Files: ui/components/games/typing/modes/{WordTypingMode,TimeAttackMode,SentenceTypingMode,MonsterBattleMode,FallingWordsMode,LetterRunnerMode}.vue; ui/components/games/typing/ui/{TypingModeHeader,TypingStatsBar,TypingComboDisplay,TypingInput,TypingWordDisplay}.vue; ui/pages/Play/Games/typing/result.vue; ui/tests/typing-input.spec.ts.
+- Added shared mode identity/progress, responsive HUD, combo milestones, localized gameplay/results, replay goals and loading recovery. Corrected premature input clearing and duplicate v-model assignment, IME confirmation handling, async countdown cleanup and sentence character spacing. Both arcade health bars now use responsive Vue HUD only.
+- TH/EN typingArena messages and typing/play.vue measured-result fallback were added preserving existing edits, then included by concurrent external commits; latest baseline contains them. Key Training, keyboard and hand work preserved.
+- Verified ourselves: 13 SFC compilations; 4 Vitest integration regressions; TH/EN JSON; git diff --check; Chrome five visible modes at 375/768/1280 with actual API words (no overflow/page errors); complete word round/results/replay; sentence Enter/spaces; arcade typed targets score/combo; sentence/arcade failed-load recovery and dark rendering.
+- Smoke tests deliberately intercepted session POSTs to avoid synthetic database records. Saved-session backend behavior unchanged, full build not run. Letter Runner remains hidden in lobby as before; only shared header added and SFC compiled. User requested committing this completed change; no required implementation remains.

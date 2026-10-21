@@ -9,11 +9,25 @@ definePageMeta({
   layout: 'main',
 })
 
+const { t } = useI18n()
 const store = useTypingStore()
 const authStore = useAuthStore()
 const { fetchLeaderboard } = useTypingApi()
 
 const result = computed(() => store.lastResult)
+const nextGoal = computed(() => {
+  const r = result.value
+  if (!r) return ''
+  return r.accuracy < 95
+    ? t('typingArena.accuracyGoal', { count: Math.min(100, Math.max(80, Math.round(r.accuracy) + 3)) })
+    : t('typingArena.speedGoal', { count: Math.max(10, Math.round(r.wpm) + 5) })
+})
+const resultStats = computed(() => result.value ? [
+  { label: t('typingArena.wpm'), value: Math.round(result.value.wpm), icon: 'heroicons:bolt' },
+  { label: t('typingArena.accuracy'), value: `${result.value.accuracy}%`, icon: 'heroicons:check-badge' },
+  { label: t('typingArena.score'), value: result.value.score, icon: 'heroicons:trophy' },
+  { label: t('typingArena.xp'), value: `+${result.value.xp_earned}`, icon: 'heroicons:sparkles' },
+] : [])
 const leaderboard = ref<any[]>([])
 const newAchievements = ref<any[]>([])
 
@@ -76,12 +90,12 @@ onMounted(async () => {
   }
 
   // Trigger confetti for good performance
-  if (result.value.accuracy >= 90) {
+  if (result.value.accuracy >= 90 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     confetti({
       particleCount: 150,
       spread: 70,
       origin: { y: 0.6 },
-      colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444']
+      colors: ['#615dfa', '#23d2e2', '#ff6b81', '#ffd700']
     })
   }
 
@@ -97,143 +111,56 @@ onMounted(async () => {
   }
 })
 
-function formatWpm(wpm: number) {
-  return Math.round(wpm)
-}
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto py-12 px-0 sm:px-4 space-y-12">
-      <!-- Achievement Notification -->
-      <AchievementToast :achievements="newAchievements" />
-
-      <!-- Result Header -->
-      <div v-if="result" class="text-center space-y-6 animate-in fade-in zoom-in duration-700">
-        <div class="space-y-2">
-          <h1 class="text-6xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Session Complete!</h1>
-          <p class="text-xl text-slate-500">Fantastic job! Here's how you did:</p>
-        </div>
-
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
-          <!-- WPM -->
-          <div class="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
-            <span class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">WPM</span>
-            <span class="text-4xl font-black text-primary-600">{{ result.wpm }}</span>
-          </div>
-          <!-- Accuracy -->
-          <div class="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
-            <span class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Accuracy</span>
-            <span class="text-4xl font-black text-blue-600">{{ result.accuracy }}%</span>
-          </div>
-          <!-- Score -->
-          <div class="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
-            <span class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Score</span>
-            <span class="text-4xl font-black text-orange-500">{{ result.score }}</span>
-          </div>
-          <!-- XP -->
-          <div class="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-3xl border border-primary-500/20 shadow-lg shadow-primary-500/10">
-            <span class="block text-xs font-black text-primary-400 uppercase tracking-widest mb-1">XP Earned</span>
-            <span class="text-4xl font-black text-primary-500">+{{ result.xp_earned }}</span>
+  <div class="mx-auto max-w-4xl space-y-5 px-3 py-6 sm:px-4 sm:py-10">
+    <AchievementToast :achievements="newAchievements" />
+    <template v-if="result">
+      <section class="relative overflow-hidden rounded-vikinger-xl border border-vikinger-purple/20 bg-white p-5 text-center shadow-vikinger dark:bg-vikinger-dark-100 sm:p-8">
+        <div aria-hidden="true" class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-vikinger"></div>
+        <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-vikinger text-3xl text-white shadow-vikinger"><Icon icon="heroicons:trophy" /></div>
+        <h1 class="text-2xl font-black text-vikinger-dark dark:text-white sm:text-4xl">{{ t('typingArena.roundComplete') }}</h1>
+        <p class="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-slate-600 dark:text-slate-300">{{ t('typingArena.resultIntro') }}</p>
+        <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div v-for="stat in resultStats" :key="stat.label" class="min-w-0 rounded-vikinger-lg border border-vikinger-purple/15 bg-vikinger-purple/5 p-3 sm:p-4">
+            <Icon :icon="stat.icon" class="mx-auto mb-2 text-xl text-vikinger-purple dark:text-vikinger-cyan" />
+            <p class="text-xs font-bold text-slate-600 dark:text-slate-300">{{ stat.label }}</p>
+            <p class="mt-2 break-words text-2xl font-black tabular-nums text-vikinger-purple dark:text-vikinger-cyan sm:text-3xl">{{ stat.value }}</p>
           </div>
         </div>
+      </section>
+      <section class="rounded-vikinger-xl bg-gradient-vikinger p-5 text-white shadow-vikinger sm:p-6">
+        <p class="text-xs font-black uppercase tracking-wider">{{ t('typingArena.nextGoal') }}</p>
+        <h2 class="mt-2 text-lg font-black sm:text-xl">{{ nextGoal }}</h2>
+        <div class="mt-5 flex flex-col gap-3 sm:flex-row">
+          <NuxtLink to="/play/games/typing/play" class="flex min-h-[48px] items-center justify-center gap-2 rounded-vikinger bg-white px-6 py-3 font-black text-vikinger-purple shadow-md transition-transform hover:-translate-y-0.5 motion-reduce:transform-none"><Icon icon="heroicons:arrow-path" />{{ t('typingArena.again') }}</NuxtLink>
+          <NuxtLink to="/play/games/typing" class="flex min-h-[48px] items-center justify-center gap-2 rounded-vikinger border border-white/50 bg-vikinger-dark/20 px-6 py-3 font-bold text-white hover:bg-vikinger-dark/30"><Icon icon="heroicons:squares-2x2" />{{ t('typingArena.changeMode') }}</NuxtLink>
+        </div>
+      </section>
+      <div class="grid items-start gap-5 md:grid-cols-2">
+        <section class="space-y-4 rounded-vikinger-xl border border-vikinger-purple/15 bg-white p-5 dark:bg-vikinger-dark-100 sm:p-6">
+          <h2 class="flex items-center gap-2 text-lg font-black text-vikinger-dark dark:text-white"><Icon icon="heroicons:sparkles" class="text-vikinger-purple dark:text-vikinger-cyan" />{{ t('typingArena.bonuses') }}</h2>
+          <dl class="divide-y divide-vikinger-purple/10">
+            <div v-for="bonus in [{ key: 'speedBonus', value: result.speed_bonus }, { key: 'comboBonus', value: result.combo_bonus }, { key: 'accuracyBonus', value: result.accuracy_bonus }, { key: 'maxCombo', value: result.max_combo }]" :key="bonus.key" class="flex justify-between gap-3 py-3 text-sm">
+              <dt class="text-slate-600 dark:text-slate-300">{{ t(`typingArena.${bonus.key}`) }}</dt><dd class="shrink-0 font-black text-vikinger-purple dark:text-vikinger-cyan">{{ bonus.key === 'maxCombo' ? `${bonus.value}×` : `+${bonus.value}` }}</dd>
+            </div>
+          </dl>
+        </section>
+        <section class="space-y-4 rounded-vikinger-xl border border-vikinger-purple/15 bg-white p-5 dark:bg-vikinger-dark-100 sm:p-6">
+          <h2 class="flex items-center gap-2 text-lg font-black text-vikinger-dark dark:text-white"><Icon icon="heroicons:trophy" class="text-orange-500" />{{ t('typingArena.ranking') }}</h2>
+          <p v-if="!leaderboard.length" class="py-4 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{{ t('typingArena.noRanking') }}</p>
+          <div v-for="(entry, index) in leaderboard.slice(0, 5)" :key="entry.user_id" class="flex items-center gap-3 rounded-vikinger bg-vikinger-purple/5 p-3">
+            <span class="shrink-0 text-sm font-black text-vikinger-purple dark:text-vikinger-cyan">#{{ index + 1 }}</span>
+            <span class="min-w-0 flex-1 truncate text-sm font-bold text-vikinger-dark dark:text-white">{{ entry.user?.name }}</span>
+            <div class="shrink-0 text-right text-sm"><p class="font-black text-vikinger-dark dark:text-white">{{ entry.top_score }}</p><p class="text-xs text-slate-600 dark:text-slate-300">{{ entry.top_wpm }} WPM</p></div>
+          </div>
+        </section>
       </div>
-
-      <!-- Details and Leaderboard -->
-      <div class="grid md:grid-cols-2 gap-8 items-start">
-        <!-- Bonuses -->
-        <div v-if="result" class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-8 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
-          <h2 class="text-xl font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
-            <Icon icon="heroicons:sparkles" class="text-yellow-500" />
-            Bonus Points
-          </h2>
-          <div class="space-y-4">
-            <div class="flex justify-between items-center py-3 border-b border-slate-50 dark:border-slate-800">
-              <span class="text-slate-600 dark:text-slate-400 font-bold">Speed Bonus</span>
-              <span class="font-black text-green-500">+{{ result.speed_bonus }}</span>
-            </div>
-            <div class="flex justify-between items-center py-3 border-b border-slate-50 dark:border-slate-800">
-              <span class="text-slate-600 dark:text-slate-400 font-bold">Combo Bonus</span>
-              <span class="font-black text-green-500">+{{ result.combo_bonus }}</span>
-            </div>
-            <div class="flex justify-between items-center py-3 border-b border-slate-50 dark:border-slate-800">
-              <span class="text-slate-600 dark:text-slate-400 font-bold">Accuracy Bonus</span>
-              <span class="font-black text-green-500">+{{ result.accuracy_bonus }}</span>
-            </div>
-            <div class="flex justify-between items-center py-3">
-              <span class="text-slate-600 dark:text-slate-400 font-bold">Max Combo</span>
-              <span class="font-black text-primary-500">{{ result.max_combo }}x</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Leaderboard -->
-        <div class="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-8 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
-          <h2 class="text-xl font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
-            <Icon icon="heroicons:trophy" class="text-orange-500" />
-            Global Ranking
-          </h2>
-          <div class="space-y-2">
-            <div 
-              v-for="(entry, index) in leaderboard" 
-              :key="entry.user_id"
-              class="flex items-center gap-4 p-3 rounded-2xl transition-colors"
-              :class="index === 0 ? 'bg-orange-500/10 border border-orange-500/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800'"
-            >
-              <div class="w-8 h-8 flex items-center justify-center font-black" :class="index === 0 ? 'text-orange-500' : 'text-slate-400'">
-                #{{ index + 1 }}
-              </div>
-              <div class="flex-1 flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
-                  <img v-if="entry.user?.profile_photo_url" :src="entry.user.profile_photo_url" class="w-full h-full object-cover" />
-                  <div v-else class="w-full h-full flex items-center justify-center text-xs font-bold text-slate-500">
-                    {{ entry.user?.name?.charAt(0) }}
-                  </div>
-                </div>
-                <span class="font-bold text-slate-800 dark:text-white truncate max-w-[120px]">{{ entry.user?.name }}</span>
-              </div>
-              <div class="text-right">
-                <div class="font-black text-slate-900 dark:text-white">{{ entry.top_score }}</div>
-                <div class="text-[10px] font-bold text-slate-500 uppercase">{{ entry.top_wpm }} WPM</div>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="flex flex-col justify-center gap-3 sm:flex-row">
+        <button v-if="authStore.user" :disabled="sharing" class="flex min-h-[44px] items-center justify-center gap-2 rounded-vikinger border border-vikinger-purple/25 px-5 py-3 text-sm font-bold text-vikinger-purple disabled:opacity-50 dark:text-vikinger-cyan" @click="shareToFeed"><Icon :icon="sharing ? 'eos-icons:loading' : 'heroicons:share'" />{{ t(shareSuccess ? 'typingArena.shared' : 'typingArena.share') }}</button>
+        <NuxtLink v-if="authStore.user" :to="`/play/games/typing/profile/${authStore.user.id}`" class="flex min-h-[44px] items-center justify-center gap-2 rounded-vikinger border border-vikinger-purple/25 px-5 py-3 text-sm font-bold text-vikinger-purple dark:text-vikinger-cyan"><Icon icon="heroicons:user" />{{ t('typingArena.profile') }}</NuxtLink>
       </div>
-
-      <!-- Actions -->
-      <div class="flex flex-col sm:flex-row gap-4 justify-center pt-8">
-        <NuxtLink
-          to="/play/games/typing/play"
-          class="px-12 py-4 bg-primary-600 hover:bg-primary-700 text-white font-black text-xl rounded-2xl shadow-lg shadow-primary-500/30 transition-all hover:scale-105 active:scale-95 text-center"
-        >
-          PLAY AGAIN
-        </NuxtLink>
-
-        <button
-          @click="shareToFeed"
-          :disabled="sharing"
-          class="px-8 py-4 border-2 border-slate-200 dark:border-slate-700 hover:border-primary-500 dark:hover:border-primary-500 text-slate-700 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 font-black text-lg rounded-2xl transition-all hover:scale-105 disabled:opacity-50 flex items-center justify-center gap-2"
-        >
-          <Icon v-if="sharing" icon="eos-icons:loading" class="animate-spin" />
-          <span v-else-if="shareSuccess" class="text-green-500">✅ แชร์แล้ว!</span>
-          <template v-else>
-            <Icon icon="heroicons:share" />
-            แชร์ลง Feed
-          </template>
-        </button>
-
-        <NuxtLink v-if="authStore.user" :to="`/play/games/typing/profile/${authStore.user.id}`"
-          class="px-8 py-4 border-2 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-600 dark:text-slate-400 font-black rounded-2xl transition-all text-center hover:scale-105 flex items-center justify-center"
-        >
-          👤 ดูโปรไฟล์ฉัน
-        </NuxtLink>
-
-        <NuxtLink
-          to="/play/games/typing"
-          class="px-4 sm:px-12 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-xl rounded-2xl shadow-xl transition-all hover:scale-105 active:scale-95 text-center"
-        >
-          LOBBY
-        </NuxtLink>
-      </div>
+    </template>
   </div>
 </template>

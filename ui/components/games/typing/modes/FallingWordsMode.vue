@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
+import TypingModeHeader from '../ui/TypingModeHeader.vue'
+import TypingComboDisplay from '../ui/TypingComboDisplay.vue'
+
 import { usePhaserGame } from '~/composables/usePhaserGame'
 import { useTypingApi } from '~/composables/useTypingApi'
 import type { Lang, Difficulty } from '~/stores/typing'
@@ -8,6 +12,10 @@ interface Props {
   difficulty: Difficulty
 }
 const props = defineProps<Props>()
+const { t } = useI18n()
+const loading = ref(true)
+const loadFailed = ref(false)
+let disposed = false
 const emit  = defineEmits(['finished'])
 
 const containerId = 'falling-words-canvas'
@@ -37,9 +45,12 @@ useKeyboardAwareInput(inputRef)
 
 async function initGame() {
   const words = await fetchWords(props.lang, props.difficulty, 50)
+  if (disposed) return
   sharedState.wordBank = words.map((w: any) => w.text)
+  if (!sharedState.wordBank.length) throw new Error('Empty word bank')
 
   const Phaser = (await import('phaser')).default
+  if (disposed) return
 
   class FallingScene extends Phaser.Scene {
     fallingWords: Phaser.GameObjects.Group | null = null
@@ -52,10 +63,9 @@ async function initGame() {
       const { width, height } = this.scale
 
       const bg = this.add.graphics()
-      bg.fillGradientStyle(0x0f172a, 0x0f172a, 0x1e1b4b, 0x1e1b4b, 1)
+      bg.fillGradientStyle(0x1d2333, 0x1d2333, 0x282f3f, 0x282f3f, 1)
       bg.fillRect(0, 0, width, height)
 
-      this.createHpBar()
 
       this.fallingWords = this.add.group()
 
@@ -84,14 +94,6 @@ async function initGame() {
       }
     }
 
-    createHpBar() {
-      const { width } = this.scale
-      this.add.text(20, 20, 'HP', { fontSize: '14px', color: '#94a3b8', fontFamily: 'monospace' })
-      this.add.rectangle(100, 28, 150, 16, 0x1e293b).setOrigin(0.5)
-      const hpBar = this.add.rectangle(100, 28, 150, 16, 0x22c55e).setOrigin(0.5)
-      this.registry.set('hpBar', hpBar)
-    }
-
     getSpawnDelay(): number {
       const base: Record<string, number> = { beginner: 4000, easy: 3000, normal: 2000, hard: 1500, expert: 1000 }
       return base[props.difficulty] ?? 2500
@@ -102,7 +104,7 @@ async function initGame() {
 
       const text = this.add.text(x, -30, word, {
         fontSize: '22px',
-        color: '#60a5fa',
+        color: '#23d2e2',
         backgroundColor: '#1e293b88',
         padding: { x: 8, y: 4 },
         fontFamily: 'monospace',
@@ -171,12 +173,6 @@ async function initGame() {
 
     takeDamage(amount: number) {
       sharedState.playerHp = Math.max(0, sharedState.playerHp - amount)
-      const hpBar = this.registry.get('hpBar') as Phaser.GameObjects.Rectangle
-      if (hpBar) {
-        const pct = sharedState.playerHp / 100
-        hpBar.width = 150 * pct
-        hpBar.setFillStyle(pct > 0.5 ? 0x22c55e : pct > 0.25 ? 0xf59e0b : 0xef4444)
-      }
       if (sharedState.playerHp <= 0) this.endGame()
     }
 
@@ -213,13 +209,14 @@ async function initGame() {
     type: Phaser.AUTO,
     width: 800,
     height: 500,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#1d2333',
     scene: [FallingScene],
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
   })
+  if (disposed) destroyGame()
 }
 
 function handleInput() {
@@ -237,6 +234,7 @@ function handleInput() {
 }
 
 function handleKeydown(e: KeyboardEvent) {
+  if (e.isComposing || e.keyCode === 229 || loading.value || loadFailed.value) return
   if (e.key !== 'Enter' && e.key !== ' ') return
   e.preventDefault()
   if (!sharedState.currentWord || !sharedState.onWordTyped) return
@@ -246,10 +244,6 @@ function handleKeydown(e: KeyboardEvent) {
 
   sharedState.onWordTyped(correct)
   sharedState.playerInput = ''
-}
-
-function keepFocus() {
-  if (!sharedState.gameOver) nextTick(() => inputRef.value?.focus())
 }
 
 watch(() => sharedState.gameOver, (over) => {
@@ -270,57 +264,57 @@ watch(() => sharedState.gameOver, (over) => {
   })
 })
 
-onMounted(async () => {
-  await initGame()
-  nextTick(() => inputRef.value?.focus())
-})
-onUnmounted(() => destroyGame())
+async function loadGame() {
+  loading.value = true
+  loadFailed.value = false
+  destroyGame()
+  try {
+    await initGame()
+  } catch (error) {
+    if (!disposed) {
+      loadFailed.value = true
+      destroyGame()
+      console.error('[typing arcade] Failed to load game', error)
+    }
+  } finally {
+    if (!disposed) {
+      loading.value = false
+      if (!loadFailed.value) nextTick(() => inputRef.value?.focus())
+    }
+  }
+}
+
+onMounted(loadGame)
+onUnmounted(() => { disposed = true; destroyGame() })
 </script>
 
 <template>
-<div class="max-w-4xl mx-auto space-y-4">
-  <div class="grid grid-cols-4 gap-3 text-center">
-    <div class="bg-slate-900 rounded-2xl p-3 border border-slate-800">
-      <p class="text-xs text-slate-500 font-bold uppercase">Score</p>
-      <p class="text-2xl font-black text-blue-400">{{ sharedState.score }}</p>
+  <div class="mx-auto max-w-4xl space-y-4">
+    <TypingModeHeader mode="falling_words" />
+    <div class="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+      <div v-for="stat in [{ label: t('typingArena.score'), value: sharedState.score, icon: 'heroicons:trophy' }, { label: t('typingArena.wpm'), value: sharedState.wpm, icon: 'heroicons:bolt' }, { label: t('typingArena.combo'), value: sharedState.combo + '×', icon: 'heroicons:fire' }, { label: t('typingArena.health'), value: sharedState.playerHp + '%', icon: 'heroicons:heart' }]" :key="stat.label" class="min-w-0 rounded-vikinger-lg border border-vikinger-purple/20 bg-white p-3 dark:bg-vikinger-dark-100 sm:p-4">
+        <p class="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300"><Icon :icon="stat.icon" class="shrink-0 text-base text-vikinger-purple dark:text-vikinger-cyan" />{{ stat.label }}</p>
+        <p class="mt-2 truncate text-2xl font-black tabular-nums text-vikinger-purple dark:text-vikinger-cyan">{{ stat.value }}</p>
+      </div>
     </div>
-    <div class="bg-slate-900 rounded-2xl p-3 border border-slate-800">
-      <p class="text-xs text-slate-500 font-bold uppercase">WPM</p>
-      <p class="text-2xl font-black text-cyan-400">{{ sharedState.wpm }}</p>
+    <div class="space-y-2">
+      <div class="flex items-center justify-between gap-2 text-xs font-bold text-slate-600 dark:text-slate-300"><span>{{ t('typingArena.health') }}</span><span :class="sharedState.playerHp <= 25 ? 'text-rose-500' : ''">{{ sharedState.playerHp }}%</span></div>
+      <div role="progressbar" :aria-label="t('typingArena.health')" :aria-valuenow="sharedState.playerHp" aria-valuemin="0" aria-valuemax="100" class="h-2 overflow-hidden rounded-full bg-vikinger-purple/10"><div class="h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none" :class="sharedState.playerHp <= 25 ? 'bg-vikinger-pink' : 'bg-gradient-vikinger'" :style="{ width: sharedState.playerHp + '%' }"></div></div>
     </div>
-    <div class="bg-slate-900 rounded-2xl p-3 border border-slate-800">
-      <p class="text-xs text-slate-500 font-bold uppercase">Combo</p>
-      <p class="text-2xl font-black text-orange-400">{{ sharedState.combo }}x</p>
+    <div class="relative overflow-hidden rounded-vikinger-xl border border-vikinger-purple/30 bg-vikinger-dark shadow-vikinger">
+      <div :id="containerId" class="w-full" style="height: 500px"></div>
+      <div v-if="loading || loadFailed" class="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-vikinger-dark p-5 text-center" role="status">
+        <Icon :icon="loadFailed ? 'heroicons:exclamation-triangle' : 'eos-icons:loading'" class="text-4xl text-vikinger-cyan" />
+        <p class="text-sm font-bold text-white">{{ t(loadFailed ? 'typingArena.loadError' : 'typingArena.loading') }}</p>
+        <button v-if="loadFailed" class="min-h-[44px] rounded-vikinger bg-gradient-vikinger px-6 py-3 font-bold text-white" @click="loadGame">{{ t('typingArena.retry') }}</button>
+      </div>
     </div>
-    <div class="bg-slate-900 rounded-2xl p-3 border border-slate-800">
-      <p class="text-xs text-slate-500 font-bold uppercase">HP</p>
-      <p class="text-2xl font-black" :class="sharedState.playerHp > 50 ? 'text-green-400' : sharedState.playerHp > 25 ? 'text-yellow-400' : 'text-red-400'">
-        {{ sharedState.playerHp }}%
-      </p>
+    <TypingComboDisplay :combo="sharedState.combo" />
+    <div class="space-y-3 rounded-vikinger-xl border border-vikinger-purple/20 bg-white p-4 text-center shadow-vikinger dark:bg-vikinger-dark-100 sm:p-6">
+      <p class="text-xs font-bold text-slate-600 dark:text-slate-300">{{ t('typingArena.target') }}</p>
+      <p class="min-h-[40px] break-words text-2xl font-black text-vikinger-purple dark:text-vikinger-cyan sm:text-3xl">{{ sharedState.currentWord || '…' }}</p>
+      <input ref="inputRef" v-model="sharedState.playerInput" :disabled="loading || loadFailed || sharedState.gameOver" :aria-label="t('typingArena.inputLabel')" :placeholder="t('typingArena.input')" class="min-h-[56px] w-full max-w-lg rounded-vikinger-lg border-2 border-vikinger-purple/25 bg-vikinger-light-200 px-4 py-4 text-center text-xl text-vikinger-dark outline-none transition-colors focus:border-vikinger-purple focus:ring-4 focus:ring-vikinger-purple/15 disabled:opacity-50 dark:bg-vikinger-dark-300 dark:text-white" autocomplete="off" autocorrect="off" autocapitalize="off" :spellcheck="false" @input="handleInput" @keydown="handleKeydown" />
+      <p class="text-xs text-slate-600 dark:text-slate-300">{{ t('typingArena.arcadeInput') }}</p>
     </div>
   </div>
-
-  <div
-    :id="containerId"
-    class="w-full rounded-3xl overflow-hidden border border-slate-800 bg-slate-900 shadow-2xl"
-    style="height: 500px"
-  ></div>
-
-  <div class="text-center space-y-4">
-    <div class="text-3xl font-black font-mono tracking-widest text-blue-400 min-h-[40px]">
-      {{ sharedState.currentWord || '...' }}
-    </div>
-    <input
-      ref="inputRef"
-      v-model="sharedState.playerInput"
-      @input="handleInput"
-      @keydown="handleKeydown"
-      @blur="keepFocus"
-      :disabled="sharedState.gameOver"
-      placeholder="พิมพ์คำแล้วกด Enter หรือ Space..."
-      class="w-full max-w-md py-4 px-4 sm:px-6 bg-slate-900 border-2 border-slate-700 focus:border-blue-400 rounded-2xl text-white text-xl font-mono text-center focus:outline-none transition-colors"
-      autocomplete="off" autocorrect="off" spellcheck="false"
-    />
-  </div>
-</div>
 </template>

@@ -1,57 +1,26 @@
 <script setup lang="ts">
-import { gsap } from 'gsap'
-
-interface Props {
-  combo: number
-}
-
-const props = defineProps<Props>()
-const comboRef = ref<HTMLElement | null>(null)
-
-watch(() => props.combo, (newVal) => {
-  if (newVal > 0) {
-    nextTick(() => {
-      if (comboRef.value) {
-        gsap.fromTo(comboRef.value, 
-          { scale: 1.5, opacity: 0, y: -20 },
-          { scale: 1, opacity: 1, y: 0, duration: 0.3, ease: 'back.out(2)' }
-        )
-      }
-    })
-  }
-})
-
-const comboColorClass = computed(() => {
-  if (props.combo >= 50) return 'text-purple-500'
-  if (props.combo >= 30) return 'text-red-500'
-  if (props.combo >= 20) return 'text-orange-500'
-  if (props.combo >= 10) return 'text-blue-500'
-  return 'text-primary-500'
-})
-
-const comboLabel = computed(() => {
-  if (props.combo >= 100) return 'GODLIKE!'
-  if (props.combo >= 50) return 'UNSTOPPABLE!'
-  if (props.combo >= 30) return 'AMAZING!'
-  if (props.combo >= 20) return 'GREAT!'
-  if (props.combo >= 10) return 'GOOD!'
-  return 'COMBO'
-})
+import { Icon } from '@iconify/vue'
+const props = defineProps<{ combo: number }>()
+const { t } = useI18n()
+const milestone = computed(() => (Math.floor(props.combo / 5) + 1) * 5)
+const label = computed(() => t(props.combo >= 20 ? 'typingArena.comboEpic' : props.combo >= 10 ? 'typingArena.comboGreat' : props.combo >= 5 ? 'typingArena.comboNice' : 'typingArena.comboHint'))
 </script>
 
 <template>
-  <div class="h-16 flex items-center justify-center overflow-hidden">
-    <div 
-      v-if="combo >= 5" 
-      ref="comboRef"
-      class="flex flex-col items-center"
-    >
-      <span class="text-xs font-black uppercase tracking-[0.2em]" :class="comboColorClass">
-        {{ comboLabel }}
-      </span>
-      <span class="text-4xl font-black italic" :class="comboColorClass">
-        {{ combo }}x
-      </span>
+  <div class="flex items-center justify-between gap-2 rounded-vikinger-lg border border-vikinger-purple/20 bg-vikinger-purple/5 p-3 dark:bg-vikinger-purple/10">
+    <div class="flex min-w-0 flex-1 items-center gap-2">
+      <Icon icon="heroicons:fire" class="shrink-0 text-2xl" :class="combo >= 5 ? 'text-orange-500' : 'text-vikinger-purple dark:text-vikinger-cyan'" />
+      <div class="min-w-0"><p class="text-sm font-bold text-vikinger-dark dark:text-white">{{ label }}</p><p class="mt-1 text-xs text-slate-600 dark:text-slate-300">{{ t('typingArena.nextCombo', { count: milestone }) }}</p></div>
+    </div>
+    <div class="flex shrink-0 flex-col-reverse items-end gap-1 sm:flex-row sm:items-center sm:gap-3">
+      <div class="flex gap-1" aria-hidden="true"><span v-for="n in 5" :key="n" class="h-1.5 w-2.5 rounded-full sm:w-5 transition-colors motion-reduce:transition-none" :class="n <= combo % 5 || (combo > 0 && combo % 5 === 0) ? 'bg-vikinger-cyan' : 'bg-vikinger-purple/20'"></span></div>
+      <span :key="combo" class="combo-value text-2xl font-black tabular-nums text-vikinger-purple dark:text-vikinger-cyan">{{ combo }}×</span>
     </div>
   </div>
 </template>
+
+<style scoped>
+.combo-value { animation: combo-pop .2s ease-out; }
+@keyframes combo-pop { from { transform: scale(1.15); } to { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .combo-value { animation: none; } }
+</style>

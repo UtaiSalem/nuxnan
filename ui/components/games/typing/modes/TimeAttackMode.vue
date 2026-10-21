@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import TypingModeHeader from '../ui/TypingModeHeader.vue'
 import TypingStatsBar from '../ui/TypingStatsBar.vue'
 import TypingWordDisplay from '../ui/TypingWordDisplay.vue'
 import TypingInput from '../ui/TypingInput.vue'
@@ -22,14 +23,16 @@ const props = withDefaults(defineProps<Props>(), {
   autoStart: false
 })
 
+const { t } = useI18n()
+
 const emit = defineEmits(['finished', 'progress'])
 
 const {
-  gameState, words, currentIndex, currentInput, currentWord,
-  currentWordChars, extraChars, completedWords, progress,
-  wpm, accuracy, combo, maxCombo, mistakes, elapsedSeconds,
+  gameState, words, currentIndex, currentInput,
+  currentWordChars, extraChars, progress,
+  wpm, accuracy, combo, mistakes, elapsedSeconds,
   isLoading, loadError,
-  init, startGame, startPlaying, onInput, submitWord, buildResult
+  init, startPlaying, onInput, submitWord, buildResult
 } = useTypingGame({
   mode: 'time_attack',
   lang: props.lang,
@@ -37,6 +40,8 @@ const {
   timeLimit: props.timeLimit,
   wordCount: 100 // Load many words for time attack
 })
+
+let disposed = false
 
 onMounted(async () => {
   await init(props.initialWords)
@@ -50,15 +55,17 @@ watch(progress, (p) => {
 })
 
 const countdown = ref(3)
-const countdownTimer = ref<any>(null)
+let countdownTimer: ReturnType<typeof setInterval> | undefined
 
 function startCountdown() {
+  if (disposed || isLoading.value || loadError.value || !words.value.length) return
+  clearInterval(countdownTimer)
   gameState.value = 'countdown'
   countdown.value = 3
-  countdownTimer.value = setInterval(() => {
+  countdownTimer = setInterval(() => {
     countdown.value--
     if (countdown.value === 0) {
-      clearInterval(countdownTimer.value)
+      clearInterval(countdownTimer)
       startPlaying()
     }
   }, 1000)
@@ -69,80 +76,42 @@ watch(gameState, (newVal) => {
     emit('finished', buildResult())
   }
 })
+async function retry() {
+  await init(props.initialWords)
+  if (props.autoStart && !loadError.value && words.value.length > 0) startCountdown()
+}
+
+onUnmounted(() => { disposed = true; clearInterval(countdownTimer) })
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto space-y-8">
-    <!-- Stats -->
-    <TypingStatsBar 
-      :wpm="wpm"
-      :accuracy="accuracy"
-      :elapsed-seconds="elapsedSeconds"
-      :time-limit="timeLimit"
-      :mistakes="mistakes"
-    />
-
-    <div class="relative bg-slate-50 dark:bg-slate-900/50 rounded-3xl p-4 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-inner min-h-[400px] flex flex-col items-center justify-center overflow-hidden">
-      
-      <!-- Loading State -->
-      <div v-if="isLoading" class="text-center space-y-4">
-        <svg class="animate-spin h-12 w-12 text-orange-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-        </svg>
-        <p class="text-slate-500 font-bold uppercase tracking-widest text-sm animate-pulse">Loading words...</p>
+  <div class="mx-auto max-w-4xl space-y-4">
+    <TypingModeHeader mode="time_attack" :progress="Math.min(100, Math.round(elapsedSeconds / timeLimit * 100))" />
+    <TypingStatsBar :wpm="wpm" :accuracy="accuracy" :elapsed-seconds="elapsedSeconds" :mistakes="mistakes" :time-limit="timeLimit" />
+    <section class="relative min-h-[340px] overflow-hidden rounded-vikinger-xl border border-vikinger-purple/20 bg-white p-4 shadow-vikinger dark:bg-vikinger-dark-100 sm:p-7">
+      <div aria-hidden="true" class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-vikinger"></div>
+      <div v-if="isLoading" role="status" class="flex min-h-[280px] flex-col items-center justify-center gap-4 text-center">
+        <span class="h-10 w-10 animate-spin rounded-full border-4 border-vikinger-purple/20 border-t-vikinger-purple motion-reduce:animate-none"></span>
+        <p class="font-bold text-slate-600 dark:text-slate-300">{{ t('typingArena.loading') }}</p>
       </div>
-
-      <!-- Error State -->
-      <div v-else-if="loadError" class="text-center space-y-4">
-        <div class="text-5xl">⚠️</div>
-        <p class="text-red-500 font-bold">{{ loadError }}</p>
-        <button @click="init()" class="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl transition-all hover:scale-105 active:scale-95">
-          Try Again
-        </button>
+      <div v-else-if="loadError" role="alert" class="flex min-h-[280px] flex-col items-center justify-center gap-4 text-center">
+        <p class="font-bold text-rose-600 dark:text-vikinger-pink">{{ t('typingArena.loadError') }}</p>
+        <button class="min-h-[44px] rounded-vikinger bg-gradient-vikinger px-6 py-3 font-bold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-vikinger-purple" @click="retry">{{ t('typingArena.retry') }}</button>
       </div>
-
-      <!-- Idle State -->
-      <div v-else-if="gameState === 'idle'" class="text-center space-y-6">
-        <div class="space-y-2">
-          <h3 class="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-wider">Time Attack!</h3>
-          <p class="text-slate-500">Type as many words as you can in {{ timeLimit }} seconds.</p>
-        </div>
-        <button
-          @click="startCountdown"
-          :disabled="words.length === 0"
-          class="px-4 sm:px-8 py-4 bg-orange-600 hover:bg-orange-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white font-black text-xl rounded-2xl shadow-lg shadow-orange-500/30 transition-all hover:scale-105 active:scale-95 disabled:scale-100"
-        >
-          START CHALLENGE
-        </button>
+      <div v-else-if="gameState === 'idle'" class="flex min-h-[280px] flex-col items-center justify-center gap-6 text-center">
+        <h2 class="text-xl font-black text-vikinger-dark dark:text-white">{{ t('typingArena.ready') }}</h2>
+        <button :disabled="!words.length" class="min-h-[48px] rounded-vikinger bg-gradient-vikinger px-8 py-4 text-lg font-black text-white shadow-vikinger transition-transform hover:scale-105 disabled:opacity-50 motion-reduce:transform-none" @click="startCountdown">{{ t('typingArena.start') }}</button>
       </div>
-
-      <!-- Countdown -->
-      <div v-else-if="gameState === 'countdown'" class="text-center">
-        <span class="text-9xl font-black text-orange-500 animate-ping">{{ countdown }}</span>
+      <div v-else-if="gameState === 'countdown'" role="status" aria-live="polite" class="flex min-h-[280px] flex-col items-center justify-center gap-5 text-center">
+        <p class="text-sm font-bold text-slate-600 dark:text-slate-300">{{ t('typingArena.countdown') }}</p>
+        <span :key="countdown" class="flex h-32 w-32 items-center justify-center rounded-full border-4 border-vikinger-cyan/40 bg-vikinger-purple/10 text-7xl font-black text-vikinger-purple shadow-vikinger dark:text-vikinger-cyan">{{ countdown }}</span>
       </div>
-
-      <!-- Playing -->
-      <div v-else-if="gameState === 'playing' || gameState === 'finished'" class="w-full space-y-8 animate-in fade-in zoom-in duration-300">
+      <div v-else class="space-y-4 sm:space-y-6">
         <TypingComboDisplay :combo="combo" />
-        
-        <TypingWordDisplay
-          :chars="currentWordChars"
-          :extra-chars="extraChars"
-          :current-index="currentIndex"
-          :total-words="words.length"
-          :all-words="words"
-        />
-
-        <TypingInput 
-          v-model="currentInput"
-          :disabled="gameState === 'finished'"
-          autofocus
-          @submit="submitWord"
-          @update:model-value="onInput"
-        />
+        <TypingWordDisplay :chars="currentWordChars" :extra-chars="extraChars" :current-index="currentIndex" :total-words="words.length" :all-words="words" />
+        <TypingInput :model-value="currentInput" :disabled="gameState === 'finished'" autofocus @submit="submitWord" @update:model-value="onInput" />
+        <p v-if="gameState === 'finished'" role="status" class="text-center text-sm font-bold text-vikinger-purple dark:text-vikinger-cyan">{{ t('typingArena.saving') }}</p>
       </div>
-
-    </div>
+    </section>
   </div>
 </template>

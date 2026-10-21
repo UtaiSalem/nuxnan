@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import TypingModeHeader from '../ui/TypingModeHeader.vue'
 import type { Difficulty, Lang } from '~/stores/typing'
 
 interface Props {
@@ -363,6 +364,7 @@ onUnmounted(() => {
 
 <template>
   <div class="mx-auto max-w-5xl space-y-5">
+    <TypingModeHeader mode="letter_runner" />
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
       <div class="rounded-2xl border border-cyan-300/20 bg-slate-950 px-4 py-3 shadow-[0_0_24px_rgba(6,182,212,0.12)]">
         <p class="text-[10px] font-black uppercase tracking-widest text-cyan-300">Score</p>
