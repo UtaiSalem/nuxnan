@@ -18,13 +18,16 @@ use App\Models\KpiValue;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
 use App\Models\Student;
+use App\Models\Topic;
 use App\Models\TrendAnalysis;
 use App\Models\User;
 use App\Services\AuditLogService;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class AnalyticsController extends Controller
@@ -44,36 +47,44 @@ class AnalyticsController extends Controller
     public function teacherPendingAssignments(Request $request, Academy $academy): JsonResponse
     {
         $user = Auth::user();
-        $isFullAdmin = $academy->user_id === $user->id;
+        // isAdmin() ครอบเจ้าของ + academy admin + super admin — เดิมเช็กแค่ user_id
+        // ทำให้ academy admin เห็นเฉพาะคอร์สที่ตัวเองสอน
+        $isFullAdmin = $academy->isAdmin($user);
 
-        // Assignment เป็น polymorphic (assignmentable → Lesson) ไม่มีคอลัมน์ course_id/teacher_id
-        // เดิมโค้ดเรียก whereHas('course') + where('teacher_id') ที่ไม่มีจริง ⇒ 500 ทุกครั้ง (ตั้งแต่เขียนมา)
-        // resolve คอร์สผ่าน morph เหมือน dashboardStats · ครูที่ไม่ใช่เจ้าของโรงเรียนเห็นเฉพาะคอร์สที่ตัวเองสอน/เป็นเจ้าของ
-        $query = Assignment::whereHasMorph('assignmentable', [Lesson::class], function ($lq) use ($academy, $user, $isFullAdmin) {
-            $lq->whereHas('course', function ($cq) use ($academy, $user, $isFullAdmin) {
-                $cq->where('academy_id', $academy->id);
-                if (! $isFullAdmin) {
-                    $cq->where(function ($q) use ($user) {
-                        $q->where('user_id', $user->id)->orWhere('instructor_id', $user->id);
+        // assignments ไม่มีคอลัมน์ course_id/teacher_id ผูกคอร์สผ่าน assignmentable (morph)
+        // เดิมกรองแค่ Lesson::class แต่งานผูกกับ Course ตรง ๆ เป็นหลัก ผลจึงว่างเปล่าเสมอ
+        $query = Assignment::inAcademy($academy)
+            ->with([
+                // assignmentable เป็น morphTo ต้อง morphWith ตาม type ไม่งั้น getCourse()
+                // จะยิง query ต่อแถว และ Course ไม่มี relation ชื่อ course ให้ eager load
+                'assignmentable' => function (MorphTo $morphTo) {
+                    $morphTo->morphWith([
+                        Lesson::class => ['course:id,name,code'],
+                        Topic::class => ['lesson.course:id,name,code'],
+                    ]);
+                },
+                'answers' => function ($q) {
+                    // ต้องครอบ closure — ไม่งั้น orWhere หลุดออกไปคร่อมเงื่อนไข assignment_id
+                    // ของ eager load ทั้งก้อน (วัดบน DB dev: ดึง 3,394 แถวแทน 420)
+                    $q->where(function ($sub) {
+                        $sub->whereNull('points')->orWhere('status', 'submitted');
                     });
-                }
-            });
-        })->with([
-            'assignmentable.course:id,name,code',
-            'answers' => function ($q) {
-                $q->whereNull('points')->orWhere('status', 'submitted');
-            },
-        ]);
+                },
+            ]);
+
+        if (! $isFullAdmin) {
+            $query->taughtBy($user);
+        }
 
         $assignments = $query->get()
             ->filter(function ($assignment) {
-                return $assignment->answers->count() > 0;
+                return $assignment->answers->isNotEmpty();
             })
             ->map(function ($assignment) {
                 return [
                     'id' => $assignment->id,
                     'title' => $assignment->title,
-                    'course' => $assignment->assignmentable?->course?->name ?? '-',
+                    'course' => $assignment->getCourse()?->name ?? '-',
                     'pending' => $assignment->answers->count(),
                 ];
             })
@@ -152,16 +163,18 @@ class AnalyticsController extends Controller
         $pendingGradingCount = 0;
         try {
             $pendingGradingCount = AssignmentAnswer::whereHas('assignment', function ($q) use ($academy) {
-                $q->whereHasMorph('assignmentable', [Lesson::class], function ($lq) use ($academy) {
-                    $lq->whereHas('course', fn ($cq) => $cq->where('academy_id', $academy->id));
-                });
+                $q->inAcademy($academy);
             })
                 ->where(function ($q) {
                     $q->whereNull('points')->orWhere('status', 'submitted');
                 })
                 ->count();
         } catch (\Throwable $e) {
-            // relationship or table may not exist
+            // เดิมกลืน error เงียบ ๆ แล้วคืน 0 — ซ่อนไว้นานว่าตัวเลขนี้นับได้แค่งานที่ผูก Lesson
+            Log::warning('dashboardStats pending_grading failed', [
+                'academy_id' => $academy->id,
+                'exception' => $e->getMessage(),
+            ]);
         }
 
         return response()->json([
