@@ -375,7 +375,7 @@ const handleRequestUnmember = async ({ memberId, memberName }: { memberId: numbe
                 console.error('Failed to remove member:', error)
                 Swal.fire(
                     'เกิดข้อผิดพลาด!',
-                    error?.response?.data?.message || 'ไม่สามารถลบสมาชิกได้.',
+                    error?.data?.message || 'ไม่สามารถลบสมาชิกได้.',
                     'error'
                 )
             }

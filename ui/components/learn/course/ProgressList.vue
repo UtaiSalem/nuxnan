@@ -74,7 +74,7 @@ const resetLessonScore = async (type: 'quiz' | 'assignment_grade' | 'assignment_
         }
     } catch (error: any) {
         console.error('Error resetting score:', error)
-        swal.error(error.response?.data?.message || 'รีเซ็ตไม่สำเร็จ')
+        swal.error(error.data?.message || 'รีเซ็ตไม่สำเร็จ')
     } finally {
         resettingScore.value = null
     }

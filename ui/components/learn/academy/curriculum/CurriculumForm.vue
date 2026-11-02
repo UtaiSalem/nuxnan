@@ -125,7 +125,7 @@ const submit = async () => {
         }
     } catch (error) {
         console.error(error);
-        Swal.fire('ข้อผิดพลาด', error.response?.data?.message || 'เกิดข้อผิดพลาดในการบันทึก', 'error');
+        Swal.fire('ข้อผิดพลาด', error.data?.message || 'เกิดข้อผิดพลาดในการบันทึก', 'error');
     } finally {
         isLoading.value = false;
     }

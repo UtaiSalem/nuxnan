@@ -237,13 +237,13 @@ const createCurriculum = async () => {
       })
     }
   } catch (err: any) {
-    if (err.response?.data?.errors) {
-      formErrors.value = err.response.data.errors
+    if (err.data?.errors) {
+      formErrors.value = err.data.errors
     } else {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถสร้างหลักสูตรได้'
+        text: err.data?.message || 'ไม่สามารถสร้างหลักสูตรได้'
       })
     }
   } finally {
@@ -274,13 +274,13 @@ const updateCurriculum = async () => {
       })
     }
   } catch (err: any) {
-    if (err.response?.data?.errors) {
-      formErrors.value = err.response.data.errors
+    if (err.data?.errors) {
+      formErrors.value = err.data.errors
     } else {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถอัปเดตหลักสูตรได้'
+        text: err.data?.message || 'ไม่สามารถอัปเดตหลักสูตรได้'
       })
     }
   } finally {
@@ -320,7 +320,7 @@ const deleteCurriculum = async (curriculum: any) => {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถลบหลักสูตรได้'
+        text: err.data?.message || 'ไม่สามารถลบหลักสูตรได้'
       })
     }
   }
@@ -408,7 +408,7 @@ const addCoursesToCurriculum = async () => {
     Swal.fire({
       icon: 'error',
       title: 'เกิดข้อผิดพลาด',
-      text: err.response?.data?.message || 'ไม่สามารถเพิ่มรายวิชาได้'
+      text: err.data?.message || 'ไม่สามารถเพิ่มรายวิชาได้'
     })
   } finally {
     isSubmitting.value = false
@@ -450,7 +450,7 @@ const removeCourse = async (curriculumCourseId: number) => {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถลบรายวิชาได้'
+        text: err.data?.message || 'ไม่สามารถลบรายวิชาได้'
       })
     }
   }

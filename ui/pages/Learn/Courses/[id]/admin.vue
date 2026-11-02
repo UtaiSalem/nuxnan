@@ -78,7 +78,7 @@ const inviteUser = async (user: any) => {
             fetchAdmins()
         }
     } catch (e: any) {
-        Swal.fire('ข้อผิดพลาด', e.response?.data?.message || 'ไม่สามารถเชิญได้', 'error')
+        Swal.fire('ข้อผิดพลาด', e.data?.message || 'ไม่สามารถเชิญได้', 'error')
     } finally {
         isLoading.value = false
     }

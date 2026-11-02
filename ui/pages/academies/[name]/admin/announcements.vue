@@ -254,13 +254,13 @@ const createAnnouncement = async () => {
       })
     }
   } catch (err: any) {
-    if (err.response?.data?.errors) {
-      formErrors.value = err.response.data.errors
+    if (err.data?.errors) {
+      formErrors.value = err.data.errors
     } else {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถสร้างประกาศได้'
+        text: err.data?.message || 'ไม่สามารถสร้างประกาศได้'
       })
     }
   } finally {
@@ -301,13 +301,13 @@ const updateAnnouncement = async () => {
       })
     }
   } catch (err: any) {
-    if (err.response?.data?.errors) {
-      formErrors.value = err.response.data.errors
+    if (err.data?.errors) {
+      formErrors.value = err.data.errors
     } else {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถอัปเดตประกาศได้'
+        text: err.data?.message || 'ไม่สามารถอัปเดตประกาศได้'
       })
     }
   } finally {
@@ -342,7 +342,7 @@ const togglePublish = async (announcement: any) => {
     Swal.fire({
       icon: 'error',
       title: 'เกิดข้อผิดพลาด',
-      text: err.response?.data?.message || `ไม่สามารถ${actionLabel}ได้`
+      text: err.data?.message || `ไม่สามารถ${actionLabel}ได้`
     })
   }
 }
@@ -381,7 +381,7 @@ const deleteAnnouncement = async (announcement: any) => {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถลบประกาศได้'
+        text: err.data?.message || 'ไม่สามารถลบประกาศได้'
       })
     }
   }

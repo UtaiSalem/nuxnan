@@ -97,7 +97,7 @@ const handleCheckIn = async (attendance: AttendanceRecord) => {
     emit('check-in-success', { attendanceId: attendance.id, status: response.status })
     emit('reload')
   } catch (error: any) {
-    const message = error.response?.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่'
+    const message = error.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่'
     
     Swal.fire({
       icon: 'error',

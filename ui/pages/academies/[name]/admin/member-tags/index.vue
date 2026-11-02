@@ -248,7 +248,7 @@ async function handleFormSubmit(data: { name: string; color: string; description
     }
     showFormModal.value = false
   } catch (error: any) {
-    Swal.fire('ผิดพลาด', error.response?.data?.message || 'ไม่สามารถบันทึกได้', 'error')
+    Swal.fire('ผิดพลาด', error.data?.message || 'ไม่สามารถบันทึกได้', 'error')
   }
 }
 
@@ -277,7 +277,7 @@ async function confirmDelete(tag: Tag) {
         await fetchTags()
       }
     } catch (error: any) {
-      Swal.fire('ผิดพลาด', error.response?.data?.message || 'ไม่สามารถลบได้', 'error')
+      Swal.fire('ผิดพลาด', error.data?.message || 'ไม่สามารถลบได้', 'error')
     }
   }
 }

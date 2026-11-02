@@ -190,7 +190,7 @@ const submitMembers = async () => {
       emit('close')
     }
   } catch (err: any) {
-    const msg = err?.data?.message || err?.response?.data?.message || 'ไม่สามารถเพิ่มสมาชิกได้'
+    const msg = err?.data?.message || 'ไม่สามารถเพิ่มสมาชิกได้'
     Swal.fire({
       icon: 'error',
       title: 'ผิดพลาด',

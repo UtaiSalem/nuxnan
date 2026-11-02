@@ -155,7 +155,7 @@ async function completePayment() {
     Swal.fire({ title: 'ชำระเงินสำเร็จ', text: 'เริ่มเรียนได้เลย', icon: 'success', timer: 2000, showConfirmButton: false })
     emit('refresh')
   } catch (error: any) {
-    const data = error?.response?.data ?? {}
+    const data = error?.data ?? {}
     if (data.need_topup) {
       Swal.fire({ title: 'ยอดเงินไม่เพียงพอ', text: `ต้องการ ${data.required} บาท (มี ${data.current_balance} บาท)`, icon: 'warning' })
     } else {

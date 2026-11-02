@@ -38,7 +38,7 @@ const respondToInvitation = async (invitation: any, accept: boolean) => {
       }
     }
   } catch (error: any) {
-    alert(error.response?.data?.message || 'ทำรายการไม่สำเร็จ')
+    alert(error.data?.message || 'ทำรายการไม่สำเร็จ')
   }
 }
 

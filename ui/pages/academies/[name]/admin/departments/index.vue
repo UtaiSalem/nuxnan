@@ -199,13 +199,13 @@ const createDepartment = async () => {
       })
     }
   } catch (err: any) {
-    if (err.response?.data?.errors) {
-      formErrors.value = err.response.data.errors
+    if (err.data?.errors) {
+      formErrors.value = err.data.errors
     } else {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถสร้างแผนกได้'
+        text: err.data?.message || 'ไม่สามารถสร้างแผนกได้'
       })
     }
   } finally {
@@ -240,13 +240,13 @@ const updateDepartment = async () => {
       })
     }
   } catch (err: any) {
-    if (err.response?.data?.errors) {
-      formErrors.value = err.response.data.errors
+    if (err.data?.errors) {
+      formErrors.value = err.data.errors
     } else {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถอัปเดตแผนกได้'
+        text: err.data?.message || 'ไม่สามารถอัปเดตแผนกได้'
       })
     }
   } finally {
@@ -286,7 +286,7 @@ const deleteDepartment = async (department: any) => {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถลบแผนกได้'
+        text: err.data?.message || 'ไม่สามารถลบแผนกได้'
       })
     }
   }
@@ -349,7 +349,7 @@ const saveDepartmentPermissions = async () => {
     Swal.fire({
       icon: 'error',
       title: 'เกิดข้อผิดพลาด',
-      text: err.response?.data?.message || 'ไม่สามารถบันทึกสิทธิ์ได้'
+      text: err.data?.message || 'ไม่สามารถบันทึกสิทธิ์ได้'
     })
   } finally {
     isSubmitting.value = false
@@ -433,7 +433,7 @@ const removeMember = async (memberId: number) => {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถนำสมาชิกออกได้'
+        text: err.data?.message || 'ไม่สามารถนำสมาชิกออกได้'
       })
     }
   }
@@ -463,7 +463,7 @@ const updateMemberRole = async (memberId: number, newRole: string) => {
     Swal.fire({
       icon: 'error',
       title: 'เกิดข้อผิดพลาด',
-      text: err.response?.data?.message || 'ไม่สามารถอัปเดตบทบาทได้'
+      text: err.data?.message || 'ไม่สามารถอัปเดตบทบาทได้'
     })
   }
 }

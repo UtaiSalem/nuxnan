@@ -139,7 +139,7 @@ const submitBooking = async () => {
       alert('จองเวลานัดพบเรียบร้อยแล้ว กรุณารอครูยืนยันการนัดหมาย')
     }
   } catch (err: any) {
-    alert(err.response?._data?.message || 'เกิดข้อผิดพลาดในการจอง')
+    alert(err.data?.message || 'เกิดข้อผิดพลาดในการจอง')
   } finally {
     isBooking.value = false
   }

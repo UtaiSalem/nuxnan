@@ -10,7 +10,7 @@ export const errorStatus = (err: any): number | null =>
 
 /** The Thai message the API sent, when it sent one. */
 export const errorMessage = (err: any): string | null =>
-  err?.data?.message ?? err?.response?._data?.message ?? err?.message ?? null
+  err?.data?.message ?? err?.message ?? null
 
 export const useGuardianAppointment = (academyName: Ref<string | number> | string | number, studentId: Ref<number | string> | number | string) => {
   const api = useApi()

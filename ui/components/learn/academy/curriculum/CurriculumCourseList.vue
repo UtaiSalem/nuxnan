@@ -224,7 +224,7 @@ const submitAddCourse = async () => {
             };
         }
     } catch (error) {
-        Swal.fire('ข้อผิดพลาด', error.response?.data?.message || 'ไม่สามารถเพิ่มรายวิชาได้', 'error');
+        Swal.fire('ข้อผิดพลาด', error.data?.message || 'ไม่สามารถเพิ่มรายวิชาได้', 'error');
     } finally {
         isAdding.value = false;
     }

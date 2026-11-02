@@ -339,7 +339,7 @@ const createLink = async () => {
     Swal.fire({
       icon: 'error',
       title: 'เกิดข้อผิดพลาด',
-      text: error.response?.data?.message || 'ไม่สามารถสร้างลิงก์ได้',
+      text: error.data?.message || 'ไม่สามารถสร้างลิงก์ได้',
     })
   } finally {
     creating.value = false
@@ -370,7 +370,7 @@ const toggleActive = async (link: any) => {
     Swal.fire({
       icon: 'error',
       title: 'เกิดข้อผิดพลาด',
-      text: error.response?.data?.message || 'ไม่สามารถเปลี่ยนสถานะได้',
+      text: error.data?.message || 'ไม่สามารถเปลี่ยนสถานะได้',
     })
   }
 }
@@ -404,7 +404,7 @@ const confirmDelete = async (link: any) => {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: error.response?.data?.message || 'ไม่สามารถลบได้',
+        text: error.data?.message || 'ไม่สามารถลบได้',
       })
     }
   }

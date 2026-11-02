@@ -322,7 +322,7 @@ const respondToInvitation = async (accept: boolean) => {
       }
     }
   } catch (error: any) {
-    Swal.fire('ข้อผิดพลาด', error.response?.data?.message || 'ทำรายการไม่สำเร็จ', 'error')
+    Swal.fire('ข้อผิดพลาด', error.data?.message || 'ทำรายการไม่สำเร็จ', 'error')
   }
 }
 </script>

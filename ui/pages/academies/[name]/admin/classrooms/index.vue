@@ -339,13 +339,13 @@ const createClassroom = async () => {
       })
     }
   } catch (err: any) {
-    if (err.response?.data?.errors) {
-      formErrors.value = err.response.data.errors
+    if (err.data?.errors) {
+      formErrors.value = err.data.errors
     } else {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถสร้างห้องเรียนได้'
+        text: err.data?.message || 'ไม่สามารถสร้างห้องเรียนได้'
       })
     }
   } finally {
@@ -384,13 +384,13 @@ const updateClassroom = async () => {
       })
     }
   } catch (err: any) {
-    if (err.response?.data?.errors) {
-      formErrors.value = err.response.data.errors
+    if (err.data?.errors) {
+      formErrors.value = err.data.errors
     } else {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถอัปเดตห้องเรียนได้'
+        text: err.data?.message || 'ไม่สามารถอัปเดตห้องเรียนได้'
       })
     }
   } finally {
@@ -430,7 +430,7 @@ const deleteClassroom = async (classroom: any) => {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถลบห้องเรียนได้'
+        text: err.data?.message || 'ไม่สามารถลบห้องเรียนได้'
       })
     }
   }
@@ -519,7 +519,7 @@ const addStudentsToClassroom = async () => {
     Swal.fire({
       icon: 'error',
       title: 'เกิดข้อผิดพลาด',
-      text: err.response?.data?.message || 'ไม่สามารถเพิ่มนักเรียนได้'
+      text: err.data?.message || 'ไม่สามารถเพิ่มนักเรียนได้'
     })
   } finally {
     isSubmitting.value = false
@@ -561,7 +561,7 @@ const removeStudent = async (studentMemberId: number) => {
       Swal.fire({
         icon: 'error',
         title: 'เกิดข้อผิดพลาด',
-        text: err.response?.data?.message || 'ไม่สามารถนำนักเรียนออกได้'
+        text: err.data?.message || 'ไม่สามารถนำนักเรียนออกได้'
       })
     }
   }
@@ -589,7 +589,7 @@ const updateStudentNumber = async (studentMemberId: number, studentNumber: strin
     Swal.fire({
       icon: 'error',
       title: 'เกิดข้อผิดพลาด',
-      text: err.response?.data?.message || 'ไม่สามารถอัปเดตเลขที่ได้'
+      text: err.data?.message || 'ไม่สามารถอัปเดตเลขที่ได้'
     })
   }
 }
@@ -648,7 +648,7 @@ const transferStudent = async () => {
     Swal.fire({
       icon: 'error',
       title: 'เกิดข้อผิดพลาด',
-      text: err.response?.data?.message || 'ไม่สามารถย้ายนักเรียนได้'
+      text: err.data?.message || 'ไม่สามารถย้ายนักเรียนได้'
     })
   } finally {
     isSubmitting.value = false
@@ -748,7 +748,7 @@ const openBulkRenumberPreview = async () => {
     Swal.fire({
       icon: 'error',
       title: 'เกิดข้อผิดพลาด',
-      text: err.response?.data?.message || 'ไม่สามารถดึงข้อมูลการจัดเรียงได้'
+      text: err.data?.message || 'ไม่สามารถดึงข้อมูลการจัดเรียงได้'
     })
   } finally {
     isLoadingBulkRenumberPreview.value = false
@@ -783,7 +783,7 @@ const applyBulkRenumber = async () => {
     Swal.fire({
       icon: 'error',
       title: 'เกิดข้อผิดพลาด',
-      text: err.response?.data?.message || 'ไม่สามารถจัดเรียงเลขที่ได้'
+      text: err.data?.message || 'ไม่สามารถจัดเรียงเลขที่ได้'
     })
   } finally {
     isApplyingBulkRenumber.value = false

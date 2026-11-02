@@ -108,7 +108,7 @@ const onChangeRole = async ({ userId, role }: { userId: number, role: string }) 
     await loadMembers()
     Swal.fire({ icon: 'success', title: 'อัปเดตบทบาทแล้ว', timer: 1500, showConfirmButton: false })
   } catch (err: any) {
-    Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: err?.data?.message || err?.response?.data?.message || err?.message || 'ไม่สามารถอัปเดตบทบาทได้' })
+    Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: err?.data?.message || err?.message || 'ไม่สามารถอัปเดตบทบาทได้' })
   }
 }
 
@@ -128,7 +128,7 @@ const onRemoveMember = async (userId: number) => {
     await api.delete(`/api/academies/${academy.value.id}/departments/${departmentId.value}/members`, { body: { user_id: userId } })
     await Promise.all([loadMembers(), loadDepartment()])
   } catch (err: any) {
-    Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: err?.data?.message || err?.response?.data?.message || err?.message || 'ไม่สามารถนำออกได้' })
+    Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: err?.data?.message || err?.message || 'ไม่สามารถนำออกได้' })
   }
 }
 
@@ -148,7 +148,7 @@ const onSetHead = async (userId: number) => {
     await loadDepartment()
     Swal.fire({ icon: 'success', title: 'ตั้งหัวหน้าฝ่ายแล้ว', timer: 1500, showConfirmButton: false })
   } catch (err: any) {
-    Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: err?.data?.message || err?.response?.data?.message || err?.message || 'ไม่สามารถตั้งหัวหน้าได้' })
+    Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: err?.data?.message || err?.message || 'ไม่สามารถตั้งหัวหน้าได้' })
   }
 }
 
@@ -158,7 +158,7 @@ const onClearHead = async () => {
     await loadDepartment()
     Swal.fire({ icon: 'success', title: 'ยกเลิกหัวหน้าฝ่ายแล้ว', timer: 1500, showConfirmButton: false })
   } catch (err: any) {
-    Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: err?.data?.message || err?.response?.data?.message || err?.message || 'ไม่สามารถยกเลิกหัวหน้าได้' })
+    Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: err?.data?.message || err?.message || 'ไม่สามารถยกเลิกหัวหน้าได้' })
   }
 }
 
@@ -187,7 +187,7 @@ const onDeleteDepartment = async () => {
       Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: res.message || 'ไม่สามารถลบฝ่ายได้' })
     }
   } catch (err: any) {
-    Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: err?.data?.message || err?.response?.data?.message || err?.message || 'ไม่สามารถลบฝ่ายได้' })
+    Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: err?.data?.message || err?.message || 'ไม่สามารถลบฝ่ายได้' })
   }
 }
 
