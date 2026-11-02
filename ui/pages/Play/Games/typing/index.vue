@@ -29,7 +29,7 @@ function selectMode(modeId: GameMode) {
 }
 
 function start() {
-  router.push('/play/games/typing/play')
+  router.push({ path: '/play/games/typing/play', query: { mode: store.selectedMode } })
 }
 </script>
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { useTypingStore } from '~/stores/typing'
+import { useTypingStore, type GameMode } from '~/stores/typing'
 import WordTypingMode from '~/components/games/typing/modes/WordTypingMode.vue'
 import TimeAttackMode from '~/components/games/typing/modes/TimeAttackMode.vue'
 import SentenceTypingMode from '~/components/games/typing/modes/SentenceTypingMode.vue'
@@ -16,11 +16,35 @@ definePageMeta({
 })
 
 const store = useTypingStore()
+const route = useRoute()
 const router = useRouter()
 const { submitSession } = useTypingApi()
 
-// Shared setup gate: every mode shows TypingGameSetup first, then mounts the
+// Read query parameter `mode` (e.g. `mode=key_training` from redirect or direct link)
+// and set mode before rendering so opening direct links or refreshing retains Key Training
+const VALID_MODES: GameMode[] = [
+  'key_training',
+  'word_typing',
+  'time_attack',
+  'sentence_typing',
+  'monster_battle',
+  'falling_words',
+  'letter_runner',
+]
+
+const syncModeFromQuery = () => {
+  const queryMode = route.query.mode as string | undefined
+  if (queryMode && VALID_MODES.includes(queryMode as GameMode)) {
+    store.selectedMode = queryMode as GameMode
+  }
+}
+
+syncModeFromQuery()
+watch(() => route.query.mode, syncModeFromQuery)
+
+// Shared setup gate: non-key-training modes show TypingGameSetup first, then mount the
 // mode component (with chosen settings already in the store) on START.
+// Key Training goes directly into its progressive stage map inside KeyTrainingMode.
 const started = ref(false)
 
 const isPhaserMode = computed(() =>
@@ -79,10 +103,10 @@ const currentModeComponent = computed(() => {
 
       <!-- Game Stage -->
 
-      <!-- Setup gate — same for every mode -->
-      <TypingGameSetup v-if="!started" :mode="store.selectedMode" @start="started = true" />
+      <!-- Setup gate — for non-Key-Training modes -->
+      <TypingGameSetup v-if="!started && !isKeyTraining" :mode="store.selectedMode" @start="started = true" />
 
-      <!-- Key Training — standalone, no API words needed -->
+      <!-- Key Training — progressive levels & sub-stages directly inside KeyTrainingMode -->
       <KeyTrainingMode v-else-if="isKeyTraining" :auto-start="true" @finished="onFinished" />
 
       <!-- Phaser-based modes (Monster Battle, Falling Words) -->
