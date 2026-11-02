@@ -73,7 +73,7 @@ class StudentMasterPolicyTest extends TestCase
             'user_id' => $admin->id,
             'academy_id' => $academy->id,
             'role' => 'admin',
-            'status' => 'active',
+            'status' => AcademyMember::STATUS_APPROVED,
         ]);
         $student = Student::create([
             'academy_id' => $academy->id,
@@ -100,7 +100,7 @@ class StudentMasterPolicyTest extends TestCase
             'user_id' => $teacher->id,
             'academy_id' => $academy->id,
             'role' => 'teacher',
-            'status' => 'active',
+            'status' => AcademyMember::STATUS_APPROVED,
         ]);
         $student = Student::create([
             'academy_id' => $academy->id,
@@ -181,5 +181,53 @@ class StudentMasterPolicyTest extends TestCase
         $this->assertTrue($policy->view($viewer, $student));
         $this->assertFalse($policy->update($viewer, $student));
         $this->assertFalse($policy->approveRequests($viewer, $academy->id));
+    }
+
+    /**
+     * สถานะที่ไม่ใช่ APPROVED ต้องหมดสิทธิ์ทันที
+     *
+     * แถวใน academy_members ยังเก็บค่า role ไว้แม้ถูกปฏิเสธหรือพ้นสภาพ ตัวกรอง
+     * status จึงเป็นสิ่งเดียวที่กั้นไม่ให้ครูที่พ้นสภาพอ่านทะเบียนนักเรียนทั้งสถาบันได้
+     */
+    public function test_non_approved_staff_lose_access()
+    {
+        $statuses = [
+            AcademyMember::STATUS_PENDING,
+            AcademyMember::STATUS_REJECTED,
+            AcademyMember::STATUS_INVITED,
+            AcademyMember::STATUS_DISCHARGED,
+        ];
+
+        foreach ($statuses as $status) {
+            $owner = $this->makeUser('o');
+            $teacher = $this->makeUser('t');
+            $admin = $this->makeUser('adm');
+            $academy = Academy::create(['name' => 'A'.$status, 'user_id' => $owner->id]);
+
+            foreach ([['teacher', $teacher], ['admin', $admin]] as [$role, $member]) {
+                AcademyMember::create([
+                    'user_id' => $member->id,
+                    'academy_id' => $academy->id,
+                    'role' => $role,
+                    'status' => $status,
+                ]);
+            }
+
+            $student = Student::create([
+                'academy_id' => $academy->id,
+                'user_id' => $owner->id,
+                'student_id' => 'S'.uniqid(),
+                'citizen_id' => (string) random_int(1000000000000, 9999999999999),
+                'first_name_th' => 'a',
+                'last_name_th' => 'b',
+            ]);
+
+            $policy = new StudentMasterProfilePolicy;
+
+            $this->assertFalse($policy->view($teacher, $student), "teacher status $status ยังดูได้");
+            $this->assertFalse($policy->viewAny($teacher, $academy->id), "teacher status $status ยัง list ได้");
+            $this->assertFalse($policy->update($admin, $student), "admin status $status ยังแก้ได้");
+            $this->assertFalse($policy->approveRequests($admin, $academy->id), "admin status $status ยังอนุมัติได้");
+        }
     }
 }

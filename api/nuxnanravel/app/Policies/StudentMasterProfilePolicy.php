@@ -57,6 +57,7 @@ class StudentMasterProfilePolicy
 
         if (AcademyMember::where('user_id', $user->id)
             ->where('academy_id', $student->academy_id)
+            ->where('status', AcademyMember::STATUS_APPROVED)
             ->whereIn('role', ['admin', 'director'])
             ->exists()) {
             return true;
@@ -121,6 +122,7 @@ class StudentMasterProfilePolicy
 
         if (AcademyMember::where('user_id', $user->id)
             ->where('academy_id', $academy_id)
+            ->where('status', AcademyMember::STATUS_APPROVED)
             ->whereIn('role', ['admin', 'director'])
             ->exists()) {
             return true;
@@ -137,7 +139,7 @@ class StudentMasterProfilePolicy
     {
         return AcademyMember::where('user_id', $user->id)
             ->where('academy_id', $academy_id)
-            ->where('status', 2)
+            ->where('status', AcademyMember::STATUS_APPROVED)
             ->with('academyRole')
             ->first()
             ?->hasAnyPermission($permissions) ?? false;
@@ -145,6 +147,10 @@ class StudentMasterProfilePolicy
 
     /**
      * Staff = admin/teacher/director in the given academy.
+     *
+     * นับเฉพาะสมาชิกสถานะ APPROVED: คนที่ถูกปฏิเสธ (STATUS_REJECTED) หรือพ้นสภาพ
+     * (STATUS_DISCHARGED) ยังเก็บค่าในคอลัมน์ role ไว้ ถ้าไม่กรอง status จะยังอ่าน
+     * โปรไฟล์นักเรียนทั้งสถาบันได้อยู่
      */
     protected function isStaff(User $user, $academy_id): bool
     {
@@ -154,6 +160,7 @@ class StudentMasterProfilePolicy
 
         return AcademyMember::where('user_id', $user->id)
             ->where('academy_id', $academy_id)
+            ->where('status', AcademyMember::STATUS_APPROVED)
             ->whereIn('role', ['admin', 'teacher', 'director'])
             ->exists();
     }
