@@ -1,5 +1,24 @@
 # Work Log — nuxnan project
 
+## 🟡 2026-11-03 — ผูกรายวิชาส่วนตัวเข้าสังกัดโรงเรียน (implement แล้ว · ยังไม่ commit · รอตรวจจอ)
+
+สเปค + คำตอบ Q1–Q8 (ใช้ตามคำแนะนำ เจ้าของเคาะ "เลือกตามที่แนะนำ"): [`.agents/specs/course-academy-affiliation.md`](specs/course-academy-affiliation.md)
+- **BE:** `Academy::canHostCourse()` + `scopeHostableBy` (isAdmin หรือครู status 2) · `Course::canAttachToAcademy/canDetachFromAcademy`
+  · `CourseAffiliationController` — `GET /api/me/course-host-academies`, `PATCH|DELETE /api/courses/{course}/academy` (resync `courses_offered` + AuditLog · ถอนไม่ได้ถ้าอยู่ใน `curriculum_courses`)
+  · **ปิดช่องโหว่:** `POST /api/courses` ตรวจสิทธิ์ `academy_id` · `PUT /api/courses/{id}` ไม่รับ `academy_id`/`user_id`/`instructor_id` แล้ว
+  · `AcademyCourseController::store` ใช้ `canHostCourse()` แทนโค้ด inline (เพิ่ม: ปฏิเสธโรงเรียนที่ archived)
+- **FE:** `useCourseAffiliation.ts` · ช่องเลือกสังกัดใน `CreateNewCourse.vue` · `CourseAffiliationCard.vue` ในหน้า settings (+2 บรรทัด)
+- **ตรวจแล้ว:** `CourseAffiliationTest` 15 + `CourseCreateThresholdTest` 10 = 25 passed บน MySQL · pint ผ่าน · revert-check: 2 เทสต์ความปลอดภัยตกเมื่อเอาโค้ดเดิมกลับ
+- **ตรวจจอแล้ว (375/768/1280):** การ์ดผูก→ถอน→ผูก→ถอน ครบวงบนคอร์ส 16 (คืนสภาพ academy_id=NULL แล้ว) · ช่องเลือกสังกัดหน้า create ไม่มี scroll แนวนอน · console ไม่มี error
+  · ผลข้างเคียงบน dev DB: `academies.courses_offered` ของโรงเรียน 1 ถูก resync 22→23 (ค่าจริง) + audit_logs 4 แถว
+  · บั๊กที่เจอตอนตรวจจอแล้วแก้: การ์ดอ่าน `course.academy` (ไม่มีจริง — [id].vue ส่งผ่าน `inject('academy')`) และ `refreshCourse()` คืน cache ของ store → อัพเดทจาก response + `invalidateCourse()`
+- **ยังไม่ตรวจ:** `npm run build` (เจ้าของรัน)
+- **เจอระหว่างตรวจ (นอกงานนี้):** หน้า settings ที่ ~1280px คอลัมน์ "การเผยแพร่" ถูกบีบแคบจนข้อความไทยแตกแนวตั้ง
+- **ตามมา:** แอดมินโรงเรียนถอนรายวิชาได้ทาง API แต่ยังไม่มีปุ่มฝั่งหน้าแอดมินโรงเรียน (หน้า settings ของรายวิชาเปิดได้เฉพาะ course admin)
+  · `components/learn/course/CourseSettings.vue` เป็นโค้ด Inertia ที่ตายแล้ว ลบได้
+
+---
+
 ## 🟢 2026-10-20 — เกมพิมพ์ Play/Games/typing: รวมขั้นตอนตั้งค่าทุกโหมดให้เป็นรูปแบบเดียว (เสร็จ · commit `1509bd63`)
 
 ### ปัญหา

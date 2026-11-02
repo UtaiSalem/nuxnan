@@ -6,6 +6,7 @@ import CourseDangerAction from '~/components/learn/course/settings/CourseDangerA
 import CourseStatusOption from '~/components/learn/course/settings/CourseStatusOption.vue'
 import CourseToggleSetting from '~/components/learn/course/settings/CourseToggleSetting.vue'
 import CourseSettingField from '~/components/learn/course/settings/CourseSettingField.vue'
+import CourseAffiliationCard from '~/components/learn/course/settings/CourseAffiliationCard.vue'
 
 import Swal from 'sweetalert2'
 
@@ -711,6 +712,7 @@ watch(() => course?.value?.id, id => { if (id && isCourseAdmin?.value) fetchElig
         </template>
       </ResponsiveCard>
 
+      <CourseAffiliationCard v-if="isCourseAdmin" />
       <!-- Mobile Save Button (Sticky Bottom) -->
       <div v-if="isAnySectionDirty"
            class="fixed bottom-16 left-0 right-0 px-4 pt-3 pb-3 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 md:hidden z-40"

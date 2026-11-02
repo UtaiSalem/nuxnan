@@ -19,6 +19,8 @@ const headerTitle = ref('สร้างรายวิชาใหม่');
 
 const config = useRuntimeConfig();
 const api = useApi();
+const { hostAcademies, fetchHostAcademies } = useCourseAffiliation();
+onMounted(() => { fetchHostAcademies(); });
 const authStore = useAuthStore();
 const authUser = computed(() => authStore.user || {});
 const tempCover = ref(`${config.public.apiBase}/storage/images/courses/covers/default_cover.jpg`);
@@ -232,7 +234,7 @@ async function handleSubmitForm(){
   try {
     const courseFormData = new FormData();
 
-    courseFormData.append('academy_id', form.value.academy_id ?? null);
+    if (form.value.academy_id) courseFormData.append('academy_id', String(form.value.academy_id));
     courseFormData.append('code', form.value.code);
     courseFormData.append('name', form.value.name);
     courseFormData.append('description', form.value.description);
@@ -370,6 +372,22 @@ async function handleSubmitForm(){
                         ข้อมูลทั่วไป
                     </h2>
                     <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-8 shadow-sm border border-gray-100 dark:border-gray-700 space-y-6">
+                        <!-- Affiliation (only when the user can host courses in at least one school) -->
+                        <div v-if="hostAcademies.length > 0">
+                            <label for="course-affiliation" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">สังกัดของรายวิชา</label>
+                            <select id="course-affiliation" v-model="form.academy_id"
+                                class="block w-full min-h-[44px] px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all text-sm sm:text-base"
+                            >
+                                <option value="">รายวิชาส่วนตัว (ไม่สังกัดโรงเรียน)</option>
+                                <option v-for="academy in hostAcademies" :key="academy.id" :value="academy.id">
+                                    {{ academy.name }}
+                                </option>
+                            </select>
+                            <p class="mt-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400 break-words">
+                                เมื่อเลือกโรงเรียน รายวิชาจะแสดงในรายการของโรงเรียน และผู้ดูแลโรงเรียนจะแก้ไขหรือลบรายวิชานี้ได้ เปลี่ยนภายหลังได้ที่หน้าตั้งค่ารายวิชา
+                            </p>
+                        </div>
+
                         <!-- Name -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ชื่อรายวิชา <span class="text-red-500">*</span></label>
