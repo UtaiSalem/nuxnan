@@ -9,8 +9,6 @@ import { VueDatePicker } from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
 
 const authStore = useAuthStore()
-const config = useRuntimeConfig()
-const apiBase = config.public.apiBase
 const api = useApi()
 const router = useRouter()
 const route = useRoute()
@@ -297,11 +295,7 @@ async function submitForm() {
   }
 
   try {
-    const res = await $fetch(`${apiBase}/api/campaigns`, {
-      method: 'POST',
-      body: formData,
-      headers: { Authorization: `Bearer ${authStore.token}` }
-    })
+    const res = await api.post('/api/campaigns', formData)
 
     if (res.success) {
       Swal.fire({
@@ -317,7 +311,10 @@ async function submitForm() {
       throw new Error(res.message || 'เกิดข้อผิดพลาดจากระบบ')
     }
   } catch (error) {
-    Swal.fire('ข้อผิดพลาด', error.message || 'ไม่สามารถทำรายการได้', 'error')
+    const message = !error?.status && error?.name === 'ApiError'
+      ? 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่อีกครั้ง'
+      : error?.data?.message || error.message || 'ไม่สามารถทำรายการได้'
+    Swal.fire('ข้อผิดพลาด', message, 'error')
   } finally {
     isLoading.value = false
   }

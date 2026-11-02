@@ -20,8 +20,6 @@ const emit = defineEmits<{
 }>()
 
 const authStore = useAuthStore()
-const config = useRuntimeConfig()
-const apiBase = config.public.apiBase
 
 // Pricing must mirror the server (config campaign.ad_price_per_view_second, default 0.10)
 // and the central create page, otherwise the backend rejects a mismatched budget.
@@ -145,20 +143,18 @@ async function submit() {
   }
 
   try {
-    const res: any = await $fetch(`${apiBase}/api/campaigns`, {
-      method: 'POST',
-      body: formData,
-      headers: { Authorization: `Bearer ${authStore.token}` },
-    })
+    const res: any = await useApi().post('/api/campaigns', formData)
     if (res?.success === false) throw new Error(res.message || 'เกิดข้อผิดพลาดจากระบบ')
 
     Swal.fire({ title: 'สำเร็จ!', text: 'สร้างแคมเปญเรียบร้อยแล้ว', icon: 'success', timer: 2000, showConfirmButton: false })
     emit('created', res?.data ?? res)
     emit('update:visible', false)
   } catch (e: any) {
-    if (e?.status === 422 || e?.response?.status === 422) {
-      fieldErrors.value = e?.data?.errors || e?.response?._data?.errors || {}
+    if (e?.status === 422) {
+      fieldErrors.value = e?.data?.errors || {}
       error.value = 'กรุณาตรวจสอบข้อมูลอีกครั้ง'
+    } else if (!e?.status && e?.name === 'ApiError') {
+      error.value = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่อีกครั้ง'
     } else {
       error.value = e?.data?.message || e?.message || 'ไม่สามารถสร้างแคมเปญได้'
     }
