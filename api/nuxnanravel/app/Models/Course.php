@@ -571,6 +571,22 @@ class Course extends Model
     }
 
     /**
+     * ผูก/ย้ายสังกัดโรงเรียน: เฉพาะแอดมินของรายวิชา (เจ้าของ / co-admin / super admin)
+     */
+    public function canAttachToAcademy($user): bool
+    {
+        return $this->isAdmin($user);
+    }
+
+    /**
+     * ถอนออกจากสังกัด: แอดมินของรายวิชา หรือแอดมินของโรงเรียนที่รายวิชาสังกัดอยู่
+     */
+    public function canDetachFromAcademy($user): bool
+    {
+        return $this->isAdmin($user) || (bool) $this->academy?->isAdmin($user);
+    }
+
+    /**
      * Restrict a query to the courses the user may administer.
      *
      * The query form of isAdmin() — keep the two in step, or listings will offer

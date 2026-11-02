@@ -9,6 +9,7 @@ use App\Http\Resources\Learn\Course\groups\CourseGroupResource;
 use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Http\Resources\Learn\Course\info\MemberedCourseResource;
 use App\Http\Resources\Learn\Course\info\UserProfileCourseResource;
+use App\Models\Academy;
 use App\Models\AssignmentAnswer;
 use App\Models\AttendanceDetail;
 use App\Models\Course;
@@ -548,7 +549,7 @@ class CourseController extends Controller
 
             // validate for all of this request academy_id,code,name,description,category,level,credit_units,hours_per_week,start_date,end_date,auto_accept_members,saleable,price,status,cover
             $validated = $request->validate([
-                'academy_id' => 'nullable',
+                'academy_id' => ['nullable', 'integer', 'exists:academies,id'],
                 'code' => 'nullable',
                 'name' => 'required|string|max:255',
                 'description' => 'nullable|string',
@@ -571,6 +572,18 @@ class CourseController extends Controller
                 'cover' => 'nullable|image|mimes:jpg,jpeg,png,gif|max:4096',
             ]);
 
+            // ผูกสังกัดตอนสร้าง: ต้องเป็นครู/แอดมินของโรงเรียนนั้นจริง (กันคนนอกยัดรายวิชาเข้าโรงเรียน)
+            $hostAcademy = null;
+            if (! empty($validated['academy_id'])) {
+                $hostAcademy = Academy::find($validated['academy_id']);
+                if (! $hostAcademy || ! $hostAcademy->canHostCourse(auth()->user())) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'คุณต้องเป็นครูหรือผู้ดูแลของโรงเรียนนี้ จึงจะเพิ่มรายวิชาเข้าสังกัดได้',
+                    ], 403);
+                }
+            }
+
             if ($request->file('cover')) {
                 $cover_file = $request->file('cover');
                 $cover_filename = uniqid().'.'.$cover_file->getClientOriginalExtension();
@@ -584,7 +597,7 @@ class CourseController extends Controller
             // ], 200);
 
             $newCourse = new Course;
-            $newCourse->academy_id = $request->academy_id;
+            $newCourse->academy_id = $hostAcademy?->id;
             $newCourse->user_id = auth()->id();
             $newCourse->instructor_id = auth()->id();
             $newCourse->code = $request->code;
@@ -635,6 +648,10 @@ class CourseController extends Controller
                     'course_member_status' => 1,
                     'role' => 4, // 4: Admin
                 ]);
+
+                if ($hostAcademy) {
+                    $hostAcademy->update(['courses_offered' => $hostAcademy->courses()->count()]);
+                }
             }
 
             return response()->json([
@@ -676,9 +693,6 @@ class CourseController extends Controller
         }
 
         $validated = $request->validate([
-            'user_id' => 'nullable',
-            'instructor_id' => 'nullable',
-            'academy_id' => 'nullable',
             'name' => 'nullable|string',
             'slug' => 'nullable',
             'code' => 'nullable',

@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Learn\Academy\AcademyResource;
 use App\Http\Resources\Learn\Course\info\CourseResource;
 use App\Models\Academy;
-use App\Models\AcademyMember;
 use App\Models\Course;
 use App\Models\CourseMember;
 use Illuminate\Database\Eloquent\Builder;
@@ -38,24 +37,11 @@ class AcademyCourseController extends Controller
         try {
             $user = auth()->user();
 
-            if (! $academy->isAdmin($user)) {
-                $member = $academy->academyMembers()
-                    ->where('user_id', $user->id)
-                    ->where('status', AcademyMember::STATUS_APPROVED)
-                    ->with('academyRole')
-                    ->first();
-
-                // `academy_role_id` is the source of truth, but a legacy `role` string
-                // column is still populated on older rows — accept either so a real
-                // teacher is never falsely blocked.
-                $isTeacher = $member && ($member->isTeacher() || $member->role === 'teacher');
-
-                if (! $isTeacher) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'ต้องเป็นสมาชิกของโรงเรียนและมีสถานะครูผู้สอน จึงจะสร้างรายวิชาได้',
-                    ], 403);
-                }
+            if (! $academy->canHostCourse($user)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'ต้องเป็นสมาชิกของโรงเรียนและมีสถานะครูผู้สอน จึงจะสร้างรายวิชาได้',
+                ], 403);
             }
 
             $validated = $request->validate([

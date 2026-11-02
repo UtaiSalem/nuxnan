@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\Learn\Course\groups\CourseGroupClassroomController;
 use App\Http\Controllers\Api\Learn\Course\groups\CourseGroupController;
 use App\Http\Controllers\Api\Learn\Course\groups\CourseGroupMemberController;
 use App\Http\Controllers\Api\Learn\Course\info\CourseActivityController;
+use App\Http\Controllers\Api\Learn\Course\info\CourseAffiliationController;
 use App\Http\Controllers\Api\Learn\Course\info\CourseController;
 use App\Http\Controllers\Api\Learn\Course\info\CourseSettingController;
 use App\Http\Controllers\Api\Learn\Course\lessons\assignments\LessonAssignmentController;
@@ -65,6 +66,11 @@ use Illuminate\Support\Facades\Route;
 Route::get('/courses/marketplace', [CourseMarketplaceController::class, 'index'])->name('courses.marketplace');
 
 Route::middleware(['auth:api', 'verified'])->group(function () {
+    // สังกัดโรงเรียนของรายวิชา (.agents/specs/course-academy-affiliation.md)
+    Route::get('/me/course-host-academies', [CourseAffiliationController::class, 'hostAcademies'])->name('course.affiliation.host-academies');
+    Route::patch('/courses/{course}/academy', [CourseAffiliationController::class, 'update'])->name('course.affiliation.update');
+    Route::delete('/courses/{course}/academy', [CourseAffiliationController::class, 'destroy'])->name('course.affiliation.destroy');
+
     // Course Point Account & Campaigns (owner/admin)
     Route::prefix('/courses/{course}/points')->group(function () {
         Route::get('/account', [CoursePointAccountController::class, 'show'])->name('course.points.account.show');

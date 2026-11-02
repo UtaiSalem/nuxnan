@@ -230,6 +230,49 @@ class Academy extends Model
     }
 
     /**
+     * ผู้ใช้เอารายวิชามาไว้ใต้สังกัดโรงเรียนนี้ได้ไหม
+     * = แอดมิน/เจ้าของ (เจ้าของไม่มีแถว academy_members — ต้องผ่าน isAdmin) หรือครูที่อนุมัติแล้ว (status 2)
+     * `academy_role_id` คือ source of truth แต่แถวเก่ายังใช้คอลัมน์ `role` string — รับทั้งสองแบบ
+     */
+    public function canHostCourse($user): bool
+    {
+        if (! $user || $this->archived_at !== null) {
+            return false;
+        }
+
+        if ($this->isAdmin($user)) {
+            return true;
+        }
+
+        $member = $this->academyMembers()
+            ->where('user_id', $user->id)
+            ->where('status', AcademyMember::STATUS_APPROVED)
+            ->with('academyRole')
+            ->first();
+
+        return $member !== null && ($member->isTeacher() || $member->role === 'teacher');
+    }
+
+    /**
+     * โรงเรียนที่ผู้ใช้เอารายวิชามาไว้ใต้สังกัดได้ (คู่กับ canHostCourse)
+     */
+    public function scopeHostableBy($query, $user)
+    {
+        return $query->whereNull('archived_at')->where(function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+                ->orWhereHas('academyAdmins', fn ($a) => $a->where('user_id', $user->id))
+                ->orWhereHas('academyMembers', function ($m) use ($user) {
+                    $m->where('user_id', $user->id)
+                        ->where('status', AcademyMember::STATUS_APPROVED)
+                        ->where(function ($r) {
+                            $r->where('role', 'teacher')
+                                ->orWhereHas('academyRole', fn ($ar) => $ar->where('name', 'teacher'));
+                        });
+                });
+        });
+    }
+
+    /**
      * SET-S2 — โรงเรียนที่ยังไม่ถูกเก็บถาวร
      *
      * ใช้กับ "จุดที่แสดงรายการโรงเรียน" เท่านั้น (directory / ค้นหา / เป้าหมายแคมเปญ)
