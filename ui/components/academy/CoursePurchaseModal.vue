@@ -49,6 +49,11 @@
                   <span>คุณมี Master Copy นี้อยู่แล้ว ต้องการซื้อเพิ่มอีกชุดหรือไม่?</span>
                 </div>
 
+                <div v-if="checkResult?.is_self" class="mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs flex items-start gap-2 border border-amber-100 dark:border-amber-900/30">
+                  <Icon icon="mdi:block-helper" class="w-4 h-4 flex-shrink-0" />
+                  <span class="min-w-0 flex-1 break-words">นี่คือรายวิชาของคุณเอง ระบบไม่อนุญาตให้ซื้อลิขสิทธิ์รายวิชาของตัวเอง</span>
+                </div>
+
                 <div v-if="checking" class="py-12 flex flex-col items-center justify-center gap-3">
                   <Icon icon="svg-spinners:ring-resize" class="w-8 h-8 text-primary-600" />
                   <span class="text-sm text-slate-500">กำลังตรวจสอบข้อมูลราคา...</span>
@@ -87,7 +92,7 @@
                   <button @click="$emit('close')" class="flex-1 px-4 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                     ยกเลิก
                   </button>
-                  <button @click="nextStep" :disabled="checking || !checkResult" class="flex-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-bold px-8 py-3 rounded-xl transition-all shadow-lg shadow-primary-500/30">
+                  <button @click="nextStep" :disabled="checking || !checkResult || checkResult.is_self" class="flex-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-bold px-8 py-3 rounded-xl transition-all shadow-lg shadow-primary-500/30">
                     ยืนยันคำสั่งซื้อ
                   </button>
                 </div>

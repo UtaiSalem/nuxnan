@@ -156,6 +156,13 @@
             <span v-if="course.owned_by_academy" class="flex items-center gap-1 px-2.5 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] font-bold rounded-full">
               <Icon icon="mdi:check-circle" class="w-3 h-3" /> ในคลัง
             </span>
+            <span
+              v-else-if="isOwner"
+              class="flex items-center gap-1 px-2.5 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] font-bold rounded-full"
+              title="ซื้อลิขสิทธิ์รายวิชาของตัวเองไม่ได้"
+            >
+              <Icon icon="mdi:account-check" class="w-3 h-3" /> รายวิชาของคุณ
+            </span>
             <button
               v-else
               @click.stop="emit('purchase', course)"
@@ -271,7 +278,8 @@ const semesterBadge = computed(() => {
   return parts.join(' / ')
 })
 
-const isOwner = computed(() => props.course.auth_role === 4)
+// auth_role ไม่มีใน payload ของ /api/courses/marketplace จึงต้องดู is_self ด้วย
+const isOwner = computed(() => props.course.is_self === true || props.course.auth_role === 4)
 const isOwned = computed(() => props.course.is_owned)
 const isMember = computed(() => props.course.enrollment_status?.is_member)
 const memberStatus = computed(() => props.course.enrollment_status?.status)

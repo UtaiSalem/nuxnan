@@ -62,6 +62,10 @@ class MarketplaceCourseResource extends JsonResource
                 'enrolled_at' => $enrollment?->enrollment_date?->toDateString(),
             ],
 
+            // เจ้าของรายวิชาซื้อลิขสิทธิ์ของตัวเองไม่ได้ (CoursePurchaseService กันไว้)
+            // ชื่อฟิลด์ตรงกับ checkPurchase() เพื่อให้ฝั่ง UI ใช้เงื่อนไขเดียวกัน
+            'is_self' => $currentUserId !== null && (int) $this->user_id === (int) $currentUserId,
+
             'saleable' => (bool) $this->saleable,
             'is_for_marketplace' => (bool) $this->is_for_marketplace,
             'total_sales' => $this->total_sales,
