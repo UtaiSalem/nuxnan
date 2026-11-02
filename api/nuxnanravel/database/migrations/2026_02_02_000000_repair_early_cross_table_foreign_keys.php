@@ -36,6 +36,12 @@ return new class extends Migration
 
     public function up(): void
     {
+        // งานซ่อมนี้มีไว้แก้ปัญหาลำดับ FK บน MySQL และเช็คผ่าน information_schema ซึ่ง sqlite ไม่มี
+        // ⇒ ข้ามบน driver อื่น (ชุดเทสต์ sqlite :memory: ไม่ต้องใช้ FK เหล่านี้)
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
+
         foreach (self::REPAIRS as [$tableName, $column, $parent, $onDelete]) {
             if (! Schema::hasTable($tableName) || ! Schema::hasColumn($tableName, $column)) {
                 continue;

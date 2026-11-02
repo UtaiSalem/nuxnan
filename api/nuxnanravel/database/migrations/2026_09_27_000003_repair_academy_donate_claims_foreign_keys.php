@@ -31,7 +31,8 @@ return new class extends Migration
 
     public function up(): void
     {
-        if (! Schema::hasTable('academy_donate_claims')) {
+        // information_schema มีแค่บน MySQL — ชุดเทสต์ sqlite :memory: ข้ามงานซ่อมนี้
+        if (DB::getDriverName() !== 'mysql' || ! Schema::hasTable('academy_donate_claims')) {
             return;
         }
 

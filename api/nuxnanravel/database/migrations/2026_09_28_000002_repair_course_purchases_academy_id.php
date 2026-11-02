@@ -29,6 +29,11 @@ return new class extends Migration
             });
         }
 
+        // The FK check reads information_schema, which only exists on MySQL (tests run on sqlite).
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
+
         $hasFk = collect(DB::select(
             'SELECT 1 FROM information_schema.KEY_COLUMN_USAGE
              WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? AND REFERENCED_TABLE_NAME = ?',
