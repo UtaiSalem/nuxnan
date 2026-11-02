@@ -64,10 +64,10 @@ const games = [
     glow: 'rgba(35,210,226,0.35)'
   },
   {
-    title: 'เกมจับคู่',
-    description: 'จับคู่ภาพและคำเพื่อฝึกความจำและการคิด',
-    icon: 'fluent:brain-circuit-24-regular',
-    route: '/play/games/mental-match',
+    title: 'เกมจับคู่ความจำ',
+    description: 'เปิดการ์ดหาภาพที่เหมือนกันให้ครบทุกคู่ ฝึกความจำและสมาธิ',
+    icon: 'fluent:square-multiple-24-regular',
+    route: '/play/games/memory-match',
     gradient: 'from-orange-400 to-pink-500',
     glow: 'rgba(255,149,0,0.35)'
   }

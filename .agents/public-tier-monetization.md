@@ -451,7 +451,7 @@ user คาดหวังว่า **ทั้งบริจาคและโ
 
 **เฟส 2b — ปิดช่องเนรมิต pp (D11, D11.1)**
 - P0 #8e — **ปิด client access ของ `POST /api/points/earn`** (pp เพิ่มจาก server-side เท่านั้น: บริจาค/ดูโฆษณา/allocate) + ตรวจ #8f
-- เกมทั้งหมด (snake/xo/typing/mental-match) frontend เปลี่ยนไปเรียก `POST /points/xp/earn` แทน — ระบบ XP (`users.xp`/`level`/`addXp()`) พร้อมแล้ว ไม่ต้องสร้างใหม่
+- เกมทั้งหมด (snake/xo/typing/memory-match) frontend เปลี่ยนไปเรียก `POST /points/xp/earn` แทน — ระบบ XP (`users.xp`/`level`/`addXp()`) พร้อมแล้ว ไม่ต้องสร้างใหม่
 - `point_rules`: set `base_amount = 0` สำหรับ `login` (D11.1) **และ `lesson_complete`/`quiz_pass` (D11.2)** — หยุด mint คง xp
 - **P0 #8g — ลบการจ่ายซ้ำ**: หลัง zero point_rules แล้ว lesson/quiz จะได้แต้มจาก `CoursePointCampaign` ทางเดียว (fund-backed) · ยืนยันว่าไม่มี mint เหลือค้าง
 - ตรวจ `streak_bonus` (`GamificationService.php:41`, `StreakService.php:73`) ที่ `earn()` ตรง ไม่ผ่าน rule table

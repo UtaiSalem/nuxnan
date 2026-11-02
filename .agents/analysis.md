@@ -26,7 +26,7 @@
 - Verification: Navigate from `/earn/wallet` to `/play/games/cross-math-game` without reload.
 
 ## Phase 1: Standardize Simple Games (Group B)
-- Files: `mental-math-game`, `snake-game`, `xo-game`, `guessing-number-game`, `english-vocab-game`, `mental-match`, `typing/*`
+- Files: `mental-math-game`, `snake-game`, `xo-game`, `guessing-number-game`, `english-vocab-game`, `memory-match`, `typing/*`
 - Recipe: Unwrap + metadata update.
 
 ## Phase 2: Handle Named Slots (Group A)
