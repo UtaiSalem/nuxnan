@@ -25,7 +25,18 @@ const emit = defineEmits<{
 
 const config = useRuntimeConfig()
 
-// Get group color based on index or id
+// สีที่ผู้ใช้เลือกไว้ (#RRGGBB) — ใช้ก่อนเสมอ
+const customColor = computed<string | null>(() => {
+  const c = props.group?.color
+  return typeof c === 'string' && /^#[0-9A-Fa-f]{6}$/.test(c) ? c : null
+})
+const customColorStyle = computed(() =>
+  customColor.value
+    ? { backgroundImage: `linear-gradient(to bottom right, ${customColor.value}b3, ${customColor.value})` }
+    : {}
+)
+
+// Fallback: กลุ่มที่ไม่มีสี (เช่น กลุ่มนอกรายวิชา) เลือกตาม id
 const groupColors = [
   'from-sky-300/80 to-blue-400/80',
   'from-violet-300/80 to-purple-400/80',
@@ -36,6 +47,7 @@ const groupColors = [
 ]
 
 const groupColor = computed(() => {
+  if (customColor.value) return ''
   const index = props.group.id % groupColors.length
   return groupColors[index]
 })
@@ -143,7 +155,7 @@ const handleJoinClick = async () => {
     <div 
       class="relative h-32 bg-gradient-to-br flex items-center justify-center"
       :class="groupColor"
-      :style="coverUrl ? { backgroundImage: `url(${coverUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}"
+      :style="coverUrl ? { backgroundImage: `url(${coverUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : customColorStyle"
     >
       <!-- Overlay gradient -->
       <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
@@ -193,7 +205,7 @@ const handleJoinClick = async () => {
               :alt="group.name"
               class="w-full h-full object-cover"
             >
-            <div v-else :class="`w-full h-full flex items-center justify-center bg-gradient-to-br ${groupColor}`">
+            <div v-else :class="`w-full h-full flex items-center justify-center bg-gradient-to-br ${groupColor}`" :style="customColorStyle">
               <span class="text-3xl font-bold text-white">
                 {{ group.name?.charAt(0) || 'G' }}
               </span>
