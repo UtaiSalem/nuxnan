@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/game/guessing-number', [GameController::class, 'guessing_number_game'])->name('game.quessing_number');
 Route::get('/game/xo', [GameController::class, 'xo_game'])->name('game.xo');
 Route::get('/game/snake', [GameController::class, 'snake_game'])->name('game.snake');
-Route::get('/game/mental-match', [GameController::class, 'mental_match_game'])->name('game.mental_match');
+Route::get('/game/memory-match', [GameController::class, 'memory_match_game'])->name('game.memory_match');
 
 // Game Scores and Leaderboards
 Route::get('/game/scores', [GameScoreController::class, 'index'])->name('game.scores.index');

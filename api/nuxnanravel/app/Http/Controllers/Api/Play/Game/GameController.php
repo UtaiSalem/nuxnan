@@ -21,7 +21,7 @@ class GameController extends Controller
         return response()->json(['success' => true]);
     }
 
-    public function mental_match_game()
+    public function memory_match_game()
     {
         return response()->json(['success' => true]);
     }
