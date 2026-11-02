@@ -7,6 +7,7 @@ import { Icon } from '@iconify/vue'
 import CourseMarketCard from '~/components/academy/CourseMarketCard.vue'
 import CourseMarketCardSkeleton from '~/components/academy/CourseMarketCardSkeleton.vue'
 import CoursePurchaseModal from '~/components/academy/CoursePurchaseModal.vue'
+import { stripHtml } from '~/utils/textUtils'
 
 definePageMeta({
   layout: 'main',
@@ -216,6 +217,9 @@ const onPurchaseSuccess = (result: any) => {
   }
 }
 
+// คำอธิบายรายวิชาเก็บเป็น HTML จาก TipTap → ต้องถอดแท็กก่อนแสดงเป็นข้อความย่อ
+const descriptionPreview = (html: any) => stripHtml(html).replace(/\s+/g, ' ').trim()
+
 const getStatusBadge = (status: string | number) => {
   const s = String(status)
   // courses.status tinyint: 1=published, 2=draft, 3=archived (0 = legacy draft)
@@ -395,15 +399,15 @@ watch(activeTab, (newTab) => {
 
               <div class="min-w-0 flex-1">
                 <div class="flex items-start justify-between gap-4">
-                  <div>
+                  <div class="min-w-0 flex-1">
                     <h3 class="line-clamp-1 font-semibold text-gray-800 dark:text-white">
                       {{ course.title || course.name }}
                     </h3>
                     <p class="mt-1 line-clamp-2 text-sm text-gray-500 dark:text-gray-400">
-                      {{ course.description }}
+                      {{ descriptionPreview(course.description) || 'ไม่มีคำอธิบาย' }}
                     </p>
                   </div>
-                  <span :class="[getStatusBadge(course.status), 'whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium']">
+                  <span :class="[getStatusBadge(course.status), 'flex-shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium']">
                     {{ getStatusLabel(course.status) }}
                   </span>
                 </div>
@@ -424,7 +428,7 @@ watch(activeTab, (newTab) => {
                 </div>
               </div>
 
-              <div class="flex items-center gap-2 sm:flex-col sm:justify-center">
+              <div class="flex flex-shrink-0 items-center justify-end gap-1 sm:gap-2 sm:self-center">
                 <NuxtLink
                   :to="`/courses/${course.name || course.slug}`"
                   class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg p-2 text-gray-500 transition-colors hover:bg-primary-50 hover:text-primary-600 dark:hover:bg-primary-900/30 sm:min-h-0 sm:min-w-0"
