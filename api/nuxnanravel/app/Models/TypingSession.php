@@ -34,6 +34,7 @@ class TypingSession extends Model
         'xp_earned',
         'classroom_id',
         'challenge_id',
+        'stage_id',
         'completed',
         'started_at',
         'completed_at',
@@ -54,5 +55,10 @@ class TypingSession extends Model
     public function classroom(): BelongsTo
     {
         return $this->belongsTo(Academy::class, 'classroom_id');
+    }
+
+    public function stage(): BelongsTo
+    {
+        return $this->belongsTo(TypingStage::class, 'stage_id');
     }
 }

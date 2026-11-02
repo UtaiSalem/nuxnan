@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Play\Typing\Admin\AdminTypingSentenceController;
 use App\Http\Controllers\Api\Play\Typing\Admin\AdminTypingWordController;
 use App\Http\Controllers\Api\Play\Typing\TypingAchievementController;
 use App\Http\Controllers\Api\Play\Typing\TypingClassroomController;
+use App\Http\Controllers\Api\Play\Typing\TypingCurriculumController;
 use App\Http\Controllers\Api\Play\Typing\TypingDailyChallengeController;
 use App\Http\Controllers\Api\Play\Typing\TypingLeaderboardController;
 use App\Http\Controllers\Api\Play\Typing\TypingRaceController;
@@ -49,6 +50,12 @@ Route::middleware('auth:api')->group(function () {
     // Achievement routes
     Route::get('/typing/achievements', [TypingAchievementController::class, 'index'])->name('typing.achievements.index');
     Route::get('/typing/achievements/mine', [TypingAchievementController::class, 'mine'])->name('typing.achievements.mine');
+
+    // Curriculum progression routes
+    Route::get('/typing/curriculum', [TypingCurriculumController::class, 'index'])->name('typing.curriculum.index');
+    Route::get('/typing/curriculum/stages/{stageId}', [TypingCurriculumController::class, 'show'])->name('typing.curriculum.stage.show');
+    Route::post('/typing/curriculum/stages/{stageId}/submit', [TypingCurriculumController::class, 'submit'])->name('typing.curriculum.stage.submit');
+    Route::get('/typing/curriculum/weak-keys', [TypingCurriculumController::class, 'weakKeys'])->name('typing.curriculum.weak_keys');
 
     // Race Room routes
     Route::post('/typing/race/rooms', [TypingRaceController::class, 'createRoom']);
