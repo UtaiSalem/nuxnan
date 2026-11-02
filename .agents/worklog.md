@@ -4255,6 +4255,11 @@ Q3 scope รอบนี้ (ปิด P0+P1 ของ staff ก่อน · G15
 
 แตก step ไว้แล้ว ST-S1..S7 ใน [`14-staff.md`](school-admin/14-staff.md) §7 — เริ่มเมื่อ Q เคาะ
 
+## 2026-10-21 - Typing training refresh
+- Updated TypingGameSetup, KeyTrainingMode, VirtualKeyboard, Hand3DOverlay, typing/play and TH/EN messages. Fixed right-thumb mirroring and camera cropping; added studio visuals, hand preview, queue and feedback. Preserved existing dirty dependency/hand-guide work.
+- Vue compilation and Three.js anatomy/camera checks passed; no connected browser for visual verification, no full build or commit. See latest-analysis entry.
+
+
 ## 2026-10-21 — Typing other modes Vikinger refresh (complete; branch main)
 - User authorized implementation; game identity uses Vikinger per explicit instruction.
 - Files: ui/components/games/typing/modes/{WordTypingMode,TimeAttackMode,SentenceTypingMode,MonsterBattleMode,FallingWordsMode,LetterRunnerMode}.vue; ui/components/games/typing/ui/{TypingModeHeader,TypingStatsBar,TypingComboDisplay,TypingInput,TypingWordDisplay}.vue; ui/pages/Play/Games/typing/result.vue; ui/tests/typing-input.spec.ts.
@@ -4262,3 +4267,51 @@ Q3 scope รอบนี้ (ปิด P0+P1 ของ staff ก่อน · G15
 - TH/EN typingArena messages and typing/play.vue measured-result fallback were added preserving existing edits, then included by concurrent external commits; latest baseline contains them. Key Training, keyboard and hand work preserved.
 - Verified ourselves: 13 SFC compilations; 4 Vitest integration regressions; TH/EN JSON; git diff --check; Chrome five visible modes at 375/768/1280 with actual API words (no overflow/page errors); complete word round/results/replay; sentence Enter/spaces; arcade typed targets score/combo; sentence/arcade failed-load recovery and dark rendering.
 - Smoke tests deliberately intercepted session POSTs to avoid synthetic database records. Saved-session backend behavior unchanged, full build not run. Letter Runner remains hidden in lobby as before; only shared header added and SFC compiled. User requested committing this completed change; no required implementation remains.
+
+## 2026-10-25 — Consolidated Progressive Stages Directly Into Existing `KeyTrainingMode` (complete; branch main)
+- **Task:** Upgrade the existing `key_training` mode (`KeyTrainingMode.vue`) in-place to feature progressive keyboard-row levels and sub-stages (starting with 15 Home Row stages), and remove duplicate `/curriculum` routes/buttons from earlier work while preserving player data.
+- **Backend files:**
+  - `database/migrations/2026_10_23_130000_create_typing_stages_tables.php` (`typing_stages`, `typing_user_stages`, `typing_sessions.stage_id`).
+  - `app/Models/TypingStage.php`, `app/Models/TypingUserStage.php`, `app/Models/TypingSession.php`.
+  - `database/seeders/TypingCurriculumSeeder.php` (seeded 60 stages across Levels 1–4 for both `th` and `en`: 15 Home Row + 5 Top Row + 5 Bottom Row + 5 Mixed per language).
+  - `app/Services/TypingCurriculumService.php` (server-side authoritative WPM/accuracy calculation, sequential stage & level unlocking, 2-of-3 exam window check, weak keys tracking).
+  - `app/Http/Controllers/Api/Play/Typing/TypingCurriculumController.php`.
+  - `routes/play/game.php` (4 endpoints under `/api/typing/curriculum`).
+  - `tests/Feature/Play/Typing/TypingCurriculumTest.php` (7 feature tests, 5,691 assertions).
+- **Frontend files:**
+  - `ui/components/games/typing/modes/KeyTrainingMode.vue` (in-place progressive level & stage map, resume button, multi-set prompt drill studio, `VirtualKeyboard`, `Hand3DOverlay`/`FingerGuide`, post-round weak-key breakdown and pass/fail diagnostics).
+  - `ui/pages/Play/Games/typing/play.vue` (bypasses legacy 5-lesson setup screen when `selectedMode === 'key_training'`).
+  - `ui/pages/Play/Games/typing/index.vue` (restored clean lobby without duplicate curriculum buttons/banners).
+  - Removed `ui/pages/Play/Games/typing/curriculum/` (`index.vue` and `[stageId].vue`).
+  - `ui/composables/useTypingCurriculum.ts` & `ui/tests/typing-curriculum.spec.ts`.
+- **Verification:**
+  - MySQL seeded with 60 stages (`th` + `en`, Levels 1–4); existing player records in `typing_sessions` and `typing_user_stages` preserved.
+  - PHPUnit (`TypingCurriculumTest`): 7 tests, 5,691 assertions passed.
+  - Vitest: 8 tests in `tests/typing-curriculum.spec.ts` and `tests/typing-input.spec.ts` passed.
+  - Vue SFC compilation verified for `index.vue`, `play.vue`, and `KeyTrainingMode.vue`.
+  - Laravel Pint passed on all backend PHP files.
+
+## 2026-10-30 — Route warnings resolution & typing curriculum legacy URL support (complete; branch main)
+- **Task:** Resolve duplicate route name warning for courses catch-all page and add legacy URL support + query-mode synchronization for typing curriculum without re-creating curriculum menus/tabs.
+- **Root Cause & Fix 1 (Duplicate Course Route Name):**
+  - Nuxt's file-based route generator (`unrouting`) generates route names based on folder and param segment names (`courses/[slug]` and `courses/[...slug]` both yielded `courses-slug`) prior to AST extraction of `definePageMeta`.
+  - Renamed `ui/pages/courses/[...slug].vue` -> `ui/pages/courses/[...path].vue` and set `name: 'courses-legacy-redirect'` in `definePageMeta`.
+  - Redirection target in middleware reads `to.params.path || to.params.slug`, preserving redirect behavior to `/Learn/Courses/${targetPath}`.
+  - Public course details page (`ui/pages/courses/[slug].vue`) retains route name `courses-slug`. Nuxt startup/build warning eliminated.
+- **Root Cause & Fix 2 (Typing Curriculum Legacy URLs & Mode Selection):**
+  - Added compatibility redirect routes:
+    - `ui/pages/Play/Games/typing/curriculum/index.vue`: Redirects `/play/games/typing/curriculum` (with alias `/curriculum`) to `/play/games/typing/play?mode=key_training` preserving query parameters.
+    - `ui/pages/Play/Games/typing/curriculum/[stageId].vue`: Redirects `/play/games/typing/curriculum/:stageId` (with alias `/curriculum/:stageId`) to `/play/games/typing/play?mode=key_training&stageId=:stageId` preserving query parameters.
+  - Updated `ui/pages/Play/Games/typing/play.vue`:
+    - Reads `route.query.mode` upon mounting and route change; sets `store.selectedMode` before component rendering so direct links or page refreshes retain `key_training` instead of falling back to default `word_typing`.
+  - Updated `ui/pages/Play/Games/typing/index.vue`:
+    - Sends `query: { mode: store.selectedMode }` on start to persist any selected game mode across refreshes.
+  - Updated `ui/components/games/typing/modes/KeyTrainingMode.vue`:
+    - Dynamically syncs `selectedLevel` and `selectedLang` to match deep-linked `stageId`.
+    - Added `watch(() => route.query.stageId)` for in-page stage updates.
+    - Maintains backend unlocking rules: unlocked stages go to ready/play; locked stages set `stageError` and remain on the stage selection map.
+- **Verification:**
+  - `npx nuxt prepare`: 0 warnings, clean route table.
+  - Vitest: 9 test files, 81 tests passed (added 11 tests in `tests/typing-routing.spec.ts`).
+  - PHPUnit: `TypingCurriculumTest` 7 tests, 5,691 assertions passed.
+  - `@vue/compiler-sfc`: All 7 related SFC components compiled cleanly.

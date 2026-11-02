@@ -1,5 +1,142 @@
 ---
 
+# 2026-11-02 — เปิดสิทธิ์ "ครูสมาชิกที่ไม่ใช่แอดมิน" ซื้อรายวิชาจากตลาด
+
+- **Status:** 📝 แผน (ยังไม่ลงมือ) — ต้องให้เจ้าของโปรเจคเคาะ 4 ข้อท้ายเอกสารก่อนเริ่ม
+- **Branch ตอนร่างแผน:** `main` — working tree **ไม่สะอาด** (งาน typing curriculum ค้างอยู่ 20+ ไฟล์) ⇒ งานนี้ต้องแยก commit ออกจากงาน typing เด็ดขาด
+- **ที่มา:** คำถาม "คุณครูท่านอื่นที่เป็นสมาชิกของโรงเรียนแต่ไม่ได้เป็นแอดมิน สมควรซื้อรายวิชาเพื่อให้เป็นวิชาของตัวเองได้หรือไม่"
+- **ขอบเขต:** สิทธิ์การซื้อ/ที่มาของรายวิชาในโรงเรียนเท่านั้น — **ห้ามแตะระบบเงิน/แต้ม, ห้ามสร้าง academy wallet, ห้ามแตะคิว `backlog`**
+
+## ข้อสรุป: **ควรให้ซื้อได้** — และด่านที่กันอยู่ตอนนี้ขัดกับ role matrix ของตัวเอง
+
+role `teacher` (`academy_roles` id=4) **มี permission `courses.create` + `courses.edit.own` อยู่แล้ว** และครู 120 คนในระบบจริงถูก map เข้า role นี้ครบ
+
+แต่ `CourseMarketplaceController@purchase` กันด้วย `academy_admins` ซึ่ง **ตารางนั้นมี 0 แถว** ⇒ ทุกวันนี้มีคนเดียวในระบบที่ซื้อเข้าคลังโรงเรียนได้ คือ `academies.user_id` (เจ้าของ)
+
+สรุป: ไม่ใช่การ "เพิ่มสิทธิ์ใหม่" แต่เป็นการ **ทำให้ด่าน API ตรงกับสิทธิ์ที่ประกาศไว้ใน DB แล้ว**
+
+## หลักฐาน (อ่านโค้ด + query DB จริง 2026-11-02)
+
+| สิ่งที่ตรวจ | ผล |
+| --- | --- |
+| `POST /api/courses/{course}/purchase` | middleware มีแค่ `auth:api` — `routes/learn/course.php:94` |
+| ซื้อเข้าคลัง**ตัวเอง** (`academy_id` = null) | **ใครก็ได้ที่ล็อกอินทำได้อยู่แล้ววันนี้** คอร์สโคลนออกมา `academy_id` = null → เป็นคอร์สส่วนตัว ไม่ขึ้นคลังโรงเรียน |
+| ซื้อ**ในนามโรงเรียน** | เจ้าของ หรือมีแถวใน `academy_admins` เท่านั้น → ครูได้ 403 — `CourseMarketplaceController.php:170-187` |
+| `SELECT COUNT(*) FROM academy_admins` | **0** ⇒ เส้นทาง admin ใช้งานจริงไม่ได้เลย |
+| `academy_members` status=2 | `teacher` 120 (role_id 4) · `student` 2,492 · role NULL 2 (role_id 5) |
+| role `teacher` permissions | มี `courses.create`, `courses.edit.own` |
+| ใครเช็ค permission พวกนี้ฝั่ง server | **ไม่มีใครเลย** — `AcademyRole::hasPermission()` มีอยู่ แต่ไม่มี controller ไหนเรียก; grep `courses.create` ใน `app/` เจอแต่ 2 model ⇒ permission matrix วันนี้ขับแค่เมนู UI |
+| ใครจ่ายเงินตอนซื้อในนามโรงเรียน | **กระเป๋าส่วนตัวของคนซื้อ** — `CoursePurchaseService::processPayment()` หัก `$buyer->wallet` / `$buyer->pp` เสมอ · ไม่มี academy wallet ในระบบ (ไม่มีคอลัมน์/ตารางใด ๆ) |
+| สร้างรายวิชาเอง | ต้องมี ≥ 120,000 แต้ม — `CourseController.php:532` (`features.create_course_threshold`) |
+| ซื้อจากตลาด | **ไม่มี gate แต้มเลย** |
+| คอร์สในตลาดวันนี้ | 10 รายการ — **8 รายการราคา 0** ⇒ ช่องข้าม gate 120k ไม่ใช่เรื่องสมมติ |
+| `CourseController@store` กับ `academy_id` | เอาจาก request ใส่ตรง ๆ **ไม่เช็คสิทธิ์อะไรเลย** (`CourseController.php:587`) ⇒ ใครก็ยัดคอร์สเข้าโรงเรียนไหนก็ได้ ด่าน purchase จึงเป็นฉากหน้า |
+| หน้า `academies/[name]/admin/courses` | `middleware: 'auth'` เท่านั้น — **ไม่มี guard แอดมินฝั่ง UI** ครูเปิดหน้านี้และเห็นแท็บตลาดได้อยู่แล้ว ที่กันคือ 403 จาก API เท่านั้น |
+| คอร์สที่โคลนออกมา | `user_id` = คนซื้อ (เป็นเจ้าของ `auth_role` 4), `status = 1` **(= published ทันที)** — `CourseCloneService.php:131-136` |
+| `course_purchases` ทั้งระบบ | **1 แถว** ⇒ ฟีเจอร์แทบไม่ถูกใช้ ความเสี่ยงตอนแก้ต่ำ |
+
+## 🔴 กับดักที่ต้องอ่านก่อนแตะ
+
+1. **เจ้าของโรงเรียนไม่มีแถวใน `academy_members`** — เช็ค `academies.user_id` ก่อนเสมอ ห้ามเช็คจาก member ทางเดียว (ใช้ `Academy::isAdmin()` ที่มีอยู่แล้ว บรรทัด 218)
+2. **`academy_members.status` = 2 คือ approved ไม่ใช่ 1** — ใช้ค่าคงที่ `AcademyMember::STATUS_APPROVED`
+3. **`academy_admins` ว่าง** — อย่าทำให้มันเป็น path หลัก แต่ยังต้องรองรับไว้ (โค้ดอื่นอ้างถึง)
+4. **`status = 1` ของ `courses` คือ published** และ **`finalization_status` คือ lifecycle จริง** — ถ้าจะให้คอร์สที่ซื้อเข้ามาเป็น "ร่าง" ต้องแก้ทั้งสองที่ ไม่ใช่แค่ `status`
+5. **ข้อมูลเพี้ยนเล็กน้อย**: มี student 10 คนถูก map `academy_role_id` = 5 (staff) และ member role NULL 2 คน role_id 5 ⇒ ถ้าตรรกะสิทธิ์อิงแต่ `academy_role_id` คนเหล่านี้จะได้สิทธิ์ผิดกลุ่ม ต้องเช็ค `role` varchar ประกบ
+6. **ไม่มี unique index กันซื้อซ้ำ** — กันด้วย `lockForUpdate()` ใน transaction อย่างเดียว ถ้าจะเพิ่ม index ต้องเป็น migration (ตามกติกา: ทุกการเปลี่ยน DB ต้องเป็น migration)
+
+## Work Plan — Action Items
+
+### P0 · A1 — ปิดรู `CourseController@store` ก่อน (prerequisite ของทุกข้อ)
+
+- **ปัญหา:** `CourseController.php:587` รับ `academy_id` จาก request โดยไม่ตรวจสิทธิ์
+- **ทำ:** ถ้า `academy_id` ไม่ null → ตรวจผ่านจุดตรวจเดียวใน A2 · ไม่ผ่าน → **403** (ห้าม set null เงียบ ๆ เพราะคอร์สจะหลุดไปเป็นของส่วนตัวโดยผู้ใช้ไม่รู้ตัว)
+- **เกณฑ์ผ่าน:** test ยิง `store` ด้วย `academy_id` ของโรงเรียนที่ผู้ใช้ไม่ได้เป็นสมาชิก → ได้ 403 และ **ไม่มีแถวใหม่ใน `courses`**
+
+### P0 · A2 — สร้างจุดตรวจสิทธิ์ "จัดการรายวิชาของโรงเรียน" ที่เดียว
+
+- **ที่อยู่ที่แนะนำ:** `Academy::canManageCourses(?User $user): bool` (ข้าง ๆ `isAdmin()` ที่มีอยู่) — ให้ทั้ง A1 และ A3 เรียกตัวเดียวกัน ห้ามเขียนเงื่อนไขซ้ำสองที่
+- **ตรรกะ (เรียงตามลำดับ):** `isSuperAdmin()` → `academies.user_id === user->id` → แถวใน `academy_admins` → แถวใน `academy_members` ที่ `status = STATUS_APPROVED` **และ** role มี permission `courses.create`
+- **การอ่าน permission:** ผ่าน `AcademyRole::hasPermission('courses.create')` (รองรับ `["*"]` ของ owner อยู่แล้ว) · fallback เมื่อ `academy_role_id` เป็น NULL → map จาก `role` varchar; ถ้า map ไม่ได้ → **ไม่มีสิทธิ์**
+- **เหตุผลที่เลือก permission ไม่ใช่ชื่อ role:** โรงเรียนแก้ permission ของ role ได้เอง (มี `AcademyRoleController`) ถ้า hardcode `role === 'teacher'` การตั้งค่าของโรงเรียนจะไม่มีผล
+- **เกณฑ์ผ่าน:** unit test ครอบ 6 เคส — super admin / เจ้าของ / academy_admin / ครู status 2 / ครู status 1 (pending) / นักเรียน status 2 → true, true, true, true, false, false
+
+### P1 · A3 — เปลี่ยน gate ของ `purchase` ให้ใช้ A2
+
+- แทนบล็อก `AcademyAdmin::where(...)` ที่ `CourseMarketplaceController.php:170-187` ด้วย `$academy->canManageCourses($buyer)`
+- ข้อความ 403 เดิม ("คุณไม่มีสิทธิ์ดำเนินการในนามโรงเรียนนี้") ใช้ต่อได้
+- **เกณฑ์ผ่าน:** feature test — ครู status 2 ซื้อคอร์สในนามโรงเรียนได้ 200 · นักเรียน status 2 ได้ 403 · คนนอกได้ 403
+
+### P1 · A4 — ปิดช่องข้าม gate 120,000 แต้มด้วยคอร์สราคา 0
+
+- **ความจริง:** 8 จาก 10 คอร์สในตลาดราคา 0 ⇒ ใครก็ได้คอร์สมาครองโดยไม่แตะ gate ที่ `store()` บังคับไว้
+- **ทางเลือก:**
+  - (ก) ใช้ threshold เดียวกับ `store()` เมื่อ `price <= 0`
+  - (ข) **แนะนำ** — ยกเว้น threshold เฉพาะเมื่อซื้อ**ในนามโรงเรียน**และผู้ซื้อผ่าน A2; ส่วนการซื้อเข้าคลังส่วนตัวของคอร์สฟรี ใช้ threshold เดียวกับ `store()`
+  - (ค) ไม่กันเลย (ยอมรับว่า gate 120k ใช้ไม่ได้จริง) — ถ้าเลือกข้อนี้ ควรถอด gate ที่ `store()` ด้วย เพื่อไม่ให้มีกฎที่หลอกตัวเอง
+- **เหตุผลที่เชียร์ (ข):** gate 120k ออกแบบมากันคนทั่วไปสร้างคอร์สมั่วในตลาด ไม่ได้ออกแบบมากันครูในโรงเรียนที่ผู้บริหารรับรองตัวแล้ว
+
+### P1 · A5 — ตัดสินใจ duplicate guard: 1 ชุด/โรงเรียน หรือ 1 ชุด/ครู
+
+- **ปัจจุบัน** (`CoursePurchaseService.php:48-71`) ถ้า `academy_id` ถูกส่งมา จะเช็คว่า **โรงเรียน** มีคอร์สนี้แล้วหรือยัง → ครูคนที่สองจะโดน "โรงเรียนมีคอร์สนี้อยู่แล้ว" ทั้งที่ยังไม่ได้จ่ายและยังไม่มีคอร์สเป็นของตัวเอง
+- ถ้าเปิดให้ครูซื้อ **ต้องเปลี่ยนเป็นต่อครู**: เพิ่ม `buyer_id` เข้าเงื่อนไขของ branch `academy_id` (ครูสองคนสอนวิชาเดียวกันต่างห้องเป็นเรื่องปกติของโรงเรียน)
+- ถ้าเลือก "1 ชุด/โรงเรียน" ต้องออกแบบการแชร์คอร์สให้ครูคนที่สองแทน — **งานใหญ่กว่าเยอะ ไม่ควรรวมในรอบนี้**
+- **เกณฑ์ผ่าน:** test ครู A และครู B ในโรงเรียนเดียวกันซื้อคอร์สเดียวกัน → สำเร็จทั้งคู่ ได้ `courses` 2 แถว เจ้าของต่างกัน · ครู A ซื้อซ้ำรอบสอง → ถูกปฏิเสธ
+
+### P2 · A6 — คอร์สที่ซื้อเข้ามาควรเป็น "ร่าง" ไม่ใช่ published ทันที
+
+- `CourseCloneService.php:136` ตั้ง `status = 1` (published) ตรง ๆ ⇒ ครูซื้อแล้วคอร์สขึ้นคลังโรงเรียนทันที ไม่มีจุดให้ฝ่ายวิชาการตรวจ
+- **ทำ:** เมื่อ `context->mode === 'purchase'` **และ** `academyId` ไม่ null → ตั้งเป็นร่าง (ต้องตั้ง `finalization_status` ให้สอดคล้อง ไม่ใช่แค่ `status`) แล้วให้แอดมินกด "รับเข้าคลัง"
+- ⚠️ ต้องอ่าน `CourseCloneService` ทั้งไฟล์ก่อนแก้ — ฟังก์ชันเดียวกันใช้กับ `self_duplicate` ด้วย ห้ามทำให้การ duplicate คอร์สตัวเองพัง
+- ถ้าเจ้าของโปรเจคเคาะว่า "ไม่ต้องรออนุมัติ" → ข้อนี้ตัดทิ้งทั้งข้อ
+
+### P2 · A7 — ทางเข้า UI ของครู
+
+- **ไม่ต้องสร้างหน้าใหม่** — `academies/[name]/admin/courses` มี `middleware: 'auth'` เท่านั้น ครูเปิดได้อยู่แล้ว เห็นแท็บ "ตลาด" และกดซื้อได้ สิ่งที่กันคือ 403 จาก API
+- สิ่งที่ต้องทำจริงคือ **ความสุภาพของ UI**: ถ้าผู้ใช้ไม่ผ่าน A2 ต้องซ่อน/disable ปุ่มซื้อพร้อมบอกเหตุผล ไม่ใช่ปล่อยให้กดแล้วเด้ง 403
+- ต้องมี field บอกสิทธิ์ใน API response (เช่น `can_purchase_for_academy`) — ฝั่ง UI **ห้ามเดาสิทธิ์จาก role string เอง**
+- ⚠️ ถ้าให้ครูใช้หน้าใต้ `admin/` ต่อ ต้องยอมรับว่าเมนู/sidebar ของหน้านั้นเป็นของแอดมิน (หน้าใต้ `admin/` สืบ sidebar ของ parent)
+- บล็อกกติกา **mobile-first** ต้องแปะในสเปคที่ส่งให้ agy ทุกใบ: ตรวจที่ 375px ก่อน, touch target ≥ 44px, ห้าม `hidden` ซ่อนข้อมูลสำคัญ
+
+## เกณฑ์ผ่านรวม (ต้องรันเอง ห้าม paste ตัวเลขที่ไม่ได้รันจริง)
+
+```bash
+# 1) เทสต์ต้องรันบน MySQL จริง — sqlite โกหกได้
+cd api/nuxnanravel
+php artisan test:db:rebuild
+php artisan test -c phpunit.mysql.xml --filter="Purchase|AcademyCourse"
+
+# 2) migration (ถ้ามีจาก A5) ต้องรันขึ้นและถอยลงได้จริง
+php artisan migrate:status
+php artisan migrate && php artisan migrate:rollback --step=1
+
+# 3) format
+./vendor/bin/pint --dirty
+
+# 4) ตรวจว่าไม่มีด่านสิทธิ์ซ้ำซ้อน
+git grep -n "AcademyAdmin::where" app/Http/Controllers/Api/Learn/Course/
+git grep -n "canManageCourses" app/
+```
+
+- ต้องเปิดหน้าจริงด้วยบัญชีครู (ไม่ใช่เจ้าของโรงเรียน) แล้วกดซื้อคอร์สฟรี 1 รายการ — ดูว่าคอร์สโผล่ที่ไหน สถานะอะไร
+- **queue worker ต้องรันคู่กันตอนทดสอบ** (`php artisan queue:work --queue=default --timeout=60`) ไม่งั้นคอร์สที่มี > 20 บทเรียนจะค้างเงียบ ๆ ไม่ error
+
+## ห้ามทำในรอบนี้
+
+- ห้ามสร้าง academy wallet / กระเป๋าโรงเรียน — ไม่มีในระบบ เป็นงานคนละเรื่องและใหญ่กว่ามาก
+- ห้ามแตะคิว `backlog` (~15,869 job)
+- ห้ามแก้ตรรกะเงิน/แต้มใน `processPayment()`
+- ห้ามเอางานนี้ไปรวม commit กับงาน typing curriculum ที่ค้างอยู่ใน working tree
+- ห้ามเพิ่ม middleware admin ให้หน้า `academies/[name]/admin/*` ทั้งก้อน (จะพังทางเข้าที่ครูใช้อยู่ และกระทบหน้าอื่นทั้งหมดในโฟลเดอร์)
+
+## ❓ ต้องให้เจ้าของโปรเจคเคาะก่อนเริ่ม
+
+1. **ครูลาออกแล้วคอร์สที่เขาซื้อด้วยเงินตัวเองเป็นของใคร** — ของครู (ติดตัวไป), ของโรงเรียน (ยึด), หรือค้างเป็น orphan? โค้ดตอบให้ไม่ได้ ต้องเป็นนโยบาย
+2. **1 ชุด/โรงเรียน หรือ 1 ชุด/ครู** (A5) — ถ้าตอบ "ต่อโรงเรียน" งานจะกลายเป็นงานออกแบบการแชร์คอร์ส ไม่ใช่งานสิทธิ์
+3. **คอร์สที่ครูซื้อ ต้องรอแอดมินรับเข้าคลังไหม** (A6) — ถ้าไม่ต้อง ตัด A6 ทิ้ง
+4. **gate 120k แต้มกับคอร์สฟรี** (A4) — เลือก (ก)/(ข)/(ค)
+
+---
+
 # 2026-08-09 — 🅰️ ลบเกาะ Inertia legacy ออกจาก `ui/` (Tier A: orphan ล้วน)
 
 - **Status:** ✅ **ปิดครบทุก Tier แล้ว** — Tier A ลบครบ 6 เกาะ (75 ไฟล์ / −18,773 บรรทัด) 2026-08-10 commit `a4093743` `3055501d` `84a56449` `e2b7fa86` `9476499f` `42a4e9b9` · Tier C ปิดด้วย `bcefe3dc` · เกณฑ์ผ่านครบทั้ง A–E
@@ -4912,6 +5049,16 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 - User requested a further size reduction. Mobile/tablet keypad now uses 44px buttons, 6px gaps, 8px panel padding, 320px maximum width and 20px labels. Height reduced from 242px to 212px (30px recovered for board); adjusted reserved space/scroll margins to match.
 - Chrome verified 375px and 768px start and next-level transition: all 11 buttons visible, hit-testable and >=44px. git diff --check passed with existing line-ending warnings. Desktop unchanged.
 
+## 2026-10-21 - Typing UI and hand correction
+- Implemented requested /play/games/typing/play visual refresh. Preserved existing dirty KeyTrainingMode, FingerGuide, Hand3DOverlay and package changes; no dependency edits.
+- Updated TypingGameSetup.vue, modes/KeyTrainingMode.vue, ui/Hand3DOverlay.vue, ui/VirtualKeyboard.vue, pages/Play/Games/typing/play.vue and th/en locale JSON.
+- Fixed double-mirrored right thumb, rounded palms/wrists, added nails, aspect-safe camera, WebGL fallback and GPU cleanup. Added hand preview, upcoming keys, progress, combo feedback, responsive stats and keyboard scrolling.
+- HopeUI reference: Tailwind dashboard/widget/widgetbasic.html progress/stat structure, lines 4330-4370; conversion guide followed.
+- Six SFC script/template/style compilations passed. Actual Three.js geometry checks: ten mirrored fingers, inward thumbs, camera bounds at 270x190, 600x220 and 800x220. TH/EN JSON encoding and git diff --check passed. Browser inventory empty: visual/gameplay smoke test unavailable. Full build not run.
+
+
+## 2026-10-21 - Typing hand placement follow-up
+- User requested hands below keyboard. Moved VirtualKeyboard above the hand-guide heading and ClientOnly hand rendering in KeyTrainingMode.vue; retained finger/status bindings and fallback. Vue compilation and source-order verification passed; git diff --check passed. Browser visual verification remains unavailable.
 ## 2026-10-21 — Typing modes Vikinger redesign (complete)
 - User explicitly authorized implementation after the plan; Vikinger overrides HopeUI for game screens.
 - Preserving pre-existing KeyTrainingMode, TypingGameSetup, virtual keyboard/hand overlays and dependency changes.
@@ -4921,3 +5068,59 @@ async function submitCardRequest(studentId, requestType, reason?, requester?) {
 - Chrome real-data smoke: Word, Time Attack, Sentences, Monster Battle and Falling Words at 375/768/1280px, no horizontal overflow or page errors. 20 correct words -> 100% accuracy -> local result (save deliberately intercepted) -> replay. Sentence spaces/Enter checked. Both arcade modes scored actual targets with combo increases.
 - Chrome recovery/dark smoke: sentence + both arcade modes failed requests -> retry -> playable; dark rendering checked. Reviewed screenshots and fixed artificial character spacing/natural word wrapping; compacted mobile combo. Responsive Vue HP HUD replaces duplicate canvas HP.
 - Full build not run. Commit authorized by the user. Existing concurrent Key Training work was committed externally during the task; translations and measured-result fallback are already included in that updated baseline. No user changes reverted.
+
+## 2026-10-25 — Consolidated Progressive Stages Directly Into Existing `KeyTrainingMode` (complete)
+- Consolidated the progressive keyboard-row levels and sub-stages directly into the existing `key_training` mode (`ui/components/games/typing/modes/KeyTrainingMode.vue`) entered via `/play/games/typing` -> `/play/games/typing/play`, without creating any new mode, menu, tab, card, or route.
+- Removed duplicate mode entry points created in the earlier draft:
+  - Deleted `ui/pages/Play/Games/typing/curriculum/index.vue` and `ui/pages/Play/Games/typing/curriculum/[stageId].vue`.
+  - Restored `ui/pages/Play/Games/typing/index.vue` so there are no duplicate Curriculum buttons or banners.
+  - Updated `ui/pages/Play/Games/typing/play.vue` so selecting `key_training` opens `KeyTrainingMode.vue` directly without showing the legacy 5-lesson setup screen in `TypingGameSetup.vue`.
+- Expanded `TypingCurriculumSeeder` to 60 stages across 4 progressive levels per language (`th` and `en`):
+  - Level 1: Home Row (15 stages: stages 1–5 >=90% acc / 0 WPM, stages 6–10 >=93% acc / 8 WPM, stages 11–14 >=95% acc / 12 WPM, stage 15 exam >=95% acc / 15 WPM / 60s / pass 2 of last 3 attempts).
+  - Level 2: Top Row + Home Row (5 stages + exam).
+  - Level 3: Bottom Row + Previous Rows (5 stages + exam).
+  - Level 4: Full Keyboard / Mixed (5 stages + exam).
+- Updated `TypingCurriculumService` to compute WPM and accuracy authoritatively on the server from `correct_chars`, `total_chars`, and `time_elapsed`, unlock `level + 1, stage 1` when a level's final exam is passed, and persist `weak_keys` per attempt.
+- Preserved all existing player data (`typing_sessions` and `typing_user_stages`).
+- Verification:
+  - PHPUnit (`TypingCurriculumTest`): 7 tests, 5,691 assertions passed (including verifying every prompt across all 60 stages only uses `target_keys`).
+  - Vitest (`typing-curriculum.spec.ts`, `typing-input.spec.ts`): 8 tests passed.
+  - Vue SFC compilation verified for `index.vue`, `play.vue`, and `KeyTrainingMode.vue`.
+  - Laravel Pint passed on all backend PHP files.
+
+## 2026-10-30 — Route warnings investigation (report only)
+- Scope: investigate supplied Nuxt duplicate-name and Vue Router no-match warnings; no application code changes.
+- Confirmed with installed unrouting generator in memory: courses/[slug].vue -> /courses/:slug(), courses/[...slug].vue -> /courses/:slug(.*)*; both emit name courses-slug. Neither page specifies a custom name. Single-slug page serves public course donations; catch-all redirects legacy paths to /Learn/Courses/.
+- Typing curriculum page files are absent, consistent with the 2026-10-25 consolidation recorded above and in worklog. Current entry: typing lobby -> select key_training -> typing/play -> KeyTrainingMode progressive stages. No current frontend reference to /play/games/typing/curriculum found; /typing/curriculum strings in composable/tests are API endpoints.
+- The source requesting the obsolete URL cannot be determined from supplied logs (stale tab/bookmark/older client are possible). Repeated warnings do not establish separate defects.
+- Suggested follow-up: give catch-all a unique definePageMeta name; optionally add compatibility redirect for old curriculum URLs while explicitly selecting key_training (store defaults to word_typing). Validate course detail/deep redirect plus lobby/key-training and old URL behavior. No fix/build/browser verification performed; existing dirty work preserved.
+
+## 2026-10-30 — Route warnings resolution & typing curriculum legacy URL support (complete)
+- **Problem 1 (Duplicate Course Route Name):**
+  - Nuxt's route compiler (`unrouting`) generates route names based on folder & parameter names before `definePageMeta` is parsed. Because both `courses/[slug].vue` and `courses/[...slug].vue` shared the param name `slug`, unrouting generated `courses-slug` for both and raised a warning.
+  - Fix: Renamed `pages/courses/[...slug].vue` to `pages/courses/[...path].vue` and explicitly assigned `name: 'courses-legacy-redirect'` within `definePageMeta`. The parameter reader checks `to.params.path || to.params.slug` to maintain full redirection to `/Learn/Courses/${targetPath}`. The single-slug page `pages/courses/[slug].vue` retains default route name `courses-slug` for public donation/course view. Nuxt builds and startup warnings for duplicate course routes are fully eliminated.
+- **Problem 2 (Legacy Typing Curriculum URLs & Mode Synchronization):**
+  - Added lightweight redirect pages:
+    - `ui/pages/Play/Games/typing/curriculum/index.vue`: redirects `/play/games/typing/curriculum` (with alias `/curriculum`) to `/play/games/typing/play?mode=key_training`, forwarding any query parameters.
+    - `ui/pages/Play/Games/typing/curriculum/[stageId].vue`: redirects `/play/games/typing/curriculum/:stageId` (with alias `/curriculum/:stageId`) to `/play/games/typing/play?mode=key_training&stageId=:stageId`, forwarding any query parameters.
+  - Updated `ui/pages/Play/Games/typing/play.vue`:
+    - Checks `route.query.mode` on mount and on route changes. When `mode=key_training` (or any valid `GameMode`), sets `store.selectedMode` before mounting components, ensuring direct link navigation and browser refresh correctly render `KeyTrainingMode` instead of falling back to default `word_typing`.
+  - Updated `ui/pages/Play/Games/typing/index.vue`:
+    - Passes `query: { mode: store.selectedMode }` when navigating to `/play/games/typing/play` so all lobby mode selections persist across refresh and direct links.
+  - Updated `ui/components/games/typing/modes/KeyTrainingMode.vue`:
+    - Synchronizes `selectedLevel` and `selectedLang` to match the target stage when opening via deep-link `stageId`.
+    - Added `watch(() => route.query.stageId)` for responsive deep-link stage switching.
+    - Preserves backend validation & unlock checks: unlocked stages transition to ready/play; locked stages set `stageError` and retain the map view.
+- **Verification:**
+  - `npx nuxt prepare`: 0 warnings, types generated cleanly.
+  - Vitest: 9 test files, 81 tests passed (including 11 new tests in `tests/typing-routing.spec.ts`).
+  - PHPUnit: `TypingCurriculumTest` 7 tests, 5,691 assertions passed on prebuilt MySQL database.
+  - `@vue/compiler-sfc`: All 7 changed/created `.vue` components compiled successfully.
+  - `npm run build`: Production build verified.
+
+## 2026-10-30 — Review of route warning fixes (Codex; no code edits)
+- Scope: course catch-all rename, typing legacy redirect pages, lobby/play query mode, KeyTrainingMode deep-link handling, routing tests. Existing unrelated curriculum backend work not reviewed.
+- P2 confirmed: KeyTrainingMode.vue lines 234-243 update selectedLevel/selectedLang inside openStage then prepare ready state, but watcher lines 184-187 subsequently resets viewState to map. An unlocked deep-link stage in a different language/level fails to remain in ready view; next-stage transitions across levels share this path.
+- Reproduction: compiled and executed actual SFC setup in memory with mocked API returning unlocked stage 20 (level 2, th), initial state level 1/en; after openStage and nextTick: activeStage=20, selectedLevel=2, selectedLang=th, viewState=map. Suggested fix: separate manual map-filter changes from stage synchronization or await watcher/map refresh before prepareStageRound, then add actual-component regression coverage.
+- Verification: 19 tests passed across typing-routing, typing-curriculum and typing-input; 6 changed/new routing SFCs compiled; installed route generator reports no duplicate course names after catch-all param rename; git diff --check passed (CRLF warnings only).
+- Test gap: typing-routing.spec.ts constructs its own route table and copies syncModeFromQuery rather than executing page middleware/components, so it cannot catch the confirmed watcher regression. Full build/browser navigation not independently rerun in this review.
