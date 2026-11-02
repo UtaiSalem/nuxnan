@@ -5,6 +5,8 @@ import { useCourseMemberStore } from '~/stores/courseMember'
 
 // Inject dependencies
 const course = inject<Ref<any>>('course')
+// API decimal scores may arrive as strings; normalize before passing numeric props.
+const courseTotalScore = computed(() => Number(course?.value?.total_score) || 100)
 // const courseMember = inject<Ref<any>>('courseMember')
 const isCourseAdmin = inject<Ref<boolean>>('isCourseAdmin')
 const api = useApi()
@@ -755,7 +757,7 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                         v-if="effectiveViewMode === 'card' || effectiveViewMode === 'table'"
                         :members="members"
                         :view-mode="effectiveViewMode === 'card' ? 'card' : 'table'"
-                        :course-total-score="course?.total_score || 100"
+                        :course-total-score="courseTotalScore"
                         :is-course-admin="isCourseAdmin"
                         :available-groups="activeGroupTab === -1 ? courseGroupStore.groups : []"
                         :assigning-member-id="assigningGroupForMember"
@@ -777,7 +779,7 @@ async function assignGroupToMember(memberId: number, groupId: number) {
                             :member="member"
                             :data-index="index"
                             :is-course-admin="isCourseAdmin"
-                            :course-total-score="course?.total_score || 100"
+                            :course-total-score="courseTotalScore"
                             :available-groups="activeGroupTab === -1 ? courseGroupStore.groups : []"
                             :assigning-member-id="assigningGroupForMember"
                             :is-pending-view="activeGroupTab === -2"

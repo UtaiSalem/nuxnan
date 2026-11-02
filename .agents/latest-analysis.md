@@ -1,3 +1,11 @@
+# 2026-11-03 — Course member numeric score prop fix (complete)
+
+- User authorized implementation of the pasted `courseTotalScore` Vue prop warnings.
+- Changed `ui/pages/Learn/Courses/[id]/members/index.vue`: normalize the API decimal score with a shared computed numeric value and pass it to both MemberListView and MemberCard; preserve the existing 100-point fallback.
+- Verified actual page script/template compilation with the installed Vue SFC compiler; checked 9 numeric/default/reactivity cases, including decimal strings and missing course injection; confirmed both bindings use the normalized value. `git diff --check` passed.
+- Full production build and browser smoke test were not run. No backend or child prop contract changes.
+
+---
 ---
 
 # 2026-11-02 — เปิดสิทธิ์ "ครูสมาชิกที่ไม่ใช่แอดมิน" ซื้อรายวิชาจากตลาด
