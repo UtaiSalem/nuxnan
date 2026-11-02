@@ -54,6 +54,19 @@
                   <span class="text-sm text-slate-500">กำลังตรวจสอบข้อมูลราคา...</span>
                 </div>
 
+                <div v-else-if="checkError" class="mb-6 rounded-xl border border-red-100 bg-red-50 p-4 dark:border-red-900/30 dark:bg-red-900/20">
+                  <div class="flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
+                    <Icon icon="mdi:alert-circle" class="h-5 w-5 flex-shrink-0" />
+                    <span class="min-w-0 flex-1 break-words">{{ checkError }}</span>
+                  </div>
+                  <button
+                    @click="fetchCheckResult"
+                    class="mt-3 min-h-[44px] w-full rounded-xl bg-red-100 px-4 py-2 text-sm font-bold text-red-700 transition-colors hover:bg-red-200 dark:bg-red-900/40 dark:text-red-200 sm:min-h-0"
+                  >
+                    ลองโหลดใหม่
+                  </button>
+                </div>
+
                 <div v-else-if="checkResult" class="space-y-3 mb-6">
                   <div class="flex justify-between items-center text-sm">
                     <span class="text-slate-500">ราคาลิขสิทธิ์ (THB)</span>
@@ -74,7 +87,7 @@
                   <button @click="$emit('close')" class="flex-1 px-4 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                     ยกเลิก
                   </button>
-                  <button @click="nextStep" :disabled="checking" class="flex-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-bold px-8 py-3 rounded-xl transition-all shadow-lg shadow-primary-500/30">
+                  <button @click="nextStep" :disabled="checking || !checkResult" class="flex-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-bold px-8 py-3 rounded-xl transition-all shadow-lg shadow-primary-500/30">
                     ยืนยันคำสั่งซื้อ
                   </button>
                 </div>
@@ -90,7 +103,7 @@
                   <!-- Wallet Option -->
                   <button 
                     @click="paymentMode = 'wallet'"
-                    :disabled="!checkResult?.can_pay.wallet"
+                    :disabled="!checkResult?.can_pay?.wallet"
                     class="w-full p-4 rounded-2xl border-2 transition-all text-left flex items-center justify-between group disabled:opacity-50 disabled:grayscale"
                     :class="paymentMode === 'wallet' ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/10' : 'border-slate-100 dark:border-slate-700 hover:border-slate-200'"
                   >
@@ -100,19 +113,19 @@
                       </div>
                       <div>
                         <div class="font-bold text-slate-800 dark:text-white">ชำระด้วย Wallet</div>
-                        <div class="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">คงเหลือ: ฿ {{ formatNumber(checkResult?.balance.wallet) }}</div>
+                        <div class="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">คงเหลือ: ฿ {{ formatNumber(checkResult?.balance?.wallet) }}</div>
                       </div>
                     </div>
                     <div class="text-right">
                       <div class="font-black text-primary-600">฿ {{ formatNumber(checkResult?.price_thb) }}</div>
-                      <div v-if="!checkResult?.can_pay.wallet" class="text-[10px] text-red-500 font-bold">ยอดเงินไม่พอ</div>
+                      <div v-if="!checkResult?.can_pay?.wallet" class="text-[10px] text-red-500 font-bold">ยอดเงินไม่พอ</div>
                     </div>
                   </button>
 
                   <!-- Points Option -->
                   <button 
                     @click="paymentMode = 'points'"
-                    :disabled="!checkResult?.can_pay.points"
+                    :disabled="!checkResult?.can_pay?.points"
                     class="w-full p-4 rounded-2xl border-2 transition-all text-left flex items-center justify-between group disabled:opacity-50 disabled:grayscale"
                     :class="paymentMode === 'points' ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/10' : 'border-slate-100 dark:border-slate-700 hover:border-slate-200'"
                   >
@@ -122,18 +135,18 @@
                       </div>
                       <div>
                         <div class="font-bold text-slate-800 dark:text-white">ชำระด้วยแต้มสะสม</div>
-                        <div class="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">คงเหลือ: {{ formatNumber(checkResult?.balance.points) }} P</div>
+                        <div class="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">คงเหลือ: {{ formatNumber(checkResult?.balance?.points) }} P</div>
                       </div>
                     </div>
                     <div class="text-right">
                       <div class="font-black text-amber-600">{{ formatNumber(checkResult?.price_points) }} P</div>
-                      <div v-if="!checkResult?.can_pay.points" class="text-[10px] text-red-500 font-bold">แต้มไม่พอ</div>
+                      <div v-if="!checkResult?.can_pay?.points" class="text-[10px] text-red-500 font-bold">แต้มไม่พอ</div>
                     </div>
                   </button>
 
                   <!-- Mixed Option -->
                   <button 
-                    v-if="checkResult?.can_pay.mixed"
+                    v-if="checkResult?.can_pay?.mixed"
                     @click="paymentMode = 'mixed'"
                     class="w-full p-4 rounded-2xl border-2 transition-all text-left flex items-center justify-between group"
                     :class="paymentMode === 'mixed' ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/10' : 'border-slate-100 dark:border-slate-700 hover:border-slate-200'"
@@ -148,8 +161,8 @@
                       </div>
                     </div>
                     <div class="text-right flex flex-col items-end">
-                      <div class="font-black text-slate-700 dark:text-slate-200 text-xs">฿ {{ formatNumber(checkResult?.mixed_breakdown.wallet_portion) }}</div>
-                      <div class="font-black text-violet-600">+ {{ formatNumber(checkResult?.mixed_breakdown.points_portion) }} P</div>
+                      <div class="font-black text-slate-700 dark:text-slate-200 text-xs">฿ {{ formatNumber(checkResult?.mixed_breakdown?.wallet_portion) }}</div>
+                      <div class="font-black text-violet-600">+ {{ formatNumber(checkResult?.mixed_breakdown?.points_portion) }} P</div>
                     </div>
                   </button>
                 </div>
@@ -239,32 +252,38 @@ const loading = ref(false)
 const error = ref('')
 const newCourseId = ref(null)
 const isQueued = ref(false)
-const checkResult = ref(null)
+const checkResult = ref<any>(null)
 const checking = ref(false)
+const checkError = ref('')
 
 const fetchCheckResult = async () => {
   checking.value = true
+  checkError.value = ''
   try {
-    const response = await api.get(`/api/courses/${props.course.id}/purchase/check`)
+    const response: any = await api.get(`/api/courses/${props.course.id}/purchase/check`)
     checkResult.value = response
-  } catch (err) {
+  } catch (err: any) {
+    // useApi ใส่ body ของ error ไว้ที่ err.data (ไม่ใช่ err.response.data)
+    checkResult.value = null
+    checkError.value = err?.data?.message || 'โหลดข้อมูลราคาและยอดคงเหลือไม่สำเร็จ'
     console.error('Failed to check purchase:', err)
   } finally {
     checking.value = false
   }
 }
 
+// immediate: จำเป็น เพราะหน้าที่ใช้ modal นี้ mount component พร้อม visible=true
+// อยู่แล้ว (v-if="selectedCourse" ติดมาพร้อมกัน) watcher ธรรมดาจึงไม่เคยยิงรอบแรก
 watch(() => props.visible, (val) => {
-  if (val) {
-    step.value = 1
-    paymentMode.value = ''
-    error.value = ''
-    newCourseId.value = null
-    isQueued.value = false
-    loading.value = false
-    fetchCheckResult()
-  }
-})
+  if (!val) return
+  step.value = 1
+  paymentMode.value = ''
+  error.value = ''
+  newCourseId.value = null
+  isQueued.value = false
+  loading.value = false
+  fetchCheckResult()
+}, { immediate: true })
 
 const nextStep = () => {
   if (checkResult.value?.is_free) {
@@ -309,7 +328,9 @@ const goToCourse = () => {
   emit('close')
 }
 
-const formatNumber = (num: number) => {
-  return new Intl.NumberFormat().format(num)
+const formatNumber = (num: any) => {
+  const n = Number(num)
+  // ไม่คืน 0 เพราะจะกลายเป็นการบอกยอดคงเหลือที่ผิดเมื่อโหลดข้อมูลไม่สำเร็จ
+  return Number.isFinite(n) ? new Intl.NumberFormat().format(n) : '—'
 }
 </script>
