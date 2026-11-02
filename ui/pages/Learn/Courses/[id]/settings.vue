@@ -117,6 +117,16 @@ const sectionLabels: Record<string, string> = {
 
 const isSavingSection = (section: string) => savingSection.value === section
 
+// แสดง "บันทึกแล้ว" ชั่วครู่หลังบันทึกสำเร็จ
+const justSavedSection = ref<string | null>(null)
+let justSavedTimer: ReturnType<typeof setTimeout> | null = null
+const flashSaved = (section: string) => {
+  justSavedSection.value = section
+  if (justSavedTimer) clearTimeout(justSavedTimer)
+  justSavedTimer = setTimeout(() => { justSavedSection.value = null }, 2500)
+}
+onBeforeUnmount(() => { if (justSavedTimer) clearTimeout(justSavedTimer) })
+
 // Form data
 const form = ref({
   code: '',
@@ -183,6 +193,14 @@ const markSectionClean = (section: string) => {
   const fields = sectionFields[section]
   fields.forEach(field => {
     initialForm.value[field] = JSON.parse(JSON.stringify((form.value as any)[field]))
+  })
+}
+
+// ยกเลิกการแก้ไขของ section กลับเป็นค่าที่บันทึกล่าสุด
+const revertSection = (section: string) => {
+  if (!initialForm.value) return
+  sectionFields[section]?.forEach(field => {
+    (form.value as any)[field] = JSON.parse(JSON.stringify(initialForm.value[field]))
   })
 }
 
@@ -257,7 +275,17 @@ watch(() => course?.value, (newCourse) => {
       unlock_reading_lesson_count: newCourse.unlock_reading_lesson_count ?? null,
       unlock_reading_lesson_ids: newCourse.unlock_reading_lesson_ids || [],
     }
-    form.value = { ...data }
+    // refreshCourse() หลังบันทึก section หนึ่งจะยิง watcher นี้ซ้ำ —
+    // เก็บค่าที่ผู้ใช้แก้ค้างไว้ใน section อื่นไว้ ไม่ให้ถูกเขียนทับ
+    const pending: Record<string, any> = {}
+    if (initialForm.value) {
+      Object.keys(sectionFields).forEach(section => {
+        if (isSectionDirty(section)) {
+          sectionFields[section].forEach(field => { pending[field] = (form.value as any)[field] })
+        }
+      })
+    }
+    form.value = { ...data, ...pending }
     initialForm.value = JSON.parse(JSON.stringify(data))
   }
 }, { immediate: true })
@@ -278,7 +306,12 @@ const netPrice = computed(() => {
 
 // Save settings
 const saveSettings = async () => {
-  if (!course?.value) return
+  if (!course?.value || isSaving.value) return
+
+  if (!form.value.name?.trim()) {
+    useToast().error('กรุณาระบุชื่อรายวิชา')
+    return
+  }
 
   isSaving.value = true
   try {
@@ -302,7 +335,7 @@ const saveSettings = async () => {
 
 // Save specific section
 const saveSettingsSection = async (section: string, fields: string[]) => {
-  if (!course?.value) return
+  if (!course?.value || savingSection.value) return
 
   // Validation
   if (section === 'general' && !form.value.name?.trim()) {
@@ -327,6 +360,7 @@ const saveSettingsSection = async (section: string, fields: string[]) => {
     if (response) {
       useToast().success(`บันทึก${sectionLabels[section]}เรียบร้อยแล้ว`)
       markSectionClean(section)
+      flashSaved(section)
       if (refreshCourse) refreshCourse()
     }
   } catch (err: any) {
@@ -628,18 +662,51 @@ watch(() => course?.value?.id, id => { if (id && isCourseAdmin?.value) fetchElig
             </CourseSettingField>
           </div>
         </div>
-        <template #footer v-if="isSectionDirty('general')">
-          <div class="flex justify-end">
-            <button
-              type="button"
-              @click="saveSettingsSection('general', sectionFields.general)"
-              :disabled="isSavingSection('general')"
-              class="min-h-[44px] sm:min-h-0 flex items-center gap-2 px-4 py-2 bg-cyan-600 text-white font-bold rounded-xl shadow-lg hover:bg-cyan-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-            >
-              <Icon v-if="isSavingSection('general')" icon="svg-spinners:ring-resize" class="w-4 h-4" />
-              <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
-              บันทึกข้อมูลทั่วไป
-            </button>
+        <template #footer>
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <!-- สถานะการบันทึก -->
+            <p class="flex items-center gap-2 min-w-0 text-sm" aria-live="polite">
+              <template v-if="isSavingSection('general')">
+                <Icon icon="svg-spinners:ring-resize" class="w-4 h-4 flex-shrink-0 text-cyan-600" />
+                <span class="min-w-0 break-words text-gray-600 dark:text-gray-300">กำลังบันทึก...</span>
+              </template>
+              <template v-else-if="isSectionDirty('general')">
+                <span class="w-2 h-2 flex-shrink-0 rounded-full bg-amber-500"></span>
+                <span class="min-w-0 break-words text-amber-700 dark:text-amber-400">มีการแก้ไขที่ยังไม่ได้บันทึก</span>
+              </template>
+              <template v-else-if="justSavedSection === 'general'">
+                <Icon icon="heroicons:check-circle-solid" class="w-4 h-4 flex-shrink-0 text-green-600" />
+                <span class="min-w-0 break-words text-green-700 dark:text-green-400">บันทึกเรียบร้อยแล้ว</span>
+              </template>
+              <template v-else>
+                <Icon icon="heroicons:check-circle" class="w-4 h-4 flex-shrink-0 text-gray-400" />
+                <span class="min-w-0 break-words text-gray-500 dark:text-gray-400">ข้อมูลเป็นปัจจุบัน</span>
+              </template>
+            </p>
+
+            <div class="flex flex-col-reverse gap-2 sm:flex-row sm:flex-shrink-0">
+              <button
+                v-if="isSectionDirty('general')"
+                type="button"
+                @click="revertSection('general')"
+                :disabled="isSavingSection('general')"
+                class="min-h-[44px] sm:min-h-0 w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 whitespace-nowrap text-sm font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Icon icon="heroicons:arrow-uturn-left" class="w-4 h-4" />
+                ยกเลิกการแก้ไข
+              </button>
+              <button
+                type="button"
+                @click="saveSettingsSection('general', sectionFields.general)"
+                :disabled="!isSectionDirty('general') || !form.name?.trim() || isSavingSection('general')"
+                :title="!form.name?.trim() ? 'กรุณาระบุชื่อรายวิชา' : undefined"
+                class="min-h-[44px] sm:min-h-0 w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2 whitespace-nowrap bg-cyan-600 text-white font-bold rounded-xl shadow-lg shadow-cyan-600/20 hover:bg-cyan-700 transition-all active:scale-95 disabled:bg-gray-300 disabled:text-gray-500 disabled:shadow-none disabled:active:scale-100 disabled:cursor-not-allowed dark:disabled:bg-gray-700 dark:disabled:text-gray-400 text-sm"
+              >
+                <Icon v-if="isSavingSection('general')" icon="svg-spinners:ring-resize" class="w-4 h-4" />
+                <Icon v-else icon="fluent:save-24-filled" class="w-4 h-4" />
+                {{ isSavingSection('general') ? 'กำลังบันทึก...' : 'บันทึกข้อมูลทั่วไป' }}
+              </button>
+            </div>
           </div>
         </template>
       </ResponsiveCard>
