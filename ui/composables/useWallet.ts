@@ -106,43 +106,6 @@ export const useWallet = () => {
   }
 
   /**
-   * Deposit money to wallet
-   */
-  const deposit = async (data: {
-    amount: number
-    method: string
-    reference?: string
-    description?: string
-    metadata?: Record<string, any>
-  }) => {
-    try {
-      isLoading.value = true
-      error.value = null
-
-      const response = await $fetch(`${apiBase.value}/api/wallet/deposit`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authStore.token}`,
-        },
-        body: data,
-      }) as any
-
-      if (response.success) {
-        return response.data
-      } else {
-        throw new Error(response.message || 'Failed to deposit money')
-      }
-    } catch (err: any) {
-      const msg = err.data?.message || err.response?._data?.message || err.message || 'Failed to deposit money'
-      error.value = msg
-      console.error('Deposit error:', err)
-      throw new Error(msg)
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  /**
    * Withdraw money from wallet
    */
   const withdraw = async (data: {
@@ -545,7 +508,6 @@ export const useWallet = () => {
 
     // Methods
     getBalance,
-    deposit,
     withdraw,
     getMyWithdrawals,
     cancelWithdrawal,

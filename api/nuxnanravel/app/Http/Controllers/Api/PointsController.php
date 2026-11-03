@@ -11,6 +11,8 @@ use App\Services\PointsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\Rule;
 
 class PointsController extends Controller
 {
@@ -101,7 +103,7 @@ class PointsController extends Controller
     }
 
     /**
-     * Earn XP only (do not modify PP/points).
+     * Earn XP from games only (do not modify PP/points). Whitelisted sources, per-call and per-day caps in config/economy.php game_xp.
      */
     public function earnXp(Request $request): JsonResponse
     {
@@ -115,17 +117,25 @@ class PointsController extends Controller
         }
 
         $validated = $request->validate([
-            'source_type' => 'required|string|max:50',
+            'source_type' => ['required', 'string', Rule::in(config('economy.game_xp.sources'))],
             'source_id' => 'nullable|integer',
-            'amount' => 'required|numeric|min:1',
+            'amount' => 'required|numeric|min:1|max:'.config('economy.game_xp.max_per_call'),
             'description' => 'nullable|string|max:255',
             'metadata' => 'nullable|array',
         ]);
 
         try {
-            $xpAmount = (int) round((float) $validated['amount']);
+            $requested = (int) round((float) $validated['amount']);
 
-            $this->pointsService->addXp($user, $xpAmount);
+            // เพดาน XP ต่อวันต่อเกม — กันปั่นเลเวล/leaderboard ด้วยการยิง endpoint ซ้ำ
+            $capKey = "game_xp:{$user->id}:{$validated['source_type']}:".now()->toDateString();
+            $used = (int) Cache::get($capKey, 0);
+            $xpAmount = max(0, min($requested, (int) config('economy.game_xp.max_per_day') - $used));
+
+            if ($xpAmount > 0) {
+                Cache::put($capKey, $used + $xpAmount, now()->endOfDay());
+                $this->pointsService->addXp($user, $xpAmount);
+            }
 
             $user->refresh();
 
@@ -197,54 +207,6 @@ class PointsController extends Controller
                 'message' => 'Points spent successfully',
                 'data' => [
                     'points_spent' => $result->amount,
-                    'new_balance' => $result->balance_after,
-                    'transaction_id' => $result->id,
-                ],
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
-        }
-    }
-
-    /**
-     * Refund points.
-     */
-    public function refund(Request $request): JsonResponse
-    {
-        $user = Auth::user();
-
-        if (! $user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User not authenticated',
-            ], 401);
-        }
-
-        $validated = $request->validate([
-            'transaction_id' => 'nullable|integer|exists:points_transactions,id',
-            'amount' => 'required|numeric|min:0.01',
-            'description' => 'nullable|string|max:255',
-            'metadata' => 'nullable|array',
-        ]);
-
-        try {
-            $result = $this->pointsService->refund(
-                $user,
-                $validated['amount'],
-                'refund',
-                $validated['transaction_id'] ?? null,
-                $validated['description'] ?? null,
-                $validated['metadata'] ?? null
-            );
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Points refunded successfully',
-                'data' => [
-                    'points_refunded' => $result->amount,
                     'new_balance' => $result->balance_after,
                     'transaction_id' => $result->id,
                 ],

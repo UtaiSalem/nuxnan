@@ -30,4 +30,11 @@ return [
     // ปิดการโอนแต้ม/เงินระหว่างสมาชิก (กันทุจริต/ฟอกเงิน) — แต้มและเงินใช้ได้แค่สะสม ใช้จ่าย และถอนโดยเจ้าของบัญชี
     // เปิดคืนได้ทาง env เท่านั้น ห้ามเปิดโดยไม่ผ่านการตัดสินใจของเจ้าของระบบ
     'p2p_transfers_enabled' => (bool) env('ECONOMY_P2P_TRANSFERS_ENABLED', false),
+
+    // XP จากเกม (POST /points/xp/earn) — รับเฉพาะเกมที่ระบุ จำกัดต่อครั้งและต่อวันต่อเกม
+    'game_xp' => [
+        'sources' => ['game_snake', 'english_vocab_match'],
+        'max_per_call' => 100,
+        'max_per_day' => 500,
+    ],
 ];

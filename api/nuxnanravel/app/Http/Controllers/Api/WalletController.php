@@ -52,56 +52,6 @@ class WalletController extends Controller
     }
 
     /**
-     * Deposit money to wallet.
-     */
-    public function deposit(Request $request): JsonResponse
-    {
-        $user = Auth::user();
-
-        if (! $user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User not authenticated',
-            ], 401);
-        }
-
-        $validated = $request->validate([
-            'amount' => 'required|numeric|min:10',
-            'method' => 'required|string|max:50',
-            'reference' => 'nullable|string|max:255',
-            'description' => 'nullable|string|max:255',
-            'metadata' => 'nullable|array',
-        ]);
-
-        try {
-            $result = $this->walletService->deposit(
-                $user,
-                $validated['amount'],
-                $validated['method'],
-                $validated['reference'] ?? null,
-                $validated['description'] ?? null,
-                $validated['metadata'] ?? null
-            );
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Deposit successful',
-                'data' => [
-                    'amount' => $result->amount,
-                    'new_balance' => $result->balance_after,
-                    'reference_number' => $result->reference_number,
-                    'transaction_id' => $result->id,
-                ],
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
-        }
-    }
-
-    /**
      * Deduct money from wallet (Internal use for exams/purchases).
      */
     public function deduct(Request $request): JsonResponse

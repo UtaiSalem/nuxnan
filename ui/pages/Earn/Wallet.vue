@@ -29,7 +29,6 @@ const {
   isLoading,
   error,
   getBalance,
-  deposit,
   withdraw,
   getMyWithdrawals,
   cancelWithdrawal,

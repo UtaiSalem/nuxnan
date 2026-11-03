@@ -36,7 +36,6 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/balance', [PointsController::class, 'balance']);
         Route::post('/xp/earn', [PointsController::class, 'earnXp']);
         Route::post('/spend', [PointsController::class, 'spend']);
-        Route::post('/refund', [PointsController::class, 'refund']);
         Route::post('/transfer', [PointsController::class, 'transfer']);
         Route::post('/convert', [PointsController::class, 'convert']);
         Route::get('/transactions', [PointsController::class, 'transactions']);
@@ -46,7 +45,6 @@ Route::middleware('auth:api')->group(function () {
     // Wallet Routes
     Route::prefix('wallet')->group(function () {
         Route::get('/balance', [WalletController::class, 'balance']);
-        Route::post('/deposit', [WalletController::class, 'deposit']);
         Route::post('/withdraw', [WalletController::class, 'withdraw']);
         Route::post('/transfer', [WalletController::class, 'transfer']);
         Route::post('/deduct', [WalletController::class, 'deduct']);
