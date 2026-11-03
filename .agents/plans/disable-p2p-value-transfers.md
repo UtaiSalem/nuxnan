@@ -72,6 +72,8 @@ DB dev: **ไม่มี**แถวไหนมาจาก `/wallet/deposit` �
    - ไฟล์เดียวกัน: `POST /forgot-password/getuser` ไม่ตรวจแอดมินเช่นกัน — ผู้ใช้คนไหนก็ค้นคนอื่นด้วยอีเมล/เบอร์โทร/รหัสประจำตัวได้ (PII) ใส่ด่านเดียวกันใน commit นี้
    - เทสต์: ผู้ใช้ทั่วไปได้ 403 และ `pp` ไม่เปลี่ยน · แอดมินได้ 200 และมีแถว `points_transactions` เพิ่ม 1 แถว · ผู้ใช้ทั่วไปเรียก `getuser` ได้ 403
    - **ตรวจ production**: endpoint นี้ไม่เขียน ledger จึงค้นจาก ledger ไม่ได้ → ดู access log ของ `forgot-password/exchange` + เทียบ `users.pp` กับยอดสุทธิจาก `points_transactions` รายคน (ส่วนต่างบวกที่อธิบายไม่ได้ = ผู้ต้องสงสัย)
+> ✅ **ข้อ 1–3 แก้โค้ดแล้ว 2026-11-04 (ยังไม่ commit · `SelfMintEndpointsClosedTest` 8/8 บน sqlite):** ลบ `/wallet/deposit` + `/points/refund` (route + controller method; service ยังอยู่) ·
+> **`/points/xp/earn` เก็บไว้** (เจ้าของเคาะ — เกม Snake/English Vocab ใช้) แต่รับเฉพาะ `config('economy.game_xp.sources')`, ≤100 ต่อครั้ง, ≤500/วัน/เกม (นับใน Cache — race เล็กน้อยยอมรับได้เพราะเป็น XP ไม่ใช่เงิน) · ข้อ 4 (ตรวจ prod) ยังค้าง
 1. `routes/earn/points-wallet.php`: ลบ route ฝั่งผู้ใช้ `POST /wallet/deposit`, `POST /points/refund`, `POST /points/xp/earn`
    ผู้เรียกภายใน (`CouponService`, `CourseMarketplaceController`, `SchoolStoreService`) เรียกที่ **service** ไม่ใช่ route จึงไม่กระทบ ยืนยันด้วย `grep -rn "points/refund\|wallet/deposit'\|xp/earn" ui/`
 2. `ui/composables/useWallet.ts`: ลบ `deposit()` แล้วหาว่าใครเรียกใช้ ถ้ามีหน้าจอไหนใช้อยู่ ให้เปลี่ยนไปใช้ `createDepositRequest`
