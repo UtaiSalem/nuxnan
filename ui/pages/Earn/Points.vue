@@ -495,14 +495,14 @@ onMounted(async () => {
                     class="absolute -right-10 -top-10 w-32 h-32 bg-red-500/5 blur-3xl pointer-events-none group-hover:bg-red-500/10 transition-colors"
                   ></div>
 
-                  <div class="flex items-center justify-between gap-4 relative z-10">
+                  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 relative z-10">
                     <!-- Visualization: Source/Destination OR Activity Icon -->
-                    <div class="flex items-center gap-4 flex-grow">
+                    <div class="flex items-center gap-4 min-w-0 flex-grow">
                       <!-- Case 1: 3-Column Style (Transfers/Conversions) -->
                       <template v-if="isThreeColumnTransaction(tx)">
-                        <div class="flex items-center gap-2 sm:gap-4 flex-grow max-w-[80%]">
+                        <div class="flex items-center gap-2 sm:gap-4 flex-grow min-w-0 sm:max-w-[80%]">
                           <!-- Source -->
-                          <div class="flex flex-col items-center text-center min-w-[64px]">
+                          <div class="flex flex-col items-center text-center flex-shrink-0 min-w-[64px]">
                             <img 
                               :src="getOwnerInfo().avatar" 
                               :alt="getOwnerInfo().name"
@@ -514,7 +514,7 @@ onMounted(async () => {
                           </div>
 
                           <!-- Connection -->
-                          <div class="flex-grow flex flex-col items-center justify-center -mt-4 px-1">
+                          <div class="flex-grow min-w-0 flex flex-col items-center justify-center -mt-4 px-1">
                             <div class="w-full h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent relative">
                               <Icon 
                                 :icon="isPositiveTransaction(tx) ? 'mdi:chevron-left' : 'mdi:chevron-right'"
@@ -523,7 +523,7 @@ onMounted(async () => {
                               />
                             </div>
                             <span 
-                              class="text-[9px] uppercase tracking-wider font-bold mt-2"
+                              class="text-[9px] uppercase tracking-wider font-bold mt-2 whitespace-nowrap"
                               :class="isPositiveTransaction(tx) ? 'text-green-600' : 'text-amber-600'"
                             >
                               {{ getThreeColumnLabel(tx) }}
@@ -531,7 +531,7 @@ onMounted(async () => {
                           </div>
 
                           <!-- Destination -->
-                          <div class="flex flex-col items-center text-center min-w-[64px]">
+                          <div class="flex flex-col items-center text-center flex-shrink-0 min-w-[64px]">
                             <template v-if="getPartnerInfo(tx)?.isSystem">
                               <div class="w-12 h-12 rounded-full flex items-center justify-center bg-gray-50 dark:bg-gray-800 ring-2 ring-gray-50 dark:ring-gray-900 border border-gray-100 dark:border-gray-700 shadow-sm transition-transform group-hover:scale-105">
                                 <Icon 
@@ -593,7 +593,7 @@ onMounted(async () => {
                     </div>
 
                     <!-- Amount and Balance -->
-                    <div class="text-right flex flex-col items-end min-w-[100px]">
+                    <div class="flex flex-row-reverse items-center justify-between gap-2 pt-3 border-t border-gray-100 dark:border-gray-700 flex-shrink-0 sm:pt-0 sm:border-0 sm:flex-col sm:items-end sm:justify-start sm:gap-0 sm:text-right sm:min-w-[100px]">
                       <div 
                         class="flex items-center font-black text-lg sm:text-xl"
                         :class="isPositiveTransaction(tx) ? 'text-green-500' : 'text-red-500'"
@@ -601,7 +601,7 @@ onMounted(async () => {
                         <span class="text-base mr-0.5">{{ isPositiveTransaction(tx) ? '+' : '-' }}</span>
                         {{ formatPoints(Math.abs(tx.amount)) }}
                       </div>
-                      <div class="flex flex-col items-end mt-1">
+                      <div class="flex flex-col items-start sm:items-end sm:mt-1">
                         <div class="text-[10px] font-medium text-gray-400 dark:text-gray-500 flex items-center gap-1 bg-gray-50 dark:bg-gray-900/50 px-2 py-0.5 rounded-lg border border-gray-100 dark:border-gray-800">
                           <span>คงเหลือ:</span>
                           <span class="text-gray-600 dark:text-gray-300">{{ formatPoints(tx.balance_after || 0) }}</span>
@@ -778,13 +778,13 @@ onMounted(async () => {
                   class="absolute -right-10 -top-10 w-32 h-32 bg-red-500/5 blur-3xl pointer-events-none group-hover:bg-red-500/10 transition-colors"
                 ></div>
 
-                <div class="flex items-center justify-between gap-4 relative z-10">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 relative z-10">
                   <!-- Visualization -->
-                  <div class="flex items-center gap-4 flex-grow">
+                  <div class="flex items-center gap-4 min-w-0 flex-grow">
                     <!-- Case 1: 3-Column Style -->
                     <template v-if="isThreeColumnTransaction(tx)">
-                      <div class="flex items-center gap-4 flex-grow max-w-[80%]">
-                        <div class="flex flex-col items-center text-center min-w-[72px]">
+                      <div class="flex items-center gap-2 sm:gap-4 flex-grow min-w-0 sm:max-w-[80%]">
+                        <div class="flex flex-col items-center text-center flex-shrink-0 min-w-[72px]">
                           <img 
                             :src="getOwnerInfo().avatar" 
                             :alt="getOwnerInfo().name"
@@ -795,7 +795,7 @@ onMounted(async () => {
                           </span>
                         </div>
 
-                        <div class="flex-grow flex flex-col items-center justify-center -mt-4 px-2">
+                        <div class="flex-grow min-w-0 flex flex-col items-center justify-center -mt-4 px-2">
                           <div class="w-full h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent relative">
                             <Icon 
                               :icon="isPositiveTransaction(tx) ? 'mdi:chevron-left' : 'mdi:chevron-right'"
@@ -804,14 +804,14 @@ onMounted(async () => {
                             />
                           </div>
                           <span 
-                            class="text-[10px] uppercase tracking-wider font-bold mt-2"
+                            class="text-[10px] uppercase tracking-wider font-bold mt-2 whitespace-nowrap"
                             :class="isPositiveTransaction(tx) ? 'text-green-600' : 'text-amber-600'"
                           >
                             {{ getThreeColumnLabel(tx) }}
                           </span>
                         </div>
 
-                        <div class="flex flex-col items-center text-center min-w-[72px]">
+                        <div class="flex flex-col items-center text-center flex-shrink-0 min-w-[72px]">
                           <template v-if="getPartnerInfo(tx)?.isSystem">
                             <div class="w-14 h-14 rounded-full flex items-center justify-center bg-gray-50 dark:bg-gray-800 ring-2 ring-gray-50 dark:ring-gray-900 border border-gray-100 dark:border-gray-700 shadow-sm">
                               <Icon 
@@ -873,7 +873,7 @@ onMounted(async () => {
                   </div>
 
                   <!-- Amount and Balance -->
-                  <div class="text-right flex flex-col items-end min-w-[120px]">
+                  <div class="flex flex-row-reverse items-center justify-between gap-2 pt-3 border-t border-gray-100 dark:border-gray-700 flex-shrink-0 sm:pt-0 sm:border-0 sm:flex-col sm:items-end sm:justify-start sm:gap-0 sm:text-right sm:min-w-[120px]">
                     <div 
                       class="flex items-center font-black text-xl"
                       :class="isPositiveTransaction(tx) ? 'text-green-500' : 'text-red-500'"
@@ -881,7 +881,7 @@ onMounted(async () => {
                       <span class="text-base mr-0.5">{{ isPositiveTransaction(tx) ? '+' : '-' }}</span>
                       {{ formatPoints(Math.abs(tx.amount)) }}
                     </div>
-                    <div class="flex flex-col items-end mt-1">
+                    <div class="flex flex-col items-start sm:items-end sm:mt-1">
                       <div class="text-xs font-medium text-gray-400 dark:text-gray-500 flex items-center gap-1 bg-gray-50 dark:bg-gray-900/50 px-3 py-1 rounded-lg border border-gray-100 dark:border-gray-800 mt-1">
                         <span>ยอดคงเหลือ:</span>
                         <span class="text-gray-700 dark:text-gray-200 font-bold">{{ formatPoints(tx.balance_after || 0) }}</span>
