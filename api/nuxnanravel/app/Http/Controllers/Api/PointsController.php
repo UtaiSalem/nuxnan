@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\AccountEconomyRestrictedException;
 use App\Http\Controllers\Controller;
 use App\Models\PointRule;
 use App\Models\PointsTransaction;
@@ -268,6 +269,13 @@ class PointsController extends Controller
                 'success' => false,
                 'message' => 'User not authenticated',
             ], 401);
+        }
+
+        if (! config('economy.p2p_transfers_enabled')) {
+            return response()->json([
+                'success' => false,
+                'message' => AccountEconomyRestrictedException::transfersDisabled()->getMessage(),
+            ], 403);
         }
 
         if ($user->isPointsFrozen()) {

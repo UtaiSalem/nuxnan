@@ -115,7 +115,7 @@ Route::middleware(['auth:api'])->group(function () {
         Route::get('/stats', [UserProfileController::class, 'stats'])->name('profile.stats');
     });
 
-    // User search for transfer (must be before {identifier} routes)
+    // User search — used by member-invite modals (must be before {identifier} routes)
     Route::get('/users/search', [UserProfileController::class, 'search'])->name('users.search');
 
     // User profile by identifier (supports ID, reference_code, or username)

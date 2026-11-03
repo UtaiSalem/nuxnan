@@ -242,6 +242,12 @@ class WalletService
      */
     public function transfer(User $fromUser, User $toUser, float $amount, ?string $message = null): array
     {
+        // Peer-to-peer transfers are disabled platform-wide (anti-fraud): wallet
+        // money may only be deposited, spent, or withdrawn by its owner.
+        if (! config('economy.p2p_transfers_enabled')) {
+            throw AccountEconomyRestrictedException::transfersDisabled();
+        }
+
         if ($fromUser->walletFrozen() || $toUser->walletFrozen()) {
             throw AccountEconomyRestrictedException::wallet();
         }

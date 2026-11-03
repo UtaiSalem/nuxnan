@@ -34,4 +34,12 @@ class AccountEconomyRestrictedException extends RuntimeException
             'wallet',
         );
     }
+
+    public static function transfersDisabled(): self
+    {
+        return new self(
+            'ระบบปิดการโอนแต้มและเงินระหว่างสมาชิกแล้ว แต้มและเงินใช้ได้เฉพาะสะสม ใช้จ่าย และถอนโดยเจ้าของบัญชีเท่านั้น',
+            'transfer',
+        );
+    }
 }

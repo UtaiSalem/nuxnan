@@ -270,6 +270,12 @@ class PointsService
      */
     public function transfer(User $fromUser, User $toUser, float $amount, ?string $message = null): array
     {
+        // Peer-to-peer transfers are disabled platform-wide (anti-fraud): points
+        // may only be earned, spent, or withdrawn by their owner.
+        if (! config('economy.p2p_transfers_enabled')) {
+            throw AccountEconomyRestrictedException::transfersDisabled();
+        }
+
         // Freeze applies to both ends: a suspended sender cannot move points
         // out, and a suspended receiver cannot accumulate transferred points.
         if ($fromUser->pointsFrozen() || $toUser->pointsFrozen()) {

@@ -21,6 +21,8 @@ class FraudRemediationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // fixture นี้จำลองประวัติการโอนก่อนปิดระบบโอนระหว่างสมาชิก
+        config(['economy.p2p_transfers_enabled' => true]);
         foreach (['SUPER_ADMIN', 'ADMIN', 'MODERATOR'] as $role) {
             Role::firstOrCreate(['name' => $role]);
         }

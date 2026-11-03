@@ -26,4 +26,8 @@ return [
     'course_claim_ratio_platform' => 0.0370,
     'course_claim_cap_per_donation_per_day' => 5,
     'course_claim_cap_total_per_day' => 20,
+
+    // ปิดการโอนแต้ม/เงินระหว่างสมาชิก (กันทุจริต/ฟอกเงิน) — แต้มและเงินใช้ได้แค่สะสม ใช้จ่าย และถอนโดยเจ้าของบัญชี
+    // เปิดคืนได้ทาง env เท่านั้น ห้ามเปิดโดยไม่ผ่านการตัดสินใจของเจ้าของระบบ
+    'p2p_transfers_enabled' => (bool) env('ECONOMY_P2P_TRANSFERS_ENABLED', false),
 ];

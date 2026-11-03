@@ -24,6 +24,8 @@ class WalletReconciliationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // fixture นี้จำลองประวัติการโอนก่อนปิดระบบโอนระหว่างสมาชิก
+        config(['economy.p2p_transfers_enabled' => true]);
         $this->wallet = app(WalletService::class);
         $this->recon = app(WalletReconciliationService::class);
     }
