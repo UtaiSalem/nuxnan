@@ -1,5 +1,44 @@
 # Work Log — nuxnan project
 
+## 🟢 2026-11-04 — ปิดการโอนแต้ม/เงินระหว่างสมาชิก (เสร็จ · commit `ff5801cb` `43012727` `969d6a74` · pushed)
+
+เจ้าของสั่ง: "ปิดการโอนแต้ม-เงินระหว่างสมาชิกอย่างเดียวก่อน เดี๋ยวค่อยวิเคราะห์ระบบอย่างละเอียดอีกที"
+แผนเต็ม (ภาษาไทย รวมช่องทางมูลค่าอื่นที่ยังไม่ทำ): [`.agents/plans/disable-p2p-value-transfers.md`](plans/disable-p2p-value-transfers.md) — รอบนี้ทำแค่ Phase 1 + 3
+
+### งานที่ทำ
+- **BE `ff5801cb`:** flag `economy.p2p_transfers_enabled` (env `ECONOMY_P2P_TRANSFERS_ENABLED`, default **false**)
+  · ด่านชั้นแรกต้นเมธอด `PointsService::transfer` / `WalletService::transfer` → โยน `AccountEconomyRestrictedException::transfersDisabled()`
+  · `/api/points/transfer` + `/api/wallet/transfer` ตอบ **403 ก่อน validate** (กันใช้ endpoint สุ่มหา user id)
+  · `/users/search` ยังอยู่ (ใช้ใน `InviteMemberModal.vue` ×2) แก้แค่คอมเมนต์ใน `routes/api.php`
+  · เทสต์ใหม่ `tests/Feature/Wallet/P2PTransferDisabledTest.php` 6 ตัว · fixture 6 ไฟล์ที่ต้องสร้างประวัติการโอนเปิด flag ใน `setUp()`
+- **UI `43012727`:** ลบแท็บ/ปุ่ม/การ์ด/ฟอร์มโอนใน `pages/Earn/Points.vue` + `Wallet.vue` · ลบ `transfer()` ใน `usePoints`/`useWallet` และ `TRANSFER_MIN_AMOUNT`
+  · Wallet กรอง `?tab=` ด้วย whitelist → ลิงก์เก่า `?tab=transfer` ตกไปหน้าภาพรวม
+  · การ์ดภาพรวมเหลือ 3 ใบ → ใบสุดท้าย `md:col-span-2` ไม่ให้ค้างครึ่งแถว
+  · **เก็บไว้ตั้งใจ:** label/ไอคอน/ตัวกรอง `transfer_in`/`transfer_out` ในประวัติ (ledger เก่า: โอนแต้ม 412 + โอนเงิน 15 รายการ) และเครื่องมือแอดมินสืบ/ย้อนการโอน
+- **UI `969d6a74`:** แถวประวัติ 3 คอลัมน์ใน Points.vue พังบนมือถือมาก่อนแล้ว (label "โอนแต้มให้" กว้าง 7px เรียงแนวตั้ง + ยอดล้นการ์ด) → มือถือซ้อน 2 ชั้น, `sm:` ขึ้นไปเหมือนเดิม
+
+### ตรวจแล้ว
+- Pint ผ่าน · MySQL (`-c phpunit.mysql.xml`) 40 passed + 1 fail ที่ fail อยู่ก่อนแล้ว (`FraudRemediationTest > reverse points transfer…` `'0.00'` vs `0` — stash ยืนยันว่า fail บนโค้ดเดิม)
+- revert-check: เอา guard ออก เทสต์ใหม่ตก (ได้ 200/422 แทน 403)
+- จอจริง 375/640/768/1280: ไม่มี UI โอนเหลือ · ประวัติการโอนเก่าแสดงได้ · ไม่มี scroll แนวนอน · console ไม่มี error
+- **ยังไม่ตรวจ:** `npm run build` (เจ้าของรัน)
+
+### งานที่ค้าง (TODO ต่อ — ตามแผน รอเจ้าของสั่ง "วิเคราะห์ละเอียด")
+- [ ] 🔴 **Phase 0** ช่องสร้างมูลค่าเอง (ร้ายแรงกว่าการโอน): `POST /wallet/deposit` เติมเงินตัวเองได้ไม่ต้องมีสลิป · `POST /points/refund` เพิ่มแต้มตัวเองได้ · `POST /points/xp/earn` — route อยู่ใน `routes/earn/points-wallet.php` (แผน §1.3, §3 Phase 0) + ต้องตรวจ production แบบอ่านอย่างเดียว
+- [ ] Phase 2 คูปองผู้ใช้ = โอนแบบนิรนาม (`routes/earn/coupons.php` · 2 ใบยังใช้ได้ รวม 340 แต้ม · เคาะ D2 ก่อน)
+- [ ] Phase 5 แคมเปญ/บริจาค/ขายคอร์ส (เคาะ D3 ก่อน) · IDOR `budgets/{budget}/transfer` (แผน §1.4)
+- [ ] ข้อความ "โอนแต้ม/โอนเงิน" ที่อื่นยังไม่ได้ไล่ (grep เจอ ~20 ไฟล์ ส่วนใหญ่เป็น label ประวัติ/บริจาค/allocation ซึ่งไม่ใช่ P2P)
+
+### Context สำคัญ
+- **ห้ามเปิด flag คืนเอง** — ต้องเป็นการตัดสินใจของเจ้าของระบบ
+- เทสต์ใหม่ที่ต้องสร้างประวัติการโอนต้อง `config(['economy.p2p_transfers_enabled' => true])` ใน `setUp()` ไม่งั้น `PointsService::transfer` โยน exception
+- รูป avatar ผู้รับบางคนแตกในประวัติบนเครื่อง dev = ไฟล์ใน `storage/app/public/avatars/` ไม่มีในเครื่อง (ข้อมูล ไม่ใช่โค้ด)
+
+### Branch / Git State
+- Branch: `main` · Uncommitted: ไม่มี · Push: pushed พร้อม commit worklog นี้
+
+---
+
 ## 🟡 2026-11-03 — ผูกรายวิชาส่วนตัวเข้าสังกัดโรงเรียน (implement แล้ว · ยังไม่ commit · รอตรวจจอ)
 
 สเปค + คำตอบ Q1–Q8 (ใช้ตามคำแนะนำ เจ้าของเคาะ "เลือกตามที่แนะนำ"): [`.agents/specs/course-academy-affiliation.md`](specs/course-academy-affiliation.md)
