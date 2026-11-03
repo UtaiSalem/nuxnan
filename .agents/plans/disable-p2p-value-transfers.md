@@ -31,6 +31,7 @@
 
 | Endpoint | สิ่งที่ใครก็ทำได้ |
 |---|---|
+| 🔴🔴 `POST /api/forgot-password/exchange/{user}` (`ForgotPasswordController::exchangeMoney`, `routes/api.php:136`) — **เจอเพิ่ม 2026-11-04, ร้ายแรงที่สุด** | `$user->increment('pp', $request->money * 1080)` **ไม่ตรวจ `isPlearndAdmin()`** (ต่างจาก `index`/`resetPassword` ในไฟล์เดียวกัน) · **ไม่หักเงินจากไหนเลย** · `{user}` เป็นใครก็ได้ (เติมให้ตัวเอง/คนอื่น) · `money` ไม่ validate ไม่มีเพดาน (ตัวกันค่าติดลบตอบเป็น `redirect()` ใช้ไม่ได้ใน API) · **ไม่สร้างแถว `points_transactions`** จึงไม่มีร่องรอยใน ledger · UI ผู้เรียก: `ui/pages/Admin/Resetpassword.vue:345` |
 | `POST /api/wallet/deposit` (`WalletController::deposit` → `WalletService::deposit`) | เติมเงินเข้ากระเป๋าตัวเอง**จำนวนเท่าไรก็ได้ตั้งแต่ 10 บาทขึ้นไป** ใส่ `method` เป็นข้อความอะไรก็ได้ ไม่ต้องแนบสลิป ไม่ต้องรอแอดมิน (ทางที่ถูกต้องคือ `/wallet/deposit-request` + แอดมินอนุมัติ) |
 | `POST /api/points/refund` (`PointsController::refund`) | เพิ่มแต้มให้ตัวเอง**จำนวนเท่าไรก็ได้** `transaction_id` เป็น optional และไม่ได้ตรวจว่าเป็นของใคร |
 | `POST /api/points/xp/earn` | เพิ่ม XP ได้ตามใจ (กระทบแค่เลเวล/leaderboard ไม่ใช่เงิน แต่เป็นแพทเทิร์นเดียวกัน) |
@@ -55,12 +56,22 @@ DB dev: **ไม่มี**แถวไหนมาจาก `/wallet/deposit` �
 | D3 | แคมเปญรายวิชา / การกดรับเงินบริจาค / รายได้จากการขายรายวิชา อยู่ในขอบเขตไหม? | **เก็บไว้** (เป็นฟีเจอร์ที่ดีไซน์เคาะแล้ว) แต่เพิ่มด่าน: ผู้กดรับต้องเป็นสมาชิก/นักเรียนที่อนุมัติแล้ว และเฝ้าดูความถี่ ทำเป็นเฟสแยก |
 | D4 | จะทำอะไรกับการโอนแต้ม 412 ครั้งในอดีต | ไม่แตะ ledger (ต้องเก็บประวัติไว้ตรวจสอบ) ถ้าต้องการ ให้ทำรายงานครั้งเดียวว่าผู้รับรายใหญ่คนไหนแปลงเป็นเงินแล้วถอนออกไป เพื่อใช้ตรวจการทุจริต |
 | D5 | ปิด `/wallet/deposit` กับ `/points/refund` ใน release เดียวกันเลยไหม? | **ใช่ และทำก่อนอย่างเร่งด่วน** เพราะร้ายแรงกว่าการโอน |
+| D6 | `forgot-password/exchange` (แอดมินแลกเงินสด→แต้มให้สมาชิก) ยังใช้อยู่ไหม? เพดานต่อครั้งเท่าไร? | ✅ **เคาะแล้ว 2026-11-04: ยังใช้อยู่ เพดาน 100 บาทต่อครั้ง** (= 108,000 แต้มที่อัตรา 1080) → เก็บไว้ บังคับแอดมิน + ผ่าน ledger |
 
 ---
 
 ## 3. แผนการทำงาน
 
 ### Phase 0: ปิดช่องโหว่สร้างมูลค่าเอง (ด่วน เล็ก แยก commit)
+0. ✅ **(แก้โค้ดแล้ว 2026-11-04 ยังไม่ commit · เทสต์ `ForgotPasswordExchangeMoneyTest` 7/7 บน sqlite · prod ยังไม่ได้ตรวจ) ทำก่อนข้ออื่น — `exchangeMoney`** (`ForgotPasswordController.php:196`)
+   - ใส่ด่าน `isPlearndAdmin()` → 403 เป็นบรรทัดแรก (แบบเดียวกับ `resetPassword`) และย้าย route เข้ากลุ่ม middleware แอดมิน
+   - validate `money` เป็น `required|numeric|min:0.01|max:100` (D6: เพดาน 100 บาทต่อครั้ง) — ตัวกันค่าติดลบแบบ `redirect()` เดิมลบทิ้ง ให้ validation ตอบ 422 แทน
+   - เปลี่ยน `increment('pp')` เป็น `PointsService::adminAdjust` (หรือเทียบเท่า) ให้เกิดแถว ledger + บันทึก admin_id ผู้ทำ
+   - D6 เคาะแล้ว: ฟีเจอร์ยังใช้อยู่ → **เก็บ route และปุ่มใน `Admin/Resetpassword.vue` ไว้** · UI ใส่ `max="100"` ในช่องกรอก + แสดงข้อความ 422 จาก backend
+   - เทสต์เพิ่ม: แอดมินส่ง `money=100` ผ่าน · `money=100.01` ได้ 422 และ `pp` ไม่เปลี่ยน
+   - ไฟล์เดียวกัน: `POST /forgot-password/getuser` ไม่ตรวจแอดมินเช่นกัน — ผู้ใช้คนไหนก็ค้นคนอื่นด้วยอีเมล/เบอร์โทร/รหัสประจำตัวได้ (PII) ใส่ด่านเดียวกันใน commit นี้
+   - เทสต์: ผู้ใช้ทั่วไปได้ 403 และ `pp` ไม่เปลี่ยน · แอดมินได้ 200 และมีแถว `points_transactions` เพิ่ม 1 แถว · ผู้ใช้ทั่วไปเรียก `getuser` ได้ 403
+   - **ตรวจ production**: endpoint นี้ไม่เขียน ledger จึงค้นจาก ledger ไม่ได้ → ดู access log ของ `forgot-password/exchange` + เทียบ `users.pp` กับยอดสุทธิจาก `points_transactions` รายคน (ส่วนต่างบวกที่อธิบายไม่ได้ = ผู้ต้องสงสัย)
 1. `routes/earn/points-wallet.php`: ลบ route ฝั่งผู้ใช้ `POST /wallet/deposit`, `POST /points/refund`, `POST /points/xp/earn`
    ผู้เรียกภายใน (`CouponService`, `CourseMarketplaceController`, `SchoolStoreService`) เรียกที่ **service** ไม่ใช่ route จึงไม่กระทบ ยืนยันด้วย `grep -rn "points/refund\|wallet/deposit'\|xp/earn" ui/`
 2. `ui/composables/useWallet.ts`: ลบ `deposit()` แล้วหาว่าใครเรียกใช้ ถ้ามีหน้าจอไหนใช้อยู่ ให้เปลี่ยนไปใช้ `createDepositRequest`
