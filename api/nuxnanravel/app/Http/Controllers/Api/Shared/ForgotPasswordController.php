@@ -7,6 +7,7 @@ use App\Http\Resources\UserResource;
 use App\Models\AcademyMember;
 use App\Models\Course;
 use App\Models\User;
+use App\Services\PointsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -36,6 +37,14 @@ class ForgotPasswordController extends Controller
      */
     public function getUser(Request $request)
     {
+        $admin = auth()->user();
+        if (! $admin || ! $admin->isPlearndAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่มีสิทธิ์เข้าถึง',
+            ], 403);
+        }
+
         $search = $request->input('email', '');
 
         if (empty(trim($search))) {
@@ -193,27 +202,56 @@ class ForgotPasswordController extends Controller
         }
     }
 
-    public function exchangeMoney(User $user, Request $request)
+    /**
+     * Admin รับเงินสดจากสมาชิกแล้วเติมแต้มให้ (1 บาท = 1080 แต้ม, สูงสุด 100 บาทต่อครั้ง)
+     * ต้องเป็น Plearnd admin และต้องลง ledger ผ่าน PointsService::adminAdjust
+     */
+    public function exchangeMoney(User $user, Request $request, PointsService $pointsService)
     {
-        try {
-            if ($request->money && $request->money < 0) {
-                return redirect()->back()->with([
-                    'success' => false,
-                    'message' => 'จำนวนเงินน้อยเกินไป',
-                ]);
-            }
+        $admin = auth()->user();
 
-            $user->increment('pp', $request->money * 1080);
-
+        if (! $admin || ! $admin->isPlearndAdmin()) {
             return response()->json([
-                'success' => true,
-                'message' => 'เพิ่มแต้มเส็จสมบูรณ์',
-                'pp' => $user->pp,
-            ], 200);
-
-        } catch (\Throwable $th) {
-            throw $th;
+                'success' => false,
+                'message' => 'ไม่มีสิทธิ์ในการเติมแต้ม',
+            ], 403);
         }
+
+        $validated = $request->validate([
+            'money' => 'required|numeric|min:0.01|max:100',
+        ], [
+            'money.max' => 'เติมได้สูงสุด 100 บาทต่อครั้ง',
+        ]);
+
+        $money = (float) $validated['money'];
+        $points = $money * 1080;
+
+        $transaction = $pointsService->adminAdjust(
+            $user,
+            $points,
+            'add',
+            "แลกเงินสด {$money} บาทเป็นแต้ม โดยแอดมิน #{$admin->id}",
+            [
+                'source' => 'cash_exchange',
+                'admin_id' => $admin->id,
+                'money' => $money,
+                'rate' => 1080,
+            ]
+        );
+
+        Log::info('Admin exchanged cash for points', [
+            'admin_id' => $admin->id,
+            'user_id' => $user->id,
+            'money' => $money,
+            'points' => $points,
+            'transaction_id' => $transaction->id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'เพิ่มแต้มเสร็จสมบูรณ์',
+            'pp' => $transaction->balance_after,
+        ], 200);
     }
 
     public function destroy(User $user)

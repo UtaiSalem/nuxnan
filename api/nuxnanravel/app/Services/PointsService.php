@@ -353,9 +353,9 @@ class PointsService
     /**
      * Admin adjust points
      */
-    public function adminAdjust(User $user, float $amount, string $actionType, ?string $reason = null): PointsTransaction
+    public function adminAdjust(User $user, float $amount, string $actionType, ?string $reason = null, array $metadata = []): PointsTransaction
     {
-        return DB::transaction(function () use ($user, $amount, $actionType, $reason) {
+        return DB::transaction(function () use ($user, $amount, $actionType, $reason, $metadata) {
             $balanceBefore = $user->pp;
 
             if ($actionType === 'add') {
@@ -391,7 +391,7 @@ class PointsService
                 'balance_after' => $balanceAfter,
                 'source_type' => 'admin_adjust',
                 'description' => $reason ?? 'การปรับแต้มจาก Admin',
-                'metadata' => ['admin_action' => $actionType],
+                'metadata' => array_merge($metadata, ['admin_action' => $actionType]),
                 'status' => 'completed',
             ]);
 

@@ -14,6 +14,7 @@ definePageMeta({
 // Constants
 const REQUIRED_POINTS = 4800;
 const POINTS_PER_BAHT = 1080;
+const MAX_TOPUP_BAHT = 100;
 
 const searchQuery = ref('');
 const usersResult = shallowRef([]);
@@ -277,7 +278,7 @@ async function handleTopUpPoints(user) {
     const userPoints = getUserPoints(user);
     const userWallet = getUserWallet(user);
     const neededPts = getNeededPoints(user);
-    const suggestedMoney = getNeededMoney(user);
+    const suggestedMoney = Math.min(getNeededMoney(user), MAX_TOPUP_BAHT);
     
     const result = await Swal.fire({
         title: `เติมแต้มให้ ${user.name}`,
@@ -312,6 +313,7 @@ async function handleTopUpPoints(user) {
                         class="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-lg font-bold text-center ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}" 
                         value="${suggestedMoney}" 
                         min="1"
+                        max="${MAX_TOPUP_BAHT}"
                         placeholder="จำนวนเงิน">
                     <p class="text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-1 text-center">
                         แนะนำ: ${suggestedMoney} บาท (ได้ ${(suggestedMoney * POINTS_PER_BAHT).toLocaleString()} แต้ม)
@@ -332,6 +334,10 @@ async function handleTopUpPoints(user) {
             const amount = parseInt(document.getElementById('swal-topup-amount').value);
             if (!amount || amount < 1) {
                 Swal.showValidationMessage('กรุณากรอกจำนวนเงินที่ถูกต้อง');
+                return false;
+            }
+            if (amount > MAX_TOPUP_BAHT) {
+                Swal.showValidationMessage(`เติมได้สูงสุด ${MAX_TOPUP_BAHT} บาทต่อครั้ง`);
                 return false;
             }
             return amount;
