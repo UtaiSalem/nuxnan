@@ -16,9 +16,6 @@ export const WITHDRAW_FEE_MIN = 5
 export const WITHDRAW_DAILY_LIMIT = 100000
 export const WITHDRAW_MONTHLY_LIMIT = 500000
 
-/** Minimum transfer amount in THB — must mirror WalletController::transfer (min:10) */
-export const TRANSFER_MIN_AMOUNT = 10
-
 export type WithdrawalStatus = 'pending' | 'under_review' | 'approved' | 'processing' | 'completed' | 'paid' | 'rejected' | 'failed' | 'cancelled'
 
 export const useWallet = () => {
@@ -303,41 +300,6 @@ export const useWallet = () => {
   }
 
   /**
-   * Transfer money to another user
-   */
-  const transfer = async (data: {
-    recipient_id: number
-    amount: number
-    message?: string
-  }) => {
-    try {
-      isLoading.value = true
-      error.value = null
-
-      const response = await $fetch(`${apiBase.value}/api/wallet/transfer`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authStore.token}`,
-        },
-        body: data,
-      }) as any
-
-      if (response.success) {
-        return response.data
-      } else {
-        throw new Error(response.message || 'Failed to transfer money')
-      }
-    } catch (err: any) {
-      const msg = err.data?.message || err.response?._data?.message || err.message || 'Failed to transfer money'
-      error.value = msg
-      console.error('Transfer error:', err)
-      throw new Error(msg)
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  /**
    * Get wallet transactions
    */
   const getTransactions = async (params: {
@@ -589,7 +551,6 @@ export const useWallet = () => {
     cancelWithdrawal,
     getWithdrawalProof,
     deduct,
-    transfer,
     convertToPoints,
     getTransactions,
 
@@ -611,6 +572,5 @@ export const useWallet = () => {
     WITHDRAW_MIN_AMOUNT,
     WITHDRAW_FEE_RATE,
     WITHDRAW_FEE_MIN,
-    TRANSFER_MIN_AMOUNT,
   }
 }

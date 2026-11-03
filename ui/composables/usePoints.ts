@@ -197,71 +197,6 @@ export const usePoints = () => {
   }
   
   /**
-   * Transfer points to another user
-   */
-  const transfer = async (data: {
-    recipient_id: number
-    amount: number
-    message?: string
-  }) => {
-    try {
-      isLoading.value = true
-      error.value = null
-      
-      // Validate amount
-      if (data.amount <= 0) {
-        throw new Error('จำนวนแต้มต้องมากกว่า 0')
-      }
-      
-      // Check if user has enough points
-      if (points.value < data.amount) {
-        throw new Error(`แต้มของคุณไม่เพียงพอ (ต้องการ ${data.amount} แต้ม, มีอยู่ ${points.value} แต้ม)`)
-      }
-      
-      // Check if recipient is not self
-      if (data.recipient_id === authStore.user?.id) {
-        throw new Error('ไม่สามารถโอนแต้มให้ตัวเองได้')
-      }
-      
-      // Deduct points (optimistic update)
-      const hasEnough = authStore.deductPoints(data.amount)
-      if (!hasEnough) {
-        throw new Error('แต้มของคุณไม่เพียงพอ')
-      }
-      
-      const response = await $fetch(`${apiBase.value}/api/points/transfer`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authStore.token}`,
-        },
-        body: {
-          recipient_id: data.recipient_id,
-          amount: data.amount,
-          message: data.message || '',
-        },
-      }) as any
-      
-      if (response.success) {
-        // Update auth store with new points balance
-        if (response.data) {
-          authStore.setPoints(response.data.new_balance || points.value - data.amount)
-        }
-        return response.data
-      } else {
-        // Rollback points
-        authStore.rollback(data.amount)
-        throw new Error(response.message || 'ไม่สามารถโอนแต้มได้')
-      }
-    } catch (err: any) {
-      error.value = err.message || 'ไม่สามารถโอนแต้มได้'
-      console.error('Transfer points error:', err)
-      throw err
-    } finally {
-      isLoading.value = false
-    }
-  }
-  
-  /**
    * Get points transactions
    */
   const getTransactions = async (params: {
@@ -372,7 +307,6 @@ export const usePoints = () => {
     getBalance,
     earnXp,
     spend,
-    transfer,
     convertToWallet,
     getTransactions,
     

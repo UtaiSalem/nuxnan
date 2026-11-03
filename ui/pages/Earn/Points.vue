@@ -16,15 +16,12 @@ useHead({
 })
 
 const authStore = useAuthStore()
-const config = useRuntimeConfig()
-const apiBase = computed(() => config.public.apiBase || '')
 
 const {
   points,
   isLoading,
   error,
   getBalance,
-  transfer,
   convertToWallet,
   getTransactions,
   formatPoints,
@@ -32,7 +29,7 @@ const {
 } = usePoints()
 
 // Tab state
-const activeTab = ref('overview') // 'overview' | 'transfer' | 'convert' | 'history'
+const activeTab = ref('overview') // 'overview' | 'convert' | 'history'
 
 // Transactions
 const transactions = ref<any[]>([])
@@ -50,32 +47,15 @@ const transactionsPagination = ref({
   total: 0
 })
 
-// Transfer form
-const transferForm = ref({
-  recipient_id: '',
-  amount: 100,
-  message: ''
-})
-
 // Convert form
 const convertForm = ref({
   points: 1200 // Minimum 1200 points = 1 THB
 })
 
-// User search for transfer
-const userSearchQuery = ref('')
-const userSearchResults = ref<any[]>([])
-const userSearchLoading = ref(false)
-const selectedRecipient = ref<any>(null)
-const showUserDropdown = ref(false)
-
 // Processing states
 const isProcessing = ref(false)
 const processSuccess = ref(false)
 const processMessage = ref('')
-
-// Quick amounts for transfer
-const quickTransferAmounts = [100, 240, 500, 1000, 2000]
 
 // Quick amounts for convert
 const quickConvertAmounts = [1200, 2400, 4800, 6000, 9600, 12000, 14400, 18000, 24000, 30000, 48000, 120000] // 1, 2, 4, 5, 8, 10, 12, 15, 20, 25, 40, 100 THB
@@ -93,65 +73,6 @@ const conversionPreview = computed(() => {
     isValid: pts >= rate && pts <= pointsBalance.value
   }
 })
-
-// Search users for transfer
-const searchUsers = async () => {
-  if (userSearchQuery.value.length < 2) {
-    userSearchResults.value = []
-    showUserDropdown.value = false
-    return
-  }
-  
-  try {
-    userSearchLoading.value = true
-    const response = await $fetch(`${apiBase.value}/api/users/search`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${authStore.token}`,
-      },
-      params: {
-        q: userSearchQuery.value,
-        limit: 10
-      }
-    }) as any
-    
-    if (response.success) {
-      // Filter out current user
-      userSearchResults.value = (response.data || []).filter((u: any) => u.id !== authStore.user?.id)
-      showUserDropdown.value = true
-    }
-  } catch (err) {
-    console.error('Search users error:', err)
-    userSearchResults.value = []
-  } finally {
-    userSearchLoading.value = false
-  }
-}
-
-// Debounce search
-let searchTimeout: ReturnType<typeof setTimeout> | null = null
-const debouncedSearch = () => {
-  if (searchTimeout) clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(() => {
-    searchUsers()
-  }, 300)
-}
-
-// Select recipient
-const selectRecipient = (user: any) => {
-  selectedRecipient.value = user
-  transferForm.value.recipient_id = user.id.toString()
-  userSearchQuery.value = user.name || user.username
-  showUserDropdown.value = false
-}
-
-// Clear recipient
-const clearRecipient = () => {
-  selectedRecipient.value = null
-  transferForm.value.recipient_id = ''
-  userSearchQuery.value = ''
-  userSearchResults.value = []
-}
 
 // Methods
 const loadTransactions = async () => {
@@ -174,57 +95,6 @@ const loadTransactions = async () => {
     console.error('Failed to load transactions:', err)
   } finally {
     transactionsLoading.value = false
-  }
-}
-
-// Handle Transfer
-const handleTransfer = async () => {
-  // Validation
-  if (!selectedRecipient.value) {
-    processSuccess.value = false
-    processMessage.value = 'กรุณาเลือกผู้รับ'
-    return
-  }
-  
-  if (transferForm.value.amount <= 0) {
-    processSuccess.value = false
-    processMessage.value = 'กรุณาระบุจำนวนแต้มที่ถูกต้อง'
-    return
-  }
-  
-  if (transferForm.value.amount > pointsBalance.value) {
-    processSuccess.value = false
-    processMessage.value = `แต้มของคุณไม่เพียงพอ (ต้องการ ${formatPoints(transferForm.value.amount)} แต้ม, มีอยู่ ${formatPoints(pointsBalance.value)} แต้ม)`
-    return
-  }
-  
-  try {
-    isProcessing.value = true
-    processSuccess.value = false
-    
-    await transfer({
-      recipient_id: parseInt(transferForm.value.recipient_id),
-      amount: transferForm.value.amount,
-      message: transferForm.value.message
-    })
-    
-    processSuccess.value = true
-    processMessage.value = `โอนแต้ม ${formatPoints(transferForm.value.amount)} ให้ ${selectedRecipient.value.name} สำเร็จ!`
-    
-    // Refresh balance and transactions
-    await getBalance()
-    await loadTransactions()
-    
-    // Reset form
-    clearRecipient()
-    transferForm.value.amount = 100
-    transferForm.value.message = ''
-    
-  } catch (err: any) {
-    processSuccess.value = false
-    processMessage.value = err.message || 'เกิดข้อผิดพลาดในการโอนแต้ม'
-  } finally {
-    isProcessing.value = false
   }
 }
 
@@ -437,7 +307,7 @@ onMounted(async () => {
           แต้มของฉัน
         </h1>
         <p class="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-          จัดการแต้ม โอนแต้ม แปลงเป็นเงิน และดูประวัติการใช้งาน
+          จัดการแต้ม แปลงเป็นเงิน และดูประวัติการใช้งาน
         </p>
       </div>
 
@@ -464,14 +334,6 @@ onMounted(async () => {
                 <Icon icon="mdi:plus-circle" class="w-5 h-5" />
                 สะสมแต้มเพิ่ม
               </NuxtLink>
-              <button
-                class="min-h-[44px] sm:min-h-0 px-4 py-2 bg-white/20 text-white font-semibold rounded-xl hover:bg-white/30 transition-colors flex items-center gap-2 backdrop-blur"
-                :disabled="pointsBalance < 100"
-                @click="activeTab = 'transfer'"
-              >
-                <Icon icon="mdi:send" class="w-5 h-5" />
-                โอนแต้ม
-              </button>
             </div>
           </div>
           
@@ -497,7 +359,6 @@ onMounted(async () => {
         <button
           v-for="tab in [
             { key: 'overview', label: 'ภาพรวม', icon: 'mdi:view-dashboard' },
-            { key: 'transfer', label: 'โอนแต้ม', icon: 'mdi:send' },
             { key: 'convert', label: 'แปลงเป็นเงิน', icon: 'mdi:swap-horizontal' },
             { key: 'history', label: 'ประวัติ', icon: 'mdi:history' },
           ]"
@@ -533,19 +394,6 @@ onMounted(async () => {
       <!-- Overview -->
       <div v-if="activeTab === 'overview'">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <BaseCard class="cursor-pointer hover:shadow-lg transition-shadow" @click="activeTab = 'transfer'">
-            <div class="flex items-center gap-4 p-2">
-              <div class="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-                <Icon icon="mdi:send" class="w-7 h-7 text-blue-500" />
-              </div>
-              <div>
-                <h3 class="font-semibold text-gray-900 dark:text-white">โอนแต้ม</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400">โอนแต้มให้ผู้ใช้อื่น</p>
-              </div>
-              <Icon icon="mdi:chevron-right" class="w-6 h-6 text-gray-400 ml-auto" />
-            </div>
-          </BaseCard>
-          
           <BaseCard class="cursor-pointer hover:shadow-lg transition-shadow" @click="activeTab = 'convert'">
             <div class="flex items-center gap-4 p-2">
               <div class="w-14 h-14 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
@@ -574,7 +422,7 @@ onMounted(async () => {
             </BaseCard>
           </NuxtLink>
           
-          <NuxtLink to="/earn/wallet" class="block">
+          <NuxtLink to="/earn/wallet" class="block md:col-span-2">
             <BaseCard class="cursor-pointer hover:shadow-lg transition-shadow h-full">
               <div class="flex items-center gap-4 p-2">
                 <div class="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
@@ -773,156 +621,6 @@ onMounted(async () => {
           </div>
         </BaseCard>
       </div>
-
-      <!-- Transfer Form -->
-      <BaseCard v-if="activeTab === 'transfer'">
-        <div class="p-2">
-          <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">โอนแต้ม</h3>
-          <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">โอนแต้มของคุณให้ผู้ใช้อื่น</p>
-          
-          <div class="space-y-6">
-            <!-- Recipient Search -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                ผู้รับ <span class="text-red-500">*</span>
-              </label>
-              
-              <!-- Selected recipient display -->
-              <div v-if="selectedRecipient" class="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl mb-2">
-                <img 
-                  :src="selectedRecipient.avatar || '/images/default-avatar.png'" 
-                  :alt="selectedRecipient.name"
-                  class="w-10 h-10 rounded-full object-cover"
-                >
-                <div class="flex-grow">
-                  <p class="font-medium text-gray-900 dark:text-white">{{ selectedRecipient.name }}</p>
-                  <p class="text-xs text-gray-500">{{ selectedRecipient.email_masked || selectedRecipient.email }}</p>
-                </div>
-                <button 
-                  type="button"
-                  class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/20 rounded"
-                  @click="clearRecipient"
-                >
-                  <Icon icon="mdi:close" class="w-5 h-5" />
-                </button>
-              </div>
-              
-              <!-- Search input -->
-              <div v-else class="relative">
-                <input 
-                  v-model="userSearchQuery"
-                  type="text"
-                  class="w-full px-4 py-3 pl-10 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  placeholder="ค้นหาชื่อ, อีเมล หรือรหัสสมาชิก..."
-                  @input="debouncedSearch"
-                  @focus="showUserDropdown = userSearchResults.length > 0"
-                >
-                <Icon icon="mdi:magnify" class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                
-                <!-- Loading indicator -->
-                <Icon 
-                  v-if="userSearchLoading" 
-                  icon="mdi:loading" 
-                  class="w-5 h-5 text-amber-500 animate-spin absolute right-3 top-1/2 -translate-y-1/2" 
-                />
-                
-                <!-- Search results dropdown -->
-                <div 
-                  v-if="showUserDropdown && userSearchResults.length > 0"
-                  class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-60 overflow-y-auto"
-                >
-                  <button
-                    v-for="user in userSearchResults"
-                    :key="user.id"
-                    type="button"
-                    class="w-full flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
-                    @click="selectRecipient(user)"
-                  >
-                    <img 
-                      :src="user.avatar || '/images/default-avatar.png'" 
-                      :alt="user.name"
-                      class="w-10 h-10 rounded-full object-cover"
-                    >
-                    <div>
-                      <p class="font-medium text-gray-900 dark:text-white">{{ user.name }}</p>
-                      <p class="text-xs text-gray-500">{{ user.email_masked || user.email }}</p>
-                    </div>
-                  </button>
-                </div>
-                
-                <!-- No results -->
-                <div 
-                  v-if="showUserDropdown && userSearchQuery.length >= 2 && !userSearchLoading && userSearchResults.length === 0"
-                  class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg p-4 text-center text-gray-500"
-                >
-                  ไม่พบผู้ใช้
-                </div>
-              </div>
-            </div>
-            
-            <!-- Amount -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                จำนวนแต้ม <span class="text-red-500">*</span>
-              </label>
-              <div class="relative">
-                <input 
-                  v-model.number="transferForm.amount"
-                  type="number"
-                  min="1"
-                  :max="pointsBalance"
-                  class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  placeholder="ระบุจำนวนแต้ม"
-                >
-                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">แต้ม</span>
-              </div>
-              <p class="text-xs text-gray-500 mt-1">
-                แต้มของคุณ: {{ formatPoints(pointsBalance) }} แต้ม
-              </p>
-              
-              <!-- Quick Amounts -->
-              <div class="flex flex-wrap gap-2 mt-3">
-                <button 
-                  v-for="amount in quickTransferAmounts"
-                  :key="amount"
-                  type="button"
-                  class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                  :class="transferForm.amount === amount 
-                    ? 'bg-amber-500 text-white' 
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'"
-                  :disabled="amount > pointsBalance"
-                  @click="transferForm.amount = amount"
-                >
-                  {{ formatPoints(amount) }}
-                </button>
-              </div>
-            </div>
-            
-            <!-- Message -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ข้อความ</label>
-              <textarea 
-                v-model="transferForm.message"
-                rows="2"
-                maxlength="255"
-                class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                placeholder="ข้อความถึงผู้รับ (ไม่บังคับ)"
-              ></textarea>
-            </div>
-            
-            <!-- Submit Button -->
-            <button 
-              type="button"
-              class="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              :disabled="isProcessing || !selectedRecipient || transferForm.amount <= 0 || transferForm.amount > pointsBalance"
-              @click="handleTransfer"
-            >
-              <Icon v-if="isProcessing" icon="mdi:loading" class="w-5 h-5 animate-spin inline mr-2" />
-              {{ isProcessing ? 'กำลังดำเนินการ...' : `โอน ${formatPoints(transferForm.amount)} แต้ม` }}
-            </button>
-          </div>
-        </div>
-      </BaseCard>
 
       <!-- Convert Form -->
       <BaseCard v-if="activeTab === 'convert'">

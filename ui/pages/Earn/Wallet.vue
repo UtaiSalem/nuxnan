@@ -34,7 +34,6 @@ const {
   getMyWithdrawals,
   cancelWithdrawal,
   getWithdrawalProof,
-  transfer,
   convertToPoints,
   getTransactions,
   createDepositRequest,
@@ -49,7 +48,6 @@ const {
   WITHDRAW_MIN_AMOUNT,
   WITHDRAW_FEE_RATE,
   WITHDRAW_FEE_MIN,
-  TRANSFER_MIN_AMOUNT
 } = useWallet()
 
 const { points, convertToWallet, formatPoints } = usePoints()
@@ -71,7 +69,7 @@ const activeWithdrawalsCount = computed(() =>
 )
 
 // Tab state
-const activeTab = ref('overview') // 'overview' | 'deposit' | 'withdraw' | 'transfer' | 'convert' | 'convert-to-points' | 'history' | 'deposit-requests'
+const activeTab = ref('overview') // 'overview' | 'deposit' | 'withdraw' | 'convert' | 'convert-to-points' | 'history' | 'deposit-requests'
 
 // Form states
 const depositForm = ref({
@@ -116,82 +114,6 @@ watch(() => withdrawForm.value.method, (method) => {
     withdrawForm.value.bank_account.bank_name = 'promptpay'
   }
 })
-
-const transferForm = ref({
-  recipient_id: '',
-  amount: TRANSFER_MIN_AMOUNT,
-  message: ''
-})
-
-// User search for transfer
-const userSearchQuery = ref('')
-const userSearchResults = ref<any[]>([])
-const userSearchLoading = ref(false)
-const selectedRecipient = ref<any>(null)
-const showUserDropdown = ref(false)
-
-const config = useRuntimeConfig()
-const apiBase = computed(() => config.public.apiBase || '')
-
-// Search users for transfer
-const searchUsers = async () => {
-  if (userSearchQuery.value.length < 2) {
-    userSearchResults.value = []
-    return
-  }
-
-  try {
-    userSearchLoading.value = true
-    const response = await get('/api/users/search', {
-      params: {
-        q: userSearchQuery.value,
-        limit: 10
-      }
-    }) as any
-
-    if (response.success) {
-      // Filter out current user
-      userSearchResults.value = (response.data || []).filter((u: any) => u.id !== authStore.user?.id)
-      showUserDropdown.value = true
-    }
-  } catch (err: any) {
-    console.error('Search users error:', err)
-    userSearchResults.value = []
-
-    // Handle authentication errors
-    if (err.statusCode === 401 || err.message?.includes('Unauthenticated')) {
-      processMessage.value = 'กรุณาเข้าสู่ระบบเพื่อค้นหาผู้ใช้'
-      processSuccess.value = false
-    }
-  } finally {
-    userSearchLoading.value = false
-  }
-}
-
-// Debounce search
-let searchTimeout: ReturnType<typeof setTimeout> | null = null
-const debouncedSearch = () => {
-  if (searchTimeout) clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(() => {
-    searchUsers()
-  }, 300)
-}
-
-// Select recipient
-const selectRecipient = (user: any) => {
-  selectedRecipient.value = user
-  transferForm.value.recipient_id = user.id.toString()
-  userSearchQuery.value = user.name || user.username
-  showUserDropdown.value = false
-}
-
-// Clear recipient
-const clearRecipient = () => {
-  selectedRecipient.value = null
-  transferForm.value.recipient_id = ''
-  userSearchQuery.value = ''
-  userSearchResults.value = []
-}
 
 const convertForm = ref({
   points: 1200
@@ -603,37 +525,6 @@ const handleWithdraw = async () => {
   }
 }
 
-const handleTransfer = async () => {
-  try {
-    isProcessing.value = true
-    processSuccess.value = false
-    
-    await transfer({
-      recipient_id: parseInt(transferForm.value.recipient_id),
-      amount: transferForm.value.amount,
-      message: transferForm.value.message
-    })
-    
-    processSuccess.value = true
-    processMessage.value = `โอนเงิน ${formatMoney(transferForm.value.amount)} สำเร็จ!`
-    
-    // Refresh balance
-    await getBalance()
-    await loadTransactions()
-    
-    // Reset form
-    transferForm.value.recipient_id = ''
-    transferForm.value.amount = TRANSFER_MIN_AMOUNT
-    transferForm.value.message = ''
-    
-  } catch (err: any) {
-    processSuccess.value = false
-    processMessage.value = err.message || 'เกิดข้อผิดพลาด'
-  } finally {
-    isProcessing.value = false
-  }
-}
-
 const handleConvert = async () => {
   try {
     isProcessing.value = true
@@ -860,7 +751,8 @@ const formatDate = (dateString: string) => {
 onMounted(async () => {
   // Read tab from query params
   const route = useRoute()
-  if (route.query.tab && typeof route.query.tab === 'string') {
+  const validTabs = ['overview', 'deposit', 'deposit-requests', 'withdraw', 'withdrawals', 'convert', 'convert-to-points', 'history']
+  if (typeof route.query.tab === 'string' && validTabs.includes(route.query.tab)) {
     activeTab.value = route.query.tab
   }
 
@@ -887,7 +779,7 @@ onMounted(async () => {
           กระเป๋าเงิน
         </h1>
         <p class="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-          จัดการเงินในกระเป๋า เติมเงิน ถอนเงิน และโอนเงิน
+          จัดการเงินในกระเป๋า เติมเงิน และถอนเงิน
         </p>
       </div>
 
@@ -965,7 +857,6 @@ onMounted(async () => {
             { key: 'deposit-requests', label: 'คำขอเติมเงิน', icon: 'mdi:clock-outline', badge: depositRequests.filter(r => r.status === 'pending').length },
             { key: 'withdraw', label: 'ถอนเงิน', icon: 'mdi:minus-circle' },
             { key: 'withdrawals', label: 'คำขอถอนเงิน', icon: 'mdi:progress-clock', badge: activeWithdrawalsCount },
-            { key: 'transfer', label: 'โอนเงิน', icon: 'mdi:send' },
             { key: 'convert-to-points', label: 'แปลงเงินเป็นแต้ม', icon: 'mdi:swap-horizontal-circle' },
             { key: 'history', label: 'ประวัติ', icon: 'mdi:history' },
           ]"
@@ -1032,20 +923,7 @@ onMounted(async () => {
             </div>
           </BaseCard>
           
-          <BaseCard class="cursor-pointer hover:shadow-lg transition-shadow" @click="activeTab = 'transfer'">
-            <div class="flex items-center gap-4 p-2">
-              <div class="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-                <Icon icon="mdi:send" class="w-7 h-7 text-blue-500" />
-              </div>
-              <div>
-                <h3 class="font-semibold text-gray-900 dark:text-white">โอนเงิน</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400">โอนเงินให้ผู้ใช้อื่น</p>
-              </div>
-              <Icon icon="mdi:chevron-right" class="w-6 h-6 text-gray-400 ml-auto" />
-            </div>
-          </BaseCard>
-
-          <BaseCard class="cursor-pointer hover:shadow-lg transition-shadow" @click="activeTab = 'convert-to-points'">
+          <BaseCard class="cursor-pointer hover:shadow-lg transition-shadow md:col-span-2" @click="activeTab = 'convert-to-points'">
             <div class="flex items-center gap-4 p-2">
               <div class="w-14 h-14 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
                 <Icon icon="mdi:swap-horizontal-circle" class="w-7 h-7 text-purple-500" />
@@ -1057,7 +935,6 @@ onMounted(async () => {
               <Icon icon="mdi:chevron-right" class="w-6 h-6 text-gray-400 ml-auto" />
             </div>
           </BaseCard>
-
         </div>
         
         <!-- Recent Transactions -->
@@ -1612,142 +1489,6 @@ onMounted(async () => {
             >
               <Icon v-if="isProcessing" icon="mdi:loading" class="w-5 h-5 animate-spin inline mr-2" />
               {{ isProcessing ? 'กำลังดำเนินการ...' : 'ส่งคำขอถอนเงิน' }}
-            </button>
-          </div>
-        </div>
-      </BaseCard>
-
-      <!-- Transfer Form -->
-      <BaseCard v-if="activeTab === 'transfer'">
-        <div class="p-2">
-          <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-6">โอนเงินให้ผู้ใช้อื่น</h3>
-          
-          <div class="space-y-6">
-            <!-- Recipient Search -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                ค้นหาผู้รับ <span class="text-red-500">*</span>
-              </label>
-              
-              <!-- Selected Recipient Display -->
-              <div v-if="selectedRecipient" class="mb-3">
-                <div class="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-                  <img 
-                    :src="selectedRecipient.avatar || selectedRecipient.profile_photo_url || '/images/default-avatar.png'" 
-                    :alt="selectedRecipient.name"
-                    class="w-12 h-12 rounded-full object-cover"
-                  >
-                  <div class="flex-grow">
-                    <p class="font-medium text-gray-900 dark:text-white">{{ selectedRecipient.name || selectedRecipient.username }}</p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ selectedRecipient.email }}</p>
-                    <p v-if="selectedRecipient.personal_code" class="text-xs text-primary-500">{{ selectedRecipient.personal_code }}</p>
-                  </div>
-                  <button 
-                    type="button"
-                    class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
-                    @click="clearRecipient"
-                  >
-                    <Icon icon="mdi:close" class="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-              
-              <!-- Search Input -->
-              <div v-else class="relative">
-                <div class="relative">
-                  <input 
-                    v-model="userSearchQuery"
-                    type="text"
-                    class="w-full px-4 py-3 pl-10 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="พิมพ์ชื่อ, อีเมล หรือรหัสอ้างอิง..."
-                    @input="debouncedSearch"
-                    @focus="showUserDropdown = userSearchResults.length > 0"
-                  >
-                  <Icon 
-                    :icon="userSearchLoading ? 'mdi:loading' : 'mdi:magnify'" 
-                    class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
-                    :class="{ 'animate-spin': userSearchLoading }"
-                  />
-                </div>
-                
-                <!-- Search Results Dropdown -->
-                <div 
-                  v-if="showUserDropdown && userSearchResults.length > 0"
-                  class="absolute z-50 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-64 overflow-y-auto"
-                >
-                  <div 
-                    v-for="user in userSearchResults" 
-                    :key="user.id"
-                    class="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-                    @click="selectRecipient(user)"
-                  >
-                    <img 
-                      :src="user.avatar || user.profile_photo_url || '/images/default-avatar.png'" 
-                      :alt="user.name"
-                      class="w-10 h-10 rounded-full object-cover"
-                    >
-                    <div class="flex-grow">
-                      <p class="font-medium text-gray-900 dark:text-white">{{ user.name || user.username }}</p>
-                      <p class="text-xs text-gray-500">{{ user.email }}</p>
-                      <p v-if="user.personal_code" class="text-xs text-primary-500">{{ user.personal_code }}</p>
-                    </div>
-                    <Icon icon="mdi:chevron-right" class="w-5 h-5 text-gray-400" />
-                  </div>
-                </div>
-                
-                <!-- No Results -->
-                <div 
-                  v-if="showUserDropdown && userSearchQuery.length >= 2 && userSearchResults.length === 0 && !userSearchLoading"
-                  class="absolute z-50 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg p-4 text-center"
-                >
-                  <Icon icon="mdi:account-search" class="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                  <p class="text-gray-500 dark:text-gray-400">ไม่พบผู้ใช้</p>
-                </div>
-              </div>
-              
-              <p class="text-xs text-gray-500 mt-2">
-                <Icon icon="mdi:information" class="w-3.5 h-3.5 inline" />
-                พิมพ์อย่างน้อย 2 ตัวอักษรเพื่อค้นหา
-              </p>
-            </div>
-            
-            <!-- Amount -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">จำนวนเงิน</label>
-              <div class="relative">
-                <input
-                  v-model.number="transferForm.amount"
-                  type="number"
-                  :min="TRANSFER_MIN_AMOUNT"
-                  :max="walletBalance"
-                  step="1"
-                  class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  :placeholder="`ระบุจำนวนเงิน (ขั้นต่ำ ${TRANSFER_MIN_AMOUNT} บาท)`"
-                >
-                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500">บาท</span>
-              </div>
-              <p class="text-sm text-gray-500 mt-1">ยอดเงินคงเหลือ: {{ formatMoney(walletBalance) }} | โอนขั้นต่ำ {{ TRANSFER_MIN_AMOUNT }} บาท</p>
-            </div>
-            
-            <!-- Message -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ข้อความ (ไม่บังคับ)</label>
-              <textarea 
-                v-model="transferForm.message"
-                rows="3"
-                class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                placeholder="เขียนข้อความถึงผู้รับ..."
-              ></textarea>
-            </div>
-            
-            <!-- Submit Button -->
-            <button 
-              class="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              :disabled="isProcessing || !transferForm.recipient_id || transferForm.amount < TRANSFER_MIN_AMOUNT || transferForm.amount > walletBalance"
-              @click="handleTransfer"
-            >
-              <Icon v-if="isProcessing" icon="mdi:loading" class="w-5 h-5 animate-spin inline mr-2" />
-              {{ isProcessing ? 'กำลังดำเนินการ...' : `โอนเงิน ${formatMoney(transferForm.amount)}` }}
             </button>
           </div>
         </div>
