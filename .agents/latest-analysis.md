@@ -1,6 +1,11 @@
 # 2026-11-12 — สร้างบทเรียนจากการอัปโหลดไฟล์เอกสาร (Lesson import จาก .docx)
 
-> สถานะ: **วางแผนแล้ว ยังไม่ลงมือ** · เฟส 0 เคาะครบแล้ว 2026-11-12 พร้อมเริ่มเฟส 1
+> สถานะ: **เฟส 1–3 เสร็จ 2026-11-12 (ยังไม่ commit)** · เทสต์ sqlite + MySQL ผ่าน 73/73 · ทดสอบบนจอจริง 375/768/1280 ครบ flow แล้ว
+> ข้อจำกัด: ลบบทเรียนไม่ลบรูปในเนื้อหา (ตั้งใจ — โคลนรายวิชาแชร์ path รูปเดียวกัน)
+>
+> สิ่งที่ต่างจากแผน: แม่แบบเป็นไฟล์ static `ui/public/templates/lesson-import-template.docx` (ไม่มี endpoint template ฝั่ง backend) ·
+> endpoint นำเข้ายก memory_limit เป็น 512M (วัดจริง HTML 13.5MB ใช้ 86MB) · `store()` เดิมยัง 500 ถ้าไม่ส่ง description/content/youtube_url (บั๊กเดิม frontend ส่งครบจึงไม่เจอ) ·
+> พบบั๊กเดิม: `LessonAttachmentUploader.vue` ยิง `/lessons/{id}/attachments` ไม่มี `/api` นำหน้า (หน้า import ใช้ path ที่ถูกแล้ว)
 > ต้นแบบ flow: ระบบนำเข้าข้อสอบ (`QuestionImportController` + `QuestionImportService` + `ui/components/learn/course/questions/QuestionImportModal.vue`)
 
 ## User Analysis Input

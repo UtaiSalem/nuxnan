@@ -1,5 +1,19 @@
 # Work Log — nuxnan project
 
+## 🟡 2026-11-12 (ดึก) — นำเข้าบทเรียนจาก .docx: โค้ดเสร็จ + ทดสอบบนจอจริงแล้ว · ยังไม่ commit
+
+✅ ทดสอบจริงใน browser pane (รายวิชา 1, บัญชี Utai): 375px ครบ flow (เลือกไฟล์ที่มีรูป+ตาราง+YouTube → preview → บันทึกฉบับร่าง + แนบ .txt) → DB ถูกทุกช่อง · 768 / 1280 dark ไม่ล้น
+   บทเรียนทดสอบ id 68 + ไฟล์แนบ + โฟลเดอร์รูป ลบทิ้งแล้ว · แก้หลังทดสอบ: ขนาดไฟล์เล็กแสดง KB, breadcrumb มี padding บนมือถือ
+⚠️ ข้อจำกัดที่ตั้งใจ: ลบบทเรียนแล้วรูปใน `images/courses/lessons/content/{uuid}` ไม่ถูกลบ — เพราะ `CourseCloneService` คัดลอก `content` ตรง ๆ รูปจึงถูกแชร์ข้ามรายวิชาที่โคลน (ถ้าจะเก็บกวาดต้องเป็น sweep ที่เช็คการอ้างอิงทุกตาราง)
+⚠️ บั๊กเดิมเพิ่ม: ลบบทเรียน (`CourseLessonController@destroy`) ไม่ลบ `lesson_attachments` + ไฟล์ใน `course-materials/lessons`
+
+แผน + ข้อตัดสินใจ D1–D4 อยู่ใน `.agents/latest-analysis.md` (หัวข้อ 2026-11-12) · agy เขียนทั้ง 2 shard แล้วหมดโควตา (รีเซ็ต ~03:45) — Claude ตรวจ/แก้ต่อเอง
+- Backend: `LessonImportController` (POST `/api/courses/{course}/lessons/import/preview` + `/import`) · `LessonImportService` · `LessonHtmlSanitizer` · `LessonCreationService` (store() ของบทเรียน/หัวข้อเรียกตัวนี้แล้ว) · คำสั่ง `lesson-imports:prune` (schedule 03:30) · migration `content` → MEDIUMTEXT
+- Frontend: หน้า `/Learn/Courses/{id}/lessons/import` · ทางเข้าเดียวคือแถบลิงก์ในหน้าสร้างบทเรียน (กด "เพิ่มบทเรียน" ก่อน — เจ้าของเคาะให้เอาปุ่มออกจากหน้ารายการเพื่อลดความสับสน) · `mammoth@1.13` (ติดตั้งแล้ว ต้อง `npm run build` เอง) · แม่แบบ `ui/public/templates/lesson-import-template.docx`
+- ตรวจแล้ว: sqlite + **MySQL** 73/73 (LessonImport 19 · Sanitizer · เทสต์บทเรียน/หัวข้อเดิม) · pint ผ่าน · SFC compile 3 ไฟล์ · หน่วยความจำ HTML 13.5MB = 86MB
+- 🔴 `php artisan migrate` บนเครื่องนี้รัน migration ค้างอื่นไปด้วย 10 ตัว (batch 137 — ผ่านครบ ไม่ได้ rollback) ดูรายชื่อ: `select migration from migrations where batch=137`
+- บั๊กเดิมที่เจอระหว่างทาง (ไม่ได้แก้): `LessonAttachmentUploader.vue` ยิง `/lessons/...` ไม่มี `/api` · `CourseLessonController@store` 500 ถ้าไม่ส่ง description/content/youtube_url
+
 ## 🟡 2026-11-12 (เย็น) — งานวันนี้ค้างอยู่ใน draft PR 7 อัน **ยังไม่ merge เข้า `main`** (อ่านก่อนเชื่อ TODO ในหัวข้อถัดไป)
 
 `main` = `390211c` (09:32) + commit บันทึกนี้ · งานหลัง 09:32 ทั้งหมดอยู่ใน branch ของแต่ละ PR (push แล้วทุกอัน ไม่มีอะไรหาย)
