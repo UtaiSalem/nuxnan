@@ -7,7 +7,10 @@ use App\Models\Coupon;
 use App\Models\PlearndAdmin;
 use App\Models\User;
 use App\Services\CouponService;
+use App\Services\PointsService;
+use App\Services\WalletService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Mockery;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use Tests\TestCase;
 
@@ -108,9 +111,10 @@ class MemberCouponsDisabledTest extends TestCase
         $admin = $this->makeAdmin();
 
         // ตัดการสร้างไฟล์ QR ออก (ไม่เกี่ยวกับสิทธิ์ และเขียนลง storage จริง)
-        $this->partialMock(CouponService::class, function ($mock) {
-            $mock->shouldReceive('generateQRCode')->andReturn('qr-codes/test.svg');
-        });
+        // ต้องส่ง dependency เข้า constructor เอง — partialMock() ข้าม constructor
+        $mock = Mockery::mock(CouponService::class, [app(PointsService::class), app(WalletService::class)])->makePartial();
+        $mock->shouldReceive('generateQRCode')->andReturn('qr-codes/test.svg');
+        $this->app->instance(CouponService::class, $mock);
 
         $this->actingWithJwt($admin)
             ->postJson('/api/coupons', ['type' => 'points', 'amount' => 100])
