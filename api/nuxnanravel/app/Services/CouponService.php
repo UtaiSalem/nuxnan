@@ -192,8 +192,10 @@ class CouponService
     public function redeemCoupon(User $user, string $couponCode, ?string $ipAddress = null, ?string $userAgent = null): array
     {
         return DB::transaction(function () use ($user, $couponCode, $ipAddress, $userAgent) {
-            // First, find the coupon by code (any status)
-            $coupon = Coupon::where('coupon_code', $couponCode)->first();
+            // First, find the coupon by code (any status). Lock the row so two
+            // concurrent redeems (or a redeem racing the creator's cancel) cannot
+            // both see it as active and pay it out twice.
+            $coupon = Coupon::where('coupon_code', $couponCode)->lockForUpdate()->first();
 
             // Check if coupon exists
             if (! $coupon) {
@@ -356,15 +358,20 @@ class CouponService
             ];
         }
 
-        // Check if coupon can be cancelled
-        if ($coupon->status !== 'active') {
-            return [
-                'success' => false,
-                'message' => 'ไม่สามารถยกเลิกคูปองนี้ได้',
-            ];
-        }
-
         return DB::transaction(function () use ($coupon, $user) {
+            // Lock and re-read inside the transaction: a concurrent redeem (or a
+            // second cancel) must not let one coupon pay out twice — creator
+            // refund plus redeemer credit.
+            $coupon = Coupon::whereKey($coupon->id)->lockForUpdate()->first();
+
+            // Check if coupon can be cancelled
+            if (! $coupon || $coupon->status !== 'active') {
+                return [
+                    'success' => false,
+                    'message' => 'ไม่สามารถยกเลิกคูปองนี้ได้',
+                ];
+            }
+
             // Cancel coupon
             $coupon->cancel();
 
