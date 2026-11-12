@@ -1,5 +1,48 @@
 # Work Log — nuxnan project
 
+## 🟢 2026-11-12 — ลบหมวดรายจ่ายตอบ 500 ทุกครั้ง (FK ผิดใน `ExpenseCategory::expenses()`) (เสร็จ · pushed)
+
+`DELETE /api/academies/{academy}/expenses/categories/{category}` ตอบ **500 ทุกครั้ง** แม้เป็นหมวดของโรงเรียนตัวเองและไม่มีรายจ่ายผูกอยู่เลย
+
+### สาเหตุ
+`app/Models/ExpenseCategory.php` ประกาศ `expenses()` เป็น `hasMany(Expense::class, 'category_id')`
+แต่คอลัมน์จริงในตาราง `expenses` คือ **`expense_category_id`** (ดู `database/migrations/2026_02_04_100002_create_finance_tables.php:299`
+และ `Expense::category()` ที่ใช้ `expense_category_id` อยู่แล้ว)
+⇒ `ExpenseController::destroyCategory` ที่เรียก `$category->expenses()->count()` ยิง SQL
+`select count(*) … where "expenses"."category_id" = ?` → `no such column: expenses.category_id` (sqlite) / `Unknown column` (MySQL)
+บั๊กนี้โผล่ตอนตรวจ PR UtaiSalem/nuxnan#47 (`claude/friendly-dijkstra-i0kera`): พอถอด guard เจ้าของโรงเรียนออก เคส "ลบหมวด" ได้ 500 แทน 200
+
+### งานที่ทำ
+- **BE:** `ExpenseCategory::expenses()` → `hasMany(Expense::class, 'expense_category_id')` (แก้บรรทัดเดียว)
+- **เทสต์ใหม่** `tests/Feature/Academy/ExpenseCategoryDestroyTest.php` 2 ตัว (ยิงด้วย**เจ้าของโรงเรียน** เพราะกลุ่ม route การเงินอยู่หลัง `academy.permission:settings.manage`)
+  · ลบหมวดของตัวเองที่ยังไม่มีรายจ่าย → 200 + แถวหายจาก `expense_categories`
+  · ลบหมวดที่มีรายจ่ายผูกอยู่ → 400 + ข้อความ "ไม่สามารถลบได้" + แถวยังอยู่
+
+### ตรวจแล้ว
+- **revert-check:** `git stash` เอา fix ออก → เทสต์ใหม่ตกทั้ง 2 ตัวด้วย `no such column: expenses.category_id` · ใส่ fix คืน → ผ่านทั้ง 2 (7 assertions)
+- `php artisan test --filter=Expense` (sqlite): ก่อนแก้ 6 fail / 1 pass → หลังแก้ **4 fail / 3 pass**
+- `php artisan test tests/Feature/Academy` (sqlite): **283 passed**, 3 fail + 2 incomplete — ยืนยันด้วย stash ว่า 3 ตัวนั้น fail อยู่ก่อนแล้ว (`AcademySettingsAuditLogTest`, `ReportRefreshTest`, `StaffDepartmentValidationTest`)
+- Pint `--test --dirty` ผ่าน
+- **ยังไม่ตรวจ: MySQL** — เซสชันนี้รันบน container ที่ไม่มี MySQL (`test:db:rebuild` ต้องคัดลอกโครงจาก DB dev) → เจ้าของรัน `php artisan test:db:rebuild && php artisan test -c phpunit.mysql.xml --filter=Expense` ที่ WAMP เอง (SQL ที่ผิดเป็นคอลัมน์ไม่มีจริง MySQL จะตอบ `Unknown column` เหมือนกัน)
+
+### 🔴 เจอระหว่างทำ (คนละบั๊ก ยังไม่แก้ — อยู่นอกขอบเขตงานนี้)
+`app/Models/Budget.php` มี FK ผิดแบบเดียวกันอีก 2 จุด ⇒ ทุกเส้นที่แตะมันจะ 500:
+- `Budget::category()` = `belongsTo(ExpenseCategory::class, 'category_id')` แต่ตาราง `budgets` มีคอลัมน์ `expense_category_id` (migration บรรทัด 335)
+  · และ `BudgetController` ก็ validate/เขียน `category_id` ทั้งไฟล์ (บรรทัด 38–39, 79, 90, 122) → แก้ต้องแตะทั้ง model + controller + ฝั่ง UI ที่ส่ง field นี้
+- `Budget::expenses()` = `hasMany(Expense::class)` → FK เริ่มต้น `budget_id` ซึ่ง**ไม่มีในตาราง `expenses`** เลย
+  · ผู้เรียก: `Budget::updateSpent()` (`Budget.php:101`), `BudgetController::destroy` (:194), `BudgetController` รายการรายจ่ายของงบ (:260)
+  · ถ้าจะผูกรายจ่ายเข้างบจริง ต้องมี migration เพิ่ม `budget_id` หรือเปลี่ยนไปนับผ่าน `expense_category_id` + ช่วงวันของงบ — ต้องให้เจ้าของเคาะว่าความหมายควรเป็นแบบไหน
+
+### Context สำคัญ
+- 4 ตัวที่ยัง fail ใน `--filter=Expense` เป็นของเก่า **ไม่เกี่ยวกับบั๊กนี้** — ตก 403 ทั้งหมดเพราะเทสต์ยิงด้วยสมาชิกที่ถือ `finance.view`/`finance.manage`
+  แต่กลุ่ม route การเงินถูกล็อกเป็น `settings.manage` ไปแล้ว (ดู `FinanceGroupLockdownTest`) → ต้องแก้เทสต์ `SchoolExpenseSchemaFixTest` (3) + `SchoolFinanceAuditLogTest` (1) ให้ใช้ `settings.manage`
+- เซสชันนี้ไม่มี `vendor/` มาให้ ต้อง `composer install --ignore-platform-req=php` ก่อน (container มี PHP 8.3 แต่ `composer.json` ขอ ^8.4) และ `.env` ไม่มี → copy จาก `.env.example` + `key:generate` (ทั้งสองไฟล์อยู่ใน .gitignore ไม่ติด commit)
+
+### Branch / Git State
+- Branch: `claude/fix-expense-category-fk` (แยกจาก `claude/epic-gates-98a3md` ที่ `390211c`) · ยังไม่มี PR #47 ในเช็คเอาต์นี้ (fix นี้ไม่ชนกับ guard ของ #47 — คนละบรรทัด)
+
+---
+
 ## 🟢 2026-11-04 — ปิดการโอนแต้ม/เงินระหว่างสมาชิก (เสร็จ · commit `ff5801cb` `43012727` `969d6a74` · pushed)
 
 เจ้าของสั่ง: "ปิดการโอนแต้ม-เงินระหว่างสมาชิกอย่างเดียวก่อน เดี๋ยวค่อยวิเคราะห์ระบบอย่างละเอียดอีกที"
