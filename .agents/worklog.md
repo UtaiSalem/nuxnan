@@ -21,6 +21,8 @@
 - **sqlite** `php artisan test --filter=ExpenseAcademyScopingTest`: **30/30** (230 assertions) · `--filter=Expense`: **35/35**
 - **MySQL จริง** `-c phpunit.mysql.xml --filter=Expense`: **35/35** (259 assertions) · filter กว้าง `Expense|Finance|Budget|SchoolManagement|RevenueAuthz|AcademicYear`: **79 passed / 1 skipped**
 - **revert-check (เอาเฉพาะ controller กลับเป็นของ #47):** **7 เคสใหม่ตกทันที** — 4 เคส id ข้ามโรงเรียนได้ 200/201 แทน 422 · parent=ตัวเองได้ 200 · `sort_by`/`sort_order` ผิดได้ **500** (`Order direction must be "asc" or "desc"`) แทน 422 · อีก 3 เคส (ค่าของตัวเอง/เรียงปกติ) เขียวทั้งก่อนและหลัง ตามเจตนาเป็น regression guard
+- **full suite sqlite:** `89 failed · 3 incomplete · 8 skipped · 2077 passed` — **เท่ากับเลขที่ #47 บันทึกไว้เป๊ะ**
+  และไม่มี fail ไหนอยู่ในคลาส Expense/Budget/Finance/SchoolManagement ⇒ ไม่มี fail ใหม่จากงานนี้
 - **pint:** `--test --dirty` ผ่าน · `--test` บน 2 ไฟล์ที่แก้ผ่าน
 
 ### ค้าง (ยกมาจาก #47 — ยังไม่ได้แก้ในสายนี้)
