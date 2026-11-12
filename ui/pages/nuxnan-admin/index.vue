@@ -159,7 +159,7 @@ const quickActions = [
   },
   {
     title: 'สร้างคูปอง',
-    description: 'สร้างโค้ดส่วนลดใหม่',
+    description: 'ออกคูปองแต้ม/เงินแบบใช้ครั้งเดียว',
     icon: 'fluent:ticket-diagonal-24-regular',
     href: '/nuxnan-admin/coupons/create',
     color: 'from-purple-500 to-purple-600'

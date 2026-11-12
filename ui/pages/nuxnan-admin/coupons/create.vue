@@ -1,383 +1,366 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { Icon } from '@iconify/vue'
+import {
+  useAdminCoupons,
+  couponErrorMessage,
+  couponFieldErrors,
+  type AdminCoupon,
+  type CouponType
+} from '~/composables/useAdminCoupons'
 
 definePageMeta({
   layout: 'nuxnan-admin-layout',
   middleware: 'nuxnan-admin'
 })
 
-const config = useRuntimeConfig()
-const apiBase = config.public.apiBase as string
-const router = useRouter()
+const couponsApi = useAdminCoupons()
+const authStore = useAuthStore()
 
-// Form state
 const isSubmitting = ref(false)
 const errors = ref<Record<string, string>>({})
-const successMessage = ref('')
+const generalError = ref('')
+const created = ref<AdminCoupon[]>([])
+const copiedAll = ref(false)
 
 const form = reactive({
-  code: '',
-  name: '',
-  description: '',
-  discount_type: 'percentage',
-  discount_value: 0,
-  min_purchase: 0,
-  max_discount: 0,
-  usage_limit: null as number | null,
-  per_user_limit: 1,
-  start_date: '',
-  end_date: '',
-  is_active: true,
-  applicable_to: 'all'
+  type: 'points' as CouponType,
+  amount: null as number | null,
+  quantity: 1,
+  expires_in_days: null as number | null,
+  description: ''
 })
 
-// Discount types
-const discountTypes = [
-  { value: 'percentage', label: 'เปอร์เซ็นต์ (%)' },
-  { value: 'fixed', label: 'จำนวนเงิน (บาท)' }
+const typeOptions: { value: CouponType; label: string; icon: string; unit: string }[] = [
+  { value: 'points', label: 'คูปองแต้ม', icon: 'fluent:star-24-regular', unit: 'แต้ม' },
+  { value: 'wallet', label: 'คูปองเงิน', icon: 'fluent:wallet-24-regular', unit: 'บาท' }
 ]
 
-// Applicable options
-const applicableOptions = [
-  { value: 'all', label: 'ทุกสินค้า/บริการ' },
-  { value: 'courses', label: 'เฉพาะคอร์สเรียน' },
-  { value: 'products', label: 'เฉพาะสินค้า' }
-]
+const unit = computed(() => (form.type === 'points' ? 'แต้ม' : 'บาท'))
 
-// Generate random code
-const generateCode = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  let code = ''
-  for (let i = 0; i < 8; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length))
+// มูลค่าคูปองหักจากยอดของแอดมินผู้สร้างเอง — โชว์ยอดคงเหลือให้เห็นก่อนกดสร้าง
+const balanceOf = (type: CouponType) =>
+  Number(type === 'points' ? authStore.user?.points ?? 0 : authStore.user?.wallet ?? 0)
+
+const balance = computed(() => balanceOf(form.type))
+const totalCost = computed(() => (Number(form.amount) || 0) * (Number(form.quantity) || 0))
+const remaining = computed(() => balance.value - totalCost.value)
+const insufficient = computed(() => totalCost.value > 0 && remaining.value < 0)
+
+const formatValue = (value: number, type: CouponType = form.type) =>
+  type === 'points'
+    ? value.toLocaleString('th-TH', { maximumFractionDigits: 0 })
+    : value.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+const validate = () => {
+  const next: Record<string, string> = {}
+  const amount = Number(form.amount)
+
+  if (!form.amount || amount < 1) {
+    next.amount = 'มูลค่าต่อใบต้องอย่างน้อย 1'
+  } else if (form.type === 'points' && !Number.isInteger(amount)) {
+    next.amount = 'คูปองแต้มต้องเป็นจำนวนเต็ม'
+  } else if (form.type === 'wallet' && !/^\d+(\.\d{1,2})?$/.test(String(form.amount))) {
+    next.amount = 'ทศนิยมได้ไม่เกิน 2 ตำแหน่ง'
   }
-  form.code = code
+
+  if (!Number.isInteger(Number(form.quantity)) || form.quantity < 1 || form.quantity > 100) {
+    next.quantity = 'จำนวนใบต้องอยู่ระหว่าง 1–100'
+  }
+
+  if (form.expires_in_days !== null && String(form.expires_in_days) !== '') {
+    const days = Number(form.expires_in_days)
+    if (!Number.isInteger(days) || days < 1 || days > 365) {
+      next.expires_in_days = 'อายุคูปองต้องอยู่ระหว่าง 1–365 วัน (เว้นว่าง = ไม่มีวันหมดอายุ)'
+    }
+  }
+
+  if (form.description.length > 500) {
+    next.description = 'คำอธิบายยาวได้ไม่เกิน 500 ตัวอักษร'
+  }
+
+  errors.value = next
+  return Object.keys(next).length === 0
 }
 
-// Validate form
-const validateForm = () => {
-  errors.value = {}
-  
-  if (!form.code) {
-    errors.value.code = 'กรุณากรอกรหัสคูปอง'
-  }
-  
-  if (!form.name) {
-    errors.value.name = 'กรุณากรอกชื่อคูปอง'
-  }
-  
-  if (form.discount_value <= 0) {
-    errors.value.discount_value = 'กรุณากรอกมูลค่าส่วนลด'
-  }
-  
-  if (form.discount_type === 'percentage' && form.discount_value > 100) {
-    errors.value.discount_value = 'เปอร์เซ็นต์ต้องไม่เกิน 100'
-  }
-  
-  if (!form.start_date) {
-    errors.value.start_date = 'กรุณาเลือกวันที่เริ่มต้น'
-  }
-  
-  if (!form.end_date) {
-    errors.value.end_date = 'กรุณาเลือกวันที่สิ้นสุด'
-  }
-  
-  if (form.start_date && form.end_date && new Date(form.start_date) > new Date(form.end_date)) {
-    errors.value.end_date = 'วันที่สิ้นสุดต้องหลังจากวันที่เริ่มต้น'
-  }
-  
-  return Object.keys(errors.value).length === 0
-}
-
-// Submit form
 const handleSubmit = async () => {
-  if (!validateForm()) return
-  
+  generalError.value = ''
+  if (!validate() || insufficient.value || isSubmitting.value) return
+
   isSubmitting.value = true
-  successMessage.value = ''
-  
   try {
-    const token = useCookie('token')
-    const response = await $fetch(`${apiBase}/api/admin/coupons`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token.value}`,
-        'Content-Type': 'application/json'
-      },
-      body: form
+    const hasExpiry = form.expires_in_days !== null && String(form.expires_in_days) !== ''
+    const response = await couponsApi.create({
+      type: form.type,
+      amount: Number(form.amount),
+      quantity: Number(form.quantity),
+      description: form.description.trim() || null,
+      expires_in_days: hasExpiry ? Number(form.expires_in_days) : null
     })
-    
-    if (response.success) {
-      successMessage.value = 'สร้างคูปองสำเร็จ'
-      setTimeout(() => {
-        router.push('/nuxnan-admin/coupons')
-      }, 1500)
-    }
+    created.value = response.data.coupons
+    // ยอดของแอดมินถูกหักแล้ว — โหลดใหม่ให้ตัวเลขคงเหลือตรง
+    authStore.fetchUser().catch(() => {})
   } catch (error: any) {
-    if (error.data?.errors) {
-      errors.value = error.data.errors
-    } else {
-      errors.value.general = error.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง'
-    }
+    errors.value = couponFieldErrors(error)
+    generalError.value = couponErrorMessage(error)
   } finally {
     isSubmitting.value = false
   }
 }
+
+const copyAll = async () => {
+  try {
+    await navigator.clipboard.writeText(created.value.map((c) => c.coupon_code).join('\n'))
+    copiedAll.value = true
+    setTimeout(() => (copiedAll.value = false), 1500)
+  } catch {
+    generalError.value = 'คัดลอกไม่สำเร็จ กรุณาคัดลอกรหัสจากรายการด้านล่าง'
+  }
+}
+
+const resetForm = () => {
+  created.value = []
+  errors.value = {}
+  generalError.value = ''
+  form.amount = null
+  form.quantity = 1
+  form.expires_in_days = null
+  form.description = ''
+}
+
+const inputClass =
+  'min-h-[44px] w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-slate-800 placeholder-slate-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 dark:bg-slate-700 dark:text-white'
 </script>
 
 <template>
-  <div class="space-y-6 max-w-2xl mx-auto">
+  <div class="mx-auto max-w-2xl space-y-4 sm:space-y-6">
     <!-- Page Header -->
-    <div class="flex items-center gap-4">
+    <div class="flex items-start gap-3 sm:items-center sm:gap-4">
       <NuxtLink
         to="/nuxnan-admin/coupons"
-        class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+        aria-label="กลับไปหน้ารายการคูปอง"
+        class="inline-flex min-h-[44px] min-w-[44px] flex-shrink-0 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
       >
-        <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />
+        <Icon icon="fluent:arrow-left-24-regular" class="h-5 w-5" />
       </NuxtLink>
-      <div>
-        <h1 class="text-2xl font-bold text-slate-800 dark:text-white">สร้างคูปองใหม่</h1>
-        <p class="text-slate-500 dark:text-slate-400 mt-1">กรอกข้อมูลเพื่อสร้างคูปองส่วนลด</p>
+      <div class="min-w-0 flex-1">
+        <h1 class="text-xl font-bold text-slate-800 dark:text-white sm:text-2xl">สร้างคูปอง</h1>
+        <p class="mt-1 break-words text-sm text-slate-500 dark:text-slate-400 sm:text-base">
+          มูลค่าคูปองหักจากแต้ม/เงินในบัญชีของคุณ ผู้รับแลกได้ครั้งเดียว
+        </p>
       </div>
     </div>
 
-    <!-- Success Message -->
-    <div v-if="successMessage" class="p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-xl">
-      <div class="flex items-center gap-2 text-green-700 dark:text-green-400">
-        <Icon icon="fluent:checkmark-circle-24-filled" class="w-5 h-5" />
-        <span>{{ successMessage }}</span>
+    <!-- Result -->
+    <div
+      v-if="created.length"
+      class="space-y-4 rounded-2xl border border-green-200 bg-white p-4 shadow-hopeui dark:border-green-800 dark:bg-slate-800 sm:p-6"
+    >
+      <div class="flex items-start gap-3 text-green-700 dark:text-green-400">
+        <Icon icon="fluent:checkmark-circle-24-filled" class="h-6 w-6 flex-shrink-0" />
+        <p class="min-w-0 flex-1 break-words font-medium">
+          สร้างคูปอง {{ created.length }} ใบแล้ว ใบละ {{ formatValue(Number(created[0].amount), created[0].coupon_type) }}
+          {{ created[0].coupon_type === 'points' ? 'แต้ม' : 'บาท' }}
+        </p>
       </div>
-    </div>
 
-    <!-- Error Message -->
-    <div v-if="errors.general" class="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-xl">
-      <div class="flex items-center gap-2 text-red-700 dark:text-red-400">
-        <Icon icon="fluent:error-circle-24-filled" class="w-5 h-5" />
-        <span>{{ errors.general }}</span>
+      <ul class="max-h-72 space-y-2 overflow-y-auto">
+        <li
+          v-for="coupon in created"
+          :key="coupon.id"
+          class="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-700/50"
+        >
+          <code class="min-w-0 flex-1 break-all font-mono text-lg font-bold tracking-widest text-hopeui-primary-600 dark:text-hopeui-primary-400">
+            {{ coupon.coupon_code }}
+          </code>
+          <span class="flex-shrink-0 whitespace-nowrap text-xs text-slate-500">
+            {{ coupon.expires_at ? `หมดอายุ ${new Date(coupon.expires_at).toLocaleDateString('th-TH')}` : 'ไม่มีวันหมดอายุ' }}
+          </span>
+        </li>
+      </ul>
+
+      <div class="flex flex-col gap-2 sm:flex-row">
+        <button
+          type="button"
+          class="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-hopeui-primary-500 px-4 font-medium text-white hover:bg-hopeui-primary-600"
+          @click="copyAll"
+        >
+          <Icon :icon="copiedAll ? 'fluent:checkmark-24-regular' : 'fluent:copy-24-regular'" class="h-5 w-5" />
+          {{ copiedAll ? 'คัดลอกแล้ว' : 'คัดลอกรหัสทั้งหมด' }}
+        </button>
+        <button
+          type="button"
+          class="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 font-medium text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+          @click="resetForm"
+        >
+          <Icon icon="fluent:add-24-regular" class="h-5 w-5" />
+          สร้างเพิ่ม
+        </button>
+        <NuxtLink
+          to="/nuxnan-admin/coupons"
+          class="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 font-medium text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+        >
+          <Icon icon="fluent:list-24-regular" class="h-5 w-5" />
+          ไปหน้ารายการ
+        </NuxtLink>
       </div>
     </div>
 
     <!-- Form -->
-    <form @submit.prevent="handleSubmit" class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 shadow-hopeui border border-slate-100 dark:border-slate-700 space-y-6">
-      <!-- Code -->
-      <div>
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-          รหัสคูปอง <span class="text-red-500">*</span>
-        </label>
-        <div class="flex gap-2">
-          <input
-            v-model="form.code"
-            type="text"
-            class="min-w-0 flex-1 px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent uppercase"
-            :class="{ 'border-red-500': errors.code }"
-            placeholder="SAVE20"
-          />
-          <button
-            type="button"
-            @click="generateCode"
-            class="min-h-[44px] sm:min-h-0 min-w-[44px] sm:min-w-0 inline-flex items-center justify-center flex-shrink-0 whitespace-nowrap px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-300 transition-colors"
-          >
-            <Icon icon="fluent:arrow-sync-24-regular" class="w-5 h-5" />
-          </button>
-        </div>
-        <p v-if="errors.code" class="mt-1 text-sm text-red-500">{{ errors.code }}</p>
+    <form
+      v-else
+      novalidate
+      class="space-y-5 rounded-2xl border border-slate-100 bg-white p-4 shadow-hopeui dark:border-slate-700 dark:bg-slate-800 sm:space-y-6 sm:p-6"
+      @submit.prevent="handleSubmit"
+    >
+      <div
+        v-if="generalError"
+        class="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-red-700 dark:border-red-700 dark:bg-red-900/30 dark:text-red-400"
+      >
+        <Icon icon="fluent:error-circle-24-filled" class="h-5 w-5 flex-shrink-0" />
+        <span class="min-w-0 flex-1 break-words">{{ generalError }}</span>
       </div>
 
-      <!-- Name -->
+      <!-- Type -->
+      <fieldset>
+        <legend class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">ประเภทคูปอง</legend>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label
+            v-for="option in typeOptions"
+            :key="option.value"
+            class="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl border-2 p-3 transition-colors"
+            :class="form.type === option.value
+              ? 'border-hopeui-primary-500 bg-hopeui-primary-50 dark:bg-hopeui-primary-900/20'
+              : 'border-slate-200 hover:border-slate-300 dark:border-slate-600'"
+          >
+            <input v-model="form.type" type="radio" name="coupon-type" :value="option.value" class="sr-only" />
+            <Icon :icon="option.icon" class="h-6 w-6 flex-shrink-0 text-hopeui-primary-600" />
+            <span class="min-w-0 flex-1">
+              <span class="block font-medium text-slate-800 dark:text-white">{{ option.label }}</span>
+              <span class="block break-words text-xs text-slate-500">
+                ยอดของคุณ {{ formatValue(balanceOf(option.value), option.value) }} {{ option.unit }}
+              </span>
+            </span>
+          </label>
+        </div>
+      </fieldset>
+
+      <!-- Amount & Quantity -->
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label for="coupon-amount" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+            มูลค่าต่อใบ ({{ unit }}) <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="coupon-amount"
+            v-model.number="form.amount"
+            type="number"
+            inputmode="decimal"
+            min="1"
+            :step="form.type === 'points' ? 1 : 0.01"
+            :class="[inputClass, errors.amount ? 'border-red-500' : 'border-slate-200 dark:border-slate-600']"
+            placeholder="100"
+          />
+          <p v-if="errors.amount" class="mt-1 text-sm text-red-500">{{ errors.amount }}</p>
+        </div>
+        <div>
+          <label for="coupon-quantity" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+            จำนวนใบ
+          </label>
+          <input
+            id="coupon-quantity"
+            v-model.number="form.quantity"
+            type="number"
+            inputmode="numeric"
+            min="1"
+            max="100"
+            step="1"
+            :class="[inputClass, errors.quantity ? 'border-red-500' : 'border-slate-200 dark:border-slate-600']"
+          />
+          <p v-if="errors.quantity" class="mt-1 text-sm text-red-500">{{ errors.quantity }}</p>
+          <p v-else class="mt-1 text-xs text-slate-500">สูงสุด 100 ใบต่อครั้ง · แต่ละใบได้รหัสไม่ซ้ำกัน</p>
+        </div>
+      </div>
+
+      <!-- Expiry -->
       <div>
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-          ชื่อคูปอง <span class="text-red-500">*</span>
+        <label for="coupon-expiry" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+          อายุคูปอง (วัน)
         </label>
         <input
-          v-model="form.name"
-          type="text"
-          class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
-          :class="{ 'border-red-500': errors.name }"
-          placeholder="ส่วนลด 20% สำหรับสมาชิกใหม่"
+          id="coupon-expiry"
+          v-model.number="form.expires_in_days"
+          type="number"
+          inputmode="numeric"
+          min="1"
+          max="365"
+          step="1"
+          :class="[inputClass, errors.expires_in_days ? 'border-red-500' : 'border-slate-200 dark:border-slate-600']"
+          placeholder="เว้นว่าง = ไม่มีวันหมดอายุ"
         />
-        <p v-if="errors.name" class="mt-1 text-sm text-red-500">{{ errors.name }}</p>
+        <p v-if="errors.expires_in_days" class="mt-1 text-sm text-red-500">{{ errors.expires_in_days }}</p>
+        <p v-else class="mt-1 text-xs text-slate-500">1–365 วันนับจากตอนสร้าง · คูปองที่หมดอายุแล้วยกเลิกเพื่อรับยอดคืนได้</p>
       </div>
 
       <!-- Description -->
       <div>
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+        <label for="coupon-description" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
           คำอธิบาย
         </label>
         <textarea
+          id="coupon-description"
           v-model="form.description"
           rows="3"
-          class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent resize-none"
-          placeholder="รายละเอียดเพิ่มเติมของคูปอง"
+          maxlength="500"
+          :class="[inputClass, 'resize-none', errors.description ? 'border-red-500' : 'border-slate-200 dark:border-slate-600']"
+          placeholder="เช่น รางวัลผู้ชนะกิจกรรมเดือนพฤศจิกายน"
         ></textarea>
+        <p v-if="errors.description" class="mt-1 text-sm text-red-500">{{ errors.description }}</p>
       </div>
 
-      <!-- Discount Type & Value -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            ประเภทส่วนลด
-          </label>
-          <select
-            v-model="form.discount_type"
-            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
+      <!-- Cost summary -->
+      <div
+        class="space-y-2 rounded-xl p-3 text-sm sm:p-4"
+        :class="insufficient
+          ? 'border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20'
+          : 'bg-slate-50 dark:bg-slate-700/50'"
+      >
+        <div class="flex items-start gap-3">
+          <span class="min-w-0 flex-1 break-words text-slate-600 dark:text-slate-300">หักจากบัญชีของคุณ</span>
+          <span class="flex-shrink-0 whitespace-nowrap font-bold text-slate-800 dark:text-white">
+            {{ formatValue(totalCost) }} {{ unit }}
+          </span>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="min-w-0 flex-1 break-words text-slate-600 dark:text-slate-300">คงเหลือหลังสร้าง</span>
+          <span
+            class="flex-shrink-0 whitespace-nowrap font-bold"
+            :class="insufficient ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-white'"
           >
-            <option v-for="type in discountTypes" :key="type.value" :value="type.value">
-              {{ type.label }}
-            </option>
-          </select>
+            {{ formatValue(remaining) }} {{ unit }}
+          </span>
         </div>
-
-        <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            มูลค่าส่วนลด <span class="text-red-500">*</span>
-          </label>
-          <div class="relative">
-            <input
-              v-model.number="form.discount_value"
-              type="number"
-              min="0"
-              class="w-full px-4 py-2.5 pr-10 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
-              :class="{ 'border-red-500': errors.discount_value }"
-            />
-            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
-              {{ form.discount_type === 'percentage' ? '%' : '฿' }}
-            </span>
-          </div>
-          <p v-if="errors.discount_value" class="mt-1 text-sm text-red-500">{{ errors.discount_value }}</p>
-        </div>
-      </div>
-
-      <!-- Min Purchase & Max Discount -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            ยอดสั่งซื้อขั้นต่ำ (บาท)
-          </label>
-          <input
-            v-model.number="form.min_purchase"
-            type="number"
-            min="0"
-            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
-            placeholder="0"
-          />
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            ส่วนลดสูงสุด (บาท)
-          </label>
-          <input
-            v-model.number="form.max_discount"
-            type="number"
-            min="0"
-            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
-            placeholder="0 = ไม่จำกัด"
-          />
-        </div>
-      </div>
-
-      <!-- Usage Limits -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            จำนวนใช้งานทั้งหมด
-          </label>
-          <input
-            v-model.number="form.usage_limit"
-            type="number"
-            min="0"
-            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
-            placeholder="ไม่จำกัด"
-          />
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            จำกัดต่อผู้ใช้
-          </label>
-          <input
-            v-model.number="form.per_user_limit"
-            type="number"
-            min="1"
-            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
-          />
-        </div>
-      </div>
-
-      <!-- Dates -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            วันที่เริ่มต้น <span class="text-red-500">*</span>
-          </label>
-          <input
-            v-model="form.start_date"
-            type="datetime-local"
-            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
-            :class="{ 'border-red-500': errors.start_date }"
-          />
-          <p v-if="errors.start_date" class="mt-1 text-sm text-red-500">{{ errors.start_date }}</p>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            วันที่สิ้นสุด <span class="text-red-500">*</span>
-          </label>
-          <input
-            v-model="form.end_date"
-            type="datetime-local"
-            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
-            :class="{ 'border-red-500': errors.end_date }"
-          />
-          <p v-if="errors.end_date" class="mt-1 text-sm text-red-500">{{ errors.end_date }}</p>
-        </div>
-      </div>
-
-      <!-- Applicable To -->
-      <div>
-        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-          ใช้ได้กับ
-        </label>
-        <select
-          v-model="form.applicable_to"
-          class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
-        >
-          <option v-for="option in applicableOptions" :key="option.value" :value="option.value">
-            {{ option.label }}
-          </option>
-        </select>
-      </div>
-
-      <!-- Active Status -->
-      <div class="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
-        <label class="flex items-center gap-3 cursor-pointer">
-          <input
-            v-model="form.is_active"
-            type="checkbox"
-            class="w-5 h-5 rounded border-slate-300 text-hopeui-primary-600 focus:ring-hopeui-primary-500"
-          />
-          <span class="text-slate-700 dark:text-slate-300">เปิดใช้งานทันที</span>
-        </label>
+        <p v-if="insufficient" class="break-words text-red-600 dark:text-red-400">
+          ยอด{{ form.type === 'points' ? 'แต้ม' : 'เงิน' }}ของคุณไม่พอ ลดมูลค่าหรือจำนวนใบลง
+        </p>
       </div>
 
       <!-- Actions -->
-      <div class="flex flex-col sm:flex-row gap-3 pt-4">
+      <div class="flex flex-col gap-3 pt-2 sm:flex-row">
         <button
           type="submit"
-          :disabled="isSubmitting"
-          class="flex-1 inline-flex justify-center items-center gap-2 px-6 py-3 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 disabled:bg-hopeui-primary-300 rounded-xl text-white font-medium transition-colors"
+          :disabled="isSubmitting || insufficient"
+          class="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-hopeui-primary-500 px-6 py-3 font-medium text-white transition-colors hover:bg-hopeui-primary-600 disabled:cursor-not-allowed disabled:bg-hopeui-primary-300"
         >
-          <Icon v-if="isSubmitting" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
-          <Icon v-else icon="fluent:save-24-regular" class="w-5 h-5" />
-          {{ isSubmitting ? 'กำลังบันทึก...' : 'สร้างคูปอง' }}
+          <Icon v-if="isSubmitting" icon="fluent:spinner-ios-20-regular" class="h-5 w-5 animate-spin" />
+          <Icon v-else icon="fluent:ticket-diagonal-24-regular" class="h-5 w-5" />
+          {{ isSubmitting ? 'กำลังสร้าง...' : 'สร้างคูปอง' }}
         </button>
-        
         <NuxtLink
           to="/nuxnan-admin/coupons"
-          class="flex-1 inline-flex justify-center items-center gap-2 px-4 sm:px-6 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-300 font-medium transition-colors"
+          class="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-3 font-medium text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600 sm:px-6"
         >
-          <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
+          <Icon icon="fluent:dismiss-24-regular" class="h-5 w-5" />
           ยกเลิก
         </NuxtLink>
       </div>
