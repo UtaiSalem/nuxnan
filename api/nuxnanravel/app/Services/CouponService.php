@@ -171,7 +171,8 @@ class CouponService
     {
         return DB::transaction(function () use ($user, $couponCode, $ipAddress, $userAgent) {
             // First, find the coupon by code (any status)
-            $coupon = Coupon::where('coupon_code', $couponCode)->first();
+            // lockForUpdate: กันแลกซ้ำพร้อมกัน 2 คำขอ และกันแลกชนกับแอดมินยกเลิก+คืนยอด (cancelCouponByAdmin)
+            $coupon = Coupon::where('coupon_code', $couponCode)->lockForUpdate()->first();
 
             // Check if coupon exists
             if (! $coupon) {
@@ -336,26 +337,7 @@ class CouponService
             // Cancel coupon
             $coupon->cancel();
 
-            // Refund based on coupon type
-            if ($coupon->coupon_type === 'points') {
-                $this->pointsService->refund(
-                    $user,
-                    $coupon->amount,
-                    'coupon_cancellation',
-                    $coupon->id,
-                    "คืนแต้มจากการยกเลิกคูปอง {$coupon->coupon_code}",
-                    ['coupon_code' => $coupon->coupon_code]
-                );
-            } else {
-                $this->walletService->deposit(
-                    $user,
-                    $coupon->amount,
-                    'coupon_cancellation',
-                    $coupon->coupon_code,
-                    "คืนเงินจากการยกเลิกคูปอง {$coupon->coupon_code}",
-                    ['coupon_code' => $coupon->coupon_code]
-                );
-            }
+            $this->refundToCreator($coupon, $user);
 
             Log::info('Coupon cancelled', [
                 'coupon_id' => $coupon->id,
@@ -369,6 +351,80 @@ class CouponService
                 'message' => 'ยกเลิกคูปองสำเร็จ',
             ];
         });
+    }
+
+    /**
+     * ยกเลิกคูปองจากหน้าแอดมิน แล้วคืนยอดให้ "ผู้สร้างคูปอง" (coupons.user_id)
+     * ไม่ใช่แอดมินที่กดยกเลิก — มูลค่าของคูปองถูกหักจากผู้สร้างตอนสร้าง จึงต้องคืนที่เดิม
+     *
+     * ยกเลิกได้เฉพาะคูปองที่ยังไม่ถูกแลก (active หรือ expired) · คูปองที่แลกแล้ว/ยกเลิกแล้วเก็บไว้เป็นประวัติ
+     */
+    public function cancelCouponByAdmin(Coupon $coupon, User $admin): array
+    {
+        return DB::transaction(function () use ($coupon, $admin) {
+            // ล็อกแถวก่อนตรวจสถานะ — redeemCoupon ล็อกแถวเดียวกัน จึงไม่มีทางทั้งแลกและคืนยอดซ้อนกัน
+            $coupon = Coupon::whereKey($coupon->id)->lockForUpdate()->firstOrFail();
+
+            if (! in_array($coupon->status, ['active', 'expired'], true)) {
+                return [
+                    'success' => false,
+                    'message' => $coupon->status === 'redeemed'
+                        ? 'คูปองนี้ถูกแลกไปแล้ว ยกเลิกไม่ได้'
+                        : 'คูปองนี้ถูกยกเลิกไปแล้ว',
+                    'error_code' => 'COUPON_NOT_CANCELLABLE',
+                ];
+            }
+
+            $creator = User::whereKey($coupon->user_id)->lockForUpdate()->firstOrFail();
+
+            $coupon->cancel();
+
+            $this->refundToCreator($coupon, $creator, ['cancelled_by_admin_id' => $admin->id]);
+
+            Log::info('Coupon cancelled by admin', [
+                'coupon_id' => $coupon->id,
+                'creator_id' => $creator->id,
+                'admin_id' => $admin->id,
+                'amount' => $coupon->amount,
+                'type' => $coupon->coupon_type,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => $coupon->coupon_type === 'points'
+                    ? 'ยกเลิกคูปองแล้ว คืนแต้มให้ผู้สร้างคูปองแล้ว'
+                    : 'ยกเลิกคูปองแล้ว คืนเงินให้ผู้สร้างคูปองแล้ว',
+                'coupon' => $coupon,
+            ];
+        });
+    }
+
+    /**
+     * คืนมูลค่าคูปองให้ผู้สร้าง พร้อมเขียน ledger (points: refund · wallet: deposit)
+     */
+    protected function refundToCreator(Coupon $coupon, User $creator, array $extraMetadata = []): void
+    {
+        $metadata = array_merge(['coupon_code' => $coupon->coupon_code], $extraMetadata);
+
+        if ($coupon->coupon_type === 'points') {
+            $this->pointsService->refund(
+                $creator,
+                $coupon->amount,
+                'coupon_cancellation',
+                $coupon->id,
+                "คืนแต้มจากการยกเลิกคูปอง {$coupon->coupon_code}",
+                $metadata
+            );
+        } else {
+            $this->walletService->deposit(
+                $creator,
+                $coupon->amount,
+                'coupon_cancellation',
+                $coupon->coupon_code,
+                "คืนเงินจากการยกเลิกคูปอง {$coupon->coupon_code}",
+                $metadata
+            );
+        }
     }
 
     /**

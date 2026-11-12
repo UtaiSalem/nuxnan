@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\AdminCouponController;
 use App\Http\Controllers\Api\Admin\AdminFraudReportController;
 use App\Http\Controllers\Api\Admin\GamificationRuleLogController;
 use App\Http\Controllers\Api\Admin\PointRuleController;
@@ -13,12 +14,10 @@ use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Requests\Admin\StoreAcademyRequest;
 use App\Http\Requests\Admin\StoreCourseRequest;
 use App\Http\Requests\Admin\UpdateAcademyRequest;
-use App\Http\Requests\Admin\UpdateCouponRequest;
 use App\Http\Requests\Admin\UpdateCourseRequest;
 use App\Models\Academy;
 use App\Models\AccountSuspensionAudit;
 use App\Models\ActivityLog;
-use App\Models\Coupon;
 use App\Models\Course;
 use App\Models\PointsTransaction;
 use App\Models\User;
@@ -589,58 +588,21 @@ Route::middleware(['auth:api', 'admin'])->group(function () {
     // =====================================================
     // Coupons Management
     // =====================================================
-    Route::prefix('coupons')->group(function () {
-        Route::get('/', function (Request $request) {
-            $query = Coupon::with(['creator', 'usedBy']);
-
-            if ($request->has('status')) {
-                $query->where('status', $request->status);
-            }
-
-            $coupons = $query->orderBy('created_at', 'desc')
-                ->paginate($request->get('per_page', 10));
-
-            return response()->json(['success' => true, 'data' => $coupons]);
-        })->name('admin.coupons.index');
-
-        Route::post('/', function (Request $request) {
-            $validated = $request->validate([
-                'code' => 'required|string|unique:coupons,code',
-                'type' => 'required|in:points,wallet',
-                'amount' => 'required|numeric|min:0',
-                'description' => 'nullable|string',
-                'expires_at' => 'nullable|date',
-            ]);
-
-            $coupon = Coupon::create([
-                ...$validated,
-                'creator_id' => auth()->id(),
-                'status' => 'unused',
-            ]);
-
-            return response()->json(['success' => true, 'data' => $coupon], 201);
-        })->middleware('permission:coupon-create')->name('admin.coupons.store');
-
-        Route::get('/{id}', function ($id) {
-            $coupon = Coupon::with(['creator', 'usedBy'])->findOrFail($id);
-
-            return response()->json(['success' => true, 'data' => $coupon]);
-        })->name('admin.coupons.show');
-
-        Route::put('/{id}', function (UpdateCouponRequest $request, $id) {
-            $coupon = Coupon::findOrFail($id);
-            // ใช้ validated() แทน all() เพื่อป้องกัน mass assignment
-            $coupon->update($request->validated());
-
-            return response()->json(['success' => true, 'data' => $coupon]);
-        })->middleware('permission:coupon-edit')->name('admin.coupons.update');
-
-        Route::delete('/{id}', function ($id) {
-            $coupon = Coupon::findOrFail($id);
-            $coupon->delete();
-
-            return response()->json(['success' => true, 'message' => 'ลบคูปองสำเร็จ']);
-        })->middleware('permission:coupon-delete')->name('admin.coupons.destroy');
+    // คูปอง = บัตรกำนัลแต้ม/เงินใช้ครั้งเดียว · มูลค่าหักจากยอดของแอดมินผู้สร้าง (ไม่สร้างมูลค่าใหม่)
+    // plearnd_admin: คูปองที่ออกจากหน้านี้ต้องเป็นของแอดมินแพลตฟอร์ม (VENDOR/ADMIN role เฉย ๆ มี coupon-create แต่ใช้ไม่ได้)
+    // รายการ/รายละเอียดแสดงรหัสคูปองเต็ม (ใครเห็นรหัสก็แลกได้) จึงติดด่านเดียวกัน
+    Route::prefix('coupons')->middleware('plearnd_admin')->group(function () {
+        Route::get('/', [AdminCouponController::class, 'index'])
+            ->middleware('permission:coupon-list')->name('admin.coupons.index');
+        Route::post('/', [AdminCouponController::class, 'store'])
+            ->middleware('permission:coupon-create')->name('admin.coupons.store');
+        Route::get('/{id}', [AdminCouponController::class, 'show'])
+            ->whereNumber('id')->middleware('permission:coupon-list')->name('admin.coupons.show');
+        Route::put('/{id}', [AdminCouponController::class, 'update'])
+            ->whereNumber('id')->middleware('permission:coupon-edit')->name('admin.coupons.update');
+        // ลบ = ยกเลิก + คืนยอดให้ผู้สร้าง (คูปองที่แลกแล้วยกเลิกไม่ได้)
+        Route::delete('/{id}', [AdminCouponController::class, 'destroy'])
+            ->whereNumber('id')->middleware('permission:coupon-delete')->name('admin.coupons.destroy');
     });
 
     // =====================================================
