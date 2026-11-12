@@ -1,5 +1,35 @@
 # Work Log — nuxnan project
 
+## 🟢 2026-11-12 — รายจ่าย (ต่อจาก #47): ผูก `academic_year_id`/`parent_id` เข้าโรงเรียนใน URL + whitelist `sort_by` (เสร็จ · branch `claude/expense-fk-scoping`)
+
+**สแต็กบน PR #47** (`claude/friendly-dijkstra-i0kera`) — เก็บ 3 ข้อค้างในหัวข้อถัดไปของ worklog นี้ (ยกเว้นบั๊ก `destroyCategory` 500 ที่ยังเป็นของเจ้าของ/PR อื่น)
+**ปัญหา:** `ExpenseController` ตรวจเฉพาะว่า id "มีอยู่จริง" ไม่ได้ตรวจว่าเป็นของโรงเรียนใน URL
+→ ผูกรายจ่ายเข้า **ปีการศึกษาของโรงเรียนอื่น** ได้ · ซ้อนหมวดรายจ่ายใต้ **หมวดแม่ของโรงเรียนอื่น** ได้ (แล้วไปโผล่เป็นลูกใน `categories()` ของโรงเรียนนั้น)
+
+### สิ่งที่เปลี่ยน (`ExpenseController.php` ไฟล์เดียว · commit `e4fef1b`)
+- `store`/`update`: `academic_year_id` → `Rule::exists('academic_years', 'id')->where('academy_id', $academy->id)` (แนวเดียวกับ `BudgetController` PR #46)
+- `storeCategory`/`updateCategory`: `parent_id` → `Rule::exists('expense_categories', 'id')->where('academy_id', $academy->id)`
+  · `updateCategory` เพิ่ม `Rule::notIn([$category->id])` — ห้ามตั้งตัวเองเป็นหมวดแม่
+- `index`: `sort_by` ต้องอยู่ใน const `SORTABLE_COLUMNS` (created_at/updated_at/expense_date/amount/title/status/vendor/reference_number) · `sort_order` ต้องเป็น `asc|desc` → ค่าผิดได้ **422 ไม่ใช่ 500**
+  · เช็กแล้วว่า **ฝั่ง FE ไม่มีที่ไหนส่ง `sort_by` มาที่เส้นนี้** (`grep sort_by ui/` เจอแค่ members/classrooms) ⇒ whitelist ไม่ทำของเดิมพัง
+- **ไม่แตะ** route middleware · ไม่แตะ `ensureBelongsToAcademy()`/`expense_category_id` ของ #47
+
+### เทสต์ (เพิ่ม 9 เคสใน `tests/Feature/Academy/ExpenseAcademyScopingTest.php` ของ #47 → รวม 30)
+ปีการศึกษาโรงเรียนอื่นใน store/update = 422 + ไม่มีแถวใหม่/ค่าไม่เปลี่ยน · หมวดแม่โรงเรียนอื่นใน storeCategory/updateCategory = 422 + หมวดนั้นไม่มีลูกเพิ่ม · ตั้งตัวเองเป็นแม่ = 422 · ค่าของโรงเรียนตัวเองยังใช้ได้ (ปีการศึกษา 2 เคส + หมวดแม่ 2 เคส) · `sort_by`/`sort_order` ผิด = 422 · เรียงด้วยคอลัมน์ที่อนุญาตยังถูกต้อง
+
+### ตรวจแล้ว (เซสชัน cloud · PHP 8.3 + composer `--ignore-platform-req=php` · docker `mysql:8.4` → `migrate` 506 ตัวผ่าน → `test:db:rebuild` 376 ตาราง)
+- **sqlite** `php artisan test --filter=ExpenseAcademyScopingTest`: **30/30** (230 assertions) · `--filter=Expense`: **35/35**
+- **MySQL จริง** `-c phpunit.mysql.xml --filter=Expense`: **35/35** (259 assertions) · filter กว้าง `Expense|Finance|Budget|SchoolManagement|RevenueAuthz|AcademicYear`: **79 passed / 1 skipped**
+- **revert-check (เอาเฉพาะ controller กลับเป็นของ #47):** **7 เคสใหม่ตกทันที** — 4 เคส id ข้ามโรงเรียนได้ 200/201 แทน 422 · parent=ตัวเองได้ 200 · `sort_by`/`sort_order` ผิดได้ **500** (`Order direction must be "asc" or "desc"`) แทน 422 · อีก 3 เคส (ค่าของตัวเอง/เรียงปกติ) เขียวทั้งก่อนและหลัง ตามเจตนาเป็น regression guard
+- **pint:** `--test --dirty` ผ่าน · `--test` บน 2 ไฟล์ที่แก้ผ่าน
+
+### ค้าง (ยกมาจาก #47 — ยังไม่ได้แก้ในสายนี้)
+- [ ] 🔴 `ExpenseCategory::expenses()` ใช้ FK `category_id` แต่คอลัมน์จริงคือ `expense_category_id` → `destroyCategory` 500 ทุกครั้ง (แก้บรรทัดเดียวใน model · ไม่ได้แตะเพราะคนละเรื่องกับ validation)
+- [ ] `updateCategory` ยังกันแค่ "ตัวเองเป็นแม่" — วงจร 2 ขั้น (A→B แล้ว B→A) ยังทำได้ ⇒ `getFullNameAttribute()` วนไม่จบ · ถ้าจะปิดต้องไล่สาย parent ขึ้นไปทั้งเส้น
+- **เจ้าของรันบนเครื่อง:** `php artisan test:db:rebuild` แล้ว `php artisan test -c phpunit.mysql.xml --filter=Expense` (ยืนยันกับสคีมา dev จริง — ในคลาวด์สคีมามาจาก `migrate` ไม่ใช่ dump ของ dev)
+
+---
+
 ## 🟢 2026-11-12 — รายจ่ายโรงเรียน (expenses): ปิด IDOR ข้ามโรงเรียน + แก้เทสต์การเงิน 5 ตัวที่ตก 403 (เสร็จ · branch `claude/friendly-dijkstra-i0kera`)
 
 **ปัญหา:** `ExpenseController` ไม่ตรวจว่า `{expense}`/`{category}` เป็นของ `{academy}` ใน URL (กลุ่ม `{academy}/expenses` ไม่มี `scopeBindings()`)
@@ -21,8 +51,8 @@
 
 ### ค้าง / เจอระหว่างทาง (ไม่ได้แก้ — นอกขอบเขต)
 - [ ] 🔴 **ลบหมวดรายจ่ายพังทุกครั้ง (500):** `ExpenseCategory::expenses()` ใช้ FK `category_id` แต่คอลัมน์จริงคือ `expense_category_id` → `destroyCategory` ตอบ 500 แม้เป็นหมวดของโรงเรียนตัวเอง (revert-check เห็น 500 ในเคส "destroy category") · แก้บรรทัดเดียวใน model
-- [ ] ยังไม่ผูกกับโรงเรียน (คลาสเดียวกัน): `academic_year_id` ใน store/update รายจ่าย · `parent_id` ใน storeCategory/updateCategory (ผูกหมวดเข้ากับหมวดแม่ของโรงเรียนอื่นได้)
-- [ ] (เล็ก) index ส่ง `sort_by`/`sort_order` จาก request เข้า `orderBy` ตรง ๆ ไม่มี whitelist → ชื่อคอลัมน์ผิด/ทิศผิดได้ 500 แทน 422
+- [x] ยังไม่ผูกกับโรงเรียน (คลาสเดียวกัน): `academic_year_id` ใน store/update รายจ่าย · `parent_id` ใน storeCategory/updateCategory (ผูกหมวดเข้ากับหมวดแม่ของโรงเรียนอื่นได้) → **แก้แล้วใน branch `claude/expense-fk-scoping`** (หัวข้อบนสุด)
+- [x] (เล็ก) index ส่ง `sort_by`/`sort_order` จาก request เข้า `orderBy` ตรง ๆ ไม่มี whitelist → ชื่อคอลัมน์ผิด/ทิศผิดได้ 500 แทน 422 → **แก้แล้วใน branch `claude/expense-fk-scoping`**
 - **เจ้าของรันบนเครื่อง:** `php artisan test:db:rebuild` แล้ว `php artisan test -c phpunit.mysql.xml --filter="Expense"` (ยืนยันกับสคีมา dev จริง)
 
 ---
