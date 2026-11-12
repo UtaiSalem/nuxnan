@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\AccountEconomyRestrictedException;
 use App\Models\Coupon;
 use App\Models\CouponRedemption;
 use App\Models\User;
@@ -24,6 +25,23 @@ class CouponService
     }
 
     /**
+     * Member-issued coupons work as an anonymous peer-to-peer transfer (A pays
+     * to mint a code, hands it to B, B redeems it), so they follow the same
+     * platform switch as direct transfers. Platform admins may still issue.
+     */
+    public function canIssueCoupons(User $user): bool
+    {
+        return config('economy.p2p_transfers_enabled') || $user->isPlearndAdmin();
+    }
+
+    protected function assertCanIssueCoupons(User $user): void
+    {
+        if (! $this->canIssueCoupons($user)) {
+            throw AccountEconomyRestrictedException::memberCouponsDisabled();
+        }
+    }
+
+    /**
      * Generate unique coupon code (numeric only for user convenience).
      */
     public function generateCouponCode(): string
@@ -41,6 +59,8 @@ class CouponService
      */
     public function createPointsCoupon(User $user, float $points, ?string $description = null, ?int $expiresInDays = null, int $quantity = 1): array
     {
+        $this->assertCanIssueCoupons($user);
+
         return DB::transaction(function () use ($user, $points, $description, $expiresInDays, $quantity) {
             $totalPoints = $points * $quantity;
 
@@ -106,6 +126,8 @@ class CouponService
      */
     public function createWalletCoupon(User $user, float $amount, ?string $description = null, ?int $expiresInDays = null, int $quantity = 1): array
     {
+        $this->assertCanIssueCoupons($user);
+
         return DB::transaction(function () use ($user, $amount, $description, $expiresInDays, $quantity) {
             $totalAmount = $amount * $quantity;
 
@@ -217,6 +239,16 @@ class CouponService
                     'success' => false,
                     'message' => 'คูปองนี้ไม่สามารถใช้งานได้',
                     'error_code' => 'COUPON_INACTIVE',
+                ];
+            }
+
+            // Member-issued coupons are closed together with P2P transfers;
+            // only coupons a platform admin issued can still be redeemed.
+            if (! config('economy.p2p_transfers_enabled') && ! $coupon->isIssuedByPlatformAdmin()) {
+                return [
+                    'success' => false,
+                    'message' => 'คูปองนี้สร้างโดยสมาชิก ซึ่งระบบปิดใช้งานแล้ว (ผู้สร้างยกเลิกคูปองเพื่อรับแต้ม/เงินคืนได้)',
+                    'error_code' => 'COUPON_MEMBER_ISSUED_DISABLED',
                 ];
             }
 
