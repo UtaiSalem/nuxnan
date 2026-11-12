@@ -1,5 +1,32 @@
 # Work Log — nuxnan project
 
+## 🟢 2026-11-12 — รายจ่ายโรงเรียน (expenses): ปิด IDOR ข้ามโรงเรียน + แก้เทสต์การเงิน 5 ตัวที่ตก 403 (เสร็จ · branch `claude/friendly-dijkstra-i0kera`)
+
+**ปัญหา:** `ExpenseController` ไม่ตรวจว่า `{expense}`/`{category}` เป็นของ `{academy}` ใน URL (กลุ่ม `{academy}/expenses` ไม่มี `scopeBindings()`)
+→ เจ้าของ/ผู้ถือ `settings.manage` ของโรงเรียน A อ่าน/แก้/อนุมัติ/ปฏิเสธ/ทำเครื่องหมายจ่าย/ลบ รายจ่ายและหมวดรายจ่ายของโรงเรียน B ได้ด้วยการเปลี่ยนเลข id
+
+### สิ่งที่เปลี่ยน (แนวเดียวกับ BudgetController · PR #46 `claude/happy-curie-m2qgkm`)
+- **`ExpenseController.php`:** `ensureBelongsToAcademy()` (404) ใน show/update/approve/reject/markAsPaid/destroy/updateCategory/destroyCategory
+  · ด่านอยู่**ก่อน** validate ⇒ reject ข้ามโรงเรียนได้ 404 ไม่ใช่ 422 · store/update: `expense_category_id` ต้องเป็นหมวดของโรงเรียนนี้ (`Rule::exists(...)->where('academy_id', ...)`)
+  · **ไม่แตะ route middleware** (`academy.permission:settings.manage` ของ SM-S2 คงเดิม)
+- **เทสต์ใหม่ `tests/Feature/Academy/ExpenseAcademyScopingTest.php`** (20): data provider 8 เส้น × (เจ้าของ + ผู้ถือ settings.manage) = 16 เคส 404 + ตรวจว่าข้อมูลโรงเรียนอื่นไม่ถูกแตะ · store/update ด้วยหมวดโรงเรียนอื่น = 422 · เส้นของโรงเรียนตัวเองยังใช้ได้ 2 เคส
+- **เทสต์ 5 ตัวที่ตก 403 อยู่ก่อนแล้ว** → เปลี่ยนสมาชิกเป็น `settings.manage` ตามกติกา SM-S2: `SchoolExpenseSchemaFixTest` (3) · `SchoolFinanceAuditLogTest > expense lifecycle…`
+  · `SchoolManagementRouteGuardTest`: **เปลี่ยนชื่อ** `test_member_with_finance_view_passes_the_gate` → `test_member_with_settings_manage_passes_the_finance_gate` (เคส finance.view ได้ 403 มีใน `FinanceGroupLockdownTest` แล้ว)
+
+### ตรวจแล้ว (เซสชัน cloud · PHP 8.3 + composer `--ignore-platform-req=php` · docker `mirror.gcr.io/library/mysql:8.4` → `migrate` 507 ตัวผ่าน → `test:db:rebuild`)
+- sqlite: ไฟล์เป้าหมาย 4 ไฟล์ 34/34 · MySQL (`-c phpunit.mysql.xml`): 34/34 และ `--filter="Expense|Finance|Budget|SchoolManagement|RevenueAuthz"` 52/52
+- revert-check: เอาด่านออก → 18 เคสตก (16 ได้ 200/500 แทน 404, 2 ได้ 201/200 แทน 422) · เทสต์ 5 ตัวเดิมบนโค้ดเทสต์เดิมได้ 403 ตรงตาม issue
+- full suite sqlite ก่อน/หลัง: 94 → 89 fail — หายไปตรง 5 ตัวเป้าหมาย **ไม่มี fail ใหม่** (89 ที่เหลือเป็นของเดิมในเครื่องนี้: Wallet/Withdraw/ClassSchedule/CoursePurchase ฯลฯ)
+- pint: 5 ไฟล์ที่แก้ผ่าน (`--dirty` ผ่าน) · `pint --test` ทั้ง repo ยังตก 6 ไฟล์**เดิม**ที่งานนี้ไม่ได้แตะ (migration 2 ไฟล์, StudentCardsImport, StudentCardController, AnnouncementController, AcademyDonateClaimsOrphanCheck)
+
+### ค้าง / เจอระหว่างทาง (ไม่ได้แก้ — นอกขอบเขต)
+- [ ] 🔴 **ลบหมวดรายจ่ายพังทุกครั้ง (500):** `ExpenseCategory::expenses()` ใช้ FK `category_id` แต่คอลัมน์จริงคือ `expense_category_id` → `destroyCategory` ตอบ 500 แม้เป็นหมวดของโรงเรียนตัวเอง (revert-check เห็น 500 ในเคส "destroy category") · แก้บรรทัดเดียวใน model
+- [ ] ยังไม่ผูกกับโรงเรียน (คลาสเดียวกัน): `academic_year_id` ใน store/update รายจ่าย · `parent_id` ใน storeCategory/updateCategory (ผูกหมวดเข้ากับหมวดแม่ของโรงเรียนอื่นได้)
+- [ ] (เล็ก) index ส่ง `sort_by`/`sort_order` จาก request เข้า `orderBy` ตรง ๆ ไม่มี whitelist → ชื่อคอลัมน์ผิด/ทิศผิดได้ 500 แทน 422
+- **เจ้าของรันบนเครื่อง:** `php artisan test:db:rebuild` แล้ว `php artisan test -c phpunit.mysql.xml --filter="Expense"` (ยืนยันกับสคีมา dev จริง)
+
+---
+
 ## 🟢 2026-11-04 — ปิดการโอนแต้ม/เงินระหว่างสมาชิก (เสร็จ · commit `ff5801cb` `43012727` `969d6a74` · pushed)
 
 เจ้าของสั่ง: "ปิดการโอนแต้ม-เงินระหว่างสมาชิกอย่างเดียวก่อน เดี๋ยวค่อยวิเคราะห์ระบบอย่างละเอียดอีกที"
