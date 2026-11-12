@@ -1,5 +1,36 @@
 # Work Log — nuxnan project
 
+## 🟡 2026-11-12 — ซ่อมหน้าจัดการคูปองของแอดมิน `/api/admin/coupons` + `/nuxnan-admin/coupons` (commit `da5d6ad` `5654d47` · branch `claude/serene-pasteur-n2kgj5` · รอ review PR)
+
+### เจ้าของเคาะ (2026-11-12)
+- **มูลค่าคูปองแอดมิน = หักจากแต้ม/เงินของแอดมินผู้สร้างเอง** (ไม่สร้างมูลค่าใหม่ / ไม่ mint) → ใช้ `CouponService::createPointsCoupon/createWalletCoupon` เดิม
+- **ผู้ออกคูปอง = มี `permission:coupon-create` + เป็น Plearnd admin (หรือ super admin)** → VENDOR / ADMIN role เฉย ๆ ได้ 403
+- **Phase 2 ไม่ทำในงานนี้** — ⚠️ บรีฟบอกว่า Phase 2 (ปิดคูปองสมาชิก + แลกได้เฉพาะคูปองของ Plearnd admin) เสร็จแล้ว 2026-11-12 แต่**โค้ดบน main ยังไม่มี** (`CouponService`/`CouponController` ไม่มีด่าน `isPlearndAdmin`) สมาชิกยังสร้างคูปองได้ และแลกคูปองใครก็ได้ — ถ้าทำไว้ที่อื่นแล้วยังไม่ push ให้ push
+
+### งานที่ทำ
+- **BE `da5d6ad`:** closure เดิมพังทุกตัว (relation `creator`/`usedBy` ไม่มี → 500 · เขียนคอลัมน์ `code`/`type`/`creator_id` + status `unused` ที่ไม่มีจริง)
+  · `Api/Admin/AdminCouponController` แทน closure (ชื่อ route เดิม) · group ติด `plearnd_admin` + `permission:coupon-*` (เพิ่ม `coupon-list` ให้ index/show — รายการโชว์รหัสเต็ม ใครเห็นก็แลกได้)
+  · update รับแค่ `description` + `expires_at` (ต้องเป็นอนาคต) — amount/type/code/status ล็อก
+  · DELETE = **ยกเลิก + คืนยอดให้ผู้สร้างคูปอง** (ไม่ใช่แอดมินที่กด) เฉพาะคูปองที่ยังไม่ถูกแลก · แถวไม่ถูกลบ (`CouponService::cancelCouponByAdmin`)
+  · `redeemCoupon` ล็อกแถวคูปอง (`lockForUpdate`) กันแลกซ้ำพร้อมกัน/แลกชนกับยกเลิก
+  · `AdminCouponResource` (`display_status`: active ที่เลยวันหมดอายุ = expired · `creator.is_plearnd_admin`) · audit log ทุก create/update/cancel
+  · เทสต์ `tests/Feature/Coupons/` 21 ตัว: ทุก endpoint + สิทธิ์ + แลกผ่าน `/api/coupons/redeem` แล้ว ledger ถูก (ผู้สร้างในเทสต์เป็น Plearnd admin เสมอ → ยังผ่านเมื่อ Phase 2 มา)
+- **UI `5654d47`:** หน้าเดิมเป็นฟอร์ม "โค้ดส่วนลด %/บาท" ที่ backend ไม่มีเลย + `$fetch` ตรง + mock data → เขียนใหม่ทั้ง 3 หน้า + `composables/useAdminCoupons.ts` (useApi)
+  · create โชว์ยอดของแอดมิน + "หักจากบัญชี/คงเหลือ" และบล็อกปุ่มถ้ายอดไม่พอ · หลังสร้างโชว์รหัส + คัดลอกทั้งหมด
+
+### ตรวจแล้ว
+- Pint ผ่าน · sqlite 21 passed · **MySQL 8 (strict) 21 passed** — หมายเหตุ: สคีมา MySQL ในคลาวด์สร้างจาก `migrate` (ปิด FK check ตอน migrate) ไม่ใช่สำเนา DB dev
+- revert-check: เอา closure เดิมกลับ → 20/21 ตก
+- full suite sqlite: 46 fail **ชุดเดียวกับ origin/main เป๊ะ** (เทียบใน worktree) — ของเดิม เช่น `Wallet/*` ตกเพราะ CHECK ของ `transaction_type` บน sqlite ไม่มี `transfer_out`
+- จอจริง 375/768/1280 (Nuxt dev + artisan serve + MySQL): ไม่มี scroll แนวนอน · console ไม่มี error · ไล่ flow สร้าง→คัดลอก→แก้→ยกเลิก ledger ถูก (spend 200 → refund 150)
+- **ยังไม่ตรวจ:** `npm run build` · ไอคอน Iconify ไม่ขึ้นในคลาวด์ (CDN ถูกบล็อก — ไม่ใช่โค้ด)
+
+### เจอระหว่างทาง (นอกงานนี้)
+- `layouts/NuxnanAdminLayout.vue:307` `<main class="px-0 py-4 lg:p-6">` → ทุกหน้าแอดมินชิดขอบจอต่ำกว่า `lg` (ไม่มี gutter)
+- `ui/package-lock.json` ไม่ sync กับ `package.json` (`npm ci` ล้ม: ขาด pinia@3.0.4 ฯลฯ)
+
+---
+
 ## 🟢 2026-11-04 — ปิดการโอนแต้ม/เงินระหว่างสมาชิก (เสร็จ · commit `ff5801cb` `43012727` `969d6a74` · pushed)
 
 เจ้าของสั่ง: "ปิดการโอนแต้ม-เงินระหว่างสมาชิกอย่างเดียวก่อน เดี๋ยวค่อยวิเคราะห์ระบบอย่างละเอียดอีกที"
