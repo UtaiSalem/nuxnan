@@ -1,5 +1,49 @@
 # Work Log — nuxnan project
 
+## 🟡 2026-11-12 (เย็น) — งานวันนี้ค้างอยู่ใน draft PR 7 อัน **ยังไม่ merge เข้า `main`** (อ่านก่อนเชื่อ TODO ในหัวข้อถัดไป)
+
+`main` = `390211c` (09:32) + commit บันทึกนี้ · งานหลัง 09:32 ทั้งหมดอยู่ใน branch ของแต่ละ PR (push แล้วทุกอัน ไม่มีอะไรหาย)
+รายละเอียดเต็มของแต่ละงาน (ตรวจอะไรแล้ว/ยังไม่ตรวจ) อยู่ใน `.agents/worklog.md` **ของ branch นั้น** → `git show origin/<branch>:.agents/worklog.md | head -120`
+
+| PR | branch | เรื่อง | ปิด TODO ไหนในหัวข้อ 2026-11-04 |
+|---|---|---|---|
+| [#43](https://github.com/UtaiSalem/nuxnan/pull/43) | `claude/intelligent-albattani-llfm1i` | Phase 2 ปิดคูปองที่สมาชิกสร้าง (+ migration ยกเลิกคูปองค้าง คืนผู้สร้าง) · Phase 5 ตาม D3: กดรับแต้มรายวิชาได้เฉพาะเจ้าของ/สมาชิกที่อนุมัติแล้ว + ตรวจการโอนทางอ้อมตอนแอดมินตรวจถอน | Phase 2 ✅ · Phase 5 ✅ (เหลือ P5-a/b/c) |
+| [#44](https://github.com/UtaiSalem/nuxnan/pull/44) | `claude/magical-lamport-acd9rn` | budgets: `scopeBindings()` ผูก `{budget}` กับ `{academy}` + แก้ `transfer` ที่ผูกงบผิดตัว (เทสต์ 13 เคส) | IDOR `budgets/{budget}/transfer` ✅ |
+| [#45](https://github.com/UtaiSalem/nuxnan/pull/45) | `claude/serene-pasteur-n2kgj5` | ซ่อม `/api/admin/coupons` + `/nuxnan-admin/coupons` ให้ใช้ schema คูปองจริง (เดิมพังทั้งชุด) · มูลค่าคูปองหักจากแอดมินผู้สร้าง | — (งานใหม่) |
+| [#46](https://github.com/UtaiSalem/nuxnan/pull/46) | `claude/happy-curie-m2qgkm` | budgets: model/controller ให้ตรง schema จริง (ไม่มี migration) + ปิด IDOR + transfer ใช้ได้ (ห่อ transaction + lock) | IDOR budgets ✅ (ซ้ำกับ #44) |
+| [#47](https://github.com/UtaiSalem/nuxnan/pull/47) | `claude/friendly-dijkstra-i0kera` | expenses: ปิด IDOR ข้ามโรงเรียน + แก้เทสต์การเงิน 5 ตัวที่ตก 403 | — |
+| [#48](https://github.com/UtaiSalem/nuxnan/pull/48) | `claude/expense-fk-scoping` | **ซ้อนบน #47 (มี commit ของ #47 ครบ)** + ผูก `academic_year_id`/`parent_id` เข้าโรงเรียน + whitelist `sort_by` | — |
+| [#49](https://github.com/UtaiSalem/nuxnan/pull/49) | `claude/fix-expense-category-fk` | ลบหมวดรายจ่ายตอบ 500 ทุกครั้ง — `ExpenseCategory::expenses()` FK ผิด (แก้บรรทัดเดียว) | — |
+
+### ⚠️ conflict ที่จะเจอตอน merge (จำลองด้วย `git merge-tree` แล้ว · ทุก PR merge เข้า `main` ตัวเดียวได้สะอาด)
+- **ทุก PR** แทรกหัวข้อบนสุดของ `.agents/worklog.md` → merge อันที่ 2 เป็นต้นไปชนที่ worklog ทุกครั้ง (แก้ง่าย: เก็บทุกหัวข้อ)
+- **#44 กับ #46 แก้เรื่องเดียวกันคนละแบบ** → ชน `BudgetController.php` + `tests/Feature/Academy/BudgetAcademyScopingTest.php` (ชื่อไฟล์เดียวกัน เนื้อหาต่างกัน: 13 เคส vs 7 เคส)
+- **#43 กับ #45** ชน `app/Services/CouponService.php` (ทั้งคู่ใส่ `lockForUpdate` ใน `redeemCoupon` · #45 เพิ่ม `cancelCouponByAdmin`) — เทสต์ของ #45 ใช้ผู้สร้างเป็น Plearnd admin เสมอ จึงเข้ากับ Phase 2 ของ #43 ได้
+- #48 กับ #49 ชนแค่ worklog
+
+### ลำดับ merge ที่แนะนำ (repo นี้ใช้ squash merge → PR ที่ซ้อนกันจะไม่ปิดเอง)
+1. **#49** (บรรทัดเดียว ไม่ชนโค้ดใคร)
+2. **#48** แล้ว**ปิด #47** ด้วยมือ (งานของ #47 อยู่ใน #48 ครบแล้ว)
+3. **#46** (budgets ครบกว่า) → แล้วค่อยตัดสินใจ #44: เอา `scopeBindings()` + `Academy::budgets()` + เทสต์ 13 เคสมาวางทับ #46 (แก้ conflict ด้วยมือ · ได้ด่านสองชั้น) หรือปิด #44 ถ้า `ensureBelongsToAcademy()` ของ #46 พอแล้ว
+4. **#43** → แล้ว **#45** (แก้ conflict `CouponService.php` ด้วยมือ ให้มีทั้งด่าน Phase 2 และ `cancelCouponByAdmin`)
+
+### เจ้าของต้องทำบนเครื่อง WAMP หลัง merge (ในคลาวด์ใช้ schema จาก `migrate` ไม่ใช่ DB dev จริง)
+- [ ] `php artisan test:db:rebuild` แล้ว `php artisan test -c phpunit.mysql.xml --filter="Expense|Budget|Coupon|CourseClaim|Withdrawal"`
+- [ ] `SHOW CREATE TABLE budgets;` + `SHOW CREATE TABLE expenses;` บน DB dev — #46 สมมติว่า schema จริงตรงกับ migration (ไม่มี `status`/`category_id`/`created_by`/`expenses.budget_id`)
+- [ ] #43: ดูจำนวนคูปองสมาชิกที่ยัง `active` ก่อน แล้ว `php artisan migrate` (`2026_11_12_000001_cancel_active_member_coupons`) → ดู log `Member coupons cancelled and refunded` (dev เดิมคาด 2 ใบ รวม 340 แต้ม)
+- [ ] `npm run build` (#43 #45 แก้ UI) + ตรวจจอ 375/768/1280 หน้า `Earn/coupons/*`, `nuxnan-admin/coupons/*`, `nuxnan-admin/wallet/pending`
+
+### ต้องเคาะ / เจอระหว่างทาง ยังไม่แก้ (รวมจากทุก PR)
+- [ ] 🔴 **P5-a** เพดาน `points_per_claim` ของแคมเปญรายวิชา (ตอนนี้ไม่มี max = ช่องโอนก้อนใหญ่ที่ยังเหลือ) · P5-b พักรายได้ขายรายวิชา N วัน · P5-c จำกัดแปลงแต้มกองกลาง→เงิน — ต้องการตัวเลขจากเจ้าของ
+- [ ] Phase 0: ตรวจ prod แบบอ่านอย่างเดียว เทียบ `users.pp` กับ ledger (ยังค้างจาก 2026-11-04)
+- [ ] `PointsService::refund` ไม่ lock แถว user → กดยกเลิกคูปองหลายใบพร้อมกันอาจคำนวณจากยอดเก่า
+- [ ] `Budget.spent_amount` ไม่อัพเดทเองเมื่อรายจ่ายอนุมัติ/จ่าย (`updateSpent()` ไม่มีผู้เรียกมาแต่เดิม) → งาน finance buildout
+- [ ] `updateCategory` ของรายจ่ายกันได้แค่ "ตั้งตัวเองเป็นแม่" — วงจร 2 ขั้น (A→B แล้ว B→A) ยังทำได้ → `getFullNameAttribute()` วนไม่จบ
+- [ ] `ui/layouts/NuxnanAdminLayout.vue:306` `px-0` ต่ำกว่า `lg` → ทุกหน้าแอดมินชิดขอบจอบนมือถือ (ผิดกติกา mobile-first)
+- [ ] `ui/package-lock.json` ไม่ sync กับ `package.json` (`npm ci` ล้ม: ขาด pinia@3.0.4 ฯลฯ)
+
+---
+
 ## 🟢 2026-11-04 — ปิดการโอนแต้ม/เงินระหว่างสมาชิก (เสร็จ · commit `ff5801cb` `43012727` `969d6a74` · pushed)
 
 เจ้าของสั่ง: "ปิดการโอนแต้ม-เงินระหว่างสมาชิกอย่างเดียวก่อน เดี๋ยวค่อยวิเคราะห์ระบบอย่างละเอียดอีกที"
