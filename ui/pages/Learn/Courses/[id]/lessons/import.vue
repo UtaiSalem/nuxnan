@@ -2,7 +2,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
-import RichTextViewer from '~/components/Common/RichTextViewer.vue'
+import RichTextViewer from '~/components/RichTextViewer.vue'
 import { useDocxToHtml, DOCX_MAX_BYTES } from '~/composables/useDocxToHtml'
 import { useLessonImportService } from '~/services/lessonImportService'
 import type {
@@ -562,7 +562,7 @@ const save = async () => {
               v-if="showLessonContent"
               class="mt-2 max-h-96 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-3"
             >
-              <RichTextViewer :content="form.lesson.content" />
+              <RichTextViewer :content="form.lesson.content" size="sm" />
             </div>
           </div>
         </div>
@@ -647,7 +647,7 @@ const save = async () => {
               v-if="expandedTopic === index"
               class="max-h-96 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-3"
             >
-              <RichTextViewer :content="topic.content" />
+              <RichTextViewer :content="topic.content" size="sm" />
             </div>
           </div>
         </div>
