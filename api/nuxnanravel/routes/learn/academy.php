@@ -757,7 +757,8 @@ Route::middleware(['auth:api'])->prefix('/academies')->group(function () {
     });
 
     // Budgets - งบประมาณ
-    Route::prefix('{academy}/budgets')->middleware(['academy.visibility:content', 'academy.permission:settings.manage'])->group(function () {
+    // scopeBindings: `{budget}` ต้องเป็นของ `{academy}` ใน URL (ผ่าน Academy::budgets()) ไม่งั้น 404
+    Route::prefix('{academy}/budgets')->scopeBindings()->middleware(['academy.visibility:content', 'academy.permission:settings.manage'])->group(function () {
         Route::get('/', [BudgetController::class, 'index'])->name('api.academy.budgets.index');
         Route::post('/', [BudgetController::class, 'store'])->name('api.academy.budgets.store');
         Route::get('/summary', [BudgetController::class, 'summary'])->name('api.academy.budgets.summary');

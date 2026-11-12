@@ -8,6 +8,7 @@ use App\Models\Budget;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * BudgetController - จัดการงบประมาณ
@@ -316,16 +317,31 @@ class BudgetController extends Controller
 
     /**
      * โอนงบประมาณ
+     *
+     * พารามิเตอร์ต้องชื่อ `$budget` ให้ตรงกับ `{budget}` ใน route — implicit binding จับคู่ด้วยชื่อ
+     * (เดิมชื่อ `$fromBudget` จึงได้ Budget เปล่าที่ยังไม่บันทึก แทนงบตัวจริง)
      */
-    public function transfer(Request $request, Academy $academy, Budget $fromBudget): JsonResponse
+    public function transfer(Request $request, Academy $academy, Budget $budget): JsonResponse
     {
+        $fromBudget = $budget;
+
         $validated = $request->validate([
-            'to_budget_id' => 'required|exists:budgets,id|different:'.$fromBudget->id,
+            'to_budget_id' => [
+                'required',
+                'integer',
+                // ปลายทางต้องอยู่ในโรงเรียนเดียวกัน และไม่ใช่งบต้นทาง
+                // (`different:` เทียบกับชื่อฟิลด์ ไม่ใช่ค่า จึงใช้กันโอนเข้างบเดิมไม่ได้)
+                Rule::exists('budgets', 'id')->where('academy_id', $academy->id),
+                Rule::notIn([$fromBudget->id]),
+            ],
             'amount' => 'required|numeric|min:0.01',
             'notes' => 'nullable|string',
+        ], [
+            'to_budget_id.exists' => 'ไม่พบงบประมาณปลายทางในโรงเรียนนี้',
+            'to_budget_id.not_in' => 'งบประมาณปลายทางต้องไม่ใช่งบประมาณต้นทาง',
         ]);
 
-        $toBudget = Budget::findOrFail($validated['to_budget_id']);
+        $toBudget = $academy->budgets()->findOrFail($validated['to_budget_id']);
 
         // Check if source has enough funds
         if ($fromBudget->remaining_amount < $validated['amount']) {
