@@ -434,6 +434,25 @@ class Course extends Model
         return $this->members->contains($user);
     }
 
+    /**
+     * Who may take points out of this course's point pool (donation claims and
+     * every campaign type): the owner, or a member the course has approved
+     * (course_member_status = 1). A pending join request is not enough —
+     * otherwise anyone can request to join and immediately drain the pool.
+     */
+    public function canClaimPoints(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return (int) $this->user_id === (int) $user->id
+            || CourseMember::where('course_id', $this->id)
+                ->where('user_id', $user->id)
+                ->where('course_member_status', 1)
+                ->exists();
+    }
+
     public function member_status($id)
     {
         $userId = auth()->guard('api')->id() ?? auth()->id();

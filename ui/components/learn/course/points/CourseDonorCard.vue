@@ -59,7 +59,7 @@ const closeReceiveModal = () => {
 const mapErrorCodeToMessage = (code: string | number) => {
   switch (code) {
     case 'not_a_course_member':
-      return 'ต้องเข้าร่วมรายวิชาก่อนจึงจะกดรับได้'
+      return 'ต้องเป็นสมาชิกรายวิชาที่ได้รับอนุมัติแล้วจึงจะกดรับได้'
     case 'daily_cap_reached':
       return 'ครบเพดานกดรับ 20 ครั้ง/วัน แล้ว'
     case 'per_donation_cap_reached':
