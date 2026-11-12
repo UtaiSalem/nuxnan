@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Academy;
 
+use App\Models\AcademicYear;
 use App\Models\Academy;
 use App\Models\AcademyMember;
 use App\Models\AcademyRole;
@@ -18,6 +19,9 @@ use Tests\TestCase;
  * route `{academy}/expenses/{expense}` และ `{academy}/expenses/categories/{category}` ไม่ได้ผูก
  * `{expense}`/`{category}` เข้ากับ `{academy}` ⇒ เจ้าของ (หรือผู้ถือ settings.manage) ของโรงเรียน A
  * เคยอ่าน/แก้/อนุมัติ/ปฏิเสธ/ทำเครื่องหมายจ่าย/ลบ รายจ่ายและหมวดของโรงเรียน B ได้ด้วยการเปลี่ยนเลข id (IDOR)
+ *
+ * ชุดหลัง (`academic_year_id` / `parent_id` / `sort_by`) คุม id ที่ "ส่งเข้ามาใน body" ให้อยู่ในโรงเรียนของ URL
+ * ด้วย — ก่อนหน้านี้ผูกรายจ่ายเข้าปีการศึกษาของโรงเรียนอื่น หรือซ้อนหมวดใต้หมวดของโรงเรียนอื่นได้
  */
 class ExpenseAcademyScopingTest extends TestCase
 {
@@ -215,5 +219,218 @@ class ExpenseAcademyScopingTest extends TestCase
             ->deleteJson("/api/academies/{$academy->id}/expenses/{$toDelete->id}")
             ->assertOk();
         $this->assertDatabaseMissing('expenses', ['id' => $toDelete->id]);
+    }
+
+    // =====================================================
+    // id ใน body: academic_year_id / parent_id ต้องเป็นของโรงเรียนใน URL
+    // =====================================================
+
+    private function academicYearFor(Academy $academy, string $name = '2568'): AcademicYear
+    {
+        return AcademicYear::create([
+            'academy_id' => $academy->id,
+            'name' => $name,
+            'start_date' => '2026-05-01',
+            'end_date' => '2027-03-31',
+        ]);
+    }
+
+    public function test_store_rejects_another_academys_academic_year(): void
+    {
+        [$mine, $owner, $myCategory] = $this->academyWithExpense('ของฉัน');
+        [$theirs] = $this->academyWithExpense('ของคนอื่น');
+        $theirYear = $this->academicYearFor($theirs);
+
+        $this->actingAs($owner, 'api')
+            ->postJson("/api/academies/{$mine->id}/expenses", [
+                'expense_category_id' => $myCategory->id,
+                'academic_year_id' => $theirYear->id,
+                'title' => 'รายจ่ายข้ามปีการศึกษา',
+                'amount' => 100,
+                'expense_date' => '2026-09-01',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('academic_year_id');
+
+        $this->assertDatabaseMissing('expenses', ['title' => 'รายจ่ายข้ามปีการศึกษา']);
+    }
+
+    public function test_update_rejects_another_academys_academic_year(): void
+    {
+        [$mine, $owner, , $myExpense] = $this->academyWithExpense('ของฉัน');
+        [$theirs] = $this->academyWithExpense('ของคนอื่น');
+        $theirYear = $this->academicYearFor($theirs);
+
+        $this->actingAs($owner, 'api')
+            ->patchJson("/api/academies/{$mine->id}/expenses/{$myExpense->id}", [
+                'academic_year_id' => $theirYear->id,
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('academic_year_id');
+
+        $this->assertNull($myExpense->fresh()->academic_year_id);
+    }
+
+    public function test_store_and_update_accept_own_academys_academic_year(): void
+    {
+        [$mine, $owner, $myCategory, $myExpense] = $this->academyWithExpense('ของฉัน');
+        $firstYear = $this->academicYearFor($mine, '2568');
+        $secondYear = $this->academicYearFor($mine, '2569');
+
+        $this->actingAs($owner, 'api')
+            ->postJson("/api/academies/{$mine->id}/expenses", [
+                'expense_category_id' => $myCategory->id,
+                'academic_year_id' => $firstYear->id,
+                'title' => 'รายจ่ายปีนี้',
+                'amount' => 100,
+                'expense_date' => '2026-09-01',
+            ])
+            ->assertStatus(201)
+            ->assertJsonPath('data.academic_year_id', $firstYear->id);
+
+        $this->assertDatabaseHas('expenses', [
+            'academy_id' => $mine->id,
+            'title' => 'รายจ่ายปีนี้',
+            'academic_year_id' => $firstYear->id,
+        ]);
+
+        $this->actingAs($owner, 'api')
+            ->patchJson("/api/academies/{$mine->id}/expenses/{$myExpense->id}", [
+                'academic_year_id' => $secondYear->id,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.academic_year_id', $secondYear->id);
+
+        $this->assertSame($secondYear->id, $myExpense->fresh()->academic_year_id);
+    }
+
+    public function test_store_category_rejects_another_academys_parent(): void
+    {
+        [$mine, $owner] = $this->academyWithExpense('ของฉัน');
+        [, , $theirCategory] = $this->academyWithExpense('ของคนอื่น');
+
+        $this->actingAs($owner, 'api')
+            ->postJson("/api/academies/{$mine->id}/expenses/categories", [
+                'name' => 'หมวดลูกข้ามโรงเรียน',
+                'parent_id' => $theirCategory->id,
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('parent_id');
+
+        $this->assertDatabaseMissing('expense_categories', ['name' => 'หมวดลูกข้ามโรงเรียน']);
+        $this->assertSame(0, $theirCategory->children()->count());
+    }
+
+    public function test_update_category_rejects_another_academys_parent(): void
+    {
+        [$mine, $owner, $myCategory] = $this->academyWithExpense('ของฉัน');
+        [, , $theirCategory] = $this->academyWithExpense('ของคนอื่น');
+
+        $this->actingAs($owner, 'api')
+            ->patchJson("/api/academies/{$mine->id}/expenses/categories/{$myCategory->id}", [
+                'parent_id' => $theirCategory->id,
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('parent_id');
+
+        $this->assertNull($myCategory->fresh()->parent_id);
+        $this->assertSame(0, $theirCategory->children()->count());
+    }
+
+    public function test_update_category_rejects_itself_as_parent(): void
+    {
+        [$mine, $owner, $myCategory] = $this->academyWithExpense('ของฉัน');
+
+        $this->actingAs($owner, 'api')
+            ->patchJson("/api/academies/{$mine->id}/expenses/categories/{$myCategory->id}", [
+                'parent_id' => $myCategory->id,
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('parent_id');
+
+        $this->assertNull($myCategory->fresh()->parent_id);
+    }
+
+    public function test_category_accepts_own_academys_parent(): void
+    {
+        [$mine, $owner, $myCategory] = $this->academyWithExpense('ของฉัน');
+
+        $this->actingAs($owner, 'api')
+            ->postJson("/api/academies/{$mine->id}/expenses/categories", [
+                'name' => 'หมวดลูกในบ้าน',
+                'parent_id' => $myCategory->id,
+            ])
+            ->assertStatus(201)
+            ->assertJsonPath('data.parent_id', $myCategory->id);
+
+        $sibling = ExpenseCategory::create([
+            'academy_id' => $mine->id,
+            'name' => 'หมวดพี่น้อง',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($owner, 'api')
+            ->patchJson("/api/academies/{$mine->id}/expenses/categories/{$sibling->id}", [
+                'parent_id' => $myCategory->id,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.parent_id', $myCategory->id);
+
+        $this->assertSame($myCategory->id, $sibling->fresh()->parent_id);
+        $this->assertSame(2, $myCategory->children()->count());
+    }
+
+    // =====================================================
+    // index: sort_by / sort_order ต้องเป็นค่าที่อนุญาต (เดิมหลุดลง orderBy ตรง ๆ → 500)
+    // =====================================================
+
+    public function test_index_rejects_unknown_sort_column(): void
+    {
+        [$mine, $owner] = $this->academyWithExpense('ของฉัน');
+
+        $this->actingAs($owner, 'api')
+            ->getJson("/api/academies/{$mine->id}/expenses?sort_by=no_such_column")
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('sort_by');
+
+        $this->actingAs($owner, 'api')
+            ->getJson("/api/academies/{$mine->id}/expenses?sort_by=".urlencode('amount) -- '))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('sort_by');
+    }
+
+    public function test_index_rejects_unknown_sort_order(): void
+    {
+        [$mine, $owner] = $this->academyWithExpense('ของฉัน');
+
+        $this->actingAs($owner, 'api')
+            ->getJson("/api/academies/{$mine->id}/expenses?sort_order=".urlencode('asc, amount desc'))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('sort_order');
+    }
+
+    public function test_index_sorts_by_whitelisted_column(): void
+    {
+        [$mine, $owner, $category] = $this->academyWithExpense('ของฉัน');
+        Expense::create([
+            'academy_id' => $mine->id,
+            'expense_category_id' => $category->id,
+            'title' => 'ถูกกว่า',
+            'amount' => 1,
+            'expense_date' => '2026-09-02',
+            'status' => Expense::STATUS_PENDING,
+            'requested_by' => $owner->id,
+        ]);
+
+        $this->actingAs($owner, 'api')
+            ->getJson("/api/academies/{$mine->id}/expenses?sort_by=amount&sort_order=asc")
+            ->assertOk()
+            ->assertJsonPath('data.0.title', 'ถูกกว่า')
+            ->assertJsonPath('data.1.title', 'ของฉัน');
+
+        $this->actingAs($owner, 'api')
+            ->getJson("/api/academies/{$mine->id}/expenses")
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
     }
 }

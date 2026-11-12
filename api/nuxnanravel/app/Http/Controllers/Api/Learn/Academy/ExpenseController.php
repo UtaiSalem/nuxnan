@@ -16,6 +16,20 @@ use Illuminate\Validation\Rule;
  */
 class ExpenseController extends Controller
 {
+    /**
+     * คอลัมน์ที่ยอมให้เรียงได้ — ก่อนหน้านี้ `sort_by` ดิบ ๆ ลง `orderBy` ตรง ๆ ชื่อคอลัมน์ผิดจึงได้ 500 ไม่ใช่ 422
+     */
+    private const SORTABLE_COLUMNS = [
+        'created_at',
+        'updated_at',
+        'expense_date',
+        'amount',
+        'title',
+        'status',
+        'vendor',
+        'reference_number',
+    ];
+
     protected AuditLogService $auditService;
 
     public function __construct(AuditLogService $auditService)
@@ -48,9 +62,15 @@ class ExpenseController extends Controller
             });
         }
 
-        $sortBy = $request->input('sort_by', 'created_at');
-        $sortOrder = $request->input('sort_order', 'desc');
-        $query->orderBy($sortBy, $sortOrder);
+        $sort = $request->validate([
+            'sort_by' => ['nullable', Rule::in(self::SORTABLE_COLUMNS)],
+            'sort_order' => 'nullable|in:asc,desc',
+        ]);
+
+        $sortBy = $sort['sort_by'] ?? null;
+        $sortOrder = $sort['sort_order'] ?? null;
+
+        $query->orderBy($sortBy ?: 'created_at', $sortOrder ?: 'desc');
 
         $expenses = $query->paginate($request->input('per_page', 20));
 
@@ -90,7 +110,7 @@ class ExpenseController extends Controller
     {
         $validated = $request->validate([
             'expense_category_id' => ['required', Rule::exists('expense_categories', 'id')->where('academy_id', $academy->id)],
-            'academic_year_id' => 'nullable|exists:academic_years,id',
+            'academic_year_id' => ['nullable', Rule::exists('academic_years', 'id')->where('academy_id', $academy->id)],
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'amount' => 'required|numeric|min:0.01',
@@ -140,7 +160,7 @@ class ExpenseController extends Controller
 
         $validated = $request->validate([
             'expense_category_id' => ['sometimes', Rule::exists('expense_categories', 'id')->where('academy_id', $academy->id)],
-            'academic_year_id' => 'nullable|exists:academic_years,id',
+            'academic_year_id' => ['nullable', Rule::exists('academic_years', 'id')->where('academy_id', $academy->id)],
             'title' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
             'amount' => 'sometimes|numeric|min:0.01',
@@ -337,7 +357,7 @@ class ExpenseController extends Controller
             'name' => 'required|string|max:255',
             'code' => 'nullable|string|max:50',
             'description' => 'nullable|string',
-            'parent_id' => 'nullable|exists:expense_categories,id',
+            'parent_id' => ['nullable', Rule::exists('expense_categories', 'id')->where('academy_id', $academy->id)],
         ]);
 
         $category = ExpenseCategory::create([
@@ -367,7 +387,11 @@ class ExpenseController extends Controller
             'name' => 'sometimes|string|max:255',
             'code' => 'nullable|string|max:50',
             'description' => 'nullable|string',
-            'parent_id' => 'nullable|exists:expense_categories,id',
+            'parent_id' => [
+                'nullable',
+                Rule::notIn([$category->id]),
+                Rule::exists('expense_categories', 'id')->where('academy_id', $academy->id),
+            ],
             'is_active' => 'boolean',
         ]);
 
