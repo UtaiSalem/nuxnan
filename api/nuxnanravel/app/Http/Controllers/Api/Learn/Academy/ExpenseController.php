@@ -9,6 +9,7 @@ use App\Models\ExpenseCategory;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * ExpenseController - จัดการรายจ่าย
@@ -70,6 +71,8 @@ class ExpenseController extends Controller
      */
     public function show(Academy $academy, Expense $expense): JsonResponse
     {
+        $this->ensureBelongsToAcademy($academy, $expense);
+
         $expense->load(['category', 'creator:id,name', 'approver:id,name']);
 
         $this->auditService->logView($expense);
@@ -86,7 +89,7 @@ class ExpenseController extends Controller
     public function store(Request $request, Academy $academy): JsonResponse
     {
         $validated = $request->validate([
-            'expense_category_id' => 'required|exists:expense_categories,id',
+            'expense_category_id' => ['required', Rule::exists('expense_categories', 'id')->where('academy_id', $academy->id)],
             'academic_year_id' => 'nullable|exists:academic_years,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -126,6 +129,8 @@ class ExpenseController extends Controller
      */
     public function update(Request $request, Academy $academy, Expense $expense): JsonResponse
     {
+        $this->ensureBelongsToAcademy($academy, $expense);
+
         if ($expense->status === Expense::STATUS_APPROVED || $expense->status === Expense::STATUS_PAID) {
             return response()->json([
                 'success' => false,
@@ -134,7 +139,7 @@ class ExpenseController extends Controller
         }
 
         $validated = $request->validate([
-            'expense_category_id' => 'sometimes|exists:expense_categories,id',
+            'expense_category_id' => ['sometimes', Rule::exists('expense_categories', 'id')->where('academy_id', $academy->id)],
             'academic_year_id' => 'nullable|exists:academic_years,id',
             'title' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
@@ -162,6 +167,8 @@ class ExpenseController extends Controller
      */
     public function approve(Academy $academy, Expense $expense): JsonResponse
     {
+        $this->ensureBelongsToAcademy($academy, $expense);
+
         if ($expense->status !== Expense::STATUS_PENDING) {
             return response()->json([
                 'success' => false,
@@ -186,6 +193,8 @@ class ExpenseController extends Controller
      */
     public function reject(Request $request, Academy $academy, Expense $expense): JsonResponse
     {
+        $this->ensureBelongsToAcademy($academy, $expense);
+
         $validated = $request->validate([
             'reason' => 'required|string|max:500',
         ]);
@@ -213,6 +222,8 @@ class ExpenseController extends Controller
      */
     public function markAsPaid(Academy $academy, Expense $expense): JsonResponse
     {
+        $this->ensureBelongsToAcademy($academy, $expense);
+
         if ($expense->status !== Expense::STATUS_APPROVED) {
             return response()->json([
                 'success' => false,
@@ -236,6 +247,8 @@ class ExpenseController extends Controller
      */
     public function destroy(Academy $academy, Expense $expense): JsonResponse
     {
+        $this->ensureBelongsToAcademy($academy, $expense);
+
         if (in_array($expense->status, [Expense::STATUS_APPROVED, Expense::STATUS_PAID])) {
             return response()->json([
                 'success' => false,
@@ -348,6 +361,8 @@ class ExpenseController extends Controller
      */
     public function updateCategory(Request $request, Academy $academy, ExpenseCategory $category): JsonResponse
     {
+        $this->ensureBelongsToAcademy($academy, $category);
+
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'code' => 'nullable|string|max:50',
@@ -370,6 +385,8 @@ class ExpenseController extends Controller
      */
     public function destroyCategory(Academy $academy, ExpenseCategory $category): JsonResponse
     {
+        $this->ensureBelongsToAcademy($academy, $category);
+
         $expenseCount = $category->expenses()->count();
         if ($expenseCount > 0) {
             return response()->json([
@@ -384,5 +401,13 @@ class ExpenseController extends Controller
             'success' => true,
             'message' => 'ลบหมวดหมู่สำเร็จ',
         ]);
+    }
+
+    /**
+     * `{expense}` / `{category}` ใน route ไม่ได้ผูกกับ `{academy}` — ต้องกันการเข้าถึงข้อมูลของโรงเรียนอื่นเอง (IDOR)
+     */
+    private function ensureBelongsToAcademy(Academy $academy, Expense|ExpenseCategory $record): void
+    {
+        abort_if((int) $record->academy_id !== (int) $academy->id, 404);
     }
 }
