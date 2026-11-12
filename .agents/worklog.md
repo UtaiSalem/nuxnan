@@ -1,5 +1,36 @@
 # Work Log — nuxnan project
 
+## 🟡 2026-11-12 (ต่อ) — Phase 5: ด่านผู้กดรับ + เฝ้าดูการโอนทางอ้อมตอนถอน (เทสต์ sqlite แล้ว · branch เดียวกับ Phase 2 · PR #43)
+
+เจ้าของสั่ง: "ทำ Phase 5 ต่อ เลือกตามที่แนะนำ" → D3 = เก็บแคมเปญ/บริจาค/ขายรายวิชาไว้ + ผู้กดรับต้องเป็นสมาชิกที่อนุมัติแล้ว + เฝ้าดู
+แผน: [`.agents/plans/disable-p2p-value-transfers.md`](plans/disable-p2p-value-transfers.md) §Phase 5 (อัพเดทสถานะ + ข้อที่ต้องเคาะ P5-a/b/c)
+
+### งานที่ทำ
+- **`feat(course-points)` ด่านผู้กดรับ:** `Course::canClaimPoints()` = เจ้าของ หรือ `course_member_status = 1`
+  · ⚠️ `course_members` มีสถานะ 3 คอลัมน์: `course_member_status` = การอนุมัติของครู (0 รอ/1 อนุมัติ, default 1) · `status` = ชำระเงิน/active (default 0) · `member_status` — ใช้ตัวแรกแบบเดียวกับรีวิว/รายการรออนุมัติ/นับผู้เรียน
+  · ใช้ที่ `CourseClaimService::assertMember` (list/claim กองบริจาค), `claimManualCampaign`, `grantCampaignClaim` (ครอบรางวัลบทเรียน/แบบทดสอบ คืน `reason=not_an_approved_member`), `CoursePointCampaignController` view/available
+  · UI: ข้อความ `not_a_course_member` ใน `CourseDonorCard.vue` บอกว่าต้องได้รับอนุมัติ
+- **`feat(withdrawal-review)` เฝ้าดู:** `WithdrawalFundSourceService::trace` เพิ่มแหล่งเงินเข้าทางอ้อม
+  · แต้มกดรับ `donation_claim` (→ `donates.donor_id`), `donation_claim_reward_claimer` (→ academy/course_donate_claims.claimer_transaction_id → donor), `course_manual_claim`/`lesson_completion_reward`/`quiz_completion_reward` (→ metadata.campaign_id → `created_by`)
+  · `course_income` (→ metadata.buyer_id) · summary `pool_claims`/`course_sales`/`top_indirect_funder`
+  · risk: `pool_claim_rewards`/`course_sale_income` (แค่ข้อมูล) · `single_indirect_funder` ≥50% ของยอดถอน → high · ไม่นับของตัวเอง · flag การโอนเดิมไม่เปลี่ยน
+  · UI `nuxnan-admin/wallet/pending.vue`: การ์ดช่องทางอ้อม + สีป้ายในรายการเงินเข้า
+
+### ตรวจแล้ว
+- เทสต์ใหม่ `CourseClaimApprovedMemberGateTest` 7 + `WithdrawalIndirectFundingTraceTest` 6 ผ่านบน sqlite · เทสต์เดิม CoursePointClaimTest/CourseClaimLedgerTest ผ่าน · pint ผ่าน
+- revert-check: เอาเงื่อนไข `course_member_status = 1` ออก → 5 เทสต์ตก · ปิดเงื่อนไขกระจุกตัว → 2 เทสต์ตก
+- `WithdrawalSourceOfFundsTest` 2 ตัวตก **เหมือนบน main** (sqlite CHECK enum ไม่รู้จัก `transfer_out`) — pre-existing
+- full suite sqlite เทียบ `main`: branch 2175 เทสต์ / `main` 2147 — ตก 46 ตัว **ชุดเดียวกับ main ทุกตัว** (เทียบ junit) ไม่มีตัวตกใหม่
+- Vue SFC compile ผ่าน (`CourseDonorCard.vue`, `nuxnan-admin/wallet/pending.vue`) — ไม่ใช่ `npm run build`
+- **ยังไม่ตรวจ:** MySQL · จอจริง · `npm run build` · ข้อมูล dev ว่ามีสมาชิก `course_member_status=0` ที่เคยกดรับไปแล้วกี่คน
+
+### ต้องเคาะต่อ (ไม่ได้ทำ เพราะต้องใช้ตัวเลขที่ไม่มีในข้อเสนอ)
+- [ ] 🔴 P5-a เพดาน `points_per_claim` แคมเปญรายวิชา (ตอนนี้ไม่มี max) — ช่องโอนก้อนใหญ่ที่เหลืออยู่จริง
+- [ ] P5-b พักรายได้ขายรายวิชา N วัน · [ ] P5-c จำกัดแปลงแต้ม→เงินจากแต้มกองกลาง
+- [ ] budget endpoints (`routes/learn/academy.php` `{academy}/budgets/*`) — ตรวจว่า `{budget}` ถูก scope กับ `{academy}` ไหม + `transfer()` ใช้ชื่อพารามิเตอร์ `$fromBudget` ไม่ตรง `{budget}` (implicit binding อาจไม่ทำงาน) — แยกเป็น suggested task แล้ว
+
+---
+
 ## 🟡 2026-11-12 — Phase 2: ปิดคูปองที่สมาชิกสร้าง (implement + เทสต์ sqlite แล้ว · branch `claude/intelligent-albattani-llfm1i` · รอ MySQL + ตรวจจอ + build)
 
 เจ้าของสั่ง: "ทำ Phase 2 คูปองต่อ เลือกตามที่แนะนำ" → D2 = ปิดการสร้างของสมาชิก · แลกได้เฉพาะคูปองแอดมิน · คูปองสมาชิกที่ค้าง → migration ยกเลิก + คืนผู้สร้าง
@@ -63,7 +94,7 @@
 ### งานที่ค้าง (TODO ต่อ — ตามแผน รอเจ้าของสั่ง "วิเคราะห์ละเอียด")
 - [ ] 🔴 **Phase 0** ช่องสร้างมูลค่าเอง (ร้ายแรงกว่าการโอน): **ตัวแรกสุด `POST /forgot-password/exchange/{user}` เติมแต้มให้ใครก็ได้ ไม่ตรวจแอดมิน ไม่เขียน ledger (แผน Phase 0 ข้อ 0 · D6 เคาะแล้ว: ฟีเจอร์ยังใช้ เพดาน 100 บาท/ครั้ง) → ✅ แก้โค้ดแล้ว 2026-11-04 (admin gate + max:100 + ledger, getuser gate) · เหลือตรวจ prod ด้วยการเทียบ users.pp กับ ledger** · ✅ 2026-11-04 ลบ `/wallet/deposit` + `/points/refund` แล้ว, `/points/xp/earn` เก็บไว้แต่ whitelist เกม + ≤100/ครั้ง + ≤500/วัน/เกม (`config/economy.php` game_xp) · agy opus quota หมด (รีเซ็ต ~2026-11-10) ใช้ `gemini-4-argon-high` แทนได้ · · `POST /wallet/deposit` เติมเงินตัวเองได้ไม่ต้องมีสลิป · `POST /points/refund` เพิ่มแต้มตัวเองได้ · `POST /points/xp/earn` — route อยู่ใน `routes/earn/points-wallet.php` (แผน §1.3, §3 Phase 0) + ต้องตรวจ production แบบอ่านอย่างเดียว
 - [x] Phase 2 คูปองผู้ใช้ = โอนแบบนิรนาม — ✅ ทำแล้ว 2026-11-12 (ดูบันทึกด้านบน)
-- [ ] Phase 5 แคมเปญ/บริจาค/ขายคอร์ส (เคาะ D3 ก่อน) · IDOR `budgets/{budget}/transfer` (แผน §1.4)
+- [x] Phase 5 แคมเปญ/บริจาค/ขายคอร์ส — ✅ ทำตามคำแนะนำ D3 แล้ว 2026-11-12 (ดูบันทึกบนสุด) · IDOR `budgets/{budget}/transfer` (แผน §1.4) ยังไม่ทำ — แยกเป็นงานต่างหาก
 - [x] ข้อความ "โอนแต้ม/โอนเงิน" ที่อื่น — ✅ ไล่ครบแล้ว 2026-11-12 (อ่านโค้ดอย่างเดียว ไม่ได้แก้ไฟล์ · ไม่ได้ตรวจจอ) **ไม่เหลือจุดไหนโฆษณา/เปิดทางโอนระหว่างสมาชิก**
   · ไม่มีผู้เรียก `/points/transfer` · `/wallet/transfer` · `?tab=transfer` · `transfer()` เหลือใน `ui/` · `i18n/locales/*.json` ไม่มี key เรื่องโอน
   · ที่เหลือทั้งหมดจัดได้ 5 กลุ่ม (เก็บไว้ทุกกลุ่ม): (1) สลิป/โอนเงินผ่านธนาคาร — ฝากเงิน ถอนเงิน โฆษณา บริจาคเงินสด (2) label ประวัติ `transfer`/`transfer_in`/`transfer_out` — `Points.vue`, `Wallet.vue`, `PointsTransactionCard`, `UnifiedTransactionCard`, `DashboardActivityFeed`, model `PointsTransaction`/`WalletTransaction` (3) เครื่องมือแอดมินสืบ/ย้อนการโอน — `nuxnan-admin/wallet`, `points`, `users/[id]`, `WithdrawalFundSourceService`, `FraudRemediationService` (4) โรงเรียน→คอร์ส `academy/allocations/*` (ไม่ใช่ P2P) (5) บริจาคแต้มเข้ากองกลางคอร์ส/โรงเรียน + กดรับ — `SupportDonationModal`, `CourseDonorCard:347` "กำลังโอนแต้มสนับสนุนให้คุณ" → เป็นช่องทางมูลค่าของ Phase 5 (รอ D3) ไม่ใช่เรื่องข้อความ
