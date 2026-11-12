@@ -100,6 +100,8 @@ export default defineNuxtConfig({
       reverbHost: process.env.NUXT_PUBLIC_REVERB_HOST || '',
       reverbPort: Number(process.env.NUXT_PUBLIC_REVERB_PORT || 8080),
       reverbScheme: process.env.NUXT_PUBLIC_REVERB_SCHEME || 'http',
+      // ระบบแจ้งเตือนซ่อนไว้ชั่วคราว (2026-11-12) — ตั้ง NUXT_PUBLIC_NOTIFICATIONS_ENABLED=true เพื่อเปิดกลับ
+      notificationsEnabled: process.env.NUXT_PUBLIC_NOTIFICATIONS_ENABLED === 'true',
     },
   },
 
