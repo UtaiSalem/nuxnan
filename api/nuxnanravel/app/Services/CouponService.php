@@ -346,9 +346,12 @@ class CouponService
     }
 
     /**
-     * Cancel coupon.
+     * Cancel coupon and refund its value to the creator.
+     *
+     * @param  array  $metadata  extra keys merged into the refund ledger row
+     *                           (e.g. which data migration cancelled it)
      */
-    public function cancelCoupon(Coupon $coupon, User $user): array
+    public function cancelCoupon(Coupon $coupon, User $user, array $metadata = []): array
     {
         // Check if user owns the coupon
         if ($coupon->user_id !== $user->id) {
@@ -358,7 +361,7 @@ class CouponService
             ];
         }
 
-        return DB::transaction(function () use ($coupon, $user) {
+        return DB::transaction(function () use ($coupon, $user, $metadata) {
             // Lock and re-read inside the transaction: a concurrent redeem (or a
             // second cancel) must not let one coupon pay out twice — creator
             // refund plus redeemer credit.
@@ -375,6 +378,11 @@ class CouponService
             // Cancel coupon
             $coupon->cancel();
 
+            $metadata = array_merge(
+                ['coupon_code' => $coupon->coupon_code, 'coupon_id' => $coupon->id],
+                $metadata,
+            );
+
             // Refund based on coupon type
             if ($coupon->coupon_type === 'points') {
                 $this->pointsService->refund(
@@ -383,7 +391,7 @@ class CouponService
                     'coupon_cancellation',
                     $coupon->id,
                     "คืนแต้มจากการยกเลิกคูปอง {$coupon->coupon_code}",
-                    ['coupon_code' => $coupon->coupon_code]
+                    $metadata
                 );
             } else {
                 $this->walletService->deposit(
@@ -392,7 +400,7 @@ class CouponService
                     'coupon_cancellation',
                     $coupon->coupon_code,
                     "คืนเงินจากการยกเลิกคูปอง {$coupon->coupon_code}",
-                    ['coupon_code' => $coupon->coupon_code]
+                    $metadata
                 );
             }
 
