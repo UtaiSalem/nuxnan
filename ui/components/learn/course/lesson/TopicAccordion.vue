@@ -187,7 +187,7 @@ const handleImageError = (event: Event) => {
       <div class="p-3 sm:p-4 space-y-4">
         <!-- Topic Content -->
         <div v-if="topic.content" class="prose prose-sm dark:prose-invert max-w-none">
-          <RichTextViewer :content="topic.content" />
+          <RichTextViewer :content="topic.content" size="sm" />
         </div>
 
         <!-- Video Section -->

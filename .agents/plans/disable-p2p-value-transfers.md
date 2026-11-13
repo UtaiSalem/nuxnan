@@ -42,6 +42,7 @@ DB dev: **ไม่มี**แถวไหนมาจาก `/wallet/deposit` �
 
 ### 1.4 อยู่นอกขอบเขต (จดไว้เท่านั้น)
 - `budgets/{budget}/transfer` ของโรงเรียนเป็น ledger งบประมาณภายใน (ไม่เกี่ยวกับยอดของผู้ใช้) แต่น่าจะมี IDOR: `to_budget_id` ไม่ได้จำกัดให้อยู่ใน `{academy}` ควรแก้แยกต่างหาก
+  · ✅ **แก้แล้ว 2026-11-12** — ยืนยันว่าเป็น IDOR จริงทั้งกลุ่ม `{academy}/budgets/{budget}` (ไม่ใช่แค่ `to_budget_id`) และ `transfer` ผูกงบผิดตัว · ใส่ `scopeBindings()` + จำกัด `to_budget_id` ให้อยู่ในโรงเรียน · เทสต์ `tests/Feature/Academy/BudgetAcademyScopingTest.php` (ดู worklog 2026-11-12)
 - รางวัลจากการกดรีแอคชัน (`increment('pp', 12)` ให้เจ้าของโพสต์ ใน ~15 controller) แพลตฟอร์มเป็นผู้สร้างแต้มให้ ไม่ได้หักจากยอดของ A จึงเป็นความเสี่ยงด้าน**ปั๊มแต้ม**ด้วยบัญชีอวตาร ไม่ใช่การโอน ควรทำในรอบปรับ governance ภายหลัง
 - route "transfer" ของห้องเรียน/นักเรียนเป็นเรื่องการย้ายห้อง ไม่เกี่ยวกับมูลค่า
 
@@ -52,8 +53,8 @@ DB dev: **ไม่มี**แถวไหนมาจาก `/wallet/deposit` �
 | # | คำถาม | ข้อเสนอ |
 |---|---|---|
 | D1 | ลบโค้ดการโอนทิ้ง หรือปิดด้วย flag? | **ใช้ flag** `economy.p2p_transfers_enabled=false` (config/env) + ตอบ 403 ตายตัวที่ service layer เก็บโค้ดไว้หนึ่งรอบ release แล้วค่อยลบใน follow-up |
-| D2 | คูปองที่ผู้ใช้สร้าง: ปิดทั้งการ**สร้าง**และการ**แลก**? | ปิดการ**สร้าง** ส่วนการ**แลก**ให้ใช้ต่อได้กับรหัสที่ออกไปแล้ว (2 ใบที่ยังใช้งานได้ รวม 340 แต้ม) หรือยกเลิกอัตโนมัติพร้อมคืนแต้ม คูปองที่แอดมินออก (`admin.php` `permission:coupon-create`) ยังใช้ได้ตามเดิม |
-| D3 | แคมเปญรายวิชา / การกดรับเงินบริจาค / รายได้จากการขายรายวิชา อยู่ในขอบเขตไหม? | **เก็บไว้** (เป็นฟีเจอร์ที่ดีไซน์เคาะแล้ว) แต่เพิ่มด่าน: ผู้กดรับต้องเป็นสมาชิก/นักเรียนที่อนุมัติแล้ว และเฝ้าดูความถี่ ทำเป็นเฟสแยก |
+| D2 | คูปองที่ผู้ใช้สร้าง: ปิดทั้งการ**สร้าง**และการ**แลก**? | ปิดการ**สร้าง** ส่วนการ**แลก**ให้ใช้ต่อได้กับรหัสที่ออกไปแล้ว (2 ใบที่ยังใช้งานได้ รวม 340 แต้ม) หรือยกเลิกอัตโนมัติพร้อมคืนแต้ม คูปองที่แอดมินออก (`admin.php` `permission:coupon-create`) ยังใช้ได้ตามเดิม · ✅ **เคาะแล้ว 2026-11-12 ("เลือกตามที่แนะนำ"): ปิดการสร้างของสมาชิก · แลกได้เฉพาะคูปองแอดมิน · คูปองสมาชิกที่ค้าง → migration ยกเลิก + คืนผู้สร้าง** |
+| D3 | แคมเปญรายวิชา / การกดรับเงินบริจาค / รายได้จากการขายรายวิชา อยู่ในขอบเขตไหม? | **เก็บไว้** (เป็นฟีเจอร์ที่ดีไซน์เคาะแล้ว) แต่เพิ่มด่าน: ผู้กดรับต้องเป็นสมาชิก/นักเรียนที่อนุมัติแล้ว และเฝ้าดูความถี่ ทำเป็นเฟสแยก · ✅ **เคาะแล้ว 2026-11-12 ("เลือกตามที่แนะนำ")** |
 | D4 | จะทำอะไรกับการโอนแต้ม 412 ครั้งในอดีต | ไม่แตะ ledger (ต้องเก็บประวัติไว้ตรวจสอบ) ถ้าต้องการ ให้ทำรายงานครั้งเดียวว่าผู้รับรายใหญ่คนไหนแปลงเป็นเงินแล้วถอนออกไป เพื่อใช้ตรวจการทุจริต |
 | D5 | ปิด `/wallet/deposit` กับ `/points/refund` ใน release เดียวกันเลยไหม? | **ใช่ และทำก่อนอย่างเร่งด่วน** เพราะร้ายแรงกว่าการโอน |
 | D6 | `forgot-password/exchange` (แอดมินแลกเงินสด→แต้มให้สมาชิก) ยังใช้อยู่ไหม? เพดานต่อครั้งเท่าไร? | ✅ **เคาะแล้ว 2026-11-04: ยังใช้อยู่ เพดาน 100 บาทต่อครั้ง** (= 108,000 แต้มที่อัตรา 1080) → เก็บไว้ บังคับแอดมิน + ผ่าน ledger |
@@ -73,12 +74,44 @@ DB dev: **ไม่มี**แถวไหนมาจาก `/wallet/deposit` �
    - เทสต์: ผู้ใช้ทั่วไปได้ 403 และ `pp` ไม่เปลี่ยน · แอดมินได้ 200 และมีแถว `points_transactions` เพิ่ม 1 แถว · ผู้ใช้ทั่วไปเรียก `getuser` ได้ 403
    - **ตรวจ production**: endpoint นี้ไม่เขียน ledger จึงค้นจาก ledger ไม่ได้ → ดู access log ของ `forgot-password/exchange` + เทียบ `users.pp` กับยอดสุทธิจาก `points_transactions` รายคน (ส่วนต่างบวกที่อธิบายไม่ได้ = ผู้ต้องสงสัย)
 > ✅ **ข้อ 1–3 แก้โค้ดแล้ว 2026-11-04 (ยังไม่ commit · `SelfMintEndpointsClosedTest` 8/8 บน sqlite):** ลบ `/wallet/deposit` + `/points/refund` (route + controller method; service ยังอยู่) ·
-> **`/points/xp/earn` เก็บไว้** (เจ้าของเคาะ — เกม Snake/English Vocab ใช้) แต่รับเฉพาะ `config('economy.game_xp.sources')`, ≤100 ต่อครั้ง, ≤500/วัน/เกม (นับใน Cache — race เล็กน้อยยอมรับได้เพราะเป็น XP ไม่ใช่เงิน) · ข้อ 4 (ตรวจ prod) ยังค้าง
+> **`/points/xp/earn` เก็บไว้** (เจ้าของเคาะ — เกม Snake/English Vocab ใช้) แต่รับเฉพาะ `config('economy.game_xp.sources')`, ≤100 ต่อครั้ง, ≤500/วัน/เกม (นับใน Cache — race เล็กน้อยยอมรับได้เพราะเป็น XP ไม่ใช่เงิน) · ข้อ 4 (ตรวจ prod): SQL เขียนไว้แล้ว รอเจ้าของรัน
+> ✅ **ตรวจซ้ำ 2026-11-12 (commit `c33ef14f`):** `route:list` ไม่มี deposit/refund · `SelfMintEndpointsClosedTest` 8/8 บน **MySQL** · Pint ผ่าน · revert-check: คืนไฟล์ก่อน commit แล้ว 5 เทสต์ด่านตก ✓ · `ui/` เหลือแค่ผู้เรียก `xp/earn` (Snake, `usePoints`) ตามที่เคาะ
 1. `routes/earn/points-wallet.php`: ลบ route ฝั่งผู้ใช้ `POST /wallet/deposit`, `POST /points/refund`, `POST /points/xp/earn`
    ผู้เรียกภายใน (`CouponService`, `CourseMarketplaceController`, `SchoolStoreService`) เรียกที่ **service** ไม่ใช่ route จึงไม่กระทบ ยืนยันด้วย `grep -rn "points/refund\|wallet/deposit'\|xp/earn" ui/`
 2. `ui/composables/useWallet.ts`: ลบ `deposit()` แล้วหาว่าใครเรียกใช้ ถ้ามีหน้าจอไหนใช้อยู่ ให้เปลี่ยนไปใช้ `createDepositRequest`
 3. เทสต์: feature test ยืนยันว่า route ที่ลบไปตอบ 404/405
 4. **ตรวจ production**: นับแบบอ่านอย่างเดียว `wallet_transactions` ที่ `transaction_type='deposit'` และ reference ไม่ได้มาจากคำขอฝากเงินที่อนุมัติแล้ว กับ `points_transactions` ที่ `transaction_type='refund'` และ `source_type='refund'`
+   > 🔎 **SQL พร้อมรัน (2026-11-12) — SELECT ล้วน เจ้าของรันเองบน prod** · ลองบน dev แล้ว syntax/คอลัมน์ถูก (dev ได้ 0 แถว)
+   > ใครเขียนแถว `deposit`: route ที่ลบไป (method/reference/metadata ผู้ใช้กรอกเอง) · `approveDepositRequest` (ผูกกับ `wallet_deposit_requests.wallet_transaction_id`) · `CouponService` แลก/ยกเลิกคูปอง (`metadata.coupon_code`)
+   > ใครเขียนแถว `refund` ที่ `source_type='refund'`: **มีแค่ route ที่ลบไป** (ผู้เรียกภายในใช้ `coupon_cancellation` / `App\Models\Course` / `reward_cancel`) จึงนับได้ตรง ๆ
+   > ⚠️ ข้อจำกัด: route เก่ารับ `metadata` จากผู้ใช้ — ถ้าคนโกงใส่ `coupon_code` ที่มีอยู่จริงลงไป แถวนั้นจะหลุด Q1 ได้ (ทำได้ยาก ยอมรับ) · ถ้าเจอ `Illegal mix of collations` ใน Q1 ให้เติม `COLLATE utf8mb4_unicode_ci` หลัง `JSON_UNQUOTE(...)`
+   ```sql
+   -- Q1: เงินที่เข้า wallet โดยไม่มีคำขอฝากที่อนุมัติ และไม่ได้มาจากคูปอง (= ผู้ต้องสงสัยว่าเติมเองผ่าน /wallet/deposit)
+   SELECT wt.id, wt.user_id, wt.amount, wt.description, wt.reference_number, wt.created_at
+   FROM wallet_transactions wt
+   LEFT JOIN wallet_deposit_requests r ON r.wallet_transaction_id = wt.id AND r.status = 'approved'
+   LEFT JOIN coupons c ON c.coupon_code = JSON_UNQUOTE(JSON_EXTRACT(wt.metadata, '$.coupon_code'))
+   WHERE wt.transaction_type = 'deposit' AND r.id IS NULL AND c.id IS NULL
+   ORDER BY wt.created_at;
+
+   -- Q1-สรุป: จำนวนแถว / ยอดรวม / จำนวนคน
+   SELECT COUNT(*) AS n, COALESCE(SUM(x.amount), 0) AS total_thb, COUNT(DISTINCT x.user_id) AS users
+   FROM (
+     SELECT wt.id, wt.user_id, wt.amount
+     FROM wallet_transactions wt
+     LEFT JOIN wallet_deposit_requests r ON r.wallet_transaction_id = wt.id AND r.status = 'approved'
+     LEFT JOIN coupons c ON c.coupon_code = JSON_UNQUOTE(JSON_EXTRACT(wt.metadata, '$.coupon_code'))
+     WHERE wt.transaction_type = 'deposit' AND r.id IS NULL AND c.id IS NULL
+   ) x;
+
+   -- Q2: แต้มที่ผู้ใช้ "คืนให้ตัวเอง" ผ่าน /points/refund รายคน
+   SELECT pt.user_id, COUNT(*) AS n, SUM(pt.amount) AS total_pp, MIN(pt.created_at) AS first_at, MAX(pt.created_at) AS last_at
+   FROM points_transactions pt
+   WHERE pt.transaction_type = 'refund' AND pt.source_type = 'refund'
+   GROUP BY pt.user_id
+   ORDER BY total_pp DESC;
+   ```
+   > ถ้าได้แถว → อย่าแก้ข้อมูลตรง ๆ ให้ส่งต่อเข้า `FraudRemediationService` / migration ตามกติกา (ดู Phase 4)
 
 ### Phase 1: ปิดการโอนตรง (backend คือด่านจริง)
 1. `config/economy.php`: เพิ่ม `'p2p_transfers_enabled' => env('ECONOMY_P2P_TRANSFERS', false)`
@@ -89,6 +122,13 @@ DB dev: **ไม่มี**แถวไหนมาจาก `/wallet/deposit` �
 4. เทสต์: `PointsTransferDisabledTest`, `WalletTransferDisabledTest` ทั้งคู่ยืนยันว่าได้ 403 ยอดไม่เปลี่ยน และไม่มีแถว ledger เพิ่ม รันบน MySQL (`-c phpunit.mysql.xml`)
 
 ### Phase 2: ปิดการสร้างคูปองโดยผู้ใช้
+> ✅ **ทำแล้ว 2026-11-12** (เทสต์ใหม่ 15 ตัวผ่านบน sqlite · full suite ไม่มีตัวตกใหม่เทียบ `main` · ยังไม่ได้รันบน MySQL · ยังไม่ได้ตรวจจอ · ยังไม่ได้ `npm run build`)
+> - ใช้ flag เดียวกับการโอนตรง `economy.p2p_transfers_enabled` · "แอดมิน" = `isPlearndAdmin()` (แบบเดียวกับ Phase 0) — `user_id` ของคูปองคือผู้สร้าง ไม่มีคอลัมน์ `created_by`
+> - `POST /coupons` สมาชิกได้ 403 ก่อน validate · service โยน `memberCouponsDisabled()` · แอดมินยังสร้างได้ (หักจากยอดของแอดมินเอง)
+> - redeem คูปองสมาชิก → `COUPON_MEMBER_ISSUED_DISABLED` · ผู้สร้างยังกดยกเลิกรับคืนเองได้
+> - migration `2026_11_12_000001_cancel_active_member_coupons` เรียก `CouponService::cancelCoupon` (ผลเหมือนผู้สร้างกดยกเลิกเอง รวมใบที่เลยวันหมดอายุแต่ยัง active) · ข้ามคูปองเงินของคนที่ถูกระงับ wallet · ledger ติด `metadata.cancelled_by` → `down()` หักคืนแล้วเปิดคูปองกลับ (ข้ามถ้ายอดไม่พอ ไม่ทำให้ติดลบ)
+> - แถม: lock แถวคูปองตอนแลก/ยกเลิก (เดิมยกเลิกพร้อมกับที่อีกคนแลก = จ่ายสองทาง)
+> - 🔴 เจอ: route แอดมิน `routes/admin/admin.php` `/admin/coupons` **ใช้งานไม่ได้มาตลอด** (ใช้คอลัมน์ `code`/`creator_id`/สถานะ `unused` และ relation `creator`/`usedBy` ที่ไม่มีใน `Coupon`) → หน้า `nuxnan-admin/coupons` สร้าง/ดูคูปองไม่ได้ ทางเดียวที่แอดมินออกคูปองได้ตอนนี้คือ `POST /api/coupons` ด้วยบัญชีแอดมิน
 1. `routes/earn/coupons.php`: ปิด `POST /coupons` (สร้าง) สำหรับผู้ใช้ทั่วไป (ลบ route หรือใช้ flag เดียวกัน)
 2. เก็บ `POST /coupons/redeem` ไว้ แต่ให้แลกได้เฉพาะคูปองที่ `created_by` เป็นแอดมิน หรือสร้างก่อนวันตัดรอบ (ตาม D2)
 3. จัดการคูปองผู้ใช้ 2 ใบที่ยังใช้งานได้ด้วย **migration** (ตามกติกาโปรเจค: แก้ข้อมูลต้องเป็น migration): ยกเลิกและคืนแต้มให้ผู้สร้างตามหลักของ `PointsService::refund` มี `down()` จริง และไม่ hard-code id
@@ -108,6 +148,13 @@ DB dev: **ไม่มี**แถวไหนมาจาก `/wallet/deposit` �
 - ทางเลือก: เปลี่ยน "ยอดโอนวันนี้" บนแดชบอร์ดแอดมินเป็นตัวเลขย้อนหลัง หรือซ่อนเมื่อ flag ปิด
 
 ### Phase 5 (แยกต่างหาก หลังเคาะ D3): เสริมความปลอดภัยช่องทางมูลค่าที่เหลือ
+> ✅ **ทำแล้ว 2026-11-12 ตามคำแนะนำ D3 (เก็บฟีเจอร์ + ด่านสมาชิกที่อนุมัติ + เฝ้าดู)** — เทสต์บน sqlite · ยังไม่ได้รันบน MySQL / ตรวจจอ / `npm run build`
+> - **ด่านผู้กดรับ:** `Course::canClaimPoints()` = เจ้าของ หรือ `course_members.course_member_status = 1` (คอลัมน์การอนุมัติของครู — `status` คือสถานะชำระเงิน) ใช้กับกองบริจาครายวิชา, แคมเปญ manual, `grantCampaignClaim` (ครอบรางวัลบทเรียน/แบบทดสอบ), endpoint view/available · เดิมแค่มีแถว `course_members` (รออนุมัติ) ก็กดรับได้ · ฝั่งโรงเรียนบังคับ `academy_members.status=2` อยู่แล้ว
+> - **เฝ้าดูตอนถอน:** `WithdrawalFundSourceService` เห็นแต้มที่กดรับจากกอง (ระบุผู้บริจาค/ผู้สร้างแคมเปญ) และรายได้ขายรายวิชา (ระบุผู้ซื้อ) · ถ้าคนเดียวคิดเป็น ≥50% ของยอดถอน → `single_indirect_funder` ระดับ high · ไม่นับมูลค่าที่มาจากตัวเอง
+> - ⏸️ **ยังไม่ทำ — ต้องให้เจ้าของเคาะตัวเลข (ไม่มีในข้อเสนอเดิม):**
+>   - (P5-a) 🔴 เพดาน `points_per_claim` ของแคมเปญรายวิชา — ตอนนี้ `min:1` ไม่มี max: เจ้าของตั้งแคมเปญก้อนเดียวเท่ากองทั้งกอง แล้วให้สมาชิกที่ตัวเองอนุมัติกดรับไปได้ทันที (ด่านสมาชิกกันไม่ได้เพราะเจ้าของเป็นคนอนุมัติเอง · การถอนเป็นเงินจะโดนจับที่ trace แต่การใช้แต้มซื้อของไม่โดน)
+>   - (P5-b) พักรายได้ขายรายวิชา N วันก่อนถอนได้
+>   - (P5-c) จำกัดการแปลง แต้ม→เงิน สำหรับแต้มที่มาจากกองกลาง
 - รายได้จากการขายรายวิชา: พักเงินของเจ้าของไว้ N วันก่อนถอนได้ หรือ flag การขายที่ผู้ซื้อกับผู้ขายใช้ IP/อุปกรณ์เดียวกัน
 - การกดรับแคมเปญ/เงินบริจาค: ยืนยันว่าผู้กดรับเป็นสมาชิกที่อนุมัติแล้ว (`academy_members.status=2`) หรือเป็นนักเรียนที่ลงทะเบียน และจำกัดความถี่ต่อผู้กดรับ
 - จำกัดอัตราการแปลง `แต้ม → เงิน` สำหรับบัญชีที่แต้มมาจากการกดรับจากกองกลาง

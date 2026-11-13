@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\AccountEconomyRestrictedException;
 use App\Models\Coupon;
 use App\Models\CouponRedemption;
 use App\Models\User;
@@ -24,6 +25,25 @@ class CouponService
     }
 
     /**
+     * Member-issued coupons work as an anonymous peer-to-peer transfer (A pays
+     * to mint a code, hands it to B, B redeems it), so they follow the same
+     * platform switch as direct transfers. Platform admins may still issue —
+     * the same set the admin coupon routes let in (EnsurePlearndAdmin:
+     * Plearnd admin or SUPER_ADMIN).
+     */
+    public function canIssueCoupons(User $user): bool
+    {
+        return config('economy.p2p_transfers_enabled') || $user->isPlearndAdmin() || $user->isSuperAdmin();
+    }
+
+    protected function assertCanIssueCoupons(User $user): void
+    {
+        if (! $this->canIssueCoupons($user)) {
+            throw AccountEconomyRestrictedException::memberCouponsDisabled();
+        }
+    }
+
+    /**
      * Generate unique coupon code (numeric only for user convenience).
      */
     public function generateCouponCode(): string
@@ -41,6 +61,8 @@ class CouponService
      */
     public function createPointsCoupon(User $user, float $points, ?string $description = null, ?int $expiresInDays = null, int $quantity = 1): array
     {
+        $this->assertCanIssueCoupons($user);
+
         return DB::transaction(function () use ($user, $points, $description, $expiresInDays, $quantity) {
             $totalPoints = $points * $quantity;
 
@@ -106,6 +128,8 @@ class CouponService
      */
     public function createWalletCoupon(User $user, float $amount, ?string $description = null, ?int $expiresInDays = null, int $quantity = 1): array
     {
+        $this->assertCanIssueCoupons($user);
+
         return DB::transaction(function () use ($user, $amount, $description, $expiresInDays, $quantity) {
             $totalAmount = $amount * $quantity;
 
@@ -170,8 +194,9 @@ class CouponService
     public function redeemCoupon(User $user, string $couponCode, ?string $ipAddress = null, ?string $userAgent = null): array
     {
         return DB::transaction(function () use ($user, $couponCode, $ipAddress, $userAgent) {
-            // First, find the coupon by code (any status)
-            // lockForUpdate: กันแลกซ้ำพร้อมกัน 2 คำขอ และกันแลกชนกับแอดมินยกเลิก+คืนยอด (cancelCouponByAdmin)
+            // First, find the coupon by code (any status). Lock the row so two
+            // concurrent redeems (or a redeem racing the creator's cancel / cancelCouponByAdmin)
+            // cannot both see it as active and pay it out twice.
             $coupon = Coupon::where('coupon_code', $couponCode)->lockForUpdate()->first();
 
             // Check if coupon exists
@@ -218,6 +243,16 @@ class CouponService
                     'success' => false,
                     'message' => 'คูปองนี้ไม่สามารถใช้งานได้',
                     'error_code' => 'COUPON_INACTIVE',
+                ];
+            }
+
+            // Member-issued coupons are closed together with P2P transfers;
+            // only coupons a platform admin issued can still be redeemed.
+            if (! config('economy.p2p_transfers_enabled') && ! $coupon->isIssuedByPlatformAdmin()) {
+                return [
+                    'success' => false,
+                    'message' => 'คูปองนี้สร้างโดยสมาชิก ซึ่งระบบปิดใช้งานแล้ว (ผู้สร้างยกเลิกคูปองเพื่อรับแต้ม/เงินคืนได้)',
+                    'error_code' => 'COUPON_MEMBER_ISSUED_DISABLED',
                 ];
             }
 
@@ -313,9 +348,12 @@ class CouponService
     }
 
     /**
-     * Cancel coupon.
+     * Cancel coupon and refund its value to the creator.
+     *
+     * @param  array  $metadata  extra keys merged into the refund ledger row
+     *                           (e.g. which data migration cancelled it)
      */
-    public function cancelCoupon(Coupon $coupon, User $user): array
+    public function cancelCoupon(Coupon $coupon, User $user, array $metadata = []): array
     {
         // Check if user owns the coupon
         if ($coupon->user_id !== $user->id) {
@@ -325,19 +363,28 @@ class CouponService
             ];
         }
 
-        // Check if coupon can be cancelled
-        if ($coupon->status !== 'active') {
-            return [
-                'success' => false,
-                'message' => 'ไม่สามารถยกเลิกคูปองนี้ได้',
-            ];
-        }
+        return DB::transaction(function () use ($coupon, $user, $metadata) {
+            // Lock and re-read inside the transaction: a concurrent redeem (or a
+            // second cancel) must not let one coupon pay out twice — creator
+            // refund plus redeemer credit.
+            $coupon = Coupon::whereKey($coupon->id)->lockForUpdate()->first();
 
-        return DB::transaction(function () use ($coupon, $user) {
+            // Check if coupon can be cancelled
+            if (! $coupon || $coupon->status !== 'active') {
+                return [
+                    'success' => false,
+                    'message' => 'ไม่สามารถยกเลิกคูปองนี้ได้',
+                ];
+            }
+
             // Cancel coupon
             $coupon->cancel();
 
-            $this->refundToCreator($coupon, $user);
+            $this->refundToCreator(
+                $coupon,
+                $user,
+                array_merge(['coupon_id' => $coupon->id], $metadata),
+            );
 
             Log::info('Coupon cancelled', [
                 'coupon_id' => $coupon->id,

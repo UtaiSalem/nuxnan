@@ -15,6 +15,9 @@ const toast = useToast()
 const swal = useSweetAlert()
 const authStore = useAuthStore()
 
+// สมาชิกทั่วไปสร้างคูปองไม่ได้แล้ว (คูปอง = โอนแต้ม/เงินให้ผู้อื่นทางอ้อม) — backend บังคับจริง ตรงนี้แค่ซ่อนปุ่ม
+const canIssueCoupons = computed(() => !!authStore.user?.is_plearnd_admin)
+
 // State
 const coupons = ref<any[]>([])
 const statistics = ref<any>(null)
@@ -119,7 +122,7 @@ const redeemCoupon = async () => {
   
   isRedeeming.value = true
   try {
-    const response = await api.post('/api/coupons/redeem', { code: redeemCode.value.trim() })
+    const response = await api.post('/api/coupons/redeem', { coupon_code: redeemCode.value.trim() })
     if (response.success) {
       toast.success('แลกคูปองสำเร็จ! ได้รับแต้มแล้ว')
       showRedeemModal.value = false
@@ -130,9 +133,10 @@ const redeemCoupon = async () => {
     } else {
       swal.error(response.message || 'ไม่สามารถแลกคูปองได้')
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error redeeming coupon:', error)
-    swal.error('ไม่สามารถแลกคูปองได้')
+    // 4xx ถูก throw — ข้อความจริงจาก backend อยู่ใน error.data.message
+    swal.error(error?.data?.message || 'ไม่สามารถแลกคูปองได้')
   } finally {
     isRedeeming.value = false
   }
@@ -442,12 +446,25 @@ const downloadPDF = async () => {
           <span class="hidden md:inline">{{ isDownloading ? 'กำลังดาวน์โหลด...' : 'ดาวน์โหลด PDF' }}</span>
         </button>
         <NuxtLink 
+          v-if="canIssueCoupons"
           to="/earn/coupons/create"
           class="p-2.5 md:px-4 md:py-2.5 bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white rounded-xl hover:opacity-90 transition-all flex items-center gap-2 font-bold shadow-lg"
         >
           <Icon icon="fluent:add-24-regular" class="w-5 h-5" />
           <span class="hidden md:inline">สร้างคูปอง</span>
         </NuxtLink>
+      </div>
+    </div>
+
+    <!-- แจ้งสมาชิกว่าปิดการสร้างคูปองแล้ว -->
+    <div
+      v-if="!canIssueCoupons"
+      class="mb-6 flex items-start gap-3 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3 sm:p-4"
+    >
+      <Icon icon="fluent:info-24-regular" class="w-5 h-5 flex-shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+      <div class="min-w-0 flex-1 break-words text-sm text-amber-800 dark:text-amber-200">
+        <p class="font-bold">ปิดการสร้างคูปองโดยสมาชิกแล้ว</p>
+        <p class="mt-1">คูปองเป็นการโอนแต้ม/เงินให้ผู้อื่นทางอ้อม ระบบจึงปิดไว้เหมือนการโอน คูปองที่คุณสร้างไว้และยังไม่มีใครใช้จะถูกยกเลิกและคืนแต้ม/เงินเข้าบัญชีคุณ ส่วนคูปองจากผู้ดูแลระบบยังแลกได้ตามปกติ</p>
       </div>
     </div>
 
@@ -724,6 +741,7 @@ const downloadPDF = async () => {
       <h3 class="text-lg font-bold text-gray-700 dark:text-gray-300 mb-2">ไม่มีคูปอง</h3>
       <p class="text-gray-500 dark:text-gray-400 mb-6">คุณยังไม่มีคูปองในขณะนี้</p>
       <NuxtLink 
+        v-if="canIssueCoupons"
         to="/earn/coupons/create"
         class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white rounded-xl font-bold shadow-lg hover:opacity-90 transition-all"
       >

@@ -132,11 +132,13 @@ const redeemCoupon = async () => {
       swal.error(response.message || 'ไม่สามารถใช้คูปองได้')
     }
   } catch (error: any) {
+    // 4xx ถูก throw — ข้อความจริงจาก backend อยู่ใน error.data.message
+    const message = error?.data?.message || error.message || 'เกิดข้อผิดพลาด'
     result.value = {
       success: false,
-      message: error.message || 'เกิดข้อผิดพลาด',
+      message,
     }
-    swal.error(error.message || 'เกิดข้อผิดพลาด')
+    swal.error(message)
   } finally {
     isLoading.value = false
     stopScanning()

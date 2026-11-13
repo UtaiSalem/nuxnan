@@ -1084,6 +1084,33 @@ onMounted(() => {
                   </div>
                 </div>
 
+                <!-- ช่องทางอ้อม: กดรับจากกองที่คนอื่นเติม / ขายรายวิชา (Phase 5) -->
+                <div
+                  v-if="fundSource.summary?.pool_claims?.count || fundSource.summary?.course_sales?.count"
+                  class="grid grid-cols-1 gap-2 sm:grid-cols-2"
+                >
+                  <div class="bg-white/70 dark:bg-slate-900/40 rounded-xl p-2.5">
+                    <p class="text-[11px] opacity-80">กดรับแต้มจากกอง/แคมเปญ</p>
+                    <p class="text-sm font-bold mt-0.5 break-words">{{ formatPoints(fundSource.summary?.pool_claims?.points) }}</p>
+                    <p class="text-[11px] opacity-70">≈ {{ formatCurrency(fundSource.summary?.pool_claims?.value_thb) }} · {{ fundSource.summary?.pool_claims?.count || 0 }} รายการ</p>
+                  </div>
+                  <div class="bg-white/70 dark:bg-slate-900/40 rounded-xl p-2.5">
+                    <p class="text-[11px] opacity-80">รายได้ขายรายวิชา</p>
+                    <p class="text-sm font-bold mt-0.5 break-words">{{ formatCurrency(fundSource.summary?.course_sales?.value_thb) }}</p>
+                    <p class="text-[11px] opacity-70">{{ fundSource.summary?.course_sales?.count || 0 }} รายการ</p>
+                  </div>
+                  <div
+                    v-if="fundSource.summary?.top_indirect_funder"
+                    class="sm:col-span-2 flex items-center gap-2 bg-white/70 dark:bg-slate-900/40 rounded-xl px-2.5 py-2"
+                  >
+                    <Icon icon="fluent:person-24-regular" class="w-5 h-5 flex-shrink-0 opacity-70" />
+                    <p class="min-w-0 flex-1 text-xs break-words">
+                      มาจากคนเดียวมากที่สุด: <span class="font-semibold">{{ fundSource.summary.top_indirect_funder.user?.name }}</span>
+                    </p>
+                    <p class="flex-shrink-0 whitespace-nowrap text-xs font-bold">{{ formatCurrency(fundSource.summary.top_indirect_funder.value_thb) }}</p>
+                  </div>
+                </div>
+
                 <!-- Senders list -->
                 <div v-if="fundSource.summary?.senders?.length" class="space-y-1.5 pt-1">
                   <p class="text-[11px] font-semibold uppercase tracking-wider opacity-80">ผู้ที่โอนเข้ามา</p>
@@ -1128,6 +1155,8 @@ onMounted(() => {
                       class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap"
                       :class="flow.type === 'transfer_in' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
                         : flow.type === 'transfer' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300'
+                        : flow.type === 'pool_claim' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                        : flow.type === 'course_sale' ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300'
                         : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'"
                     >
                       {{ flow.type_label }}

@@ -9,12 +9,27 @@ use App\Models\ExpenseCategory;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * ExpenseController - จัดการรายจ่าย
  */
 class ExpenseController extends Controller
 {
+    /**
+     * คอลัมน์ที่ยอมให้เรียงได้ — ก่อนหน้านี้ `sort_by` ดิบ ๆ ลง `orderBy` ตรง ๆ ชื่อคอลัมน์ผิดจึงได้ 500 ไม่ใช่ 422
+     */
+    private const SORTABLE_COLUMNS = [
+        'created_at',
+        'updated_at',
+        'expense_date',
+        'amount',
+        'title',
+        'status',
+        'vendor',
+        'reference_number',
+    ];
+
     protected AuditLogService $auditService;
 
     public function __construct(AuditLogService $auditService)
@@ -47,9 +62,15 @@ class ExpenseController extends Controller
             });
         }
 
-        $sortBy = $request->input('sort_by', 'created_at');
-        $sortOrder = $request->input('sort_order', 'desc');
-        $query->orderBy($sortBy, $sortOrder);
+        $sort = $request->validate([
+            'sort_by' => ['nullable', Rule::in(self::SORTABLE_COLUMNS)],
+            'sort_order' => 'nullable|in:asc,desc',
+        ]);
+
+        $sortBy = $sort['sort_by'] ?? null;
+        $sortOrder = $sort['sort_order'] ?? null;
+
+        $query->orderBy($sortBy ?: 'created_at', $sortOrder ?: 'desc');
 
         $expenses = $query->paginate($request->input('per_page', 20));
 
@@ -70,6 +91,8 @@ class ExpenseController extends Controller
      */
     public function show(Academy $academy, Expense $expense): JsonResponse
     {
+        $this->ensureBelongsToAcademy($academy, $expense);
+
         $expense->load(['category', 'creator:id,name', 'approver:id,name']);
 
         $this->auditService->logView($expense);
@@ -86,8 +109,8 @@ class ExpenseController extends Controller
     public function store(Request $request, Academy $academy): JsonResponse
     {
         $validated = $request->validate([
-            'expense_category_id' => 'required|exists:expense_categories,id',
-            'academic_year_id' => 'nullable|exists:academic_years,id',
+            'expense_category_id' => ['required', Rule::exists('expense_categories', 'id')->where('academy_id', $academy->id)],
+            'academic_year_id' => ['nullable', Rule::exists('academic_years', 'id')->where('academy_id', $academy->id)],
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'amount' => 'required|numeric|min:0.01',
@@ -126,6 +149,8 @@ class ExpenseController extends Controller
      */
     public function update(Request $request, Academy $academy, Expense $expense): JsonResponse
     {
+        $this->ensureBelongsToAcademy($academy, $expense);
+
         if ($expense->status === Expense::STATUS_APPROVED || $expense->status === Expense::STATUS_PAID) {
             return response()->json([
                 'success' => false,
@@ -134,8 +159,8 @@ class ExpenseController extends Controller
         }
 
         $validated = $request->validate([
-            'expense_category_id' => 'sometimes|exists:expense_categories,id',
-            'academic_year_id' => 'nullable|exists:academic_years,id',
+            'expense_category_id' => ['sometimes', Rule::exists('expense_categories', 'id')->where('academy_id', $academy->id)],
+            'academic_year_id' => ['nullable', Rule::exists('academic_years', 'id')->where('academy_id', $academy->id)],
             'title' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
             'amount' => 'sometimes|numeric|min:0.01',
@@ -162,6 +187,8 @@ class ExpenseController extends Controller
      */
     public function approve(Academy $academy, Expense $expense): JsonResponse
     {
+        $this->ensureBelongsToAcademy($academy, $expense);
+
         if ($expense->status !== Expense::STATUS_PENDING) {
             return response()->json([
                 'success' => false,
@@ -186,6 +213,8 @@ class ExpenseController extends Controller
      */
     public function reject(Request $request, Academy $academy, Expense $expense): JsonResponse
     {
+        $this->ensureBelongsToAcademy($academy, $expense);
+
         $validated = $request->validate([
             'reason' => 'required|string|max:500',
         ]);
@@ -213,6 +242,8 @@ class ExpenseController extends Controller
      */
     public function markAsPaid(Academy $academy, Expense $expense): JsonResponse
     {
+        $this->ensureBelongsToAcademy($academy, $expense);
+
         if ($expense->status !== Expense::STATUS_APPROVED) {
             return response()->json([
                 'success' => false,
@@ -236,6 +267,8 @@ class ExpenseController extends Controller
      */
     public function destroy(Academy $academy, Expense $expense): JsonResponse
     {
+        $this->ensureBelongsToAcademy($academy, $expense);
+
         if (in_array($expense->status, [Expense::STATUS_APPROVED, Expense::STATUS_PAID])) {
             return response()->json([
                 'success' => false,
@@ -324,7 +357,7 @@ class ExpenseController extends Controller
             'name' => 'required|string|max:255',
             'code' => 'nullable|string|max:50',
             'description' => 'nullable|string',
-            'parent_id' => 'nullable|exists:expense_categories,id',
+            'parent_id' => ['nullable', Rule::exists('expense_categories', 'id')->where('academy_id', $academy->id)],
         ]);
 
         $category = ExpenseCategory::create([
@@ -348,11 +381,17 @@ class ExpenseController extends Controller
      */
     public function updateCategory(Request $request, Academy $academy, ExpenseCategory $category): JsonResponse
     {
+        $this->ensureBelongsToAcademy($academy, $category);
+
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'code' => 'nullable|string|max:50',
             'description' => 'nullable|string',
-            'parent_id' => 'nullable|exists:expense_categories,id',
+            'parent_id' => [
+                'nullable',
+                Rule::notIn([$category->id]),
+                Rule::exists('expense_categories', 'id')->where('academy_id', $academy->id),
+            ],
             'is_active' => 'boolean',
         ]);
 
@@ -370,6 +409,8 @@ class ExpenseController extends Controller
      */
     public function destroyCategory(Academy $academy, ExpenseCategory $category): JsonResponse
     {
+        $this->ensureBelongsToAcademy($academy, $category);
+
         $expenseCount = $category->expenses()->count();
         if ($expenseCount > 0) {
             return response()->json([
@@ -384,5 +425,13 @@ class ExpenseController extends Controller
             'success' => true,
             'message' => 'ลบหมวดหมู่สำเร็จ',
         ]);
+    }
+
+    /**
+     * `{expense}` / `{category}` ใน route ไม่ได้ผูกกับ `{academy}` — ต้องกันการเข้าถึงข้อมูลของโรงเรียนอื่นเอง (IDOR)
+     */
+    private function ensureBelongsToAcademy(Academy $academy, Expense|ExpenseCategory $record): void
+    {
+        abort_if((int) $record->academy_id !== (int) $academy->id, 404);
     }
 }

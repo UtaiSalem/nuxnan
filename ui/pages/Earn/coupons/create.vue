@@ -12,6 +12,9 @@ const swal = useSweetAlert()
 const authStore = useAuthStore()
 const router = useRouter()
 
+// สมาชิกทั่วไปสร้างคูปองไม่ได้แล้ว (คูปอง = โอนแต้ม/เงินให้ผู้อื่นทางอ้อม) — backend ตอบ 403 อยู่แล้ว
+const canIssueCoupons = computed(() => !!authStore.user?.is_plearnd_admin)
+
 // State
 const type = ref<'points' | 'wallet'>('points')
 const amount = ref<number>(100)
@@ -125,8 +128,27 @@ const formatNumber = (num: number): string => {
       กลับไปหน้าคูปอง
     </NuxtLink>
 
+    <!-- ปิดการสร้างคูปองโดยสมาชิก -->
+    <div v-if="!canIssueCoupons" class="vikinger-card p-4 sm:p-8 text-center">
+      <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+        <Icon icon="fluent:ticket-diagonal-24-regular" class="w-8 h-8 text-amber-600 dark:text-amber-400" />
+      </div>
+      <h1 class="text-lg sm:text-2xl font-black text-gray-900 dark:text-white break-words">ปิดการสร้างคูปองโดยสมาชิกแล้ว</h1>
+      <p class="mt-2 text-sm sm:text-base text-gray-500 dark:text-gray-400 break-words">
+        คูปองเป็นการโอนแต้ม/เงินให้ผู้อื่นทางอ้อม ระบบจึงปิดไว้เหมือนการโอนแต้มและโอนเงิน
+        คุณยังแลกคูปองที่ผู้ดูแลระบบออกให้ได้ตามปกติ
+      </p>
+      <NuxtLink
+        to="/earn/coupons"
+        class="mt-6 inline-flex min-h-[44px] items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white rounded-xl font-bold shadow-lg hover:opacity-90 transition-all"
+      >
+        <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />
+        กลับไปหน้าคูปอง
+      </NuxtLink>
+    </div>
+
     <!-- Success State -->
-    <div v-if="createdCoupons.length > 0" class="vikinger-card !p-0 overflow-hidden">
+    <div v-else-if="createdCoupons.length > 0" class="vikinger-card !p-0 overflow-hidden">
       <!-- Success Header -->
       <div class="bg-gradient-to-r from-green-500 to-emerald-500 p-6 text-center">
         <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-white/20 flex items-center justify-center">

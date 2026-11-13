@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Course;
 use App\Models\CourseDonate;
-use App\Models\CourseMember;
 use App\Models\CoursePointAccount;
 use App\Models\CoursePointCampaign;
 use App\Models\CoursePointCampaignClaim;
@@ -472,6 +471,11 @@ class CoursePointAccountService
             if ($idempotencyKey && ($existing = CoursePointTransaction::where('idempotency_key', $idempotencyKey)->first())) {
                 return ['rewarded' => true, 'points_received' => $existing->amount, 'campaign_title' => $campaign->title];
             }
+            // ทุกแคมเปญ (manual/บทเรียน/แบบทดสอบ) จ่ายออกจากกองแต้มของรายวิชา — ผู้รับต้องเป็นเจ้าของหรือสมาชิกที่อนุมัติแล้ว
+            if (! Course::find($campaign->course_id)?->canClaimPoints($student)) {
+                return ['rewarded' => false, 'reason' => 'not_an_approved_member'];
+            }
+
             // ลำดับ lock: campaign -> account เพื่อเลี่ยง deadlock
             $campaign = CoursePointCampaign::lockForUpdate()->find($campaign->id);
             if (! $campaign->isClaimable()) {
@@ -631,9 +635,8 @@ class CoursePointAccountService
         if ($campaign->campaign_type !== CoursePointCampaign::CAMPAIGN_TYPE_MANUAL) {
             return ['success' => false, 'message' => 'Campaign is not manual'];
         }
-        $isCourseOwner = Course::where('id', $campaign->course_id)->value('user_id') === $student->id;
-        if (! $isCourseOwner && ! CourseMember::where('course_id', $campaign->course_id)->where('user_id', $student->id)->exists()) {
-            return ['success' => false, 'message' => 'ต้องเข้าร่วมรายวิชาก่อน'];
+        if (! Course::find($campaign->course_id)?->canClaimPoints($student)) {
+            return ['success' => false, 'message' => 'ต้องเป็นสมาชิกรายวิชาที่ได้รับอนุมัติแล้วจึงจะรับแต้มได้'];
         }
         if (! $campaign->isClaimable()) {
             return ['success' => false, 'message' => 'Campaign is not claimable'];

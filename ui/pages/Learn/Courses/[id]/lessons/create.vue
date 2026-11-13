@@ -80,6 +80,15 @@ useHead({
       <span class="text-gray-900 dark:text-white font-medium">สร้างบทเรียนใหม่</span>
     </nav>
 
+    <NuxtLink
+      :to="`/Learn/Courses/${courseId}/lessons/import`"
+      class="flex min-h-[44px] items-center gap-3 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-3 sm:p-4 text-sm text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+    >
+      <Icon icon="fluent:document-arrow-up-24-regular" class="w-6 h-6 flex-shrink-0" />
+      <span class="min-w-0 flex-1 break-words">มีเนื้อหาในไฟล์ Word อยู่แล้ว? นำเข้าบทเรียนจากไฟล์ .docx ได้เลย</span>
+      <Icon icon="fluent:chevron-right-16-regular" class="w-4 h-4 flex-shrink-0" />
+    </NuxtLink>
+
     <!-- Lesson Form - Always show, backend will validate permission -->
     <LessonForm
       :course-id="courseId"

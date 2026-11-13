@@ -64,7 +64,7 @@ class CoursePointCampaignController extends Controller
     {
         abort_if($campaign->course_id !== $course->id, 404);
         abort_unless($campaign->isClaimable(), 422);
-        abort_unless($course->courseMembers()->where('user_id', auth()->id())->exists(), 403);
+        abort_unless($course->canClaimPoints(auth()->user()), 403);
         abort_if($campaign->claims()->where('user_id', auth()->id())->exists(), 422);
 
         $donation = CourseDonate::with('donor.profile')
@@ -102,7 +102,7 @@ class CoursePointCampaignController extends Controller
     public function available(Course $course)
     {
         $user = auth()->user();
-        $enrolled = $course->user_id === $user->id || $course->courseMembers()->where('user_id', $user->id)->exists();
+        $enrolled = $course->canClaimPoints($user);
         $data = CoursePointCampaign::where('course_id', $course->id)->where('campaign_type', CoursePointCampaign::CAMPAIGN_TYPE_MANUAL)->get()->filter(fn ($campaign) => $campaign->isClaimable())->map(function ($campaign) use ($user, $enrolled) {
             $claimed = $campaign->claims()->where('user_id', $user->id)->exists();
 
