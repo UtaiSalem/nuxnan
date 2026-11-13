@@ -197,6 +197,38 @@
 
 ---
 
+## 🟢 2026-11-12 — งบประมาณโรงเรียน (budgets): โค้ดให้ตรงสคีมาจริง + ปิด IDOR + โอนงบใช้ได้ (เสร็จ · branch `claude/happy-curie-m2qgkm`)
+
+**ปัญหา:** `Budget` model + `BudgetController` ใช้คอลัมน์ที่ไม่มีในตาราง (`status`, `category_id`, `created_by`, `expenses.budget_id`)
+→ บน MySQL: summary/store/show/close/expenses/destroy ตอบ 500 · activate ตอบ 400 ทุกครั้ง (sqlite ซ่อนบั๊ก summary เพราะ `"status"` กลายเป็นสตริง)
+
+**เจ้าของเคาะ (AskUserQuestion):** (b) **ปรับโค้ดให้ตรงสคีมา ไม่มี migration** (แนวเดียวกับ SM-S4 ของ Expense)
+· รายจ่ายของงบ = **หมวดเดียวกัน + อยู่ในช่วง start_date..end_date** ของโรงเรียนเดียวกัน (งบไม่ระบุหมวด = ทุกหมวด) · ลบงบได้เสมอ (ไม่มีรายจ่ายผูกกับงบ)
+· หลักฐานว่าสคีมาจริงคือ migration: คอมเมนต์คอลัมน์ใน `SchoolManagementSeeder` · บันทึก SM-S10 (2026-09-09 probe แล้วเจอ `expense_category_id`/`is_active`) · UI อ่าน `budget.is_active`
+· ⚠️ **ยังไม่ได้ `SHOW CREATE TABLE budgets/expenses` บน dev DB/production จริง** (เซสชัน cloud เข้าไม่ถึง) — ถ้ามีคอลัมน์ประวัติศาสตร์ต่างจาก migration ให้แจ้ง
+
+### สิ่งที่เปลี่ยน
+- **`app/Models/Budget.php`:** fillable/casts ตามตาราง (`expense_category_id`, `period`, `is_active` boolean) · `category()` ชี้ `expense_category_id`
+  · ลบ `expenses()` HasMany + `creator()` + STATUS_* → เพิ่ม `expensesQuery()` (Builder · ใช้ `>= start` และ `< end+1 วัน` แทน BETWEEN เพราะ sqlite เก็บ date เป็น "Y-m-d 00:00:00") · `isExceeded()` = remaining < 0 · PERIODS · `scopeActive` ใช้ `is_active`
+- **`BudgetController.php`:**
+  · index กรอง `is_active`/`expense_category_id`/`period` · store/update ใช้ `expense_category_id` + `period` (enum) · `academic_year_id`/`expense_category_id` **ต้องเป็นของโรงเรียนนี้**
+  · update ตรวจ end_date > start_date (เทียบกับค่าเดิมด้วย) · activate/close สลับ `is_active` (ตอบ 400 ถ้าอยู่สถานะนั้นแล้ว) · summary `by_status` = `{active, inactive, exceeded}` + `is_exceeded` ต่อรายการ
+  · 🔴 **IDOR:** `{budget}` ไม่ผูกกับ `{academy}` → เพิ่ม `ensureBelongsToAcademy()` (404) ทุกเส้นที่มี `{budget}` · `to_budget_id` ต้องอยู่โรงเรียนเดียวกัน
+  · 🔴 **transfer พังมาตลอด:** พารามิเตอร์ชื่อ `$fromBudget` แต่ route คือ `{budget}` → Laravel ฉีด Budget เปล่า → ตอบ 400 "งบไม่พอ" ทุกครั้ง · แก้ชื่อ + ห่อ transaction + `lockForUpdate`
+- **เทสต์ใหม่:** `tests/Feature/Academy/BudgetEndpointsTest.php` (16) + `BudgetAcademyScopingTest.php` (7) — ไฟล์ scoping **ไม่เคยมีใน repo มาก่อน** (issue อ้างว่ามี) จึงเขียนใหม่
+
+### ตรวจแล้ว (เซสชัน cloud · docker mysql:8.4 สร้างสคีมาจาก `migrate` แล้ว `test:db:rebuild`)
+- 23/23 เขียวทั้ง sqlite และ MySQL · ก่อนแก้: แดง 20 (sqlite) / 21 (MySQL) — summary ผ่านบน sqlite แต่ตกบน MySQL ตรงตาม issue
+- full suite MySQL: เทียบ fail list ก่อน/หลังแก้ → **ไม่มี fail ใหม่** (78 ตัวที่ fail อยู่แล้วในเครื่องนี้ ทั้ง Wallet/Withdraw/ClassSchedule ฯลฯ เป็นของเดิม — เครื่องนี้ PHP 8.3 + composer `--ignore-platform-req=php` และสคีมามาจาก migration ไม่ใช่ dev DB)
+- `pint --test` ผ่าน 4 ไฟล์ · ไม่ต้องแก้ UI (`SchoolFinanceTab.vue` ใช้แค่ index + `is_active`/ยอดเงิน · `createBudget`/`getBudget` ไม่มีผู้เรียก)
+
+### ค้าง / ข้อควรรู้
+- [ ] **เจ้าของรันบนเครื่อง:** `php artisan test:db:rebuild` แล้ว `php artisan test -c phpunit.mysql.xml --filter="Budget"` (ยืนยันกับสคีมา dev จริง) + `SHOW CREATE TABLE budgets` ดูว่าไม่มีคอลัมน์แปลก
+- `spent_amount` ยัง**ไม่อัพเดทอัตโนมัติ**เมื่อรายจ่ายถูกอนุมัติ/จ่าย (`updateSpent()` ไม่มีผู้เรียกมาแต่เดิม) → งาน finance buildout (Q3) · ตอนนี้ show อาจแสดงรายจ่ายที่ยอดไม่ตรง spent ที่เก็บไว้
+- เจอระหว่างทาง (ไม่ได้แก้): เทสต์ Expense/finance 5 ตัว fail อยู่ก่อนแล้ว (ได้ 403) เพราะ SM-S2 ปิดกลุ่มการเงินด้วย `settings.manage` แต่เทสต์ยังใช้สมาชิก `finance.view/manage` · `ExpenseController` show/update/approve ฯลฯ ไม่ตรวจ `expense->academy_id` (IDOR แบบเดียวกัน)
+
+---
+
 ## 🟢 2026-11-04 — ปิดการโอนแต้ม/เงินระหว่างสมาชิก (เสร็จ · commit `ff5801cb` `43012727` `969d6a74` · pushed)
 
 เจ้าของสั่ง: "ปิดการโอนแต้ม-เงินระหว่างสมาชิกอย่างเดียวก่อน เดี๋ยวค่อยวิเคราะห์ระบบอย่างละเอียดอีกที"
@@ -223,7 +255,7 @@
 ### งานที่ค้าง (TODO ต่อ — ตามแผน รอเจ้าของสั่ง "วิเคราะห์ละเอียด")
 - [ ] 🔴 **Phase 0** ช่องสร้างมูลค่าเอง (ร้ายแรงกว่าการโอน): **ตัวแรกสุด `POST /forgot-password/exchange/{user}` เติมแต้มให้ใครก็ได้ ไม่ตรวจแอดมิน ไม่เขียน ledger (แผน Phase 0 ข้อ 0 · D6 เคาะแล้ว: ฟีเจอร์ยังใช้ เพดาน 100 บาท/ครั้ง) → ✅ แก้โค้ดแล้ว 2026-11-04 (admin gate + max:100 + ledger, getuser gate) · เหลือตรวจ prod ด้วยการเทียบ users.pp กับ ledger** · ✅ 2026-11-04 ลบ `/wallet/deposit` + `/points/refund` แล้ว, `/points/xp/earn` เก็บไว้แต่ whitelist เกม + ≤100/ครั้ง + ≤500/วัน/เกม (`config/economy.php` game_xp) · agy opus quota หมด (รีเซ็ต ~2026-11-10) ใช้ `gemini-4-argon-high` แทนได้ · · `POST /wallet/deposit` เติมเงินตัวเองได้ไม่ต้องมีสลิป · `POST /points/refund` เพิ่มแต้มตัวเองได้ · `POST /points/xp/earn` — route อยู่ใน `routes/earn/points-wallet.php` (แผน §1.3, §3 Phase 0) + ต้องตรวจ production แบบอ่านอย่างเดียว
 - [ ] Phase 2 คูปองผู้ใช้ = โอนแบบนิรนาม (`routes/earn/coupons.php` · 2 ใบยังใช้ได้ รวม 340 แต้ม · เคาะ D2 ก่อน)
-- [ ] Phase 5 แคมเปญ/บริจาค/ขายคอร์ส (เคาะ D3 ก่อน) · IDOR `budgets/{budget}/transfer` (แผน §1.4)
+- [ ] Phase 5 แคมเปญ/บริจาค/ขายคอร์ส (เคาะ D3 ก่อน) · ~~IDOR `budgets/{budget}/transfer` (แผน §1.4)~~ ✅ แก้แล้ว 2026-11-12 (ดูหัวข้องบประมาณด้านบนสุด)
 - [x] ข้อความ "โอนแต้ม/โอนเงิน" ที่อื่น — ✅ ไล่ครบแล้ว 2026-11-12 (อ่านโค้ดอย่างเดียว ไม่ได้แก้ไฟล์ · ไม่ได้ตรวจจอ) **ไม่เหลือจุดไหนโฆษณา/เปิดทางโอนระหว่างสมาชิก**
   · ไม่มีผู้เรียก `/points/transfer` · `/wallet/transfer` · `?tab=transfer` · `transfer()` เหลือใน `ui/` · `i18n/locales/*.json` ไม่มี key เรื่องโอน
   · ที่เหลือทั้งหมดจัดได้ 5 กลุ่ม (เก็บไว้ทุกกลุ่ม): (1) สลิป/โอนเงินผ่านธนาคาร — ฝากเงิน ถอนเงิน โฆษณา บริจาคเงินสด (2) label ประวัติ `transfer`/`transfer_in`/`transfer_out` — `Points.vue`, `Wallet.vue`, `PointsTransactionCard`, `UnifiedTransactionCard`, `DashboardActivityFeed`, model `PointsTransaction`/`WalletTransaction` (3) เครื่องมือแอดมินสืบ/ย้อนการโอน — `nuxnan-admin/wallet`, `points`, `users/[id]`, `WithdrawalFundSourceService`, `FraudRemediationService` (4) โรงเรียน→คอร์ส `academy/allocations/*` (ไม่ใช่ P2P) (5) บริจาคแต้มเข้ากองกลางคอร์ส/โรงเรียน + กดรับ — `SupportDonationModal`, `CourseDonorCard:347` "กำลังโอนแต้มสนับสนุนให้คุณ" → เป็นช่องทางมูลค่าของ Phase 5 (รอ D3) ไม่ใช่เรื่องข้อความ
