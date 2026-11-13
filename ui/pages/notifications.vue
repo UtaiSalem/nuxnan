@@ -8,7 +8,15 @@ import type { ApiNotification } from '~/composables/useNotifications'
 import { ENROLLMENT_NOTIFICATION_TYPES, ROLLOVER_NOTIFICATION_TYPES } from '~/composables/useNotifications'
 
 definePageMeta({
-  middleware: ['auth'],
+  middleware: [
+    'auth',
+    // ระบบแจ้งเตือนซ่อนไว้ชั่วคราว — ดู notificationsEnabled ใน nuxt.config.ts
+    () => {
+      if (!useRuntimeConfig().public.notificationsEnabled) {
+        return navigateTo('/dashboard', { replace: true })
+      }
+    },
+  ],
 })
 
 useHead({

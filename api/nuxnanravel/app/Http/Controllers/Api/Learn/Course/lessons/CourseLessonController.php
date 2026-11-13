@@ -15,6 +15,7 @@ use App\Models\QuestionImage;
 use App\Models\RecentlyViewedCourse;
 use App\Models\TopicImage;
 use App\Services\ContentVisibilityService;
+use App\Services\Course\LessonCreationService;
 use App\Services\CourseMediaService;
 use App\Services\LessonAccessService;
 use Illuminate\Http\Request;
@@ -365,8 +366,7 @@ class CourseLessonController extends Controller
             ]);
 
             // Create lesson
-            $lesson = $course->courseLessons()->create([
-                'user_id' => auth()->id(),
+            $lesson = app(LessonCreationService::class)->createLesson($course, auth()->user(), [
                 'title' => $validated['title'],
                 'description' => ($validated['description'] === 'null' || $validated['description'] === '') ? null : $validated['description'],
                 'content' => ($validated['content'] === 'null' || $validated['content'] === '') ? null : $validated['content'],
@@ -383,9 +383,6 @@ class CourseLessonController extends Controller
 
             // Upload images using helper method
             $this->uploadLessonImages($request, $lesson);
-
-            // Increment course lessons count
-            $course->increment('lessons');
 
             return response()->json([
                 'success' => true,

@@ -102,9 +102,11 @@ class SchoolManagementRouteGuardTest extends TestCase
         }
     }
 
-    public function test_member_with_finance_view_passes_the_gate(): void
+    public function test_member_with_settings_manage_passes_the_finance_gate(): void
     {
-        [$academy, $user] = $this->academyWithMember(['finance.view']);
+        // กลุ่มการเงินอยู่หลัง `academy.permission:settings.manage` ตั้งแต่ SM-S2 — finance.view อย่างเดียวได้ 403
+        // (เคสนั้นพิสูจน์ไว้ใน Academy/FinanceGroupLockdownTest::test_finance_view_holder_is_now_blocked)
+        [$academy, $user] = $this->academyWithMember(['settings.manage']);
 
         $response = $this->actingAs($user, 'api')
             ->getJson("/api/academies/{$academy->id}/fee-structures");

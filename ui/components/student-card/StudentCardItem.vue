@@ -139,6 +139,7 @@ const handlePhotoUpload = async (event) => {
             isEditStudentPhoto.value = false
             if (fileInput.value) fileInput.value.value = ''
             Swal.fire({
+                heightAuto: false,
                 icon: 'error',
                 title: 'ไฟล์ใหญ่เกินไป',
                 text: `ย่อแล้วยังได้ ${formatBytes(result.bytes)} ซึ่งเกิน ${formatBytes(MAX_STUDENT_PHOTO_BYTES)} กรุณาเลือกรูปที่เล็กลง`,
@@ -158,7 +159,7 @@ const handlePhotoUpload = async (event) => {
     reader.onerror = () => {
         isEditStudentPhoto.value = false
         if (fileInput.value) fileInput.value.value = ''
-        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'อ่านไฟล์รูปไม่สำเร็จ', confirmButtonText: 'ตกลง' })
+        Swal.fire({ heightAuto: false, icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'อ่านไฟล์รูปไม่สำเร็จ', confirmButtonText: 'ตกลง' })
     }
     reader.readAsDataURL(picked)
 }
@@ -175,7 +176,7 @@ const handlePhotoUploadToServer = async (id, studentNumber, file) => {
                 body: formData,
             })
         if (response.success) {
-            Swal.fire({ icon: 'success', title: 'อัพโหลดรูปภาพสำเร็จ', text: response.message, confirmButtonText: 'ตกลง' })
+            Swal.fire({ heightAuto: false, icon: 'success', title: 'อัพโหลดรูปภาพสำเร็จ', text: response.message, confirmButtonText: 'ตกลง' })
             if (response.photo) {
                 tempPhoto.value = response.photo
             }
@@ -184,10 +185,10 @@ const handlePhotoUploadToServer = async (id, studentNumber, file) => {
             }
             emit('updated', props.studentInfo)
         } else {
-            Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: response.message || 'ไม่สามารถอัพโหลดรูปภาพได้', confirmButtonText: 'ตกลง' })
+            Swal.fire({ heightAuto: false, icon: 'error', title: 'เกิดข้อผิดพลาด', text: response.message || 'ไม่สามารถอัพโหลดรูปภาพได้', confirmButtonText: 'ตกลง' })
         }
     } catch {
-        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถอัพโหลดรูปภาพได้', confirmButtonText: 'ตกลง' })
+        Swal.fire({ heightAuto: false, icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถอัพโหลดรูปภาพได้', confirmButtonText: 'ตกลง' })
     } finally {
         isEditStudentPhoto.value = false
         if (fileInput.value) fileInput.value.value = ''
@@ -218,12 +219,13 @@ const handleSubmit = async () => {
             })
         if (response.success) {
             editForm.full_name_thai = [editForm.title_name, editForm.first_name_thai, editForm.last_name_thai].filter(p => p?.trim()).join(' ')
-            Swal.fire({ title: 'บันทึกข้อมูลสำเร็จ', icon: 'success', confirmButtonText: 'ตกลง' })
+            Swal.fire({ heightAuto: false, title: 'บันทึกข้อมูลสำเร็จ', icon: 'success', confirmButtonText: 'ตกลง' })
             isEditModalOpen.value = false
             emit('updated', props.studentInfo)
         }
     } catch (error) {
         Swal.fire({
+            heightAuto: false,
             title: 'เกิดข้อผิดพลาด',
             text: error?.data?.message || 'ไม่สามารถบันทึกข้อมูลได้',
             icon: 'error',
@@ -236,6 +238,7 @@ const handleSubmit = async () => {
 
 const handleDeletePhoto = async () => {
     const result = await Swal.fire({
+        heightAuto: false,
         title: 'ลบรูปภาพ', text: 'คุณต้องการลบรูปภาพนี้หรือไม่?', icon: 'warning',
         showCancelButton: true, confirmButtonText: 'ลบ', cancelButtonText: 'ยกเลิก',
     })
@@ -249,13 +252,13 @@ const handleDeletePhoto = async () => {
             previewImage.value = null
             tempPhoto.value = null
             uploadedImageUrl.value = null
-            Swal.fire('ลบสำเร็จ', '', 'success')
+            Swal.fire({ title: 'ลบสำเร็จ', icon: 'success', heightAuto: false })
             emit('updated', props.studentInfo)
         } else {
-            Swal.fire('เกิดข้อผิดพลาด', response.message || '', 'error')
+            Swal.fire({ title: 'เกิดข้อผิดพลาด', text: response.message || '', icon: 'error', heightAuto: false })
         }
     } catch (error) {
-        Swal.fire('เกิดข้อผิดพลาด', error?.data?.message || 'ไม่สามารถลบรูปภาพได้', 'error')
+        Swal.fire({ title: 'เกิดข้อผิดพลาด', text: error?.data?.message || 'ไม่สามารถลบรูปภาพได้', icon: 'error', heightAuto: false })
     } finally {
         isDeletingStudentPhoto.value = false
     }

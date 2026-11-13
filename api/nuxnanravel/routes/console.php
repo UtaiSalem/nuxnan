@@ -41,3 +41,4 @@ Schedule::command('risk:scan')->dailyAt('03:00');
 
 // Telescope — auto-prune entries older than 48 hours to prevent DB bloat.
 Schedule::command('telescope:prune --hours=48')->dailyAt('04:00');
+Schedule::command('lesson-imports:prune')->dailyAt('03:30');

@@ -48,7 +48,7 @@ class ExpenseCategory extends Model
 
     public function expenses(): HasMany
     {
-        return $this->hasMany(Expense::class, 'category_id');
+        return $this->hasMany(Expense::class, 'expense_category_id');
     }
 
     // Accessors
