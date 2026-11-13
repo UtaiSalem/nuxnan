@@ -3,33 +3,36 @@
 namespace App\Http\Requests\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 /**
- * UpdateCouponRequest
+ * UpdateCouponRequest — แก้ไขคูปองจากหน้าแอดมิน (PUT /api/admin/coupons/{id})
  *
- * ใช้แทน $request->all() ใน admin coupon update route
- * ป้องกัน mass assignment (เช่น status แก้เป็น 'used' เพื่อเลี่ยงระบบ,
- * amount แก้เป็นตัวเลขสูง ฯลฯ).
+ * แก้ได้เฉพาะ description และ expires_at เท่านั้น:
+ * - type/amount ห้ามแก้ — มูลค่าถูกหักจากผู้สร้างไปแล้วตอนสร้าง แก้ทีหลังจะทำให้ ledger ไม่ตรง
+ * - coupon_code ห้ามแก้ — รหัสถูกแจก/พิมพ์ QR ไปแล้ว
+ * - status ห้ามแก้ตรง — การยกเลิกต้องคืนยอดให้ผู้สร้าง จึงต้องผ่าน DELETE (CouponService::cancelCouponByAdmin)
  */
 class UpdateCouponRequest extends FormRequest
 {
     public function authorize(): bool
     {
+        // สิทธิ์ตรวจที่ middleware: admin + plearnd_admin + permission:coupon-edit
         return $this->user() !== null;
     }
 
     public function rules(): array
     {
-        $couponId = $this->route('id');
-
         return [
-            'code' => ['sometimes', 'string', Rule::unique('coupons', 'code')->ignore($couponId)],
-            'type' => ['sometimes', Rule::in(['points', 'wallet'])],
-            'amount' => ['sometimes', 'numeric', 'min:0'],
-            'description' => ['sometimes', 'nullable', 'string'],
-            'expires_at' => ['sometimes', 'nullable', 'date'],
-            'status' => ['sometimes', Rule::in(['unused', 'used', 'expired', 'disabled'])],
+            'description' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'expires_at' => ['sometimes', 'nullable', 'date', 'after:now'],
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'description' => 'คำอธิบาย',
+            'expires_at' => 'วันหมดอายุ',
         ];
     }
 }

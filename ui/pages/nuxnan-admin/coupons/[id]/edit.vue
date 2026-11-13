@@ -1,420 +1,363 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
+import Swal from 'sweetalert2'
+import {
+  useAdminCoupons,
+  couponErrorMessage,
+  couponFieldErrors,
+  type AdminCoupon,
+  type CouponStatus
+} from '~/composables/useAdminCoupons'
 
 definePageMeta({
   layout: 'nuxnan-admin-layout',
   middleware: 'nuxnan-admin'
 })
 
-const config = useRuntimeConfig()
-const apiBase = config.public.apiBase as string
-const router = useRouter()
 const route = useRoute()
-
+const router = useRouter()
+const couponsApi = useAdminCoupons()
 const couponId = route.params.id as string
 
-// Form state
+const coupon = ref<AdminCoupon | null>(null)
 const isLoading = ref(true)
+const loadError = ref('')
 const isSubmitting = ref(false)
+const isCancelling = ref(false)
 const errors = ref<Record<string, string>>({})
+const generalError = ref('')
 const successMessage = ref('')
 
 const form = reactive({
-  code: '',
-  name: '',
   description: '',
-  discount_type: 'percentage',
-  discount_value: 0,
-  min_purchase: 0,
-  max_discount: 0,
-  usage_limit: null as number | null,
-  per_user_limit: 1,
-  start_date: '',
-  end_date: '',
-  is_active: true,
-  applicable_to: 'all'
+  noExpiry: true,
+  expiresAt: '' // รูปแบบ datetime-local (เวลาท้องถิ่น) YYYY-MM-DDTHH:mm
 })
 
-// Discount types
-const discountTypes = [
-  { value: 'percentage', label: 'เปอร์เซ็นต์ (%)' },
-  { value: 'fixed', label: 'จำนวนเงิน (บาท)' }
-]
+const statusBadge: Record<CouponStatus, string> = {
+  active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  redeemed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  expired: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  cancelled: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+}
 
-// Applicable options
-const applicableOptions = [
-  { value: 'all', label: 'ทุกสินค้า/บริการ' },
-  { value: 'courses', label: 'เฉพาะคอร์สเรียน' },
-  { value: 'products', label: 'เฉพาะสินค้า' }
-]
+const pad = (n: number) => String(n).padStart(2, '0')
+const toLocalInput = (date: Date) =>
+  `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 
-// Fetch coupon data
+const minExpiry = computed(() => toLocalInput(new Date(Date.now() + 60_000)))
+
+const unit = computed(() => (coupon.value?.coupon_type === 'points' ? 'แต้ม' : 'บาท'))
+const amountText = computed(() => {
+  if (!coupon.value) return ''
+  const value = Number(coupon.value.amount)
+  return coupon.value.coupon_type === 'points'
+    ? value.toLocaleString('th-TH', { maximumFractionDigits: 0 })
+    : value.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+})
+
+const formatDate = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' }) : '-'
+
+const fillForm = (data: AdminCoupon) => {
+  coupon.value = data
+  form.description = data.description ?? ''
+  form.noExpiry = !data.expires_at
+  form.expiresAt = data.expires_at ? toLocalInput(new Date(data.expires_at)) : ''
+}
+
 const fetchCoupon = async () => {
   isLoading.value = true
+  loadError.value = ''
   try {
-    const token = useCookie('token')
-    const response = await $fetch(`${apiBase}/api/admin/coupons/${couponId}`, {
-      headers: {
-        Authorization: `Bearer ${token.value}`
-      }
-    })
-    
-    if (response.success) {
-      const coupon = response.data
-      form.code = coupon.code || ''
-      form.name = coupon.name || ''
-      form.description = coupon.description || ''
-      form.discount_type = coupon.discount_type || 'percentage'
-      form.discount_value = coupon.discount_value || 0
-      form.min_purchase = coupon.min_purchase || 0
-      form.max_discount = coupon.max_discount || 0
-      form.usage_limit = coupon.usage_limit
-      form.per_user_limit = coupon.per_user_limit || 1
-      form.start_date = coupon.start_date ? coupon.start_date.slice(0, 16) : ''
-      form.end_date = coupon.end_date ? coupon.end_date.slice(0, 16) : ''
-      form.is_active = coupon.is_active ?? true
-      form.applicable_to = coupon.applicable_to || 'all'
-    }
-  } catch (error) {
-    console.error('Failed to fetch coupon:', error)
-    errors.value.general = 'ไม่สามารถโหลดข้อมูลคูปองได้'
+    const response = await couponsApi.get(couponId)
+    fillForm(response.data)
+  } catch (error: any) {
+    loadError.value = error?.status === 404 ? 'ไม่พบคูปองนี้' : couponErrorMessage(error, 'โหลดข้อมูลคูปองไม่สำเร็จ')
   } finally {
     isLoading.value = false
   }
 }
 
-// Validate form
-const validateForm = () => {
-  errors.value = {}
-  
-  if (!form.code) {
-    errors.value.code = 'กรุณากรอกรหัสคูปอง'
+const validate = () => {
+  const next: Record<string, string> = {}
+  if (form.description.length > 500) next.description = 'คำอธิบายยาวได้ไม่เกิน 500 ตัวอักษร'
+  if (!form.noExpiry) {
+    if (!form.expiresAt) next.expires_at = 'กรุณาเลือกวันหมดอายุ หรือเลือก “ไม่มีวันหมดอายุ”'
+    else if (new Date(form.expiresAt).getTime() <= Date.now()) next.expires_at = 'วันหมดอายุต้องเป็นเวลาในอนาคต'
   }
-  
-  if (!form.name) {
-    errors.value.name = 'กรุณากรอกชื่อคูปอง'
-  }
-  
-  if (form.discount_value <= 0) {
-    errors.value.discount_value = 'กรุณากรอกมูลค่าส่วนลด'
-  }
-  
-  if (form.discount_type === 'percentage' && form.discount_value > 100) {
-    errors.value.discount_value = 'เปอร์เซ็นต์ต้องไม่เกิน 100'
-  }
-  
-  if (!form.start_date) {
-    errors.value.start_date = 'กรุณาเลือกวันที่เริ่มต้น'
-  }
-  
-  if (!form.end_date) {
-    errors.value.end_date = 'กรุณาเลือกวันที่สิ้นสุด'
-  }
-  
-  if (form.start_date && form.end_date && new Date(form.start_date) > new Date(form.end_date)) {
-    errors.value.end_date = 'วันที่สิ้นสุดต้องหลังจากวันที่เริ่มต้น'
-  }
-  
-  return Object.keys(errors.value).length === 0
+  errors.value = next
+  return Object.keys(next).length === 0
 }
 
-// Submit form
 const handleSubmit = async () => {
-  if (!validateForm()) return
-  
-  isSubmitting.value = true
+  generalError.value = ''
   successMessage.value = ''
-  
+  if (!coupon.value?.can_edit || !validate() || isSubmitting.value) return
+
+  isSubmitting.value = true
   try {
-    const token = useCookie('token')
-    const response = await $fetch(`${apiBase}/api/admin/coupons/${couponId}`, {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token.value}`,
-        'Content-Type': 'application/json'
-      },
-      body: form
+    const response = await couponsApi.update(couponId, {
+      description: form.description.trim() || null,
+      expires_at: form.noExpiry ? null : new Date(form.expiresAt).toISOString()
     })
-    
-    if (response.success) {
-      successMessage.value = 'บันทึกคูปองสำเร็จ'
-      setTimeout(() => {
-        router.push('/nuxnan-admin/coupons')
-      }, 1500)
-    }
+    fillForm(response.data)
+    successMessage.value = response.message || 'บันทึกแล้ว'
   } catch (error: any) {
-    if (error.data?.errors) {
-      errors.value = error.data.errors
-    } else {
-      errors.value.general = error.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง'
-    }
+    errors.value = couponFieldErrors(error)
+    generalError.value = couponErrorMessage(error)
   } finally {
     isSubmitting.value = false
   }
 }
 
-onMounted(() => {
-  fetchCoupon()
-})
+const handleCancel = async () => {
+  if (!coupon.value?.can_cancel || isCancelling.value) return
+  const confirm = await Swal.fire({
+    title: 'ยกเลิกคูปองนี้?',
+    text: `รหัส ${coupon.value.coupon_code} จะแลกไม่ได้อีก และระบบคืน ${amountText.value} ${unit.value} ให้ ${coupon.value.creator?.name ?? 'ผู้สร้างคูปอง'}`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'ยกเลิกคูปอง',
+    cancelButtonText: 'ไม่ใช่ตอนนี้',
+    confirmButtonColor: '#dc2626'
+  })
+  if (!confirm.isConfirmed) return
+
+  isCancelling.value = true
+  try {
+    const response = await couponsApi.cancel(couponId)
+    await Swal.fire({ title: 'ยกเลิกแล้ว', text: response.message, icon: 'success', timer: 1800, showConfirmButton: false })
+    router.push('/nuxnan-admin/coupons')
+  } catch (error: any) {
+    Swal.fire('ยกเลิกไม่สำเร็จ', couponErrorMessage(error), 'error')
+  } finally {
+    isCancelling.value = false
+  }
+}
+
+const copyCode = async () => {
+  if (!coupon.value) return
+  try {
+    await navigator.clipboard.writeText(coupon.value.coupon_code)
+    successMessage.value = 'คัดลอกรหัสแล้ว'
+  } catch {
+    generalError.value = 'คัดลอกไม่สำเร็จ'
+  }
+}
+
+const inputClass =
+  'min-h-[44px] w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-slate-800 placeholder-slate-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-slate-700 dark:text-white'
+
+onMounted(fetchCoupon)
 </script>
 
 <template>
-  <div class="space-y-6 max-w-2xl mx-auto">
+  <div class="mx-auto max-w-2xl space-y-4 sm:space-y-6">
     <!-- Page Header -->
-    <div class="flex items-center gap-4">
+    <div class="flex items-start gap-3 sm:items-center sm:gap-4">
       <NuxtLink
         to="/nuxnan-admin/coupons"
-        class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+        aria-label="กลับไปหน้ารายการคูปอง"
+        class="inline-flex min-h-[44px] min-w-[44px] flex-shrink-0 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
       >
-        <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />
+        <Icon icon="fluent:arrow-left-24-regular" class="h-5 w-5" />
       </NuxtLink>
-      <div>
-        <h1 class="text-2xl font-bold text-slate-800 dark:text-white">แก้ไขคูปอง</h1>
-        <p class="text-slate-500 dark:text-slate-400 mt-1">แก้ไขข้อมูลคูปอง #{{ couponId }}</p>
+      <div class="min-w-0 flex-1">
+        <h1 class="text-xl font-bold text-slate-800 dark:text-white sm:text-2xl">
+          {{ coupon?.can_edit === false ? 'รายละเอียดคูปอง' : 'แก้ไขคูปอง' }}
+        </h1>
+        <p class="mt-1 break-words text-sm text-slate-500 dark:text-slate-400 sm:text-base">
+          แก้ได้เฉพาะคำอธิบายและวันหมดอายุ — มูลค่าและรหัสถูกล็อกตั้งแต่ตอนสร้าง
+        </p>
       </div>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="isLoading" class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-8 shadow-hopeui border border-slate-100 dark:border-slate-700">
-      <div class="text-center">
-        <Icon icon="fluent:spinner-ios-20-regular" class="w-8 h-8 text-hopeui-primary-600 animate-spin mx-auto" />
-        <p class="text-slate-500 mt-2">กำลังโหลดข้อมูล...</p>
-      </div>
+    <!-- Loading -->
+    <div v-if="isLoading" class="p-8 text-center">
+      <Icon icon="fluent:spinner-ios-20-regular" class="mx-auto h-8 w-8 animate-spin text-hopeui-primary-600" />
+      <p class="mt-2 text-slate-500">กำลังโหลดข้อมูล...</p>
+    </div>
+
+    <!-- Load error -->
+    <div
+      v-else-if="loadError || !coupon"
+      class="flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-700 dark:bg-red-900/30 dark:text-red-400"
+    >
+      <Icon icon="fluent:error-circle-24-filled" class="h-5 w-5 flex-shrink-0" />
+      <span class="min-w-0 flex-1 break-words">{{ loadError || 'ไม่พบคูปองนี้' }}</span>
     </div>
 
     <template v-else>
-      <!-- Success Message -->
-      <div v-if="successMessage" class="p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-xl">
-        <div class="flex items-center gap-2 text-green-700 dark:text-green-400">
-          <Icon icon="fluent:checkmark-circle-24-filled" class="w-5 h-5" />
-          <span>{{ successMessage }}</span>
+      <!-- Coupon facts (read-only) -->
+      <section class="rounded-2xl border border-slate-100 bg-white p-4 shadow-hopeui dark:border-slate-700 dark:bg-slate-800 sm:p-6">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="whitespace-nowrap rounded-full bg-hopeui-primary-100 px-2 py-0.5 text-xs font-medium text-hopeui-primary-700 dark:bg-hopeui-primary-900/30 dark:text-hopeui-primary-300">
+            {{ coupon.type_label }}
+          </span>
+          <span class="whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium" :class="statusBadge[coupon.display_status]">
+            {{ coupon.status_label }}
+          </span>
         </div>
+
+        <p class="mt-2 break-words text-3xl font-bold text-slate-800 dark:text-white">
+          {{ amountText }} <span class="text-base font-normal text-slate-500">{{ unit }}</span>
+        </p>
+
+        <div class="mt-3 flex items-center gap-2 rounded-xl bg-slate-50 p-2 pl-3 dark:bg-slate-700/50">
+          <code class="min-w-0 flex-1 break-all font-mono text-xl font-bold tracking-widest text-hopeui-primary-600 dark:text-hopeui-primary-400">
+            {{ coupon.coupon_code }}
+          </code>
+          <button
+            type="button"
+            aria-label="คัดลอกรหัสคูปอง"
+            class="inline-flex min-h-[44px] min-w-[44px] flex-shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-white hover:text-hopeui-primary-600 dark:hover:bg-slate-600"
+            @click="copyCode"
+          >
+            <Icon icon="fluent:copy-24-regular" class="h-5 w-5" />
+          </button>
+        </div>
+
+        <dl class="mt-4 space-y-2 text-sm">
+          <div class="flex items-start gap-3">
+            <dt class="flex-shrink-0 whitespace-nowrap text-slate-500">ผู้สร้าง</dt>
+            <dd class="min-w-0 flex-1 break-words text-right text-slate-800 dark:text-white">
+              {{ coupon.creator?.name ?? '-' }}
+              <span v-if="coupon.creator?.email" class="block text-xs text-slate-500">{{ coupon.creator.email }}</span>
+            </dd>
+          </div>
+          <div class="flex items-start gap-3">
+            <dt class="flex-shrink-0 whitespace-nowrap text-slate-500">สร้างเมื่อ</dt>
+            <dd class="min-w-0 flex-1 break-words text-right text-slate-800 dark:text-white">{{ formatDate(coupon.created_at) }}</dd>
+          </div>
+          <div class="flex items-start gap-3">
+            <dt class="flex-shrink-0 whitespace-nowrap text-slate-500">หมดอายุ</dt>
+            <dd class="min-w-0 flex-1 break-words text-right text-slate-800 dark:text-white">
+              {{ coupon.expires_at ? formatDate(coupon.expires_at) : 'ไม่มีวันหมดอายุ' }}
+            </dd>
+          </div>
+          <div v-if="coupon.redeemer" class="flex items-start gap-3">
+            <dt class="flex-shrink-0 whitespace-nowrap text-slate-500">ผู้แลก</dt>
+            <dd class="min-w-0 flex-1 break-words text-right text-slate-800 dark:text-white">
+              {{ coupon.redeemer.name }}
+              <span class="block text-xs text-slate-500">{{ formatDate(coupon.redeemed_at) }}</span>
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <div
+        v-if="successMessage"
+        class="flex items-start gap-2 rounded-xl border border-green-200 bg-green-50 p-3 text-green-700 dark:border-green-700 dark:bg-green-900/30 dark:text-green-400"
+      >
+        <Icon icon="fluent:checkmark-circle-24-filled" class="h-5 w-5 flex-shrink-0" />
+        <span class="min-w-0 flex-1 break-words">{{ successMessage }}</span>
       </div>
 
-      <!-- Error Message -->
-      <div v-if="errors.general" class="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-xl">
-        <div class="flex items-center gap-2 text-red-700 dark:text-red-400">
-          <Icon icon="fluent:error-circle-24-filled" class="w-5 h-5" />
-          <span>{{ errors.general }}</span>
-        </div>
-      </div>
-
-      <!-- Form -->
-      <form @submit.prevent="handleSubmit" class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-6 shadow-hopeui border border-slate-100 dark:border-slate-700 space-y-6">
-        <!-- Code -->
-        <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            รหัสคูปอง <span class="text-red-500">*</span>
-          </label>
-          <input
-            v-model="form.code"
-            type="text"
-            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent uppercase"
-            :class="{ 'border-red-500': errors.code }"
-            placeholder="SAVE20"
-          />
-          <p v-if="errors.code" class="mt-1 text-sm text-red-500">{{ errors.code }}</p>
+      <!-- Editable fields -->
+      <form
+        novalidate
+        class="space-y-5 rounded-2xl border border-slate-100 bg-white p-4 shadow-hopeui dark:border-slate-700 dark:bg-slate-800 sm:p-6"
+        @submit.prevent="handleSubmit"
+      >
+        <div
+          v-if="!coupon.can_edit"
+          class="flex items-start gap-2 rounded-xl bg-slate-50 p-3 text-sm text-slate-600 dark:bg-slate-700/50 dark:text-slate-300"
+        >
+          <Icon icon="fluent:lock-closed-24-regular" class="h-5 w-5 flex-shrink-0" />
+          <span class="min-w-0 flex-1 break-words">คูปองที่{{ coupon.status_label }}แก้ไขไม่ได้ เก็บไว้เป็นประวัติ</span>
         </div>
 
-        <!-- Name -->
-        <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            ชื่อคูปอง <span class="text-red-500">*</span>
-          </label>
-          <input
-            v-model="form.name"
-            type="text"
-            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
-            :class="{ 'border-red-500': errors.name }"
-            placeholder="ส่วนลด 20% สำหรับสมาชิกใหม่"
-          />
-          <p v-if="errors.name" class="mt-1 text-sm text-red-500">{{ errors.name }}</p>
+        <div
+          v-if="generalError"
+          class="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-red-700 dark:border-red-700 dark:bg-red-900/30 dark:text-red-400"
+        >
+          <Icon icon="fluent:error-circle-24-filled" class="h-5 w-5 flex-shrink-0" />
+          <span class="min-w-0 flex-1 break-words">{{ generalError }}</span>
         </div>
 
-        <!-- Description -->
         <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            คำอธิบาย
-          </label>
+          <label for="coupon-description" class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">คำอธิบาย</label>
           <textarea
+            id="coupon-description"
             v-model="form.description"
             rows="3"
-            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent resize-none"
+            maxlength="500"
+            :disabled="!coupon.can_edit"
+            :class="[inputClass, 'resize-none', errors.description ? 'border-red-500' : 'border-slate-200 dark:border-slate-600']"
             placeholder="รายละเอียดเพิ่มเติมของคูปอง"
           ></textarea>
+          <p v-if="errors.description" class="mt-1 text-sm text-red-500">{{ errors.description }}</p>
         </div>
 
-        <!-- Discount Type & Value -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              ประเภทส่วนลด
-            </label>
-            <select
-              v-model="form.discount_type"
-              class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
-            >
-              <option v-for="type in discountTypes" :key="type.value" :value="type.value">
-                {{ type.label }}
-              </option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              มูลค่าส่วนลด <span class="text-red-500">*</span>
-            </label>
-            <div class="relative">
-              <input
-                v-model.number="form.discount_value"
-                type="number"
-                min="0"
-                class="w-full px-4 py-2.5 pr-10 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
-                :class="{ 'border-red-500': errors.discount_value }"
-              />
-              <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
-                {{ form.discount_type === 'percentage' ? '%' : '฿' }}
-              </span>
-            </div>
-            <p v-if="errors.discount_value" class="mt-1 text-sm text-red-500">{{ errors.discount_value }}</p>
-          </div>
-        </div>
-
-        <!-- Min Purchase & Max Discount -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              ยอดสั่งซื้อขั้นต่ำ (บาท)
-            </label>
+        <div class="space-y-3">
+          <span class="block text-sm font-medium text-slate-700 dark:text-slate-300">วันหมดอายุ</span>
+          <label class="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl bg-slate-50 px-3 dark:bg-slate-700/50">
             <input
-              v-model.number="form.min_purchase"
-              type="number"
-              min="0"
-              class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
-              placeholder="0"
-            />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              ส่วนลดสูงสุด (บาท)
-            </label>
-            <input
-              v-model.number="form.max_discount"
-              type="number"
-              min="0"
-              class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
-              placeholder="0 = ไม่จำกัด"
-            />
-          </div>
-        </div>
-
-        <!-- Usage Limits -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              จำนวนใช้งานทั้งหมด
-            </label>
-            <input
-              v-model.number="form.usage_limit"
-              type="number"
-              min="0"
-              class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
-              placeholder="ไม่จำกัด"
-            />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              จำกัดต่อผู้ใช้
-            </label>
-            <input
-              v-model.number="form.per_user_limit"
-              type="number"
-              min="1"
-              class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
-            />
-          </div>
-        </div>
-
-        <!-- Dates -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              วันที่เริ่มต้น <span class="text-red-500">*</span>
-            </label>
-            <input
-              v-model="form.start_date"
-              type="datetime-local"
-              class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
-              :class="{ 'border-red-500': errors.start_date }"
-            />
-            <p v-if="errors.start_date" class="mt-1 text-sm text-red-500">{{ errors.start_date }}</p>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              วันที่สิ้นสุด <span class="text-red-500">*</span>
-            </label>
-            <input
-              v-model="form.end_date"
-              type="datetime-local"
-              class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500 focus:border-transparent"
-              :class="{ 'border-red-500': errors.end_date }"
-            />
-            <p v-if="errors.end_date" class="mt-1 text-sm text-red-500">{{ errors.end_date }}</p>
-          </div>
-        </div>
-
-        <!-- Applicable To -->
-        <div>
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            ใช้ได้กับ
-          </label>
-          <select
-            v-model="form.applicable_to"
-            class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-hopeui-primary-500"
-          >
-            <option v-for="option in applicableOptions" :key="option.value" :value="option.value">
-              {{ option.label }}
-            </option>
-          </select>
-        </div>
-
-        <!-- Active Status -->
-        <div class="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
-          <label class="flex items-center gap-3 cursor-pointer">
-            <input
-              v-model="form.is_active"
+              v-model="form.noExpiry"
               type="checkbox"
-              class="w-5 h-5 rounded border-slate-300 text-hopeui-primary-600 focus:ring-hopeui-primary-500"
+              :disabled="!coupon.can_edit"
+              class="h-5 w-5 flex-shrink-0 rounded border-slate-300 text-hopeui-primary-600 focus:ring-hopeui-primary-500"
             />
-            <span class="text-slate-700 dark:text-slate-300">เปิดใช้งาน</span>
+            <span class="min-w-0 flex-1 text-slate-700 dark:text-slate-300">ไม่มีวันหมดอายุ</span>
           </label>
+          <div v-if="!form.noExpiry">
+            <input
+              v-model="form.expiresAt"
+              type="datetime-local"
+              aria-label="วันและเวลาหมดอายุ"
+              :min="minExpiry"
+              :disabled="!coupon.can_edit"
+              :class="[inputClass, errors.expires_at ? 'border-red-500' : 'border-slate-200 dark:border-slate-600']"
+            />
+            <p v-if="errors.expires_at" class="mt-1 text-sm text-red-500">{{ errors.expires_at }}</p>
+          </div>
         </div>
 
-        <!-- Actions -->
-        <div class="flex flex-col sm:flex-row gap-3 pt-4">
+        <div v-if="coupon.can_edit" class="flex flex-col gap-3 pt-2 sm:flex-row">
           <button
             type="submit"
             :disabled="isSubmitting"
-            class="flex-1 inline-flex justify-center items-center gap-2 px-6 py-3 bg-hopeui-primary-500 hover:bg-hopeui-primary-600 disabled:bg-hopeui-primary-300 rounded-xl text-white font-medium transition-colors"
+            class="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-hopeui-primary-500 px-6 py-3 font-medium text-white transition-colors hover:bg-hopeui-primary-600 disabled:bg-hopeui-primary-300"
           >
-            <Icon v-if="isSubmitting" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
-            <Icon v-else icon="fluent:save-24-regular" class="w-5 h-5" />
-            {{ isSubmitting ? 'กำลังบันทึก...' : 'บันทึกการเปลี่ยนแปลง' }}
+            <Icon v-if="isSubmitting" icon="fluent:spinner-ios-20-regular" class="h-5 w-5 animate-spin" />
+            <Icon v-else icon="fluent:save-24-regular" class="h-5 w-5" />
+            {{ isSubmitting ? 'กำลังบันทึก...' : 'บันทึก' }}
           </button>
-          
           <NuxtLink
             to="/nuxnan-admin/coupons"
-            class="flex-1 inline-flex justify-center items-center gap-2 px-4 sm:px-6 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl text-slate-700 dark:text-slate-300 font-medium transition-colors"
+            class="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-3 font-medium text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600 sm:px-6"
           >
-            <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
-            ยกเลิก
+            ย้อนกลับ
           </NuxtLink>
         </div>
       </form>
+
+      <!-- Cancel + refund -->
+      <section
+        v-if="coupon.can_cancel"
+        class="space-y-3 rounded-2xl border border-red-200 bg-white p-4 dark:border-red-900/50 dark:bg-slate-800 sm:p-6"
+      >
+        <h2 class="font-semibold text-red-600 dark:text-red-400">ยกเลิกคูปอง</h2>
+        <p class="break-words text-sm text-slate-600 dark:text-slate-300">
+          รหัสนี้จะแลกไม่ได้อีก และระบบคืน {{ amountText }} {{ unit }} ให้ผู้สร้างคูปอง ({{ coupon.creator?.name ?? '-' }})
+          คูปองยังอยู่ในรายการเป็นประวัติ
+        </p>
+        <button
+          type="button"
+          :disabled="isCancelling"
+          class="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-60 sm:w-auto"
+          @click="handleCancel"
+        >
+          <Icon
+            :icon="isCancelling ? 'fluent:spinner-ios-20-regular' : 'fluent:dismiss-circle-24-regular'"
+            class="h-5 w-5"
+            :class="{ 'animate-spin': isCancelling }"
+          />
+          ยกเลิกคูปองและคืนยอด
+        </button>
+      </section>
     </template>
   </div>
 </template>
