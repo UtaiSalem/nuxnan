@@ -229,6 +229,37 @@
 
 ---
 
+---
+
+## 🟢 2026-11-12 — งบประมาณโรงเรียน: ปิด IDOR ข้ามโรงเรียน + แก้ `transfer` ผูกงบผิดตัว (เสร็จ · branch `claude/magical-lamport-acd9rn`)
+
+ledger งบประมาณภายในของโรงเรียน (ไม่ใช่แต้ม/กระเป๋าเงินผู้ใช้) · แผน §1.4 ใน [`plans/disable-p2p-value-transfers.md`](plans/disable-p2p-value-transfers.md)
+
+### บั๊กที่ยืนยันด้วยเทสต์ (บนโค้ดเดิม)
+1. **IDOR:** กลุ่ม `{academy}/budgets` ไม่มี `scopeBindings()` ⇒ ผู้มี `settings.manage` ของโรงเรียน A ใส่ id งบของ B ใต้ URL ของ A ได้
+   · `PATCH` แก้ชื่อ/ยอดงบของ B ได้ (200) · `add-funds` เติมยอดให้งบของ B ได้ (200) · route อื่นที่ไม่ 200 ก็เพราะพังด้วยเหตุผลอื่น (ดูข้อ 3) ไม่ใช่เพราะมีด่าน
+2. **`transfer` ผูกงบผิด:** พารามิเตอร์ชื่อ `$fromBudget` ไม่ตรง `{budget}` ⇒ ได้ `Budget` เปล่า ⇒ โอนภายในโรงเรียนเดียวกันตอบ 400 "งบประมาณต้นทางไม่เพียงพอ" ทุกครั้ง
+   · `to_budget_id` แค่ `exists:budgets,id` (ข้ามโรงเรียนได้) · `different:<id>` เทียบกับ**ชื่อฟิลด์**ไม่ใช่ค่า ⇒ กันโอนเข้างบเดิมไม่ได้
+   · ⚠️ revert-check เจอ: ถ้าแก้แค่ข้อ 2 โดยไม่ใส่ `scopeBindings()` ⇒ `POST /academies/A/budgets/{งบของ B}/transfer` ดูดเงินของ B เข้างบ A ได้ (200) — **สองข้อต้องไปด้วยกัน**
+
+### งานที่ทำ
+- `routes/learn/academy.php` กลุ่ม budgets ใส่ `->scopeBindings()` (แบบเดียวกับ students lifecycle / rollover batches)
+- `Academy::budgets()` HasMany (scopeBindings ใช้ relation นี้)
+- `BudgetController::transfer` → `Budget $budget` · `to_budget_id` = `integer` + `Rule::exists(...)->where('academy_id', ...)` + `Rule::notIn([ต้นทาง])` + ข้อความไทย · หา `$toBudget` ผ่าน `$academy->budgets()`
+- เทสต์ใหม่ `tests/Feature/Academy/BudgetAcademyScopingTest.php` 13 เคส: ข้ามโรงเรียน 8 route → 404 + ยอดไม่เปลี่ยน · โอนในโรงเรียนเดียวกันยอดถูก · ปลายทางข้ามโรงเรียน/งบเดิม → 422 · ยอดไม่พอ → 400
+
+### ตรวจแล้ว
+- Pint ผ่าน · sqlite 13/13 · MySQL 8.4 (docker, สคีมาจาก `php artisan migrate` ไม่ใช่สำเนา DB dev) 13/13
+- revert-check: เอา `scopeBindings()` ออก → 8 เคสข้ามโรงเรียนตก · คืนชื่อ `$fromBudget` → 3 เคส transfer ตก
+- `SchoolManagementRouteGuardTest > member with finance view passes the gate` ตกอยู่ก่อนแล้ว (stash ยืนยันทั้ง sqlite/MySQL — ขัดกับ `FinanceGroupLockdownTest` ที่ล็อก fee-structures ไว้ที่ `settings.manage`)
+
+### เจอระหว่างตรวจ (นอกงานนี้ · ยังไม่แก้)
+- 🔴 **schema drift ของงบประมาณ:** migration ไม่มี `budgets.status/category_id/created_by` และ `expenses.budget_id` แต่ model/controller ใช้
+  ⇒ บนสคีมาจาก migration: `store`/`show`/`close`/`expenses`/`destroy` = 500 · `activate` = 400 เสมอ · `summary` 500 บน MySQL (sqlite ผ่านเพราะ `"status"` กลายเป็น string literal)
+  · UI `SchoolFinanceTab.vue` เรียก create/show → น่าจะพังอยู่ · **ต้องเช็ค `SHOW CREATE TABLE budgets` บน DB dev/prod ก่อนเคาะว่าฝั่งไหนถูก**
+- `transfer` ไม่ห่อ transaction/lock ⇒ โอนพร้อมกันสองครั้งอาจทำยอดติดลบได้ (ยังไม่แก้)
+
+---
 ## 🟢 2026-11-04 — ปิดการโอนแต้ม/เงินระหว่างสมาชิก (เสร็จ · commit `ff5801cb` `43012727` `969d6a74` · pushed)
 
 เจ้าของสั่ง: "ปิดการโอนแต้ม-เงินระหว่างสมาชิกอย่างเดียวก่อน เดี๋ยวค่อยวิเคราะห์ระบบอย่างละเอียดอีกที"
@@ -256,6 +287,10 @@
 - [ ] 🔴 **Phase 0** ช่องสร้างมูลค่าเอง (ร้ายแรงกว่าการโอน): **ตัวแรกสุด `POST /forgot-password/exchange/{user}` เติมแต้มให้ใครก็ได้ ไม่ตรวจแอดมิน ไม่เขียน ledger (แผน Phase 0 ข้อ 0 · D6 เคาะแล้ว: ฟีเจอร์ยังใช้ เพดาน 100 บาท/ครั้ง) → ✅ แก้โค้ดแล้ว 2026-11-04 (admin gate + max:100 + ledger, getuser gate) · เหลือตรวจ prod ด้วยการเทียบ users.pp กับ ledger** · ✅ 2026-11-04 ลบ `/wallet/deposit` + `/points/refund` แล้ว, `/points/xp/earn` เก็บไว้แต่ whitelist เกม + ≤100/ครั้ง + ≤500/วัน/เกม (`config/economy.php` game_xp) · agy opus quota หมด (รีเซ็ต ~2026-11-10) ใช้ `gemini-4-argon-high` แทนได้ · · `POST /wallet/deposit` เติมเงินตัวเองได้ไม่ต้องมีสลิป · `POST /points/refund` เพิ่มแต้มตัวเองได้ · `POST /points/xp/earn` — route อยู่ใน `routes/earn/points-wallet.php` (แผน §1.3, §3 Phase 0) + ต้องตรวจ production แบบอ่านอย่างเดียว
 - [ ] Phase 2 คูปองผู้ใช้ = โอนแบบนิรนาม (`routes/earn/coupons.php` · 2 ใบยังใช้ได้ รวม 340 แต้ม · เคาะ D2 ก่อน)
 - [ ] Phase 5 แคมเปญ/บริจาค/ขายคอร์ส (เคาะ D3 ก่อน) · ~~IDOR `budgets/{budget}/transfer` (แผน §1.4)~~ ✅ แก้แล้ว 2026-11-12 (ดูหัวข้องบประมาณด้านบนสุด)
+
+---
+
+- [ ] Phase 5 แคมเปญ/บริจาค/ขายคอร์ส (เคาะ D3 ก่อน) · ~~IDOR `budgets/{budget}/transfer` (แผน §1.4)~~ ✅ แก้แล้ว 2026-11-12 (ดูบันทึกด้านบน)
 - [x] ข้อความ "โอนแต้ม/โอนเงิน" ที่อื่น — ✅ ไล่ครบแล้ว 2026-11-12 (อ่านโค้ดอย่างเดียว ไม่ได้แก้ไฟล์ · ไม่ได้ตรวจจอ) **ไม่เหลือจุดไหนโฆษณา/เปิดทางโอนระหว่างสมาชิก**
   · ไม่มีผู้เรียก `/points/transfer` · `/wallet/transfer` · `?tab=transfer` · `transfer()` เหลือใน `ui/` · `i18n/locales/*.json` ไม่มี key เรื่องโอน
   · ที่เหลือทั้งหมดจัดได้ 5 กลุ่ม (เก็บไว้ทุกกลุ่ม): (1) สลิป/โอนเงินผ่านธนาคาร — ฝากเงิน ถอนเงิน โฆษณา บริจาคเงินสด (2) label ประวัติ `transfer`/`transfer_in`/`transfer_out` — `Points.vue`, `Wallet.vue`, `PointsTransactionCard`, `UnifiedTransactionCard`, `DashboardActivityFeed`, model `PointsTransaction`/`WalletTransaction` (3) เครื่องมือแอดมินสืบ/ย้อนการโอน — `nuxnan-admin/wallet`, `points`, `users/[id]`, `WithdrawalFundSourceService`, `FraudRemediationService` (4) โรงเรียน→คอร์ส `academy/allocations/*` (ไม่ใช่ P2P) (5) บริจาคแต้มเข้ากองกลางคอร์ส/โรงเรียน + กดรับ — `SupportDonationModal`, `CourseDonorCard:347` "กำลังโอนแต้มสนับสนุนให้คุณ" → เป็นช่องทางมูลค่าของ Phase 5 (รอ D3) ไม่ใช่เรื่องข้อความ

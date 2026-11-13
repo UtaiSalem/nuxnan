@@ -561,4 +561,13 @@ class Academy extends Model
     {
         return $this->hasMany(RolloverBatch::class);
     }
+
+    /**
+     * งบประมาณของโรงเรียน — `scopeBindings()` ของกลุ่ม `{academy}/budgets/{budget}` ใช้ relation นี้
+     * หา `{budget}` ภายในโรงเรียนเท่านั้น
+     */
+    public function budgets(): HasMany
+    {
+        return $this->hasMany(Budget::class);
+    }
 }
