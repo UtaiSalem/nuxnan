@@ -51,10 +51,22 @@
 - 🔴 `php artisan migrate` บนเครื่องนี้รัน migration ค้างอื่นไปด้วย 10 ตัว (batch 137 — ผ่านครบ ไม่ได้ rollback) ดูรายชื่อ: `select migration from migrations where batch=137`
 - บั๊กเดิมที่เจอระหว่างทาง (ไม่ได้แก้): `LessonAttachmentUploader.vue` ยิง `/lessons/...` ไม่มี `/api` · `CourseLessonController@store` 500 ถ้าไม่ส่ง description/content/youtube_url
 
-## 🟡 2026-11-12 (เย็น) — งานวันนี้ค้างอยู่ใน draft PR 7 อัน **ยังไม่ merge เข้า `main`** (อ่านก่อนเชื่อ TODO ในหัวข้อถัดไป)
+## ✅ 2026-11-14 — merge draft PR ทั้ง 7 อันของ 2026-11-12 เข้า `main` แล้ว (squash)
+
+ลำดับ: #49 `a2271d3c` → #48 `c28f696c` (เปลี่ยน base จาก #47 เป็น main · **ปิด #47** เพราะงานอยู่ใน #48 ครบ) → #46 `c30e8ee1` → #44 `2cd15e1f` → #43 `35fab91e` → #45 `b9a780d9`
+- worklog ชนทุกตัว → รวมทุกหัวข้อ (หัวข้อของแต่ละ PR อยู่ใต้ตารางนี้แล้ว ไม่ต้อง `git show` branch อีก)
+- **#44 (เจ้าของเคาะ: รวมเข้ามา)**: controller ใช้ของ #46 ทั้งไฟล์ (ครอบคลุม fix ของ #44 หมดแล้ว) · เก็บ `scopeBindings()` บน route + `Academy::budgets()` เป็นด่านชั้นสอง · เทสต์ 13 เคสของ #44 ย้ายไปเป็น `BudgetRouteScopeBindingTest.php` (ชื่อชนกับของ #46)
+- **#45 × #43 `CouponService.php`**: เก็บทั้ง `lockForUpdate` + `cancelCouponByAdmin` + `refundToCreator()` ของ #45 และ `$metadata` ของ `cancelCoupon` จาก #43 (ส่งต่อผ่าน `refundToCreator`)
+  · 🔴 **เจอชนจริงตอนรวม:** `canIssueCoupons()` ของ Phase 2 ยอมเฉพาะ `isPlearndAdmin()` แต่ route แอดมินคูปอง (`EnsurePlearndAdmin`) ยอม SUPER_ADMIN ด้วย → super admin เข้าหน้าได้แต่สร้างคูปองไม่ได้ (403) · แก้: ให้ `canIssueCoupons()` รับ `isSuperAdmin()` ด้วย
+- ตรวจแล้ว (sqlite) บน main ที่รวมแล้ว: `Expense|Budget|Coupon|CourseClaim|Withdrawal|SchoolFinance|SchoolManagementRouteGuard` 209 ผ่าน · ตก 2 = `WithdrawalSourceOfFundsTest` ซึ่ง**ตกอยู่แล้วบน main ก่อน merge** (เหมือน `TypingRewardPolicyTest`, `AdminUserTransferLensTest`, `FraudRemediationTest`, `UserPointsTransactionsTest`, `HomeVisit\AdminControllerTest` — QueryException ทั้งชุด ยังไม่ได้สืบ)
+- **ยังไม่ทำ (owner):** checklist "เจ้าของต้องทำบนเครื่อง WAMP หลัง merge" ด้านล่างยังค้างทุกข้อ — โดยเฉพาะ migration `2026_11_12_000001_cancel_active_member_coupons` (ยกเลิกคูปองสมาชิก + คืนแต้ม) **ยังไม่ได้รัน** · ใช้ `migrate --path` ตามกติกา · `npm run build` + ตรวจจอคูปอง
+
+---
+
+## 🟡 2026-11-12 (เย็น) — งานวันนี้ค้างอยู่ใน draft PR 7 อัน (✅ merge แล้ว 2026-11-14 — ดูหัวข้อบน)
 
 `main` = `390211c` (09:32) + commit บันทึกนี้ · งานหลัง 09:32 ทั้งหมดอยู่ใน branch ของแต่ละ PR (push แล้วทุกอัน ไม่มีอะไรหาย)
-รายละเอียดเต็มของแต่ละงาน (ตรวจอะไรแล้ว/ยังไม่ตรวจ) อยู่ใน `.agents/worklog.md` **ของ branch นั้น** → `git show origin/<branch>:.agents/worklog.md | head -120`
+รายละเอียดเต็มของแต่ละงานอยู่ในหัวข้อของแต่ละ PR ด้านล่าง (รวมเข้ามาตอน merge แล้ว)
 
 | PR | branch | เรื่อง | ปิด TODO ไหนในหัวข้อ 2026-11-04 |
 |---|---|---|---|
