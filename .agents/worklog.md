@@ -1,5 +1,202 @@
 # Work Log — nuxnan project
 
+## 🟢 2026-11-13 — แก้หน้าเด้งขึ้นบนสุดหลังกดปุ่มในหน้าบัตรนักเรียนของครู (`/student-card/{level}/{room}`)
+
+อาการที่เจ้าของแจ้ง: กด "ส่งคำร้องขอทำบัตรใหม่" แล้วหน้าเด้งกลับไปช่วงแรกของหน้าทุกครั้ง
+ครูที่ทำให้นักเรียนคนท้าย ๆ ของห้องต้องเลื่อนลงมาหาการ์ดใบเดิมใหม่ทุกคน
+
+**ต้นเหตุ 2 ชั้น (ชุดเดียวกับหน้าแอดมินที่แก้ไว้ 2026-09-30) — ไม่ใช่การโหลดหน้าใหม่:**
+1. `handleRequestSubmitted` เรียก `fetchStudents()` ที่ตั้ง `isLoading = true` → `v-if="isLoading"`
+   ถอดการ์ดทุกใบออกจาก DOM เหลือสปินเนอร์ตัวเดียว → ความสูงเอกสารยุบเหลือเท่าจอเดียว
+   เบราว์เซอร์จึงหนีบ `scrollY` กลับไป 0
+2. SweetAlert2 ค่าเริ่มต้น `heightAuto: true` ตั้ง height ของ `html/body` เป็น `auto !important`
+   ทุกครั้งที่เปิด/ปิดกล่อง → เด้งอีกชั้นแม้ list จะยังอยู่
+
+**แก้ (`ui/pages/student-card/[level]/[room].vue`):**
+- `fetchStudents({ silent })` — silent refetch ไม่แตะ `isLoading` (`isLoading` เหลือใช้เฉพาะตอนเปิดหน้าครั้งแรก)
+  การ์ดอยู่ใน DOM ตลอด Vue แค่ patch แถวเดิมด้วย `:key="student.uid"`
+- `refreshKeepingScroll(anchorUid?)` — ยึด **ขอบบนของการ์ดใบที่เพิ่งกด** (`#card-{uid}`) ไว้ที่ตำแหน่งเดิมบนจอ
+  วัดเป็นระยะสัมพัทธ์ (`getBoundingClientRect().top`) ไม่ใช่ค่า `scrollY` ดิบ จึงคืนตำแหน่งได้แม้มีอะไร
+  ไปดึงจอขึ้นบนสุดระหว่างทาง · ไม่มี anchor (ส่งหลายคน/เพิ่มนักเรียน) → fallback คืน `scrollY` เดิม
+  เรียกทั้ง 4 จุด: ส่งคำร้องเดี่ยว · ส่งหลายคน · ยกเลิกคำร้อง · เพิ่มนักเรียน
+- `await nextTick()` ก่อนวัดตำแหน่ง (รอ modal ของ Headless UI unmount + คืน scroll lock ก่อน แล้วค่อยวัด)
+- ใส่ `heightAuto: false` ให้ **ทุก** `Swal.fire` ในหน้านี้ (11 จุด) และใน `components/student-card/StudentCardItem.vue`
+  (11 จุด — อัปโหลด/ลบรูป, แก้ชื่อ ก็เด้งด้วยเหตุเดียวกัน · 3 จุดที่เรียกแบบ positional `Swal.fire('...', '', 'success')`
+  แปลงเป็น object form เพื่อใส่ `heightAuto` ได้)
+
+**ไม่ทำ:** ป้าย "กำลังอัปเดตข้อมูล..." แบบ `fixed` ที่ร่างไว้รอบแรก — ตัดออกเพราะรอบ refresh สั้น
+และของจริงที่ทำให้เด้งคือ 2 ข้อข้างบน ป้ายไม่ได้ช่วยและเพิ่ม DOM/transition ให้ดูแลเปล่า ๆ
+
+**ตรวจแล้ว:** SFC `parse` + `compileScript` + `compileTemplate` ผ่านทั้ง 3 ไฟล์ (page, StudentCardItem, RequestCardModal)
+**🔴 ยังไม่ได้ทดสอบบนเบราว์เซอร์จริง** — คอนเทนเนอร์คลาวด์ไม่มี `ui/node_modules` รัน Nuxt ไม่ได้
+เกณฑ์ที่ต้องยืนยันที่เครื่อง dev: เปิด `/student-card/1/2` ที่ 375px → เลื่อนลงไปนักเรียนคนท้ายรายการ
+→ กดส่งคำร้อง → การ์ดใบนั้นต้องค้างอยู่ตำแหน่งเดิมบนจอ และขึ้นสถานะ "ส่งคำร้องแล้ว" ทันที
+(ทำซ้ำกับ ยกเลิกคำร้อง · ส่งหลายคน · อัปโหลดรูป)
+**หมายเหตุ:** หน้าแอดมิน `student-card/admin/students/[level]/[room].vue` ใช้แพตเทิร์น `silent` + `heightAuto:false` นี้อยู่แล้ว
+(เจ้าของยืนยันว่าหายเด้งจริงตั้งแต่ 2026-09-30) การแก้รอบนี้ทำให้สองหน้าตรงกัน + เพิ่ม anchor ให้แม่นขึ้น
+
+---
+
+## 🟡 2026-11-12 (ดึก) — นำเข้าบทเรียนจาก .docx: โค้ดเสร็จ + ทดสอบบนจอจริงแล้ว · ยังไม่ commit
+
+✅ ทดสอบจริงใน browser pane (รายวิชา 1, บัญชี Utai): 375px ครบ flow (เลือกไฟล์ที่มีรูป+ตาราง+YouTube → preview → บันทึกฉบับร่าง + แนบ .txt) → DB ถูกทุกช่อง · 768 / 1280 dark ไม่ล้น
+   บทเรียนทดสอบ id 68 + ไฟล์แนบ + โฟลเดอร์รูป ลบทิ้งแล้ว · แก้หลังทดสอบ: ขนาดไฟล์เล็กแสดง KB, breadcrumb มี padding บนมือถือ
+⚠️ ข้อจำกัดที่ตั้งใจ: ลบบทเรียนแล้วรูปใน `images/courses/lessons/content/{uuid}` ไม่ถูกลบ — เพราะ `CourseCloneService` คัดลอก `content` ตรง ๆ รูปจึงถูกแชร์ข้ามรายวิชาที่โคลน (ถ้าจะเก็บกวาดต้องเป็น sweep ที่เช็คการอ้างอิงทุกตาราง)
+⚠️ บั๊กเดิมเพิ่ม: ลบบทเรียน (`CourseLessonController@destroy`) ไม่ลบ `lesson_attachments` + ไฟล์ใน `course-materials/lessons`
+
+แผน + ข้อตัดสินใจ D1–D4 อยู่ใน `.agents/latest-analysis.md` (หัวข้อ 2026-11-12) · agy เขียนทั้ง 2 shard แล้วหมดโควตา (รีเซ็ต ~03:45) — Claude ตรวจ/แก้ต่อเอง
+- Backend: `LessonImportController` (POST `/api/courses/{course}/lessons/import/preview` + `/import`) · `LessonImportService` · `LessonHtmlSanitizer` · `LessonCreationService` (store() ของบทเรียน/หัวข้อเรียกตัวนี้แล้ว) · คำสั่ง `lesson-imports:prune` (schedule 03:30) · migration `content` → MEDIUMTEXT
+- Frontend: หน้า `/Learn/Courses/{id}/lessons/import` · ทางเข้าเดียวคือแถบลิงก์ในหน้าสร้างบทเรียน (กด "เพิ่มบทเรียน" ก่อน — เจ้าของเคาะให้เอาปุ่มออกจากหน้ารายการเพื่อลดความสับสน) · `mammoth@1.13` (ติดตั้งแล้ว ต้อง `npm run build` เอง) · แม่แบบ `ui/public/templates/lesson-import-template.docx`
+- ตรวจแล้ว: sqlite + **MySQL** 73/73 (LessonImport 19 · Sanitizer · เทสต์บทเรียน/หัวข้อเดิม) · pint ผ่าน · SFC compile 3 ไฟล์ · หน่วยความจำ HTML 13.5MB = 86MB
+- 🔴 `php artisan migrate` บนเครื่องนี้รัน migration ค้างอื่นไปด้วย 10 ตัว (batch 137 — ผ่านครบ ไม่ได้ rollback) ดูรายชื่อ: `select migration from migrations where batch=137`
+- บั๊กเดิมที่เจอระหว่างทาง (ไม่ได้แก้): `LessonAttachmentUploader.vue` ยิง `/lessons/...` ไม่มี `/api` · `CourseLessonController@store` 500 ถ้าไม่ส่ง description/content/youtube_url
+
+## 🟡 2026-11-12 (เย็น) — งานวันนี้ค้างอยู่ใน draft PR 7 อัน **ยังไม่ merge เข้า `main`** (อ่านก่อนเชื่อ TODO ในหัวข้อถัดไป)
+
+`main` = `390211c` (09:32) + commit บันทึกนี้ · งานหลัง 09:32 ทั้งหมดอยู่ใน branch ของแต่ละ PR (push แล้วทุกอัน ไม่มีอะไรหาย)
+รายละเอียดเต็มของแต่ละงาน (ตรวจอะไรแล้ว/ยังไม่ตรวจ) อยู่ใน `.agents/worklog.md` **ของ branch นั้น** → `git show origin/<branch>:.agents/worklog.md | head -120`
+
+| PR | branch | เรื่อง | ปิด TODO ไหนในหัวข้อ 2026-11-04 |
+|---|---|---|---|
+| [#43](https://github.com/UtaiSalem/nuxnan/pull/43) | `claude/intelligent-albattani-llfm1i` | Phase 2 ปิดคูปองที่สมาชิกสร้าง (+ migration ยกเลิกคูปองค้าง คืนผู้สร้าง) · Phase 5 ตาม D3: กดรับแต้มรายวิชาได้เฉพาะเจ้าของ/สมาชิกที่อนุมัติแล้ว + ตรวจการโอนทางอ้อมตอนแอดมินตรวจถอน | Phase 2 ✅ · Phase 5 ✅ (เหลือ P5-a/b/c) |
+| [#44](https://github.com/UtaiSalem/nuxnan/pull/44) | `claude/magical-lamport-acd9rn` | budgets: `scopeBindings()` ผูก `{budget}` กับ `{academy}` + แก้ `transfer` ที่ผูกงบผิดตัว (เทสต์ 13 เคส) | IDOR `budgets/{budget}/transfer` ✅ |
+| [#45](https://github.com/UtaiSalem/nuxnan/pull/45) | `claude/serene-pasteur-n2kgj5` | ซ่อม `/api/admin/coupons` + `/nuxnan-admin/coupons` ให้ใช้ schema คูปองจริง (เดิมพังทั้งชุด) · มูลค่าคูปองหักจากแอดมินผู้สร้าง | — (งานใหม่) |
+| [#46](https://github.com/UtaiSalem/nuxnan/pull/46) | `claude/happy-curie-m2qgkm` | budgets: model/controller ให้ตรง schema จริง (ไม่มี migration) + ปิด IDOR + transfer ใช้ได้ (ห่อ transaction + lock) | IDOR budgets ✅ (ซ้ำกับ #44) |
+| [#47](https://github.com/UtaiSalem/nuxnan/pull/47) | `claude/friendly-dijkstra-i0kera` | expenses: ปิด IDOR ข้ามโรงเรียน + แก้เทสต์การเงิน 5 ตัวที่ตก 403 | — |
+| [#48](https://github.com/UtaiSalem/nuxnan/pull/48) | `claude/expense-fk-scoping` | **ซ้อนบน #47 (มี commit ของ #47 ครบ)** + ผูก `academic_year_id`/`parent_id` เข้าโรงเรียน + whitelist `sort_by` | — |
+| [#49](https://github.com/UtaiSalem/nuxnan/pull/49) | `claude/fix-expense-category-fk` | ลบหมวดรายจ่ายตอบ 500 ทุกครั้ง — `ExpenseCategory::expenses()` FK ผิด (แก้บรรทัดเดียว) | — |
+
+### ⚠️ conflict ที่จะเจอตอน merge (จำลองด้วย `git merge-tree` แล้ว · ทุก PR merge เข้า `main` ตัวเดียวได้สะอาด)
+- **ทุก PR** แทรกหัวข้อบนสุดของ `.agents/worklog.md` → merge อันที่ 2 เป็นต้นไปชนที่ worklog ทุกครั้ง (แก้ง่าย: เก็บทุกหัวข้อ)
+- **#44 กับ #46 แก้เรื่องเดียวกันคนละแบบ** → ชน `BudgetController.php` + `tests/Feature/Academy/BudgetAcademyScopingTest.php` (ชื่อไฟล์เดียวกัน เนื้อหาต่างกัน: 13 เคส vs 7 เคส)
+- **#43 กับ #45** ชน `app/Services/CouponService.php` (ทั้งคู่ใส่ `lockForUpdate` ใน `redeemCoupon` · #45 เพิ่ม `cancelCouponByAdmin`) — เทสต์ของ #45 ใช้ผู้สร้างเป็น Plearnd admin เสมอ จึงเข้ากับ Phase 2 ของ #43 ได้
+- #48 กับ #49 ชนแค่ worklog
+
+### ลำดับ merge ที่แนะนำ (repo นี้ใช้ squash merge → PR ที่ซ้อนกันจะไม่ปิดเอง)
+1. **#49** (บรรทัดเดียว ไม่ชนโค้ดใคร)
+2. **#48** แล้ว**ปิด #47** ด้วยมือ (งานของ #47 อยู่ใน #48 ครบแล้ว)
+3. **#46** (budgets ครบกว่า) → แล้วค่อยตัดสินใจ #44: เอา `scopeBindings()` + `Academy::budgets()` + เทสต์ 13 เคสมาวางทับ #46 (แก้ conflict ด้วยมือ · ได้ด่านสองชั้น) หรือปิด #44 ถ้า `ensureBelongsToAcademy()` ของ #46 พอแล้ว
+4. **#43** → แล้ว **#45** (แก้ conflict `CouponService.php` ด้วยมือ ให้มีทั้งด่าน Phase 2 และ `cancelCouponByAdmin`)
+
+### เจ้าของต้องทำบนเครื่อง WAMP หลัง merge (ในคลาวด์ใช้ schema จาก `migrate` ไม่ใช่ DB dev จริง)
+- [ ] `php artisan test:db:rebuild` แล้ว `php artisan test -c phpunit.mysql.xml --filter="Expense|Budget|Coupon|CourseClaim|Withdrawal"`
+- [ ] `SHOW CREATE TABLE budgets;` + `SHOW CREATE TABLE expenses;` บน DB dev — #46 สมมติว่า schema จริงตรงกับ migration (ไม่มี `status`/`category_id`/`created_by`/`expenses.budget_id`)
+- [ ] #43: ดูจำนวนคูปองสมาชิกที่ยัง `active` ก่อน แล้ว `php artisan migrate` (`2026_11_12_000001_cancel_active_member_coupons`) → ดู log `Member coupons cancelled and refunded` (dev เดิมคาด 2 ใบ รวม 340 แต้ม)
+- [ ] `npm run build` (#43 #45 แก้ UI) + ตรวจจอ 375/768/1280 หน้า `Earn/coupons/*`, `nuxnan-admin/coupons/*`, `nuxnan-admin/wallet/pending`
+
+### ต้องเคาะ / เจอระหว่างทาง ยังไม่แก้ (รวมจากทุก PR)
+- [ ] 🔴 **P5-a** เพดาน `points_per_claim` ของแคมเปญรายวิชา (ตอนนี้ไม่มี max = ช่องโอนก้อนใหญ่ที่ยังเหลือ) · P5-b พักรายได้ขายรายวิชา N วัน · P5-c จำกัดแปลงแต้มกองกลาง→เงิน — ต้องการตัวเลขจากเจ้าของ
+- [ ] Phase 0: ตรวจ prod แบบอ่านอย่างเดียว เทียบ `users.pp` กับ ledger (ยังค้างจาก 2026-11-04)
+- [ ] `PointsService::refund` ไม่ lock แถว user → กดยกเลิกคูปองหลายใบพร้อมกันอาจคำนวณจากยอดเก่า
+- [ ] `Budget.spent_amount` ไม่อัพเดทเองเมื่อรายจ่ายอนุมัติ/จ่าย (`updateSpent()` ไม่มีผู้เรียกมาแต่เดิม) → งาน finance buildout
+- [ ] `updateCategory` ของรายจ่ายกันได้แค่ "ตั้งตัวเองเป็นแม่" — วงจร 2 ขั้น (A→B แล้ว B→A) ยังทำได้ → `getFullNameAttribute()` วนไม่จบ
+- [ ] `ui/layouts/NuxnanAdminLayout.vue:306` `px-0` ต่ำกว่า `lg` → ทุกหน้าแอดมินชิดขอบจอบนมือถือ (ผิดกติกา mobile-first)
+- [ ] `ui/package-lock.json` ไม่ sync กับ `package.json` (`npm ci` ล้ม: ขาด pinia@3.0.4 ฯลฯ)
+
+---
+
+## 🟢 2026-11-12 — ลบหมวดรายจ่ายตอบ 500 ทุกครั้ง (FK ผิดใน `ExpenseCategory::expenses()`) (เสร็จ · pushed)
+
+`DELETE /api/academies/{academy}/expenses/categories/{category}` ตอบ **500 ทุกครั้ง** แม้เป็นหมวดของโรงเรียนตัวเองและไม่มีรายจ่ายผูกอยู่เลย
+
+### สาเหตุ
+`app/Models/ExpenseCategory.php` ประกาศ `expenses()` เป็น `hasMany(Expense::class, 'category_id')`
+แต่คอลัมน์จริงในตาราง `expenses` คือ **`expense_category_id`** (ดู `database/migrations/2026_02_04_100002_create_finance_tables.php:299`
+และ `Expense::category()` ที่ใช้ `expense_category_id` อยู่แล้ว)
+⇒ `ExpenseController::destroyCategory` ที่เรียก `$category->expenses()->count()` ยิง SQL
+`select count(*) … where "expenses"."category_id" = ?` → `no such column: expenses.category_id` (sqlite) / `Unknown column` (MySQL)
+บั๊กนี้โผล่ตอนตรวจ PR UtaiSalem/nuxnan#47 (`claude/friendly-dijkstra-i0kera`): พอถอด guard เจ้าของโรงเรียนออก เคส "ลบหมวด" ได้ 500 แทน 200
+
+### งานที่ทำ
+- **BE:** `ExpenseCategory::expenses()` → `hasMany(Expense::class, 'expense_category_id')` (แก้บรรทัดเดียว)
+- **เทสต์ใหม่** `tests/Feature/Academy/ExpenseCategoryDestroyTest.php` 2 ตัว (ยิงด้วย**เจ้าของโรงเรียน** เพราะกลุ่ม route การเงินอยู่หลัง `academy.permission:settings.manage`)
+  · ลบหมวดของตัวเองที่ยังไม่มีรายจ่าย → 200 + แถวหายจาก `expense_categories`
+  · ลบหมวดที่มีรายจ่ายผูกอยู่ → 400 + ข้อความ "ไม่สามารถลบได้" + แถวยังอยู่
+
+### ตรวจแล้ว
+- **revert-check:** `git stash` เอา fix ออก → เทสต์ใหม่ตกทั้ง 2 ตัวด้วย `no such column: expenses.category_id` · ใส่ fix คืน → ผ่านทั้ง 2 (7 assertions)
+- `php artisan test --filter=Expense` (sqlite): ก่อนแก้ 6 fail / 1 pass → หลังแก้ **4 fail / 3 pass**
+- `php artisan test tests/Feature/Academy` (sqlite): **283 passed**, 3 fail + 2 incomplete — ยืนยันด้วย stash ว่า 3 ตัวนั้น fail อยู่ก่อนแล้ว (`AcademySettingsAuditLogTest`, `ReportRefreshTest`, `StaffDepartmentValidationTest`)
+- Pint `--test --dirty` ผ่าน
+- **ยังไม่ตรวจ: MySQL** — เซสชันนี้รันบน container ที่ไม่มี MySQL (`test:db:rebuild` ต้องคัดลอกโครงจาก DB dev) → เจ้าของรัน `php artisan test:db:rebuild && php artisan test -c phpunit.mysql.xml --filter=Expense` ที่ WAMP เอง (SQL ที่ผิดเป็นคอลัมน์ไม่มีจริง MySQL จะตอบ `Unknown column` เหมือนกัน)
+
+### 🔴 เจอระหว่างทำ (คนละบั๊ก ยังไม่แก้ — อยู่นอกขอบเขตงานนี้)
+`app/Models/Budget.php` มี FK ผิดแบบเดียวกันอีก 2 จุด ⇒ ทุกเส้นที่แตะมันจะ 500:
+- `Budget::category()` = `belongsTo(ExpenseCategory::class, 'category_id')` แต่ตาราง `budgets` มีคอลัมน์ `expense_category_id` (migration บรรทัด 335)
+  · และ `BudgetController` ก็ validate/เขียน `category_id` ทั้งไฟล์ (บรรทัด 38–39, 79, 90, 122) → แก้ต้องแตะทั้ง model + controller + ฝั่ง UI ที่ส่ง field นี้
+- `Budget::expenses()` = `hasMany(Expense::class)` → FK เริ่มต้น `budget_id` ซึ่ง**ไม่มีในตาราง `expenses`** เลย
+  · ผู้เรียก: `Budget::updateSpent()` (`Budget.php:101`), `BudgetController::destroy` (:194), `BudgetController` รายการรายจ่ายของงบ (:260)
+  · ถ้าจะผูกรายจ่ายเข้างบจริง ต้องมี migration เพิ่ม `budget_id` หรือเปลี่ยนไปนับผ่าน `expense_category_id` + ช่วงวันของงบ — ต้องให้เจ้าของเคาะว่าความหมายควรเป็นแบบไหน
+
+### Context สำคัญ
+- 4 ตัวที่ยัง fail ใน `--filter=Expense` เป็นของเก่า **ไม่เกี่ยวกับบั๊กนี้** — ตก 403 ทั้งหมดเพราะเทสต์ยิงด้วยสมาชิกที่ถือ `finance.view`/`finance.manage`
+  แต่กลุ่ม route การเงินถูกล็อกเป็น `settings.manage` ไปแล้ว (ดู `FinanceGroupLockdownTest`) → ต้องแก้เทสต์ `SchoolExpenseSchemaFixTest` (3) + `SchoolFinanceAuditLogTest` (1) ให้ใช้ `settings.manage`
+- เซสชันนี้ไม่มี `vendor/` มาให้ ต้อง `composer install --ignore-platform-req=php` ก่อน (container มี PHP 8.3 แต่ `composer.json` ขอ ^8.4) และ `.env` ไม่มี → copy จาก `.env.example` + `key:generate` (ทั้งสองไฟล์อยู่ใน .gitignore ไม่ติด commit)
+
+### Branch / Git State
+- Branch: `claude/fix-expense-category-fk` (แยกจาก `claude/epic-gates-98a3md` ที่ `390211c`) · ยังไม่มี PR #47 ในเช็คเอาต์นี้ (fix นี้ไม่ชนกับ guard ของ #47 — คนละบรรทัด)
+
+---
+
+## 🟢 2026-11-12 — รายจ่าย (ต่อจาก #47): ผูก `academic_year_id`/`parent_id` เข้าโรงเรียนใน URL + whitelist `sort_by` (เสร็จ · branch `claude/expense-fk-scoping`)
+
+**สแต็กบน PR #47** (`claude/friendly-dijkstra-i0kera`) — เก็บ 3 ข้อค้างในหัวข้อถัดไปของ worklog นี้ (ยกเว้นบั๊ก `destroyCategory` 500 ที่ยังเป็นของเจ้าของ/PR อื่น)
+**ปัญหา:** `ExpenseController` ตรวจเฉพาะว่า id "มีอยู่จริง" ไม่ได้ตรวจว่าเป็นของโรงเรียนใน URL
+→ ผูกรายจ่ายเข้า **ปีการศึกษาของโรงเรียนอื่น** ได้ · ซ้อนหมวดรายจ่ายใต้ **หมวดแม่ของโรงเรียนอื่น** ได้ (แล้วไปโผล่เป็นลูกใน `categories()` ของโรงเรียนนั้น)
+
+### สิ่งที่เปลี่ยน (`ExpenseController.php` ไฟล์เดียว · commit `e4fef1b`)
+- `store`/`update`: `academic_year_id` → `Rule::exists('academic_years', 'id')->where('academy_id', $academy->id)` (แนวเดียวกับ `BudgetController` PR #46)
+- `storeCategory`/`updateCategory`: `parent_id` → `Rule::exists('expense_categories', 'id')->where('academy_id', $academy->id)`
+  · `updateCategory` เพิ่ม `Rule::notIn([$category->id])` — ห้ามตั้งตัวเองเป็นหมวดแม่
+- `index`: `sort_by` ต้องอยู่ใน const `SORTABLE_COLUMNS` (created_at/updated_at/expense_date/amount/title/status/vendor/reference_number) · `sort_order` ต้องเป็น `asc|desc` → ค่าผิดได้ **422 ไม่ใช่ 500**
+  · เช็กแล้วว่า **ฝั่ง FE ไม่มีที่ไหนส่ง `sort_by` มาที่เส้นนี้** (`grep sort_by ui/` เจอแค่ members/classrooms) ⇒ whitelist ไม่ทำของเดิมพัง
+- **ไม่แตะ** route middleware · ไม่แตะ `ensureBelongsToAcademy()`/`expense_category_id` ของ #47
+
+### เทสต์ (เพิ่ม 9 เคสใน `tests/Feature/Academy/ExpenseAcademyScopingTest.php` ของ #47 → รวม 30)
+ปีการศึกษาโรงเรียนอื่นใน store/update = 422 + ไม่มีแถวใหม่/ค่าไม่เปลี่ยน · หมวดแม่โรงเรียนอื่นใน storeCategory/updateCategory = 422 + หมวดนั้นไม่มีลูกเพิ่ม · ตั้งตัวเองเป็นแม่ = 422 · ค่าของโรงเรียนตัวเองยังใช้ได้ (ปีการศึกษา 2 เคส + หมวดแม่ 2 เคส) · `sort_by`/`sort_order` ผิด = 422 · เรียงด้วยคอลัมน์ที่อนุญาตยังถูกต้อง
+
+### ตรวจแล้ว (เซสชัน cloud · PHP 8.3 + composer `--ignore-platform-req=php` · docker `mysql:8.4` → `migrate` 506 ตัวผ่าน → `test:db:rebuild` 376 ตาราง)
+- **sqlite** `php artisan test --filter=ExpenseAcademyScopingTest`: **30/30** (230 assertions) · `--filter=Expense`: **35/35**
+- **MySQL จริง** `-c phpunit.mysql.xml --filter=Expense`: **35/35** (259 assertions) · filter กว้าง `Expense|Finance|Budget|SchoolManagement|RevenueAuthz|AcademicYear`: **79 passed / 1 skipped**
+- **revert-check (เอาเฉพาะ controller กลับเป็นของ #47):** **7 เคสใหม่ตกทันที** — 4 เคส id ข้ามโรงเรียนได้ 200/201 แทน 422 · parent=ตัวเองได้ 200 · `sort_by`/`sort_order` ผิดได้ **500** (`Order direction must be "asc" or "desc"`) แทน 422 · อีก 3 เคส (ค่าของตัวเอง/เรียงปกติ) เขียวทั้งก่อนและหลัง ตามเจตนาเป็น regression guard
+- **full suite sqlite:** `89 failed · 3 incomplete · 8 skipped · 2077 passed` — **เท่ากับเลขที่ #47 บันทึกไว้เป๊ะ**
+  และไม่มี fail ไหนอยู่ในคลาส Expense/Budget/Finance/SchoolManagement ⇒ ไม่มี fail ใหม่จากงานนี้
+- **pint:** `--test --dirty` ผ่าน · `--test` บน 2 ไฟล์ที่แก้ผ่าน
+
+### ค้าง (ยกมาจาก #47 — ยังไม่ได้แก้ในสายนี้)
+- [ ] 🔴 `ExpenseCategory::expenses()` ใช้ FK `category_id` แต่คอลัมน์จริงคือ `expense_category_id` → `destroyCategory` 500 ทุกครั้ง (แก้บรรทัดเดียวใน model · ไม่ได้แตะเพราะคนละเรื่องกับ validation)
+- [ ] `updateCategory` ยังกันแค่ "ตัวเองเป็นแม่" — วงจร 2 ขั้น (A→B แล้ว B→A) ยังทำได้ ⇒ `getFullNameAttribute()` วนไม่จบ · ถ้าจะปิดต้องไล่สาย parent ขึ้นไปทั้งเส้น
+- **เจ้าของรันบนเครื่อง:** `php artisan test:db:rebuild` แล้ว `php artisan test -c phpunit.mysql.xml --filter=Expense` (ยืนยันกับสคีมา dev จริง — ในคลาวด์สคีมามาจาก `migrate` ไม่ใช่ dump ของ dev)
+
+---
+
+## 🟢 2026-11-12 — รายจ่ายโรงเรียน (expenses): ปิด IDOR ข้ามโรงเรียน + แก้เทสต์การเงิน 5 ตัวที่ตก 403 (เสร็จ · branch `claude/friendly-dijkstra-i0kera`)
+
+**ปัญหา:** `ExpenseController` ไม่ตรวจว่า `{expense}`/`{category}` เป็นของ `{academy}` ใน URL (กลุ่ม `{academy}/expenses` ไม่มี `scopeBindings()`)
+→ เจ้าของ/ผู้ถือ `settings.manage` ของโรงเรียน A อ่าน/แก้/อนุมัติ/ปฏิเสธ/ทำเครื่องหมายจ่าย/ลบ รายจ่ายและหมวดรายจ่ายของโรงเรียน B ได้ด้วยการเปลี่ยนเลข id
+
+### สิ่งที่เปลี่ยน (แนวเดียวกับ BudgetController · PR #46 `claude/happy-curie-m2qgkm`)
+- **`ExpenseController.php`:** `ensureBelongsToAcademy()` (404) ใน show/update/approve/reject/markAsPaid/destroy/updateCategory/destroyCategory
+  · ด่านอยู่**ก่อน** validate ⇒ reject ข้ามโรงเรียนได้ 404 ไม่ใช่ 422 · store/update: `expense_category_id` ต้องเป็นหมวดของโรงเรียนนี้ (`Rule::exists(...)->where('academy_id', ...)`)
+  · **ไม่แตะ route middleware** (`academy.permission:settings.manage` ของ SM-S2 คงเดิม)
+- **เทสต์ใหม่ `tests/Feature/Academy/ExpenseAcademyScopingTest.php`** (20): data provider 8 เส้น × (เจ้าของ + ผู้ถือ settings.manage) = 16 เคส 404 + ตรวจว่าข้อมูลโรงเรียนอื่นไม่ถูกแตะ · store/update ด้วยหมวดโรงเรียนอื่น = 422 · เส้นของโรงเรียนตัวเองยังใช้ได้ 2 เคส
+- **เทสต์ 5 ตัวที่ตก 403 อยู่ก่อนแล้ว** → เปลี่ยนสมาชิกเป็น `settings.manage` ตามกติกา SM-S2: `SchoolExpenseSchemaFixTest` (3) · `SchoolFinanceAuditLogTest > expense lifecycle…`
+  · `SchoolManagementRouteGuardTest`: **เปลี่ยนชื่อ** `test_member_with_finance_view_passes_the_gate` → `test_member_with_settings_manage_passes_the_finance_gate` (เคส finance.view ได้ 403 มีใน `FinanceGroupLockdownTest` แล้ว)
+
+### ตรวจแล้ว (เซสชัน cloud · PHP 8.3 + composer `--ignore-platform-req=php` · docker `mirror.gcr.io/library/mysql:8.4` → `migrate` 507 ตัวผ่าน → `test:db:rebuild`)
+- sqlite: ไฟล์เป้าหมาย 4 ไฟล์ 34/34 · MySQL (`-c phpunit.mysql.xml`): 34/34 และ `--filter="Expense|Finance|Budget|SchoolManagement|RevenueAuthz"` 52/52
+- revert-check: เอาด่านออก → 18 เคสตก (16 ได้ 200/500 แทน 404, 2 ได้ 201/200 แทน 422) · เทสต์ 5 ตัวเดิมบนโค้ดเทสต์เดิมได้ 403 ตรงตาม issue
+- full suite sqlite ก่อน/หลัง: 94 → 89 fail — หายไปตรง 5 ตัวเป้าหมาย **ไม่มี fail ใหม่** (89 ที่เหลือเป็นของเดิมในเครื่องนี้: Wallet/Withdraw/ClassSchedule/CoursePurchase ฯลฯ)
+- pint: 5 ไฟล์ที่แก้ผ่าน (`--dirty` ผ่าน) · `pint --test` ทั้ง repo ยังตก 6 ไฟล์**เดิม**ที่งานนี้ไม่ได้แตะ (migration 2 ไฟล์, StudentCardsImport, StudentCardController, AnnouncementController, AcademyDonateClaimsOrphanCheck)
+
+### ค้าง / เจอระหว่างทาง (ไม่ได้แก้ — นอกขอบเขต)
+- [ ] 🔴 **ลบหมวดรายจ่ายพังทุกครั้ง (500):** `ExpenseCategory::expenses()` ใช้ FK `category_id` แต่คอลัมน์จริงคือ `expense_category_id` → `destroyCategory` ตอบ 500 แม้เป็นหมวดของโรงเรียนตัวเอง (revert-check เห็น 500 ในเคส "destroy category") · แก้บรรทัดเดียวใน model
+- [x] ยังไม่ผูกกับโรงเรียน (คลาสเดียวกัน): `academic_year_id` ใน store/update รายจ่าย · `parent_id` ใน storeCategory/updateCategory (ผูกหมวดเข้ากับหมวดแม่ของโรงเรียนอื่นได้) → **แก้แล้วใน branch `claude/expense-fk-scoping`** (หัวข้อบนสุด)
+- [x] (เล็ก) index ส่ง `sort_by`/`sort_order` จาก request เข้า `orderBy` ตรง ๆ ไม่มี whitelist → ชื่อคอลัมน์ผิด/ทิศผิดได้ 500 แทน 422 → **แก้แล้วใน branch `claude/expense-fk-scoping`**
+- **เจ้าของรันบนเครื่อง:** `php artisan test:db:rebuild` แล้ว `php artisan test -c phpunit.mysql.xml --filter="Expense"` (ยืนยันกับสคีมา dev จริง)
+
+---
+
 ## 🟢 2026-11-12 — งบประมาณโรงเรียน (budgets): โค้ดให้ตรงสคีมาจริง + ปิด IDOR + โอนงบใช้ได้ (เสร็จ · branch `claude/happy-curie-m2qgkm`)
 
 **ปัญหา:** `Budget` model + `BudgetController` ใช้คอลัมน์ที่ไม่มีในตาราง (`status`, `category_id`, `created_by`, `expenses.budget_id`)

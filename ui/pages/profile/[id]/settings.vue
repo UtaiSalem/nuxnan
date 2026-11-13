@@ -103,13 +103,15 @@ watch(() => route.params.id, (newId) => {
   }
 })
 
+// ระบบแจ้งเตือนซ่อนไว้ชั่วคราว — ดู notificationsEnabled ใน nuxt.config.ts
+const notificationsEnabled = useRuntimeConfig().public.notificationsEnabled
 const settingsTabs = [
   { id: 'profile', label: 'โปรไฟล์', icon: 'fluent:contact-card-24-regular', description: 'แก้ไขข้อมูลโปรไฟล์' },
   { id: 'account', label: 'บัญชีและรหัสผ่าน', icon: 'fluent:person-info-24-regular', description: 'จัดการข้อมูลบัญชีและเปลี่ยนรหัสผ่าน' },
   { id: 'privacy', label: 'ความเป็นส่วนตัว', icon: 'fluent:shield-24-regular', description: 'ตั้งค่าความเป็นส่วนตัว' },
   { id: 'notifications', label: 'การแจ้งเตือน', icon: 'fluent:alert-24-regular', description: 'จัดการการแจ้งเตือน' },
   { id: 'socials', label: 'โซเชียล', icon: 'fluent:share-24-regular', description: 'เชื่อมต่อโซเชียลมีเดีย' },
-]
+].filter(tab => tab.id !== 'notifications' || notificationsEnabled)
 
 const activeTab = ref('profile')
 

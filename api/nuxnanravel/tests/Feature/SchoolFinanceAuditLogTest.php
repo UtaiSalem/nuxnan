@@ -39,7 +39,8 @@ class SchoolFinanceAuditLogTest extends TestCase
 
     public function test_expense_lifecycle_writes_audit_logs_and_module_fits_column(): void
     {
-        [$academy, $user] = $this->academyWithMember(['finance.view', 'finance.manage']);
+        // กลุ่มการเงินอยู่หลัง `academy.permission:settings.manage` ตั้งแต่ SM-S2 (finance.* อย่างเดียวได้ 403)
+        [$academy, $user] = $this->academyWithMember(['settings.manage']);
 
         $cat = ExpenseCategory::create([
             'academy_id' => $academy->id,
