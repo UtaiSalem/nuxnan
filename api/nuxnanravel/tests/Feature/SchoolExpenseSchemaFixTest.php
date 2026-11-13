@@ -16,6 +16,10 @@ class SchoolExpenseSchemaFixTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * กลุ่มการเงินทั้งหมด (`expenses` ฯลฯ) อยู่หลัง `academy.permission:settings.manage` ตั้งแต่ SM-S2
+     * ⇒ เทสต์ที่ยิง route รายจ่ายต้องใช้สมาชิกที่ถือ `settings.manage` (finance.view/manage อย่างเดียวได้ 403)
+     */
     private function academyWithMember(array $permissions = []): array
     {
         $user = User::factory()->create();
@@ -38,7 +42,7 @@ class SchoolExpenseSchemaFixTest extends TestCase
 
     public function test_store_expense_persists_with_real_columns(): void
     {
-        [$academy, $user] = $this->academyWithMember(['finance.view', 'finance.manage']);
+        [$academy, $user] = $this->academyWithMember(['settings.manage']);
 
         $cat = ExpenseCategory::create([
             'academy_id' => $academy->id,
@@ -72,7 +76,7 @@ class SchoolExpenseSchemaFixTest extends TestCase
 
     public function test_expense_summary_returns_category_breakdown_without_error(): void
     {
-        [$academy, $user] = $this->academyWithMember(['finance.view', 'finance.manage']);
+        [$academy, $user] = $this->academyWithMember(['settings.manage']);
 
         $cat = ExpenseCategory::create([
             'academy_id' => $academy->id,
@@ -110,7 +114,7 @@ class SchoolExpenseSchemaFixTest extends TestCase
 
     public function test_store_expense_category_without_display_order(): void
     {
-        [$academy, $user] = $this->academyWithMember(['finance.view', 'finance.manage']);
+        [$academy, $user] = $this->academyWithMember(['settings.manage']);
 
         $response = $this->actingAs($user, 'api')
             ->postJson("/api/academies/{$academy->id}/expenses/categories", [
