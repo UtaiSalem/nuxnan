@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, nextTick, onMounted } from 'vue'
 import Swal from 'sweetalert2'
 import { Icon } from '@iconify/vue'
 import StudentCardItem from '~/components/student-card/StudentCardItem.vue'
@@ -119,30 +119,38 @@ const cancelRequest = async (student: any) => {
         confirmButtonText: 'ยกเลิกคำร้อง',
         cancelButtonText: 'ปิด',
         confirmButtonColor: '#dc2626',
+        // heightAuto (ค่าเริ่มต้น true) ตั้ง height ของ html/body เป็น auto !important
+        // ตอนเปิด/ปิดกล่อง ทำให้หน้าเด้งขึ้นบนสุด — ปิดไว้เพื่อคง scroll เดิม
+        heightAuto: false,
     })
     if (!confirmation.isConfirmed) return
     try {
         await cancelCardRequest(request.id, student.student_id)
-        await fetchStudents()
-        Swal.fire({ icon: 'success', title: 'ยกเลิกคำร้องแล้ว', timer: 1600, showConfirmButton: false })
+        await refreshKeepingScroll(student.uid)
+        Swal.fire({ icon: 'success', title: 'ยกเลิกคำร้องแล้ว', timer: 1600, showConfirmButton: false, heightAuto: false })
     } catch (error: any) {
-        Swal.fire({ icon: 'error', title: 'ยกเลิกคำร้องไม่สำเร็จ', text: error?.data?.message || 'กรุณาลองใหม่อีกครั้ง' })
+        Swal.fire({ icon: 'error', title: 'ยกเลิกคำร้องไม่สำเร็จ', text: error?.data?.message || 'กรุณาลองใหม่อีกครั้ง', heightAuto: false })
     }
 }
 
 const handleRequestSubmitted = async () => {
-    await fetchStudents() // refresh เพื่อให้การ์ดขึ้นสถานะ "ส่งคำร้องแล้ว" ทันที
-    Swal.fire({ icon: 'success', title: 'ส่งคำร้องขอทำบัตรนักเรียนสำเร็จ', timer: 1800, showConfirmButton: false })
+    const anchorUid = selectedStudent.value?.uid ?? null
+    // รอให้ modal ปิดและคืน scroll lock ก่อน แล้วค่อยวัดตำแหน่งการ์ด
+    await nextTick()
+    // refresh เพื่อให้การ์ดขึ้นสถานะ "ส่งคำร้องแล้ว" ทันที โดยจอยังค้างอยู่ที่การ์ดใบเดิม
+    await refreshKeepingScroll(anchorUid)
+    Swal.fire({ icon: 'success', title: 'ส่งคำร้องขอทำบัตรนักเรียนสำเร็จ', timer: 1800, showConfirmButton: false, heightAuto: false })
 }
 
 const handleBulkSubmitted = async (result: PublicBulkCardRequestResult) => {
     selectMode.value = false
     selectedIds.value = new Set()
-    await fetchStudents()
+    await nextTick()
+    await refreshKeepingScroll()
 
     const failed = result.results.filter(r => !r.success)
     if (failed.length === 0) {
-        Swal.fire({ icon: 'success', title: result.message, timer: 2200, showConfirmButton: false })
+        Swal.fire({ icon: 'success', title: result.message, timer: 2200, showConfirmButton: false, heightAuto: false })
         return
     }
 
@@ -157,13 +165,15 @@ const handleBulkSubmitted = async (result: PublicBulkCardRequestResult) => {
             + failed.map(f => `• ${nameOf(f.student_id)} — ${f.message || 'ไม่ทราบสาเหตุ'}`).join('<br>')
             + '</div>',
         confirmButtonText: 'ตกลง',
+        heightAuto: false,
     })
 }
 
 const handleAdded = async () => {
-    await fetchStudents()
+    await nextTick()
+    await refreshKeepingScroll()
     await fetchManageContext()
-    Swal.fire({ icon: 'success', title: 'เพิ่มนักเรียนเข้าห้องเรียบร้อย', timer: 1600, showConfirmButton: false })
+    Swal.fire({ icon: 'success', title: 'เพิ่มนักเรียนเข้าห้องเรียบร้อย', timer: 1600, showConfirmButton: false, heightAuto: false })
 }
 
 const handleTransferConfirm = async (toClassroomId: number, reason: string | null) => {
@@ -174,10 +184,10 @@ const handleTransferConfirm = async (toClassroomId: number, reason: string | nul
         showTransferModal.value = false
         students.value = students.value.filter(s => s.uid !== student.uid)
         await fetchManageContext()
-        Swal.fire({ icon: 'success', title: response.message || 'ย้ายห้องเรียบร้อย', timer: 1800, showConfirmButton: false })
+        Swal.fire({ icon: 'success', title: response.message || 'ย้ายห้องเรียบร้อย', timer: 1800, showConfirmButton: false, heightAuto: false })
     } catch (error: any) {
         showTransferModal.value = false
-        Swal.fire({ icon: 'error', title: 'ย้ายห้องไม่สำเร็จ', text: error?.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่' })
+        Swal.fire({ icon: 'error', title: 'ย้ายห้องไม่สำเร็จ', text: error?.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่', heightAuto: false })
     }
 }
 
@@ -189,23 +199,55 @@ const handleRemoveConfirm = async (reason: string | null) => {
         showRemoveModal.value = false
         students.value = students.value.filter(s => s.uid !== student.uid)
         await fetchManageContext()
-        Swal.fire({ icon: 'success', title: response.message || 'นำออกจากห้องเรียบร้อย', timer: 1800, showConfirmButton: false })
+        Swal.fire({ icon: 'success', title: response.message || 'นำออกจากห้องเรียบร้อย', timer: 1800, showConfirmButton: false, heightAuto: false })
     } catch (error: any) {
         showRemoveModal.value = false
-        Swal.fire({ icon: 'error', title: 'นำออกจากห้องไม่สำเร็จ', text: error?.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่' })
+        Swal.fire({ icon: 'error', title: 'นำออกจากห้องไม่สำเร็จ', text: error?.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่', heightAuto: false })
     }
 }
 
-const fetchStudents = async () => {
-    isLoading.value = true
+// silent = true → ไม่สลับหน้าเป็นสปินเนอร์เต็มจอ (ใช้ตอนรีเฟรชหลังกดปุ่มในการ์ด)
+// ถ้าปล่อยให้ isLoading เป็น true การ์ดทั้งหมดจะถูก unmount ความสูงของหน้าหายไป
+// เบราว์เซอร์จึงหนีบ scroll กลับขึ้นบนสุด — คนใช้ต้องเลื่อนลงมาหานักเรียนคนเดิมใหม่ทุกครั้ง
+const fetchStudents = async ({ silent = false } = {}) => {
+    if (!silent) isLoading.value = true
     try {
         const response = await $fetch<any>(`${apiBase}/api/student-card/${level.value}/${room.value}`)
         students.value = response.students || []
     } catch (error) {
         console.error('Error fetching students:', error)
     } finally {
-        isLoading.value = false
+        if (!silent) isLoading.value = false
     }
+}
+
+// รีเฟรชแบบไม่ให้จอขยับ: ยึดขอบบนของการ์ดใบที่เพิ่งกดไว้ที่ตำแหน่งเดิมบนจอ
+// วัดเป็นระยะสัมพัทธ์ ไม่ใช่ค่า scrollY ดิบ จึงแก้คืนได้แม้มีอะไรไปดึงจอขึ้นบนสุดระหว่างทาง
+// (เช่น scroll lock ของ modal หรือ heightAuto ของ SweetAlert2)
+const refreshKeepingScroll = async (anchorUid?: string | number | null) => {
+    if (typeof window === 'undefined') {
+        await fetchStudents({ silent: true })
+        return
+    }
+
+    const anchorTop = anchorUid != null
+        ? document.getElementById(`card-${anchorUid}`)?.getBoundingClientRect().top ?? null
+        : null
+    const scrollY = window.scrollY
+
+    await fetchStudents({ silent: true })
+    await nextTick()
+
+    if (anchorTop !== null) {
+        const el = document.getElementById(`card-${anchorUid}`)
+        if (el) {
+            const delta = el.getBoundingClientRect().top - anchorTop
+            if (Math.abs(delta) > 1) window.scrollTo({ top: window.scrollY + delta })
+
+            return
+        }
+    }
+    if (Math.abs(window.scrollY - scrollY) > 1) window.scrollTo({ top: scrollY })
 }
 
 onMounted(() => {

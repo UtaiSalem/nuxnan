@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\Learn\Course\lessons\CourseLessonReactionController
 use App\Http\Controllers\Api\Learn\Course\lessons\images\LessonImageController;
 use App\Http\Controllers\Api\Learn\Course\lessons\LessonAttachmentController;
 use App\Http\Controllers\Api\Learn\Course\lessons\LessonController;
+use App\Http\Controllers\Api\Learn\Course\lessons\LessonImportController;
 use App\Http\Controllers\Api\Learn\Course\lessons\LessonProgressController;
 use App\Http\Controllers\Api\Learn\Course\lessons\questions\LessonAnswerQuestionController;
 use App\Http\Controllers\Api\Learn\Course\lessons\questions\LessonQuestionController;
@@ -186,6 +187,8 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/groups')-
 Route::middleware(['auth:api', 'verified'])->prefix('/courses/{course}/lessons')->group(function () {
     Route::get('/', [CourseLessonController::class, 'index'])->name('course.lessons.index');
     Route::post('/', [CourseLessonController::class, 'store'])->name('course.lessons.store');
+    Route::post('/import/preview', [LessonImportController::class, 'preview'])->name('course.lessons.import.preview');
+    Route::post('/import', [LessonImportController::class, 'store'])->name('course.lessons.import.store');
     Route::get('/create', [CourseLessonController::class, 'create'])->name('course.lessons.create');
     Route::patch('/reorder', [CourseLessonController::class, 'reorder'])->name('course.lessons.reorder');
     Route::get('/{lesson}', [CourseLessonController::class, 'show'])->name('course.lessons.show');

@@ -42,6 +42,7 @@ DB dev: **ไม่มี**แถวไหนมาจาก `/wallet/deposit` �
 
 ### 1.4 อยู่นอกขอบเขต (จดไว้เท่านั้น)
 - `budgets/{budget}/transfer` ของโรงเรียนเป็น ledger งบประมาณภายใน (ไม่เกี่ยวกับยอดของผู้ใช้) แต่น่าจะมี IDOR: `to_budget_id` ไม่ได้จำกัดให้อยู่ใน `{academy}` ควรแก้แยกต่างหาก
+  · ✅ **แก้แล้ว 2026-11-12** — ยืนยันว่าเป็น IDOR จริงทั้งกลุ่ม `{academy}/budgets/{budget}` (ไม่ใช่แค่ `to_budget_id`) และ `transfer` ผูกงบผิดตัว · ใส่ `scopeBindings()` + จำกัด `to_budget_id` ให้อยู่ในโรงเรียน · เทสต์ `tests/Feature/Academy/BudgetAcademyScopingTest.php` (ดู worklog 2026-11-12)
 - รางวัลจากการกดรีแอคชัน (`increment('pp', 12)` ให้เจ้าของโพสต์ ใน ~15 controller) แพลตฟอร์มเป็นผู้สร้างแต้มให้ ไม่ได้หักจากยอดของ A จึงเป็นความเสี่ยงด้าน**ปั๊มแต้ม**ด้วยบัญชีอวตาร ไม่ใช่การโอน ควรทำในรอบปรับ governance ภายหลัง
 - route "transfer" ของห้องเรียน/นักเรียนเป็นเรื่องการย้ายห้อง ไม่เกี่ยวกับมูลค่า
 
@@ -73,12 +74,44 @@ DB dev: **ไม่มี**แถวไหนมาจาก `/wallet/deposit` �
    - เทสต์: ผู้ใช้ทั่วไปได้ 403 และ `pp` ไม่เปลี่ยน · แอดมินได้ 200 และมีแถว `points_transactions` เพิ่ม 1 แถว · ผู้ใช้ทั่วไปเรียก `getuser` ได้ 403
    - **ตรวจ production**: endpoint นี้ไม่เขียน ledger จึงค้นจาก ledger ไม่ได้ → ดู access log ของ `forgot-password/exchange` + เทียบ `users.pp` กับยอดสุทธิจาก `points_transactions` รายคน (ส่วนต่างบวกที่อธิบายไม่ได้ = ผู้ต้องสงสัย)
 > ✅ **ข้อ 1–3 แก้โค้ดแล้ว 2026-11-04 (ยังไม่ commit · `SelfMintEndpointsClosedTest` 8/8 บน sqlite):** ลบ `/wallet/deposit` + `/points/refund` (route + controller method; service ยังอยู่) ·
-> **`/points/xp/earn` เก็บไว้** (เจ้าของเคาะ — เกม Snake/English Vocab ใช้) แต่รับเฉพาะ `config('economy.game_xp.sources')`, ≤100 ต่อครั้ง, ≤500/วัน/เกม (นับใน Cache — race เล็กน้อยยอมรับได้เพราะเป็น XP ไม่ใช่เงิน) · ข้อ 4 (ตรวจ prod) ยังค้าง
+> **`/points/xp/earn` เก็บไว้** (เจ้าของเคาะ — เกม Snake/English Vocab ใช้) แต่รับเฉพาะ `config('economy.game_xp.sources')`, ≤100 ต่อครั้ง, ≤500/วัน/เกม (นับใน Cache — race เล็กน้อยยอมรับได้เพราะเป็น XP ไม่ใช่เงิน) · ข้อ 4 (ตรวจ prod): SQL เขียนไว้แล้ว รอเจ้าของรัน
+> ✅ **ตรวจซ้ำ 2026-11-12 (commit `c33ef14f`):** `route:list` ไม่มี deposit/refund · `SelfMintEndpointsClosedTest` 8/8 บน **MySQL** · Pint ผ่าน · revert-check: คืนไฟล์ก่อน commit แล้ว 5 เทสต์ด่านตก ✓ · `ui/` เหลือแค่ผู้เรียก `xp/earn` (Snake, `usePoints`) ตามที่เคาะ
 1. `routes/earn/points-wallet.php`: ลบ route ฝั่งผู้ใช้ `POST /wallet/deposit`, `POST /points/refund`, `POST /points/xp/earn`
    ผู้เรียกภายใน (`CouponService`, `CourseMarketplaceController`, `SchoolStoreService`) เรียกที่ **service** ไม่ใช่ route จึงไม่กระทบ ยืนยันด้วย `grep -rn "points/refund\|wallet/deposit'\|xp/earn" ui/`
 2. `ui/composables/useWallet.ts`: ลบ `deposit()` แล้วหาว่าใครเรียกใช้ ถ้ามีหน้าจอไหนใช้อยู่ ให้เปลี่ยนไปใช้ `createDepositRequest`
 3. เทสต์: feature test ยืนยันว่า route ที่ลบไปตอบ 404/405
 4. **ตรวจ production**: นับแบบอ่านอย่างเดียว `wallet_transactions` ที่ `transaction_type='deposit'` และ reference ไม่ได้มาจากคำขอฝากเงินที่อนุมัติแล้ว กับ `points_transactions` ที่ `transaction_type='refund'` และ `source_type='refund'`
+   > 🔎 **SQL พร้อมรัน (2026-11-12) — SELECT ล้วน เจ้าของรันเองบน prod** · ลองบน dev แล้ว syntax/คอลัมน์ถูก (dev ได้ 0 แถว)
+   > ใครเขียนแถว `deposit`: route ที่ลบไป (method/reference/metadata ผู้ใช้กรอกเอง) · `approveDepositRequest` (ผูกกับ `wallet_deposit_requests.wallet_transaction_id`) · `CouponService` แลก/ยกเลิกคูปอง (`metadata.coupon_code`)
+   > ใครเขียนแถว `refund` ที่ `source_type='refund'`: **มีแค่ route ที่ลบไป** (ผู้เรียกภายในใช้ `coupon_cancellation` / `App\Models\Course` / `reward_cancel`) จึงนับได้ตรง ๆ
+   > ⚠️ ข้อจำกัด: route เก่ารับ `metadata` จากผู้ใช้ — ถ้าคนโกงใส่ `coupon_code` ที่มีอยู่จริงลงไป แถวนั้นจะหลุด Q1 ได้ (ทำได้ยาก ยอมรับ) · ถ้าเจอ `Illegal mix of collations` ใน Q1 ให้เติม `COLLATE utf8mb4_unicode_ci` หลัง `JSON_UNQUOTE(...)`
+   ```sql
+   -- Q1: เงินที่เข้า wallet โดยไม่มีคำขอฝากที่อนุมัติ และไม่ได้มาจากคูปอง (= ผู้ต้องสงสัยว่าเติมเองผ่าน /wallet/deposit)
+   SELECT wt.id, wt.user_id, wt.amount, wt.description, wt.reference_number, wt.created_at
+   FROM wallet_transactions wt
+   LEFT JOIN wallet_deposit_requests r ON r.wallet_transaction_id = wt.id AND r.status = 'approved'
+   LEFT JOIN coupons c ON c.coupon_code = JSON_UNQUOTE(JSON_EXTRACT(wt.metadata, '$.coupon_code'))
+   WHERE wt.transaction_type = 'deposit' AND r.id IS NULL AND c.id IS NULL
+   ORDER BY wt.created_at;
+
+   -- Q1-สรุป: จำนวนแถว / ยอดรวม / จำนวนคน
+   SELECT COUNT(*) AS n, COALESCE(SUM(x.amount), 0) AS total_thb, COUNT(DISTINCT x.user_id) AS users
+   FROM (
+     SELECT wt.id, wt.user_id, wt.amount
+     FROM wallet_transactions wt
+     LEFT JOIN wallet_deposit_requests r ON r.wallet_transaction_id = wt.id AND r.status = 'approved'
+     LEFT JOIN coupons c ON c.coupon_code = JSON_UNQUOTE(JSON_EXTRACT(wt.metadata, '$.coupon_code'))
+     WHERE wt.transaction_type = 'deposit' AND r.id IS NULL AND c.id IS NULL
+   ) x;
+
+   -- Q2: แต้มที่ผู้ใช้ "คืนให้ตัวเอง" ผ่าน /points/refund รายคน
+   SELECT pt.user_id, COUNT(*) AS n, SUM(pt.amount) AS total_pp, MIN(pt.created_at) AS first_at, MAX(pt.created_at) AS last_at
+   FROM points_transactions pt
+   WHERE pt.transaction_type = 'refund' AND pt.source_type = 'refund'
+   GROUP BY pt.user_id
+   ORDER BY total_pp DESC;
+   ```
+   > ถ้าได้แถว → อย่าแก้ข้อมูลตรง ๆ ให้ส่งต่อเข้า `FraudRemediationService` / migration ตามกติกา (ดู Phase 4)
 
 ### Phase 1: ปิดการโอนตรง (backend คือด่านจริง)
 1. `config/economy.php`: เพิ่ม `'p2p_transfers_enabled' => env('ECONOMY_P2P_TRANSFERS', false)`

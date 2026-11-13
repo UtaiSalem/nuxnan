@@ -759,7 +759,7 @@ const publicationStatusColor = computed(() => {
               !showFullContent && isContentOverflowing && 'max-h-96 overflow-hidden',
             ]"
           >
-            <RichTextViewer :content="lesson.content" />
+            <RichTextViewer :content="lesson.content" size="sm" />
           </div>
 
           <!-- Read More Button - Only show when content overflows -->

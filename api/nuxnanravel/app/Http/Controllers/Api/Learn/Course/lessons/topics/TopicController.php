@@ -12,6 +12,7 @@ use App\Http\Resources\Learn\Course\questions\QuestionResource;
 use App\Models\Lesson;
 use App\Models\Topic;
 use App\Models\TopicImage;
+use App\Services\Course\LessonCreationService;
 use App\Services\CourseMediaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -34,17 +35,12 @@ class TopicController extends Controller
         ]);
 
         $topic = DB::transaction(function () use ($lesson, $validatedData) {
-            $topic = $lesson->topics()->create([
-                'user_id' => auth()->id(),
-                'academy_id' => $lesson->course->academy_id,
-                'course_id' => $lesson->course_id,
+            $topic = app(LessonCreationService::class)->createTopic($lesson, auth()->user(), [
                 'title' => $validatedData['title'],
                 'content' => $validatedData['content'] ?? null,
                 'youtube_url' => $validatedData['youtube_url'] ?? null,
                 'min_read' => $validatedData['min_read'] ?? 0,
             ]);
-
-            $lesson->increment('min_read', $topic->min_read);
 
             return $topic;
         });

@@ -1,3 +1,111 @@
+# 2026-11-12 — สร้างบทเรียนจากการอัปโหลดไฟล์เอกสาร (Lesson import จาก .docx)
+
+> สถานะ: **เฟส 1–3 เสร็จ 2026-11-12 (ยังไม่ commit)** · เทสต์ sqlite + MySQL ผ่าน 73/73 · ทดสอบบนจอจริง 375/768/1280 ครบ flow แล้ว
+> ข้อจำกัด: ลบบทเรียนไม่ลบรูปในเนื้อหา (ตั้งใจ — โคลนรายวิชาแชร์ path รูปเดียวกัน)
+>
+> สิ่งที่ต่างจากแผน: แม่แบบเป็นไฟล์ static `ui/public/templates/lesson-import-template.docx` (ไม่มี endpoint template ฝั่ง backend) ·
+> endpoint นำเข้ายก memory_limit เป็น 512M (วัดจริง HTML 13.5MB ใช้ 86MB) · `store()` เดิมยัง 500 ถ้าไม่ส่ง description/content/youtube_url (บั๊กเดิม frontend ส่งครบจึงไม่เจอ) ·
+> พบบั๊กเดิม: `LessonAttachmentUploader.vue` ยิง `/lessons/{id}/attachments` ไม่มี `/api` นำหน้า (หน้า import ใช้ path ที่ถูกแล้ว)
+> ต้นแบบ flow: ระบบนำเข้าข้อสอบ (`QuestionImportController` + `QuestionImportService` + `ui/components/learn/course/questions/QuestionImportModal.vue`)
+
+## User Analysis Input
+"อยากให้สร้างบทเรียนใหม่ได้โดยอัปโหลดเนื้อหาบทเรียนและสิ่งต่าง ๆ ที่เกี่ยวข้องจากไฟล์เอกสาร คล้าย ๆ อัปโหลดข้อสอบ"
+
+## โครงสร้างปัจจุบัน (อ่านโค้ดจริง 2026-11-12)
+
+```
+Course
+ └─ Lesson   (title, description, content[HTML], youtube_url, min_read, order,
+ │            status '0'/'1', publication_status, access_type, point/money fee)
+ │   ├─ images         LessonImage (disk public)
+ │   ├─ attachments    LessonAttachment morph — pdf/doc/docx/ppt/pptx/xls/xlsx/txt/csv/zip ≤20MB, ≤5 ไฟล์/ครั้ง, disk local `course-materials/lessons`
+ │   ├─ questions      นำเข้า .xlsx ได้แล้ว (/api/lessons/{lesson}/questions/import)
+ │   ├─ assignments
+ │   └─ Topic (title, content[HTML], youtube_url, min_read, sort_order) — images ที่ `images/courses/lessons/topics`, attachments, questions, assignments
+```
+
+- สร้างบทเรียน: `LessonForm.vue` → `CourseLessonController@store` (`api/nuxnanravel/app/Http/Controllers/Api/Learn/Course/lessons/CourseLessonController.php:339`)
+- สร้างหัวข้อย่อย: `TopicFormModal` → `TopicController@store` (`.../lessons/topics/TopicController.php:22`) ทีละหัวข้อ
+- นำเข้าข้อสอบ: template → preview (stateless) → commit (ส่ง rows ที่แก้แล้วกลับมา validate ซ้ำ) — ใช้ pattern เดียวกัน
+- แสดงผล: `RichTextViewer` sanitize ด้วย DOMPurify ฝั่ง client
+
+## 🔴 กับดักที่เจอในโค้ด (ต้องแก้ก่อน/พร้อมฟีเจอร์)
+1. **`lessons.content` และ `topics.content` เป็น `TEXT` (64KB)** — HTML จาก Word ที่มีตารางเกินง่าย → MySQL STRICT error. ต้อง migration เป็น `MEDIUMTEXT` และห้ามเก็บรูป base64 ใน content
+2. **ไม่มี sanitize ฝั่ง server** — backend เก็บ HTML ดิบ. ตัวนำเข้าต้องกรองด้วย allowlist เอง (ไม่มี purifier lib ใน composer)
+3. **`RichTextEditor` ใส่รูปได้แค่ URL** — รูปใน Word ต้องถูกแยกเก็บบน disk public แล้ว rewrite `src`
+4. **side effects กระจายใน controller** — `$course->increment('lessons')`, รวม `min_read` ของ topic เข้า lesson, `order`/`sort_order` auto → แยก `LessonCreationService` ใช้ร่วมกันระหว่าง `store` กับ import
+5. **สิทธิ์ไม่สม่ำเสมอ** — `store` ใช้ `checkCoursePermission()`, import ข้อสอบใช้ `Gate::authorize('manage', $course)` → ตัวนำเข้าใช้ Gate
+6. Topic image validation ไม่รับ webp (lesson รับ) — ตัวนำเข้าให้รับชุดเดียวกัน
+
+## แนวทาง
+- ไฟล์หลัก **.docx** + template .docx ให้ดาวน์โหลด กติกา:
+
+| ใน Word | กลายเป็น |
+|---|---|
+| Title / Heading 1 แรก | ชื่อบทเรียน |
+| ย่อหน้าก่อน Heading 2 แรก | description + content ของบทเรียน |
+| **Heading 2** | Topic 1 หัวข้อ |
+| ลิงก์ YouTube บรรทัดเดี่ยว | `youtube_url` ของหัวข้อนั้น (ลิงก์แรก) |
+| รูป / ตาราง / รายการ | รูปแยกเป็นไฟล์, ตาราง/รายการคงใน HTML |
+| จำนวนตัวอักษร | ประมาณ `min_read` อัตโนมัติ |
+
+- ไฟล์ประกอบ (PDF/PPT/XLSX) → แนบเป็น attachment ผ่าน endpoint เดิม; ไฟล์ข้อสอบ .xlsx → ส่งเข้าตัวนำเข้าข้อสอบเดิม
+- PDF **ไม่แปลงเป็นเนื้อหา** (ดึงโครงหัวข้อไม่ได้) → แนบอย่างเดียว
+- flow: ดาวน์โหลด template → อัปโหลด .docx + ไฟล์ประกอบ → preview (แก้ชื่อ/ลบ/รวมหัวข้อได้) → **ครูเลือกสถานะ draft/published** → ยืนยัน
+
+## Work Plan — Action Items
+
+### เฟส 0 · ✅ เคาะแล้ว (2026-11-12)
+| # | เรื่อง | ข้อสรุป | ผลต่อการออกแบบ |
+|---|---|---|---|
+| D1 | ตัวแปลง .docx | **mammoth.js ฝั่ง browser** | client แปลง .docx → HTML (รูปเป็น data URI) แล้ว POST HTML ไป preview — server **ไม่รับไฟล์ .docx** แต่รับ `html` string; ไม่ต้อง composer require อะไร; ต้อง `npm i mammoth` (เจ้าของโปรเจคติดตั้ง/บิลด์เอง) และ lazy-import เฉพาะหน้านำเข้า |
+| D2 | ไฟล์ต่อบทเรียน | **1 ไฟล์ = 1 บทเรียน** | ใช้ Title/Heading 1 แรกเป็นชื่อ; Heading 1 ตัวถัดไปให้ลดเป็น h2 + warning; เฟส 4 "หลายบท/ไฟล์" ตัดออก |
+| D3 | สถานะบทเรียน | **ครูเลือกตอนยืนยัน** | ฟอร์มยืนยันมีตัวเลือก `publication_status` (ค่าเริ่มต้นเลือก `draft`); commit validate `in:draft,published` |
+| D4 | ขีดจำกัด | **.docx ≤ 15MB · รูป ≤ 15 รูป/ไฟล์ · หัวข้อ ≤ 10 หัวข้อ/บท** | ตรวจ 2 ชั้น: client ตรวจขนาดไฟล์ก่อนแปลง; server ตรวจจำนวนรูป ≤15, หัวข้อ ≤10, ขนาด payload HTML (ตั้งเพดานราว 20MB เผื่อ base64 โต ~33%) — เกินให้ 422 พร้อมข้อความไทย ไม่ตัดทิ้งเงียบ ๆ. ตรวจ `post_max_size`/`upload_max_filesize` ของ PHP/WAMP ให้รองรับ |
+
+กติกาที่ตามมาจาก D1: เนื้อหาที่ server รับมาเป็น HTML จาก client = **untrusted** → sanitize allowlist ฝั่ง server เสมอ, รับเฉพาะ data URI ประเภท png/jpeg/gif/webp, ตรวจ magic bytes ของรูปที่ decode แล้ว, ทิ้ง `<img src>` ที่ชี้ URL ภายนอก/ไม่ใช่ data URI พร้อม warning
+
+### เฟส 1 · Backend
+- [ ] Migration: `lessons.content`, `topics.content` → `MEDIUMTEXT` (มี `down()` จริง, guard STRICT)
+- [ ] แยก `LessonCreationService` จาก `CourseLessonController@store` + `TopicController@store` (counter, min_read, order) — store เดิมเรียก service นี้
+- [ ] `App\Services\Import\LessonImportService`: รับ HTML (จาก mammoth) → split h1/h2 → sanitize allowlist → extract รูป data URI → ตรวจ รูป ≤15 / หัวข้อ ≤10 → คืนโครง preview + warnings
+- [ ] Endpoints (Gate `manage`): `GET /courses/{course}/lessons/import/template`, `POST .../import/preview`, `POST .../import`
+- [ ] รูปจาก preview เก็บชั่วคราว `storage/app/lesson-imports/{uuid}` → commit ย้ายไป `images/courses/lessons/...` + rewrite src; scheduled cleanup ไฟล์ค้าง > 24 ชม.
+- [ ] Commit ใน `DB::transaction` เดียว; validate โครงที่ส่งกลับมาซ้ำเหมือน import ข้อสอบ
+- [ ] เทสต์บน **MySQL** (`php artisan test -c phpunit.mysql.xml`) — รวมเคส content > 64KB, รูปเยอะ, ไม่มี Heading 2, ไม่มีสิทธิ์
+
+### เฟส 2 · Frontend (mobile-first — ตรวจที่ 375px ก่อน)
+- [ ] `npm i mammoth` (เจ้าของโปรเจคติดตั้ง) + composable `useDocxToHtml` ที่ dynamic-import mammoth, ตรวจไฟล์ ≤15MB ก่อนแปลง, ตั้ง styleMap (Title/Heading 1→h1, Heading 2→h2) และคืน messages ของ mammoth เป็น warnings
+- [ ] `ui/services/lessonImportService.ts` ผ่าน `useApi` (ระวัง `api.getBlob` ทิ้ง params เงียบ)
+- [ ] ฟอร์มยืนยันมีตัวเลือกสถานะ draft/published (เริ่มที่ draft)
+- [ ] หน้า `pages/Learn/Courses/[id]/lessons/import.vue` หรือ modal โครงเดียวกับ `QuestionImportModal.vue` (ใช้ hopeui-port)
+- [ ] preview: รายการหัวข้อ แก้ชื่อ/ลบ/รวม, ดูเนื้อหาผ่าน `RichTextViewer`, แสดง warnings
+- [ ] ปุ่ม "นำเข้าจากไฟล์" ในหน้ารายการบทเรียนและหน้า `lessons/create.vue`
+
+### เฟส 3 · ไฟล์ประกอบใน wizard เดียว
+- [ ] หลัง commit เรียก `/api/lessons/{id}/attachments` (≤5 ไฟล์/ครั้ง — แบ่งรอบถ้าเกิน)
+- [ ] ถ้ามี .xlsx ข้อสอบ → ส่งเข้า `/api/lessons/{id}/questions/import/preview` เดิม
+
+### เฟส 4 · (ถ้าต้องการ)
+- .pptx (1 สไลด์ = 1 หัวข้อ) · ส่งออกบทเรียนเป็น .docx
+- ~~หลายบทเรียนต่อไฟล์~~ — ตัดออกตาม D2
+
+## เกณฑ์ผ่านรวม (ต้องรันเอง)
+```bash
+cd api/nuxnanravel
+php artisan test:db:rebuild --force
+php artisan test -c phpunit.mysql.xml --filter=LessonImport
+php artisan migrate:status   # migration ขึ้นจริง และ rollback ได้
+./vendor/bin/pint --test
+```
+- เปิดหน้าจริงที่ 375px / 768px / 1280px นำเข้า template ตัวอย่าง → เปิดบทเรียน draft ที่ได้ ตรวจรูป/ตาราง/YouTube
+
+## ห้ามทำในรอบนี้
+- ไม่แปลง PDF เป็นเนื้อหา · ไม่เก็บ base64 ใน content · ไม่แก้ endpoint import ข้อสอบเดิม
+
+---
+---
+
 # 2026-11-03 — Course member numeric score prop fix (complete)
 
 - User authorized implementation of the pasted `courseTotalScore` Vue prop warnings.
