@@ -12,6 +12,8 @@ import PersonalCodeCard from '~/components/user/PersonalCodeCard.vue'
 
 const router = useRouter()
 const route = useRoute()
+// ระบบแจ้งเตือนซ่อนไว้ชั่วคราว — ดู notificationsEnabled ใน nuxt.config.ts
+const notificationsEnabled = useRuntimeConfig().public.notificationsEnabled
 const authStore = useAuthStore()
 const uiStore = useUIStore()
 const gamificationStore = useGamificationStore()
@@ -642,6 +644,7 @@ const onQRActionComplete = (result) => {
                   <span>ตั้งค่า</span>
                 </NuxtLink>
                 <NuxtLink
+                  v-if="notificationsEnabled"
                   to="/notifications"
                   @click="closeSettings"
                   class="flex items-center gap-3 px-4 py-3 transition-colors"
@@ -1025,6 +1028,7 @@ const onQRActionComplete = (result) => {
               </transition>
             </div>
             <NuxtLink
+              v-if="notificationsEnabled"
               to="/notifications"
               class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300"
               :class="
@@ -1245,7 +1249,7 @@ const onQRActionComplete = (result) => {
           >
             <Icon icon="fluent:wallet-24-regular" class="w-6 h-6" />
           </NuxtLink>
-          <NotificationsNotificationBell v-if="authUser" />
+          <NotificationsNotificationBell v-if="authUser && notificationsEnabled" />
           <NuxtLink
             to="/play/games"
             class="w-12 h-12 flex items-center justify-center rounded-lg transition-all duration-300"
@@ -1708,6 +1712,7 @@ const onQRActionComplete = (result) => {
             </div>
 
             <NuxtLink
+              v-if="notificationsEnabled"
               to="/notifications"
               class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors"
               :class="
