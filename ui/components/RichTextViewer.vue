@@ -5,11 +5,16 @@ import { useRichText } from '~/composables/useRichText'
 interface Props {
   content: string
   class?: string
+  // 'lg' = prose-lg (18px) ค่าเดิม · 'sm' = prose-sm (14px) ทุกจอ ใช้กับเนื้อหาบทเรียน
+  size?: 'sm' | 'lg'
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  class: ''
+  class: '',
+  size: 'lg'
 })
+
+const sizeClass = computed(() => (props.size === 'sm' ? 'prose-sm' : 'prose-lg'))
 
 const { sanitizeHtml, wrapTablesForScroll } = useRichText()
 
@@ -42,7 +47,7 @@ const sanitizedContent = computed(() => {
 <template>
   <div
     v-if="content"
-    :class="['prose prose-lg dark:prose-invert max-w-none break-words', props.class]"
+    :class="['prose dark:prose-invert max-w-none break-words', sizeClass, props.class]"
     v-html="sanitizedContent"
   />
   <div v-else class="text-gray-500 dark:text-gray-400 italic">
