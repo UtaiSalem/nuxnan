@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\AccountEconomyRestrictedException;
 use App\Http\Controllers\Controller;
 use App\Models\Coupon;
 use App\Models\User;
@@ -31,6 +32,15 @@ class CouponController extends Controller
                 'success' => false,
                 'message' => 'User not authenticated',
             ], 401);
+        }
+
+        // Members can no longer issue coupons (anonymous P2P transfer). Checked
+        // before validation, same as /points/transfer and /wallet/transfer.
+        if (! $this->couponService->canIssueCoupons($user)) {
+            return response()->json([
+                'success' => false,
+                'message' => AccountEconomyRestrictedException::memberCouponsDisabled()->getMessage(),
+            ], 403);
         }
 
         $validated = $request->validate([

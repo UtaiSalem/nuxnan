@@ -42,4 +42,12 @@ class AccountEconomyRestrictedException extends RuntimeException
             'transfer',
         );
     }
+
+    public static function memberCouponsDisabled(): self
+    {
+        return new self(
+            'ระบบปิดการสร้างคูปองโดยสมาชิกแล้ว (คูปองเป็นการโอนแต้ม/เงินให้ผู้อื่นทางอ้อม) คูปองที่ยังใช้ได้มีเฉพาะที่ผู้ดูแลระบบออกให้',
+            'coupon',
+        );
+    }
 }

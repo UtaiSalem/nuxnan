@@ -3,6 +3,7 @@
     <div class="page-header">
       <h1 class="page-title">คูปองของฉัน</h1>
       <button 
+        v-if="canIssueCoupons"
         @click="showCreateModal = true" 
         class="create-btn"
       >
@@ -13,7 +14,7 @@
 
     <CouponList v-if="!showCreateModal" />
 
-    <div class="modal-overlay" v-if="showCreateModal" @click="showCreateModal = false">
+    <div class="modal-overlay" v-if="canIssueCoupons && showCreateModal" @click="showCreateModal = false">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
           <h2>สร้างคูปองใหม่</h2>
@@ -32,11 +33,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import CouponList from '~/components/coupons/CouponList.vue'
 import CouponCreationForm from '~/components/coupons/CouponCreationForm.vue'
 
 const showCreateModal = ref(false)
+
+// สมาชิกทั่วไปสร้างคูปองไม่ได้แล้ว (คูปอง = โอนแต้ม/เงินให้ผู้อื่นทางอ้อม) — backend ตอบ 403 อยู่แล้ว
+const authStore = useAuthStore()
+const canIssueCoupons = computed(() => !!authStore.user?.is_plearnd_admin)
 
 function handleCouponCreated(coupon: any) {
   showCreateModal.value = false

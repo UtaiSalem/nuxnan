@@ -92,6 +92,71 @@
 - [ ] `updateCategory` ของรายจ่ายกันได้แค่ "ตั้งตัวเองเป็นแม่" — วงจร 2 ขั้น (A→B แล้ว B→A) ยังทำได้ → `getFullNameAttribute()` วนไม่จบ
 - [ ] `ui/layouts/NuxnanAdminLayout.vue:306` `px-0` ต่ำกว่า `lg` → ทุกหน้าแอดมินชิดขอบจอบนมือถือ (ผิดกติกา mobile-first)
 - [ ] `ui/package-lock.json` ไม่ sync กับ `package.json` (`npm ci` ล้ม: ขาด pinia@3.0.4 ฯลฯ)
+## 🟡 2026-11-12 (ต่อ) — Phase 5: ด่านผู้กดรับ + เฝ้าดูการโอนทางอ้อมตอนถอน (เทสต์ sqlite แล้ว · branch เดียวกับ Phase 2 · PR #43)
+
+เจ้าของสั่ง: "ทำ Phase 5 ต่อ เลือกตามที่แนะนำ" → D3 = เก็บแคมเปญ/บริจาค/ขายรายวิชาไว้ + ผู้กดรับต้องเป็นสมาชิกที่อนุมัติแล้ว + เฝ้าดู
+แผน: [`.agents/plans/disable-p2p-value-transfers.md`](plans/disable-p2p-value-transfers.md) §Phase 5 (อัพเดทสถานะ + ข้อที่ต้องเคาะ P5-a/b/c)
+
+### งานที่ทำ
+- **`feat(course-points)` ด่านผู้กดรับ:** `Course::canClaimPoints()` = เจ้าของ หรือ `course_member_status = 1`
+  · ⚠️ `course_members` มีสถานะ 3 คอลัมน์: `course_member_status` = การอนุมัติของครู (0 รอ/1 อนุมัติ, default 1) · `status` = ชำระเงิน/active (default 0) · `member_status` — ใช้ตัวแรกแบบเดียวกับรีวิว/รายการรออนุมัติ/นับผู้เรียน
+  · ใช้ที่ `CourseClaimService::assertMember` (list/claim กองบริจาค), `claimManualCampaign`, `grantCampaignClaim` (ครอบรางวัลบทเรียน/แบบทดสอบ คืน `reason=not_an_approved_member`), `CoursePointCampaignController` view/available
+  · UI: ข้อความ `not_a_course_member` ใน `CourseDonorCard.vue` บอกว่าต้องได้รับอนุมัติ
+- **`feat(withdrawal-review)` เฝ้าดู:** `WithdrawalFundSourceService::trace` เพิ่มแหล่งเงินเข้าทางอ้อม
+  · แต้มกดรับ `donation_claim` (→ `donates.donor_id`), `donation_claim_reward_claimer` (→ academy/course_donate_claims.claimer_transaction_id → donor), `course_manual_claim`/`lesson_completion_reward`/`quiz_completion_reward` (→ metadata.campaign_id → `created_by`)
+  · `course_income` (→ metadata.buyer_id) · summary `pool_claims`/`course_sales`/`top_indirect_funder`
+  · risk: `pool_claim_rewards`/`course_sale_income` (แค่ข้อมูล) · `single_indirect_funder` ≥50% ของยอดถอน → high · ไม่นับของตัวเอง · flag การโอนเดิมไม่เปลี่ยน
+  · UI `nuxnan-admin/wallet/pending.vue`: การ์ดช่องทางอ้อม + สีป้ายในรายการเงินเข้า
+
+### ตรวจแล้ว
+- เทสต์ใหม่ `CourseClaimApprovedMemberGateTest` 7 + `WithdrawalIndirectFundingTraceTest` 6 ผ่านบน sqlite · เทสต์เดิม CoursePointClaimTest/CourseClaimLedgerTest ผ่าน · pint ผ่าน
+- revert-check: เอาเงื่อนไข `course_member_status = 1` ออก → 5 เทสต์ตก · ปิดเงื่อนไขกระจุกตัว → 2 เทสต์ตก
+- `WithdrawalSourceOfFundsTest` 2 ตัวตก **เหมือนบน main** (sqlite CHECK enum ไม่รู้จัก `transfer_out`) — pre-existing
+- full suite sqlite เทียบ `main`: branch 2175 เทสต์ / `main` 2147 — ตก 46 ตัว **ชุดเดียวกับ main ทุกตัว** (เทียบ junit) ไม่มีตัวตกใหม่
+- Vue SFC compile ผ่าน (`CourseDonorCard.vue`, `nuxnan-admin/wallet/pending.vue`) — ไม่ใช่ `npm run build`
+- **ยังไม่ตรวจ:** MySQL · จอจริง · `npm run build` · ข้อมูล dev ว่ามีสมาชิก `course_member_status=0` ที่เคยกดรับไปแล้วกี่คน
+
+### ต้องเคาะต่อ (ไม่ได้ทำ เพราะต้องใช้ตัวเลขที่ไม่มีในข้อเสนอ)
+- [ ] 🔴 P5-a เพดาน `points_per_claim` แคมเปญรายวิชา (ตอนนี้ไม่มี max) — ช่องโอนก้อนใหญ่ที่เหลืออยู่จริง
+- [ ] P5-b พักรายได้ขายรายวิชา N วัน · [ ] P5-c จำกัดแปลงแต้ม→เงินจากแต้มกองกลาง
+- [ ] budget endpoints (`routes/learn/academy.php` `{academy}/budgets/*`) — ตรวจว่า `{budget}` ถูก scope กับ `{academy}` ไหม + `transfer()` ใช้ชื่อพารามิเตอร์ `$fromBudget` ไม่ตรง `{budget}` (implicit binding อาจไม่ทำงาน) — แยกเป็น suggested task แล้ว
+
+---
+
+## 🟡 2026-11-12 — Phase 2: ปิดคูปองที่สมาชิกสร้าง (implement + เทสต์ sqlite แล้ว · branch `claude/intelligent-albattani-llfm1i` · รอ MySQL + ตรวจจอ + build)
+
+เจ้าของสั่ง: "ทำ Phase 2 คูปองต่อ เลือกตามที่แนะนำ" → D2 = ปิดการสร้างของสมาชิก · แลกได้เฉพาะคูปองแอดมิน · คูปองสมาชิกที่ค้าง → migration ยกเลิก + คืนผู้สร้าง
+แผน: [`.agents/plans/disable-p2p-value-transfers.md`](plans/disable-p2p-value-transfers.md) §Phase 2 (อัพเดทสถานะแล้ว)
+
+### งานที่ทำ (5 commit แยก revert ได้)
+- **BE `feat(coupons)`:** ผูกกับ flag เดิม `economy.p2p_transfers_enabled` · "แอดมิน" = `isPlearndAdmin()`
+  · `CouponService::canIssueCoupons()` + `createPointsCoupon/createWalletCoupon` โยน `AccountEconomyRestrictedException::memberCouponsDisabled()`
+  · `POST /api/coupons` สมาชิกได้ **403 ก่อน validate** · แอดมินยังสร้างได้ (หักจากยอดตัวเอง)
+  · redeem คูปองที่ผู้สร้างไม่ใช่แอดมิน → 400 `COUPON_MEMBER_ISSUED_DISABLED` · `Coupon::isIssuedByPlatformAdmin()`
+  · ผู้สร้างยังกด "ยกเลิก" รับคืนเองได้ (เก็บ route cancel/index/show/print/statistics ไว้)
+- **BE `fix(coupons)`:** `lockForUpdate` คูปองตอน redeem + ย้ายเช็ค status ของ cancel เข้า transaction — เดิมกดยกเลิกพร้อมกับอีกคนแลก = จ่ายสองทาง
+- **BE migration `2026_11_12_000001_cancel_active_member_coupons`:** ทุกคูปอง `active` ของสมาชิก → `CouponService::cancelCoupon` (ผลเหมือนผู้สร้างกดยกเลิกเอง รวมใบเลยวันหมดอายุที่ยัง active เพราะ `markExpiredCoupons` ไม่มีใครเรียก)
+  · lock คูปอง + ผู้สร้างก่อนคืน (กันยอดเก่าทับกันเมื่อคนเดียวมีหลายใบ) · ข้าม + log รายการที่คืนไม่ได้ (wallet ถูกระงับ → `deposit` โยน) — ใบนั้นแลกไม่ได้อยู่แล้ว
+  · ledger คืนติด `metadata.cancelled_by` → `down()` หักคืนด้วย `spend`/`deductForPurchase` แล้วเปิดคูปองกลับ · ยอดไม่พอ = ปล่อยยกเลิกไว้ ไม่ทำให้ติดลบ
+- **UI `refactor(coupons-ui)`:** ปุ่ม/ลิงก์สร้างคูปองเฉพาะ `is_plearnd_admin` (`Earn/coupons/index.vue`, `/coupons` เก่า) · `Earn/coupons/create.vue` สมาชิกเห็นการ์ดแจ้งปิด · แถบแจ้งในหน้าคูปอง
+  · แก้บั๊กเดิม: modal แลกใน `Earn/coupons/index.vue` ส่ง `code` แทน `coupon_code` (แลกไม่ได้เลย ได้ 422)
+  · ช่องแลกทุกจุดแสดง `error.data.message` (เดิม 4xx โชว์ข้อความ fetch ดิบ → สมาชิกจะไม่รู้ว่าทำไมแลกไม่ได้)
+
+### ตรวจแล้ว
+- เทสต์ใหม่ `tests/Feature/Coupons/` 15 ตัว (MemberCouponsDisabledTest 9 + CancelActiveMemberCouponsMigrationTest 6) ผ่านบน **sqlite** · pint ผ่าน
+- revert-check: เอา guard ออก → 5 เทสต์ตก · เอาเงื่อนไขข้ามแอดมินใน migration ออก → 1 เทสต์ตก
+- full suite sqlite เทียบกับ `main`: branch 2162 เทสต์ / `main` 2147 — ตก 46 ตัว (22 error + 24 failure) **ชุดเดียวกันทุกตัว** (เทียบ junit) ไม่มีตัวไหนเกี่ยวกับคูปอง = pre-existing บน sqlite · ไม่มีเทสต์ใหม่ที่ตก
+- Vue SFC ทั้ง 5 ไฟล์ compile ผ่าน (`@vue/compiler-sfc`) — **ไม่ใช่** `npm run build`
+- **ยังไม่ตรวจ:** MySQL (`-c phpunit.mysql.xml`) · จอจริง 375/768/1280 · `npm run build` · จำนวนคูปองค้างบน dev/prod ก่อนรัน migration
+
+### งานที่ค้าง / เจอระหว่างทำ
+- [ ] รันเทสต์บน MySQL + `php artisan migrate` บน dev แล้วดู log `Member coupons cancelled and refunded` (คาด cancelled=2 ตามข้อมูล dev เดิม)
+- [ ] 🔴 route แอดมิน `/api/admin/coupons` (`routes/admin/admin.php` ~บรรทัด 590) **พังมาตลอด**: ใช้คอลัมน์ `code`/`creator_id`, สถานะ `unused`, relation `creator`/`usedBy` ซึ่งไม่มีใน `Coupon` → หน้า `nuxnan-admin/coupons` สร้าง/ดูคูปองไม่ได้ (index 500, store ตก) · ตอนนี้แอดมินออกคูปองได้ทางเดียวคือ `POST /api/coupons` ด้วยบัญชีแอดมิน (หักจากยอดตัวเอง) — ถ้าต้องการคูปองโปรโมชันที่แพลตฟอร์มออกเอง ต้องเคาะดีไซน์ (แหล่งเงิน/ledger) ก่อนแก้
+- [ ] `PointsService::refund` ไม่ lock แถว user (อ่าน `$user->pp` จาก model ที่ส่งมา) — ปุ่มยกเลิกคูปองพร้อมกันหลายใบอาจคำนวณจากยอดเก่า (migration lock เองแล้ว)
+- เครื่อง cloud นี้ไม่มี agy/MySQL/node_modules และ PHP เป็น 8.3 (โปรเจคใช้ 8.4) → `composer install --ignore-platform-req=php` + ติดตั้ง `php8.3-bcmath` เพื่อรันเทสต์ (ไม่กระทบ repo)
+
+### Branch / Git State
+- Branch: `claude/intelligent-albattani-llfm1i` (แตกจาก `main` `390211c`) · Push: ดู PR
 
 ---
 
@@ -291,6 +356,11 @@ ledger งบประมาณภายในของโรงเรียน 
 ---
 
 - [ ] Phase 5 แคมเปญ/บริจาค/ขายคอร์ส (เคาะ D3 ก่อน) · ~~IDOR `budgets/{budget}/transfer` (แผน §1.4)~~ ✅ แก้แล้ว 2026-11-12 (ดูบันทึกด้านบน)
+
+---
+
+- [x] Phase 2 คูปองผู้ใช้ = โอนแบบนิรนาม — ✅ ทำแล้ว 2026-11-12 (ดูบันทึกด้านบน)
+- [x] Phase 5 แคมเปญ/บริจาค/ขายคอร์ส — ✅ ทำตามคำแนะนำ D3 แล้ว 2026-11-12 (ดูบันทึกบนสุด) · IDOR `budgets/{budget}/transfer` (แผน §1.4) ยังไม่ทำ — แยกเป็นงานต่างหาก
 - [x] ข้อความ "โอนแต้ม/โอนเงิน" ที่อื่น — ✅ ไล่ครบแล้ว 2026-11-12 (อ่านโค้ดอย่างเดียว ไม่ได้แก้ไฟล์ · ไม่ได้ตรวจจอ) **ไม่เหลือจุดไหนโฆษณา/เปิดทางโอนระหว่างสมาชิก**
   · ไม่มีผู้เรียก `/points/transfer` · `/wallet/transfer` · `?tab=transfer` · `transfer()` เหลือใน `ui/` · `i18n/locales/*.json` ไม่มี key เรื่องโอน
   · ที่เหลือทั้งหมดจัดได้ 5 กลุ่ม (เก็บไว้ทุกกลุ่ม): (1) สลิป/โอนเงินผ่านธนาคาร — ฝากเงิน ถอนเงิน โฆษณา บริจาคเงินสด (2) label ประวัติ `transfer`/`transfer_in`/`transfer_out` — `Points.vue`, `Wallet.vue`, `PointsTransactionCard`, `UnifiedTransactionCard`, `DashboardActivityFeed`, model `PointsTransaction`/`WalletTransaction` (3) เครื่องมือแอดมินสืบ/ย้อนการโอน — `nuxnan-admin/wallet`, `points`, `users/[id]`, `WithdrawalFundSourceService`, `FraudRemediationService` (4) โรงเรียน→คอร์ส `academy/allocations/*` (ไม่ใช่ P2P) (5) บริจาคแต้มเข้ากองกลางคอร์ส/โรงเรียน + กดรับ — `SupportDonationModal`, `CourseDonorCard:347` "กำลังโอนแต้มสนับสนุนให้คุณ" → เป็นช่องทางมูลค่าของ Phase 5 (รอ D3) ไม่ใช่เรื่องข้อความ

@@ -277,7 +277,8 @@ async function redeemCoupon() {
   } catch (err: any) {
     result.value = {
       success: false,
-      message: err.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่'
+      // 4xx ถูก throw — ข้อความจริงจาก backend อยู่ใน err.data.message
+      message: err?.data?.message || err.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่'
     }
     swal.error(result.value.message)
   } finally {

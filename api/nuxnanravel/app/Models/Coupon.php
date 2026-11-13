@@ -106,6 +106,16 @@ class Coupon extends Model
     }
 
     /**
+     * Whether this coupon was issued by a platform (Plearnd) admin rather than
+     * an ordinary member. Member-issued coupons are an anonymous peer-to-peer
+     * transfer and are closed while economy.p2p_transfers_enabled is off.
+     */
+    public function isIssuedByPlatformAdmin(): bool
+    {
+        return (bool) $this->user?->isPlearndAdmin();
+    }
+
+    /**
      * Check if coupon is expired.
      */
     public function isExpired(): bool

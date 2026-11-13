@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Course;
 use App\Models\CourseDonate;
 use App\Models\CourseDonateClaim;
-use App\Models\CourseMember;
 use App\Models\CoursePointAccount;
 use App\Models\CoursePointTransaction;
 use App\Models\User;
@@ -159,9 +158,13 @@ class CourseClaimService
         ];
     }
 
+    /**
+     * Owner or an approved member only — a pending join request cannot claim
+     * from (or browse) the donation pool. See Course::canClaimPoints().
+     */
     private function assertMember(User $user, Course $course): void
     {
-        if ((int) $course->user_id !== (int) $user->id && ! CourseMember::where('course_id', $course->id)->where('user_id', $user->id)->exists()) {
+        if (! $course->canClaimPoints($user)) {
             throw new DomainException('not_a_course_member');
         }
     }
