@@ -3,7 +3,9 @@
 namespace App\Http\Resources\Learn\Course\questions;
 
 use App\Http\Resources\UserResource;
+use App\Models\Course;
 use App\Models\LessonAnswerQuestion;
+use App\Models\Question;
 use App\Models\UserAnswerQuestion;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -15,6 +17,34 @@ class QuestionResource extends JsonResource
      *
      * @return array<string, mixed>
      */
+    /**
+     * Who may see a question's answer key (correct option, explanations):
+     * its author and every admin of its course — so a co-teacher opening the
+     * edit form sees which option is right instead of saving them all as
+     * wrong. Memoised on the request: lists would otherwise query per row.
+     */
+    public static function canSeeAnswerKey(?Question $question): bool
+    {
+        $user = auth()->user();
+        if (! $user || ! $question) {
+            return false;
+        }
+
+        if ((int) $question->user_id === (int) $user->id) {
+            return true;
+        }
+
+        $key = 'answer_key_admin:'.$question->course_id.':'.$user->id;
+        $attributes = request()->attributes;
+
+        if (! $attributes->has($key)) {
+            $course = $question->course_id ? Course::find($question->course_id) : null;
+            $attributes->set($key, (bool) $course?->isAdmin($user));
+        }
+
+        return (bool) $attributes->get($key);
+    }
+
     public function toArray(Request $request): array
     {
         $authAnswerQuestion = null;
@@ -56,16 +86,15 @@ class QuestionResource extends JsonResource
             'text' => $this->text,
             'type' => $this->type,
             'options' => QuestionOptionResource::collection($this->options),
-            // Answer key: mirrors the gate QuestionOptionResource applies to
-            // `is_correct` (owner of the question only). Exposing it
-            // unconditionally defeated that gate entirely.
+            // Answer key: same audience as QuestionOptionResource `is_correct`
+            // (question author + course admins), never learners.
             'correct_option_id' => $this->when(
-                auth()->check() && $this->user_id === auth()->id(),
+                self::canSeeAnswerKey($this->resource),
                 fn () => $this->correct_option_id
             ),
             // The explanation reveals the answer — same audience as the key.
             'explanation' => $this->when(
-                auth()->check() && $this->user_id === auth()->id(),
+                self::canSeeAnswerKey($this->resource),
                 fn () => $this->explanation
             ),
             'difficulty_level' => $this->difficulty_level,

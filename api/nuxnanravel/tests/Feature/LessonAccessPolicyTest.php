@@ -356,6 +356,129 @@ class LessonAccessPolicyTest extends TestCase
         $this->assertEquals(10, $this->member->fresh()->pp);
     }
 
+    // ── Explanation in the lesson question form ──────────────────────────
+
+    public function test_teacher_writes_explanation_and_learner_reads_it_on_reveal(): void
+    {
+        $this->actingAs($this->teacher, 'api')
+            ->putJson("/api/lessons/{$this->lesson->id}/questions/{$this->question->id}", [
+                'text' => 'Q',
+                'points' => 10,
+                'explanation' => 'Because the right answer is right',
+            ])
+            ->assertOk();
+
+        $this->answerLesson($this->member, $this->wrong->id)->assertOk();
+
+        $this->reveal($this->member)
+            ->assertOk()
+            ->assertJsonPath('revealed.explanation', 'Because the right answer is right');
+    }
+
+    public function test_teacher_can_create_question_with_explanation(): void
+    {
+        $this->actingAs($this->teacher, 'api')
+            ->postJson("/api/lessons/{$this->lesson->id}/questions", [
+                'text' => 'New',
+                'points' => 1,
+                'explanation' => 'Why',
+            ])
+            ->assertOk();
+
+        $this->assertDatabaseHas('questions', ['text' => 'New', 'explanation' => 'Why']);
+    }
+
+    public function test_update_without_explanation_keeps_question_and_option_explanations(): void
+    {
+        $this->question->update(['explanation' => 'Keep me']);
+        $this->right->update(['explanation' => 'Option note']);
+
+        // Same shape the form sends when the editor could not load the old
+        // explanation (co-teacher): no `explanation` keys at all.
+        $this->actingAs($this->teacher, 'api')
+            ->putJson("/api/lessons/{$this->lesson->id}/questions/{$this->question->id}", [
+                'text' => 'Q',
+                'points' => 10,
+                'options' => [
+                    ['id' => $this->right->id, 'text' => 'Right', 'is_correct' => 'true'],
+                    ['id' => $this->wrong->id, 'text' => 'Wrong', 'is_correct' => 'false'],
+                    ['id' => $this->wrong2->id, 'text' => 'Wrong 2', 'is_correct' => 'false'],
+                ],
+            ])
+            ->assertOk();
+
+        $this->assertSame('Keep me', $this->question->fresh()->explanation);
+        $this->assertSame('Option note', $this->right->fresh()->explanation);
+    }
+
+    private function coTeacher(): User
+    {
+        $coTeacher = User::factory()->create();
+        CourseMember::create([
+            'course_id' => $this->course->id,
+            'user_id' => $coTeacher->id,
+            'course_member_status' => 1,
+            'role' => 4, // course admin (Course::isAdmin: role 4 + status 1)
+            'status' => 1,
+        ]);
+
+        return $coTeacher;
+    }
+
+    public function test_co_teacher_sees_answer_key_of_questions_they_did_not_write(): void
+    {
+        $this->question->update(['explanation' => 'Why']);
+
+        $question = $this->actingAs($this->coTeacher(), 'api')
+            ->getJson("/api/lessons/{$this->lesson->id}/questions")
+            ->assertOk()
+            ->json('data.0');
+
+        $this->assertSame($this->right->id, $question['correct_option_id']);
+        $this->assertSame('Why', $question['explanation']);
+        $right = collect($question['options'])->firstWhere('id', $this->right->id);
+        $this->assertTrue((bool) $right['is_correct']);
+    }
+
+    public function test_member_still_never_sees_answer_key(): void
+    {
+        $question = $this->actingAs($this->member, 'api')
+            ->getJson("/api/lessons/{$this->lesson->id}/questions")
+            ->assertOk()
+            ->json('data.0');
+
+        $this->assertArrayNotHasKey('correct_option_id', $question);
+        $this->assertArrayNotHasKey('is_correct', $question['options'][0]);
+    }
+
+    public function test_update_without_is_correct_keeps_the_correct_option(): void
+    {
+        $this->actingAs($this->coTeacher(), 'api')
+            ->putJson("/api/lessons/{$this->lesson->id}/questions/{$this->question->id}", [
+                'text' => 'Q',
+                'points' => 10,
+                'options' => [
+                    ['id' => $this->right->id, 'text' => 'Right'],
+                    ['id' => $this->wrong->id, 'text' => 'Wrong'],
+                    ['id' => $this->wrong2->id, 'text' => 'Wrong 2'],
+                ],
+            ])
+            ->assertOk();
+
+        $this->assertTrue((bool) $this->right->fresh()->is_correct);
+    }
+
+    public function test_explanation_is_capped(): void
+    {
+        $this->actingAs($this->teacher, 'api')
+            ->putJson("/api/lessons/{$this->lesson->id}/questions/{$this->question->id}", [
+                'text' => 'Q',
+                'points' => 10,
+                'explanation' => str_repeat('ก', 5001),
+            ])
+            ->assertStatus(422);
+    }
+
     // ── Quizzes ──────────────────────────────────────────────────────────
 
     private function makeQuiz(): array
