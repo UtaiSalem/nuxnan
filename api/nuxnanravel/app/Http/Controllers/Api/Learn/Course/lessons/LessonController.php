@@ -101,20 +101,10 @@ class LessonController extends Controller
         $course = $lesson->course;
 
         try {
-            if (! $isCourseAdmin && (auth()->user()->pp < $lesson->point_tuition_fee)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'You do not have enough points to access this lesson // คุณมีพอยต์ไม่เพียงพอเพื่อเข้าถึงบทเรียนนี้',
-                ], 401);
-            }
-
+            // Policy: knowledge is shared — reading a lesson is always free.
+            // (This used to charge point_tuition_fee on EVERY view, straight
+            // off users.pp with no ledger entry.)
             $lesson->increment('view_count');
-
-            if (! $isCourseAdmin) {
-                auth()->user()->decrement('pp', $lesson->point_tuition_fee);
-            }
-
-            $course->increment('points', $lesson->point_tuition_fee);
 
             return response()->json([
                 'course' => new CourseResource($course),

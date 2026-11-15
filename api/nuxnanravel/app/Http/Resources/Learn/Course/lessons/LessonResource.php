@@ -114,8 +114,31 @@ class LessonResource extends JsonResource
                     return false;
                 })
             ),
-            'questions' => QuestionResource::collection($this->questions),
+            // Policy: everyone reads the lesson; questions are for course
+            // admins and approved members only.
+            'can_answer_questions' => $this->canAnswerQuestions(),
+            'questions' => $this->canAnswerQuestions()
+                ? QuestionResource::collection($this->questions)
+                : [],
         ]);
+    }
+
+    /** Memoised on the current request: lesson lists would otherwise query per row. */
+    private function canAnswerQuestions(): bool
+    {
+        $user = auth()->guard('api')->user();
+        if (! $user || ! $this->course) {
+            return false;
+        }
+
+        $key = 'lesson_can_answer:'.$this->course_id.':'.$user->id;
+        $attributes = request()->attributes;
+
+        if (! $attributes->has($key)) {
+            $attributes->set($key, $this->course->canAnswerQuestions($user));
+        }
+
+        return (bool) $attributes->get($key);
     }
 
     protected function getRewardInfo(Request $request): ?array

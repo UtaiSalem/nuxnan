@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Learn\Course\lessons\questions;
 
+use App\Exceptions\AccountEconomyRestrictedException;
 use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\CourseMember;
@@ -9,11 +10,14 @@ use App\Models\Lesson;
 use App\Models\LessonAnswerQuestion;
 use App\Models\Question;
 use App\Models\QuestionOption;
+use App\Models\User;
 use App\Services\ContentVisibilityService;
 use App\Services\CourseScoreService;
+use App\Services\PointsService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
@@ -45,6 +49,15 @@ class LessonAnswerQuestionController extends Controller
         // Guard for students
         if (! $lesson->course->isAdmin($user)) {
             $this->visibility->assertVisibleOrFail($lesson, $user, 403);
+        }
+
+        // Policy: anyone may read the lesson, only approved members answer.
+        if (! $lesson->course->canAnswerQuestions($user)) {
+            return response()->json([
+                'success' => false,
+                'code' => 'NOT_COURSE_MEMBER',
+                'message' => 'เฉพาะสมาชิกรายวิชาเท่านั้นที่ตอบคำถามได้ กรุณาสมัครเข้ารายวิชาก่อน',
+            ], 403);
         }
 
         // The option must belong to THIS question, otherwise a learner could send
@@ -114,20 +127,78 @@ class LessonAnswerQuestionController extends Controller
             'is_correct' => $isCorrect,
         ];
 
-        // `updateOrCreate` is a check-then-insert race: two concurrent submissions
-        // can both miss the SELECT and insert duplicate rows, double counting the
-        // score. Once the unique index on (user_id, lesson_id, question_id) exists
-        // the loser hits a constraint violation, which we recover from by updating
-        // the row the winner just wrote. Without the index no violation is raised
-        // and this behaves exactly as before.
-        try {
-            LessonAnswerQuestion::updateOrCreate($answerKeys, $answerValues);
-        } catch (QueryException $e) {
-            if (! $this->isUniqueViolation($e)) {
-                throw $e;
-            }
+        // Policy: changing an answer that was already submitted costs the
+        // question's pp_fine (set by the teacher; 0 = free). Locking the user
+        // row serialises concurrent submissions of the same learner, so the
+        // balance check and the charge cannot race.
+        $ppFine = (int) ($question->pp_fine ?? 0);
 
-            LessonAnswerQuestion::where($answerKeys)->firstOrFail()->update($answerValues);
+        try {
+            $charge = DB::transaction(function () use ($answerKeys, $answerValues, $ppFine, $lesson, $question) {
+                $user = User::whereKey(auth()->id())->lockForUpdate()->firstOrFail();
+                $existing = LessonAnswerQuestion::where($answerKeys)->first();
+
+                $isChange = $existing && (int) $existing->answer_id !== (int) $answerValues['answer_id'];
+                $ppDeducted = 0;
+
+                if ($isChange && $ppFine > 0) {
+                    $transaction = $user->pp >= $ppFine
+                        ? app(PointsService::class)->spend(
+                            $user,
+                            $ppFine,
+                            'lesson_answer_edit',
+                            $existing->id,
+                            "ตอบคำถามบทเรียนใหม่ (lesson #{$lesson->id}, question #{$question->id})",
+                            ['lesson_id' => $lesson->id, 'question_id' => $question->id],
+                        )
+                        : null;
+
+                    if (! $transaction) {
+                        return ['ok' => false, 'current_pp' => (int) $user->pp];
+                    }
+
+                    $ppDeducted = $ppFine;
+                }
+
+                // A re-submission of the very same option changes nothing.
+                if ($existing && ! $isChange) {
+                    return ['ok' => true, 'pp_deducted' => 0, 'user_pp' => (int) $user->pp];
+                }
+
+                // `updateOrCreate` is a check-then-insert race: two concurrent submissions
+                // can both miss the SELECT and insert duplicate rows, double counting the
+                // score. Once the unique index on (user_id, lesson_id, question_id) exists
+                // the loser hits a constraint violation, which we recover from by updating
+                // the row the winner just wrote. Without the index no violation is raised
+                // and this behaves exactly as before.
+                try {
+                    LessonAnswerQuestion::updateOrCreate($answerKeys, $answerValues);
+                } catch (QueryException $e) {
+                    if (! $this->isUniqueViolation($e)) {
+                        throw $e;
+                    }
+
+                    LessonAnswerQuestion::where($answerKeys)->firstOrFail()->update($answerValues);
+                }
+
+                return ['ok' => true, 'pp_deducted' => $ppDeducted, 'user_pp' => (int) $user->fresh()->pp];
+            });
+        } catch (AccountEconomyRestrictedException $e) {
+            return response()->json([
+                'success' => false,
+                'code' => 'ACCOUNT_RESTRICTED',
+                'message' => $e->getMessage(),
+            ], 403);
+        }
+
+        if (! $charge['ok']) {
+            return response()->json([
+                'success' => false,
+                'code' => 'INSUFFICIENT_PP',
+                'message' => "แต้มสะสมไม่เพียงพอ ต้องใช้ {$ppFine} แต้มในการตอบข้อนี้ใหม่",
+                'required_pp' => $ppFine,
+                'current_pp' => $charge['current_pp'],
+            ], 422);
         }
 
         // Update CourseMember achieved score
@@ -145,8 +216,123 @@ class LessonAnswerQuestionController extends Controller
             'is_correct' => $isCorrect,
             'points' => $points,
             'message' => $isCorrect ? 'ถูกต้อง!' : 'ยังไม่ถูกต้อง',
+            'pp_deducted' => $charge['pp_deducted'],
+            'user_pp' => $charge['user_pp'],
             'quiz_summary' => $this->buildQuizSummary($lesson, (int) auth()->id(), $totalQuestions, $wasAllCorrect),
         ]);
+    }
+
+    /**
+     * POST /lessons/{lesson}/questions/{question}/reveal
+     *
+     * Policy (2026-11-15): the first answer is free; reading the answer key
+     * costs the question's pp_fine (0 = free) EVERY time — nothing is
+     * remembered, so revealing again means paying again. The learner must
+     * have answered once first and still has to pick the answer themselves.
+     */
+    public function reveal(Lesson $lesson, Question $question)
+    {
+        $user = auth()->user();
+
+        if ($question->questionable_type !== $lesson->getMorphClass()
+            || (int) $question->questionable_id !== (int) $lesson->id) {
+            return response()->json([
+                'success' => false,
+                'code' => 'QUESTION_NOT_IN_LESSON',
+                'message' => 'ไม่พบคำถามนี้ในบทเรียน',
+            ], 404);
+        }
+
+        if (! $lesson->course->isAdmin($user)) {
+            $this->visibility->assertVisibleOrFail($lesson, $user, 403);
+        }
+
+        if (! $lesson->course->canAnswerQuestions($user)) {
+            return response()->json([
+                'success' => false,
+                'code' => 'NOT_COURSE_MEMBER',
+                'message' => 'เฉพาะสมาชิกรายวิชาเท่านั้นที่ดูเฉลยได้ กรุณาสมัครเข้ารายวิชาก่อน',
+            ], 403);
+        }
+
+        $hasAnswered = LessonAnswerQuestion::where('user_id', $user->id)
+            ->where('lesson_id', $lesson->id)
+            ->where('question_id', $question->id)
+            ->exists();
+
+        if (! $hasAnswered) {
+            return response()->json([
+                'success' => false,
+                'code' => 'ANSWER_FIRST',
+                'message' => 'กรุณาตอบข้อนี้ก่อน แล้วจึงดูเฉลยได้',
+            ], 422);
+        }
+
+        $fee = (int) ($question->pp_fine ?? 0);
+
+        try {
+            $result = DB::transaction(function () use ($user, $lesson, $question, $fee) {
+                $locked = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+
+                if ($fee > 0) {
+                    $transaction = $locked->pp >= $fee
+                        ? app(PointsService::class)->spend(
+                            $locked,
+                            $fee,
+                            'lesson_answer_reveal',
+                            $question->id,
+                            "ดูเฉลยคำถามบทเรียน (lesson #{$lesson->id}, question #{$question->id})",
+                            ['lesson_id' => $lesson->id, 'question_id' => $question->id],
+                        )
+                        : null;
+
+                    if (! $transaction) {
+                        return ['ok' => false, 'current_pp' => (int) $locked->pp];
+                    }
+                }
+
+                return ['ok' => true, 'pp_deducted' => $fee, 'user_pp' => (int) $locked->fresh()->pp];
+            });
+        } catch (AccountEconomyRestrictedException $e) {
+            return response()->json([
+                'success' => false,
+                'code' => 'ACCOUNT_RESTRICTED',
+                'message' => $e->getMessage(),
+            ], 403);
+        }
+
+        if (! $result['ok']) {
+            return response()->json([
+                'success' => false,
+                'code' => 'INSUFFICIENT_PP',
+                'message' => "แต้มสะสมไม่เพียงพอ ต้องใช้ {$fee} แต้มในการดูเฉลย",
+                'required_pp' => $fee,
+                'current_pp' => $result['current_pp'],
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'pp_deducted' => $result['pp_deducted'],
+            'user_pp' => $result['user_pp'],
+            'revealed' => self::answerKey($question),
+        ]);
+    }
+
+    /**
+     * The answer key as READING material: the text of the correct option and
+     * the explanations. No option id is sent, so the UI cannot pre-select or
+     * highlight it — the learner still has to choose the answer themselves.
+     */
+    public static function answerKey(Question $question): array
+    {
+        $correct = $question->options()->where('is_correct', true)->first(['text', 'explanation']);
+
+        return [
+            'correct_option_text' => $correct?->text,
+            'correct_option_explanation' => $correct?->explanation,
+            'explanation' => $question->explanation,
+        ];
     }
 
     /**

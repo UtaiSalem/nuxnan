@@ -297,35 +297,11 @@ class CourseLessonController extends Controller
                 return response()->json(['success' => false, 'message' => 'ไม่สามารถปลดล็อกบทเรียนที่ยังไม่เผยแพร่'], 422);
             }
 
-            if ($lesson->access_type === Lesson::ACCESS_FREE) {
-                $this->accessService->grantFreeAccess($user, $lesson);
+            // Policy: every published lesson is free to read — never charge,
+            // whatever access_type a legacy lesson still carries.
+            $this->accessService->grantFreeAccess($user, $lesson);
 
-                return response()->json(['success' => true, 'message' => 'บทเรียนนี้เข้าถึงได้ฟรี']);
-            }
-
-            // ปลดล็อกด้วยแต้ม
-            if ($lesson->access_type === Lesson::ACCESS_POINTS) {
-                $result = $this->accessService->unlockWithPoints($user, $lesson);
-                $status = $result['success'] ? 200 : 422;
-                if (isset($result['shortage'])) {
-                    $status = 402;
-                } // Payment Required
-
-                return response()->json($result, $status);
-            }
-
-            // ปลดล็อกด้วยเงิน
-            if ($lesson->access_type === Lesson::ACCESS_MONEY) {
-                $result = $this->accessService->unlockWithMoney($user, $lesson);
-                $status = $result['success'] ? 200 : 422;
-                if (isset($result['shortage'])) {
-                    $status = 402;
-                }
-
-                return response()->json($result, $status);
-            }
-
-            return response()->json(['success' => false, 'message' => 'ประเภทการเข้าถึงไม่ถูกต้อง'], 422);
+            return response()->json(['success' => true, 'message' => 'บทเรียนนี้เข้าถึงได้ฟรี']);
 
         } catch (\Exception $e) {
             \Log::error('Error unlocking lesson: '.$e->getMessage());
@@ -373,11 +349,13 @@ class CourseLessonController extends Controller
                 'youtube_url' => ($validated['youtube_url'] === 'null' || $validated['youtube_url'] === '') ? null : $validated['youtube_url'],
                 'order' => $validated['order'] ?? null,
                 'min_read' => $validated['min_read'] ?? 1,
-                'point_tuition_fee' => $validated['point_tuition_fee'] ?? 0,
-                'money_tuition_fee' => $validated['money_tuition_fee'] ?? null,
+                // Policy: lessons are always free to read — any price sent
+                // by an older client is ignored.
+                'point_tuition_fee' => 0,
+                'money_tuition_fee' => null,
                 'status' => $validated['status'],
                 'publication_status' => $validated['publication_status'] ?? 'published',
-                'access_type' => $validated['access_type'] ?? 'free',
+                'access_type' => Lesson::ACCESS_FREE,
                 'require_completion_before_exercises' => (bool) ($request->require_completion_before_exercises ?? false),
             ]);
 
@@ -493,11 +471,12 @@ class CourseLessonController extends Controller
                 'youtube_url' => ($validated['youtube_url'] === 'null' || $validated['youtube_url'] === '') ? null : $validated['youtube_url'],
                 'min_read' => $validated['min_read'] ?? $lesson->min_read,
                 'order' => $validated['order'] ?? $lesson->order,
-                'point_tuition_fee' => $validated['point_tuition_fee'] ?? $lesson->point_tuition_fee,
-                'money_tuition_fee' => $validated['money_tuition_fee'] ?? $lesson->money_tuition_fee,
+                // Policy: lessons are always free to read.
+                'point_tuition_fee' => 0,
+                'money_tuition_fee' => null,
                 'status' => $validated['status'],
                 'publication_status' => $validated['publication_status'] ?? $lesson->publication_status,
-                'access_type' => $validated['access_type'] ?? $lesson->access_type,
+                'access_type' => Lesson::ACCESS_FREE,
                 'require_completion_before_exercises' => $request->has('require_completion_before_exercises')
                     ? (bool) $request->require_completion_before_exercises
                     : $lesson->require_completion_before_exercises,

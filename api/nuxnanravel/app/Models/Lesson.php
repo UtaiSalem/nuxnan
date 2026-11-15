@@ -199,16 +199,8 @@ class Lesson extends Model
             return false;
         }
 
-        // free lesson — อนุญาตทันที
-        if ($this->access_type === self::ACCESS_FREE) {
-            return true;
-        }
-
-        // points/money — ตรวจ access record
-        return $this->accesses()
-            ->where('user_id', $user->id)
-            ->where('status', LessonAccess::STATUS_ACTIVE)
-            ->exists();
+        // นโยบาย: บทเรียนที่เผยแพร่แล้วอ่านได้ฟรีทุกคน (รวมบทเรียน points/money เดิม)
+        return true;
     }
 
     /**

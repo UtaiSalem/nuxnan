@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Learn\Course\questions;
 
 use App\Constants\QuizConstants;
+use App\Exceptions\AccountEconomyRestrictedException;
 use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\CourseMember;
@@ -10,11 +11,14 @@ use App\Models\CourseQuiz;
 use App\Models\CourseQuizResult;
 use App\Models\Question;
 use App\Models\QuestionOption;
+use App\Models\User;
 use App\Models\UserAnswerQuestion;
 use App\Services\ContentVisibilityService;
 use App\Services\CourseScoreService;
+use App\Services\PointsService;
 use App\Services\QuizEfficiencyService;
 use DB;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
@@ -38,12 +42,17 @@ class UserAnswerQuestionController extends Controller
     public function store(CourseQuiz $quiz, Question $question, Request $request)
     {
         $user = auth()->user();
-        $isCourseAdmin = false;
 
-        $course = Course::find($quiz->course_id ?? $request->course_id);
-        if ($course) {
-            $isCourseAdmin = $course->isAdmin($user);
+        if ($response = $this->guardQuizAnswer($quiz, $question)) {
+            return $response;
         }
+
+        // The quiz decides which course the answer belongs to — never the
+        // client (a forged course_id would credit the score elsewhere).
+        $request->merge(['course_id' => $quiz->course_id]);
+
+        $course = Course::find($quiz->course_id);
+        $isCourseAdmin = $course ? $course->isAdmin($user) : false;
 
         // Visibility guard for students
         if (! $isCourseAdmin) {
@@ -130,6 +139,10 @@ class UserAnswerQuestionController extends Controller
     {
         $user = auth()->user();
 
+        if ($response = $this->guardQuizAnswer($quiz, $question)) {
+            return $response;
+        }
+
         $course = Course::find($quiz->course_id);
         $isCourseAdmin = $course ? $course->isAdmin($user) : false;
 
@@ -166,11 +179,33 @@ class UserAnswerQuestionController extends Controller
             }
 
             // Validate and deduct pp_fine (Plearnd Points) for editing an answer
-            $ppFine = $question->pp_fine ?? 0;
-            $user = auth()->user();
+            $ppFine = (int) ($question->pp_fine ?? 0);
+
+            // Lock the user row so two concurrent edits cannot both pass the
+            // balance check and overdraw, then charge through the points
+            // ledger (a bare decrement left no PointsTransaction behind).
+            $user = User::whereKey(auth()->id())->lockForUpdate()->firstOrFail();
 
             if ($ppFine > 0) {
-                if ($user->pp < $ppFine) {
+                try {
+                    $transaction = $user->pp >= $ppFine
+                        ? app(PointsService::class)->spend(
+                            $user,
+                            $ppFine,
+                            'quiz_answer_edit',
+                            $answer->id,
+                            "แก้ไขคำตอบข้อสอบ (quiz #{$quiz->id}, question #{$question->id})",
+                            ['quiz_id' => $quiz->id, 'question_id' => $question->id, 'edit_number' => $answer->edit_count + 1],
+                        )
+                        : null;
+                } catch (AccountEconomyRestrictedException $e) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $e->getMessage(),
+                    ], 403);
+                }
+
+                if (! $transaction) {
                     return response()->json([
                         'success' => false,
                         'message' => "แต้มสะสมไม่เพียงพอ ต้องใช้ {$ppFine} แต้มในการแก้ไขคำตอบ",
@@ -178,9 +213,6 @@ class UserAnswerQuestionController extends Controller
                         'current_pp' => $user->pp,
                     ], 422);
                 }
-
-                // Deduct pp_fine from user
-                $user->decrement('pp', $ppFine);
             }
 
             $oldAnswer = $answer->answer_id;
@@ -214,6 +246,34 @@ class UserAnswerQuestionController extends Controller
                 'user_pp' => $user->fresh()->pp,
             ], 200);
         });
+    }
+
+    /**
+     * Shared guard for answering: the question must belong to this quiz
+     * (route binding resolves them independently), and only course admins
+     * or approved members may answer.
+     */
+    private function guardQuizAnswer(CourseQuiz $quiz, Question $question): ?JsonResponse
+    {
+        if ($question->questionable_type !== $quiz->getMorphClass()
+            || (int) $question->questionable_id !== (int) $quiz->id) {
+            return response()->json([
+                'success' => false,
+                'code' => 'QUESTION_NOT_IN_QUIZ',
+                'message' => 'ไม่พบคำถามนี้ในแบบทดสอบ',
+            ], 404);
+        }
+
+        $course = Course::find($quiz->course_id);
+        if (! $course || ! $course->canAnswerQuestions(auth()->user())) {
+            return response()->json([
+                'success' => false,
+                'code' => 'NOT_COURSE_MEMBER',
+                'message' => 'เฉพาะสมาชิกรายวิชาเท่านั้นที่ทำแบบทดสอบได้ กรุณาสมัครเข้ารายวิชาก่อน',
+            ], 403);
+        }
+
+        return null;
     }
 
     /**

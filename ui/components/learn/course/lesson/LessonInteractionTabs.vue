@@ -1310,6 +1310,7 @@ const submitReply = async (parentComment: any) => {
             :questions="lesson.questions || []"
             :lesson-id="lesson.id"
             :is-creator="isCreator"
+            :can-answer="lesson.can_answer_questions !== false"
             :lesson-completed="isCompleted"
             :has-assignments="hasAssignments"
             :assignment-count="assignmentCount"

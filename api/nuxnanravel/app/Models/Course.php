@@ -435,6 +435,32 @@ class Course extends Model
     }
 
     /**
+     * Approved member of this course (course_member_status = 1).
+     *
+     * Policy: lessons are free for everyone to read, but answering lesson
+     * questions and quizzes is for approved members only.
+     */
+    public function isApprovedMember(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return CourseMember::where('course_id', $this->id)
+            ->where('user_id', $user->id)
+            ->where('course_member_status', 1)
+            ->exists();
+    }
+
+    /**
+     * Admins, plus approved members, may answer questions and take quizzes.
+     */
+    public function canAnswerQuestions(?User $user): bool
+    {
+        return $this->isAdmin($user) || $this->isApprovedMember($user);
+    }
+
+    /**
      * Who may take points out of this course's point pool (donation claims and
      * every campaign type): the owner, or a member the course has approved
      * (course_member_status = 1). A pending join request is not enough —

@@ -74,6 +74,13 @@ class ExamRetakePhase2Test extends TestCase
         $course = Course::factory()->create(['user_id' => $teacher->id]);
         $quiz = CourseQuiz::factory()->create(['course_id' => $course->id]);
 
+        // Only approved members may take a quiz (policy 2026-11-15).
+        CourseMember::create([
+            'course_id' => $course->id,
+            'user_id' => $student->id,
+            'course_member_status' => 1,
+        ]);
+
         // Manually grant a retake
         $quizResult = CourseQuizResult::create([
             'user_id' => $student->id,

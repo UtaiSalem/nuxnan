@@ -6,17 +6,68 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Learn\Course\questions\QuestionResource;
 use App\Models\Lesson;
 use App\Models\Question;
+use App\Services\ContentVisibilityService;
 use App\Services\CourseScoreService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class LessonQuestionController extends Controller
 {
+    public function __construct(protected ContentVisibilityService $visibility) {}
+
+    /**
+     * Students may only read questions of a lesson that is visible to them —
+     * the same gate LessonAnswerQuestionController@store applies — and, by
+     * policy, only approved members see the questions at all (anyone may
+     * read the lesson itself).
+     */
+    private function assertCanView(Lesson $lesson): void
+    {
+        $user = auth()->user();
+
+        if (! $lesson->course || ! $lesson->course->isAdmin($user)) {
+            $this->visibility->assertVisibleOrFail($lesson, $user, 404);
+        }
+
+        abort_unless(
+            $lesson->course && $lesson->course->canAnswerQuestions($user),
+            403,
+            'เฉพาะสมาชิกรายวิชาเท่านั้นที่ทำแบบทดสอบได้'
+        );
+    }
+
+    /**
+     * Writing questions (and their answer keys) is for course admins only.
+     */
+    private function assertCanManage(Lesson $lesson): void
+    {
+        abort_unless(
+            $lesson->course && $lesson->course->isAdmin(auth()->user()),
+            403,
+            'เฉพาะผู้ดูแลรายวิชาเท่านั้นที่จัดการคำถามได้'
+        );
+    }
+
+    /**
+     * Route-model binding resolves {lesson} and {question} independently.
+     */
+    private function assertQuestionInLesson(Lesson $lesson, Question $question): void
+    {
+        abort_unless(
+            $question->questionable_type === $lesson->getMorphClass()
+                && (int) $question->questionable_id === (int) $lesson->id,
+            404,
+            'ไม่พบคำถามนี้ในบทเรียน'
+        );
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index(Lesson $lesson)
     {
+        $this->assertCanView($lesson);
+
         $questions = $lesson->questions()->with(['options', 'images'])->get();
 
         return QuestionResource::collection($questions);
@@ -24,6 +75,9 @@ class LessonQuestionController extends Controller
 
     public function store(Lesson $lesson, Request $request)
     {
+        $this->assertCanManage($lesson);
+        $request->validate(['pp_fine' => ['nullable', 'integer', 'min:0']]);
+
         $question = $lesson->questions()->create([
             'course_id' => $lesson->course_id,
             'user_id' => auth()->id(),
@@ -31,6 +85,8 @@ class LessonQuestionController extends Controller
             'points' => $request->points,
             'type' => $request->type ?? 'multiple_choice',
             'explanation' => $request->explanation,
+            // Points a learner pays to change an answer already submitted.
+            'pp_fine' => (int) ($request->pp_fine ?? 0),
         ]);
 
         if ($lesson->course) {
@@ -79,15 +135,26 @@ class LessonQuestionController extends Controller
 
     public function show(Lesson $lesson, Question $question)
     {
+        $this->assertCanView($lesson);
+        $this->assertQuestionInLesson($lesson, $question);
+
         return new QuestionResource($question->load('options', 'images'));
     }
 
     public function update(Request $request, Lesson $lesson, Question $question)
     {
+        $this->assertCanManage($lesson);
+        $this->assertQuestionInLesson($lesson, $question);
+
+        $request->validate(['pp_fine' => ['nullable', 'integer', 'min:0']]);
+
         $question->update([
             'text' => $request->text,
             'points' => $request->points,
-            'explanation' => $request->explanation,
+            // The edit form does not send these — keep the stored value
+            // instead of wiping it to null.
+            'explanation' => $request->has('explanation') ? $request->explanation : $question->explanation,
+            'pp_fine' => $request->has('pp_fine') ? (int) ($request->pp_fine ?? 0) : $question->pp_fine,
         ]);
 
         // Sync Options
@@ -181,6 +248,9 @@ class LessonQuestionController extends Controller
 
     public function destroy(Lesson $lesson, Question $question)
     {
+        $this->assertCanManage($lesson);
+        $this->assertQuestionInLesson($lesson, $question);
+
         try {
             // Eager load relationships to ensure they exist before we iterate
             $question->load(['images', 'options.images']);

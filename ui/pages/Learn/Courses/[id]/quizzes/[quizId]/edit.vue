@@ -6,6 +6,7 @@ import { formatScore, normalizeScore, isValidScore } from '~/utils/scoreFormat'
 import Swal from 'sweetalert2'
 import QuizRewardForm from '~/components/learn/course/points/QuizRewardForm.vue'
 import QuestionImportModal from '~/components/learn/course/questions/QuestionImportModal.vue'
+import QuestionBulkSettingsModal from '~/components/learn/course/questions/QuestionBulkSettingsModal.vue'
 import { useQuestionImportService } from '~/services/questionImportService'
 
 const route = useRoute()
@@ -21,6 +22,10 @@ const onQuestionsImported = async (count: number) => {
   await fetchData()
   Swal.fire('สำเร็จ', `นำเข้าข้อสอบ ${count} ข้อเรียบร้อยแล้ว`, 'success')
 }
+
+// ตั้งค่าคะแนน/แต้มที่หัก ให้ข้อสอบทุกข้อในแบบทดสอบนี้ในคลิกเดียว
+const showBulkSettings = ref(false)
+const bulkSettingsEndpoint = computed(() => `/api/courses/${courseId}/quizzes/${quizId}/questions/bulk-settings`)
 
 const questionExportService = useQuestionImportService()
 const isExporting = ref(false)
@@ -696,6 +701,14 @@ const deleteQuestion = async (qId: number) => {
                     <span class="whitespace-nowrap">{{ isExporting ? 'กำลังดาวน์โหลด...' : 'ดาวน์โหลดข้อสอบ' }}</span>
                   </button>
                   <button
+                    @click="showBulkSettings = true"
+                    :disabled="questions.length === 0"
+                    class="w-full sm:w-auto min-h-[44px] px-3 sm:px-4 py-2 rounded-lg border border-purple-200 text-purple-600 hover:bg-purple-50 dark:border-purple-800 dark:text-purple-400 dark:hover:bg-purple-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
+                  >
+                    <Icon icon="fluent:options-24-regular" class="w-5 h-5 flex-shrink-0" />
+                    <span class="whitespace-nowrap">ตั้งค่าทั้งชุด</span>
+                  </button>
+                  <button
                     @click="openAddQuestion"
                     class="w-full sm:w-auto min-h-[44px] px-3 sm:px-4 py-2 rounded-lg bg-purple-100 text-purple-600 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50 transition-colors flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
                   >
@@ -922,5 +935,12 @@ const deleteQuestion = async (qId: number) => {
     </div>
 
     <QuestionImportModal :show="showImportModal" :scope="importScope" @close="showImportModal = false" @imported="onQuestionsImported" />
+    <QuestionBulkSettingsModal
+      :show="showBulkSettings"
+      :endpoint="bulkSettingsEndpoint"
+      :question-count="questions.length"
+      @close="showBulkSettings = false"
+      @saved="fetchData"
+    />
   </div>
 </template>

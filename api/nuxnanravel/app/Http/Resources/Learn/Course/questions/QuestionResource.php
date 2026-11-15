@@ -63,7 +63,11 @@ class QuestionResource extends JsonResource
                 auth()->check() && $this->user_id === auth()->id(),
                 fn () => $this->correct_option_id
             ),
-            'explanation' => $this->explanation,
+            // The explanation reveals the answer — same audience as the key.
+            'explanation' => $this->when(
+                auth()->check() && $this->user_id === auth()->id(),
+                fn () => $this->explanation
+            ),
             'difficulty_level' => $this->difficulty_level,
             'time_limit' => $this->time_limit,
             'points' => $this->points,

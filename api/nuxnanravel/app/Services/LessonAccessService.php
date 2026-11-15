@@ -42,43 +42,17 @@ class LessonAccessService
             ];
         }
 
-        // Free lesson
-        if ($lesson->access_type === Lesson::ACCESS_FREE) {
-            // Auto-create access record ถ้ายังไม่มี
-            $this->grantFreeAccess($user, $lesson);
+        // Policy: knowledge is shared — every published lesson is free to
+        // read, including legacy points/money lessons (none in use).
+        // Auto-create access record ถ้ายังไม่มี
+        $this->grantFreeAccess($user, $lesson);
 
-            return [
-                'is_locked' => false,
-                'access_type' => 'free',
-                'access_status' => 'unlocked',
-                'price_label' => 'ฟรี',
-            ];
-        }
-
-        // Points / Money — ตรวจ record
-        $hasAccess = $lesson->hasActiveAccessFor($user);
-
-        if ($lesson->access_type === Lesson::ACCESS_POINTS) {
-            return [
-                'is_locked' => ! $hasAccess,
-                'access_type' => 'points',
-                'access_status' => $hasAccess ? 'unlocked' : 'locked',
-                'price_label' => $lesson->point_tuition_fee.' แต้ม',
-                'price_points' => $lesson->point_tuition_fee,
-            ];
-        }
-
-        if ($lesson->access_type === Lesson::ACCESS_MONEY) {
-            return [
-                'is_locked' => ! $hasAccess,
-                'access_type' => 'money',
-                'access_status' => $hasAccess ? 'unlocked' : 'locked',
-                'price_label' => '฿'.number_format($lesson->money_tuition_fee, 2),
-                'price_money' => $lesson->money_tuition_fee,
-            ];
-        }
-
-        return ['is_locked' => false, 'access_type' => 'free', 'access_status' => 'unlocked', 'price_label' => null];
+        return [
+            'is_locked' => false,
+            'access_type' => 'free',
+            'access_status' => 'unlocked',
+            'price_label' => 'ฟรี',
+        ];
     }
 
     /**

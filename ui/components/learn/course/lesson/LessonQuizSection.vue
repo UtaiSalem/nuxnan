@@ -7,6 +7,7 @@ import { useSweetAlert } from '@/composables/useSweetAlert'
 import ImageLightbox from '~/components/play/feed/ImageLightbox.vue'
 import LessonQuizCompletionCard from './LessonQuizCompletionCard.vue'
 import QuestionImportModal from '~/components/learn/course/questions/QuestionImportModal.vue'
+import QuestionBulkSettingsModal from '~/components/learn/course/questions/QuestionBulkSettingsModal.vue'
 import { useQuestionImportService } from '~/services/questionImportService'
 
 interface NextLesson {
@@ -18,6 +19,8 @@ interface Props {
   questions: any[]
   lessonId: number
   isCreator?: boolean
+  /** นโยบาย: ทำแบบทดสอบได้เฉพาะสมาชิกรายวิชา (คนนอกอ่านบทเรียนได้อย่างเดียว) */
+  canAnswer?: boolean
   /** บทเรียนนี้ถูกทำเครื่องหมาย "อ่านแล้ว" หรือยัง */
   lessonCompleted?: boolean
   hasAssignments?: boolean
@@ -33,6 +36,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   isCreator: false,
+  canAnswer: true,
   lessonCompleted: false,
   hasAssignments: false,
   assignmentCount: 0,
@@ -54,6 +58,13 @@ const api = useApi()
 const swal = useSweetAlert()
 
 const showImportModal = ref(false)
+const showBulkSettings = ref(false)
+const bulkSettingsEndpoint = computed(() => `/api/lessons/${props.lessonId}/questions/bulk-settings`)
+/** หลังตั้งค่าทั้งชุด โหลดคำถามใหม่ให้ค่าบนจอตรงกับฐานข้อมูล */
+const onBulkSettingsSaved = async () => {
+  const res: any = await api.get(`/api/lessons/${props.lessonId}/questions`)
+  emit('update:questions', res?.data ?? res ?? [])
+}
 const importScope = computed(() => ({ type: 'lesson' as const, lessonId: props.lessonId }))
 const onQuestionsImported = async () => {
   showImportModal.value = false
@@ -87,6 +98,17 @@ const selectedAnswers = ref<Record<number, number>>({})
 const answerResults = ref<Record<number, { is_correct: boolean, points: number, message: string }>>({})
 // Track submitting state
 const submitting = ref<Record<number, boolean>>({})
+// เฉลยที่เปิดอ่านอยู่ (question id -> { correct_option_text, correct_option_explanation, explanation })
+// ไม่จำข้ามการโหลดหน้า: ปิดแล้วเปิดใหม่ = จ่ายแต้มใหม่ (นโยบายเจ้าของ)
+const revealedKeys = ref<Record<number, any>>({})
+const revealing = ref<Record<number, boolean>>({})
+
+/** แต้มที่ใช้ทั้งตอนแก้คำตอบและตอนดูเฉลย (ผู้สอนตั้งต่อข้อ, 0 = ฟรี) */
+const questionFee = (question: any) => Math.max(0, Math.floor(Number(question?.pp_fine) || 0))
+
+const closeReveal = (questionId: number) => {
+    delete revealedKeys.value[questionId]
+}
 
 /**
  * สรุปผลจาก backend (quiz_summary) — อาจไม่มีถ้า API ยังไม่ deploy
@@ -118,6 +140,8 @@ const pruneStaleKeys = (validIds: Set<number>) => {
         answerResults.value,
         selectedAnswers.value,
         submitting.value,
+        revealedKeys.value,
+        revealing.value,
     ]
     maps.forEach(map => {
         Object.keys(map).forEach(key => {
@@ -313,6 +337,20 @@ const submitAnswer = async (question: any) => {
     const answerId = selectedAnswers.value[question.id]
     if (!answerId) return
 
+    // นโยบาย: เปลี่ยนคำตอบที่ส่งไปแล้วต้องจ่ายแต้มตามที่ผู้สอนตั้ง (pp_fine) — ถามยืนยันก่อน
+    const fee = questionFee(question)
+    const previousAnswerId = question.user_answer?.answer_id ?? null
+    const alreadyAnswered = isQuestionAnswered(question)
+    const isChange = alreadyAnswered && Number(previousAnswerId) !== Number(answerId)
+    if (fee > 0 && isChange) {
+        const ok = await swal.confirm(
+            `ระบบจะหัก <b>${fee}</b> แต้ม เพื่อแก้คำตอบข้อนี้<br><small>หักทุกครั้งที่แก้คำตอบ</small>`,
+            'ยืนยันการแก้คำตอบ',
+            { confirmText: `หัก ${fee} แต้ม`, icon: 'warning' }
+        )
+        if (!ok) return
+    }
+
     submitting.value[question.id] = true
     // เก็บสถานะก่อนส่ง ไว้ใช้ fallback หา "เพิ่งทำครบ" ถ้า backend ไม่ส่ง quiz_summary
     const wasAllCorrect = allCorrect.value
@@ -322,6 +360,11 @@ const submitAnswer = async (question: any) => {
         })
 
         const data = response as any
+        // จำคำตอบล่าสุดไว้ เพื่อให้รอบถัดไปรู้ว่าเป็นการ "แก้คำตอบ" (มีค่าแต้ม)
+        question.user_answer = { ...(question.user_answer || {}), answer_id: answerId, is_correct: !!data.is_correct }
+        if (Number(data.pp_deducted) > 0) {
+            swal.toast(`ใช้ ${data.pp_deducted} แต้ม (คงเหลือ ${data.user_pp})`, 'info')
+        }
         answerResults.value[question.id] = {
             is_correct: data.is_correct,
             points: data.points,
@@ -359,11 +402,38 @@ const submitAnswer = async (question: any) => {
             }
         }
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Submit answer failed', error)
-        swal.error('ส่งคำตอบไม่สำเร็จ')
+        // useApi เก็บ body ของ error ไว้ที่ err.data
+        swal.error(error?.data?.message || 'ส่งคำตอบไม่สำเร็จ')
     } finally {
         submitting.value[question.id] = false
+    }
+}
+/** ดูเฉลย — ตอบครั้งแรกฟรี แต่ดูเฉลยต้องจ่ายแต้มเท่าค่าแก้คำตอบ (จ่ายครั้งเดียวต่อข้อ) */
+const revealAnswer = async (question: any) => {
+    const fee = questionFee(question)
+    const ok = await swal.confirm(
+        fee > 0
+            ? `ระบบจะหัก <b>${fee}</b> แต้ม เพื่อเปิดอ่านเฉลยข้อนี้<br><small>หักทุกครั้งที่เปิดดู · คุณยังต้องเลือกคำตอบเอง</small>`
+            : 'ดูเฉลยข้อนี้ได้ฟรี · คุณยังต้องเลือกคำตอบเอง',
+        'ดูเฉลย',
+        { confirmText: fee > 0 ? `หัก ${fee} แต้ม` : 'ดูเฉลย', icon: fee > 0 ? 'warning' : 'question' }
+    )
+    if (!ok) return
+
+    revealing.value[question.id] = true
+    try {
+        const data: any = await api.post(`/api/lessons/${props.lessonId}/questions/${question.id}/reveal`, {})
+        revealedKeys.value[question.id] = data.revealed
+        if (Number(data.pp_deducted) > 0) {
+            swal.toast(`ใช้ ${data.pp_deducted} แต้ม (คงเหลือ ${data.user_pp})`, 'info')
+        }
+    } catch (error: any) {
+        // useApi เก็บ body ของ error ไว้ที่ err.data
+        swal.error(error?.data?.message || 'เปิดเฉลยไม่สำเร็จ')
+    } finally {
+        revealing.value[question.id] = false
     }
 }
 // ---------------------
@@ -454,7 +524,7 @@ onUnmounted(() => {
         <h3 class="flex flex-wrap items-center gap-2 text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
             <Icon icon="fluent:quiz-new-24-filled" class="w-6 h-6 text-orange-600 flex-shrink-0" />
             แบบทดสอบ
-            <span class="px-2 py-0.5 text-sm font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full whitespace-nowrap">
+            <span v-if="isCreator || canAnswer" class="px-2 py-0.5 text-sm font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full whitespace-nowrap">
             {{ questions.length }} ข้อ
             </span>
         </h3>
@@ -477,6 +547,14 @@ onUnmounted(() => {
                 <span class="whitespace-nowrap">{{ isExporting ? 'กำลังดาวน์โหลด...' : 'ดาวน์โหลดข้อสอบ' }}</span>
             </button>
             <button
+                @click="showBulkSettings = true"
+                :disabled="questions.length === 0"
+                class="w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px] px-3 sm:px-4 py-2 border border-orange-300 text-orange-600 rounded-lg hover:bg-orange-50 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+            >
+                <Icon icon="fluent:options-24-regular" class="w-4 h-4 flex-shrink-0" />
+                <span class="whitespace-nowrap">ตั้งค่าทั้งชุด</span>
+            </button>
+            <button
                 @click="emit('create')"
                 class="w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px] px-3 sm:px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
             >
@@ -485,6 +563,16 @@ onUnmounted(() => {
             </button>
         </div>
       </div>
+    </div>
+
+    <!-- คนนอกรายวิชา: อ่านบทเรียนได้ แต่ทำแบบทดสอบไม่ได้ -->
+    <div
+        v-if="!isCreator && !canAnswer"
+        class="flex flex-col items-center text-center gap-2 p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+    >
+        <Icon icon="fluent:lock-closed-24-filled" class="w-10 h-10 text-gray-400" />
+        <h4 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white break-words">แบบทดสอบสำหรับสมาชิกรายวิชา</h4>
+        <p class="text-sm text-gray-600 dark:text-gray-400 break-words">คุณอ่านเนื้อหาบทเรียนได้ฟรี หากต้องการทำแบบทดสอบ กรุณาสมัครเข้าเป็นสมาชิกรายวิชานี้</p>
     </div>
 
     <!-- Sticky Progress Header (Student Only) -->
@@ -581,8 +669,8 @@ onUnmounted(() => {
                                 :disabled="submitting[question.id] || answerResults[question.id]?.is_correct"
                                 class="w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left group relative overflow-hidden"
                                 :class="[
-                                    selectedAnswers[question.id] === option.id 
-                                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/10' 
+                                    selectedAnswers[question.id] === option.id
+                                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/10'
                                         : 'border-gray-200 dark:border-gray-700 hover:border-orange-200 dark:hover:border-orange-800 hover:bg-gray-50 dark:hover:bg-gray-800/50'
                                 ]"
                             >
@@ -599,7 +687,7 @@ onUnmounted(() => {
                                 </div>
                                 
                                 <!-- Option Content -->
-                                <div class="flex-1">
+                                <div class="min-w-0 flex-1 break-words">
                                     <span class="text-gray-900 dark:text-gray-200 text-base">{{ option.text }}</span>
                                     <div v-if="option.images?.length" class="mt-3">
                                         <img 
@@ -613,9 +701,37 @@ onUnmounted(() => {
                         </transition-group>
                     </div>
 
+                    <!-- เฉลยสำหรับอ่าน (จ่ายแต้มแล้ว) — ไม่ไฮไลต์ตัวเลือก ผู้เรียนต้องเลือกตอบเอง -->
+                    <div
+                        v-if="revealedKeys[question.id]"
+                        class="mt-4 p-3 sm:p-4 rounded-xl border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/20 text-sm text-sky-900 dark:text-sky-200"
+                    >
+                        <div class="flex items-start justify-between gap-2">
+                            <p class="min-w-0 flex-1 font-semibold break-words">
+                                <Icon icon="fluent:book-open-24-regular" class="w-4 h-4 inline -mt-0.5" />
+                                เฉลย: {{ revealedKeys[question.id].correct_option_text || 'ดูจากรูปภาพในตัวเลือก' }}
+                            </p>
+                            <button
+                                type="button"
+                                class="flex-shrink-0 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center text-sky-700 dark:text-sky-300 hover:text-sky-900"
+                                aria-label="ปิดเฉลย"
+                                @click="closeReveal(question.id)"
+                            >
+                                <Icon icon="fluent:dismiss-24-regular" class="w-5 h-5" />
+                            </button>
+                        </div>
+                        <p v-if="revealedKeys[question.id].correct_option_explanation" class="mt-2 break-words">
+                            {{ revealedKeys[question.id].correct_option_explanation }}
+                        </p>
+                        <p v-if="revealedKeys[question.id].explanation" class="mt-2 break-words">
+                            <span class="font-semibold">คำอธิบาย:</span> {{ revealedKeys[question.id].explanation }}
+                        </p>
+                        <p class="mt-2 text-xs opacity-80 break-words">เลือกคำตอบด้วยตัวเองแล้วกด "ส่งคำตอบ" · ปิดแล้วเปิดดูใหม่ต้องใช้แต้มอีกครั้ง</p>
+                    </div>
+
                     <!-- Actions & Feedback Area -->
-                    <div class="mt-6 flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700/50">
-                        <div class="flex-1 min-h-[40px] flex items-center">
+                    <div class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-4 border-t border-gray-100 dark:border-gray-700/50">
+                        <div class="min-w-0 flex-1 min-h-[40px] flex items-center">
                              <transition
                                 enter-active-class="transition ease-out duration-200"
                                 enter-from-class="opacity-0 translate-y-2"
@@ -632,16 +748,31 @@ onUnmounted(() => {
                              </transition>
                         </div>
 
-                        <button 
-                            v-if="!answerResults[question.id]?.is_correct"
-                            @click="submitAnswer(question)"
-                            :disabled="!selectedAnswers[question.id] || submitting[question.id]"
-                            class="min-h-[44px] sm:min-h-0 px-8 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-medium rounded-full shadow-lg shadow-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 transform active:scale-95"
-                        >
-                            <span v-if="submitting[question.id]" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                            <span>{{ submitting[question.id] ? 'กำลังส่ง...' : 'ตรวจคำตอบ' }}</span>
-                            <Icon v-if="!submitting[question.id]" icon="fluent:send-24-filled" class="w-5 h-5" />
-                        </button>
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center flex-shrink-0">
+                            <!-- ดูเฉลย: ใช้ได้หลังตอบครั้งแรก, ใช้แต้มเท่าค่าแก้คำตอบ -->
+                            <button
+                                v-if="isQuestionAnswered(question) && !answerResults[question.id]?.is_correct && !revealedKeys[question.id]"
+                                type="button"
+                                @click="revealAnswer(question)"
+                                :disabled="revealing[question.id]"
+                                class="min-h-[44px] sm:min-h-0 px-5 py-2.5 rounded-full border-2 border-green-500 text-green-700 dark:text-green-400 font-medium hover:bg-green-50 dark:hover:bg-green-900/20 disabled:opacity-50 transition-all flex items-center justify-center gap-2 whitespace-nowrap"
+                            >
+                                <Icon icon="fluent:eye-24-regular" class="w-5 h-5" />
+                                <span>{{ revealing[question.id] ? 'กำลังเปิด...' : 'ดูเฉลย' }}</span>
+                                <span v-if="questionFee(question) > 0" class="text-xs opacity-80">({{ questionFee(question) }} แต้ม)</span>
+                            </button>
+
+                            <button
+                                v-if="!answerResults[question.id]?.is_correct"
+                                @click="submitAnswer(question)"
+                                :disabled="!selectedAnswers[question.id] || submitting[question.id]"
+                                class="min-h-[44px] sm:min-h-0 px-8 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-medium rounded-full shadow-lg shadow-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 transform active:scale-95 whitespace-nowrap"
+                            >
+                                <span v-if="submitting[question.id]" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                <span>{{ submitting[question.id] ? 'กำลังส่ง...' : 'ส่งคำตอบ' }}</span>
+                                <Icon v-if="!submitting[question.id]" icon="fluent:send-24-filled" class="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -839,6 +970,14 @@ onUnmounted(() => {
       </Transition>
     </Teleport>
     <QuestionImportModal v-if="isCreator" :show="showImportModal" :scope="importScope" @close="showImportModal = false" @imported="onQuestionsImported" />
+    <QuestionBulkSettingsModal
+        v-if="isCreator"
+        :show="showBulkSettings"
+        :endpoint="bulkSettingsEndpoint"
+        :question-count="questions.length"
+        @close="showBulkSettings = false"
+        @saved="onBulkSettingsSaved"
+    />
   </div>
 </template>
 

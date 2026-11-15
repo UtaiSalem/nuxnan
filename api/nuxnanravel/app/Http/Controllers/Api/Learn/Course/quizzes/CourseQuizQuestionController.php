@@ -12,12 +12,34 @@ use App\Services\CourseMediaService;
 use App\Services\CourseScoreService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 
 class CourseQuizQuestionController extends Controller
 {
+    /**
+     * Writing quiz questions (and their answer keys) is for course managers
+     * only, and the quiz / question must really belong to the course in the
+     * URL — route binding resolves each parameter independently.
+     */
+    private function authorizeManage(Course $course, CourseQuiz $quiz, ?Question $question = null): void
+    {
+        Gate::authorize('manage', $course);
+        abort_if((int) $quiz->course_id !== (int) $course->id, 404);
+
+        if ($question) {
+            abort_unless(
+                $question->questionable_type === $quiz->getMorphClass()
+                    && (int) $question->questionable_id === (int) $quiz->id,
+                404
+            );
+        }
+    }
+
     public function store(Course $course, CourseQuiz $quiz, Request $request)
     {
+        $this->authorizeManage($course, $quiz);
+
         $validatedData = $request->validate([
             'text' => 'required|string',
             'points' => 'required|numeric|min:0.5|max:1000|multiple_of:0.5',
@@ -88,6 +110,7 @@ class CourseQuizQuestionController extends Controller
 
     public function update(Course $course, CourseQuiz $quiz, Question $question, Request $request)
     {
+        $this->authorizeManage($course, $quiz, $question);
 
         $validatedData = $request->validate([
             'text' => 'required|string',
@@ -148,6 +171,8 @@ class CourseQuizQuestionController extends Controller
 
     public function destroy(Course $course, CourseQuiz $quiz, Question $question)
     {
+        $this->authorizeManage($course, $quiz, $question);
+
         if ($question->images) {
             foreach ($question->images as $q_image) {
                 Storage::disk('public')->delete('images/courses/quizzes/questions/'.$q_image->filename);
