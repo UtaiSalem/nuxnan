@@ -23,6 +23,7 @@ const form = ref({
   text: '',
   points: 1,
   pp_fine: 0,
+  explanation: '',
   images: [] as File[],
   options: [
     { text: '', is_correct: false, id: null, image: null, imageFile: null },
@@ -32,6 +33,13 @@ const form = ref({
   ],
   deleted_images: [] as number[]
 })
+
+/**
+ * คำอธิบายเฉลย: API ส่งให้เฉพาะ "ผู้สร้างคำถาม" — ถ้าครูผู้ช่วยเปิดแก้แล้วไม่ได้ค่ามา
+ * ห้ามส่งช่องว่างกลับไปทับของเดิม จึงส่งเฉพาะเมื่อรู้ค่าเดิม หรือมีคนพิมพ์แก้
+ */
+const explanationKnown = ref(true)
+const explanationTouched = ref(false)
 
 const existingImages = ref<any[]>([])
 const previewImages = ref<string[]>([])
@@ -43,6 +51,9 @@ const initForm = () => {
     form.value.text = props.question.text || ''
     form.value.points = Number(props.question.points) || 1
     form.value.pp_fine = Math.max(0, Math.floor(Number(props.question.pp_fine) || 0))
+    explanationKnown.value = Object.prototype.hasOwnProperty.call(props.question, 'explanation')
+    explanationTouched.value = false
+    form.value.explanation = props.question.explanation || ''
     form.value.images = [] // New images
     form.value.deleted_images = []
     existingImages.value = [...(props.question.images || [])] 
@@ -83,6 +94,7 @@ function resetForm() {
     text: '',
     points: 1,
     pp_fine: 0,
+    explanation: '',
     images: [],
     options: [
         { text: '', is_correct: false, id: null, image: null, imageFile: null },
@@ -93,6 +105,8 @@ function resetForm() {
     deleted_images: []
   }
   existingImages.value = []
+  explanationKnown.value = true
+  explanationTouched.value = false
   previewImages.value = []
 }
 
@@ -173,6 +187,9 @@ const onSubmit = async () => {
     formData.append('text', form.value.text)
     formData.append('points', normalizeScore(form.value.points).toString())
     formData.append('pp_fine', Math.max(0, Math.floor(Number(form.value.pp_fine) || 0)).toString())
+    if (explanationKnown.value || explanationTouched.value) {
+      formData.append('explanation', form.value.explanation.trim())
+    }
     
     // Append Options
     form.value.options.forEach((opt, index) => {
@@ -354,6 +371,21 @@ const onSubmit = async () => {
                        <Icon icon="fluent:add-circle-20-filled" class="w-5 h-5" />
                        เพิ่มตัวเลือก
                    </button>
+                </div>
+
+                <!-- คำอธิบายเฉลย (ผู้เรียนเห็นเมื่อจ่ายแต้มกด "ดูเฉลย") -->
+                <div class="mt-4">
+                  <label for="question-explanation" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">คำอธิบายเฉลย <span class="font-normal text-gray-400">(ไม่บังคับ)</span></label>
+                  <textarea
+                    id="question-explanation"
+                    v-model="form.explanation"
+                    @input="explanationTouched = true"
+                    rows="3"
+                    maxlength="5000"
+                    :placeholder="explanationKnown ? 'อธิบายว่าทำไมคำตอบนี้จึงถูก เพื่อให้ผู้เรียนเข้าใจ' : 'คำอธิบายเดิมดูได้เฉพาะผู้สร้างคำถาม — พิมพ์ใหม่เพื่อแทนที่'"
+                    class="w-full min-h-[44px] rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-orange-500 focus:border-orange-500 text-sm sm:text-base"
+                  ></textarea>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 break-words">ผู้เรียนจะเห็นข้อความนี้เมื่อกด "ดูเฉลย" (ใช้แต้มตามที่ตั้งไว้ด้านล่าง)</p>
                 </div>
 
                 <hr class="border-gray-200 dark:border-gray-700 my-4" />

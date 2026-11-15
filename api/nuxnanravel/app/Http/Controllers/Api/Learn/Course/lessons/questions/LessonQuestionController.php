@@ -76,7 +76,10 @@ class LessonQuestionController extends Controller
     public function store(Lesson $lesson, Request $request)
     {
         $this->assertCanManage($lesson);
-        $request->validate(['pp_fine' => ['nullable', 'integer', 'min:0']]);
+        $request->validate([
+            'pp_fine' => ['nullable', 'integer', 'min:0'],
+            'explanation' => ['nullable', 'string', 'max:5000'],
+        ]);
 
         $question = $lesson->questions()->create([
             'course_id' => $lesson->course_id,
@@ -146,7 +149,10 @@ class LessonQuestionController extends Controller
         $this->assertCanManage($lesson);
         $this->assertQuestionInLesson($lesson, $question);
 
-        $request->validate(['pp_fine' => ['nullable', 'integer', 'min:0']]);
+        $request->validate([
+            'pp_fine' => ['nullable', 'integer', 'min:0'],
+            'explanation' => ['nullable', 'string', 'max:5000'],
+        ]);
 
         $question->update([
             'text' => $request->text,
@@ -168,8 +174,16 @@ class LessonQuestionController extends Controller
                     if ($option) {
                         $option->update([
                             'text' => $optionData['text'],
-                            'is_correct' => filter_var($optionData['is_correct'] ?? false, FILTER_VALIDATE_BOOLEAN),
-                            'explanation' => $optionData['explanation'] ?? null,
+                            // Missing key = "unchanged", never "wrong" — an editor
+                            // that could not see the key must not wipe it.
+                            'is_correct' => array_key_exists('is_correct', $optionData)
+                                ? filter_var($optionData['is_correct'], FILTER_VALIDATE_BOOLEAN)
+                                : $option->is_correct,
+                            // The form does not send per-option explanations
+                            // (they come from file import) — keep them.
+                            'explanation' => array_key_exists('explanation', $optionData)
+                                ? $optionData['explanation']
+                                : $option->explanation,
                         ]);
                         $processedIds[] = $option->id;
 
