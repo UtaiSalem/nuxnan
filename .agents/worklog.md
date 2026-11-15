@@ -1,5 +1,56 @@
 # Work Log — nuxnan project
 
+## 🟢 2026-11-15 — นโยบายบทเรียน/แบบทดสอบใหม่ + ปิดช่องโหว่คำถาม/เฉลย + ปุ่มตั้งค่าทั้งชุด (merge แล้ว PR #51 · `718ceb73`)
+
+### นโยบายที่เจ้าของเคาะ (ดู memory `project_lesson_access_policy`)
+1. **บทเรียนอ่านฟรีทุกคน** — ปิดระบบบทเรียนเสียเงินถาวร: `LessonAccessService::getAccessStatus` / `Lesson::isAccessibleByUser` /
+   `CourseLessonController@unlock` คืนฟรีเสมอ, store/update บังคับ `access_type=free` fee 0, `LessonForm.vue` ไม่มีตัวเลือกตั้งราคาแล้ว
+   (โค้ด `unlockWithPoints/Money` ยังอยู่แต่ไม่มีทางเรียก) · `LessonController@show` เลิกหัก `point_tuition_fee` ทุกครั้งที่เปิดดู
+   (route นี้จริง ๆ เรียกไม่ถึง — หน้าเว็บใช้ `CourseLessonController@show`)
+2. **ตอบคำถาม/ทำแบบทดสอบเฉพาะสมาชิก** — `Course::canAnswerQuestions()` = admin หรือ `course_members.course_member_status=1`
+   ใช้ใน LessonAnswerQuestionController, UserAnswerQuestionController (store/update), CourseQuizResultController@store → 403 `NOT_COURSE_MEMBER`
+   · คนนอกได้ `lesson.questions: []` + `can_answer_questions: false` และหน้า LessonQuizSection โชว์กล่อง "แบบทดสอบสำหรับสมาชิกรายวิชา"
+3. **ตอบครั้งแรกฟรี · แก้คำตอบ = จ่าย `questions.pp_fine` ทุกครั้ง** (บทเรียน + แบบทดสอบ) ผ่าน `PointsService::spend` + lockForUpdate
+   (source `lesson_answer_edit` / `quiz_answer_edit`) · ส่งตัวเลือกเดิมซ้ำไม่เสียแต้ม · ครูตั้ง pp_fine ในฟอร์มคำถามบทเรียนได้แล้ว
+4. **ดูเฉลย (คำถามบทเรียนเท่านั้น) = จ่าย pp_fine ทุกครั้งที่เปิด** — `POST /api/lessons/{l}/questions/{q}/reveal` ต้องตอบก่อน 1 ครั้ง
+   (`ANSWER_FIRST`) · **ไม่มีตาราง ไม่จำผล** (เจ้าของสั่งห้ามเพิ่มตาราง) · คืนแค่ `correct_option_text` + คำอธิบาย ไม่ส่ง option id
+   → **ห้ามไฮไลต์ตัวเลือก** ผู้เรียนต้องเลือกเอง · ดูแล้วยังแก้คำตอบได้และได้คะแนนปกติ · มีโมดัลเตือนการหักแต้มทุกครั้ง · ปุ่ม "ตรวจคำตอบ" → "ส่งคำตอบ"
+
+### ปุ่ม "ตั้งค่าทั้งชุด" (ครู)
+- `PATCH /api/lessons/{lesson}/questions/bulk-settings` และ `PATCH /api/courses/{course}/quizzes/{quiz}/questions/bulk-settings`
+  (`QuestionBulkSettingsController`) ตั้ง `points` และ/หรือ `pp_fine` ทุกข้อ · route ต้องอยู่**ก่อน** resource ไม่งั้น "bulk-settings" ถูกจับเป็น `{question}`
+- เปลี่ยนคะแนนแล้ว re-score คำตอบเดิม + `syncQuestionCounters` + `syncAllCourseMembers` · **ไม่ตัดสินผ่าน/ไม่ผ่านให้ attempt ที่ยังไม่ `completed_at`**
+  (ปุ่ม "คำนวณคะแนนใหม่" เดิม `CourseQuizController@recalculateResults` ตั้ง status 3/4 ให้ทุก result รวมคนที่ยังสอบไม่เสร็จ — บั๊กเดิม ยังไม่แก้)
+- UI: `components/learn/course/questions/QuestionBulkSettingsModal.vue` ใน LessonQuizSection + หน้า `quizzes/[quizId]/edit.vue`
+
+### ช่องโหว่ที่ปิดในรอบนี้
+- `GET /api/questions/{q}/answers` คืนเฉลยให้ทุกคน → เจ้าของคำถาม/course admin
+- `LessonQuestionController` store/update/destroy และ **`CourseQuizQuestionController` store/update/destroy ไม่เช็คสิทธิ์เลย** → course manager + เช็คคำถามอยู่ในบทเรียน/แบบทดสอบนั้น
+- `QuestionResource`/`QuestionOptionResource` ส่ง `explanation` ให้นักเรียน → เฉพาะเจ้าของคำถาม
+- ส่งคำตอบแบบทดสอบรับ `course_id` จาก client + ไม่เช็คคำถามอยู่ใน quiz → ใช้ของ quiz + 404 `QUESTION_NOT_IN_QUIZ`
+
+### ตรวจแล้ว
+- เทสต์ใหม่: `LessonAccessPolicyTest` · `QuestionAccessHardeningTest` · `QuestionAnswerKeyAccessTest` · `QuestionBulkSettingsTest`
+- MySQL (`-c phpunit.mysql.xml`) 85 passed · sqlite `--filter="Lesson|Question|Quiz|Course"` 464 passed
+  (1 fail = `ClassScheduleTodayTest` ขึ้นกับวันที่ fail บนโค้ดเดิมด้วย) · Wallet transfer/conversion 12 เคส fail อยู่ก่อนแล้ว ไม่เกี่ยว
+- Vue SFC compile ผ่าน · pint ผ่าน
+
+### งานที่ค้างอยู่ (TODO ต่อ)
+- [ ] 🔴 **ยังไม่ได้เปิดหน้าจอจริงเลย** (browser pane ไม่ได้ล็อกอิน) — ตรวจที่ 375px → 768 → 1280:
+  `ui/components/learn/course/lesson/LessonQuizSection.vue` (ปุ่มดูเฉลย/ส่งคำตอบ, กล่องเฉลยสีฟ้า, โมดัลหักแต้ม, กล่องคนนอกรายวิชา),
+  ปุ่ม "ตั้งค่าทั้งชุด" ทั้งแท็บแบบทดสอบของบทเรียน และ `ui/pages/Learn/Courses/[id]/quizzes/[quizId]/edit.vue`
+- [ ] คนที่**ไม่ล็อกอิน**ยังอ่านบทเรียนไม่ได้ (route `/courses/{c}/lessons/{l}` อยู่ใต้ `auth:api`) — ถ้า "ทุกคน" รวม guest ต้องแยก route อ่านแบบ public
+- [ ] ฟอร์มคำถามบทเรียน (`QuestionFormModal.vue`) ไม่มีช่อง `explanation` — ครูยังเขียนคำอธิบายเฉลยไม่ได้ (update คงค่าเดิมแล้ว ไม่ล้างทิ้ง)
+- [ ] `CourseQuizController@recalculateResults` ปิด attempt ที่ยังทำอยู่ (ดูด้านบน)
+- [ ] แผนเกมแบบทดสอบบทเรียน `.agents/plans/quiz-rush-game.md` = **พักไว้** ห้ามเริ่มจนกว่าเจ้าของสั่ง
+
+### Branch / Git State
+- Branch: `main` (PR #51 squash-merge แล้ว · branch `feat/lesson-quiz-access-policy` ยังอยู่บน GitHub)
+- Uncommitted: `.agents/plans/ai-course-generation.md` (มีอยู่ก่อน session นี้ ไม่ใช่งานรอบนี้ — ไม่ได้แตะ)
+- Push status: pushed
+
+---
+
 ## 🟢 2026-11-13 — แก้หน้าเด้งขึ้นบนสุดหลังกดปุ่มในหน้าบัตรนักเรียนของครู (`/student-card/{level}/{room}`)
 
 อาการที่เจ้าของแจ้ง: กด "ส่งคำร้องขอทำบัตรใหม่" แล้วหน้าเด้งกลับไปช่วงแรกของหน้าทุกครั้ง
