@@ -35,6 +35,17 @@ class CourseQuizResultController extends Controller
         $user = auth()->user();
         $isCourseAdmin = $course->isAdmin($user);
 
+        abort_if((int) $quiz->course_id !== (int) $course->id, 404);
+
+        // Policy: only approved members may take a quiz.
+        if (! $course->canAnswerQuestions($user)) {
+            return response()->json([
+                'status' => false,
+                'code' => 'NOT_COURSE_MEMBER',
+                'message' => 'เฉพาะสมาชิกรายวิชาเท่านั้นที่ทำแบบทดสอบได้ กรุณาสมัครเข้ารายวิชาก่อน',
+            ], 403);
+        }
+
         // Visibility guard for students
         if (! $isCourseAdmin) {
             $this->visibility->assertVisibleOrFail($quiz, $user, 403);

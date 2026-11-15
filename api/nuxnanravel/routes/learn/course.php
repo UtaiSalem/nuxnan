@@ -47,6 +47,7 @@ use App\Http\Controllers\Api\Learn\Course\posts\CoursePostImageCommentReactionCo
 use App\Http\Controllers\Api\Learn\Course\posts\CoursePostImageController;
 use App\Http\Controllers\Api\Learn\Course\posts\CoursePostReactionController;
 use App\Http\Controllers\Api\Learn\Course\questions\QuestionAnswerController;
+use App\Http\Controllers\Api\Learn\Course\questions\QuestionBulkSettingsController;
 use App\Http\Controllers\Api\Learn\Course\questions\QuestionController;
 use App\Http\Controllers\Api\Learn\Course\questions\QuestionExportController;
 use App\Http\Controllers\Api\Learn\Course\questions\QuestionImageController;
@@ -149,6 +150,8 @@ Route::middleware(['auth:api', 'verified'])->prefix('/courses')->group(function 
     Route::post('/{course}/quizzes/{quiz}/questions/import/preview', [QuestionImportController::class, 'quizPreview'])->name('course.quiz.questions.import.preview');
     Route::post('/{course}/quizzes/{quiz}/questions/import', [QuestionImportController::class, 'quizImport'])->name('course.quiz.questions.import');
     Route::get('/{course}/quizzes/{quiz}/questions/export', [QuestionExportController::class, 'quizExport'])->name('course.quiz.questions.export');
+    // ต้องมาก่อน resource — ไม่งั้น "bulk-settings" จะถูกจับเป็น {question}
+    Route::patch('/{course}/quizzes/{quiz}/questions/bulk-settings', [QuestionBulkSettingsController::class, 'quiz'])->name('course.quiz.questions.bulk-settings');
     Route::resource('/{course}/quizzes/{quiz}/questions', CourseQuizQuestionController::class)->names('course.quiz.questions');
     Route::resource('/{course}/quizzes/{quiz}/results', CourseQuizResultController::class);
     Route::post('/{course}/quizzes/{quiz}/recalculate', [CourseQuizController::class, 'recalculateResults'])->name('course.quiz.recalculate');
@@ -240,6 +243,8 @@ Route::middleware(['auth:api', 'verified'])->prefix('/lessons')->group(function 
     Route::post('/{lesson}/questions/import/preview', [QuestionImportController::class, 'lessonPreview'])->name('lesson.questions.import.preview');
     Route::post('/{lesson}/questions/import', [QuestionImportController::class, 'lessonImport'])->name('lesson.questions.import');
     Route::get('/{lesson}/questions/export', [QuestionExportController::class, 'lessonExport'])->name('lesson.questions.export');
+    // ต้องมาก่อน resource — ไม่งั้น "bulk-settings" จะถูกจับเป็น {question}
+    Route::patch('/{lesson}/questions/bulk-settings', [QuestionBulkSettingsController::class, 'lesson'])->name('lesson.questions.bulk-settings');
     Route::resource('/{lesson}/questions', LessonQuestionController::class, [
         'names' => [
             'index' => 'lesson.questions.index',
@@ -252,6 +257,7 @@ Route::middleware(['auth:api', 'verified'])->prefix('/lessons')->group(function 
         ],
     ]);
     Route::post('/{lesson}/questions/{question}/answer', [LessonAnswerQuestionController::class, 'store'])->name('lesson.questions.answer');
+    Route::post('/{lesson}/questions/{question}/reveal', [LessonAnswerQuestionController::class, 'reveal'])->name('lesson.questions.reveal');
 
     Route::get('/{lesson}/topics/reading-progress', [TopicReadProgressController::class, 'lessonTopicProgress'])->name('lesson.topics.reading-progress');
     Route::patch('/{lesson}/topics/reorder', [TopicController::class, 'reorder'])->name('lesson.topics.reorder');
