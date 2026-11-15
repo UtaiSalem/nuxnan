@@ -22,6 +22,7 @@ const isLoading = ref(false)
 const form = ref({
   text: '',
   points: 1,
+  pp_fine: 0,
   images: [] as File[],
   options: [
     { text: '', is_correct: false, id: null, image: null, imageFile: null },
@@ -41,6 +42,7 @@ const initForm = () => {
     // Edit mode
     form.value.text = props.question.text || ''
     form.value.points = Number(props.question.points) || 1
+    form.value.pp_fine = Math.max(0, Math.floor(Number(props.question.pp_fine) || 0))
     form.value.images = [] // New images
     form.value.deleted_images = []
     existingImages.value = [...(props.question.images || [])] 
@@ -80,6 +82,7 @@ function resetForm() {
   form.value = {
     text: '',
     points: 1,
+    pp_fine: 0,
     images: [],
     options: [
         { text: '', is_correct: false, id: null, image: null, imageFile: null },
@@ -169,6 +172,7 @@ const onSubmit = async () => {
     const formData = new FormData()
     formData.append('text', form.value.text)
     formData.append('points', normalizeScore(form.value.points).toString())
+    formData.append('pp_fine', Math.max(0, Math.floor(Number(form.value.pp_fine) || 0)).toString())
     
     // Append Options
     form.value.options.forEach((opt, index) => {
@@ -367,6 +371,22 @@ const onSubmit = async () => {
                     inputmode="decimal"
                   >
                   <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">ตั้งได้ทีละ 0.5 คะแนน</p>
+                </div>
+
+                <!-- Re-answer fee -->
+                <div class="mt-4">
+                  <label for="question-pp-fine" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">แต้มที่ใช้เมื่อแก้คำตอบ / ดูเฉลย</label>
+                  <input
+                    id="question-pp-fine"
+                    type="number"
+                    v-model.number="form.pp_fine"
+                    class="w-32 min-h-[44px] sm:min-h-0 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-orange-500 focus:border-orange-500"
+                    min="0"
+                    max="100000"
+                    step="1"
+                    inputmode="numeric"
+                  >
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 break-words">ตอบครั้งแรกฟรี · ผู้เรียนจ่ายแต้มนี้ทุกครั้งที่เปลี่ยนคำตอบที่ส่งไปแล้ว และเมื่อกดดูเฉลย (0 = ฟรี)</p>
                 </div>
 
               </div>

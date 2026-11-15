@@ -457,46 +457,15 @@ const handleCancel = () => {
           </select>
         </div>
 
-        <!-- Access Type -->
+        <!-- Access: นโยบาย — บทเรียนอ่านได้ฟรีทุกคนเสมอ (ไม่มีตัวเลือกตั้งราคา) -->
         <div>
-          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+          <p class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
             รูปแบบการเข้าถึง
-          </label>
-          <select
-            v-model="form.access_type"
-            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all"
-          >
-            <option value="free">🔓 ฟรี</option>
-            <option value="points">⭐ ใช้แต้ม</option>
-            <option value="money">💰 ชำระเงิน</option>
-          </select>
-        </div>
-
-        <!-- Point Fee (แสดงเมื่อ access_type = points) -->
-        <div v-if="form.access_type === 'points'">
-          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-            ราคา (แต้ม)
-          </label>
-          <input
-            v-model.number="form.point_tuition_fee"
-            type="number"
-            min="0"
-            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all"
-          />
-        </div>
-
-        <!-- Money Fee (แสดงเมื่อ access_type = money) -->
-        <div v-if="form.access_type === 'money'">
-          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-            ราคา (บาท)
-          </label>
-          <input
-            v-model.number="form.money_tuition_fee"
-            type="number"
-            min="0"
-            step="0.01"
-            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all"
-          />
+          </p>
+          <div class="flex items-start gap-2 px-4 py-3 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm">
+            <span class="flex-shrink-0">🔓</span>
+            <span class="min-w-0 flex-1 break-words">ฟรี — ทุกคนเข้าอ่านบทเรียนได้ ส่วนการตอบคำถามเปิดเฉพาะสมาชิกรายวิชา</span>
+          </div>
         </div>
 
         <!-- Min Read -->
