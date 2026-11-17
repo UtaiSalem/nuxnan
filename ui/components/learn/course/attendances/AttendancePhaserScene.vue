@@ -34,6 +34,16 @@ const containerRef = ref<HTMLElement | null>(null)
 const containerId = `attendance-phaser-${Math.random().toString(36).slice(2)}`
 const resizeObserver = ref<ResizeObserver | null>(null)
 const dynamicHeight = ref(640)
+let lastAppliedWidth = 0
+let resizeTimer: ReturnType<typeof setTimeout> | null = null
+let resizeFrame: number | null = null
+
+function cancelPendingResize() {
+  if (resizeTimer !== null) clearTimeout(resizeTimer)
+  if (resizeFrame !== null) cancelAnimationFrame(resizeFrame)
+  resizeTimer = null
+  resizeFrame = null
+}
 
 const {
   createGame,
@@ -74,7 +84,9 @@ async function initPhaser() {
         onHeightChange: (h) => {
           dynamicHeight.value = h
           const { width: w } = containerRef.value!.getBoundingClientRect()
-          resizeGame(Math.round(w), h)
+          cancelPendingResize()
+          lastAppliedWidth = Math.max(320, Math.round(w))
+          resizeGame(lastAppliedWidth, h)
         },
         getAvatarUrl: (user) => {
           const url = getAvatarUrl(user)
@@ -95,17 +107,24 @@ onMounted(async () => {
   await initPhaser()
 
   if (typeof ResizeObserver !== 'undefined' && containerRef.value) {
-    // Debounce + hysteresis: only re-render if width moved >24px since the last
-    // applied resize. Prevents zoning pattern flicker while the user drags.
-    let lastAppliedWidth = 0
-    let resizeTimer: ReturnType<typeof setTimeout> | null = null
+    lastAppliedWidth = Math.max(320, Math.round(containerRef.value.getBoundingClientRect().width))
     resizeObserver.value = new ResizeObserver((entries) => {
       const entry = entries[0]
       if (!entry) return
       const w = Math.max(320, Math.round(entry.contentRect.width))
-      if (Math.abs(w - lastAppliedWidth) < 24 && lastAppliedWidth !== 0) return
-      if (resizeTimer) clearTimeout(resizeTimer)
+      cancelPendingResize()
+      if (w < lastAppliedWidth) {
+        resizeFrame = requestAnimationFrame(() => {
+          resizeFrame = null
+          lastAppliedWidth = w
+          resizeGame(w, dynamicHeight.value)
+        })
+        return
+      }
+      // Keep hysteresis and debounce only for growth.
+      if (w - lastAppliedWidth < 24) return
       resizeTimer = setTimeout(() => {
+        resizeTimer = null
         lastAppliedWidth = w
         resizeGame(w, dynamicHeight.value)
       }, 120)
@@ -120,6 +139,7 @@ watch(sceneState, (next) => {
 
 onUnmounted(() => {
   resizeObserver.value?.disconnect()
+  cancelPendingResize()
   destroyGame()
 })
 </script>
@@ -133,3 +153,9 @@ onUnmounted(() => {
     <div :id="containerId" class="w-full h-full" />
   </div>
 </template>
+
+<style scoped>
+:deep(canvas) {
+  max-width: 100%;
+}
+</style>

@@ -301,16 +301,17 @@ async function handleSelfCheckIn() {
     selectedMemberId.value = authMemberId.value
     emit('checked-in', res)
 
-    // Success toast
+    // Centered check-in confirmation without changing page geometry.
     Swal.fire({
-      toast: true,
-      position: 'top-end',
       icon: willBeLate ? 'warning' : 'success',
       title: willBeLate ? 'รายงานตัวสาย' : 'รายงานตัวสำเร็จ',
       text: willBeLate ? 'คุณเข้าเรียนสายกว่าเวลาที่กำหนด' : 'คุณเข้าเรียนตรงเวลา',
       showConfirmButton: false,
-      timer: 3000,
+      timer: 2500,
       timerProgressBar: true,
+      heightAuto: false,
+      scrollbarPadding: false,
+      returnFocus: false,
     })
   } catch (err: any) {
     error.value = err?.message || 'รายงานตัวไม่สำเร็จ'
