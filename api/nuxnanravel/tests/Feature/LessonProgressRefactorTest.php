@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Course;
 use App\Models\CourseMember;
 use App\Models\Lesson;
+use App\Models\LessonProgress;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -35,6 +36,13 @@ class LessonProgressRefactorTest extends TestCase
             'publication_status' => 'published',
             'access_type' => 'free',
             'min_read' => 0, // เฟส 2: ปิดด่านเวลาอ่าน เทสต์ชุดนี้ทดสอบ endpoint ไม่ใช่ด่าน
+        ]);
+
+        LessonProgress::create([
+            'user_id' => $this->student->id,
+            'lesson_id' => $this->lesson->id,
+            'status' => 'in_progress',
+            'time_spent_seconds' => 60,
         ]);
 
         CourseMember::create([

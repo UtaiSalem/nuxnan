@@ -127,6 +127,13 @@ class LessonTopicGatedCompletionTest extends TestCase
             'min_read' => 0, // เฟส 2: บทเรียนไม่มีหัวข้อย่อยและไม่บังคับเวลา = มาร์คได้
         ]);
 
+        LessonProgress::create([
+            'user_id' => $this->student->id,
+            'lesson_id' => $lessonWithoutTopics->id,
+            'status' => 'in_progress',
+            'time_spent_seconds' => 60,
+        ]);
+
         $response = $this->actingAs($this->student, 'api')
             ->postJson("/api/lessons/{$lessonWithoutTopics->id}/progress/toggle");
 

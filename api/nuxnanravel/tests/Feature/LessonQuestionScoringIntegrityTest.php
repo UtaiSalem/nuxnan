@@ -7,6 +7,7 @@ use App\Models\Course;
 use App\Models\CourseMember;
 use App\Models\Lesson;
 use App\Models\LessonAnswerQuestion;
+use App\Models\LessonProgress;
 use App\Models\Question;
 use App\Models\QuestionOption;
 use App\Models\User;
@@ -64,6 +65,20 @@ class LessonQuestionScoringIntegrityTest extends TestCase
 
         $this->lesson = $this->makeLesson('Lesson A');
         $this->otherLesson = $this->makeLesson('Lesson B');
+
+        LessonProgress::create([
+            'user_id' => $this->student->id,
+            'lesson_id' => $this->lesson->id,
+            'status' => 'in_progress',
+            'time_spent_seconds' => 60,
+        ]);
+
+        LessonProgress::create([
+            'user_id' => $this->student->id,
+            'lesson_id' => $this->otherLesson->id,
+            'status' => 'in_progress',
+            'time_spent_seconds' => 60,
+        ]);
 
         $this->question = $this->makeQuestion($this->lesson);
         $this->correctOption = $this->makeOption($this->question, 'Right', true);

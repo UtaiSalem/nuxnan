@@ -34,6 +34,15 @@ class LessonQuestionController extends Controller
             403,
             'เฉพาะสมาชิกรายวิชาเท่านั้นที่ทำแบบทดสอบได้'
         );
+
+        // แบบทดสอบบังคับอ่านบทเรียนก่อนเสมอ (ผู้ดูแลรายวิชาข้ามได้)
+        if (! $lesson->course->isAdmin($user) && ! $lesson->canAccessQuizBy($user)) {
+            abort(response()->json([
+                'success' => false,
+                'code' => 'LESSON_READ_REQUIRED',
+                'message' => 'กรุณาอ่านเนื้อหาบทเรียนให้ครบก่อน จึงจะเปิดดูแบบทดสอบได้',
+            ], 403));
+        }
     }
 
     /**

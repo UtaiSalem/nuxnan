@@ -7,6 +7,7 @@ use App\Models\CourseMember;
 use App\Models\CourseQuiz;
 use App\Models\Lesson;
 use App\Models\LessonAnswerQuestion;
+use App\Models\LessonProgress;
 use App\Models\PointsTransaction;
 use App\Models\Question;
 use App\Models\QuestionOption;
@@ -67,6 +68,13 @@ class LessonAccessPolicyTest extends TestCase
             'access_type' => Lesson::ACCESS_FREE,
             'point_tuition_fee' => 7,
             'require_completion_before_exercises' => false,
+        ]);
+
+        LessonProgress::create([
+            'user_id' => $this->member->id,
+            'lesson_id' => $this->lesson->id,
+            'status' => 'in_progress',
+            'time_spent_seconds' => 60,
         ]);
 
         $this->question = $this->lesson->questions()->create([

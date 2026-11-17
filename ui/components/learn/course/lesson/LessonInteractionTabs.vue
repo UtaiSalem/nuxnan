@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import LessonAssignmentSection from './LessonAssignmentSection.vue'
@@ -88,6 +88,8 @@ const gradingAssignment = ref<any>(null)
 const isCreator = computed(() => {
   return props.isAdmin || authStore.user?.id === props.lesson.creater?.id
 })
+
+const quizLocked = computed(() => !isCreator.value && !isCompleted.value && !props.canMarkComplete)
 
 const exercisesLocked = computed(() => {
   if (isCreator.value) return false
@@ -269,6 +271,23 @@ const handleQuestionSubmit = (question: any) => {
 const updateQuestions = (newQuestions: any[]) => {
     props.lesson.questions = newQuestions
 }
+
+const requestedQuizLessons = new Set<number>()
+watch(quizLocked, async (locked, wasLocked) => {
+  const lessonId = props.lesson.id
+  if (locked || !wasLocked || props.lesson.can_answer_questions === false ||
+      props.lesson.questions?.length || requestedQuizLessons.has(lessonId)) return
+
+  requestedQuizLessons.add(lessonId)
+  try {
+    const response = await api.get<{ data: any[] }>(`/api/lessons/${lessonId}/questions`)
+    if (props.lesson.id === lessonId && !quizLocked.value) {
+      updateQuestions(response.data)
+    }
+  } catch (error) {
+    console.error('Failed to fetch unlocked quiz questions:', error)
+  }
+})
 
 // --- Quiz next-step navigation ---
 /**
@@ -1285,24 +1304,15 @@ const submitReply = async (parentComment: any) => {
 
       <!-- Quiz Tab -->
       <div v-show="activeTab === 'quiz'">
-        <!-- Exercises Locked Banner -->
-        <div v-if="exercisesLocked" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 sm:p-6 text-center">
+        <!-- Quiz Locked Banner -->
+        <div v-if="quizLocked" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 sm:p-6 text-center">
           <Icon icon="fluent:lock-closed-24-filled" class="w-12 h-12 text-amber-500 mx-auto mb-3" />
           <h4 class="text-lg font-bold text-amber-800 dark:text-amber-400 mb-1">แบบทดสอบถูกล็อกอยู่</h4>
-          <p class="text-amber-700 dark:text-amber-500 text-sm mb-4">คุณต้องทำเครื่องหมายว่า "อ่านแล้ว" ในหน้าบทเรียนก่อน จึงจะสามารถทำแบบทดสอบได้</p>
-          <div v-if="markCompleteLocked" class="text-amber-700 dark:text-amber-500 text-sm break-words">
+          <p class="text-amber-700 dark:text-amber-500 text-sm mb-4">อ่านเนื้อหาบทเรียนให้ครบก่อน จึงจะเปิดดูและทำแบบทดสอบได้</p>
+          <div class="text-amber-700 dark:text-amber-500 text-sm break-words">
             <p class="font-semibold">{{ markCompleteLockLabel }}</p>
             <p class="mt-1">{{ markCompleteLockHint }}</p>
           </div>
-          <button
-            v-else
-            @click="toggleProgress"
-            :disabled="isTogglingProgress"
-            class="min-h-[44px] sm:min-h-0 px-6 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-full font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
-          >
-            <Icon v-if="isTogglingProgress" icon="eos-icons:bubble-loading" class="w-4 h-4 inline mr-1" />
-            ทำเครื่องหมายว่าอ่านแล้ว
-          </button>
         </div>
 
         <LessonQuizSection
