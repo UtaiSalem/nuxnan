@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Play;
 
 use App\Enums\UsageEventType;
+use App\Exceptions\AccountEconomyRestrictedException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StorePostRequest;
 use App\Http\Requests\UpdatePostRequest;
@@ -14,12 +15,15 @@ use App\Models\Feeling;
 use App\Models\Post;
 use App\Models\PostBackground;
 use App\Models\PostImage;
+use App\Models\User;
+use App\Services\FeedPointsService;
 use App\Services\LocationService;
 use App\Services\PostMediaService;
 use App\Services\PostService;
 use App\Services\UsageEventService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -114,7 +118,7 @@ class PostController extends Controller
                 'max_images' => 20,
                 'max_image_size_mb' => 4,
                 'max_content_length' => 5000,
-                'points_required' => 180,
+                'points_required' => (int) config('economy.feed_costs.post'),
             ],
         ]);
     }
@@ -137,11 +141,15 @@ class PostController extends Controller
             // Check points — use validated data to prevent negative poll_points_pool bypass
             $validatedData = $request->validated();
             $pollPointsPool = max(0, (int) ($validatedData['poll_points_pool'] ?? 0));
-            $totalPointsNeeded = 180 + $pollPointsPool;
+            $postCost = (int) config('economy.feed_costs.post');
+            $totalPointsNeeded = $postCost + $pollPointsPool;
 
             if (auth()->user()->pp < $totalPointsNeeded) {
                 return response()->json([
                     'success' => false,
+                    'code' => 'INSUFFICIENT_PP',
+                    'required_pp' => $totalPointsNeeded,
+                    'current_pp' => (int) auth()->user()->pp,
                     'message' => "คุณมีแต้มสะสมไม่พอสำหรับการสร้างโพสต์ (ต้องการ {$totalPointsNeeded} แต้ม)",
                 ], 403);
             }
@@ -168,7 +176,29 @@ class PostController extends Controller
             }
 
             // Create post using service
-            $post = $this->postService->createPost($validatedData, auth()->id());
+            $charge = DB::transaction(function () use ($validatedData, $postCost, $totalPointsNeeded) {
+                $payer = User::whereKey(auth()->id())->lockForUpdate()->firstOrFail();
+                if ($payer->pp < $totalPointsNeeded) {
+                    return ['ok' => false, 'current_pp' => (int) $payer->pp];
+                }
+
+                return app(FeedPointsService::class)->charge(
+                    $payer, $postCost, 'feed_post_create', null, 'สร้างโพสต์', [],
+                    function () use ($validatedData, $payer) {
+                        return ['post' => $this->postService->createPost($validatedData, $payer->id)];
+                    }
+                );
+            });
+            if (! $charge['ok']) {
+                return response()->json([
+                    'success' => false,
+                    'code' => 'INSUFFICIENT_PP',
+                    'message' => "คุณมีแต้มสะสมไม่พอสำหรับการสร้างโพสต์ (ต้องการ {$totalPointsNeeded} แต้ม)",
+                    'required_pp' => $totalPointsNeeded,
+                    'current_pp' => $charge['current_pp'],
+                ], 422);
+            }
+            $post = $charge['post'];
 
             // Fire gamification event
             UsageEventService::fire(auth()->user(), UsageEventType::POST_CREATE->value, 'post', $post->id);
@@ -184,15 +214,19 @@ class PostController extends Controller
                 'activityable.poll.comments.user',
             ]);
 
-            // Deduct points
-            auth()->user()->decrement('pp', 180);
-
             return response()->json([
                 'success' => true,
+                'user_pp' => $charge['user_pp'],
                 'message' => 'โพสต์สำเร็จ / Post created successfully',
                 'post' => new PostResource($post),
                 'activity' => new ActivityResource($activity),
             ], 201);
+        } catch (AccountEconomyRestrictedException $e) {
+            return response()->json([
+                'success' => false,
+                'code' => 'ACCOUNT_RESTRICTED',
+                'message' => $e->getMessage(),
+            ], 403);
         } catch (\Throwable $th) {
             Log::error('PostController@store error', [
                 'error' => $th->getMessage(),

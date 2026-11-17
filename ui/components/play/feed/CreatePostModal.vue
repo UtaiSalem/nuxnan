@@ -3,6 +3,7 @@ import { Icon } from '@iconify/vue'
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { usePosts } from '~/composables/usePosts'
+import { FEED_COSTS } from '~/constants/feedCosts'
 
 const modalContainerRef = ref(null)
 
@@ -57,6 +58,12 @@ const props = defineProps({
     default: false
   }
 })
+
+// โพสต์ในรายวิชา/สถานศึกษายังคิด 180 แต้มเหมือนเดิม — ฟีดสาธารณะใช้ FEED_COSTS.post
+const COURSE_ACADEMY_POST_COST = 180
+const postCost = computed(() =>
+  ['academy', 'course'].includes(props.context) && props.contextId ? COURSE_ACADEMY_POST_COST : FEED_COSTS.post
+)
 
 const selectedGroupId = ref(props.postedAsGroupId ?? props.lockedGroupId ?? null)
 
@@ -337,9 +344,9 @@ const createPost = async () => {
   if (activeTab.value === 'status' && !postText.value.trim() && selectedImages.value.length === 0) return
   if (isSubmitting.value) return
   
-  // Check points for all contexts (backend requires 180 PP for all post types)
-  if (authStore.user && authStore.points < 180) {
-    swal.warning('คุณมีแต้มสะสมไม่พอสำหรับการโพสต์ กรุณาสะสมแต้มสะสมอย่างน้อย 180 แต้ม', 'แต้มไม่พอ')
+  // Check the fee for the selected post endpoint
+  if (authStore.user && authStore.points < postCost.value) {
+    swal.warning(`คุณมีแต้มสะสมไม่พอสำหรับการโพสต์ กรุณาสะสมแต้มสะสมอย่างน้อย ${postCost.value} แต้ม`, 'แต้มไม่พอ')
     return
   }
   
@@ -1113,7 +1120,7 @@ const removeTaggedFriend = (friendId) => {
                       <ul class="space-y-1.5">
                         <li class="flex justify-between items-center text-gray-600 dark:text-gray-400">
                           <span>ค่าธรรมเนียมสร้างโพล</span>
-                          <span class="font-semibold">180 แต้ม</span>
+                          <span class="font-semibold">{{ postCost }} แต้ม</span>
                         </li>
                         <li class="flex justify-between items-center text-gray-600 dark:text-gray-400">
                           <span>แต้มรางวัลสำหรับคนโหวต</span>
@@ -1121,14 +1128,14 @@ const removeTaggedFriend = (friendId) => {
                         </li>
                         <li class="flex justify-between items-center pt-2 border-t border-vikinger-cyan/20 font-bold text-gray-800 dark:text-white mt-1">
                           <span>รวมทั้งหมด</span>
-                          <span>{{ 180 + pollPointsPool }} แต้ม</span>
+                          <span>{{ postCost + pollPointsPool }} แต้ม</span>
                         </li>
                       </ul>
                       <div class="mt-3 flex items-center gap-2 text-xs text-green-600 dark:text-green-400 font-medium">
                         <Icon icon="fluent:gift-24-regular" class="w-4 h-4" />
                         <span>ผู้ร่วมโหวตจะได้รับแต้มรางวัลโดยอัตโนมัติ!</span>
                       </div>
-                      <p v-if="authStore.user && authStore.points < (180 + pollPointsPool)" class="text-xs text-red-500 font-bold mt-2">
+                      <p v-if="authStore.user && authStore.points < (postCost + pollPointsPool)" class="text-xs text-red-500 font-bold mt-2">
                         ! คุณมีแต้มไม่เพียงพอ (ปัจจุบัน {{ authStore.points }} แต้ม)
                       </p>
                     </div>

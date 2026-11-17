@@ -4,6 +4,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
 import { getAcademyGroupTypeMeta, GROUP_TYPE_COLOR_CLASSES } from '~/constants/academyGroupTypes'
+import { FEED_COSTS } from '~/constants/feedCosts'
 import ShareModal from '~/components/share/ShareModal.vue'
 import EditPostModal from '~/components/play/feed/EditPostModal.vue'
 import ImageLightbox from '~/components/play/feed/ImageLightbox.vue'
@@ -670,6 +671,7 @@ const addComment = async () => {
     
     // Determine API endpoint based on activity/post type
     let apiUrl = ''
+    let isRegularFeedPost = false
     
     // For Share Activities, comment on the Share
     if (isShareActivity.value && shareData.value?.id) {
@@ -686,6 +688,13 @@ const addComment = async () => {
     // For regular Posts
     else {
       apiUrl = `${config.public.apiBase}/api/posts/${postData.value.id}/comments`
+      isRegularFeedPost = true
+    }
+    
+    // Regular feed comments cost FEED_COSTS.comment points
+    if (isRegularFeedPost && authStore.points < FEED_COSTS.comment) {
+      swal.warning(`แต้มของคุณไม่เพียงพอในการแสดงความคิดเห็น (ต้องการ ${FEED_COSTS.comment} แต้ม)`)
+      return
     }
     
     const response = await $fetch(apiUrl, {
@@ -698,6 +707,15 @@ const addComment = async () => {
     })
     
     if (response.success) {
+      // Sync payer balance with server for regular feed comments
+      if (isRegularFeedPost) {
+        if (typeof response.user_pp === 'number') {
+          authStore.setPoints(response.user_pp)
+        } else {
+          authStore.deductPoints(FEED_COSTS.comment)
+        }
+      }
+      
       // Add new comment to top of list
       if (response.comment) {
         newlyAddedComments.value.unshift(response.comment)
@@ -759,6 +777,19 @@ const handleLike = async () => {
   
   isLiking.value = true
   
+  // Determine API endpoint + feed-ness once (regular feed posts use FEED_COSTS)
+  const isCourseLikeTarget = actionTo.value === 'CoursePost' && !!postData.value.course_id
+  const isAcademyLikeTarget = actionTo.value === 'AcademyPost' && !!postData.value.academy?.id
+  const isFeedPost = !isCourseLikeTarget && !isAcademyLikeTarget
+  let apiUrl = ''
+  if (isCourseLikeTarget) {
+    apiUrl = `/api/courses/${postData.value.course_id}/posts/${postData.value.id}/like`
+  } else if (isAcademyLikeTarget) {
+    apiUrl = `/api/academies/${postData.value.academy.id}/posts/${postData.value.id}/like`
+  } else {
+    apiUrl = `/api/posts/${postData.value.id}/like`
+  }
+  
   // Optimistic update
   const wasLiked = localIsLiked.value
   
@@ -767,24 +798,24 @@ const handleLike = async () => {
   let pointsToAuthor = 0
   
   if (wasLiked) {
-    // Unlike - ผู้ยกเลิกเสีย 12 แต้ม (เข้าระบบ) และไม่มีการคืนแต้ม
-    pointsToUse = 12
-    pointsToAuthor = 12 // ลดแต้มเจ้าของโพสต์
+    // Unlike - feed: FEED_COSTS.unlike (ไม่มีส่วนแบ่งเจ้าของ) / course+academy: 12 แต้ม
+    pointsToUse = isFeedPost ? FEED_COSTS.unlike : 12
+    pointsToAuthor = isFeedPost ? 0 : 12 // ลดแต้มเจ้าของโพสต์
     
     const hasEnough = authStore.deductPoints(pointsToUse)
     if (!hasEnough) {
-      swal.warning('แต้มของคุณไม่เพียงพอในการยกเลิก Like (ต้องการ 12 แต้ม)')
+      swal.warning(`แต้มของคุณไม่เพียงพอในการยกเลิก Like (ต้องการ ${pointsToUse} แต้ม)`)
       isLiking.value = false
       return
     }
   } else {
-    // Like - ผู้กดเสีย 24 แต้ม (12 ให้เจ้าของ, 12 เข้าระบบ)
-    pointsToUse = 24
-    pointsToAuthor = 12 // เจ้าของได้ 12 แต้ม
+    // Like - feed: FEED_COSTS.like (เจ้าของได้ likeAuthorShare) / course+academy: 24 แต้ม (12 ให้เจ้าของ)
+    pointsToUse = isFeedPost ? FEED_COSTS.like : 24
+    pointsToAuthor = isFeedPost ? FEED_COSTS.likeAuthorShare : 12
     
     const hasEnough = authStore.deductPoints(pointsToUse)
     if (!hasEnough) {
-      swal.warning('แต้มของคุณไม่เพียงพอ (ต้องการ 24 แต้ม)')
+      swal.warning(`แต้มของคุณไม่เพียงพอ (ต้องการ ${pointsToUse} แต้ม)`)
       isLiking.value = false
       return
     }
@@ -811,19 +842,14 @@ const handleLike = async () => {
   }
   
   try {
-    // Determine API endpoint based on post type
-    let apiUrl = ''
-    if (actionTo.value === 'CoursePost' && postData.value.course_id) {
-      apiUrl = `/api/courses/${postData.value.course_id}/posts/${postData.value.id}/like`
-    } else if (actionTo.value === 'AcademyPost' && postData.value.academy?.id) {
-      apiUrl = `/api/academies/${postData.value.academy.id}/posts/${postData.value.id}/like`
-    } else {
-      apiUrl = `/api/posts/${postData.value.id}/like`
-    }
-    
     const response = await api.call(apiUrl, {
       method: 'POST'
     })
+    
+    if (response.success && typeof response.user_pp === 'number') {
+      // Sync header balance with the server's real balance
+      authStore.setPoints(response.user_pp)
+    }
     
     if (!response.success) {
       // Revert optimistic update
@@ -850,7 +876,7 @@ const handleLike = async () => {
     localIsLiked.value = wasLiked
     localLikes.value += wasLiked ? 1 : -1
     
-    // Rollback points
+    // Rollback points (give back the optimistic deduction, e.g. on 422 INSUFFICIENT_PP)
     authStore.rollback(pointsToUse)
     
     // Rollback author points
@@ -865,7 +891,7 @@ const handleLike = async () => {
     }
     
     console.error('Failed to like:', error)
-    swal.warning('คุณมีพอยต์ไม่เพียงพอในการกดถูกใจ')
+    swal.warning(error?.data?.message || 'คุณมีพอยต์ไม่เพียงพอในการกดถูกใจ')
   } finally {
     isLiking.value = false
   }
@@ -882,19 +908,34 @@ const handleDislike = async () => {
   
   isDisliking.value = true
   
+  // Determine API endpoint + feed-ness once (regular feed posts use FEED_COSTS)
+  const isCourseDislikeTarget = actionTo.value === 'CoursePost' && !!postData.value.course_id
+  const isAcademyDislikeTarget = actionTo.value === 'AcademyPost' && !!postData.value.academy?.id
+  const isFeedPost = !isCourseDislikeTarget && !isAcademyDislikeTarget
+  let apiUrl = ''
+  if (isCourseDislikeTarget) {
+    apiUrl = `/api/courses/${postData.value.course_id}/posts/${postData.value.id}/dislike`
+  } else if (isAcademyDislikeTarget) {
+    apiUrl = `/api/academies/${postData.value.academy.id}/posts/${postData.value.id}/dislike`
+  } else {
+    apiUrl = `/api/posts/${postData.value.id}/dislike`
+  }
+  
   // Optimistic update
   const wasDisliked = localIsDisliked.value
   
   // คำนวณแต้มที่ต้องใช้
-  let pointsToUse = 12
+  // feed: dislike FEED_COSTS.dislike / undislike FEED_COSTS.undislike ; course+academy: 12 แต้มทั้งคู่
+  let pointsToUse = isFeedPost
+    ? (wasDisliked ? FEED_COSTS.undislike : FEED_COSTS.dislike)
+    : 12
   
-  // ทั้ง Dislike และ Undislike ต้องตัดแต้ม 12 แต้ม
   const hasEnough = authStore.deductPoints(pointsToUse)
   if (!hasEnough) {
     if (wasDisliked) {
-      swal.warning('แต้มของคุณไม่เพียงพอในการยกเลิก Dislike (ต้องการ 12 แต้ม)')
+      swal.warning(`แต้มของคุณไม่เพียงพอในการยกเลิก Dislike (ต้องการ ${pointsToUse} แต้ม)`)
     } else {
-      swal.warning('แต้มของคุณไม่เพียงพอ (ต้องการ 12 แต้ม)')
+      swal.warning(`แต้มของคุณไม่เพียงพอ (ต้องการ ${pointsToUse} แต้ม)`)
     }
     isDisliking.value = false
     return
@@ -910,28 +951,27 @@ const handleDislike = async () => {
   }
   
   // อัพเดทแต้มเจ้าของโพสต์
+  // feed: เจ้าของเสีย FEED_COSTS.dislikeAuthorFine (เฉพาะเท่าที่มี) / course+academy: เสีย 12 แต้ม
+  let authorFineApplied = 0
   if (postAuthor.value?.points !== undefined) {
     if (!wasDisliked) {
-      // Dislike: เจ้าของโพสต์เสียแต้ม 12 แต้ม
-      postAuthor.value.points = (postAuthor.value.points || 0) - pointsToUse
+      authorFineApplied = isFeedPost
+        ? Math.min(FEED_COSTS.dislikeAuthorFine, Math.max(0, postAuthor.value.points || 0))
+        : pointsToUse
+      postAuthor.value.points = (postAuthor.value.points || 0) - authorFineApplied
     }
     // Undislike: ไม่คืนแต้มให้เจ้าของโพสต์
   }
   
   try {
-    // Determine API endpoint based on post type
-    let apiUrl = ''
-    if (actionTo.value === 'CoursePost' && postData.value.course_id) {
-      apiUrl = `/api/courses/${postData.value.course_id}/posts/${postData.value.id}/dislike`
-    } else if (actionTo.value === 'AcademyPost' && postData.value.academy?.id) {
-      apiUrl = `/api/academies/${postData.value.academy.id}/posts/${postData.value.id}/dislike`
-    } else {
-      apiUrl = `/api/posts/${postData.value.id}/dislike`
-    }
-    
     const response = await api.call(apiUrl, {
       method: 'POST'
     })
+    
+    if (response.success && typeof response.user_pp === 'number') {
+      // Sync header balance with the server's real balance
+      authStore.setPoints(response.user_pp)
+    }
     
     if (!response.success) {
       // Revert optimistic update
@@ -944,7 +984,7 @@ const handleDislike = async () => {
       // Rollback author points
       if (postAuthor.value?.points !== undefined && !wasDisliked) {
         // คืนแต้มที่หักจากเจ้าของโพสต์
-        postAuthor.value.points = (postAuthor.value.points || 0) + pointsToUse
+        postAuthor.value.points = (postAuthor.value.points || 0) + authorFineApplied
       }
       
       swal.error(response.message || 'ไม่สามารถกดไม่ถูกใจได้')
@@ -954,17 +994,17 @@ const handleDislike = async () => {
     localIsDisliked.value = wasDisliked
     localDislikes.value += wasDisliked ? 1 : -1
     
-    // Rollback points - คืนแต้มที่ตัดไป
+    // Rollback points - คืนแต้มที่ตัดไป (e.g. on 422 INSUFFICIENT_PP)
     authStore.rollback(pointsToUse)
     
     // Rollback author points
     if (postAuthor.value?.points !== undefined && !wasDisliked) {
       // คืนแต้มที่หักจากเจ้าของโพสต์
-      postAuthor.value.points = (postAuthor.value.points || 0) + pointsToUse
+      postAuthor.value.points = (postAuthor.value.points || 0) + authorFineApplied
     }
     
     console.error('Failed to dislike:', error)
-    swal.warning('คุณมีพอยต์ไม่เพียงพอในการกดไม่ถูกใจ')
+    swal.warning(error?.data?.message || 'คุณมีพอยต์ไม่เพียงพอในการกดไม่ถูกใจ')
   } finally {
     isDisliking.value = false
   }
@@ -1154,8 +1194,10 @@ const cancelReply = () => {
 const submitReply = async (comment) => {
   if (!replyContent.value.trim() || isSubmittingReply.value) return
   
-  // Check points (12 required)
-  const pointsRequired = 12
+  // Check points: regular feed posts cost FEED_COSTS.reply, course/academy posts keep 12
+  const isFeedPost = !(actionTo.value === 'CoursePost' && postData.value?.course_id)
+    && !(actionTo.value === 'AcademyPost' && postData.value?.academy?.id)
+  const pointsRequired = isFeedPost ? FEED_COSTS.reply : 12
   const hasEnough = authStore.deductPoints(pointsRequired)
   if (!hasEnough) {
     swal.warning(`แต้มของคุณไม่เพียงพอในการตอบกลับ (ต้องการ ${pointsRequired} แต้ม)`)
@@ -1173,6 +1215,11 @@ const submitReply = async (comment) => {
     })
     
     if (response.success) {
+      // Sync header balance with the server's real balance
+      if (typeof response.user_pp === 'number') {
+        authStore.setPoints(response.user_pp)
+      }
+      
       // Add reply to local state
       if (!commentReplies.value[comment.id]) {
         commentReplies.value[comment.id] = []
