@@ -1,5 +1,51 @@
 # Work Log — nuxnan project
 
+## 🟡 2026-11-20 — หน้าโปรไฟล์: วิเคราะห์ + แผน + เฟส 0 ปิดข้อมูลส่วนตัวรั่ว (branch `fix/profile-privacy-phase0` · ยังไม่ commit)
+
+แผนเต็ม + หลักฐานทั้งหมด: [`.agents/plans/profile-redesign.md`](plans/profile-redesign.md) (ผลเฟส 0 อยู่ข้อ 10)
+
+**วิเคราะห์ (ยิง API จริงบน DB dev แล้ว rollback):**
+- `/profile/{id}` 14 แท็บ ใช้ได้จริง 4 แท็บ
+- ระบบเพื่อนอ่านตาราง `friends` ที่ว่างเปล่า (ของจริงอยู่ใน `friendships`) → จำนวนเพื่อนเป็น 0 และสถานะเพื่อนผิดทุกคน
+- ปุ่มส่งข้อความไปหน้า `/chat` ที่ไม่มีอยู่จริง
+
+**เฟส 0 (4 shard):**
+- **A1/A2/B ใช้ agy · A3 ใช้ Codex** เพราะ agy หมดโควตา 429 (รีเซ็ตประมาณ 23:50)
+- `UserResource` ส่ง email/เบอร์/wallet/personal_code ของคนอื่นออกไปจาก endpoint **สาธารณะ** 4 จุด:
+  `/api/welcome` (ไล่ `?page=` ได้ทุกคน), `/api/register/{ref}`, `/api/suggester/check`, `/api/courses/marketplace`
+  และจาก timeline/ฟีด/คอมเมนต์ → แก้ด้วย `PublicUserResource` ใหม่
+- โปรไฟล์ของคนอื่นไม่ส่ง แต้ม/wallet/last_login/ความครบโปรไฟล์ แล้ว · ชื่อจริง/เพศ/เว็บ/โซเชียล ส่งตาม privacy_settings
+- `/api/posts` และ `/api/posts/{id}` ทำตาม privacy ของโพสต์แล้ว (ใช้ตาราง `friendships`)
+- หน้าเว็บ: การ์ดแต้ม-เงินแสดงเฉพาะบนโปรไฟล์ตัวเอง
+
+**ตรวจแล้ว:**
+- MySQL: เทสต์ใหม่ 22 + เทสต์เดิมที่เกี่ยวข้อง 23 ผ่าน
+- revert-check: ใช้โค้ดเดิม เทสต์ใหม่ fail 17 เคส
+- pint ผ่าน · SFC compile ผ่าน
+- probe ข้อมูลจริง: route สาธารณะ 22 ตัว ไม่มีข้อมูลส่วนตัวหลุด
+- ชุดกันถอยหลัง MySQL (`--filter` Post|Feed|Activity|Comment|Donat|Marketplace|Profile|Friend|Welcome|Newsfeed|Poll|Share|Suggester|Referral|Academy|Course|Lesson|Support):
+  **1,244 ผ่าน** · 4 fail · 3 incomplete · 9 skipped
+- 4 เคสที่ fail ก็ fail บนโค้ดเดิมด้วย (ยืนยันโดย stash งานทั้งหมดแล้วรันซ้ำ) จึง**ไม่ใช่ผลจากงานนี้**:
+  `AcademySettingsAuditLogTest::removed_academy_audit_logs_index_route_is_gone` ·
+  `StaffDepartmentValidationTest::store_staff_requires_first_and_last_name` ·
+  `StudentLifecycleControllerTest::graduate_as_homeroom_teacher_is_allowed` ·
+  `ClassScheduleTodayTest::today_uses_title_when_there_is_no_course` (ขึ้นกับวันที่)
+
+**TODO:**
+- [ ] 🔴 เปิดจอจริง 375px: โปรไฟล์คนอื่นต้องไม่มีการ์ดแต้ม-เงิน · โปรไฟล์ตัวเองยังมี · หน้าแรกการ์ดผู้บริจาค/ผู้รับยังแสดงชื่อ-รหัส-แต้ม · marketplace ยังเห็นชื่อ-รูปเจ้าของ
+- [ ] ⚠️ PR #53 (เปิดอยู่) แก้ import ของ `PostController` ด้วย → merge ทีหลังจะชนตรงบรรทัด `use` (แก้ง่าย)
+- [ ] 🔴 **D9 รอเคาะ:** เปลี่ยนค่าเริ่มต้นของ `UserResource` ทั้งระบบ (ข้อ 10.3 ของแผน)
+  ผู้ใช้ที่ล็อกอินยังเห็นอีเมล/เบอร์/wallet ของเจ้าของคอร์ส สมาชิกรายวิชา คนคอมเมนต์บทเรียน โพสต์โรงเรียน
+  และ `PeopleMayKnowWidget` แสดงอีเมลคนแปลกหน้าบนจอ
+- [ ] D1–D8 ของแผนยังรอเคาะ (ก่อนเฟส 2) · เฟส 1 (ระบบเพื่อน/resolver/visits) เริ่มได้โดยไม่ต้องเคาะ
+- [ ] เจอข้างทาง: `GET /api/supports/donates/create` (สาธารณะ) ตอบ 500 เพราะไม่มีเมธอด `DonateController::create()`
+
+### Branch / Git State
+- Branch: `fix/profile-privacy-phase0` (จาก `origin/main` b4533e7b · ไม่ได้ตั้ง upstream) · ยังไม่ commit / ยังไม่ push
+- Uncommitted: งานเฟส 0 ทั้งหมด + `.agents/plans/profile-redesign.md` · `.agents/plans/ai-course-generation.md` มีอยู่ก่อนแล้ว ไม่ได้แตะ
+
+---
+
 ## 🟡 2026-11-18 — แต้มฟีด 480 · แผงเช็คชื่อเลื่อนซ้าย · แบบทดสอบต้องอ่านบทเรียนก่อน (PR #53 เปิดอยู่ ยังไม่ merge)
 
 PR: https://github.com/UtaiSalem/nuxnan/pull/53 · branch `feat/feed-costs-attendance-quiz-gate` · 3 commit แยกเรื่อง
