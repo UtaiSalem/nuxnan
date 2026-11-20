@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Shared;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateUserProfileRequest;
 use App\Http\Resources\Play\ActivityResource;
+use App\Http\Resources\PublicUserResource;
 use App\Http\Resources\UserProfileResource;
 use App\Models\Activity;
 use App\Models\Friend;
@@ -82,7 +83,7 @@ class UserProfileController extends Controller
             ->paginate();
 
         return response()->json([
-            'user' => $user,
+            'user' => new PublicUserResource($user),
             'activities' => ActivityResource::collection($activities),
         ]);
     }
@@ -556,7 +557,7 @@ class UserProfileController extends Controller
 
         return response()->json([
             'success' => true,
-            'user' => $user,
+            'user' => new PublicUserResource($user),
             'activities' => ActivityResource::collection($activities),
             'meta' => [
                 'current_page' => $activities->currentPage(),
@@ -594,17 +595,23 @@ class UserProfileController extends Controller
                 ->orWhere('friend_id', $user->id);
         })->where('status', 1)->count();
 
+        $data = [
+            'posts' => $postsCount,
+            'followers' => $user->profile->followers ?? 0,
+            'following' => $user->profile->following ?? 0,
+            'friends' => $friendsCount,
+            'visits' => $user->profile->visits ?? 0,
+        ];
+
+        // แต้มคงเหลือและเงินใน wallet เป็นข้อมูลการเงินส่วนตัว — ส่งให้เจ้าของบัญชีเท่านั้น
+        if (Auth::check() && (int) Auth::id() === (int) $user->id) {
+            $data['points'] = $user->pp ?? 0;
+            $data['wallet'] = $user->wallet ?? 0;
+        }
+
         return response()->json([
             'success' => true,
-            'data' => [
-                'posts' => $postsCount,
-                'followers' => $user->profile->followers ?? 0,
-                'following' => $user->profile->following ?? 0,
-                'friends' => $friendsCount,
-                'points' => $user->pp ?? 0,
-                'wallet' => $user->wallet ?? 0,
-                'visits' => $user->profile->visits ?? 0,
-            ],
+            'data' => $data,
         ]);
     }
 

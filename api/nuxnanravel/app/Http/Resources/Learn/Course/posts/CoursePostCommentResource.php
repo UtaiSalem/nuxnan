@@ -2,7 +2,7 @@
 
 namespace App\Http\Resources\Learn\Course\posts;
 
-use App\Http\Resources\UserResource;
+use App\Http\Resources\PublicUserResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -18,7 +18,7 @@ class CoursePostCommentResource extends JsonResource
         return [
             'id' => $this->id,
             'course_post_id' => $this->course_post_id,
-            'user' => new UserResource($this->user),
+            'user' => new PublicUserResource($this->user),
             'content' => $this->content,
             'images' => $this->postCommentImages,
             'timestamp' => $this->created_at->toDateTimeString(),

@@ -2,7 +2,7 @@
 
 namespace App\Http\Resources\Play;
 
-use App\Http\Resources\UserResource;
+use App\Http\Resources\PublicUserResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -18,7 +18,7 @@ class PostResource extends JsonResource
         return [
             // Basic Info
             'id' => $this->id,
-            'author' => new UserResource($this->user),
+            'author' => new PublicUserResource($this->user),
             'content' => $this->content,
             'post_url' => $this->post_url,
             'status' => $this->status,
@@ -65,7 +65,7 @@ class PostResource extends JsonResource
                     return [
                         'id' => $mention->user_id,
                         'username' => $mention->username,
-                        'user' => $mention->user ? new UserResource($mention->user) : null,
+                        'user' => $mention->user ? new PublicUserResource($mention->user) : null,
                     ];
                 });
             }),

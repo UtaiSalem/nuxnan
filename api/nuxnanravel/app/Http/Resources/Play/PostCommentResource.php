@@ -2,7 +2,7 @@
 
 namespace App\Http\Resources\Play;
 
-use App\Http\Resources\UserResource;
+use App\Http\Resources\PublicUserResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -19,7 +19,7 @@ class PostCommentResource extends JsonResource
             'id' => $this->id,
             // 'comment_id' => $this->id,
             'post_id' => $this->post_id,
-            'user' => new UserResource($this->user),
+            'user' => new PublicUserResource($this->user),
             'content' => $this->content,
             'images' => $this->postCommentImages,
             'timestamp' => $this->created_at->toDateTimeString(),
@@ -48,7 +48,7 @@ class PostCommentResource extends JsonResource
             'parent_post_comment' => $this->when($this->parent_post_comment_id, function () {
                 return $this->parentPostComment ? [
                     'id' => $this->parentPostComment->id,
-                    'user' => new UserResource($this->parentPostComment->user),
+                    'user' => new PublicUserResource($this->parentPostComment->user),
                 ] : null;
             }),
             'sentiment' => $this->sentiment,
