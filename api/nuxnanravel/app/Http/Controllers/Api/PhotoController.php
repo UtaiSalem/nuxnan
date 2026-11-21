@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Album;
 use App\Models\Photo;
 use App\Models\User;
+use App\Support\ProfileUserResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -361,9 +362,6 @@ class PhotoController extends Controller
      */
     private function getUserByIdentifier(string $identifier): ?User
     {
-        return User::where('id', $identifier)
-            ->orWhere('reference_code', $identifier)
-            ->orWhere('username', $identifier)
-            ->first();
+        return ProfileUserResolver::resolve($identifier);
     }
 }
