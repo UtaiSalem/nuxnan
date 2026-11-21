@@ -1,8 +1,8 @@
 # Work Log — nuxnan project
 
-## 🟡 2026-11-21 — หน้าโปรไฟล์เฟส 1: ระบบเพื่อน/สิทธิ์/ตัวระบุผู้ใช้ให้ถูก (branch `fix/profile-phase1-friendship` ซ้อนบนเฟส 0 · commit แล้ว · ยังไม่ push / ยังไม่เปิด PR)
+## 🟡 2026-11-21 — หน้าโปรไฟล์เฟส 1: ระบบเพื่อน/สิทธิ์/ตัวระบุผู้ใช้ให้ถูก (branch `fix/profile-phase1-friendship` = PR #55 · รอ review)
 
-รายละเอียด + หลักฐาน: ข้อ 11 ของ [`.agents/plans/profile-redesign.md`](plans/profile-redesign.md) · เฟส 0 = PR #54 (เปิดอยู่ · Auto-fix เปิด)
+รายละเอียด + หลักฐาน: ข้อ 11 ของ [`.agents/plans/profile-redesign.md`](plans/profile-redesign.md) · เฟส 0 = PR #54 (squash-merge เข้า `main` แล้ว 2026-11-21 = `1a9e3f3b`)
 
 - **ความเป็นเพื่อน:** อ่านจาก `friendships` ผ่าน `ProfileAccess` ที่เดียว ไม่มีโค้ดอ่านตาราง `friends` ที่ว่างแล้ว
   ข้อมูลจริง 50 คู่ได้สถานะ `friends` ครบ (เดิม `none` ทุกคู่) · จำนวนเพื่อนจริง (เดิม 0 ทุกคน)
@@ -25,14 +25,15 @@
 - **TODO:**
   - [ ] 🔴 เปิดจอจริง 375px: แท็บเพื่อน · ปุ่มเพิ่มเพื่อน · ยอดเข้าชมของคนอื่นต้องไม่แสดง
   - [ ] ลบแถวซ้ำใน `friendships` 21 คู่ (ต้องเป็น migration — รอเคาะ)
-  - [ ] ถ้า #54 ถูก squash-merge ต้อง rebase branch นี้ลง `main` ก่อนเปิด PR
+  - [x] #54 squash-merge แล้ว → rebase เฉพาะ 4 commit ของเฟส 1 ลง `main` (`git rebase --onto main fdcf7726`) แล้วเปิด PR #55
   - [ ] D1–D9 ยังรอเคาะ
-- **Git:** commit แล้ว 4 ชุด (profile access · friends API · UI · docs) · ยังไม่ push
+- **Git:** 4 commit (profile access · friends API · UI · docs) + commit อัปเดตสถานะเอกสาร = PR #55 (Auto-fix เปิด)
+  rebase ลง `main` หลัง #54 merge แล้ว tree เหมือนเดิมทุกไบต์ · เทสต์โปรไฟล์ MySQL 52 ผ่านซ้ำหลัง rebase
   `.agents/plans/ai-course-generation.md` มีอยู่ก่อนแล้ว ไม่ได้แตะ (ยัง untracked)
 
 ---
 
-## 🟡 2026-11-20 — หน้าโปรไฟล์: วิเคราะห์ + แผน + เฟส 0 ปิดข้อมูลส่วนตัวรั่ว (branch `fix/profile-privacy-phase0` = PR #54 · รอ review)
+## 🟡 2026-11-20 — หน้าโปรไฟล์: วิเคราะห์ + แผน + เฟส 0 ปิดข้อมูลส่วนตัวรั่ว (branch `fix/profile-privacy-phase0` = PR #54 · squash-merge แล้ว 2026-11-21)
 
 แผนเต็ม + หลักฐานทั้งหมด: [`.agents/plans/profile-redesign.md`](plans/profile-redesign.md) (ผลเฟส 0 อยู่ข้อ 10)
 
@@ -65,7 +66,7 @@
 
 **TODO:**
 - [ ] 🔴 เปิดจอจริง 375px: โปรไฟล์คนอื่นต้องไม่มีการ์ดแต้ม-เงิน · โปรไฟล์ตัวเองยังมี · หน้าแรกการ์ดผู้บริจาค/ผู้รับยังแสดงชื่อ-รหัส-แต้ม · marketplace ยังเห็นชื่อ-รูปเจ้าของ
-- [ ] ⚠️ PR #53 (เปิดอยู่) แก้ import ของ `PostController` ด้วย → merge ทีหลังจะชนตรงบรรทัด `use` (แก้ง่าย)
+- [ ] ⚠️ #54 เข้า `main` ก่อนแล้ว → PR #53 ตอนนี้ CONFLICTING ที่ `PostController` ไฟล์เดียว (บรรทัด `use`) ต้องแก้ก่อน merge #53
 - [ ] 🔴 **D9 รอเคาะ:** เปลี่ยนค่าเริ่มต้นของ `UserResource` ทั้งระบบ (ข้อ 10.3 ของแผน)
   ผู้ใช้ที่ล็อกอินยังเห็นอีเมล/เบอร์/wallet ของเจ้าของคอร์ส สมาชิกรายวิชา คนคอมเมนต์บทเรียน โพสต์โรงเรียน
   และ `PeopleMayKnowWidget` แสดงอีเมลคนแปลกหน้าบนจอ
@@ -73,7 +74,7 @@
 - [ ] เจอข้างทาง: `GET /api/supports/donates/create` (สาธารณะ) ตอบ 500 เพราะไม่มีเมธอด `DonateController::create()`
 
 ### Branch / Git State
-- Branch: `fix/profile-privacy-phase0` (จาก `origin/main` b4533e7b) · commit 5 ชุด + push แล้ว (upstream `origin/fix/profile-privacy-phase0`) = PR #54
+- Branch: `fix/profile-privacy-phase0` (จาก `origin/main` b4533e7b) · commit 5 ชุด + push แล้ว (upstream `origin/fix/profile-privacy-phase0`) = PR #54 → Claude squash-merge ตามที่เจ้าของสั่ง 2026-11-21 = `1a9e3f3b`
 - `.agents/plans/ai-course-generation.md` มีอยู่ก่อนแล้ว ไม่ได้แตะ (ยัง untracked)
 
 ---

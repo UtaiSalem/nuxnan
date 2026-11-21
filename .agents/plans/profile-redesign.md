@@ -1,8 +1,8 @@
 # หน้าโปรไฟล์ผู้ใช้ — วิเคราะห์ · ออกแบบใหม่ · แผนงาน
 
 > สถานะ:
-> - 🟡 **เฟส 0** = PR #54 (branch `fix/profile-privacy-phase0`) รอ review (ดูข้อ 10)
-> - 🟡 **เฟส 1** เสร็จบน branch `fix/profile-phase1-friendship` ที่ต่อจากเฟส 0 (2026-11-21) — commit แล้ว · ยังไม่ push / ยังไม่เปิด PR (ดูข้อ 11)
+> - ✅ **เฟส 0** = PR #54 squash-merge เข้า `main` แล้ว 2026-11-21 (`1a9e3f3b`) (ดูข้อ 10)
+> - 🟡 **เฟส 1** = PR #55 (branch `fix/profile-phase1-friendship` rebase ลง `main` แล้ว) รอ review (ดูข้อ 11)
 > - เฟส 2 ขึ้นไปต้องรอเจ้าของเคาะ D1–D8 (ข้อ 8) · และ **D9 (ข้อ 10.3) ก่อนแก้ `UserResource` ทั้งระบบ**
 > วิธีตรวจ: อ่านโค้ด + **เรียก API จริงบน DB dev ในฐานะผู้ใช้จริง 2 คน (คู่ที่เป็นเพื่อนกัน และคนแปลกหน้า) ใน transaction แล้ว rollback**
 > สคริปต์อยู่ที่ scratchpad (`probe_profile_api.php`) ถ้าจะรันซ้ำให้เขียนใหม่เป็นเทสต์ในเฟส 0–1
@@ -373,7 +373,7 @@
 
 ---
 
-## 10. ผลเฟส 0 (2026-11-20) — branch `fix/profile-privacy-phase0` จาก `origin/main` · = PR #54
+## 10. ผลเฟส 0 (2026-11-20) — branch `fix/profile-privacy-phase0` จาก `origin/main` · = PR #54 (squash-merge แล้ว `1a9e3f3b`)
 
 ### 10.1 เจอเพิ่มระหว่างทำ (ร้ายแรงกว่าในแผน)
 ต้นเหตุร่วมคือ `App\Http\Resources\UserResource` ซึ่งส่ง **email, phone, phone_number, points, wallet, personal_code** ของผู้ใช้**ทุกคนที่มันแปลง**
@@ -434,7 +434,7 @@ Claude แก้เอง 1 จุด: รัน `pint` กับ `PostControlle
 
 ---
 
-## 11. ผลเฟส 1 (2026-11-21) — branch `fix/profile-phase1-friendship` (ต่อจาก `fix/profile-privacy-phase0`) · commit แล้ว · ยังไม่เปิด PR
+## 11. ผลเฟส 1 (2026-11-21) — branch `fix/profile-phase1-friendship` · = PR #55 (rebase ลง `main` หลัง #54 merge)
 
 ### 11.1 สิ่งที่แก้
 
@@ -471,4 +471,6 @@ Claude แก้เอง 1 จุด: รัน `pint` กับ `PostControlle
 - **agy หมดโควตาประมาณ 6 วัน** (รีเซ็ตราว 2026-11-27) → งานถัดไปใช้ Codex
 - **แถวซ้ำใน `friendships` (21 คู่):** ยังไม่ลบ ถ้าจะลบต้องทำเป็น migration ตามกติกา — รอเจ้าของเคาะ
   สงสัยว่ามาจาก `befriend()` ของแพ็กเกจที่สร้างแถวใหม่ได้หลัง denied (ยังไม่ได้พิสูจน์)
-- **PR ซ้อน:** branch นี้ซ้อนอยู่บนเฟส 0 → ถ้า #54 ถูก squash-merge ต้อง rebase branch นี้ลง `main` ก่อนเปิด PR
+- **PR ซ้อน (จบแล้ว):** #54 squash-merge แล้ว → rebase เฉพาะ 4 commit ของเฟส 1 ด้วย `git rebase --onto main fdcf7726`
+  tree เหมือนก่อน rebase ทุกไบต์ · เทสต์โปรไฟล์ MySQL 52 ผ่านซ้ำ → PR #55
+- **#53 ชนกับ `main` แล้ว:** `PostController` ไฟล์เดียว (บรรทัด `use` ที่ #54 เพิ่ม) ต้องแก้ก่อน merge #53
