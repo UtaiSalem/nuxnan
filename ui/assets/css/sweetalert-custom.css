@@ -87,7 +87,7 @@
 
 /* Responsive adjustments */
 @media (max-width: 640px) {
-  .swal2-popup {
+  .swal2-popup:not(.swal2-toast) {
     width: 90% !important;
     max-width: 400px !important;
     padding: 1.5rem !important;

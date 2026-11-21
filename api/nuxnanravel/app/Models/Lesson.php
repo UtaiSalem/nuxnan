@@ -27,6 +27,9 @@ class Lesson extends Model
 
     const ACCESS_MONEY = 'money';
 
+    // เวลาอ่านขั้นต่ำสำรอง (วินาที) เมื่อบทเรียนไม่มีหัวข้อย่อยและไม่ได้ตั้ง min_read
+    public const QUIZ_FALLBACK_READ_SECONDS = 60;
+
     protected $guarded = [];
 
     protected static function booted()
@@ -179,6 +182,26 @@ class Lesson extends Model
         return $this->isCompletedBy($user);
     }
 
+    /**
+     * เปิดดู/ทำแบบทดสอบ (คำถามท้ายบทเรียน) ได้หรือยัง — บังคับเสมอ ไม่ขึ้นกับ
+     * require_completion_before_exercises (flag นั้นคุมเฉพาะแบบฝึกหัด/assignment)
+     * ผ่านเมื่อ: เป็นผู้ดูแลรายวิชา / อ่านบทเรียนนี้จบแล้ว / ผ่านด่านอ่านเดียวกับปุ่ม "อ่านแล้ว"
+     */
+    public function canAccessQuizBy(?User $user, bool $isCourseAdmin = false): bool
+    {
+        if ($isCourseAdmin) {
+            return true;
+        }
+        if (! $user) {
+            return false;
+        }
+        if ($this->isCompletedBy($user)) {
+            return true;
+        }
+
+        return $this->canBeMarkedCompletedBy($user);
+    }
+
     public function accesses(): HasMany
     {
         return $this->hasMany(LessonAccess::class);
@@ -265,11 +288,12 @@ class Lesson extends Model
 
     /**
      * เวลาอ่านเนื้อหาบทเรียนขั้นต่ำ (วินาที) — min_read หน่วยเป็นนาที
-     * min_read = 0 / null คือ "ไม่บังคับเวลา" (ต่างจาก Topic ที่ 0 = 30 วินาที)
+     * min_read = 0 / null ใช้ค่าสำรอง QUIZ_FALLBACK_READ_SECONDS (60 วินาที) เพื่อให้มีการตรวจการอ่านเสมอ
+     * (มีผลทั้งด่านเปิดแบบทดสอบและด่านปุ่ม "อ่านแล้ว"; Topic ใช้ 0 = 30 วินาที)
      */
     public function getRequiredReadSeconds(): int
     {
-        return $this->min_read > 0 ? (int) $this->min_read * 60 : 0;
+        return $this->min_read > 0 ? (int) $this->min_read * 60 : self::QUIZ_FALLBACK_READ_SECONDS;
     }
 
     /**

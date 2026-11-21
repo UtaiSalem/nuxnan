@@ -1,4 +1,5 @@
 import { useAuthStore } from '~/stores/auth'
+import { FEED_COSTS } from '~/constants/feedCosts'
 
 // Type definitions for post options
 export interface PostLocation {
@@ -53,6 +54,7 @@ export interface CreatePostOptions {
   is_poll?: boolean
   poll_title?: string
   poll_options?: string[]
+  poll_points_pool?: number
   poll_duration?: number
 }
 
@@ -269,6 +271,7 @@ export const usePosts = () => {
       // Poll
       if (options.is_poll) {
         formData.append('is_poll', '1')
+        if (options.poll_points_pool !== undefined) formData.append('poll_points_pool', String(options.poll_points_pool))
         if (options.poll_title) formData.append('poll_title', options.poll_title)
         if (options.poll_duration) formData.append('poll_duration', String(options.poll_duration))
         if (options.poll_options && options.poll_options.length > 0) {
@@ -283,7 +286,12 @@ export const usePosts = () => {
       if (response.success && response.activity) {
         feedStore.addPost(response.activity)
         // Update user points
-        authStore.deductPoints(180)
+        if (typeof response.user_pp === 'number') {
+          authStore.setPoints(response.user_pp)
+        } else {
+          const pool = Number(formData.get('poll_points_pool') ?? 0)
+          authStore.deductPoints(FEED_COSTS.post + pool)
+        }
       }
 
       return response
