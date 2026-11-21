@@ -3,7 +3,7 @@
 namespace App\Http\Resources\Learn\Course\info;
 
 use App\Http\Resources\Learn\Academy\AcademyResource;
-use App\Http\Resources\UserResource;
+use App\Http\Resources\PublicUserResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -23,7 +23,7 @@ class MarketplaceCourseResource extends JsonResource
 
         return [
             'id' => $this->id,
-            'user' => $this->user ? new UserResource($this->user) : null,
+            'user' => $this->user ? new PublicUserResource($this->user) : null,
             'academy' => $this->academy ? new AcademyResource($this->academy) : null,
             'name' => $this->name,
             'slug' => $this->slug,

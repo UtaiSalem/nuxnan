@@ -1,5 +1,98 @@
 # Work Log — nuxnan project
 
+## 🟡 2026-11-20 — หน้าโปรไฟล์: วิเคราะห์ + แผน + เฟส 0 ปิดข้อมูลส่วนตัวรั่ว (branch `fix/profile-privacy-phase0` · ยังไม่ commit)
+
+แผนเต็ม + หลักฐานทั้งหมด: [`.agents/plans/profile-redesign.md`](plans/profile-redesign.md) (ผลเฟส 0 อยู่ข้อ 10)
+
+**วิเคราะห์ (ยิง API จริงบน DB dev แล้ว rollback):**
+- `/profile/{id}` 14 แท็บ ใช้ได้จริง 4 แท็บ
+- ระบบเพื่อนอ่านตาราง `friends` ที่ว่างเปล่า (ของจริงอยู่ใน `friendships`) → จำนวนเพื่อนเป็น 0 และสถานะเพื่อนผิดทุกคน
+- ปุ่มส่งข้อความไปหน้า `/chat` ที่ไม่มีอยู่จริง
+
+**เฟส 0 (4 shard):**
+- **A1/A2/B ใช้ agy · A3 ใช้ Codex** เพราะ agy หมดโควตา 429 (รีเซ็ตประมาณ 23:50)
+- `UserResource` ส่ง email/เบอร์/wallet/personal_code ของคนอื่นออกไปจาก endpoint **สาธารณะ** 4 จุด:
+  `/api/welcome` (ไล่ `?page=` ได้ทุกคน), `/api/register/{ref}`, `/api/suggester/check`, `/api/courses/marketplace`
+  และจาก timeline/ฟีด/คอมเมนต์ → แก้ด้วย `PublicUserResource` ใหม่
+- โปรไฟล์ของคนอื่นไม่ส่ง แต้ม/wallet/last_login/ความครบโปรไฟล์ แล้ว · ชื่อจริง/เพศ/เว็บ/โซเชียล ส่งตาม privacy_settings
+- `/api/posts` และ `/api/posts/{id}` ทำตาม privacy ของโพสต์แล้ว (ใช้ตาราง `friendships`)
+- หน้าเว็บ: การ์ดแต้ม-เงินแสดงเฉพาะบนโปรไฟล์ตัวเอง
+
+**ตรวจแล้ว:**
+- MySQL: เทสต์ใหม่ 22 + เทสต์เดิมที่เกี่ยวข้อง 23 ผ่าน
+- revert-check: ใช้โค้ดเดิม เทสต์ใหม่ fail 17 เคส
+- pint ผ่าน · SFC compile ผ่าน
+- probe ข้อมูลจริง: route สาธารณะ 22 ตัว ไม่มีข้อมูลส่วนตัวหลุด
+- ชุดกันถอยหลัง MySQL (`--filter` Post|Feed|Activity|Comment|Donat|Marketplace|Profile|Friend|Welcome|Newsfeed|Poll|Share|Suggester|Referral|Academy|Course|Lesson|Support):
+  **1,244 ผ่าน** · 4 fail · 3 incomplete · 9 skipped
+- 4 เคสที่ fail ก็ fail บนโค้ดเดิมด้วย (ยืนยันโดย stash งานทั้งหมดแล้วรันซ้ำ) จึง**ไม่ใช่ผลจากงานนี้**:
+  `AcademySettingsAuditLogTest::removed_academy_audit_logs_index_route_is_gone` ·
+  `StaffDepartmentValidationTest::store_staff_requires_first_and_last_name` ·
+  `StudentLifecycleControllerTest::graduate_as_homeroom_teacher_is_allowed` ·
+  `ClassScheduleTodayTest::today_uses_title_when_there_is_no_course` (ขึ้นกับวันที่)
+
+**TODO:**
+- [ ] 🔴 เปิดจอจริง 375px: โปรไฟล์คนอื่นต้องไม่มีการ์ดแต้ม-เงิน · โปรไฟล์ตัวเองยังมี · หน้าแรกการ์ดผู้บริจาค/ผู้รับยังแสดงชื่อ-รหัส-แต้ม · marketplace ยังเห็นชื่อ-รูปเจ้าของ
+- [ ] ⚠️ PR #53 (เปิดอยู่) แก้ import ของ `PostController` ด้วย → merge ทีหลังจะชนตรงบรรทัด `use` (แก้ง่าย)
+- [ ] 🔴 **D9 รอเคาะ:** เปลี่ยนค่าเริ่มต้นของ `UserResource` ทั้งระบบ (ข้อ 10.3 ของแผน)
+  ผู้ใช้ที่ล็อกอินยังเห็นอีเมล/เบอร์/wallet ของเจ้าของคอร์ส สมาชิกรายวิชา คนคอมเมนต์บทเรียน โพสต์โรงเรียน
+  และ `PeopleMayKnowWidget` แสดงอีเมลคนแปลกหน้าบนจอ
+- [ ] D1–D8 ของแผนยังรอเคาะ (ก่อนเฟส 2) · เฟส 1 (ระบบเพื่อน/resolver/visits) เริ่มได้โดยไม่ต้องเคาะ
+- [ ] เจอข้างทาง: `GET /api/supports/donates/create` (สาธารณะ) ตอบ 500 เพราะไม่มีเมธอด `DonateController::create()`
+
+### Branch / Git State
+- Branch: `fix/profile-privacy-phase0` (จาก `origin/main` b4533e7b · ไม่ได้ตั้ง upstream) · ยังไม่ commit / ยังไม่ push
+- Uncommitted: งานเฟส 0 ทั้งหมด + `.agents/plans/profile-redesign.md` · `.agents/plans/ai-course-generation.md` มีอยู่ก่อนแล้ว ไม่ได้แตะ
+
+---
+
+## 🟡 2026-11-18 — แต้มฟีด 480 · แผงเช็คชื่อเลื่อนซ้าย · แบบทดสอบต้องอ่านบทเรียนก่อน (PR #53 เปิดอยู่ ยังไม่ merge)
+
+PR: https://github.com/UtaiSalem/nuxnan/pull/53 · branch `feat/feed-costs-attendance-quiz-gate` · 3 commit แยกเรื่อง
+
+### 1. แต้มบนหน้าฟีด (`3be87ee6`) — อัตราที่เจ้าของเคาะ
+- โพสต์ 480 (+ แต้มรางวัลโพลเหมือนเดิม) · คอมเมนต์ 240 (เดิมฟรี) · ตอบกลับ 300 · ไลค์/ยกเลิก 120/60 · ดิสไลค์/ยกเลิก 120/60
+- ส่วนแบ่ง (Claude เสนอ เจ้าของยังไม่ได้เคาะแยก): ไลค์ → เจ้าของโพสต์ 60 + ระบบ 60 · ดิสไลค์ → เจ้าของโดนหัก 60 เฉพาะถ้ามีพอ ·
+  คอมเมนต์ → เจ้าของโพสต์ 120 · ตอบกลับ → เจ้าของคอมเมนต์ 150 · ตัวเองคอมเมนต์/ตอบตัวเอง ส่วนแบ่งเข้าระบบ (User id 1)
+- ค่าอยู่ที่ `api/nuxnanravel/config/economy.php` `feed_costs` และ `ui/constants/feedCosts.ts` — **แก้ต้องแก้ทั้งสองไฟล์**
+- `app/Services/FeedPointsService.php` ใหม่: lock แถวผู้จ่าย + `PointsService::spend/earn` ลง ledger (เดิมเป็น `decrement('pp')` ตรง ๆ ติดลบได้)
+- แต้มไม่พอ → 422 `INSUFFICIENT_PP` (เดิมคืน 200) · response มี `user_pp` ให้หน้าเว็บ `authStore.setPoints`
+- ใช้กับฟีดสาธารณะ (`/api/posts…`, รูปในโพสต์, คอมเมนต์โพล) เท่านั้น — โพสต์รายวิชา/สถานศึกษายัง 180 · ไลค์คอมเมนต์ · แชร์ ยังอัตราเดิม
+
+### 2. แผงห้องเรียนเลื่อนซ้ายหลังเช็คชื่อ (`aa958fb9`) — `/Learn/Courses/{id}/attendances`
+- ต้นเหตุ (วิเคราะห์จากโค้ด ยังไม่ได้เห็นจอจริง): Phaser `Scale.NONE` + `CENTER_BOTH` ให้ margin ซ้ายติดลบเมื่อ canvas กว้างกว่ากล่อง ·
+  หลังเช็คชื่อ scrollbar โผล่ กล่องแคบลง ~15px แต่ ResizeObserver ใน `AttendancePhaserScene.vue` ข้ามการเปลี่ยน < 24px
+- แก้: หดแล้ว resize ทันที (hysteresis เหลือแค่ตอนขยาย) + `:deep(canvas){max-width:100%}` ·
+  toast เช็คชื่อ → SweetAlert กลางจอ `heightAuto:false, scrollbarPadding:false` (เจ้าของขอ) · CSS มือถือ `.swal2-popup:not(.swal2-toast)`
+- toast ไม่ใช่ต้นเหตุจริง (SweetAlert toast ไม่แตะ layout) แค่เกิดพร้อมกัน
+
+### 3. แบบทดสอบบทเรียนต้องอ่านก่อน (`fab5761c`)
+- `Lesson::canAccessQuizBy()` บังคับ**เสมอ**: ผ่านถ้าเป็น admin / เรียนจบแล้ว / ผ่านด่านเดียวกับปุ่ม "อ่านแล้ว" (`canBeMarkedCompletedBy`)
+  · flag `require_completion_before_exercises` เหลือคุมแค่ assignment
+- ก่อนอ่านครบ: `LessonResource` ส่ง `questions: []` + `can_take_quiz: false` · GET questions 403 · answer/reveal 422 — code `LESSON_READ_REQUIRED`
+- **บทเรียนไม่มีหัวข้อย่อย + `min_read` 0 → บังคับอ่าน 60 วินาที** (`Lesson::QUIZ_FALLBACK_READ_SECONDS`) มีผลกับปุ่ม "อ่านแล้ว" ด้วย
+- หน้าเว็บ `LessonInteractionTabs.vue`: `quizLocked` + กล่องความคืบหน้าการอ่าน · ปลดล็อกแล้วดึงคำถามเอง
+
+### ตรวจแล้ว
+- `FeedPointCostsTest` 22 ผ่าน · เทสต์บทเรียน 7 ไฟล์ 70 ผ่าน (เทสต์เดิมแก้แค่ setup ให้อ่าน 60 วิ · `LessonReadTimeGateTest` แก้ assertion 1 ข้อตามกฎใหม่)
+- pint ผ่าน · SFC ที่แก้คอมไพล์ผ่าน
+- 10 เทสต์ที่ fail (`QuestionBulkSettingsTest` 1 + Wallet transfer/conversion) fail เท่ากันบน main — ไม่เกี่ยว
+- **ยังไม่ได้รันบน MySQL** (`-c phpunit.mysql.xml`) — ไม่มี migration ในรอบนี้
+
+### งานที่ค้างอยู่ (TODO ต่อ)
+- [ ] 🔴 **ทดสอบบนจอจริงก่อน merge PR #53** (browser pane ไม่ได้ล็อกอิน):
+  เช็คชื่อด้วยบัญชีนักเรียนที่ 1280 และ 375px · ไลค์/ดิสไลค์/คอมเมนต์ที่ `/play/newsfeed` ยอดแต้มบนหัวเว็บต้องตรง · แท็บแบบทดสอบล็อกแล้วปลดเอง
+- [ ] `/api/polls` (`ui/components/play/poll/CreatePollModal.vue` ผ่าน `usePolls`) ยังคิด 180 — ถามเจ้าของว่าจะให้เป็น 480 ด้วยไหม
+- [ ] ข้อความ 422 ของไลค์/ดิสไลค์มีคำอังกฤษปน (`"...ในการ like"`) — `PostReactionController.php` / `PostImageReactionController.php` ปรับเป็นไทยได้
+- [ ] agy โควต้าหมด (429, รีเซ็ตราว 2026-11-20) — รอบนี้ใช้ Codex `codex exec` ตรงแทน; Codex เขียน 180 เป็น `1.8e2` หลบ grep → ตรวจ diff เสมอ
+
+### Branch / Git State
+- PR branch `feat/feed-costs-attendance-quiz-gate` pushed, PR #53 open (Auto-fix เปิดอยู่)
+- `main`: commit นี้คือ worklog เท่านั้น
+- Uncommitted: `.agents/plans/ai-course-generation.md` (มีอยู่ก่อน ไม่ได้แตะ)
+
+---
+
 ## 🟢 2026-11-15 — นโยบายบทเรียน/แบบทดสอบใหม่ + ปิดช่องโหว่คำถาม/เฉลย + ปุ่มตั้งค่าทั้งชุด (merge แล้ว PR #51 · `718ceb73`)
 
 ### นโยบายที่เจ้าของเคาะ (ดู memory `project_lesson_access_policy`)

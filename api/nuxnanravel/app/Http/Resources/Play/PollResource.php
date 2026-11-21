@@ -2,7 +2,7 @@
 
 namespace App\Http\Resources\Play;
 
-use App\Http\Resources\UserResource;
+use App\Http\Resources\PublicUserResource;
 use App\Models\PollVote;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -18,7 +18,7 @@ class PollResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'author' => new UserResource($this->user),
+            'author' => new PublicUserResource($this->user),
             'question' => $this->title,
             'description' => $this->description,
             'starts_at' => $this->start_date,

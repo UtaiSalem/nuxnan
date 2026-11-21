@@ -54,12 +54,12 @@ export interface UserProfile {
   grade?: number  // ระดับชั้น ม.1-6 (1-6)
   experience?: number
   experience_to_next_level?: number
-  points: number
-  wallet: number
+  points?: number // เจ้าของบัญชีเท่านั้น
+  wallet?: number // เจ้าของบัญชีเท่านั้น
   privacy_settings: 'public' | 'friends' | 'private'
-  profile_completion: ProfileCompletion
+  profile_completion?: ProfileCompletion // เจ้าของบัญชีเท่านั้น
   join_date: string
-  last_login: string | null
+  last_login?: string | null // เจ้าของบัญชีเท่านั้น
   is_verified: boolean
   is_plearnd_admin: boolean
   // Gamification & Social Stats (Optional as they might not always be present or computed on fly)
@@ -323,8 +323,8 @@ export const useProfile = () => {
     followers: number
     following: number
     friends: number
-    points: number
-    wallet: number
+    points?: number
+    wallet?: number
   } | null> => {
     try {
       const endpoint = referenceCode 
@@ -338,8 +338,8 @@ export const useProfile = () => {
           followers: number
           following: number
           friends: number
-          points: number
-          wallet: number
+          points?: number
+          wallet?: number
         }
       }
       

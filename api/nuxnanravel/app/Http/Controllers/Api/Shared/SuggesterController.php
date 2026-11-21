@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\Shared;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\UserResource;
+use App\Http\Resources\PublicUserResource;
 use App\Models\User;
 
 class SuggesterController extends Controller
@@ -13,7 +13,7 @@ class SuggesterController extends Controller
         if ($user) {
             return response()->json([
                 'isSuggesterActive' => true,
-                'suggester' => new UserResource($user),
+                'suggester' => new PublicUserResource($user),
                 'error' => null,
             ]);
         } else {
@@ -30,12 +30,12 @@ class SuggesterController extends Controller
         if ($user->canAcceptReferral()) {
             return response()->json([
                 'isSuggesterActive' => true,
-                'suggester' => new UserResource($user),
+                'suggester' => new PublicUserResource($user),
             ]);
         } else {
             return response()->json([
                 'isSuggesterActive' => false,
-                'suggester' => new UserResource($user),
+                'suggester' => new PublicUserResource($user),
                 'error' => 'Suggester has reached the maximum number of referrals/ผู้แนะนำได้รับจำนวนการแนะนำสูงสุดแล้ว',
             ]);
         }

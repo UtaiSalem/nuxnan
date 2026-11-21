@@ -964,8 +964,8 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
           <!-- Friend Requests Widget (Own Profile) -->
           <FriendRequestsWidget v-if="isOwnProfile" />
 
-          <!-- Points & Wallet Card - Compact Style -->
-          <div class="vikinger-card vikinger-card-hover overflow-hidden !rounded-2xl !p-0">
+          <!-- Points & Wallet Card - Compact Style — เจ้าของโปรไฟล์เท่านั้น (API ไม่ส่งยอดของคนอื่น) -->
+          <div v-if="isOwnProfile" class="vikinger-card vikinger-card-hover overflow-hidden !rounded-2xl !p-0">
             <!-- Header - Compact -->
             <div class="relative bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 px-3 py-2.5">
               <div class="absolute inset-0 bg-[url('/images/patterns/circuit.svg')] bg-repeat opacity-10"></div>

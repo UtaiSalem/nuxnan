@@ -2,7 +2,7 @@
 
 namespace App\Http\Resources\Learn\Academy;
 
-use App\Http\Resources\UserResource;
+use App\Http\Resources\PublicUserResource;
 use App\Models\Academy;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -71,14 +71,14 @@ class AcademyResource extends JsonResource
             : (is_numeric($this->director) ? User::find((int) $this->director) : null);
 
         return array_merge($base, [
-            'creater' => new UserResource($this->user),
+            'creater' => new PublicUserResource($this->user),
             'address' => $this->address,
             'email' => $this->email,
             'phone' => $this->phone,
             'website' => $this->website,
             'province' => $this->province,
             'country' => $this->country,
-            'director' => $director ? new UserResource($director) : null,
+            'director' => $director ? new PublicUserResource($director) : null,
             'established_year' => $this->established_year,
             'type' => $this->type,
             'accreditation' => $this->accreditation,
