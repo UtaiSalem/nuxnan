@@ -1,6 +1,39 @@
 # Work Log — nuxnan project
 
-## 🟡 2026-11-20 — หน้าโปรไฟล์: วิเคราะห์ + แผน + เฟส 0 ปิดข้อมูลส่วนตัวรั่ว (branch `fix/profile-privacy-phase0` · ยังไม่ commit)
+## 🟡 2026-11-21 — หน้าโปรไฟล์เฟส 1: ระบบเพื่อน/สิทธิ์/ตัวระบุผู้ใช้ให้ถูก (branch `fix/profile-phase1-friendship` = PR #55 · รอ review)
+
+รายละเอียด + หลักฐาน: ข้อ 11 ของ [`.agents/plans/profile-redesign.md`](plans/profile-redesign.md) · เฟส 0 = PR #54 (squash-merge เข้า `main` แล้ว 2026-11-21 = `1a9e3f3b`)
+
+- **ความเป็นเพื่อน:** อ่านจาก `friendships` ผ่าน `ProfileAccess` ที่เดียว ไม่มีโค้ดอ่านตาราง `friends` ที่ว่างแล้ว
+  ข้อมูลจริง 50 คู่ได้สถานะ `friends` ครบ (เดิม `none` ทุกคู่) · จำนวนเพื่อนจริง (เดิม 0 ทุกคน)
+- **หาเจ้าของโปรไฟล์:** ใช้ `ProfileUserResolver` = id / personal_code / reference_code / username ไม่จับคู่ด้วยชื่อแสดงแล้ว
+- **ยอดเข้าชม:** นับวันละครั้งต่อผู้ชม และเจ้าของเห็นคนเดียว (= ทางเลือกที่แนะนำของ D6)
+- **แก้ 500:** โปรไฟล์ของ 4 คนที่บันทึกลิงก์โซเชียล (`json_decode` ซ้ำ array) · `VideoController` (`friends()` ไม่มี `users.id`)
+- **คำขอเป็นเพื่อน:** ส่งหาตัวเอง 422 · ผู้รับปิดรับ 403 · ซ้ำ 409 · response ไม่มีข้อมูลส่วนตัวของผู้รับ
+- **รายชื่อเพื่อน:** ทำตาม privacy · แบ่งหน้าละ 20 · ไม่มีสถานะออนไลน์ปลอม · ไม่ส่งชื่อจริง · นับเพื่อนร่วมไม่ N+1 · suggestions ไม่ส่งอีเมล
+- **หน้าเว็บ:** แท็บเพื่อนเลิกใช้ mock, ตัวกรองออนไลน์, dropdown DaisyUI (ไม่ได้ติดตั้ง), ปุ่มแชตไป `/messages` (ไม่มี) และลิงก์ `/members` (coming soon)
+  · ปุ่มเพิ่มเพื่อนซ่อนเมื่อเจ้าของปิดรับ · ช่องเข้าชมเห็นเฉพาะเจ้าของ · PeopleMayKnow เลิกแสดงอีเมล
+- **ผู้ทำ:** agy ทำ A/D และแก้ไฟล์ของ B ครบ แล้วโควตาหมด (**429 รีเซ็ตราว 2026-11-27**)
+  Claude รัน pint/เทสต์ของ B ต่อเอง + แก้การนับเพื่อนให้นับเป็นจำนวนคน
+  เพราะ **DB มี 21 คู่ที่ accepted ซ้ำ 2 แถว** ทำให้จำนวนเพื่อนของ 41 คนเกินจริง
+- **ตรวจแล้ว:**
+  - MySQL: เทสต์โปรไฟล์ทั้งหมด 52 ผ่าน
+  - revert-check: โค้ดเดิม fail 21/23 · เคสแถวซ้ำ fail 2/2 เมื่อใช้วิธีนับเดิม
+  - pint ผ่าน · SFC compile ผ่าน · probe ข้อมูลจริงผ่าน
+- **ชุดกันถอยหลัง MySQL** (Post/Feed/Activity/Comment/Donat/Marketplace/Profile/Friend/Welcome/Newsfeed/Poll/Share/Suggester/Referral/Academy/Course/Lesson/Support/Photo/Video/Settings):
+  **1,285 ผ่าน** · 4 fail = ชุดเดิมที่ fail บน main อยู่แล้ว (ยืนยันตอนเฟส 0) ไม่มีอะไรพังเพิ่ม
+- **TODO:**
+  - [ ] 🔴 เปิดจอจริง 375px: แท็บเพื่อน · ปุ่มเพิ่มเพื่อน · ยอดเข้าชมของคนอื่นต้องไม่แสดง
+  - [ ] ลบแถวซ้ำใน `friendships` 21 คู่ (ต้องเป็น migration — รอเคาะ)
+  - [x] #54 squash-merge แล้ว → rebase เฉพาะ 4 commit ของเฟส 1 ลง `main` (`git rebase --onto main fdcf7726`) แล้วเปิด PR #55
+  - [ ] D1–D9 ยังรอเคาะ
+- **Git:** 4 commit (profile access · friends API · UI · docs) + commit อัปเดตสถานะเอกสาร = PR #55 (Auto-fix เปิด)
+  rebase ลง `main` หลัง #54 merge แล้ว tree เหมือนเดิมทุกไบต์ · เทสต์โปรไฟล์ MySQL 52 ผ่านซ้ำหลัง rebase
+  `.agents/plans/ai-course-generation.md` มีอยู่ก่อนแล้ว ไม่ได้แตะ (ยัง untracked)
+
+---
+
+## 🟡 2026-11-20 — หน้าโปรไฟล์: วิเคราะห์ + แผน + เฟส 0 ปิดข้อมูลส่วนตัวรั่ว (branch `fix/profile-privacy-phase0` = PR #54 · squash-merge แล้ว 2026-11-21)
 
 แผนเต็ม + หลักฐานทั้งหมด: [`.agents/plans/profile-redesign.md`](plans/profile-redesign.md) (ผลเฟส 0 อยู่ข้อ 10)
 
@@ -33,7 +66,7 @@
 
 **TODO:**
 - [ ] 🔴 เปิดจอจริง 375px: โปรไฟล์คนอื่นต้องไม่มีการ์ดแต้ม-เงิน · โปรไฟล์ตัวเองยังมี · หน้าแรกการ์ดผู้บริจาค/ผู้รับยังแสดงชื่อ-รหัส-แต้ม · marketplace ยังเห็นชื่อ-รูปเจ้าของ
-- [ ] ⚠️ PR #53 (เปิดอยู่) แก้ import ของ `PostController` ด้วย → merge ทีหลังจะชนตรงบรรทัด `use` (แก้ง่าย)
+- [ ] ⚠️ #54 เข้า `main` ก่อนแล้ว → PR #53 ตอนนี้ CONFLICTING ที่ `PostController` ไฟล์เดียว (บรรทัด `use`) ต้องแก้ก่อน merge #53
 - [ ] 🔴 **D9 รอเคาะ:** เปลี่ยนค่าเริ่มต้นของ `UserResource` ทั้งระบบ (ข้อ 10.3 ของแผน)
   ผู้ใช้ที่ล็อกอินยังเห็นอีเมล/เบอร์/wallet ของเจ้าของคอร์ส สมาชิกรายวิชา คนคอมเมนต์บทเรียน โพสต์โรงเรียน
   และ `PeopleMayKnowWidget` แสดงอีเมลคนแปลกหน้าบนจอ
@@ -41,8 +74,8 @@
 - [ ] เจอข้างทาง: `GET /api/supports/donates/create` (สาธารณะ) ตอบ 500 เพราะไม่มีเมธอด `DonateController::create()`
 
 ### Branch / Git State
-- Branch: `fix/profile-privacy-phase0` (จาก `origin/main` b4533e7b · ไม่ได้ตั้ง upstream) · ยังไม่ commit / ยังไม่ push
-- Uncommitted: งานเฟส 0 ทั้งหมด + `.agents/plans/profile-redesign.md` · `.agents/plans/ai-course-generation.md` มีอยู่ก่อนแล้ว ไม่ได้แตะ
+- Branch: `fix/profile-privacy-phase0` (จาก `origin/main` b4533e7b) · commit 5 ชุด + push แล้ว (upstream `origin/fix/profile-privacy-phase0`) = PR #54 → Claude squash-merge ตามที่เจ้าของสั่ง 2026-11-21 = `1a9e3f3b`
+- `.agents/plans/ai-course-generation.md` มีอยู่ก่อนแล้ว ไม่ได้แตะ (ยัง untracked)
 
 ---
 

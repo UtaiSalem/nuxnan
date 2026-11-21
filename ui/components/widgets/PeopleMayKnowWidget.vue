@@ -106,8 +106,8 @@ onMounted(() => {
           >
             {{ user.name }}
           </NuxtLink>
-          <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
-            {{ user.email }}
+          <p v-if="user.username" class="text-xs text-gray-500 dark:text-gray-400 truncate">
+            @{{ user.username }}
           </p>
         </div>
         <button 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -63,7 +64,6 @@ class UserProfile extends Model
         'join_date' => 'datetime',
         'last_login' => 'datetime',
         'social_media_links' => 'array',
-        'privacy_settings' => 'array',
         'interests' => 'array',
         'metadata' => 'array',
         'visits' => 'integer',
@@ -79,6 +79,25 @@ class UserProfile extends Model
         'allow_messages' => 'boolean',
         'show_online_status' => 'boolean',
     ];
+
+    /**
+     * privacy_settings เก็บเป็นสตริงเดี่ยว: public | friends | private
+     * แถวเก่าบางแถวถูกเก็บเป็น JSON string ("friends") ตอนที่ยัง cast เป็น array — อ่าน/เขียนผ่านตัวนี้จะได้ค่าเดียวกันเสมอ
+     */
+    protected function privacySettings(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => self::normalizePrivacy($value),
+            set: fn ($value) => self::normalizePrivacy($value),
+        );
+    }
+
+    public static function normalizePrivacy(mixed $value): string
+    {
+        $value = is_string($value) ? trim($value, " \"\t\n\r") : null;
+
+        return in_array($value, ['public', 'friends', 'private'], true) ? $value : 'public';
+    }
 
     /**
      * Get the user that owns the profile.

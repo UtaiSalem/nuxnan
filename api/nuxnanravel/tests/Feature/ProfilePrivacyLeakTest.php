@@ -194,7 +194,7 @@ class ProfilePrivacyLeakTest extends TestCase
         $this->assertArrayNotHasKey('wallet', $data);
         $this->assertArrayHasKey('posts', $data);
         $this->assertArrayHasKey('friends', $data);
-        $this->assertArrayHasKey('visits', $data);
+        $this->assertArrayNotHasKey('visits', $data);
 
         $ownRes = $this->actingAs($this->owner, 'api')->getJson('/api/profile/stats');
 
