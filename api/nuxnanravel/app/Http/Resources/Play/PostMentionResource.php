@@ -2,7 +2,7 @@
 
 namespace App\Http\Resources\Play;
 
-use App\Http\Resources\UserResource;
+use App\Http\Resources\PublicUserResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -20,7 +20,7 @@ class PostMentionResource extends JsonResource
             'user_id' => $this->user_id,
             'username' => $this->username,
             'user' => $this->when($this->relationLoaded('user'), function () {
-                return new UserResource($this->user);
+                return new PublicUserResource($this->user);
             }),
             'mentioned_by' => $this->mentioned_by,
             'position' => $this->position,

@@ -43,6 +43,13 @@ class UserProfileResource extends JsonResource
         $isFriend = $request->user() && $request->user()->isFriendWith($user);
         $canViewPrivate = $isOwner || $isFriend;
 
+        // ข้อมูลหมวด "เกี่ยวกับ" (ชื่อจริง เพศ เว็บไซต์ ความสนใจ ทักษะ โซเชียล) เปิดตาม privacy_settings ของเจ้าของ
+        // public = สมาชิกทุกคน · friends = เพื่อนเท่านั้น · private = เจ้าของเท่านั้น
+        $privacy = $this->privacyLevel();
+        $canSeeAbout = $isOwner
+            || $privacy === 'public'
+            || ($privacy === 'friends' && $isFriend);
+
         return [
             'id' => $this->id,
             'user_id' => $this->user_id,
@@ -56,23 +63,25 @@ class UserProfileResource extends JsonResource
             'reference_code' => $user->reference_code,
 
             // Profile info
-            'first_name' => $this->first_name,
-            'last_name' => $this->last_name,
-            'full_name' => trim(($this->first_name ?? '').' '.($this->last_name ?? '')) ?: $user->name,
+            'first_name' => $this->when($canSeeAbout, $this->first_name),
+            'last_name' => $this->when($canSeeAbout, $this->last_name),
+            'full_name' => $canSeeAbout
+                ? (trim(($this->first_name ?? '').' '.($this->last_name ?? '')) ?: $user->name)
+                : $user->name,
             'bio' => $this->bio,
             'birthdate' => $this->when($isOwner || ($this->show_birthdate && $isFriend), $this->birthdate),
-            'gender' => $this->gender,
+            'gender' => $this->when($canSeeAbout, $this->gender),
             'location' => $this->when($isOwner || ($this->show_location && $isFriend), $this->location),
-            'website' => $this->website,
-            'interests' => $this->interests,
-            'skills' => $this->skills,
+            'website' => $this->when($canSeeAbout, $this->website),
+            'interests' => $this->when($canSeeAbout, $this->interests),
+            'skills' => $this->when($canSeeAbout, $this->skills),
 
             // Images
             'avatar' => $avatarUrl,
             'cover_image' => $coverUrl,
 
             // Social
-            'social_media_links' => $this->social_media_links ? json_decode($this->social_media_links, true) : [],
+            'social_media_links' => $canSeeAbout && $this->social_media_links ? json_decode($this->social_media_links, true) : [],
 
             // Stats
             'followers' => $this->followers ?? 0,
@@ -120,9 +129,9 @@ class UserProfileResource extends JsonResource
                 ];
             }),
 
-            // Points & Wallet
-            'points' => $user->pp ?? 0,
-            'wallet' => $user->wallet ?? 0,
+            // Points & Wallet — ข้อมูลการเงินส่วนตัว ส่งให้เจ้าของบัญชีเท่านั้น
+            'points' => $this->when($isOwner, $user->pp ?? 0),
+            'wallet' => $this->when($isOwner, $user->wallet ?? 0),
 
             // Settings
             'privacy_settings' => $this->privacy_settings ?? 'public',
@@ -132,12 +141,12 @@ class UserProfileResource extends JsonResource
             'is_own_profile' => $isOwner,
             'is_friend' => $isFriend,
 
-            // Profile Completion
-            'profile_completion' => $completion,
+            // Profile Completion — บอกได้ว่าช่องไหนกรอกไว้แล้ว จึงส่งให้เจ้าของเท่านั้น
+            'profile_completion' => $this->when($isOwner, $completion),
 
             // Dates
             'join_date' => $this->join_date ?? $user->created_at,
-            'last_login' => $this->last_login,
+            'last_login' => $this->when($isOwner, $this->last_login),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
 
@@ -145,6 +154,20 @@ class UserProfileResource extends JsonResource
             'is_verified' => $user->hasVerifiedEmail(),
             'is_plearnd_admin' => $user->isPlearndAdmin(),
         ];
+    }
+
+    /**
+     * ระดับความเป็นส่วนตัวของโปรไฟล์: public | friends | private
+     *
+     * คอลัมน์ privacy_settings เก็บได้ทั้งสตริงเปล่า (public) และ JSON string ("friends")
+     * เพราะ model cast เป็น 'array' — อ่านค่าดิบแล้วตัดเครื่องหมายคำพูดเอง · ค่าที่ไม่รู้จัก = public
+     */
+    private function privacyLevel(): string
+    {
+        $raw = $this->resource->getAttributes()['privacy_settings'] ?? null;
+        $value = is_string($raw) ? trim($raw, " \"\t\n\r") : null;
+
+        return in_array($value, ['public', 'friends', 'private'], true) ? $value : 'public';
     }
 
     /**

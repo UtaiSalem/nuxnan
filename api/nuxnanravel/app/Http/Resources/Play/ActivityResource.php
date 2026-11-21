@@ -7,8 +7,8 @@ use App\Http\Resources\Earn\DonateRecipientResource;
 use App\Http\Resources\Earn\DonateResource;
 use App\Http\Resources\Learn\Academy\AcademyPostResource;
 use App\Http\Resources\Learn\Course\posts\CoursePostResource;
+use App\Http\Resources\PublicUserResource;
 use App\Http\Resources\Shared\AdvertResource;
-use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Str;
@@ -34,7 +34,7 @@ class ActivityResource extends JsonResource
         return [
             'id' => $this->id,
             'action' => ActivityType::normalize($this->activity_type),
-            'action_by' => new UserResource($this->whenLoaded('user')),
+            'action_by' => new PublicUserResource($this->whenLoaded('user')),
             'action_to' => Str::of($this->activityable_type)->substr(11),
             'action_to_id' => $this->activityable_id,
             'target_resource' => $this->relateResource(class_basename($this->activityable_type), $this->whenLoaded('activityable')),

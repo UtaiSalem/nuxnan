@@ -14,10 +14,12 @@ use App\Models\Feeling;
 use App\Models\Post;
 use App\Models\PostBackground;
 use App\Models\PostImage;
+use App\Models\User;
 use App\Services\LocationService;
 use App\Services\PostMediaService;
 use App\Services\PostService;
 use App\Services\UsageEventService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -63,6 +65,9 @@ class PostController extends Controller
             ])
             ->where('is_published', true)
             ->latest();
+
+        // privacy_settings: 1 = เฉพาะฉัน · 2 = เพื่อน · 3 = สาธารณะ
+        $this->applyVisibility($query, $user);
 
         // Filter by user if specified
         if ($request->has('user_id')) {
@@ -215,8 +220,8 @@ class PostController extends Controller
         // Check if user can view this post
         $user = auth()->user();
 
-        // Private post - only owner can view
-        if ($post->privacy_settings == 1 && $post->user_id !== $user?->id) {
+        // privacy_settings: 1 = เฉพาะฉัน · 2 = เพื่อน · 3 = สาธารณะ
+        if (! $this->canViewPost($post, $user)) {
             return response()->json([
                 'success' => false,
                 'message' => 'You do not have permission to view this post.',
@@ -669,5 +674,58 @@ class PostController extends Controller
         }
 
         return $hashtags;
+    }
+
+    /**
+     * จำกัด query ของโพสต์ให้เหลือเฉพาะที่ผู้ชมมีสิทธิ์เห็น
+     * สาธารณะ (3) ทุกคน · โพสต์ของตัวเองทุกระดับ · ระดับเพื่อน (2) เฉพาะเพื่อนที่ยอมรับแล้ว (ตาราง friendships)
+     *
+     * @param  Builder<Post>  $query
+     * @param  User|null  $viewer
+     */
+    private function applyVisibility($query, $viewer): void
+    {
+        $friendIds = $viewer ? $viewer->getFriendsQueryBuilder()->pluck('id')->all() : [];
+
+        $query->where(function ($q) use ($viewer, $friendIds) {
+            $q->where('privacy_settings', 3);
+
+            if (! $viewer) {
+                return;
+            }
+
+            $q->orWhere('user_id', $viewer->id);
+
+            if ($friendIds !== []) {
+                $q->orWhere(function ($friendsOnly) use ($friendIds) {
+                    $friendsOnly->where('privacy_settings', 2)
+                        ->whereIn('user_id', $friendIds);
+                });
+            }
+        });
+    }
+
+    /**
+     * โพสต์เดี่ยว: เจ้าของเห็นเสมอ · สาธารณะทุกคนเห็น · ระดับเพื่อนเฉพาะเพื่อนที่ยอมรับแล้ว · นอกนั้นไม่เห็น
+     *
+     * @param  User|null  $viewer
+     */
+    private function canViewPost(Post $post, $viewer): bool
+    {
+        if ($viewer && (int) $post->user_id === (int) $viewer->id) {
+            return true;
+        }
+
+        $privacy = (int) $post->privacy_settings;
+
+        if ($privacy === 3) {
+            return true;
+        }
+
+        if ($privacy === 2 && $viewer && $post->user) {
+            return $viewer->isFriendWith($post->user);
+        }
+
+        return false;
     }
 }

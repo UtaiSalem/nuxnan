@@ -2,7 +2,7 @@
 
 namespace App\Http\Resources\Play;
 
-use App\Http\Resources\UserResource;
+use App\Http\Resources\PublicUserResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -19,7 +19,7 @@ class PostTaggedUserResource extends JsonResource
             'id' => $this->id,
             'user_id' => $this->user_id,
             'user' => $this->when($this->relationLoaded('user'), function () {
-                return new UserResource($this->user);
+                return new PublicUserResource($this->user);
             }),
             'tagged_by' => $this->tagged_by,
             'is_approved' => $this->is_approved,

@@ -3,7 +3,7 @@
 namespace App\Http\Resources\Learn\Course\posts;
 
 use App\Http\Resources\Play\PollResource;
-use App\Http\Resources\UserResource;
+use App\Http\Resources\PublicUserResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -32,7 +32,7 @@ class CoursePostResource extends JsonResource
                 'slug' => $this->course->slug,
             ] : null,
             'course_id' => $this->course_id,
-            'author' => new UserResource($this->user),
+            'author' => new PublicUserResource($this->user),
             'content' => $this->content,
             'images' => $this->post_images,
             'imagesResources' => CoursePostImageResource::collection($this->post_images),
