@@ -75,6 +75,7 @@ export interface UserProfile {
   mutual_friends?: number
   online_friends?: number
   new_friends?: number
+  can_send_friend_request?: boolean
   pp?: number // Points alias
   level_progress?: number
   groups_count?: number

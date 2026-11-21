@@ -15,6 +15,7 @@ const emit = defineEmits<{
 
 const { 
   friends, 
+  total,
   isLoading, 
   hasMore, 
   fetchFriends, 
@@ -29,113 +30,36 @@ const toast = useToast()
 const searchQuery = ref('')
 const searchResults = ref<Friend[]>([])
 const isSearching = ref(false)
-const selectedFilter = ref<'all' | 'online' | 'recent'>('all')
 const showConfirmModal = ref(false)
 const friendToRemove = ref<Friend | null>(null)
-// Internal mock state
-const mockFriends = ref<Friend[]>([])
 
 // Computed
 const displayedFriends = computed(() => {
   if (searchQuery.value) {
     return searchResults.value
   }
-  
-  // Use API friends, or fall back to mock friends if empty and not loading
-  let source = friends.value.length > 0 ? friends.value : mockFriends.value
-  
-  let filtered = [...source]
-  
-  if (selectedFilter.value === 'online') {
-    filtered = filtered.filter(f => f.is_online)
-  } else if (selectedFilter.value === 'recent') {
-    filtered = filtered.slice(0, 12)
-  }
-  
-  return filtered
+  return friends.value
 })
-
-const onlineFriendsCount = computed(() => {
-  const source = friends.value.length > 0 ? friends.value : mockFriends.value
-  return source.filter(f => f.is_online).length
-})
-
-// Mock Data Generator
-const getMockFriends = (): Friend[] => {
-  return [
-    {
-      id: 101,
-      user_id: 101,
-      username: 'sarah_j',
-      name: 'Sarah Jenkins',
-      full_name: 'Sarah Jenkins',
-      avatar: 'https://i.pravatar.cc/150?u=101',
-      reference_code: 'REF101',
-      level: 15,
-      is_online: true,
-      mutual_friends_count: 5
-    },
-    {
-      id: 102,
-      user_id: 102,
-      username: 'mike_dev',
-      name: 'Mike Developer',
-      full_name: 'Mike Developer',
-      avatar: 'https://i.pravatar.cc/150?u=102',
-      reference_code: 'REF102',
-      level: 24,
-      is_online: false,
-      mutual_friends_count: 12
-    },
-    {
-      id: 103,
-      user_id: 103,
-      username: 'design_pro',
-      name: 'Jessica Lee',
-      full_name: 'Jessica Lee',
-      avatar: 'https://i.pravatar.cc/150?u=103',
-      reference_code: 'REF103',
-      level: 8,
-      is_online: true,
-      mutual_friends_count: 3
-    },
-    {
-      id: 104,
-      user_id: 104,
-      username: 'gamer_one',
-      name: 'Alex The Gamer',
-      full_name: 'Alex The Gamer',
-      avatar: 'https://i.pravatar.cc/150?u=104',
-      reference_code: 'REF104',
-      level: 42,
-      is_online: true,
-      mutual_friends_count: 8
-    }
-  ]
-}
 
 // Methods
 const handleSearch = async () => {
-  if (!searchQuery.value.trim()) {
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query) {
     searchResults.value = []
     return
   }
-  
+
+  if (!props.isOwnProfile) {
+    searchResults.value = friends.value.filter(f =>
+      (f.name || '').toLowerCase().includes(query) ||
+      (f.username || '').toLowerCase().includes(query)
+    )
+    return
+  }
+
   isSearching.value = true
   try {
-    // Try API search
-    const results = await searchFriends(searchQuery.value)
-    
-    if (results && results.length > 0) {
-      searchResults.value = results
-    } else {
-      // Search in mock data if API returns empty
-      const query = searchQuery.value.toLowerCase()
-      searchResults.value = mockFriends.value.filter(f => 
-        f.name.toLowerCase().includes(query) || 
-        f.username.toLowerCase().includes(query)
-      )
-    }
+    searchResults.value = (await searchFriends(searchQuery.value)) || []
   } catch (e) {
     console.error('Search failed', e)
     searchResults.value = []
@@ -167,13 +91,7 @@ const handleUnfriend = async () => {
     toast.success(`เลิกเป็นเพื่อนกับ ${friendToRemove.value.name} แล้ว`)
     emit('friend-action', { action: 'unfriend', userId: friendToRemove.value.id })
   } else {
-    // Determine if it was a mock friend
-    if (mockFriends.value.some(f => f.id === friendToRemove.value?.id)) {
-      mockFriends.value = mockFriends.value.filter(f => f.id !== friendToRemove.value?.id)
-      toast.success(`เลิกเป็นเพื่อนกับ ${friendToRemove.value.name} แล้ว (Mock)`)
-    } else {
-      toast.error('ไม่สามารถดำเนินการได้')
-    }
+    toast.error('ไม่สามารถดำเนินการได้')
   }
   
   showConfirmModal.value = false
@@ -183,11 +101,6 @@ const handleUnfriend = async () => {
 const goToProfile = (friend: Friend) => {
   if (!friend) return
   navigateTo(`/profile/${friend.reference_code || friend.id}`)
-}
-
-const startChat = (friend: Friend) => {
-  if (!friend) return
-  navigateTo(`/messages/${friend.id}`)
 }
 
 // Initialize
@@ -209,16 +122,13 @@ watch(searchQuery, () => {
   <div class="space-y-6">
     <!-- Header & Search -->
     <BaseCard class="bg-gray-800 border-gray-700 p-5">
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h3 class="text-xl font-bold text-white flex items-center gap-2">
             <Icon icon="fluent:people-24-filled" class="w-6 h-6 text-vikinger-cyan" />
             เพื่อน
-            <span class="text-vikinger-cyan font-normal ml-1">({{ displayedFriends.length }})</span>
+            <span class="text-vikinger-cyan font-normal ml-1">({{ searchQuery ? displayedFriends.length : total }})</span>
           </h3>
-          <p class="text-sm text-gray-400 mt-1">
-            <span class="text-green-400">{{ onlineFriendsCount }}</span> คนกำลังออนไลน์
-          </p>
         </div>
         
         <!-- Search Input -->
@@ -239,28 +149,6 @@ watch(searchQuery, () => {
             class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 animate-spin" 
           />
         </div>
-      </div>
-
-      <!-- Filter Tabs -->
-      <div class="flex gap-2 border-b border-gray-700 pb-3">
-        <button class="min-h-[44px] sm:min-h-0"
-          v-for="filter in [
-            { key: 'all', label: 'ทั้งหมด', icon: 'fluent:people-24-regular' },
-            { key: 'online', label: 'ออนไลน์', icon: 'fluent:presence-available-24-filled' },
-            { key: 'recent', label: 'เพิ่งเพิ่ม', icon: 'fluent:clock-24-regular' },
-          ]"
-          :key="filter.key"
-          @click="selectedFilter = filter.key as typeof selectedFilter"
-          :class="[
-            'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
-            selectedFilter === filter.key
-              ? 'bg-vikinger-purple/20 text-vikinger-purple border border-vikinger-purple/30'
-              : 'text-gray-400 hover:text-white hover:bg-gray-700'
-          ]"
-        >
-          <Icon :icon="filter.icon" class="w-4 h-4" />
-          {{ filter.label }}
-        </button>
       </div>
     </BaseCard>
 
@@ -296,9 +184,7 @@ watch(searchQuery, () => {
                 :alt="friend.name"
                 size="lg"
                 :border-width="2"
-                :border-color="friend.is_online ? '#22c55e' : '#6b7280'"
-                :show-online-status="true"
-                :is-online="friend.is_online"
+                border-color="#615dfa"
               />
               <!-- Level Badge -->
               <div class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-gradient-to-r from-vikinger-purple to-vikinger-cyan flex items-center justify-center text-xs font-bold text-white shadow-lg">
@@ -321,67 +207,26 @@ watch(searchQuery, () => {
                 <Icon icon="fluent:people-16-regular" class="w-3 h-3 inline mr-1" />
                 {{ friend.mutual_friends_count }} เพื่อนร่วม
               </p>
-              
-              <!-- Online Status -->
-              <div class="flex items-center gap-1 mt-2">
-                <span 
-                  :class="[
-                    'w-2 h-2 rounded-full',
-                    friend.is_online ? 'bg-green-500' : 'bg-gray-500'
-                  ]"
-                ></span>
-                <span class="text-xs" :class="friend.is_online ? 'text-green-400' : 'text-gray-500'">
-                  {{ friend.is_online ? 'ออนไลน์' : 'ออฟไลน์' }}
-                </span>
-              </div>
-            </div>
-
-            <!-- Actions Menu -->
-            <div class="relative">
-              <div class="dropdown dropdown-end">
-                <div tabindex="0" role="button" class="btn btn-ghost btn-sm btn-circle">
-                  <Icon icon="fluent:more-vertical-24-regular" class="w-5 h-5 text-gray-400" />
-                </div>
-                <ul tabindex="0" class="dropdown-content z-[20] menu p-2 shadow-lg bg-gray-900 border border-gray-700 rounded-xl w-48">
-                  <li>
-                    <a @click="goToProfile(friend)" class="flex items-center gap-2 text-gray-300 hover:text-white hover:bg-gray-700">
-                      <Icon icon="fluent:person-24-regular" class="w-4 h-4" />
-                      ดูโปรไฟล์
-                    </a>
-                  </li>
-                  <li>
-                    <a @click="startChat(friend)" class="flex items-center gap-2 text-gray-300 hover:text-white hover:bg-gray-700">
-                      <Icon icon="fluent:chat-24-regular" class="w-4 h-4" />
-                      ส่งข้อความ
-                    </a>
-                  </li>
-                  <li v-if="isOwnProfile">
-                    <a @click="confirmUnfriend(friend)" class="flex items-center gap-2 text-red-400 hover:text-red-300 hover:bg-red-900/30">
-                      <Icon icon="fluent:person-delete-24-regular" class="w-4 h-4" />
-                      เลิกเป็นเพื่อน
-                    </a>
-                  </li>
-                </ul>
-              </div>
             </div>
           </div>
         </div>
 
         <!-- Quick Actions -->
         <div class="flex border-t border-gray-700">
-          <button 
-            @click="startChat(friend)"
-            class="flex-1 py-3 flex items-center justify-center gap-2 text-gray-400 hover:text-vikinger-cyan hover:bg-gray-700/50 transition-colors"
-          >
-            <Icon icon="fluent:chat-24-regular" class="w-4 h-4" />
-            <span class="text-sm">ข้อความ</span>
-          </button>
-          <button 
+          <button
             @click="goToProfile(friend)"
-            class="flex-1 py-3 flex items-center justify-center gap-2 text-gray-400 hover:text-vikinger-purple hover:bg-gray-700/50 transition-colors border-l border-gray-700"
+            class="min-h-[44px] flex-1 py-3 flex items-center justify-center gap-2 text-gray-400 hover:text-vikinger-purple hover:bg-gray-700/50 transition-colors"
           >
-            <Icon icon="fluent:arrow-right-24-regular" class="w-4 h-4" />
-            <span class="text-sm">โปรไฟล์</span>
+            <Icon icon="fluent:person-24-regular" class="w-4 h-4" />
+            <span class="text-sm">ดูโปรไฟล์</span>
+          </button>
+          <button
+            v-if="isOwnProfile"
+            @click="confirmUnfriend(friend)"
+            class="min-h-[44px] flex-1 py-3 flex items-center justify-center gap-2 text-red-400 hover:text-red-300 hover:bg-red-900/30 transition-colors border-l border-gray-700"
+          >
+            <Icon icon="fluent:person-delete-24-regular" class="w-4 h-4" />
+            <span class="text-sm">เลิกเป็นเพื่อน</span>
           </button>
         </div>
       </BaseCard>
@@ -399,14 +244,6 @@ watch(searchQuery, () => {
       <p v-if="!searchQuery && isOwnProfile" class="text-sm text-gray-500 mt-2">
         เริ่มเพิ่มเพื่อนเพื่อเชื่อมต่อกับคนอื่นๆ!
       </p>
-      <NuxtLink 
-        v-if="!searchQuery && isOwnProfile" 
-        to="/members"
-        class="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-vikinger-purple text-white rounded-lg hover:bg-vikinger-purple/80 transition-colors"
-      >
-        <Icon icon="fluent:person-add-24-regular" class="w-5 h-5" />
-        ค้นหาเพื่อน
-      </NuxtLink>
     </BaseCard>
 
     <!-- Load More Button -->
@@ -414,7 +251,7 @@ watch(searchQuery, () => {
       <button
         @click="loadMore(props.userId)"
         :disabled="isLoading"
-        class="px-4 sm:px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto"
+        class="min-h-[44px] px-4 sm:px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto"
       >
         <Icon v-if="isLoading" icon="fluent:spinner-ios-20-regular" class="w-5 h-5 animate-spin" />
         <span>{{ isLoading ? 'กำลังโหลด...' : 'โหลดเพิ่มเติม' }}</span>

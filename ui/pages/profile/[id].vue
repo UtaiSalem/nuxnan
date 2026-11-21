@@ -458,6 +458,13 @@ const friendButtonConfig = computed(() => {
   }
 })
 
+// ซ่อนปุ่มเพิ่มเพื่อนเมื่อยังไม่ได้เป็นเพื่อนและเจ้าของโปรไฟล์ไม่รับคำขอ (backend จะตอบ 403 อยู่แล้ว)
+const showFriendButton = computed(() => {
+  const status = friendshipStatus.value?.status ?? 'none'
+  if (status !== 'none') return true
+  return profile.value?.can_send_friend_request !== false
+})
+
 // Friend action state
 const isProcessingFriend = ref(false)
 
@@ -749,7 +756,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
               <!-- Action Buttons -->
               <div class="flex gap-3 flex-shrink-0">
                 <template v-if="!isOwnProfile">
-                  <button class="min-h-[44px] sm:min-h-0" 
+                  <button v-if="showFriendButton" class="min-h-[44px] sm:min-h-0" 
                     @click="handleFriendAction"
                     :disabled="isProcessingFriend"
                     :class="[
@@ -825,8 +832,8 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
               </div>
             </div>
             
-            <!-- Visits -->
-            <div class="stat-card group flex items-center gap-3 p-2 md:p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-all cursor-pointer">
+            <!-- Visits — เจ้าของโปรไฟล์เท่านั้น (API ไม่ส่งยอดของคนอื่น) -->
+            <div v-if="isOwnProfile" class="stat-card group flex items-center gap-3 p-2 md:p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-all cursor-pointer">
               <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                 <Icon icon="fluent:eye-24-filled" class="w-5 h-5 text-white" />
               </div>
@@ -1392,7 +1399,7 @@ const socialIcons: Record<string, { icon: string; color: string }> = {
                 </p>
                 
                 <button 
-                  v-if="friendshipStatus?.status !== 'pending_sent' && friendshipStatus?.status !== 'pending_received'"
+                  v-if="showFriendButton && friendshipStatus?.status !== 'pending_sent' && friendshipStatus?.status !== 'pending_received'"
                   @click="handleFriendAction"
                   class="px-8 py-3 bg-gradient-to-r from-vikinger-purple to-vikinger-cyan text-white rounded-xl font-bold shadow-lg hover:scale-105 transition-all flex items-center gap-2 mx-auto"
                 >
