@@ -1,5 +1,42 @@
 # Work Log — nuxnan project
 
+## 🟡 2026-11-22 — บัตรนักเรียน: แก้ G5 "กดทำเสร็จแล้วไม่ได้บัตร" + ออกบัตรย้อนหลัง 67 ใบ (PR #56 · squash-merge เข้า `main` แล้ว 2026-11-22 = `c24d4cda`)
+
+ต้นเรื่อง: ถามว่าทำไมการ์ดนักเรียนบางคน (เช่น `/student-card/4/7`) ขึ้นป้าย "ยังไม่มีบัตร"
+ต่อจาก gap G5 ใน audit เมนู #16 (entry 2026-10-10 · `.agents/school-admin/16-student-cards.md` §5)
+
+- **ป้าย "ยังไม่มีบัตร" แปลว่าไม่มีบัตรจริง ไม่ใช่บั๊กการแสดงผล:** ป้ายอ่าน `id` จาก `RoomStudentResource` = แถว `student_cards` ที่ active ของนักเรียน
+  - ปีนี้มี 4 คน (students.id 2938–2941 · ม.3/7 ×2 · ม.4/7 ×2) ถูกนำเข้า 2026-07-07 20:16:50 หลังรอบสร้างบัตรรอบสุดท้าย (20:07:09) 10 นาที
+  - sync แบบเก่าปิดอยู่ (`card_request_flow_enabled=1` → `syncCommit` ตอบ 410) จึงได้บัตรผ่านคำร้องได้ทางเดียว
+- **G5 เป็นบั๊กจริง:** ปุ่ม "ทำเสร็จ/ส่งมอบแล้ว" บนหน้าไม่ล็อกอิน `/student-card/admin/students/{ชั้น}/{ห้อง}` เรียก `progressPublic()` ซึ่งเปลี่ยนแค่สถานะ ไม่สร้างบัตร
+  - คำร้องทุกรายการในฐานมาจากหน้านี้ → คำร้อง completed 67 รายการ (ทำบัตรแทนทั้งหมด) มี `result_card_id` ว่าง และบัตรเดิมยังใช้วันออก/วันหมดอายุชุดเก่า
+- **แก้โค้ด (`622bd2f2`):** ย้ายการออกบัตรไปไว้ใน `issueCard()` ของ `StudentCardRequestService` ให้ `complete()` และ `progressPublic()` ใช้ร่วมกัน
+  - ปิดบัตรเก่าก่อนสร้างใบใหม่เสมอ (unique `uq_student_card_active` = active ได้ใบเดียวต่อคนต่อโรงเรียน)
+  - กดเสร็จจากหน้าไม่ล็อกอิน → `processed_by` เป็น NULL · `PublicCardRequestTest` +6
+- **ซ่อมข้อมูล (`b4a6c189`):** migration `2026_11_22_000000_backfill_cards_for_completed_card_requests`
+  - ออกบัตรให้คำร้อง completed ที่ไม่มีบัตร ตามลำดับเวลา (วันออก = `completed_at` · หมดอายุอีก 3 ปี)
+  - ข้ามแล้วรายงานเมื่อ: ไม่พบนักเรียน / มีบัตรที่ใหม่กว่า / ไม่มีบัตรและไม่ได้เรียนแล้ว / ค่ายาวเกินคอลัมน์ (อ่านขนาดจาก `information_schema`)
+  - สำรองไว้ใน `classroom_repair_backups` batch `2026_11_22_000000` (3 แถวต่อคำร้อง) · `down()` คืนค่าได้ตรงทุกแถว · เทสต์ `BackfillCompletedCardRequestsMigrationTest` 10 เคส
+  - ไม่ใช้ตาราง `bk_*` เพราะ `test:db:rebuild` ข้ามตาราง `bk_` → เทสต์ MySQL จะต้องสร้างตารางกลาง transaction แล้ว MySQL commit ข้อมูลเทสต์ค้าง
+- **ผู้ทำ:** Codex `codex exec` ทั้ง 2 ชุด (agy หมดโควตาถึงราว 11-27) · Claude ตรวจ diff เอง: migration ตรงสเปคทุกไบต์ · Codex ไม่ได้รัน migrate
+- **ตรวจแล้ว:**
+  - MySQL: `PublicCardRequestTest` 19 ผ่าน · migration 10 ผ่าน (รวมเคสค่ายาวเกินคอลัมน์) · ชุดบัตร+ห้องเรียน 141 ผ่าน · SQLite 140 ผ่าน + 1 ข้าม
+  - revert-check: โค้ดเดิมทำเทสต์ G5 fail 3 ใน 6 (อีก 3 คุมพฤติกรรมที่ต้องไม่เปลี่ยน)
+  - dry-run บนข้อมูล dev แล้ว rollback: ออก 67 ข้าม 0 · รันซ้ำไม่เปลี่ยนอะไร · `down()` ได้ checksum ตรงเดิม (รวม `updated_at`)
+  - **รันบน dev แล้ว** (`migrate --path`, batch 140): ออกบัตร 67 ใบ · ไม่เหลือคำร้องเสร็จที่ไม่มีบัตร · migration คูปอง `2026_11_12_000001` ยัง Pending ไม่ได้แตะ
+- **TODO:**
+  - [x] merge PR #56 แล้ว → หัว worklog conflict กับ PR #55 ตามคาด แก้ด้วยการ merge `main` เข้า branch ของ #55 (เก็บไว้ทั้งสอง entry · ไม่ rebase ไม่ force push)
+  - [ ] production: deploy โค้ดพร้อม `php artisan migrate` ในรอบเดียวกัน (`mysqldump` ก่อน)
+  - [ ] **dev อีกเครื่อง:** หลัง pull ให้รัน `php artisan migrate --path=database/migrations/2026_11_22_000000_backfill_cards_for_completed_card_requests.php` (ห้าม `migrate` เปล่า เพราะมี Pending อื่น)
+  - [ ] คำร้อง #190 (pending) ส่งหลังคำร้อง #30 ของนักเรียนคนเดียวกันถูกกดเสร็จ 74 วินาที — น่าจะส่งซ้ำเพราะ G5 ให้แอดมินพิจารณายกเลิก
+  - [ ] นักเรียน 4 คนข้างบน: ส่งคำร้องตามขั้นตอนปกติ (หลัง deploy กดเสร็จแล้วได้บัตร)
+  - [ ] งานแยก: นักเรียนที่ยังไม่มีบัตรอัปโหลดรูปไม่ได้ — route รูปทุกเส้นใช้รหัสบัตร (`ui/components/student-card/StudentCardItem.vue:30-32`) ทั้งที่รูปเก็บในแถว `students`
+  - [ ] G3 ยังเปิด: route สาธารณะไม่มี auth และหลังแก้ G5 การกดเสร็จที่นั่นจะเขียนตารางบัตรด้วย
+- **Git:** 2 commit โค้ด + commit worklog → PR #56 squash-merge เป็น `c24d4cda` บน `main` (repo ไม่มี CI check)
+  branch `fix/student-card-public-complete` ยังเก็บไว้บน remote ตามแบบ #54 · `.agents/plans/ai-course-generation.md` ยัง untracked ไม่ได้แตะ
+
+---
+
 ## 🟡 2026-11-21 — หน้าโปรไฟล์เฟส 1: ระบบเพื่อน/สิทธิ์/ตัวระบุผู้ใช้ให้ถูก (branch `fix/profile-phase1-friendship` = PR #55 · รอ review)
 
 รายละเอียด + หลักฐาน: ข้อ 11 ของ [`.agents/plans/profile-redesign.md`](plans/profile-redesign.md) · เฟส 0 = PR #54 (squash-merge เข้า `main` แล้ว 2026-11-21 = `1a9e3f3b`)
