@@ -1,5 +1,39 @@
 # Work Log — nuxnan project
 
+## 🟡 2026-11-23 — merge #53 + ทดสอบจอจริง · ลบ Phaser หน้าเช็คชื่อ (branch `chore/remove-attendance-phaser` ยังไม่ push)
+
+### งานที่ทำในวันนี้ (Claude ตามที่เจ้าของสั่ง)
+- **#53 squash-merge เข้า `main` = `e15ba1bc`** (ก่อน merge push worklog `7502532c` เข้า branch ของ #53) · ไม่มี migration
+- **ทดสอบ #53 บนจอจริงบน `main` แล้ว** — รายละเอียดอยู่ใน entry 2026-11-18 ด้านล่าง:
+  ฟีด ✅ (`user_pp` = หน้าเว็บ = DB ทุกการกระทำ) · แบบทดสอบล็อกแล้วปลดเอง ✅ · เช็คชื่อ ⚠️ (การแก้ของ #53 ไปแก้ Phaser ที่หน้าจริงไม่ใช้)
+- **ลบโค้ด Phaser ฝั่งเช็คชื่อ** → commit `020e0f9a` บน branch `chore/remove-attendance-phaser`
+  - ลบ `ui/components/learn/course/attendances/AttendancePhaserScene.vue` · `.../attendances/phaser/attendancePhaserScene.ts` · `ui/composables/useAttendancePhaser.ts`
+    และตัดส่วน Phaser ใน `AttendanceSimulatorShell.vue` (รวม −1,799 บรรทัด)
+  - package `phaser` ยังต้องอยู่ — เกมพิมพ์ดีดใช้ (`ui/composables/usePhaserGame.ts`)
+  - Codex ลบตามสเปค · Claude ตรวจ diff ทุกบรรทัด + compile SFC + จอจริงรายวิชา 16 ที่ 946/375px: ห้องเรียนขึ้นครบ console ไม่มี error
+
+### งานที่ค้างอยู่ (TODO ต่อ)
+- [ ] 🔴 **branch `chore/remove-attendance-phaser` อยู่ในเครื่องนี้เท่านั้น** (ยังไม่ push · เจ้าของบอก "ไว้ก่อน" เรื่องเปิด PR)
+  อีกเครื่องจะไม่เห็น branch นี้ · ก่อน merge ให้รัน `npm run build` (ลบไฟล์ — build จะจับ import ที่หลงเหลือ)
+- [ ] ทดสอบเช็คชื่อจริงด้วยบัญชีนักเรียนตอนมีคาบเปิด ที่ 375px: ห้องเรียนต้องไม่เลื่อนหลังเช็คชื่อ + SweetAlert กลางจอ
+- [ ] production deploy #53: ไม่มี migration แต่ถ้า prod cache config ไว้ต้อง `php artisan config:cache` ใหม่
+  (`feed_costs` อ่านด้วย `(int) config(...)` ไม่มีค่า default → cache เก่า = ทุกอย่างบนฟีดเป็น 0 แต้ม)
+- [ ] ค้างจาก #53: `/api/polls` ยังคิด 180 (รอเจ้าของเคาะว่าจะเป็น 480 ไหม) · ข้อความ 422 ของไลค์/ดิสไลค์มีคำอังกฤษปน
+
+### Context สำคัญ
+- **บัญชีทดสอบบน dev:** user 1 Utai Salem = super admin + บัญชีรับส่วนแบ่ง "ระบบ" ของแต้มฟีด (ข้ามด่านอ่านทุกบท · ยอดแต้มเปลี่ยนไม่ตรงราคา)
+  · ฝั่งนักเรียนใช้ user 2 นายอุทัย สาเหล็ม (นักเรียนธรรมดาในรายวิชา 22–25) · เจ้าของล็อกอินเองใน browser pane
+- รอบทดสอบใช้แต้ม user 2 บน dev ไป 600 และ user 2 อ่านบทที่ 67 ครบแล้ว → รายวิชา 22–25 ไม่เหลือบทที่ล็อกให้ user 2 ทดสอบ
+- `lessons.status` เป็น `enum('0','1')` → query ด้วย `'1'` (เลข `1` คือ index ของ enum = `'0'` จะไม่เจออะไรเลย)
+- หน้าเช็คชื่อแสดงด้วย `ClassroomSeatGrid.vue` (DOM) — ปัญหา layout ห้องเรียนให้เริ่มที่ไฟล์นี้
+
+### Branch / Git State
+- Branch: `main` = `origin/main` หลัง push commit นี้
+- Local-only: `chore/remove-attendance-phaser` = `020e0f9a` (ยังไม่ push)
+- Uncommitted: `.agents/plans/ai-course-generation.md` (untracked มีอยู่ก่อน ไม่ได้แตะ)
+
+---
+
 ## 🟡 2026-11-22 — บัตรนักเรียน: แก้ G5 "กดทำเสร็จแล้วไม่ได้บัตร" + ออกบัตรย้อนหลัง 67 ใบ (PR #56 · squash-merge เข้า `main` แล้ว 2026-11-22 = `c24d4cda`)
 
 ต้นเรื่อง: ถามว่าทำไมการ์ดนักเรียนบางคน (เช่น `/student-card/4/7`) ขึ้นป้าย "ยังไม่มีบัตร"
