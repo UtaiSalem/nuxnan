@@ -9,7 +9,9 @@ use App\Models\Classroom;
 use App\Models\ClassroomStudent;
 use App\Models\Student;
 use App\Models\StudentCard;
+use App\Models\StudentCardRequest;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -381,5 +383,184 @@ class PublicCardRequestTest extends TestCase
         $this->assertNotNull($row);
         $this->assertSame('pending', $row['active_card_request']['status']);
         $this->assertSame('lost', $row['active_card_request']['reason_code']);
+    }
+
+    // ── completion issues a real card (G5) ──
+
+    private function submitApproveStart(Student $student, string $reasonCode): int
+    {
+        $id = $this->postJson('/api/student-card/1/1/requests', [
+            'student_id' => $student->id,
+            'reason_code' => $reasonCode,
+        ])->assertCreated()->json('request_id');
+
+        $this->postJson("/api/student-card/1/1/requests/{$id}/approve")->assertOk();
+        $this->postJson("/api/student-card/1/1/requests/{$id}/start")->assertOk();
+
+        return $id;
+    }
+
+    public function test_public_complete_issues_first_card_for_student_without_one(): void
+    {
+        Carbon::setTestNow('2026-11-22 10:00:00');
+
+        try {
+            [$academy, $year] = $this->makeAcademy(true);
+            $classroom = $this->makeClassroom($academy, $year);
+            $student = $this->makeStudent($academy);
+            $student->update([
+                'title_prefix_th' => 'เด็กชาย',
+                'first_name_en' => 'Sompong',
+                'citizen_id' => '1103700123456',
+                'date_of_birth' => '2012-03-04',
+            ]);
+            $this->enroll($student, $classroom);
+
+            $id = $this->submitApproveStart($student, 'new_student');
+            $this->postJson("/api/student-card/1/1/requests/{$id}/complete")
+                ->assertOk()->assertJson(['success' => true, 'status' => 'completed']);
+
+            $cards = StudentCard::where('student_id', $student->id)->get();
+            $this->assertCount(1, $cards);
+            $card = $cards->first();
+            $this->assertSame('active', $card->student_status);
+            $this->assertEquals($academy->id, $card->academy_id);
+            $this->assertSame($student->student_id, $card->student_number);
+            $this->assertSame('1103700123456', $card->national_id);
+            $this->assertSame('เด็กชาย', $card->title_name);
+            $this->assertSame('สมปอง', $card->first_name_thai);
+            $this->assertSame('Sompong', $card->first_name_english);
+            $this->assertEquals(1, $card->class_level);
+            $this->assertEquals(1, $card->class_section);
+            $this->assertSame('2012-03-04', Carbon::parse($card->birth_date)->toDateString());
+            $this->assertSame('04/03/2012', $card->birth_date_string);
+            $this->assertSame('2026-11-22', Carbon::parse($card->card_issue_date)->toDateString());
+            $this->assertSame('2029-11-22', Carbon::parse($card->card_expiry_date)->toDateString());
+
+            $this->assertDatabaseHas('student_card_requests', [
+                'id' => $id,
+                'status' => 'completed',
+                'request_type' => 'first_issue',
+                'result_card_id' => $card->id,
+                'processed_by' => null,
+            ]);
+            $this->assertNotNull(StudentCardRequest::findOrFail($id)->completed_at);
+
+            $response = $this->getJson('/api/student-card/1/1')->assertOk();
+            $row = collect($response->json('students'))->firstWhere('student_id', $student->id);
+            $this->assertNotNull($row);
+            $this->assertTrue($row['has_card']);
+            $this->assertSame($card->id, $row['id']);
+            $this->assertNull($row['active_card_request']);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_public_complete_replaces_existing_active_card(): void
+    {
+        [$academy, $year] = $this->makeAcademy(true);
+        $classroom = $this->makeClassroom($academy, $year);
+        $student = $this->makeStudent($academy);
+        $this->enroll($student, $classroom);
+        $oldId = $this->makeActiveCard($academy, $year, $student)->id;
+
+        $id = $this->submitApproveStart($student, 'lost');
+        $this->postJson("/api/student-card/1/1/requests/{$id}/complete")->assertOk();
+
+        $this->assertDatabaseHas('student_cards', ['id' => $oldId, 'student_status' => 'expired']);
+        $cards = StudentCard::where('student_id', $student->id)->where('student_status', 'active')->get();
+        $this->assertCount(1, $cards);
+        $this->assertNotSame($oldId, $cards->first()->id);
+        $this->assertDatabaseHas('student_card_requests', [
+            'id' => $id,
+            'request_type' => 'replacement',
+            'existing_card_id' => $oldId,
+            'result_card_id' => $cards->first()->id,
+        ]);
+    }
+
+    public function test_public_complete_twice_issues_only_one_card(): void
+    {
+        [$academy, $year] = $this->makeAcademy(true);
+        $classroom = $this->makeClassroom($academy, $year);
+        $student = $this->makeStudent($academy);
+        $this->enroll($student, $classroom);
+
+        $id = $this->submitApproveStart($student, 'new_student');
+        $this->postJson("/api/student-card/1/1/requests/{$id}/complete")->assertOk();
+        $this->postJson("/api/student-card/1/1/requests/{$id}/complete")->assertUnprocessable();
+
+        $this->assertSame(1, StudentCard::where('student_id', $student->id)->count());
+    }
+
+    public function test_public_complete_rejects_request_that_is_not_in_progress(): void
+    {
+        [$academy, $year] = $this->makeAcademy(true);
+        $classroom = $this->makeClassroom($academy, $year);
+        $student = $this->makeStudent($academy);
+        $this->enroll($student, $classroom);
+
+        $id = $this->postJson('/api/student-card/1/1/requests', [
+            'student_id' => $student->id,
+            'reason_code' => 'new_student',
+        ])->assertCreated()->json('request_id');
+        $this->postJson("/api/student-card/1/1/requests/{$id}/approve")->assertOk();
+        $this->postJson("/api/student-card/1/1/requests/{$id}/complete")->assertUnprocessable();
+
+        $this->assertDatabaseMissing('student_cards', ['student_id' => $student->id]);
+        $this->assertDatabaseHas('student_card_requests', [
+            'id' => $id,
+            'status' => 'approved',
+            'result_card_id' => null,
+        ]);
+    }
+
+    public function test_public_start_does_not_issue_a_card(): void
+    {
+        [$academy, $year] = $this->makeAcademy(true);
+        $classroom = $this->makeClassroom($academy, $year);
+        $student = $this->makeStudent($academy);
+        $this->enroll($student, $classroom);
+
+        $id = $this->submitApproveStart($student, 'new_student');
+
+        $this->assertDatabaseHas('student_card_requests', ['id' => $id, 'status' => 'in_progress']);
+        $this->assertNotNull(StudentCardRequest::findOrFail($id)->started_at);
+        $this->assertDatabaseMissing('student_cards', ['student_id' => $student->id]);
+    }
+
+    public function test_authenticated_complete_still_issues_card_for_public_request(): void
+    {
+        Carbon::setTestNow('2026-11-22 10:00:00');
+
+        try {
+            [$academy, $year] = $this->makeAcademy(true);
+            $classroom = $this->makeClassroom($academy, $year);
+            $student = $this->makeStudent($academy);
+            $this->enroll($student, $classroom);
+
+            $id = $this->submitApproveStart($student, 'new_student');
+            $owner = User::find($academy->user_id);
+            $this->actingAs($owner, 'api')
+                ->patchJson("/api/academies/{$academy->id}/student-card-requests/{$id}/complete", [
+                    'card_issue_date' => '2026-06-01',
+                    'card_expiry_date' => '2029-05-31',
+                ])->assertOk();
+
+            $cards = StudentCard::where('student_id', $student->id)->where('student_status', 'active')->get();
+            $this->assertCount(1, $cards);
+            $card = $cards->first();
+            $this->assertSame('2026-06-01', Carbon::parse($card->card_issue_date)->toDateString());
+            $this->assertSame('2029-05-31', Carbon::parse($card->card_expiry_date)->toDateString());
+            $this->assertDatabaseHas('student_card_requests', [
+                'id' => $id,
+                'status' => 'completed',
+                'result_card_id' => $card->id,
+                'processed_by' => $owner->id,
+            ]);
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 }
