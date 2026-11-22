@@ -1,6 +1,6 @@
 # Work Log — nuxnan project
 
-## 🟡 2026-11-23 — merge #53 + ทดสอบจอจริง · ลบ Phaser หน้าเช็คชื่อ (branch `chore/remove-attendance-phaser` ยังไม่ push)
+## 🟡 2026-11-23 — merge #53 + ทดสอบจอจริง · ลบ Phaser หน้าเช็คชื่อ (branch `chore/remove-attendance-phaser` push แล้ว · ยังไม่มี PR)
 
 ### งานที่ทำในวันนี้ (Claude ตามที่เจ้าของสั่ง)
 - **#53 squash-merge เข้า `main` = `e15ba1bc`** (ก่อน merge push worklog `7502532c` เข้า branch ของ #53) · ไม่มี migration
@@ -13,8 +13,8 @@
   - Codex ลบตามสเปค · Claude ตรวจ diff ทุกบรรทัด + compile SFC + จอจริงรายวิชา 16 ที่ 946/375px: ห้องเรียนขึ้นครบ console ไม่มี error
 
 ### งานที่ค้างอยู่ (TODO ต่อ)
-- [ ] 🔴 **branch `chore/remove-attendance-phaser` อยู่ในเครื่องนี้เท่านั้น** (ยังไม่ push · เจ้าของบอก "ไว้ก่อน" เรื่องเปิด PR)
-  อีกเครื่องจะไม่เห็น branch นี้ · ก่อน merge ให้รัน `npm run build` (ลบไฟล์ — build จะจับ import ที่หลงเหลือ)
+- [ ] branch `chore/remove-attendance-phaser` (`020e0f9a`) push ขึ้น origin แล้ว · ยังไม่เปิด PR (เจ้าของบอก "ไว้ก่อน")
+  ก่อน merge ให้รัน `npm run build` (ลบไฟล์ — build จะจับ import ที่หลงเหลือ)
 - [ ] ทดสอบเช็คชื่อจริงด้วยบัญชีนักเรียนตอนมีคาบเปิด ที่ 375px: ห้องเรียนต้องไม่เลื่อนหลังเช็คชื่อ + SweetAlert กลางจอ
 - [ ] production deploy #53: ไม่มี migration แต่ถ้า prod cache config ไว้ต้อง `php artisan config:cache` ใหม่
   (`feed_costs` อ่านด้วย `(int) config(...)` ไม่มีค่า default → cache เก่า = ทุกอย่างบนฟีดเป็น 0 แต้ม)
@@ -29,7 +29,7 @@
 
 ### Branch / Git State
 - Branch: `main` = `origin/main` หลัง push commit นี้
-- Local-only: `chore/remove-attendance-phaser` = `020e0f9a` (ยังไม่ push)
+- `chore/remove-attendance-phaser` = `020e0f9a` push แล้ว (track `origin/chore/remove-attendance-phaser`) · ยังไม่มี PR
 - Uncommitted: `.agents/plans/ai-course-generation.md` (untracked มีอยู่ก่อน ไม่ได้แตะ)
 
 ---
