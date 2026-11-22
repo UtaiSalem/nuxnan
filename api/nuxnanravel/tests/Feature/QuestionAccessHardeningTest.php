@@ -6,6 +6,7 @@ use App\Models\Course;
 use App\Models\CourseMember;
 use App\Models\CourseQuiz;
 use App\Models\Lesson;
+use App\Models\LessonProgress;
 use App\Models\PointsTransaction;
 use App\Models\Question;
 use App\Models\QuestionOption;
@@ -51,6 +52,7 @@ class QuestionAccessHardeningTest extends TestCase
         ]);
 
         $this->lesson = $this->makeLesson(Lesson::STATUS_PUBLISHED);
+        $this->markLessonRead($this->student, $this->lesson);
         $this->question = $this->makeLessonQuestion($this->lesson);
     }
 
@@ -85,6 +87,19 @@ class QuestionAccessHardeningTest extends TestCase
         ]);
 
         return $question;
+    }
+
+    /**
+     * The lesson read gate: a student must read the lesson before its questions open.
+     */
+    private function markLessonRead(User $user, Lesson $lesson): void
+    {
+        LessonProgress::create([
+            'user_id' => $user->id,
+            'lesson_id' => $lesson->id,
+            'status' => 'in_progress',
+            'time_spent_seconds' => $lesson->getRequiredReadSeconds(),
+        ]);
     }
 
     // ── Lesson questions: write access ────────────────────────────────────
@@ -184,6 +199,8 @@ class QuestionAccessHardeningTest extends TestCase
     public function test_show_rejects_question_from_another_lesson(): void
     {
         $otherLesson = $this->makeLesson(Lesson::STATUS_PUBLISHED);
+        // The student has read the other lesson, so the request reaches the lesson/question mismatch check (404) instead of stopping at the read gate.
+        $this->markLessonRead($this->student, $otherLesson);
 
         $this->actingAs($this->student, 'api')
             ->getJson("/api/lessons/{$otherLesson->id}/questions/{$this->question->id}")
