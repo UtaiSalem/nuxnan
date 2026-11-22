@@ -233,7 +233,7 @@ const gradeDisplay = computed(() => {
       </div>
 
       <div class="p-6">
-        <div :class="['grid grid-cols-2 gap-4', isOwnProfile ? 'sm:grid-cols-4' : 'sm:grid-cols-3']">
+        <div :class="['grid grid-cols-2 gap-4', isOwnProfile ? 'sm:grid-cols-4' : 'sm:grid-cols-2']">
           <div class="text-center p-4 bg-gradient-to-br from-violet-500/20 to-purple-500/20 rounded-xl">
             <Icon icon="fluent:document-24-filled" class="w-8 h-8 text-violet-400 mx-auto mb-2" />
             <p class="text-2xl font-bold text-white">{{ profile.posts_count || 0 }}</p>
@@ -252,7 +252,7 @@ const gradeDisplay = computed(() => {
             <p class="text-xs text-gray-400">แต้ม</p>
           </div>
           
-          <div class="text-center p-4 bg-gradient-to-br from-emerald-500/20 to-green-500/20 rounded-xl">
+          <div v-if="isOwnProfile" class="text-center p-4 bg-gradient-to-br from-emerald-500/20 to-green-500/20 rounded-xl">
             <Icon icon="fluent:eye-24-filled" class="w-8 h-8 text-emerald-400 mx-auto mb-2" />
             <p class="text-2xl font-bold text-white">{{ profile.visits_count || 0 }}</p>
             <p class="text-xs text-gray-400">การเข้าชม</p>

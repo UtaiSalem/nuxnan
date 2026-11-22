@@ -8,12 +8,14 @@ use App\Http\Resources\Play\ActivityResource;
 use App\Http\Resources\PublicUserResource;
 use App\Http\Resources\UserProfileResource;
 use App\Models\Activity;
-use App\Models\Friend;
 use App\Models\Post;
 use App\Models\User;
+use App\Services\Profile\ProfileAccess;
+use App\Support\ProfileUserResolver;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Gd\Driver;
@@ -44,12 +46,7 @@ class UserProfileController extends Controller
 
     private function findUserByProfileIdentifier(string $identifier): ?User
     {
-        return User::where('id', $identifier)
-            ->orWhere('reference_code', $identifier)
-            ->orWhere('personal_code', $identifier)
-            ->orWhere('username', $identifier)
-            ->orWhere('name', $identifier)
-            ->first();
+        return ProfileUserResolver::resolve($identifier);
     }
 
     /**
@@ -57,17 +54,8 @@ class UserProfileController extends Controller
      */
     public function index(User $user)
     {
-        // ตรวจสอบว่าผู้ใช้ที่เข้าสู่ระบบเป็นเพื่อนกับผู้ใช้ที่เป็นเจ้าของโปรไฟล์หรือไม่
-        $heIsMyFriend = Friend::where('user_id', auth()->id())->where('friend_id', $user->id)
-            ->whereStatus(1)->exists();
-
-        // ตรวจสอบว่าผู้ใช้ที่เป็นเจ้าของโปรไฟล์ป็นเพื่อนกับผู้ใช้ที่เข้าสู่ระบบเหรือไม่
-        $iAmHisFriend = Friend::where('friend_id', auth()->id())->where('user_id', $user->id)
-            ->whereStatus(1)->exists();
-
-        $friendWithAuth = $heIsMyFriend || $iAmHisFriend;
-
-        $privacySettings = $friendWithAuth ? [2, 3] : [3];
+        // privacy ของโพสต์ที่ผู้ชมเห็นได้ (ความเป็นเพื่อนจากตาราง friendships)
+        $privacySettings = ProfileAccess::for(auth()->user(), $user)->postPrivacyLevels();
 
         // ใช้ Eloquent ORM เพื่อดึงโพสต์จากตาราง "กิจกรรม" โดยกำหนดเงื่อนไขตามที่ระบุ
         $activities = Activity::whereHasMorph('activityable', // ชื่อของ relation ในโมเดล Activity
@@ -163,15 +151,21 @@ class UserProfileController extends Controller
             ]);
         }
 
+        $access = ProfileAccess::for($authUser, $user, $profile);
+
         // Check friendship status
-        $friendshipStatus = $this->getFriendshipStatus($authUser, $user);
+        $friendshipStatus = $this->getFriendshipStatus($access);
 
         // Check privacy settings
-        $canViewFullProfile = $this->canViewFullProfile($authUser, $user, $profile);
+        $canViewFullProfile = $access->canSeeFullProfile();
 
-        // Increment visits if not own profile
-        if ($authUser && $authUser->id !== $user->id) {
-            $profile->increment('visits');
+        // นับผู้เข้าชม: ผู้ชมแต่ละคนนับวันละครั้ง ไม่นับเจ้าของ (ยอดนี้เจ้าของเห็นคนเดียว)
+        if ($authUser && ! $access->isOwner()) {
+            $visitKey = sprintf('profile-visit:%d:%d:%s', $authUser->id, $user->id, now()->toDateString());
+
+            if (Cache::add($visitKey, true, now()->endOfDay())) {
+                $profile->increment('visits');
+            }
         }
 
         $profileData = new UserProfileResource($profile);
@@ -181,7 +175,7 @@ class UserProfileController extends Controller
             'data' => $profileData,
             'friendship_status' => $friendshipStatus,
             'can_view_full_profile' => $canViewFullProfile,
-            'is_own_profile' => $authUser && $authUser->id === $user->id,
+            'is_own_profile' => $access->isOwner(),
         ]);
     }
 
@@ -200,11 +194,6 @@ class UserProfileController extends Controller
         }
 
         $validated = $request->validated();
-
-        // Handle social_media_links as JSON
-        if (isset($validated['social_media_links'])) {
-            $validated['social_media_links'] = json_encode($validated['social_media_links']);
-        }
 
         $profile->update($validated);
 
@@ -473,27 +462,8 @@ class UserProfileController extends Controller
             ], 404);
         }
 
-        // ถ้าไม่มี authUser (guest) ให้ดูได้เฉพาะ public posts
-        if (! $authUser) {
-            $privacySettings = [3]; // Global only
-            $isOwnProfile = false;
-            $friendWithAuth = false;
-        } else {
-            // ตรวจสอบว่าผู้ใช้ที่เข้าสู่ระบบเป็นเพื่อนกับผู้ใช้ที่เป็นเจ้าของโปรไฟล์หรือไม่
-            $heIsMyFriend = Friend::where('user_id', $authUser->id)->where('friend_id', $user->id)
-                ->whereStatus(1)->exists();
-
-            // ตรวจสอบว่าผู้ใช้ที่เป็นเจ้าของโปรไฟล์ป็นเพื่อนกับผู้ใช้ที่เข้าสู่ระบบเหรือไม่
-            $iAmHisFriend = Friend::where('friend_id', $authUser->id)->where('user_id', $user->id)
-                ->whereStatus(1)->exists();
-
-            $friendWithAuth = $heIsMyFriend || $iAmHisFriend;
-
-            // ถ้าเป็นโปรไฟล์ของตัวเอง ให้ดูได้ทุกอย่าง
-            $isOwnProfile = $authUser->id === $user->id;
-
-            $privacySettings = $isOwnProfile ? [1, 2, 3] : ($friendWithAuth ? [2, 3] : [3]);
-        }
+        // privacy ของโพสต์ที่ผู้ชมเห็นได้: เจ้าของ [1,2,3] · เพื่อน [2,3] · คนอื่น/guest [3] (ตาราง friendships)
+        $privacySettings = ProfileAccess::for($authUser, $user)->postPrivacyLevels();
 
         // ใช้ Eloquent ORM เพื่อดึงกิจกรรมจากตาราง activities
         // ตรวจสอบ privacy_settings จากตาราง Posts หรือ CoursePosts แทน
@@ -589,24 +559,21 @@ class UserProfileController extends Controller
 
         $postsCount = Activity::where('user_id', $user->id)->count();
 
-        // Get friends count
-        $friendsCount = Friend::where(function ($query) use ($user) {
-            $query->where('user_id', $user->id)
-                ->orWhere('friend_id', $user->id);
-        })->where('status', 1)->count();
+        // Get friends count (ตาราง friendships) — นับเป็นจำนวนคน เพราะบางคู่ถูกบันทึกว่ายอมรับซ้ำ 2 แถว
+        $friendsCount = $user->getFriendsQueryBuilder()->count();
 
         $data = [
             'posts' => $postsCount,
             'followers' => $user->profile->followers ?? 0,
             'following' => $user->profile->following ?? 0,
             'friends' => $friendsCount,
-            'visits' => $user->profile->visits ?? 0,
         ];
 
-        // แต้มคงเหลือและเงินใน wallet เป็นข้อมูลการเงินส่วนตัว — ส่งให้เจ้าของบัญชีเท่านั้น
+        // แต้มคงเหลือ เงินใน wallet และยอดผู้เข้าชม เป็นข้อมูลส่วนตัว — ส่งให้เจ้าของบัญชีเท่านั้น
         if (Auth::check() && (int) Auth::id() === (int) $user->id) {
             $data['points'] = $user->pp ?? 0;
             $data['wallet'] = $user->wallet ?? 0;
+            $data['visits'] = $user->profile->visits ?? 0;
         }
 
         return response()->json([
@@ -616,72 +583,22 @@ class UserProfileController extends Controller
     }
 
     /**
-     * Get friendship status between auth user and target user
+     * Get friendship status between auth user and target user (ตาราง friendships)
      */
-    private function getFriendshipStatus($authUser, $targetUser): array
+    private function getFriendshipStatus(ProfileAccess $access): array
     {
-        if (! $authUser) {
-            return ['status' => 'guest', 'label' => 'ผู้เยี่ยมชม'];
-        }
+        $status = $access->friendshipStatus();
 
-        if ($authUser->id === $targetUser->id) {
-            return ['status' => 'self', 'label' => 'ตัวเอง'];
-        }
+        $labels = [
+            'guest' => 'ผู้เยี่ยมชม',
+            'self' => 'ตัวเอง',
+            'friends' => 'เพื่อน',
+            'pending_sent' => 'รอการยืนยัน',
+            'pending_received' => 'รอการตอบรับ',
+            'none' => 'ไม่ใช่เพื่อน',
+        ];
 
-        // Check if they are friends
-        $friendship = Friend::where(function ($query) use ($authUser, $targetUser) {
-            $query->where('user_id', $authUser->id)->where('friend_id', $targetUser->id);
-        })->orWhere(function ($query) use ($authUser, $targetUser) {
-            $query->where('user_id', $targetUser->id)->where('friend_id', $authUser->id);
-        })->first();
-
-        if (! $friendship) {
-            return ['status' => 'none', 'label' => 'ไม่ใช่เพื่อน'];
-        }
-
-        if ($friendship->status === 1) {
-            return ['status' => 'friends', 'label' => 'เพื่อน'];
-        }
-
-        if ($friendship->user_id === $authUser->id) {
-            return ['status' => 'pending_sent', 'label' => 'รอการยืนยัน'];
-        }
-
-        return ['status' => 'pending_received', 'label' => 'รอการตอบรับ'];
-    }
-
-    /**
-     * Check if user can view full profile
-     */
-    private function canViewFullProfile($authUser, $targetUser, $profile): bool
-    {
-        if (! $authUser) {
-            // Guest users can only view public profiles
-            return ($profile->privacy_settings ?? 'public') === 'public';
-        }
-
-        if ($authUser->id === $targetUser->id) {
-            return true;
-        }
-
-        $privacySetting = $profile->privacy_settings ?? 'public';
-
-        if ($privacySetting === 'public') {
-            return true;
-        }
-
-        if ($privacySetting === 'private') {
-            return false;
-        }
-
-        // For 'friends' privacy, check friendship
-        $areFriends = Friend::where(function ($query) use ($authUser, $targetUser) {
-            $query->where('user_id', $authUser->id)->where('friend_id', $targetUser->id);
-        })->orWhere(function ($query) use ($authUser, $targetUser) {
-            $query->where('user_id', $targetUser->id)->where('friend_id', $authUser->id);
-        })->where('status', 1)->exists();
-
-        return $areFriends;
+        return ['status' => $status, 'label' => $labels[$status] ?? ''];
     }
 
     /**
