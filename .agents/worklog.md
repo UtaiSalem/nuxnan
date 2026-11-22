@@ -203,7 +203,11 @@ PR: https://github.com/UtaiSalem/nuxnan/pull/53 · branch `feat/feed-costs-atten
     ไม่มี scroll แนวนอน — แต่การแก้ Phaser ไม่ได้ถูกทดสอบเพราะหน้าจริงไม่ใช้ (ดูข้อ 2)
   - บัญชีทดสอบ: user 1 ใช้ทดสอบด่านแบบทดสอบไม่ได้ (super admin ข้ามด่าน) · ฝั่งนักเรียนใช้ user 2 (นักเรียนธรรมดาในรายวิชา 22–25)
 - [ ] 🔴 ทดสอบเช็คชื่อจริงด้วยบัญชีนักเรียนตอนมีคาบเปิด: ห้องเรียนต้องไม่เลื่อนหลังเช็คชื่อ + SweetAlert กลางจอที่ 375px
-- [ ] เคาะ: ลบโค้ด Phaser ที่ไม่ได้ใช้ (`AttendancePhaserScene.vue`, `useAttendancePhaser`) หรือเก็บไว้เป็นทางสำรองตามเดิม
+- [x] เคาะแล้ว 2026-11-23: เจ้าของสั่งลบโค้ด Phaser ที่ไม่ได้ใช้ → branch `chore/remove-attendance-phaser` (Codex ลบ · Claude ตรวจ diff + จอจริง)
+  - ลบ `AttendancePhaserScene.vue` · `attendances/phaser/attendancePhaserScene.ts` · `composables/useAttendancePhaser.ts` (รวม −1,763 บรรทัด)
+  - `AttendanceSimulatorShell.vue` เหลือ `ClassroomSeatGrid` ตัวเดียว (−30 บรรทัด) · แก้คอมเมนต์ที่อ้าง Phaser ใน `ClassroomSeatGrid.vue` / `useClassroomLayout.ts`
+  - package `phaser` **ยังต้องอยู่** — เกมพิมพ์ดีดใช้ (`usePhaserGame.ts`, FallingWords, MonsterBattle)
+  - ตรวจ: compile SFC ผ่าน · grep ไม่เหลือการอ้างอิง · จอจริงรายวิชา 16 ที่ 946px และ 375px ห้องเรียนขึ้นครบ 4 ที่นั่ง กึ่งกลาง ไม่มี scroll แนวนอน · console ไม่มี error
 - [ ] `/api/polls` (`ui/components/play/poll/CreatePollModal.vue` ผ่าน `usePolls`) ยังคิด 180 — ถามเจ้าของว่าจะให้เป็น 480 ด้วยไหม
 - [ ] ข้อความ 422 ของไลค์/ดิสไลค์มีคำอังกฤษปน (`"...ในการ like"`) — `PostReactionController.php` / `PostImageReactionController.php` ปรับเป็นไทยได้
 - [ ] agy โควต้าหมด (429, รีเซ็ตราว 2026-11-20) — รอบนี้ใช้ Codex `codex exec` ตรงแทน; Codex เขียน 180 เป็น `1.8e2` หลบ grep → ตรวจ diff เสมอ

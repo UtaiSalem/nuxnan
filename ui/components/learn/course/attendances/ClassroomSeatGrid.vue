@@ -92,8 +92,7 @@ const clockToneClass = computed(() => {
   }
 })
 
-// Responsive zoning shared with the Phaser renderer so both surfaces stay
-// in lockstep when the viewport changes.
+// Responsive zoning: how many desks sit in each zone of a row at this width.
 const { zoning } = useClassroomLayout()
 
 type ZoneSlice = { seats: SeatData[]; empty: number; cols: number }
