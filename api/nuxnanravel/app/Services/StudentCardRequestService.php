@@ -70,7 +70,7 @@ class StudentCardRequestService
     public function progressPublic(StudentCardRequest $request, StudentCardRequestStatus $to): StudentCardRequest
     {
         return DB::transaction(function () use ($request, $to) {
-            $locked = StudentCardRequest::query()->lockForUpdate()->findOrFail($request->id);
+            $locked = StudentCardRequest::query()->with('student')->lockForUpdate()->findOrFail($request->id);
             $allowed = [
                 StudentCardRequestStatus::Approved->value => StudentCardRequestStatus::InProgress,
                 StudentCardRequestStatus::InProgress->value => StudentCardRequestStatus::Completed,
@@ -79,15 +79,19 @@ class StudentCardRequestService
                 throw ValidationException::withMessages(['status' => 'คำร้องนี้ไม่อยู่ในสถานะที่สามารถดำเนินการต่อได้']);
             }
 
-            $changes = ['status' => $to];
             if ($to === StudentCardRequestStatus::InProgress) {
-                $changes['started_at'] = now();
-            } else {
-                $changes['completed_at'] = now();
-            }
-            $locked->update($changes);
+                $locked->update(['status' => $to, 'started_at' => now()]);
 
-            return $locked->fresh();
+                return $locked->fresh();
+            }
+
+            // จัดทำเสร็จ = ออกบัตรจริงทางเดียวกับหน้าแอดมินที่ล็อกอิน (G5)
+            // เดิมเปลี่ยนแค่สถานะ นักเรียนจึงยังขึ้น "ยังไม่มีบัตร" และ result_card_id ว่างทุกรายการ
+            if (! $locked->student) {
+                throw ValidationException::withMessages(['status' => 'ไม่พบข้อมูลนักเรียนของคำร้องนี้ จึงออกบัตรไม่ได้']);
+            }
+
+            return $this->issueCard($locked, null);
         });
     }
 
@@ -195,46 +199,58 @@ class StudentCardRequestService
                 throw ValidationException::withMessages(['status' => 'Only an in-progress request with an active student can be completed.']);
             }
 
-            StudentCard::query()
-                ->where('academy_id', $locked->academy_id)
-                ->where('student_id', $locked->student_id)
-                ->where('student_status', 'active')
-                ->lockForUpdate()
-                ->update(['student_status' => 'expired']);
-
-            $student = $locked->student;
-            $issueDate = Carbon::parse($context['card_issue_date'] ?? now());
-            $card = StudentCard::create([
-                'student_id' => $student->id,
-                'academy_id' => $locked->academy_id,
-                'academic_year_id' => $locked->academic_year_id,
-                'student_number' => $student->student_id,
-                'full_name_thai' => $locked->full_name_snapshot,
-                'title_name' => $student->title_prefix_th,
-                'first_name_thai' => $student->first_name_th,
-                'last_name_thai' => $student->last_name_th,
-                'first_name_english' => $student->first_name_en,
-                'national_id' => $student->citizen_id,
-                'birth_date' => $student->date_of_birth,
-                'birth_date_string' => $student->date_of_birth?->format('d/m/Y'),
-                'class_level' => preg_replace('/\D+/u', '', (string) $locked->grade_level_snapshot) ?: null,
-                'class_section' => (int) $locked->section_snapshot ?: null,
-                'level_and_room' => trim($locked->grade_level_snapshot.'/'.$locked->section_snapshot, '/'),
-                'card_issue_date' => $issueDate,
-                'card_expiry_date' => $context['card_expiry_date'] ?? $issueDate->copy()->addYears(3),
-                'student_status' => 'active',
-                'profile_image' => $student->profile_image,
-            ]);
-
-            $locked->update([
-                'status' => StudentCardRequestStatus::Completed,
-                'result_card_id' => $card->id,
-                'processed_by' => $actor->id,
-                'admin_notes' => $context['admin_notes'] ?? $locked->admin_notes,
-                'completed_at' => now(),
-            ]);
-
-            return $locked->fresh(['resultCard']);
+            return $this->issueCard($locked, $actor, $context);
         });
+    }
+
+    /**
+     * ออกบัตรใบใหม่ให้คำร้องที่จัดทำเสร็จ — complete() และ progressPublic() ต้องออกบัตรผ่านที่นี่ที่เดียว
+     *
+     * ปิดบัตร active ใบเดิมก่อนสร้างใบใหม่เสมอ เพราะ unique index uq_student_card_active
+     * ยอมให้นักเรียนมีบัตร active ได้ใบเดียวต่อโรงเรียน
+     * ต้องเรียกภายใน DB::transaction ที่ lock คำร้องไว้แล้ว และคำร้องต้องโหลด student มาแล้ว
+     */
+    private function issueCard(StudentCardRequest $locked, ?User $actor, array $context = []): StudentCardRequest
+    {
+        StudentCard::query()
+            ->where('academy_id', $locked->academy_id)
+            ->where('student_id', $locked->student_id)
+            ->where('student_status', 'active')
+            ->lockForUpdate()
+            ->update(['student_status' => 'expired']);
+
+        $student = $locked->student;
+        $issueDate = Carbon::parse($context['card_issue_date'] ?? now());
+        $card = StudentCard::create([
+            'student_id' => $student->id,
+            'academy_id' => $locked->academy_id,
+            'academic_year_id' => $locked->academic_year_id,
+            'student_number' => $student->student_id,
+            'full_name_thai' => $locked->full_name_snapshot,
+            'title_name' => $student->title_prefix_th,
+            'first_name_thai' => $student->first_name_th,
+            'last_name_thai' => $student->last_name_th,
+            'first_name_english' => $student->first_name_en,
+            'national_id' => $student->citizen_id,
+            'birth_date' => $student->date_of_birth,
+            'birth_date_string' => $student->date_of_birth?->format('d/m/Y'),
+            'class_level' => preg_replace('/\D+/u', '', (string) $locked->grade_level_snapshot) ?: null,
+            'class_section' => (int) $locked->section_snapshot ?: null,
+            'level_and_room' => trim($locked->grade_level_snapshot.'/'.$locked->section_snapshot, '/'),
+            'card_issue_date' => $issueDate,
+            'card_expiry_date' => $context['card_expiry_date'] ?? $issueDate->copy()->addYears(3),
+            'student_status' => 'active',
+            'profile_image' => $student->profile_image,
+        ]);
+
+        $locked->update([
+            'status' => StudentCardRequestStatus::Completed,
+            'result_card_id' => $card->id,
+            'processed_by' => $actor?->id,
+            'admin_notes' => $context['admin_notes'] ?? $locked->admin_notes,
+            'completed_at' => now(),
+        ]);
+
+        return $locked->fresh(['resultCard']);
     }
 }
