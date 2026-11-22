@@ -1,6 +1,6 @@
 # Work Log — nuxnan project
 
-## 🟡 2026-11-23 — merge #53 + ทดสอบจอจริง · ลบ Phaser หน้าเช็คชื่อ (#57 squash-merge เข้า main แล้ว · ยังไม่ได้รัน `npm run build`)
+## 🟡 2026-11-23 — merge #53 + ทดสอบจอจริง · ลบ Phaser หน้าเช็คชื่อ (#57 squash-merge เข้า main แล้ว · build ผ่าน)
 
 ### งานที่ทำในวันนี้ (Claude ตามที่เจ้าของสั่ง)
 - **#53 squash-merge เข้า `main` = `e15ba1bc`** (ก่อน merge push worklog `7502532c` เข้า branch ของ #53) · ไม่มี migration
@@ -13,8 +13,7 @@
   - Codex ลบตามสเปค · Claude ตรวจ diff ทุกบรรทัด + compile SFC + จอจริงรายวิชา 16 ที่ 946/375px: ห้องเรียนขึ้นครบ console ไม่มี error
 
 ### งานที่ค้างอยู่ (TODO ต่อ)
-- [ ] 🔴 รัน `npm run build` บน `main` — #57 ลบไฟล์ 3 ไฟล์แล้ว merge ไปก่อน build
-  (grep ไม่เจอการอ้างอิงแล้ว แต่ build จะยืนยันได้แน่นอนกว่า)
+- [x] `npm run build` บน `main` หลัง #57 — เจ้าของรันเองแล้ว **ผ่าน** (2026-11-23)
 - [ ] ทดสอบเช็คชื่อจริงด้วยบัญชีนักเรียนตอนมีคาบเปิด ที่ 375px: ห้องเรียนต้องไม่เลื่อนหลังเช็คชื่อ + SweetAlert กลางจอ
 - [ ] production deploy #53: ไม่มี migration แต่ถ้า prod cache config ไว้ต้อง `php artisan config:cache` ใหม่
   (`feed_costs` อ่านด้วย `(int) config(...)` ไม่มีค่า default → cache เก่า = ทุกอย่างบนฟีดเป็น 0 แต้ม)
