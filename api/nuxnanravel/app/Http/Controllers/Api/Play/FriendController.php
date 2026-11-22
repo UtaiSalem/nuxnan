@@ -3,8 +3,13 @@
 namespace App\Http\Controllers\Api\Play;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\PublicUserResource;
 use App\Models\Friendship;
 use App\Models\User;
+use App\Services\Profile\ProfileAccess;
+use App\Support\ProfileUserResolver;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 class FriendController extends Controller
 {
@@ -37,7 +42,7 @@ class FriendController extends Controller
             ->values();
 
         $suggestions = User::query()
-            ->select(['id', 'name', 'email', 'reference_code', 'profile_photo_path'])
+            ->select(['id', 'name', 'username', 'reference_code', 'profile_photo_path'])
             ->whereNotIn('id', $excludedUserIds)
             ->inRandomOrder()
             ->limit(10)
@@ -59,8 +64,8 @@ class FriendController extends Controller
 
         $pendingFriends = Friendship::query()
             ->with([
-                'sender:id,name,email,reference_code,profile_photo_path',
-                'recipient:id,name,email,reference_code,profile_photo_path',
+                'sender:id,name,username,reference_code,profile_photo_path',
+                'recipient:id,name,username,reference_code,profile_photo_path',
             ])
             ->where('recipient_type', $userType)
             ->where('recipient_id', $authUser->id)
@@ -88,17 +93,39 @@ class FriendController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * ส่งคำขอเป็นเพื่อน — เคารพ allow_friend_requests ของผู้รับ และแจ้งตามจริงเมื่อส่งไม่ได้
      */
     public function addFriendRequest(User $recipient)
     {
         $user = auth()->user();
 
-        $user->befriend($recipient);
+        if ((int) $user->id === (int) $recipient->id) {
+            return response()->json([
+                'success' => false,
+                'code' => 'CANNOT_FRIEND_SELF',
+                'message' => 'ส่งคำขอเป็นเพื่อนถึงตัวเองไม่ได้',
+            ], 422);
+        }
+
+        if ($recipient->profile && $recipient->profile->allow_friend_requests === false) {
+            return response()->json([
+                'success' => false,
+                'code' => 'FRIEND_REQUESTS_DISABLED',
+                'message' => 'ผู้ใช้นี้ปิดรับคำขอเป็นเพื่อน',
+            ], 403);
+        }
+
+        if (! $user->befriend($recipient)) {
+            return response()->json([
+                'success' => false,
+                'code' => 'FRIEND_REQUEST_NOT_ALLOWED',
+                'message' => 'ส่งคำขอเป็นเพื่อนไม่ได้ (เป็นเพื่อนกันแล้ว หรือมีคำขอค้างอยู่)',
+            ], 409);
+        }
 
         return response()->json([
             'success' => true,
-            'user' => $recipient,
+            'user' => new PublicUserResource($recipient),
             'message' => 'Friend request sent successfully.',
         ], 200);
     }
@@ -169,29 +196,22 @@ class FriendController extends Controller
     public function index()
     {
         $user = auth()->user();
-        $friends = $user->getFriends();
+        $friends = $user->getFriends(20);
 
         return response()->json([
             'success' => true,
-            'data' => $this->formatFriends($friends),
-            'meta' => [
-                'current_page' => 1,
-                'last_page' => 1,
-                'total' => $friends->count(),
-            ],
+            'data' => $this->formatFriends($friends->getCollection()),
+            'meta' => $this->paginationMeta($friends),
         ]);
     }
 
     /**
-     * Get friends of a specific user by identifier.
+     * Get friends of a specific user by identifier (id, reference_code, personal_code หรือ username).
+     * ทำตาม privacy ของเจ้าของ: public = ทุกคน · friends = เฉพาะเพื่อน · private = เจ้าของเท่านั้น
      */
     public function userFriends(string $identifier)
     {
-        // Find user by ID, reference_code, or username
-        $user = User::where('id', $identifier)
-            ->orWhere('reference_code', $identifier)
-            ->orWhere('name', $identifier)
-            ->first();
+        $user = ProfileUserResolver::resolve($identifier);
 
         if (! $user) {
             return response()->json([
@@ -200,16 +220,20 @@ class FriendController extends Controller
             ], 404);
         }
 
-        $friends = $user->getFriends();
+        if (! ProfileAccess::for(auth()->user(), $user)->canSeeFriendsList()) {
+            return response()->json([
+                'success' => false,
+                'code' => 'FRIENDS_LIST_PRIVATE',
+                'message' => 'รายชื่อเพื่อนของผู้ใช้นี้เป็นส่วนตัว',
+            ], 403);
+        }
+
+        $friends = $user->getFriends(20);
 
         return response()->json([
             'success' => true,
-            'data' => $this->formatFriends($friends),
-            'meta' => [
-                'current_page' => 1,
-                'last_page' => 1,
-                'total' => $friends->count(),
-            ],
+            'data' => $this->formatFriends($friends->getCollection()),
+            'meta' => $this->paginationMeta($friends),
         ]);
     }
 
@@ -251,26 +275,87 @@ class FriendController extends Controller
 
     /**
      * Format friends data for response.
+     * ไม่ส่งชื่อจริง-นามสกุล (แต่ละคนตั้ง privacy เอง) และไม่มีสถานะออนไลน์ (ระบบยังไม่มี presence จริง)
+     *
+     * @param  Collection<int, User>  $friends
      */
     private function formatFriends($friends)
     {
-        return $friends->map(function ($friend) {
-            $profile = $friend->profile;
+        $mutualCounts = $this->mutualFriendCounts($friends);
 
+        return $friends->map(function ($friend) use ($mutualCounts) {
             return [
                 'id' => $friend->id,
                 'user_id' => $friend->id,
-                'username' => $friend->name,
+                'username' => $friend->username ?? $friend->name,
                 'name' => $friend->name,
-                'full_name' => $profile ? trim(($profile->first_name ?? '').' '.($profile->last_name ?? '')) ?: $friend->name : $friend->name,
+                'full_name' => $friend->name,
                 'avatar' => $friend->profile_photo_url ?? '/images/default-avatar.png',
                 'reference_code' => $friend->reference_code,
-                'level' => $profile ? $this->calculateLevel($friend->pp ?? 0) : 1,
-                'is_online' => $this->isUserOnline($friend),
-                'last_seen' => $friend->updated_at?->diffForHumans(),
-                'mutual_friends_count' => $this->getMutualFriendsCount($friend),
+                'level' => (int) ($friend->xp_level ?? 1),
+                'mutual_friends_count' => $mutualCounts[(int) $friend->id] ?? 0,
             ];
         })->values();
+    }
+
+    /**
+     * นับเพื่อนร่วมระหว่างผู้ชมกับเพื่อนแต่ละคนในหน้านี้ ด้วย query จำนวนคงที่ (ไม่ query ต่อแถว)
+     *
+     * @param  Collection<int, User>  $friends
+     * @return array<int, int> friend id => จำนวนเพื่อนร่วม
+     */
+    private function mutualFriendCounts($friends): array
+    {
+        $viewer = auth()->user();
+        $pageIds = $friends->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        if (! $viewer || $pageIds === []) {
+            return [];
+        }
+
+        $viewerFriendIds = array_flip(array_map('intval', $viewer->getFriendsQueryBuilder()->pluck('id')->all()));
+        $type = $viewer->getMorphClass();
+
+        $rows = Friendship::query()
+            ->where('status', 'accepted')
+            ->where('sender_type', $type)
+            ->where('recipient_type', $type)
+            ->where(function ($q) use ($pageIds) {
+                $q->whereIn('sender_id', $pageIds)->orWhereIn('recipient_id', $pageIds);
+            })
+            ->get(['sender_id', 'recipient_id']);
+
+        // เก็บเป็นเซตของคน ไม่ใช่นับแถว — บางคู่ถูกบันทึกว่ายอมรับซ้ำ 2 แถว จะได้ไม่นับเพื่อนร่วมคนเดิมสองครั้ง
+        $mutual = [];
+
+        foreach ($rows as $row) {
+            $sender = (int) $row->sender_id;
+            $recipient = (int) $row->recipient_id;
+
+            if (in_array($sender, $pageIds, true) && isset($viewerFriendIds[$recipient])) {
+                $mutual[$sender][$recipient] = true;
+            }
+
+            if (in_array($recipient, $pageIds, true) && isset($viewerFriendIds[$sender])) {
+                $mutual[$recipient][$sender] = true;
+            }
+        }
+
+        return array_map('count', $mutual);
+    }
+
+    /**
+     * @param  LengthAwarePaginator  $paginator
+     * @return array<string, int>
+     */
+    private function paginationMeta($paginator): array
+    {
+        return [
+            'current_page' => $paginator->currentPage(),
+            'last_page' => $paginator->lastPage(),
+            'per_page' => $paginator->perPage(),
+            'total' => $paginator->total(),
+        ];
     }
 
     /**
@@ -281,48 +366,10 @@ class FriendController extends Controller
         return [
             'id' => $user->id,
             'name' => $user->name,
-            'username' => $user->name,
-            'email' => $user->email,
+            'username' => $user->username ?? $user->name,
             'avatar' => $user->profile_photo_url,
             'profile_photo_url' => $user->profile_photo_url,
             'reference_code' => $user->reference_code,
         ];
-    }
-
-    /**
-     * Calculate user level from points.
-     */
-    private function calculateLevel(int $points): int
-    {
-        // Simple level calculation: 1 level per 1000 points
-        return max(1, intval($points / 1000) + 1);
-    }
-
-    /**
-     * Check if user is online (active in last 5 minutes).
-     */
-    private function isUserOnline(User $user): bool
-    {
-        if (! $user->updated_at) {
-            return false;
-        }
-
-        return $user->updated_at->diffInMinutes(now()) < 5;
-    }
-
-    /**
-     * Get mutual friends count.
-     */
-    private function getMutualFriendsCount(User $friend): int
-    {
-        $authUser = auth()->user();
-        if (! $authUser) {
-            return 0;
-        }
-
-        $authFriends = $authUser->getFriends()->pluck('id')->toArray();
-        $friendFriends = $friend->getFriends()->pluck('id')->toArray();
-
-        return count(array_intersect($authFriends, $friendFriends));
     }
 }

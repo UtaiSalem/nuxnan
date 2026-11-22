@@ -1,6 +1,6 @@
 # Work Log — nuxnan project
 
-## 🟡 2026-11-22 — บัตรนักเรียน: แก้ G5 "กดทำเสร็จแล้วไม่ได้บัตร" + ออกบัตรย้อนหลัง 67 ใบ (branch `fix/student-card-public-complete` = PR #56 · รอ review)
+## 🟡 2026-11-22 — บัตรนักเรียน: แก้ G5 "กดทำเสร็จแล้วไม่ได้บัตร" + ออกบัตรย้อนหลัง 67 ใบ (PR #56 · squash-merge เข้า `main` แล้ว 2026-11-22 = `c24d4cda`)
 
 ต้นเรื่อง: ถามว่าทำไมการ์ดนักเรียนบางคน (เช่น `/student-card/4/7`) ขึ้นป้าย "ยังไม่มีบัตร"
 ต่อจาก gap G5 ใน audit เมนู #16 (entry 2026-10-10 · `.agents/school-admin/16-student-cards.md` §5)
@@ -25,19 +25,52 @@
   - dry-run บนข้อมูล dev แล้ว rollback: ออก 67 ข้าม 0 · รันซ้ำไม่เปลี่ยนอะไร · `down()` ได้ checksum ตรงเดิม (รวม `updated_at`)
   - **รันบน dev แล้ว** (`migrate --path`, batch 140): ออกบัตร 67 ใบ · ไม่เหลือคำร้องเสร็จที่ไม่มีบัตร · migration คูปอง `2026_11_12_000001` ยัง Pending ไม่ได้แตะ
 - **TODO:**
-  - [ ] review + merge PR #56 — หัว worklog จะ conflict กับ PR #55 ตัวที่ merge ทีหลังให้เก็บไว้ทั้งสอง entry
+  - [x] merge PR #56 แล้ว → หัว worklog conflict กับ PR #55 ตามคาด แก้ด้วยการ merge `main` เข้า branch ของ #55 (เก็บไว้ทั้งสอง entry · ไม่ rebase ไม่ force push)
   - [ ] production: deploy โค้ดพร้อม `php artisan migrate` ในรอบเดียวกัน (`mysqldump` ก่อน)
   - [ ] **dev อีกเครื่อง:** หลัง pull ให้รัน `php artisan migrate --path=database/migrations/2026_11_22_000000_backfill_cards_for_completed_card_requests.php` (ห้าม `migrate` เปล่า เพราะมี Pending อื่น)
   - [ ] คำร้อง #190 (pending) ส่งหลังคำร้อง #30 ของนักเรียนคนเดียวกันถูกกดเสร็จ 74 วินาที — น่าจะส่งซ้ำเพราะ G5 ให้แอดมินพิจารณายกเลิก
   - [ ] นักเรียน 4 คนข้างบน: ส่งคำร้องตามขั้นตอนปกติ (หลัง deploy กดเสร็จแล้วได้บัตร)
   - [ ] งานแยก: นักเรียนที่ยังไม่มีบัตรอัปโหลดรูปไม่ได้ — route รูปทุกเส้นใช้รหัสบัตร (`ui/components/student-card/StudentCardItem.vue:30-32`) ทั้งที่รูปเก็บในแถว `students`
   - [ ] G3 ยังเปิด: route สาธารณะไม่มี auth และหลังแก้ G5 การกดเสร็จที่นั่นจะเขียนตารางบัตรด้วย
-- **Git:** 2 commit โค้ด + commit worklog นี้ บน `fix/student-card-public-complete` = PR #56 (Auto-fix เปิด · repo ไม่มี CI check)
-  ไฟล์ในเครื่องอยู่บน branch นี้ (งานโปรไฟล์ PR #55 อยู่ที่ `fix/profile-phase1-friendship`) · `.agents/plans/ai-course-generation.md` ยัง untracked ไม่ได้แตะ
+- **Git:** 2 commit โค้ด + commit worklog → PR #56 squash-merge เป็น `c24d4cda` บน `main` (repo ไม่มี CI check)
+  branch `fix/student-card-public-complete` ยังเก็บไว้บน remote ตามแบบ #54 · `.agents/plans/ai-course-generation.md` ยัง untracked ไม่ได้แตะ
 
 ---
 
-## 🟡 2026-11-20 — หน้าโปรไฟล์: วิเคราะห์ + แผน + เฟส 0 ปิดข้อมูลส่วนตัวรั่ว (branch `fix/profile-privacy-phase0` · ยังไม่ commit)
+## 🟡 2026-11-21 — หน้าโปรไฟล์เฟส 1: ระบบเพื่อน/สิทธิ์/ตัวระบุผู้ใช้ให้ถูก (branch `fix/profile-phase1-friendship` = PR #55 · รอ review)
+
+รายละเอียด + หลักฐาน: ข้อ 11 ของ [`.agents/plans/profile-redesign.md`](plans/profile-redesign.md) · เฟส 0 = PR #54 (squash-merge เข้า `main` แล้ว 2026-11-21 = `1a9e3f3b`)
+
+- **ความเป็นเพื่อน:** อ่านจาก `friendships` ผ่าน `ProfileAccess` ที่เดียว ไม่มีโค้ดอ่านตาราง `friends` ที่ว่างแล้ว
+  ข้อมูลจริง 50 คู่ได้สถานะ `friends` ครบ (เดิม `none` ทุกคู่) · จำนวนเพื่อนจริง (เดิม 0 ทุกคน)
+- **หาเจ้าของโปรไฟล์:** ใช้ `ProfileUserResolver` = id / personal_code / reference_code / username ไม่จับคู่ด้วยชื่อแสดงแล้ว
+- **ยอดเข้าชม:** นับวันละครั้งต่อผู้ชม และเจ้าของเห็นคนเดียว (= ทางเลือกที่แนะนำของ D6)
+- **แก้ 500:** โปรไฟล์ของ 4 คนที่บันทึกลิงก์โซเชียล (`json_decode` ซ้ำ array) · `VideoController` (`friends()` ไม่มี `users.id`)
+- **คำขอเป็นเพื่อน:** ส่งหาตัวเอง 422 · ผู้รับปิดรับ 403 · ซ้ำ 409 · response ไม่มีข้อมูลส่วนตัวของผู้รับ
+- **รายชื่อเพื่อน:** ทำตาม privacy · แบ่งหน้าละ 20 · ไม่มีสถานะออนไลน์ปลอม · ไม่ส่งชื่อจริง · นับเพื่อนร่วมไม่ N+1 · suggestions ไม่ส่งอีเมล
+- **หน้าเว็บ:** แท็บเพื่อนเลิกใช้ mock, ตัวกรองออนไลน์, dropdown DaisyUI (ไม่ได้ติดตั้ง), ปุ่มแชตไป `/messages` (ไม่มี) และลิงก์ `/members` (coming soon)
+  · ปุ่มเพิ่มเพื่อนซ่อนเมื่อเจ้าของปิดรับ · ช่องเข้าชมเห็นเฉพาะเจ้าของ · PeopleMayKnow เลิกแสดงอีเมล
+- **ผู้ทำ:** agy ทำ A/D และแก้ไฟล์ของ B ครบ แล้วโควตาหมด (**429 รีเซ็ตราว 2026-11-27**)
+  Claude รัน pint/เทสต์ของ B ต่อเอง + แก้การนับเพื่อนให้นับเป็นจำนวนคน
+  เพราะ **DB มี 21 คู่ที่ accepted ซ้ำ 2 แถว** ทำให้จำนวนเพื่อนของ 41 คนเกินจริง
+- **ตรวจแล้ว:**
+  - MySQL: เทสต์โปรไฟล์ทั้งหมด 52 ผ่าน
+  - revert-check: โค้ดเดิม fail 21/23 · เคสแถวซ้ำ fail 2/2 เมื่อใช้วิธีนับเดิม
+  - pint ผ่าน · SFC compile ผ่าน · probe ข้อมูลจริงผ่าน
+- **ชุดกันถอยหลัง MySQL** (Post/Feed/Activity/Comment/Donat/Marketplace/Profile/Friend/Welcome/Newsfeed/Poll/Share/Suggester/Referral/Academy/Course/Lesson/Support/Photo/Video/Settings):
+  **1,285 ผ่าน** · 4 fail = ชุดเดิมที่ fail บน main อยู่แล้ว (ยืนยันตอนเฟส 0) ไม่มีอะไรพังเพิ่ม
+- **TODO:**
+  - [ ] 🔴 เปิดจอจริง 375px: แท็บเพื่อน · ปุ่มเพิ่มเพื่อน · ยอดเข้าชมของคนอื่นต้องไม่แสดง
+  - [ ] ลบแถวซ้ำใน `friendships` 21 คู่ (ต้องเป็น migration — รอเคาะ)
+  - [x] #54 squash-merge แล้ว → rebase เฉพาะ 4 commit ของเฟส 1 ลง `main` (`git rebase --onto main fdcf7726`) แล้วเปิด PR #55
+  - [ ] D1–D9 ยังรอเคาะ
+- **Git:** 4 commit (profile access · friends API · UI · docs) + commit อัปเดตสถานะเอกสาร = PR #55 (Auto-fix เปิด)
+  rebase ลง `main` หลัง #54 merge แล้ว tree เหมือนเดิมทุกไบต์ · เทสต์โปรไฟล์ MySQL 52 ผ่านซ้ำหลัง rebase
+  `.agents/plans/ai-course-generation.md` มีอยู่ก่อนแล้ว ไม่ได้แตะ (ยัง untracked)
+
+---
+
+## 🟡 2026-11-20 — หน้าโปรไฟล์: วิเคราะห์ + แผน + เฟส 0 ปิดข้อมูลส่วนตัวรั่ว (branch `fix/profile-privacy-phase0` = PR #54 · squash-merge แล้ว 2026-11-21)
 
 แผนเต็ม + หลักฐานทั้งหมด: [`.agents/plans/profile-redesign.md`](plans/profile-redesign.md) (ผลเฟส 0 อยู่ข้อ 10)
 
@@ -70,7 +103,7 @@
 
 **TODO:**
 - [ ] 🔴 เปิดจอจริง 375px: โปรไฟล์คนอื่นต้องไม่มีการ์ดแต้ม-เงิน · โปรไฟล์ตัวเองยังมี · หน้าแรกการ์ดผู้บริจาค/ผู้รับยังแสดงชื่อ-รหัส-แต้ม · marketplace ยังเห็นชื่อ-รูปเจ้าของ
-- [ ] ⚠️ PR #53 (เปิดอยู่) แก้ import ของ `PostController` ด้วย → merge ทีหลังจะชนตรงบรรทัด `use` (แก้ง่าย)
+- [ ] ⚠️ #54 เข้า `main` ก่อนแล้ว → PR #53 ตอนนี้ CONFLICTING ที่ `PostController` ไฟล์เดียว (บรรทัด `use`) ต้องแก้ก่อน merge #53
 - [ ] 🔴 **D9 รอเคาะ:** เปลี่ยนค่าเริ่มต้นของ `UserResource` ทั้งระบบ (ข้อ 10.3 ของแผน)
   ผู้ใช้ที่ล็อกอินยังเห็นอีเมล/เบอร์/wallet ของเจ้าของคอร์ส สมาชิกรายวิชา คนคอมเมนต์บทเรียน โพสต์โรงเรียน
   และ `PeopleMayKnowWidget` แสดงอีเมลคนแปลกหน้าบนจอ
@@ -78,8 +111,8 @@
 - [ ] เจอข้างทาง: `GET /api/supports/donates/create` (สาธารณะ) ตอบ 500 เพราะไม่มีเมธอด `DonateController::create()`
 
 ### Branch / Git State
-- Branch: `fix/profile-privacy-phase0` (จาก `origin/main` b4533e7b · ไม่ได้ตั้ง upstream) · ยังไม่ commit / ยังไม่ push
-- Uncommitted: งานเฟส 0 ทั้งหมด + `.agents/plans/profile-redesign.md` · `.agents/plans/ai-course-generation.md` มีอยู่ก่อนแล้ว ไม่ได้แตะ
+- Branch: `fix/profile-privacy-phase0` (จาก `origin/main` b4533e7b) · commit 5 ชุด + push แล้ว (upstream `origin/fix/profile-privacy-phase0`) = PR #54 → Claude squash-merge ตามที่เจ้าของสั่ง 2026-11-21 = `1a9e3f3b`
+- `.agents/plans/ai-course-generation.md` มีอยู่ก่อนแล้ว ไม่ได้แตะ (ยัง untracked)
 
 ---
 

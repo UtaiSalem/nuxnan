@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\Play;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Play\VideoResource;
-use App\Models\User;
 use App\Models\Video;
+use App\Support\ProfileUserResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -16,9 +16,8 @@ class VideoController extends Controller
      */
     public function userVideos(Request $request, $userId)
     {
-        $user = User::where('id', $userId)
-            ->orWhere('reference_code', $userId)
-            ->firstOrFail();
+        $user = ProfileUserResolver::resolve((string) $userId);
+        abort_unless($user, 404, 'User not found');
 
         $query = Video::where('user_id', $user->id);
 
@@ -27,7 +26,7 @@ class VideoController extends Controller
             $viewer = auth()->user();
             if ($viewer->id !== $user->id) {
                 // Check if friends
-                $isFriend = $viewer->friends()->where('users.id', $user->id)->exists();
+                $isFriend = $viewer->isFriendWith($user);
                 if ($isFriend) {
                     $query->whereIn('privacy_settings', [2, 3]);
                 } else {
@@ -223,7 +222,7 @@ class VideoController extends Controller
         if (auth()->check()) {
             $viewer = auth()->user();
             if ($viewer->id !== $video->user_id) {
-                $isFriend = $viewer->friends()->where('users.id', $video->user_id)->exists();
+                $isFriend = $video->user ? $viewer->isFriendWith($video->user) : false;
                 if ($video->privacy_settings === 1) {
                     return response()->json(['success' => false, 'message' => 'Not found'], 404);
                 }

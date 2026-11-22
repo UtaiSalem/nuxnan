@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\Badge;
+use App\Services\Profile\ProfileAccess;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -39,16 +40,14 @@ class UserProfileResource extends JsonResource
         $points = $user->pp ?? 0;
         $levelData = $this->calculateLevel($points);
 
-        $isOwner = $request->user() && $request->user()->id === $this->user_id;
-        $isFriend = $request->user() && $request->user()->isFriendWith($user);
-        $canViewPrivate = $isOwner || $isFriend;
-
+        // สิทธิ์ทั้งหมดของผู้ชมตัดสินที่ ProfileAccess (ความเป็นเพื่อนจากตาราง friendships)
+        $access = ProfileAccess::for($request->user(), $user, $this->resource);
+        $isOwner = $access->isOwner();
+        $isFriend = $access->isFriend();
         // ข้อมูลหมวด "เกี่ยวกับ" (ชื่อจริง เพศ เว็บไซต์ ความสนใจ ทักษะ โซเชียล) เปิดตาม privacy_settings ของเจ้าของ
-        // public = สมาชิกทุกคน · friends = เพื่อนเท่านั้น · private = เจ้าของเท่านั้น
-        $privacy = $this->privacyLevel();
-        $canSeeAbout = $isOwner
-            || $privacy === 'public'
-            || ($privacy === 'friends' && $isFriend);
+        $canSeeAbout = $access->canSeeAbout();
+        // นับเป็นจำนวนคน ไม่ใช่จำนวนแถว — ตาราง friendships มีคู่ที่ยอมรับซ้ำ 2 แถวอยู่ (getFriendsCount() นับเกิน)
+        $friendsCount = $user->getFriendsQueryBuilder()->count();
 
         return [
             'id' => $this->id,
@@ -81,21 +80,23 @@ class UserProfileResource extends JsonResource
             'cover_image' => $coverUrl,
 
             // Social
-            'social_media_links' => $canSeeAbout && $this->social_media_links ? json_decode($this->social_media_links, true) : [],
+            'social_media_links' => $canSeeAbout ? $this->socialMediaLinks() : [],
 
             // Stats
             'followers' => $this->followers ?? 0,
             'following' => $this->following ?? 0,
-            'friends' => $this->friends ?? 0,
-            'friends_count' => $this->friends ?? 0,
+            'friends' => $friendsCount,
+            'friends_count' => $friendsCount,
+            'mutual_friends' => $access->mutualFriendsCount(),
             'posts_count' => $user->activities()
                 ->whereHasMorph('activityable', ['App\Models\Post', 'App\Models\CoursePost'],
-                    function ($q) use ($canViewPrivate) {
-                        $q->whereIn('privacy_settings', $canViewPrivate ? [1, 2, 3] : [3]);
+                    function ($q) use ($access) {
+                        $q->whereIn('privacy_settings', $access->postPrivacyLevels());
                     }
                 )->count(),
-            'visits' => $this->visits ?? 0,
-            'visits_count' => $this->visits ?? 0,
+            // ยอดผู้เข้าชม — เจ้าของเห็นคนเดียว
+            'visits' => $this->when($isOwner, $this->visits ?? 0),
+            'visits_count' => $this->when($isOwner, $this->visits ?? 0),
 
             // Level & Experience (from actual XP system, consistent with auth/sidebar)
             'level' => $xpLevel,
@@ -134,10 +135,12 @@ class UserProfileResource extends JsonResource
             'wallet' => $this->when($isOwner, $user->wallet ?? 0),
 
             // Settings
-            'privacy_settings' => $this->privacy_settings ?? 'public',
+            'privacy_settings' => $access->privacyLevel(),
 
             // Permission Flags
-            'can_view_full_profile' => $canViewPrivate,
+            // ความหมายเดิมของคีย์นี้ใน data = เจ้าของหรือเพื่อน (เทสต์เดิมยึดไว้) — หน้าเว็บใช้ can_view_full_profile ระดับบนของ show
+            'can_view_full_profile' => $isOwner || $isFriend,
+            'can_send_friend_request' => $access->canSendFriendRequest(),
             'is_own_profile' => $isOwner,
             'is_friend' => $isFriend,
 
@@ -157,17 +160,19 @@ class UserProfileResource extends JsonResource
     }
 
     /**
-     * ระดับความเป็นส่วนตัวของโปรไฟล์: public | friends | private
+     * model cast social_media_links เป็น array แล้ว — แถวเก่าที่ถูก json_encode ซ้ำจะได้เป็นสตริง ให้ decode อีกชั้น
      *
-     * คอลัมน์ privacy_settings เก็บได้ทั้งสตริงเปล่า (public) และ JSON string ("friends")
-     * เพราะ model cast เป็น 'array' — อ่านค่าดิบแล้วตัดเครื่องหมายคำพูดเอง · ค่าที่ไม่รู้จัก = public
+     * @return array<string, mixed>
      */
-    private function privacyLevel(): string
+    private function socialMediaLinks(): array
     {
-        $raw = $this->resource->getAttributes()['privacy_settings'] ?? null;
-        $value = is_string($raw) ? trim($raw, " \"\t\n\r") : null;
+        $links = $this->social_media_links;
 
-        return in_array($value, ['public', 'friends', 'private'], true) ? $value : 'public';
+        if (is_string($links)) {
+            $links = json_decode($links, true);
+        }
+
+        return is_array($links) ? $links : [];
     }
 
     /**

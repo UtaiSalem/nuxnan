@@ -11,7 +11,8 @@ export interface Friend {
   avatar: string
   reference_code: string
   level: number
-  is_online: boolean
+  // backend เลิกส่งสถานะออนไลน์ (ของเดิมเป็นค่าปลอม) — คงไว้เป็น optional เผื่อโค้ดเก่าอ้างถึง
+  is_online?: boolean
   last_seen?: string
   mutual_friends_count?: number
   friendship_date?: string
@@ -44,6 +45,7 @@ export const useFriends = () => {
   // Pagination
   const currentPage = ref(1)
   const lastPage = ref(1)
+  const total = ref(0)
   const hasMore = computed(() => currentPage.value < lastPage.value)
 
   /**
@@ -62,7 +64,7 @@ export const useFriends = () => {
         success: boolean
         data?: Friend[]
         friends?: Friend[]
-        meta?: { current_page: number; last_page: number }
+        meta?: { current_page: number; last_page: number; total?: number }
       }
       
       if (response.success) {
@@ -77,6 +79,9 @@ export const useFriends = () => {
         if (response.meta) {
           currentPage.value = response.meta.current_page
           lastPage.value = response.meta.last_page
+          total.value = response.meta.total ?? friends.value.length
+        } else {
+          total.value = friends.value.length
         }
         
         // Update chat store for sidebar
@@ -351,6 +356,7 @@ export const useFriends = () => {
     isLoadingSuggestions,
     error,
     hasMore,
+    total,
     
     // Methods
     fetchFriends,
