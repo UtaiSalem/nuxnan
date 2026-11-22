@@ -116,7 +116,7 @@
 
 ---
 
-## 🟡 2026-11-18 — แต้มฟีด 480 · แผงเช็คชื่อเลื่อนซ้าย · แบบทดสอบต้องอ่านบทเรียนก่อน (PR #53 squash-merge เข้า main 2026-11-23 · ยังไม่ได้ทดสอบบนจอจริง)
+## 🟡 2026-11-18 — แต้มฟีด 480 · แผงเช็คชื่อเลื่อนซ้าย · แบบทดสอบต้องอ่านบทเรียนก่อน (PR #53 merge เข้า main 2026-11-23 = `e15ba1bc` · ทดสอบจอจริงแล้ว: ฟีด ✅ แบบทดสอบ ✅ เช็คชื่อ ⚠️)
 
 PR: https://github.com/UtaiSalem/nuxnan/pull/53 · branch `feat/feed-costs-attendance-quiz-gate` · 3 commit แยกเรื่อง
 
@@ -135,6 +135,9 @@ PR: https://github.com/UtaiSalem/nuxnan/pull/53 · branch `feat/feed-costs-atten
 - แก้: หดแล้ว resize ทันที (hysteresis เหลือแค่ตอนขยาย) + `:deep(canvas){max-width:100%}` ·
   toast เช็คชื่อ → SweetAlert กลางจอ `heightAuto:false, scrollbarPadding:false` (เจ้าของขอ) · CSS มือถือ `.swal2-popup:not(.swal2-toast)`
 - toast ไม่ใช่ต้นเหตุจริง (SweetAlert toast ไม่แตะ layout) แค่เกิดพร้อมกัน
+- ⚠️ **2026-11-23 ตรวจจอจริงแล้วพบ: หน้าจริงไม่ได้ใช้ Phaser** — `AttendanceSimulatorShell.vue` ตั้ง `phaserFailed = ref(true)` ตั้งแต่ `2744ab1d` (2026-06-17)
+  และไม่มีโค้ดไหนเปิดกลับ · ที่แสดงจริงคือ `ClassroomSeatGrid.vue` (DOM) ซึ่งแก้อาการเลื่อนซ้ายไปแล้วใน `73f9ecdf` (2026-08-08) ·
+  การแก้ ResizeObserver ใน `AttendancePhaserScene.vue` จึงไม่มีผลกับจอ — ส่วนที่มีผลจริงของข้อนี้คือ SweetAlert กลางจอ + CSS มือถือ
 
 ### 3. แบบทดสอบบทเรียนต้องอ่านก่อน (`fab5761c`)
 - `Lesson::canAccessQuizBy()` บังคับ**เสมอ**: ผ่านถ้าเป็น admin / เรียนจบแล้ว / ผ่านด่านเดียวกับปุ่ม "อ่านแล้ว" (`canBeMarkedCompletedBy`)
@@ -155,14 +158,24 @@ PR: https://github.com/UtaiSalem/nuxnan/pull/53 · branch `feat/feed-costs-atten
   - merge `main` ล่าสุด (#54 #55 #56) เข้า branch แล้ว · ชุดใหญ่ MySQL (Post/Feed/Comment/Reaction/Poll/Activity/Profile/Friend/Lesson/Question/Quiz/…) **535 ผ่าน 0 fail**
 
 ### งานที่ค้างอยู่ (TODO ต่อ)
-- [ ] 🔴 **ทดสอบบนจอจริง — ทำบน `main`** · เจ้าของสั่ง merge ก่อนทดสอบ (2026-11-23) · browser pane ไม่ได้ล็อกอิน:
-  เช็คชื่อด้วยบัญชีนักเรียนที่ 1280 และ 375px · ไลค์/ดิสไลค์/คอมเมนต์ที่ `/play/newsfeed` ยอดแต้มบนหัวเว็บต้องตรง · แท็บแบบทดสอบล็อกแล้วปลดเอง
+- [x] **ทดสอบบนจอจริงบน `main` (`e15ba1bc`) 2026-11-23** — Claude ใน browser pane · เจ้าของล็อกอินเอง:
+  - **ฟีด ✅** โพสต์สาธารณะ 83 (เปิดจากหน้าโปรไฟล์ 1026 เพราะฟีดหน้าแรกตอนนี้มีแต่โพสต์รายวิชาที่ยังใช้ราคาเดิม) ด้วย user 2:
+    ไลค์ −120 · ยกเลิก −60 · ดิสไลค์ −120 (เจ้าของโพสต์โดนปรับ 60) · ยกเลิก −60 (ค่าปรับไม่คืน) · คอมเมนต์ −240 (เจ้าของ +120) →
+    `user_pp` = store = DB ทุกครั้ง · หัวเว็บ 198K → 197.4K · user 1 (super admin = บัญชีระบบ) ยอดก็ตรง ·
+    ลบคอมเมนต์ทดสอบแล้ว (การลบคอมเมนต์ไม่คืนแต้มและไม่ดึงส่วนแบ่งกลับ)
+  - **แบบทดสอบ ✅** user 2 บทที่ 67 (7 หัวข้อ): ก่อนอ่านมีป้ายล็อก + `questions: []` + GET questions 403 `LESSON_READ_REQUIRED` ·
+    1/7…6/7 ยังล็อก · ครบ 7/7 ป้ายหายเองไม่ต้องรีโหลด + ดึง questions ได้ 200 (20 ข้อ ไม่มีเฉลยหลุด) · violation 0
+  - **เช็คชื่อ ⚠️** ดูด้วยมุมมองแอดมิน เพราะไม่มีคาบเปิด (ล่าสุด 2026-11-12): grid กึ่งกลางทุกขนาด 1280 / 1265 / 1280×2600 / 375 ·
+    ไม่มี scroll แนวนอน — แต่การแก้ Phaser ไม่ได้ถูกทดสอบเพราะหน้าจริงไม่ใช้ (ดูข้อ 2)
+  - บัญชีทดสอบ: user 1 ใช้ทดสอบด่านแบบทดสอบไม่ได้ (super admin ข้ามด่าน) · ฝั่งนักเรียนใช้ user 2 (นักเรียนธรรมดาในรายวิชา 22–25)
+- [ ] 🔴 ทดสอบเช็คชื่อจริงด้วยบัญชีนักเรียนตอนมีคาบเปิด: ห้องเรียนต้องไม่เลื่อนหลังเช็คชื่อ + SweetAlert กลางจอที่ 375px
+- [ ] เคาะ: ลบโค้ด Phaser ที่ไม่ได้ใช้ (`AttendancePhaserScene.vue`, `useAttendancePhaser`) หรือเก็บไว้เป็นทางสำรองตามเดิม
 - [ ] `/api/polls` (`ui/components/play/poll/CreatePollModal.vue` ผ่าน `usePolls`) ยังคิด 180 — ถามเจ้าของว่าจะให้เป็น 480 ด้วยไหม
 - [ ] ข้อความ 422 ของไลค์/ดิสไลค์มีคำอังกฤษปน (`"...ในการ like"`) — `PostReactionController.php` / `PostImageReactionController.php` ปรับเป็นไทยได้
 - [ ] agy โควต้าหมด (429, รีเซ็ตราว 2026-11-20) — รอบนี้ใช้ Codex `codex exec` ตรงแทน; Codex เขียน 180 เป็น `1.8e2` หลบ grep → ตรวจ diff เสมอ
 
 ### Branch / Git State
-- PR branch `feat/feed-costs-attendance-quiz-gate` → PR #53 · Claude squash-merge เข้า `main` ตามที่เจ้าของสั่ง 2026-11-23 · ไม่มี migration · branch ยังไม่ลบ
+- PR branch `feat/feed-costs-attendance-quiz-gate` → PR #53 · Claude squash-merge เข้า `main` ตามที่เจ้าของสั่ง 2026-11-23 = `e15ba1bc` · ไม่มี migration · branch ยังไม่ลบ
 - 2026-11-22: + `8f740fae` (แก้เทสต์ read gate) + merge `main` ล่าสุด + commit worklog นี้ · ไม่มี force push
 - `main`: commit นี้คือ worklog เท่านั้น
 - Uncommitted: `.agents/plans/ai-course-generation.md` (มีอยู่ก่อน ไม่ได้แตะ)
