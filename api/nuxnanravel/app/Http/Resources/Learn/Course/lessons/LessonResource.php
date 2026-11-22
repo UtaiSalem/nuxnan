@@ -117,10 +117,31 @@ class LessonResource extends JsonResource
             // Policy: everyone reads the lesson; questions are for course
             // admins and approved members only.
             'can_answer_questions' => $this->canAnswerQuestions(),
-            'questions' => $this->canAnswerQuestions()
+            // แบบทดสอบเปิดได้หลังอ่านบทเรียนครบเท่านั้น (Lesson::canAccessQuizBy)
+            'can_take_quiz' => $this->canTakeQuiz(),
+            'questions' => $this->canAnswerQuestions() && $this->canTakeQuiz()
                 ? QuestionResource::collection($this->questions)
                 : [],
         ]);
+    }
+
+    /** Memoised on the current request (per lesson + user): the gate queries progress/topics. */
+    private function canTakeQuiz(): bool
+    {
+        $user = auth()->guard('api')->user();
+        if (! $user || ! $this->course) {
+            return false;
+        }
+
+        $key = 'lesson_can_take_quiz:'.$this->id.':'.$user->id;
+        $attributes = request()->attributes;
+
+        if (! $attributes->has($key)) {
+            $isAdminOrCreator = $this->course->isAdmin($user) || (int) $this->user_id === (int) $user->id;
+            $attributes->set($key, $this->resource->canAccessQuizBy($user, $isAdminOrCreator));
+        }
+
+        return (bool) $attributes->get($key);
     }
 
     /** Memoised on the current request: lesson lists would otherwise query per row. */

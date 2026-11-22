@@ -16,6 +16,7 @@ use App\Services\CourseScoreService;
 use App\Services\PointsService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -58,6 +59,11 @@ class LessonAnswerQuestionController extends Controller
                 'code' => 'NOT_COURSE_MEMBER',
                 'message' => 'เฉพาะสมาชิกรายวิชาเท่านั้นที่ตอบคำถามได้ กรุณาสมัครเข้ารายวิชาก่อน',
             ], 403);
+        }
+
+        // แบบทดสอบบังคับอ่านบทเรียนก่อนเสมอ (ผู้ดูแลรายวิชาข้ามได้)
+        if (! $lesson->canAccessQuizBy($user, $lesson->course->isAdmin($user))) {
+            return $this->lessonReadRequiredResponse();
         }
 
         // The option must belong to THIS question, otherwise a learner could send
@@ -255,6 +261,10 @@ class LessonAnswerQuestionController extends Controller
             ], 403);
         }
 
+        if (! $lesson->canAccessQuizBy($user, $lesson->course->isAdmin($user))) {
+            return $this->lessonReadRequiredResponse();
+        }
+
         $hasAnswered = LessonAnswerQuestion::where('user_id', $user->id)
             ->where('lesson_id', $lesson->id)
             ->where('question_id', $question->id)
@@ -333,6 +343,18 @@ class LessonAnswerQuestionController extends Controller
             'correct_option_explanation' => $correct?->explanation,
             'explanation' => $question->explanation,
         ];
+    }
+
+    /**
+     * 422 เมื่อยังอ่านบทเรียนไม่ครบ — ใช้ร่วมกันใน store() และ reveal()
+     */
+    private function lessonReadRequiredResponse(): JsonResponse
+    {
+        return response()->json([
+            'success' => false,
+            'code' => 'LESSON_READ_REQUIRED',
+            'message' => 'กรุณาอ่านเนื้อหาบทเรียนให้ครบก่อนทำแบบทดสอบ',
+        ], 422);
     }
 
     /**

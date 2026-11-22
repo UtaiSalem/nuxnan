@@ -103,7 +103,7 @@
 
 **TODO:**
 - [ ] 🔴 เปิดจอจริง 375px: โปรไฟล์คนอื่นต้องไม่มีการ์ดแต้ม-เงิน · โปรไฟล์ตัวเองยังมี · หน้าแรกการ์ดผู้บริจาค/ผู้รับยังแสดงชื่อ-รหัส-แต้ม · marketplace ยังเห็นชื่อ-รูปเจ้าของ
-- [ ] ⚠️ #54 เข้า `main` ก่อนแล้ว → PR #53 ตอนนี้ CONFLICTING ที่ `PostController` ไฟล์เดียว (บรรทัด `use`) ต้องแก้ก่อน merge #53
+- [x] #54 เข้า `main` ก่อน → #53 ชนที่ `PostController` (บรรทัด `use`) → แก้แล้วด้วย merge commit `0685a544` (2026-11-21)
 - [ ] 🔴 **D9 รอเคาะ:** เปลี่ยนค่าเริ่มต้นของ `UserResource` ทั้งระบบ (ข้อ 10.3 ของแผน)
   ผู้ใช้ที่ล็อกอินยังเห็นอีเมล/เบอร์/wallet ของเจ้าของคอร์ส สมาชิกรายวิชา คนคอมเมนต์บทเรียน โพสต์โรงเรียน
   และ `PeopleMayKnowWidget` แสดงอีเมลคนแปลกหน้าบนจอ
@@ -116,7 +116,7 @@
 
 ---
 
-## 🟡 2026-11-18 — แต้มฟีด 480 · แผงเช็คชื่อเลื่อนซ้าย · แบบทดสอบต้องอ่านบทเรียนก่อน (PR #53 เปิดอยู่ ยังไม่ merge)
+## 🟡 2026-11-18 — แต้มฟีด 480 · แผงเช็คชื่อเลื่อนซ้าย · แบบทดสอบต้องอ่านบทเรียนก่อน (PR #53 squash-merge เข้า main 2026-11-23 · ยังไม่ได้ทดสอบบนจอจริง)
 
 PR: https://github.com/UtaiSalem/nuxnan/pull/53 · branch `feat/feed-costs-attendance-quiz-gate` · 3 commit แยกเรื่อง
 
@@ -148,16 +148,22 @@ PR: https://github.com/UtaiSalem/nuxnan/pull/53 · branch `feat/feed-costs-atten
 - pint ผ่าน · SFC ที่แก้คอมไพล์ผ่าน
 - 10 เทสต์ที่ fail (`QuestionBulkSettingsTest` 1 + Wallet transfer/conversion) fail เท่ากันบน main — ไม่เกี่ยว
 - **ยังไม่ได้รันบน MySQL** (`-c phpunit.mysql.xml`) — ไม่มี migration ในรอบนี้
+- **2026-11-22 (Claude ตามที่เจ้าของสั่ง):** บน MySQL มีเทสต์เดิม 3 เคสที่ read gate ทำให้ fail:
+  `QuestionAccessHardeningTest` ×2 (คาด 200/404 ได้ 403) · `QuestionBulkSettingsTest` ×1 (คาด 200 ได้ 422)
+  - ทั้ง 3 เคสผ่านบน main · fail บน branch นี้ทั้งก่อนและหลัง merge `main`
+  - แก้: Codex เพิ่มแถว `LessonProgress` ใน setup ของสองไฟล์ (`8f740fae` · ไม่แตะโค้ดจริง · assertion เดิมทุกข้อ)
+  - merge `main` ล่าสุด (#54 #55 #56) เข้า branch แล้ว · ชุดใหญ่ MySQL (Post/Feed/Comment/Reaction/Poll/Activity/Profile/Friend/Lesson/Question/Quiz/…) **535 ผ่าน 0 fail**
 
 ### งานที่ค้างอยู่ (TODO ต่อ)
-- [ ] 🔴 **ทดสอบบนจอจริงก่อน merge PR #53** (browser pane ไม่ได้ล็อกอิน):
+- [ ] 🔴 **ทดสอบบนจอจริง — ทำบน `main`** · เจ้าของสั่ง merge ก่อนทดสอบ (2026-11-23) · browser pane ไม่ได้ล็อกอิน:
   เช็คชื่อด้วยบัญชีนักเรียนที่ 1280 และ 375px · ไลค์/ดิสไลค์/คอมเมนต์ที่ `/play/newsfeed` ยอดแต้มบนหัวเว็บต้องตรง · แท็บแบบทดสอบล็อกแล้วปลดเอง
 - [ ] `/api/polls` (`ui/components/play/poll/CreatePollModal.vue` ผ่าน `usePolls`) ยังคิด 180 — ถามเจ้าของว่าจะให้เป็น 480 ด้วยไหม
 - [ ] ข้อความ 422 ของไลค์/ดิสไลค์มีคำอังกฤษปน (`"...ในการ like"`) — `PostReactionController.php` / `PostImageReactionController.php` ปรับเป็นไทยได้
 - [ ] agy โควต้าหมด (429, รีเซ็ตราว 2026-11-20) — รอบนี้ใช้ Codex `codex exec` ตรงแทน; Codex เขียน 180 เป็น `1.8e2` หลบ grep → ตรวจ diff เสมอ
 
 ### Branch / Git State
-- PR branch `feat/feed-costs-attendance-quiz-gate` pushed, PR #53 open (Auto-fix เปิดอยู่)
+- PR branch `feat/feed-costs-attendance-quiz-gate` → PR #53 · Claude squash-merge เข้า `main` ตามที่เจ้าของสั่ง 2026-11-23 · ไม่มี migration · branch ยังไม่ลบ
+- 2026-11-22: + `8f740fae` (แก้เทสต์ read gate) + merge `main` ล่าสุด + commit worklog นี้ · ไม่มี force push
 - `main`: commit นี้คือ worklog เท่านั้น
 - Uncommitted: `.agents/plans/ai-course-generation.md` (มีอยู่ก่อน ไม่ได้แตะ)
 

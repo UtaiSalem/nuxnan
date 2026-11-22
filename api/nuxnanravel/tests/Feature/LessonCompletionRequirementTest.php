@@ -131,6 +131,13 @@ class LessonCompletionRequirementTest extends TestCase
 
     public function test_student_cannot_answer_lesson_question_if_lesson_not_completed(): void
     {
+        LessonProgress::create([
+            'user_id' => $this->student->id,
+            'lesson_id' => $this->lesson->id,
+            'status' => 'in_progress',
+            'time_spent_seconds' => 60,
+        ]);
+
         $response = $this->actingAs($this->student, 'api')
             ->postJson("/api/lessons/{$this->lesson->id}/questions/{$this->question->id}/answer", [
                 'answer_id' => $this->option->id,

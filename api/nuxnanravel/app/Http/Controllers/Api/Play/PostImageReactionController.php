@@ -2,107 +2,167 @@
 
 namespace App\Http\Controllers\Api\Play;
 
+use App\Exceptions\AccountEconomyRestrictedException;
 use App\Http\Controllers\Controller;
 use App\Models\PostImage;
 use App\Models\User;
+use App\Services\FeedPointsService;
+use App\Services\PointsService;
+use Illuminate\Support\Facades\DB;
 
 class PostImageReactionController extends Controller
 {
     public function toggleLikePostImage(PostImage $post_image)
     {
         try {
-            $userId = auth()->id();
-            $hasLiked = $post_image->likedPostImage()->where('user_id', $userId)->exists();
-            $hasDisliked = $post_image->dislikedPostImage()->where('user_id', $userId)->exists();
+            return DB::transaction(function () use ($post_image) {
+                $payer = User::whereKey(auth()->id())->lockForUpdate()->firstOrFail();
+                $userId = $payer->id;
+                $hasLiked = $post_image->likedPostImage()->where('user_id', $userId)->exists();
+                $action = $hasLiked ? 'unlike' : 'like';
+                $requiredPoints = (int) config("economy.feed_costs.{$action}");
+                $platform = User::find(1);
+                $author = $post_image->post->user;
+                $credits = [
+                    ['user' => $platform, 'amount' => $requiredPoints, 'sourceType' => 'feed_platform_fee'],
+                ];
 
-            $requiredPoints = $hasLiked ? 12 : 24;
+                if (! $hasLiked) {
+                    $authorShare = (int) config('economy.feed_costs.like_author_share');
+                    $credits = [
+                        ['user' => $author, 'amount' => $authorShare, 'sourceType' => 'feed_like_reward'],
+                        ['user' => $platform, 'amount' => $requiredPoints - $authorShare, 'sourceType' => 'feed_platform_fee'],
+                    ];
+                }
 
-            if (auth()->user()->pp < $requiredPoints) {
+                $charge = app(FeedPointsService::class)->charge(
+                    $payer,
+                    $requiredPoints,
+                    "feed_{$action}",
+                    $post_image->id,
+                    "{$action} postimage #{$post_image->id}",
+                    $credits,
+                    function () use ($post_image, $userId, $hasLiked) {
+                        // Switching reactions detaches the opposite reaction without a refund.
+                        if ($post_image->dislikedPostImage()->where('user_id', $userId)->exists()) {
+                            $post_image->dislikedPostImage()->detach($userId);
+                            $post_image->decrement('dislikes');
+                        }
+
+                        $post_image->likedPostImage()->toggle($userId);
+                        if ($hasLiked) {
+                            $post_image->decrement('likes');
+                        } else {
+                            $post_image->increment('likes');
+                        }
+
+                        return [];
+                    },
+                );
+
+                if (! $charge['ok']) {
+                    return response()->json([
+                        'success' => false,
+                        'code' => 'INSUFFICIENT_PP',
+                        'message' => "แต้มสะสมไม่เพียงพอ ต้องใช้ {$requiredPoints} แต้มในการ {$action}",
+                        'required_pp' => $requiredPoints,
+                        'current_pp' => $charge['current_pp'],
+                    ], 422);
+                }
+
                 return response()->json([
-                    'success' => false,
-                    'message' => $hasLiked
-                        ? 'You do not have enough points to unlike (12 points required). / คุณไม่มีพ้อยท์เพียงพอในการยกเลิกไลค์ (ต้องการ 12 แต้ม)'
-                        : 'You do not have enough points to like (24 points required). / คุณไม่มีพ้อยท์เพียงพอในการกดถูกใจ (ต้องการ 24 แต้ม)',
+                    'success' => true,
+                    'user_pp' => $charge['user_pp'],
                 ]);
-            }
-
-            // ถ้ากด dislike อยู่แล้ว ต้องยกเลิก dislike ก่อน
-            if ($hasDisliked) {
-                $post_image->dislikedPostImage()->detach($userId);
-                $post_image->decrement('dislikes');
-            }
-
-            $result = $post_image->likedPostImage()->toggle($userId);
-
-            if (empty($result['detached'])) {
-                // Like
-                $post_image->increment('likes');
-                auth()->user()->decrement('pp', 24);
-                $post = $post_image->post;
-                $post->user->increment('pp', 12);
-                User::find(1)->increment('pp', 12);
-            } else {
-                // Unlike
-                $post_image->decrement('likes');
-                auth()->user()->decrement('pp', 12);
-                // เจ้าของไม่ลดแต้ม
-                User::find(1)->increment('pp', 12);
-            }
-
+            });
+        } catch (AccountEconomyRestrictedException $e) {
             return response()->json([
-                'success' => true,
-            ]);
-
-        } catch (\Throwable $th) {
-            throw $th;
+                'success' => false,
+                'code' => 'ACCOUNT_RESTRICTED',
+                'message' => $e->getMessage(),
+            ], 403);
         }
-
     }
 
     public function toggleDislikePostImage(PostImage $post_image)
     {
         try {
-            if (auth()->user()->pp > 24) {
-                $userId = auth()->id();
-                $hasLiked = $post_image->likedPostImage()->where('user_id', $userId)->exists();
+            return DB::transaction(function () use ($post_image) {
+                $payer = User::whereKey(auth()->id())->lockForUpdate()->firstOrFail();
+                $userId = $payer->id;
+                $hasDisliked = $post_image->dislikedPostImage()->where('user_id', $userId)->exists();
+                $action = $hasDisliked ? 'undislike' : 'dislike';
+                $requiredPoints = (int) config("economy.feed_costs.{$action}");
+                $platform = User::find(1);
+                $author = $post_image->post->user;
+                $credits = [
+                    ['user' => $platform, 'amount' => $requiredPoints, 'sourceType' => 'feed_platform_fee'],
+                ];
 
-                // ถ้ากด like อยู่แล้ว ต้องยกเลิก like ก่อน
-                if ($hasLiked) {
-                    $post_image->likedPostImage()->detach($userId);
-                    $post_image->decrement('likes');
-                    $post = $post_image->post;
-                    $post->user()->decrement('pp', 12);
-                }
+                $charge = app(FeedPointsService::class)->charge(
+                    $payer,
+                    $requiredPoints,
+                    "feed_{$action}",
+                    $post_image->id,
+                    "{$action} postimage #{$post_image->id}",
+                    $credits,
+                    function () use ($post_image, $userId, $hasDisliked, $author, $platform) {
+                        // Switching reactions detaches the opposite reaction without a refund.
+                        if ($post_image->likedPostImage()->where('user_id', $userId)->exists()) {
+                            $post_image->likedPostImage()->detach($userId);
+                            $post_image->decrement('likes');
+                        }
 
-                $dislike = $post_image->dislikedPostImage()->toggle($userId);
+                        $post_image->dislikedPostImage()->toggle($userId);
+                        if ($hasDisliked) {
+                            $post_image->decrement('dislikes');
+                        } else {
+                            $post_image->increment('dislikes');
+                            if ($author) {
+                                $fine = app(FeedPointsService::class)->fineIfAffordable(
+                                    $author,
+                                    (int) config('economy.feed_costs.dislike_author_fine'),
+                                    'feed_dislike_fine',
+                                    $post_image->id,
+                                    'ค่าปรับเจ้าของโพสต์จากการกดไม่ถูกใจ',
+                                );
+                                if ($fine > 0 && $platform) {
+                                    app(PointsService::class)->earn(
+                                        User::whereKey($platform->id)->lockForUpdate()->firstOrFail(),
+                                        $fine,
+                                        'feed_platform_fee',
+                                        $post_image->id,
+                                        'ค่าปรับจากการกดไม่ถูกใจเข้าระบบ',
+                                    );
+                                }
+                            }
+                        }
 
-                if (empty($dislike['detached'])) {
-                    $post_image->increment('dislikes');
-                    auth()->user()->decrement('pp', 12);
+                        return [];
+                    },
+                );
 
-                    $post = $post_image->post;
-
-                    $post->user()->decrement('pp', 12);
-                    User::find(1)->increment('pp', 24);
-                } else {
-                    $post_image->decrement('dislikes');
-                    auth()->user()->decrement('pp', 12);
+                if (! $charge['ok']) {
+                    return response()->json([
+                        'success' => false,
+                        'code' => 'INSUFFICIENT_PP',
+                        'message' => "แต้มสะสมไม่เพียงพอ ต้องใช้ {$requiredPoints} แต้มในการ {$action}",
+                        'required_pp' => $requiredPoints,
+                        'current_pp' => $charge['current_pp'],
+                    ], 422);
                 }
 
                 return response()->json([
                     'success' => true,
+                    'user_pp' => $charge['user_pp'],
                 ]);
-
-            } else {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'You do not have enough points to dislike this image. / คุณไม่มีพ้อยท์เพียงพอในการกดไม่ถูกใจรูปนี้ กรุณาสะสมแต้มเพิ่มเติม',
-                ]);
-            }
-
-        } catch (\Throwable $th) {
-            throw $th;
+            });
+        } catch (AccountEconomyRestrictedException $e) {
+            return response()->json([
+                'success' => false,
+                'code' => 'ACCOUNT_RESTRICTED',
+                'message' => $e->getMessage(),
+            ], 403);
         }
-
     }
 }

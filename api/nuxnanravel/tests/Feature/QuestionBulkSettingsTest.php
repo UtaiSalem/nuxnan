@@ -8,6 +8,7 @@ use App\Models\CourseQuiz;
 use App\Models\CourseQuizResult;
 use App\Models\Lesson;
 use App\Models\LessonAnswerQuestion;
+use App\Models\LessonProgress;
 use App\Models\Question;
 use App\Models\QuestionOption;
 use App\Models\User;
@@ -51,6 +52,19 @@ class QuestionBulkSettingsTest extends TestCase
             'optionable_id' => $question->id,
             'text' => $text,
             'is_correct' => $correct,
+        ]);
+    }
+
+    /**
+     * The lesson read gate: a student must read the lesson before its questions open.
+     */
+    private function markLessonRead(User $user, Lesson $lesson): void
+    {
+        LessonProgress::create([
+            'user_id' => $user->id,
+            'lesson_id' => $lesson->id,
+            'status' => 'in_progress',
+            'time_spent_seconds' => $lesson->getRequiredReadSeconds(),
         ]);
     }
 
@@ -109,6 +123,7 @@ class QuestionBulkSettingsTest extends TestCase
     public function test_lesson_points_change_rescores_existing_correct_answers(): void
     {
         $lesson = $this->lessonWithQuestions(1);
+        $this->markLessonRead($this->student, $lesson);
         $question = $lesson->questions()->first();
         $right = $question->options()->where('is_correct', true)->first();
 

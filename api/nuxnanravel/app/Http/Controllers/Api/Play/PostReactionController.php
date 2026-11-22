@@ -2,119 +2,167 @@
 
 namespace App\Http\Controllers\Api\Play;
 
+use App\Exceptions\AccountEconomyRestrictedException;
 use App\Http\Controllers\Controller;
 use App\Models\Post;
 use App\Models\User;
+use App\Services\FeedPointsService;
+use App\Services\PointsService;
+use Illuminate\Support\Facades\DB;
 
 class PostReactionController extends Controller
 {
     public function toggleLikePost(Post $post)
     {
-        $userId = auth()->id();
-        $hasLiked = $post->likedPost()->where('user_id', $userId)->exists();
-        $hasDisliked = $post->dislikedPost()->where('user_id', $userId)->exists();
+        try {
+            return DB::transaction(function () use ($post) {
+                $payer = User::whereKey(auth()->id())->lockForUpdate()->firstOrFail();
+                $userId = $payer->id;
+                $hasLiked = $post->likedPost()->where('user_id', $userId)->exists();
+                $action = $hasLiked ? 'unlike' : 'like';
+                $requiredPoints = (int) config("economy.feed_costs.{$action}");
+                $platform = User::find(1);
+                $author = $post->user;
+                $credits = [
+                    ['user' => $platform, 'amount' => $requiredPoints, 'sourceType' => 'feed_platform_fee'],
+                ];
 
-        // ระบบใหม่: Like ใช้ 24 แต้ม, Unlike ใช้ 12 แต้ม
-        $requiredPoints = $hasLiked ? 12 : 24;
+                if (! $hasLiked) {
+                    $authorShare = (int) config('economy.feed_costs.like_author_share');
+                    $credits = [
+                        ['user' => $author, 'amount' => $authorShare, 'sourceType' => 'feed_like_reward'],
+                        ['user' => $platform, 'amount' => $requiredPoints - $authorShare, 'sourceType' => 'feed_platform_fee'],
+                    ];
+                }
 
-        if (auth()->user()->pp < $requiredPoints) {
+                $charge = app(FeedPointsService::class)->charge(
+                    $payer,
+                    $requiredPoints,
+                    "feed_{$action}",
+                    $post->id,
+                    "{$action} post #{$post->id}",
+                    $credits,
+                    function () use ($post, $userId, $hasLiked) {
+                        // Switching reactions detaches the opposite reaction without a refund.
+                        if ($post->dislikedPost()->where('user_id', $userId)->exists()) {
+                            $post->dislikedPost()->detach($userId);
+                            $post->decrement('dislikes');
+                        }
+
+                        $post->likedPost()->toggle($userId);
+                        if ($hasLiked) {
+                            $post->decrement('likes');
+                        } else {
+                            $post->increment('likes');
+                        }
+
+                        return [];
+                    },
+                );
+
+                if (! $charge['ok']) {
+                    return response()->json([
+                        'success' => false,
+                        'code' => 'INSUFFICIENT_PP',
+                        'message' => "แต้มสะสมไม่เพียงพอ ต้องใช้ {$requiredPoints} แต้มในการ {$action}",
+                        'required_pp' => $requiredPoints,
+                        'current_pp' => $charge['current_pp'],
+                    ], 422);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'user_pp' => $charge['user_pp'],
+                ]);
+            });
+        } catch (AccountEconomyRestrictedException $e) {
             return response()->json([
                 'success' => false,
-                'message' => $hasLiked
-                    ? 'You do not have enough points to unlike (12 points required). / คุณไม่มีพ้อยท์เพียงพอในการยกเลิกไลค์ (ต้องการ 12 แต้ม)'
-                    : 'You do not have enough points to like (24 points required). / คุณไม่มีพ้อยท์เพียงพอในการกดถูกใจ (ต้องการ 24 แต้ม)',
-            ]);
+                'code' => 'ACCOUNT_RESTRICTED',
+                'message' => $e->getMessage(),
+            ], 403);
         }
-
-        // ถ้ากด dislike อยู่แล้ว ต้องยกเลิก dislike ก่อน
-        if ($hasDisliked) {
-            $post->dislikedPost()->detach($userId);
-            $post->decrement('dislikes');
-            // Undislike ไม่คืนแต้มให้ทั้งสองฝ่าย (ตัดไปแล้ว 12 แต้ม)
-        }
-
-        // Toggle like
-        $post->likedPost()->toggle($userId);
-
-        // Get super admin safely
-        $superAdmin = User::find(1);
-
-        if ($post->likedPost()->where('user_id', $userId)->exists()) {
-            // Like: ผู้กดเสีย 24 แต้ม (12 ให้เจ้าของ, 12 เข้าระบบ)
-            $post->increment('likes');
-            auth()->user()->decrement('pp', 24);
-            if ($post->author) {
-                $post->author->increment('pp', 12);
-            }
-            if ($superAdmin) {
-                $superAdmin->increment('pp', 12); // Super Admin ได้ 12 แต้ม
-            }
-        } else {
-            // Unlike: ผู้ยกเลิกเสีย 12 แต้ม (เข้าระบบ), เจ้าของไม่ลดแต้ม
-            $post->decrement('likes');
-            auth()->user()->decrement('pp', 12);
-            // เจ้าของไม่ลดแต้ม
-            if ($superAdmin) {
-                $superAdmin->increment('pp', 12); // Super Admin ได้ 12 แต้ม
-            }
-        }
-
-        return response()->json([
-            'success' => true,
-        ]);
     }
 
     public function toggleDislikePost(Post $post)
     {
-        $userId = auth()->id();
-        $hasLiked = $post->likedPost()->where('user_id', $userId)->exists();
-        $hasDisliked = $post->dislikedPost()->where('user_id', $userId)->exists();
+        try {
+            return DB::transaction(function () use ($post) {
+                $payer = User::whereKey(auth()->id())->lockForUpdate()->firstOrFail();
+                $userId = $payer->id;
+                $hasDisliked = $post->dislikedPost()->where('user_id', $userId)->exists();
+                $action = $hasDisliked ? 'undislike' : 'dislike';
+                $requiredPoints = (int) config("economy.feed_costs.{$action}");
+                $platform = User::find(1);
+                $author = $post->user;
+                $credits = [
+                    ['user' => $platform, 'amount' => $requiredPoints, 'sourceType' => 'feed_platform_fee'],
+                ];
 
-        // ระบบใหม่: ทั้ง Dislike และ Undislike ใช้ 12 แต้ม
-        if (auth()->user()->pp < 12) {
+                $charge = app(FeedPointsService::class)->charge(
+                    $payer,
+                    $requiredPoints,
+                    "feed_{$action}",
+                    $post->id,
+                    "{$action} post #{$post->id}",
+                    $credits,
+                    function () use ($post, $userId, $hasDisliked, $author, $platform) {
+                        // Switching reactions detaches the opposite reaction without a refund.
+                        if ($post->likedPost()->where('user_id', $userId)->exists()) {
+                            $post->likedPost()->detach($userId);
+                            $post->decrement('likes');
+                        }
+
+                        $post->dislikedPost()->toggle($userId);
+                        if ($hasDisliked) {
+                            $post->decrement('dislikes');
+                        } else {
+                            $post->increment('dislikes');
+                            if ($author) {
+                                $fine = app(FeedPointsService::class)->fineIfAffordable(
+                                    $author,
+                                    (int) config('economy.feed_costs.dislike_author_fine'),
+                                    'feed_dislike_fine',
+                                    $post->id,
+                                    'ค่าปรับเจ้าของโพสต์จากการกดไม่ถูกใจ',
+                                );
+                                if ($fine > 0 && $platform) {
+                                    app(PointsService::class)->earn(
+                                        User::whereKey($platform->id)->lockForUpdate()->firstOrFail(),
+                                        $fine,
+                                        'feed_platform_fee',
+                                        $post->id,
+                                        'ค่าปรับจากการกดไม่ถูกใจเข้าระบบ',
+                                    );
+                                }
+                            }
+                        }
+
+                        return [];
+                    },
+                );
+
+                if (! $charge['ok']) {
+                    return response()->json([
+                        'success' => false,
+                        'code' => 'INSUFFICIENT_PP',
+                        'message' => "แต้มสะสมไม่เพียงพอ ต้องใช้ {$requiredPoints} แต้มในการ {$action}",
+                        'required_pp' => $requiredPoints,
+                        'current_pp' => $charge['current_pp'],
+                    ], 422);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'user_pp' => $charge['user_pp'],
+                ]);
+            });
+        } catch (AccountEconomyRestrictedException $e) {
             return response()->json([
                 'success' => false,
-                'message' => $hasDisliked
-                    ? 'You do not have enough points to undislike (12 points required). / คุณไม่มีพ้อยท์เพียงพอในการยกเลิกดิสไลค์ (ต้องการ 12 แต้ม)'
-                    : 'You do not have enough points to dislike (12 points required). / คุณไม่มีพ้อยท์เพียงพอในการกดไม่ถูกใจ (ต้องการ 12 แต้ม)',
-            ]);
+                'code' => 'ACCOUNT_RESTRICTED',
+                'message' => $e->getMessage(),
+            ], 403);
         }
-
-        // ถ้ากด like อยู่แล้ว ต้องยกเลิก like ก่อน
-        if ($hasLiked) {
-            $post->likedPost()->detach($userId);
-            $post->decrement('likes');
-            // Unlike ไม่คืนแต้มให้ทั้งสองฝ่าย (ตัดไปแล้ว 12 แต้ม)
-        }
-
-        // Toggle dislike
-        $post->dislikedPost()->toggle($userId);
-
-        // Get super admin safely
-        $superAdmin = User::find(1);
-
-        if ($post->dislikedPost()->where('user_id', $userId)->exists()) {
-            // Dislike: ผู้กดเสีย 12 แต้ม, เจ้าของเสีย 12 แต้ม, ระบบได้ 24 แต้ม
-            $post->increment('dislikes');
-            auth()->user()->decrement('pp', 12);
-            if ($post->author) {
-                $post->author->decrement('pp', 12);
-            }
-            if ($superAdmin) {
-                $superAdmin->increment('pp', 24); // Super Admin ได้ 24 แต้ม
-            }
-        } else {
-            // Undislike: ผู้ยกเลิกเสีย 12 แต้ม (เข้าระบบ), เจ้าของไม่คืนแต้ม
-            $post->decrement('dislikes');
-            auth()->user()->decrement('pp', 12);
-            if ($superAdmin) {
-                $superAdmin->increment('pp', 12); // Super Admin ได้ 12 แต้ม
-            }
-            // ไม่คืนแต้มให้เจ้าของโพสต์
-        }
-
-        return response()->json([
-            'success' => true,
-        ]);
     }
 }

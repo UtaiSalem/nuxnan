@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Play;
 
+use App\Exceptions\AccountEconomyRestrictedException;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Play\PollCommentResource;
 use App\Models\DislikedPoll;
@@ -9,6 +10,7 @@ use App\Models\LikedPoll;
 use App\Models\Poll;
 use App\Models\PollComment;
 use App\Models\User;
+use App\Services\FeedPointsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -129,33 +131,45 @@ class PollReactionController extends Controller
         $request->validate(['content' => 'required|string']);
         $user = $request->user();
 
-        // Comment cost: 12 points
-        if ($user->pp < 12) {
-            return response()->json([
-                'success' => false,
-                'message' => 'คุณไม่มีพ้อยท์เพียงพอในการแสดงความคิดเห็น (ต้องการ 12 แต้ม)',
-            ], 422);
-        }
+        $requiredPoints = (int) config('economy.feed_costs.comment');
+        $authorShare = (int) config('economy.feed_costs.comment_author_share');
+        $superAdmin = User::find(1);
 
         try {
-            return DB::transaction(function () use ($poll, $user, $request) {
-                $comment = PollComment::create([
-                    'poll_id' => $poll->id,
-                    'user_id' => $user->id,
-                    'content' => $request->content,
-                ]);
+            $charge = app(FeedPointsService::class)->charge(
+                $user, $requiredPoints, 'feed_comment', $poll->id, 'แสดงความคิดเห็นในโพล',
+                [
+                    ['user' => $poll->user_id === $user->id ? $superAdmin : $poll->user, 'amount' => $authorShare, 'sourceType' => $poll->user_id === $user->id ? 'feed_platform_fee' : 'feed_comment_reward'],
+                    ['user' => $superAdmin, 'amount' => $requiredPoints - $authorShare, 'sourceType' => 'feed_platform_fee'],
+                ],
+                function () use ($poll, $user, $request) {
+                    $comment = PollComment::create([
+                        'poll_id' => $poll->id,
+                        'user_id' => $user->id,
+                        'content' => $request->content,
+                    ]);
 
-                $user->decrement('pp', 12);
-                $superAdmin = User::find(1);
-                if ($superAdmin) {
-                    $superAdmin->increment('pp', 12);
+                    return ['comment' => $comment];
                 }
+            );
 
+            if (! $charge['ok']) {
                 return response()->json([
-                    'success' => true,
-                    'comment' => new PollCommentResource($comment->load('user')),
-                ]);
-            });
+                    'success' => false,
+                    'code' => 'INSUFFICIENT_PP',
+                    'message' => "คุณมีแต้มไม่เพียงพอในการแสดงความคิดเห็น (ต้องการ {$requiredPoints} แต้ม)",
+                    'required_pp' => $requiredPoints,
+                    'current_pp' => $charge['current_pp'],
+                ], 422);
+            }
+
+            return response()->json([
+                'success' => true,
+                'comment' => new PollCommentResource($charge['comment']->load('user')),
+                'user_pp' => $charge['user_pp'],
+            ]);
+        } catch (AccountEconomyRestrictedException $e) {
+            return response()->json(['success' => false, 'code' => 'ACCOUNT_RESTRICTED', 'message' => $e->getMessage()], 403);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }

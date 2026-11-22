@@ -1,6 +1,13 @@
 <?php
 
 return [
+    // ฝั่ง frontend ใช้ค่าเดียวกันใน ui/constants/feedCosts.ts
+    'feed_costs' => [
+        'post' => 480, 'comment' => 240, 'comment_author_share' => 120,
+        'reply' => 300, 'reply_author_share' => 150,
+        'like' => 120, 'like_author_share' => 60, 'unlike' => 60,
+        'dislike' => 120, 'dislike_author_fine' => 60, 'undislike' => 60,
+    ],
     'pp_per_baht_official' => 1200,
     'donation_pp_per_baht' => 1080,
     'claim_cost' => 270,

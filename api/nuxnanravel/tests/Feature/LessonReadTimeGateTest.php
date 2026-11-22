@@ -42,9 +42,20 @@ class LessonReadTimeGateTest extends TestCase
     }
 
     /** @test */
-    public function lesson_without_read_time_requirement_can_be_marked()
+    public function lesson_without_min_read_requires_60_seconds_before_marking()
     {
         $lesson = $this->makeLesson(0);
+
+        $this->actingAs($this->student, 'api')
+            ->postJson("/api/lessons/{$lesson->id}/progress/toggle")
+            ->assertStatus(422)
+            ->assertJsonPath('code', 'lesson_read_too_short')
+            ->assertJsonPath('read_time.required_seconds', 60);
+
+        LessonProgress::updateOrCreate(
+            ['user_id' => $this->student->id, 'lesson_id' => $lesson->id],
+            ['status' => 'in_progress', 'time_spent_seconds' => 60]
+        );
 
         $response = $this->actingAs($this->student, 'api')
             ->postJson("/api/lessons/{$lesson->id}/progress/toggle");
