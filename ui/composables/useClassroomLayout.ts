@@ -1,9 +1,8 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 /**
- * Responsive classroom zoning shared by the Phaser renderer and the Vue
- * fallback grid. Keeps both surfaces in lockstep so a viewport change shows
- * the same number of desks per row regardless of which renderer is active.
+ * Responsive classroom zoning for ClassroomSeatGrid: how many desks sit in
+ * each zone of a row at the current viewport width.
  *
  * Patterns are intentionally symmetric — uneven splits like 3:4:3 look off
  * once the room shrinks.

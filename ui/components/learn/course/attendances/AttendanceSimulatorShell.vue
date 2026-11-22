@@ -10,7 +10,6 @@ import {
   isSessionActive,
   ATTENDANCE_STATUS,
 } from '~/composables/useAttendanceStatus'
-import AttendancePhaserScene from '~/components/learn/course/attendances/AttendancePhaserScene.vue'
 import ClassroomSeatGrid from '~/components/learn/course/attendances/ClassroomSeatGrid.vue'
 
 interface Props {
@@ -41,14 +40,10 @@ const selectedMemberId = ref<number | null>(null)
 const editingSeat = ref<SeatData | null>(null)
 const savingStatus = ref(false)
 const checkingIn = ref(false)
-// Default to the DOM-based farm-game classroom (cleaner, smoother).
-// Phaser scene kept as opt-in fallback path.
-const phaserFailed = ref(true)
-const phaserSceneReady = ref(false)
 let initialScrollDone = false
 
 function scrollToMySeat() {
-  if (initialScrollDone || props.isCourseAdmin || !authMemberId.value || usePhaserRenderer.value) return
+  if (initialScrollDone || props.isCourseAdmin || !authMemberId.value) return
   nextTick(() => {
     const el = document.querySelector(`[data-member-id="${authMemberId.value}"]`)
     if (el) {
@@ -73,7 +68,6 @@ const mySeat = computed<SeatData | null>(() => {
   if (!authMemberId.value) return null
   return seats.value.find(s => s.course_member_id === authMemberId.value) ?? null
 })
-const usePhaserRenderer = computed(() => !phaserFailed.value)
 
 const checkInState = computed(() => {
   if (!attendanceInfo.value || !mySeat.value) return { canCheckIn: false, reason: 'no-data' }
@@ -244,11 +238,6 @@ function handleSeatSelect(memberId: number) {
   }
 }
 
-function handlePhaserLoadError(error: unknown) {
-  console.error('Phaser attendance scene failed to load:', error)
-  phaserFailed.value = true
-}
-
 const statusOptions = [
   { value: 1, label: 'มา', icon: 'heroicons:check-circle-20-solid', activeClass: 'bg-emerald-500 text-white', idleClass: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40' },
   { value: 2, label: 'สาย', icon: 'heroicons:clock-20-solid', activeClass: 'bg-amber-500 text-white', idleClass: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40' },
@@ -402,25 +391,7 @@ onUnmounted(() => {
     <!-- Classroom (full width — summary lives on the blackboard) -->
     <template v-else-if="seats.length > 0">
       <ClientOnly>
-        <AttendancePhaserScene
-          v-if="usePhaserRenderer"
-          :seats="seats"
-          :total-seats="layout.total_seats"
-          :attendance="attendanceInfo"
-          :auth-member-id="authMemberId"
-          :selected-member-id="selectedMemberId"
-          :is-course-admin="isCourseAdmin"
-          :clock="boardClock"
-          :server-time-ms="serverTimeMs"
-          :door-state="doorState"
-          :teacher="teacherInfo"
-          @seat-select="handleSeatSelect"
-          @door-click="handleSelfCheckIn"
-          @scene-ready="phaserSceneReady = true"
-          @load-error="handlePhaserLoadError"
-        />
         <ClassroomSeatGrid
-          v-else
           :seats="seats"
           :cols="layout.cols"
           :rows="layout.rows"
