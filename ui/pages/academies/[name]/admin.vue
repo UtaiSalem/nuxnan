@@ -1,10 +1,11 @@
 <script setup lang="ts">
 /**
  * Academy Admin Layout
- * หน้า Layout หลักสำหรับ Admin Panel ของโรงเรียน
+ * หน้า Layout หลักสำหรับหน้าจัดการโรงเรียน
  */
 import { Icon } from '@iconify/vue'
 import AcademyAdminForbidden from '~/components/academy/admin/AcademyAdminForbidden.vue'
+import AcademyAdminNav from '~/components/academy/admin/AcademyAdminNav.vue'
 import { provideAcademyAdminContext } from '~/composables/useAcademyAdminContext'
 import {
   adminRelativePath,
@@ -28,7 +29,9 @@ const academyName = computed(() => route.params.name as string)
 // State
 const academy = ref<any>(null)
 const isLoading = ref(true)
-const isSidebarOpen = ref(false) // Default to closed on mobile
+const isDrawerOpen = ref(false)
+const badges = ref<Record<string, number>>({})
+const drawerElement = ref<HTMLElement | null>(null)
 
 // Academy Role
 const academyId = ref<number | null>(null)
@@ -69,14 +72,73 @@ const currentSection = computed(() => {
   const rel = adminRelativePath(route.path, academyName.value)
   return rel === null ? null : findAdminSection(rel)
 })
+const currentGroupLabel = computed(() => navGroups.value.find(g => g.sections.some(s => s.id === currentSection.value?.id))?.label ?? null)
 // หน้าที่ไม่มีใน registry: ให้เฉพาะ isAdmin (fail closed — เทสต์ SA-1a กันไม่ให้มีหน้าตกหล่น)
 const canViewCurrent = computed(() =>
   currentSection.value ? canViewSection(currentSection.value, permissionCtx.value) : isAdmin.value
 )
 
-// มือถือ: ปิดเมนูเองหลังเลือก ไม่งั้นเนื้อหาถูกดันลงใต้กริดเมนู
+// มือถือ: ปิด drawer เองหลังเลือกเมนู
 watch(() => route.fullPath, () => {
-  isSidebarOpen.value = false
+  isDrawerOpen.value = false
+})
+
+let previousBodyOverflow: string | null = null
+let drawerOpener: HTMLElement | null = null
+const restoreBodyOverflow = () => {
+  if (previousBodyOverflow !== null) {
+    document.body.style.overflow = previousBodyOverflow
+    previousBodyOverflow = null
+  }
+}
+
+watch(isDrawerOpen, async open => {
+  if (!import.meta.client) return
+  if (open) {
+    previousBodyOverflow = document.body.style.overflow
+    drawerOpener = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    document.body.style.overflow = 'hidden'
+    await nextTick()
+    if (isDrawerOpen.value) drawerElement.value?.querySelector<HTMLButtonElement>('button')?.focus()
+  } else {
+    restoreBodyOverflow()
+    drawerOpener?.focus()
+    drawerOpener = null
+  }
+})
+
+const handleDrawerKeydown = (event: KeyboardEvent) => {
+  if (!isDrawerOpen.value) return
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    isDrawerOpen.value = false
+  } else if (event.key === 'Tab') {
+    const controls = drawerElement.value?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled])')
+    const first = controls?.[0]
+    const last = controls?.[controls.length - 1]
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault()
+      last?.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first?.focus()
+    }
+  }
+}
+
+const closeDesktopDrawer = () => {
+  if (window.matchMedia('(min-width: 1024px)').matches) isDrawerOpen.value = false
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', handleDrawerKeydown)
+  window.addEventListener('resize', closeDesktopDrawer)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleDrawerKeydown)
+  window.removeEventListener('resize', closeDesktopDrawer)
+  restoreBodyOverflow()
 })
 
 // Fetch data
@@ -102,9 +164,6 @@ onMounted(async () => {
   }
 })
 
-const toggleSidebar = () => {
-  isSidebarOpen.value = !isSidebarOpen.value
-}
 </script>
 
 <template>
@@ -116,113 +175,148 @@ const toggleSidebar = () => {
 
     <div v-else>
       <!-- Academy Header Card -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
-        <div class="p-4 flex items-center justify-between">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-4 sm:mb-6">
+        <div class="p-3 sm:p-4 flex items-center gap-3">
           <NuxtLink 
             :to="`/academies/${academyName}`"
-            class="flex items-center gap-3 hover:opacity-80 transition-opacity"
+            class="flex min-h-[44px] min-w-0 flex-1 items-center gap-3 hover:opacity-80 transition-opacity"
           >
             <img 
               :src="academy?.logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(academy?.name || 'Academy')}&background=6366f1&color=fff&size=96`" 
               :alt="academy?.name"
-              class="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+              class="h-10 w-10 sm:h-12 sm:w-12 rounded-lg object-cover flex-shrink-0"
             />
-            <div>
-              <h1 class="font-bold text-lg text-gray-900 dark:text-white">
+            <div class="min-w-0 flex-1">
+              <h1 class="break-words font-bold text-base sm:text-lg text-gray-900 dark:text-white">
                 {{ academy?.name }}
               </h1>
-              <p class="text-sm text-gray-500 dark:text-gray-400">Admin Panel</p>
+              <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">หน้าจัดการโรงเรียน</p>
             </div>
           </NuxtLink>
           
           <!-- Role Badge -->
-          <div :class="['flex items-center gap-2 px-3 py-2 rounded-lg', roleColor]">
-            <Icon :icon="roleIcon" class="w-5 h-5" />
-            <span class="font-medium text-sm hidden sm:inline">{{ roleDisplayName }}</span>
+          <div :class="['flex flex-shrink-0 items-center gap-2 px-2 sm:px-3 py-2 rounded-lg', roleColor]">
+            <Icon :icon="roleIcon" aria-hidden="true" class="w-5 h-5 flex-shrink-0" />
+            <span class="whitespace-nowrap font-medium text-xs sm:text-sm">{{ roleDisplayName }}</span>
           </div>
         </div>
       </div>
 
-      <!-- Mobile Menu Toggle -->
-      <button 
-        @click="toggleSidebar"
-        class="lg:hidden w-full mb-4 flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"
-      >
-        <Icon icon="fluent:navigation-24-regular" class="w-5 h-5" />
-        <span>{{ isSidebarOpen ? 'ซ่อนเมนู' : 'แสดงเมนู' }}</span>
-      </button>
-
-      <div class="flex flex-col lg:flex-row gap-6">
-      <!-- Sidebar Navigation -->
-      <aside
-        :class="[
-          'bg-white dark:bg-gray-800 rounded-xl shadow-[0_0_30px_rgba(14,165,233,0.05)] overflow-hidden transition-all duration-300',
-          isSidebarOpen ? 'block' : 'hidden lg:block',
-          'lg:w-64 lg:flex-shrink-0'
-        ]"
-      >
-        <!-- Navigation (HopeUI sidebar-default style) -->
-        <nav class="p-4 space-y-4 max-h-[70vh] lg:max-h-none overflow-y-auto">
-          <div v-for="group in navGroups" :key="group.id">
-            <h3 class="mb-2 px-3 text-[13px] font-normal uppercase tracking-[.18rem] text-gray-900 dark:text-gray-100">
-              {{ group.label }}
-            </h3>
-            <ul class="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1">
-              <li v-for="section in group.sections" :key="section.id">
-                <NuxtLink
-                  :to="sectionTo(section.path)"
-                  :class="[
-                    'flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2.5 min-w-0 transition-all duration-300 ease-in-out lg:min-h-0',
-                    currentSection?.id === section.id
-                      ? 'bg-primary-500 text-white shadow-[0_10px_20px_-10px_rgba(14,165,233,0.6)]'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-primary-500/10 hover:text-primary-600 dark:hover:text-primary-400'
-                  ]"
-                >
-                  <Icon :icon="section.icon" class="w-5 h-5 flex-shrink-0" />
-                  <span class="text-sm leading-tight break-words min-w-0">{{ section.label }}</span>
-                </NuxtLink>
+      <!-- Mobile menu and breadcrumb -->
+      <div class="lg:hidden mb-4 flex items-center gap-2">
+        <button
+          type="button"
+          aria-controls="academy-admin-drawer"
+          :aria-expanded="isDrawerOpen"
+          class="flex flex-shrink-0 min-h-[44px] items-center gap-2 whitespace-nowrap px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+          @click="isDrawerOpen = true"
+        >
+          <Icon icon="fluent:navigation-24-regular" aria-hidden="true" class="w-5 h-5" />
+          <span>เมนู</span>
+        </button>
+        <div class="min-w-0 flex-1">
+          <nav aria-label="breadcrumb" class="overflow-x-auto text-gray-500 dark:text-gray-400">
+            <ol class="flex items-center gap-1 whitespace-nowrap text-xs sm:text-sm">
+              <li>
+                <NuxtLink :to="sectionTo('')" :aria-current="currentSection?.id === 'dashboard' ? 'page' : undefined" class="inline-flex min-h-[44px] items-center hover:text-primary-600 dark:hover:text-primary-400">จัดการโรงเรียน</NuxtLink>
               </li>
-            </ul>
+              <template v-if="currentSection && currentSection.id !== 'dashboard'">
+                <li v-if="currentGroupLabel && currentSection.group !== 'overview'" class="flex items-center gap-1">
+                  <Icon icon="fluent:chevron-right-16-regular" aria-hidden="true" class="h-4 w-4 flex-shrink-0" />
+                  <span>{{ currentGroupLabel }}</span>
+                </li>
+                <li class="flex items-center gap-1">
+                  <Icon icon="fluent:chevron-right-16-regular" aria-hidden="true" class="h-4 w-4 flex-shrink-0" />
+                  <span aria-current="page" class="font-bold text-gray-900 dark:text-gray-100">{{ currentSection.label }}</span>
+                </li>
+              </template>
+            </ol>
+          </nav>
+        </div>
+      </div>
+
+      <Teleport to="body">
+        <div
+          v-if="isDrawerOpen"
+          id="academy-admin-drawer"
+          ref="drawerElement"
+          role="dialog"
+          aria-modal="true"
+          aria-label="เมนูจัดการโรงเรียน"
+          class="lg:hidden fixed inset-0 z-50 flex flex-col bg-white dark:bg-gray-900"
+        >
+          <div class="flex flex-shrink-0 items-center gap-3 border-b border-gray-200 p-3 dark:border-gray-700">
+            <span class="min-w-0 flex-1 break-words font-semibold text-gray-900 dark:text-white">{{ academy?.name }}</span>
+            <button
+              type="button"
+              aria-label="ปิดเมนู"
+              class="flex min-h-[44px] min-w-[44px] flex-shrink-0 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+              @click="isDrawerOpen = false"
+            >
+              <Icon icon="fluent:dismiss-24-regular" aria-hidden="true" class="h-6 w-6" />
+            </button>
           </div>
-        </nav>
+          <div class="min-h-0 flex-1 overflow-y-auto p-3">
+            <AcademyAdminNav :groups="navGroups" :current-id="currentSection?.id ?? null" :section-to="sectionTo" :badges="badges" />
+          </div>
+          <div class="flex-shrink-0 border-t border-gray-200 px-3 pt-3 pb-[env(safe-area-inset-bottom)] dark:border-gray-700">
+            <NuxtLink
+              :to="`/academies/${academyName}`"
+              class="mb-3 flex min-h-[44px] items-center gap-3 rounded-lg px-4 py-2.5 text-gray-600 dark:text-gray-300 hover:bg-primary-500/10 hover:text-primary-600 dark:hover:text-primary-400"
+            >
+              <Icon icon="fluent:arrow-left-24-regular" aria-hidden="true" class="w-5 h-5 flex-shrink-0" />
+              <span class="min-w-0 flex-1 break-words text-sm">กลับหน้าโรงเรียน</span>
+            </NuxtLink>
+          </div>
+        </div>
+      </Teleport>
 
-        <!-- Footer -->
-        <div class="p-4 border-t border-gray-200 dark:border-gray-700">
-          <NuxtLink
-            :to="`/academies/${academyName}`"
-            class="flex items-center gap-3 rounded-lg px-4 py-2.5 text-gray-600 dark:text-gray-300 transition-all duration-300 hover:bg-primary-500/10 hover:text-primary-600 dark:hover:text-primary-400"
+      <div class="flex flex-col lg:flex-row gap-4 lg:gap-6">
+        <!-- Desktop sidebar -->
+        <aside class="hidden lg:block lg:w-64 lg:flex-shrink-0">
+          <div
+            class="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto rounded-xl bg-white p-4 shadow-[0_0_30px_rgba(14,165,233,0.05)] dark:bg-gray-800"
           >
-            <Icon icon="fluent:arrow-left-24-regular" class="w-5 h-5" />
-            <span class="text-sm">กลับหน้าโรงเรียน</span>
-          </NuxtLink>
-        </div>
-      </aside>
+            <AcademyAdminNav :groups="navGroups" :current-id="currentSection?.id ?? null" :section-to="sectionTo" :badges="badges" />
+            <div class="mt-4 border-t border-gray-200 pt-4 dark:border-gray-700">
+              <NuxtLink
+                :to="`/academies/${academyName}`"
+                class="flex min-h-[44px] items-center gap-3 rounded-lg px-4 py-2.5 text-gray-600 dark:text-gray-300 hover:bg-primary-500/10 hover:text-primary-600 dark:hover:text-primary-400"
+              >
+                <Icon icon="fluent:arrow-left-24-regular" aria-hidden="true" class="w-5 h-5 flex-shrink-0" />
+                <span class="min-w-0 flex-1 break-words text-sm">กลับหน้าโรงเรียน</span>
+              </NuxtLink>
+            </div>
+          </div>
+        </aside>
 
-      <!-- Main Content -->
-      <main class="flex-1 min-w-0">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-          <AcademyAdminForbidden v-if="!canViewCurrent" :section="currentSection" :academy-name="academyName" />
-          <NuxtPage v-else />
-        </div>
-      </main>
+        <!-- Main content -->
+        <main class="min-w-0 flex-1">
+          <div class="hidden lg:block mb-3">
+            <nav aria-label="breadcrumb" class="overflow-x-auto text-gray-500 dark:text-gray-400">
+              <ol class="flex items-center gap-1 whitespace-nowrap text-xs sm:text-sm">
+                <li>
+                  <NuxtLink :to="sectionTo('')" :aria-current="currentSection?.id === 'dashboard' ? 'page' : undefined" class="inline-flex min-h-[44px] items-center hover:text-primary-600 dark:hover:text-primary-400">จัดการโรงเรียน</NuxtLink>
+                </li>
+                <template v-if="currentSection && currentSection.id !== 'dashboard'">
+                  <li v-if="currentGroupLabel && currentSection.group !== 'overview'" class="flex items-center gap-1">
+                    <Icon icon="fluent:chevron-right-16-regular" aria-hidden="true" class="h-4 w-4 flex-shrink-0" />
+                    <span>{{ currentGroupLabel }}</span>
+                  </li>
+                  <li class="flex items-center gap-1">
+                    <Icon icon="fluent:chevron-right-16-regular" aria-hidden="true" class="h-4 w-4 flex-shrink-0" />
+                    <span aria-current="page" class="font-bold text-gray-900 dark:text-gray-100">{{ currentSection.label }}</span>
+                  </li>
+                </template>
+              </ol>
+            </nav>
+          </div>
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-6">
+            <AcademyAdminForbidden v-if="!canViewCurrent" :section="currentSection" :academy-name="academyName" />
+            <NuxtPage v-else />
+          </div>
+        </main>
+      </div>
     </div>
   </div>
-</div>
 </template>
-
-<style scoped>
-/* Hide scrollbar for sidebar */
-nav::-webkit-scrollbar {
-  width: 4px;
-}
-nav::-webkit-scrollbar-track {
-  background: transparent;
-}
-nav::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 2px;
-}
-.dark nav::-webkit-scrollbar-thumb {
-  background: #475569;
-}
-</style>
