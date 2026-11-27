@@ -21,11 +21,15 @@
   - **SA-2b `223e3bda`** (agy) ร้านค้า `store.manage` 19 เส้น + tenant + เจ้าของออเดอร์/รีวิว · MySQL 18/18 · revert-check ตก 6/8
   - **SA-1b `70a9e924`** (Codex — agy หมดโควตา Claude อีกรอบ รีเซ็ตราว 5 ชม.) · grep 4 ข้อ = 0 · compile 4 SFC · vitest 34/34
     · จอจริง 375px บัญชีเจ้าของ: เมนู 35 · เมนูมือถือปิดเองหลังกด · ไม่มีเลื่อนแนวนอน · console ไม่มี error
+  - **SA-1c `2547b8db`** (Codex) ถอดด่านเจ้าของ 19 หน้า · ลบแค่ guard + `isAdmin` ที่ไม่ใช้ · compile 19 · จอเจ้าของ: ผลการเรียน/ห้องเรียน/หลักสูตร/ร้านค้า โหลดปกติ
+  - **SA-1d `d15c0fb9`** (Codex) หน้าบทบาทดึงแคตตาล็อกจริง 30 กลุ่ม · โมดัล 375px มี `admin.access`/`store.manage` · รายการเลื่อนในกล่อง (สเปคบอก `dark:` เดิม 78 แต่จริง 56 → ตอนนี้ 58)
+  - ⇒ **โค้ดเฟส 1 ครบทุก shard แล้ว**
   - งานแยก `students.*` drift → commit `f9f3a8e7` บน branch `fix/system-roles-students-keys` (จาก `main` · ยังไม่ push · ยังไม่ merge)
 
 ### งานที่ค้างอยู่ (TODO ต่อ)
 - [ ] 🔴 **SA-1b ยังไม่ได้เปิดจอด้วยบัญชีที่ไม่ใช่เจ้าของ** — ล็อกอิน user 2 (`staff`) ใน browser pane: เมนูต้องเหลือ 9 · พิมพ์ `/admin/gradebook` ต้องเห็นหน้า "ไม่มีสิทธิ์เปิดหน้านี้" ในกรอบ
-- [ ] **SA-1c** ถอดด่าน `if (!isAdmin.value)` 19 หน้า (รอ SA-1b ✅) · **SA-1d** หน้าบทบาทใช้แคตตาล็อกจริง (ขนานได้)
+- [ ] push branch + เปิด PR เฟส 1 · production: deploy + `migrate` (SA-2a) ในรอบเดียวกับหน้าเว็บ
+- [ ] `npm run build` บน branch นี้ (เจ้าของรันเอง)
 - [ ] SA-2b เจอนอกสเปค: `StoreReviewController::store` เช็ค `order_id` กับออเดอร์ทุกคน ไม่ใช่ของผู้รีวิว → แนบรีวิวกับออเดอร์คนอื่นได้
 - [ ] 🔴 **ลำดับ deploy:** SA-2a ต้องขึ้น (พร้อม migrate) **ก่อนหรือพร้อม** SA-1 — ถ้าหน้าเว็บ SA-1 ขึ้นก่อน ครูจะเข้าแอดมินไม่ได้ · SA-2a ขึ้นเดี่ยว ๆ ได้ไม่มีผลเสีย (หน้าเว็บเดิมไม่อ่านธงใหม่ · super admin เข้าแอดมินได้ตรงกับ backend)
 - [ ] **dev อีกเครื่อง:** หลัง pull รัน `php artisan migrate --path=database/migrations/2026_11_23_000001_grant_admin_access_permission.php` (ห้าม `migrate` เปล่า — ยังมี `2026_11_12_000001` คูปอง Pending)
