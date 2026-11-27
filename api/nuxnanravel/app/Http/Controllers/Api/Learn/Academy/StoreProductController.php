@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class StoreProductController extends Controller
 {
@@ -89,6 +90,8 @@ class StoreProductController extends Controller
      */
     public function show(Academy $academy, StoreProduct $product): JsonResponse
     {
+        $this->ensureProductInStore($academy, $product);
+
         $product->load(['category', 'reviews' => function ($q) {
             $q->approved()->with('user:id,name,profile_photo_path')->latest()->limit(10);
         }]);
@@ -120,7 +123,7 @@ class StoreProductController extends Controller
             'sku' => 'nullable|string|max:100',
             'stock_quantity' => 'required|integer|min:0',
             'low_stock_threshold' => 'nullable|integer|min:0',
-            'category_id' => 'nullable|exists:store_categories,id',
+            'category_id' => ['nullable', Rule::exists('store_categories', 'id')->where('academy_store_id', $store->id)],
             'is_active' => 'nullable|boolean',
             'is_featured' => 'nullable|boolean',
             'payment_type' => 'nullable|in:points,wallet,both',
@@ -173,6 +176,8 @@ class StoreProductController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
+        $store = $this->ensureProductInStore($academy, $product);
+
         $request->validate([
             'name' => 'nullable|string|max:255',
             'description' => 'nullable|string',
@@ -182,7 +187,7 @@ class StoreProductController extends Controller
             'sku' => 'nullable|string|max:100',
             'stock_quantity' => 'nullable|integer|min:0',
             'low_stock_threshold' => 'nullable|integer|min:0',
-            'category_id' => 'nullable|exists:store_categories,id',
+            'category_id' => ['nullable', Rule::exists('store_categories', 'id')->where('academy_store_id', $store->id)],
             'is_active' => 'nullable|boolean',
             'is_featured' => 'nullable|boolean',
             'payment_type' => 'nullable|in:points,wallet,both',
@@ -211,6 +216,8 @@ class StoreProductController extends Controller
         if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
+
+        $this->ensureProductInStore($academy, $product);
 
         $request->validate([
             'images' => 'required|array|min:1',
@@ -241,6 +248,8 @@ class StoreProductController extends Controller
         if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
+
+        $this->ensureProductInStore($academy, $product);
 
         $request->validate([
             'image_index' => 'required|integer|min:0',
@@ -277,12 +286,28 @@ class StoreProductController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
+        $this->ensureProductInStore($academy, $product);
+
         $product->delete();
 
         return response()->json([
             'success' => true,
             'message' => 'ลบสินค้าเรียบร้อย',
         ]);
+    }
+
+    /**
+     * SA-2b tenant: {product} ต้องเป็นของร้านโรงเรียนใน URL ไม่งั้น 404 (กัน IDOR ข้ามโรงเรียน)
+     */
+    private function ensureProductInStore(Academy $academy, StoreProduct $product): AcademyStore
+    {
+        $store = AcademyStore::where('academy_id', $academy->id)->firstOrFail();
+
+        if ((int) $product->academy_store_id !== (int) $store->id) {
+            abort(404);
+        }
+
+        return $store;
     }
 
     /**

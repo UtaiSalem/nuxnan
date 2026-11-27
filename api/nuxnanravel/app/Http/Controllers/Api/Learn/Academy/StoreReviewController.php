@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
+use App\Models\AcademyStore;
 use App\Models\StoreProduct;
 use App\Models\StoreProductReview;
 use Illuminate\Http\JsonResponse;
@@ -17,6 +18,8 @@ class StoreReviewController extends Controller
      */
     public function index(Request $request, Academy $academy, StoreProduct $product): JsonResponse
     {
+        $this->ensureProductInStore($academy, $product);
+
         $reviews = StoreProductReview::where('store_product_id', $product->id)
             ->approved()
             ->with('user:id,name,profile_photo_path')
@@ -56,6 +59,8 @@ class StoreReviewController extends Controller
         if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
+
+        $this->ensureProductInStore($academy, $product);
 
         $request->validate([
             'rating' => 'required|integer|min:1|max:5',
@@ -99,13 +104,25 @@ class StoreReviewController extends Controller
     }
 
     /**
-     * ลบรีวิว (Admin)
+     * ลบรีวิว (เจ้าของรีวิว หรือผู้มี store.manage)
      */
     public function destroy(Academy $academy, StoreProduct $product, StoreProductReview $review): JsonResponse
     {
         $user = Auth::user();
         if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $this->ensureProductInStore($academy, $product);
+
+        // tenant: รีวิวต้องเป็นของสินค้าใน URL
+        if ((int) $review->store_product_id !== (int) $product->id) {
+            abort(404);
+        }
+
+        // เจ้าของรายการ (เส้นนี้ไม่มี middleware สิทธิ์ — ไม่ซ้ำ G18)
+        if ((int) $review->user_id !== (int) $user->id && ! $academy->userCan($user, 'store.manage')) {
+            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
         }
 
         $review->delete();
@@ -115,5 +132,19 @@ class StoreReviewController extends Controller
             'success' => true,
             'message' => 'ลบรีวิวเรียบร้อย',
         ]);
+    }
+
+    /**
+     * SA-2b tenant: {product} ต้องเป็นของร้านโรงเรียนใน URL ไม่งั้น 404 (กัน IDOR ข้ามโรงเรียน)
+     */
+    private function ensureProductInStore(Academy $academy, StoreProduct $product): AcademyStore
+    {
+        $store = AcademyStore::where('academy_id', $academy->id)->firstOrFail();
+
+        if ((int) $product->academy_store_id !== (int) $store->id) {
+            abort(404);
+        }
+
+        return $store;
     }
 }
