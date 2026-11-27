@@ -16,9 +16,17 @@
   - `/my-role` รู้จัก super admin (`is_admin` true · `['*']` · `is_super_admin`) · `GET /academies/{name}` มีธง `canEnterAdmin` ระดับบนสุด (ไม่ใส่ใน `AcademyResource` กัน N+1)
   - ผลตรวจ: pint ผ่าน · sqlite 10/10 · MySQL **191/191** (27 ไฟล์ที่แตะ my-role/show/SYSTEM_ROLES/แคตตาล็อก + guard/แดชบอร์ด/รายงาน) · `roles-doctor` ไม่ฟ้องคีย์ใหม่
 
+- **2026-11-28 (ต่อ):** ส่ง shard ต่อ — Claude ตรวจ diff + รันเกณฑ์เองทุกตัว
+  - **SA-1a `030628e2`** (agy) registry + fixture + vitest 34/34 · ไฟล์ตรงสเปคทุกตัวอักษร
+  - **SA-2b `223e3bda`** (agy) ร้านค้า `store.manage` 19 เส้น + tenant + เจ้าของออเดอร์/รีวิว · MySQL 18/18 · revert-check ตก 6/8
+  - **SA-1b `70a9e924`** (Codex — agy หมดโควตา Claude อีกรอบ รีเซ็ตราว 5 ชม.) · grep 4 ข้อ = 0 · compile 4 SFC · vitest 34/34
+    · จอจริง 375px บัญชีเจ้าของ: เมนู 35 · เมนูมือถือปิดเองหลังกด · ไม่มีเลื่อนแนวนอน · console ไม่มี error
+  - งานแยก `students.*` drift → commit `f9f3a8e7` บน branch `fix/system-roles-students-keys` (จาก `main` · ยังไม่ push · ยังไม่ merge)
+
 ### งานที่ค้างอยู่ (TODO ต่อ)
-- [ ] **SA-2b** ร้านค้า: `store.manage` รายเส้น 19 เส้น + tenant ของ product/category/order/review (สเปคพร้อม · ไม่ทับไฟล์กับ SA-1 ส่งขนานได้)
-- [ ] **SA-1a** registry `ui/utils/academyAdminNav.ts` + vitest → **SA-1b** เปลือกใช้ registry + หน้า "ไม่มีสิทธิ์" → **SA-1c** ถอดด่าน `if (!isAdmin.value)` 19 หน้า · **SA-1d** หน้าบทบาทใช้แคตตาล็อกจริง (ขนานได้)
+- [ ] 🔴 **SA-1b ยังไม่ได้เปิดจอด้วยบัญชีที่ไม่ใช่เจ้าของ** — ล็อกอิน user 2 (`staff`) ใน browser pane: เมนูต้องเหลือ 9 · พิมพ์ `/admin/gradebook` ต้องเห็นหน้า "ไม่มีสิทธิ์เปิดหน้านี้" ในกรอบ
+- [ ] **SA-1c** ถอดด่าน `if (!isAdmin.value)` 19 หน้า (รอ SA-1b ✅) · **SA-1d** หน้าบทบาทใช้แคตตาล็อกจริง (ขนานได้)
+- [ ] SA-2b เจอนอกสเปค: `StoreReviewController::store` เช็ค `order_id` กับออเดอร์ทุกคน ไม่ใช่ของผู้รีวิว → แนบรีวิวกับออเดอร์คนอื่นได้
 - [ ] 🔴 **ลำดับ deploy:** SA-2a ต้องขึ้น (พร้อม migrate) **ก่อนหรือพร้อม** SA-1 — ถ้าหน้าเว็บ SA-1 ขึ้นก่อน ครูจะเข้าแอดมินไม่ได้ · SA-2a ขึ้นเดี่ยว ๆ ได้ไม่มีผลเสีย (หน้าเว็บเดิมไม่อ่านธงใหม่ · super admin เข้าแอดมินได้ตรงกับ backend)
 - [ ] **dev อีกเครื่อง:** หลัง pull รัน `php artisan migrate --path=database/migrations/2026_11_23_000001_grant_admin_access_permission.php` (ห้าม `migrate` เปล่า — ยังมี `2026_11_12_000001` คูปอง Pending)
 - [ ] งานแยก: `roles-doctor` เจอ drift เก่า — DB มี `students.*` เกิน `SYSTEM_ROLES` (director/admin 6 คีย์ · registrar 2) จาก migration `2026_10_11_000001` (#33) ⇒ ติดตั้งใหม่ด้วย seeder จะไม่ได้คีย์ชุดนี้
@@ -30,7 +38,7 @@
 - agy โควตาน่าจะกลับมาแล้ว (หมดถึงราว 11-27) — ถ้ายังติด 429 ใช้ Codex แทนตามเดิม
 
 ### Branch / Git State
-- Branch: `feat/school-admin-shell-phase1` แตกจาก `main` ที่ `4352d37e` · 3 commit (สเปค `87ffc5e9` · SA-2a `b883a881` · เอกสารชุดนี้) · **ยังไม่ push · ยังไม่มี PR**
+- Branch: `feat/school-admin-shell-phase1` แตกจาก `main` ที่ `4352d37e` · สเปค + SA-2a + SA-1a + SA-2b + SA-1b + เอกสาร · **ยังไม่ push · ยังไม่มี PR**
 - Untracked: `.agents/plans/ai-course-generation.md` (มีอยู่ก่อน ไม่ได้แตะ)
 
 ---
