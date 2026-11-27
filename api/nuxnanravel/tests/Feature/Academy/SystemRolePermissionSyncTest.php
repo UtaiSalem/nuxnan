@@ -35,6 +35,28 @@ class SystemRolePermissionSyncTest extends TestCase
     }
 
     /**
+     * migration 2026_10_11 (G4 ทะเบียนนักเรียน) มอบ students.* ให้แถว role ของระบบในฐาน
+     * ถ้าค่าคงที่ไม่มีคีย์ชุดนี้ การติดตั้งใหม่ที่ seed จากค่าคงที่จะเสียสิทธิ์ไปเงียบ ๆ
+     * — อ่าน ADDED จากตัว migration เอง จะได้ไม่ต้องดูแลสำเนาที่สอง
+     */
+    public function test_constant_carries_every_student_registry_grant_from_the_migration(): void
+    {
+        $migration = require database_path('migrations/2026_10_11_000001_grant_student_registry_permissions.php');
+        $added = (new \ReflectionClass($migration))->getConstant('ADDED');
+
+        $this->assertIsArray($added);
+        $this->assertNotEmpty($added);
+
+        foreach ($added as $roleName => $keys) {
+            $this->assertArrayHasKey($roleName, AcademyRole::SYSTEM_ROLES, "Role '{$roleName}' is missing from SYSTEM_ROLES");
+
+            $missing = array_values(array_diff($keys, AcademyRole::SYSTEM_ROLES[$roleName]['permissions'] ?? []));
+
+            $this->assertSame([], $missing, "Role '{$roleName}' lacks keys granted by the 2026-10-11 migration");
+        }
+    }
+
+    /**
      * ล็อก "สัญญา" ของ AcademyRoleSeeder ว่าต้องเขียนสิทธิ์จากค่าคงที่ลงแถวแบบตรงตัว
      * ครบทุก role — ถ้าใครแก้ seeder ให้ merge / filter / ข้ามแถวที่มีอยู่แล้ว เทสต์นี้จะดัง
      *
