@@ -1,6 +1,7 @@
 import { computed } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
 import { useAcademyRole } from '~/composables/useAcademyRole'
+import { ADMIN_ACCESS_KEY } from '~/utils/academyAdminNav'
 
 export interface AcademyDestination {
   id: string
@@ -193,7 +194,7 @@ export const useAcademyNavigation = (
       intent: 'manage',
       color: 'rose',
       order: 12,
-      visibleWhen: (c) => c.role.isAdmin.value || c.role.can('settings.view') || c.role.can('settings.manage')
+      visibleWhen: (c) => c.role.isAdmin.value || c.role.can(ADMIN_ACCESS_KEY)
     }
   ]
 

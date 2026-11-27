@@ -30,7 +30,7 @@ const form = ref({
   sort_order: 0,
 })
 
-const { isAdmin, fetchMyRole } = useAcademyRole(academyId)
+const { fetchMyRole } = useAcademyRole(academyId)
 
 // Popular icons for categories
 const popularIcons = [
@@ -46,10 +46,6 @@ onMounted(async () => {
     if (response.success) {
       academyId.value = response.academy.id
       await fetchMyRole()
-      if (!isAdmin.value) {
-        navigateTo(`/academies/${academyName.value}/admin`)
-        return
-      }
       await fetchCategories()
     }
   } catch (err) { console.error(err) }

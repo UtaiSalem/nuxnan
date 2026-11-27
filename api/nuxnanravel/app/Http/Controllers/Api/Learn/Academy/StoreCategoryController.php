@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class StoreCategoryController extends Controller
 {
@@ -71,7 +72,8 @@ class StoreCategoryController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'icon' => 'nullable|string|max:100',
-            'parent_id' => 'nullable|exists:store_categories,id',
+            // SA-2b tenant: หมวดแม่ต้องอยู่ในร้านเดียวกัน
+            'parent_id' => ['nullable', Rule::exists('store_categories', 'id')->where('academy_store_id', $store->id)],
             'sort_order' => 'nullable|integer|min:0',
         ]);
 
@@ -109,6 +111,8 @@ class StoreCategoryController extends Controller
         if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
+
+        $this->ensureCategoryInStore($academy, $category);
 
         $request->validate([
             'name' => 'nullable|string|max:255',
@@ -151,6 +155,8 @@ class StoreCategoryController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
+        $this->ensureCategoryInStore($academy, $category);
+
         // Check if there are products in this category
         if ($category->products()->count() > 0) {
             return response()->json([
@@ -168,5 +174,19 @@ class StoreCategoryController extends Controller
             'success' => true,
             'message' => 'ลบหมวดหมู่เรียบร้อย',
         ]);
+    }
+
+    /**
+     * SA-2b tenant: {category} ต้องเป็นของร้านโรงเรียนใน URL ไม่งั้น 404 (กัน IDOR ข้ามโรงเรียน)
+     */
+    private function ensureCategoryInStore(Academy $academy, StoreCategory $category): AcademyStore
+    {
+        $store = AcademyStore::where('academy_id', $academy->id)->firstOrFail();
+
+        if ((int) $category->academy_store_id !== (int) $store->id) {
+            abort(404);
+        }
+
+        return $store;
     }
 }

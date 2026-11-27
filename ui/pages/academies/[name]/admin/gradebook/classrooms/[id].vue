@@ -126,7 +126,7 @@ const filteredAvailable = computed(() => {
   )
 })
 
-const { isAdmin, fetchMyRole } = useAcademyRole(academyId)
+const { fetchMyRole } = useAcademyRole(academyId)
 
 onMounted(async () => {
   try {
@@ -136,10 +136,6 @@ onMounted(async () => {
       academyId.value = response.academy.id
       await fetchMyRole()
       
-      if (!isAdmin.value) {
-        navigateTo(`/academies/${academyName.value}`)
-        return
-      }
 
       await fetchData()
     }

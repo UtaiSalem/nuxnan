@@ -51,7 +51,7 @@ const permissionOptions = [
 
 // Academy Role
 const academyId = ref<number | null>(null)
-const { can, isAdmin, fetchMyRole } = useAcademyRole(academyId)
+const { can, fetchMyRole } = useAcademyRole(academyId)
 
 // Form
 const departmentForm = ref({
@@ -75,10 +75,6 @@ onMounted(async () => {
       academyId.value = response.academy.id
       await fetchMyRole()
       
-      if (!isAdmin.value) {
-        navigateTo(`/academies/${academyName.value}/admin`)
-        return
-      }
       
       await Promise.all([
         fetchDepartments(),

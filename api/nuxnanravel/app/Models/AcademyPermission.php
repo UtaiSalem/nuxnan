@@ -198,6 +198,12 @@ class AcademyPermission extends Model
             ['name' => 'emergency.view', 'display_name' => 'ดูรายงานการตอบรับประกาศฉุกเฉิน: ใครปลอดภัย/ใครขอความช่วยเหลือ'],
             ['name' => 'emergency.manage', 'display_name' => 'จัดการประกาศฉุกเฉิน: ประกาศ/แก้ไข/ยุติ/ลบ'],
         ],
+        'admin' => [
+            ['name' => 'admin.access', 'display_name' => 'เข้าหน้าจัดการโรงเรียน (เห็นเมนูตามสิทธิ์อื่นที่มี)'],
+        ],
+        'store' => [
+            ['name' => 'store.manage', 'display_name' => 'จัดการร้านค้าโรงเรียน: ตั้งค่าร้าน/สินค้า/หมวดหมู่/คำสั่งซื้อ/รายงานขาย'],
+        ],
     ];
 
     /**

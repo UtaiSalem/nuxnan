@@ -64,7 +64,7 @@ const handleHomeroomAssigned = async () => {
 
 // Academy Role
 const academyId = ref<number | null>(null)
-const { can, isAdmin, fetchMyRole } = useAcademyRole(academyId)
+const { can, fetchMyRole } = useAcademyRole(academyId)
 
 // Form
 const classroomForm = ref({
@@ -168,10 +168,6 @@ onMounted(async () => {
       academyId.value = response.academy.id
       await fetchMyRole()
 
-      if (!isAdmin.value) {
-        navigateTo(`/academies/${academyName.value}/admin`)
-        return
-      }
 
       // Academic years first — the classroom and statistics filters need to know
       // which years actually exist before they can send a year filter.
@@ -1310,7 +1306,7 @@ const applyBulkRenumber = async () => {
           </div>
 
           <!-- Modal Tabs -->
-          <div v-if="isAdmin" class="flex border-b border-gray-100 dark:border-gray-700 px-5">
+          <div v-if="can('groups.manage')" class="flex border-b border-gray-100 dark:border-gray-700 px-5">
             <button
               @click="modalActiveTab = 'students'"
               :class="[

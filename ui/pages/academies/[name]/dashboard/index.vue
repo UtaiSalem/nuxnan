@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import { ADMIN_ACCESS_KEY, hasPermission } from '~/utils/academyAdminNav'
 /**
  * Academy Dashboard Router
  * หน้านี้จะ redirect ไปยัง dashboard ที่เหมาะสมตามบทบาทของผู้ใช้
@@ -41,23 +42,28 @@ onMounted(async () => {
       return
     }
 
-    // Determine dashboard based on role
-    let dashboardPath = 'student' // Default
-    
+    // SA-1 — แอดมิน/บทบาทฝั่งบุคลากรไปหน้าแอดมิน · ครู/ผู้ปกครอง/นักเรียนไปแดชบอร์ดของตัว
+    // (เดิมส่ง staff ไปแดชบอร์ดที่ไม่มีหน้า และส่งบทบาทอื่นไปแดชบอร์ดนักเรียน)
+    const base = `/academies/${academyName.value}`
+    const roleName = roleResponse.role?.name
+    const permissions: string[] = roleResponse.permissions || []
+    let target = base
+
     if (roleResponse.is_owner || roleResponse.is_admin) {
-      dashboardPath = 'admin'
-    } else if (roleResponse.role?.name === 'teacher') {
-      dashboardPath = 'teacher'
-    } else if (roleResponse.role?.name === 'parent') {
-      dashboardPath = 'parent'
-    } else if (['staff', 'finance_staff'].includes(roleResponse.role?.name)) {
-      dashboardPath = 'staff'
-    } else if (roleResponse.role?.name === 'student') {
-      dashboardPath = 'student'
+      target = `${base}/admin`
+    } else if (roleName === 'teacher') {
+      target = `${base}/dashboard/teacher`
+    } else if (roleName === 'parent') {
+      target = `${base}/dashboard/parent`
+    } else if (roleName === 'student') {
+      target = `${base}/dashboard/student`
+    } else if (hasPermission(permissions, ADMIN_ACCESS_KEY)) {
+      target = `${base}/admin`
+    } else if (roleResponse.is_member) {
+      target = `${base}/dashboard/student`
     }
 
-    // Redirect to appropriate dashboard
-    router.replace(`/academies/${academyName.value}/dashboard/${dashboardPath}`)
+    router.replace(target)
     
   } catch (err: any) {
     console.error('Dashboard routing error:', err)

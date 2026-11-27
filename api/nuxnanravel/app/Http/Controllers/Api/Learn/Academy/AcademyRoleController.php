@@ -79,6 +79,22 @@ class AcademyRoleController extends Controller
             ]);
         }
 
+        // super admin = ผ่านทุกด่านฝั่ง backend อยู่แล้ว (Academy::isAdmin) — หน้าเว็บต้องรู้ด้วย ไม่งั้นประตูแอดมินเด้งออก
+        if ($user->isSuperAdmin()) {
+            $adminRole = AcademyRole::where('name', 'admin')
+                ->whereNull('academy_id')
+                ->first();
+
+            return response()->json([
+                'success' => true,
+                'role' => $adminRole,
+                'permissions' => ['*'],
+                'is_owner' => false,
+                'is_admin' => true,
+                'is_super_admin' => true,
+            ]);
+        }
+
         // Check if user is academy admin
         $isAdmin = $academy->academyAdmins()->where('user_id', $user->id)->exists();
         if ($isAdmin) {

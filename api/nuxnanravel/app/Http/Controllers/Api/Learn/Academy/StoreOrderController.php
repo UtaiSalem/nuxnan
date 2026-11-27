@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\AcademyStore;
 use App\Models\StoreOrder;
+use App\Models\User;
 use App\Services\SchoolStoreService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -106,6 +107,17 @@ class StoreOrderController extends Controller
      */
     public function show(Academy $academy, StoreOrder $order): JsonResponse
     {
+        $user = Auth::user();
+        if (! $user) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $this->ensureOrderInStore($academy, $order);
+
+        if (! $this->canAccessOrder($academy, $order, $user)) {
+            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
+        }
+
         $order->load([
             'user:id,name,profile_photo_path',
             'items.product:id,name,images,slug',
@@ -173,6 +185,8 @@ class StoreOrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
+        $this->ensureOrderInStore($academy, $order);
+
         try {
             $order = $this->storeService->confirmOrder($order, $user);
 
@@ -195,6 +209,8 @@ class StoreOrderController extends Controller
         if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
+
+        $this->ensureOrderInStore($academy, $order);
 
         try {
             $order = $this->storeService->processOrder($order);
@@ -219,6 +235,8 @@ class StoreOrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
+        $this->ensureOrderInStore($academy, $order);
+
         try {
             $order = $this->storeService->markReady($order);
 
@@ -242,6 +260,8 @@ class StoreOrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
+        $this->ensureOrderInStore($academy, $order);
+
         try {
             $order = $this->storeService->completeOrder($order);
 
@@ -263,6 +283,12 @@ class StoreOrderController extends Controller
         $user = Auth::user();
         if (! $user) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $this->ensureOrderInStore($academy, $order);
+
+        if (! $this->canAccessOrder($academy, $order, $user)) {
+            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
         }
 
         $request->validate([
@@ -302,6 +328,29 @@ class StoreOrderController extends Controller
             'success' => true,
             'data' => $report,
         ]);
+    }
+
+    /**
+     * SA-2b tenant: {order} ต้องเป็นของร้านโรงเรียนใน URL ไม่งั้น 404 (กัน IDOR ข้ามโรงเรียน)
+     */
+    private function ensureOrderInStore(Academy $academy, StoreOrder $order): AcademyStore
+    {
+        $store = AcademyStore::where('academy_id', $academy->id)->firstOrFail();
+
+        if ((int) $order->academy_store_id !== (int) $store->id) {
+            abort(404);
+        }
+
+        return $store;
+    }
+
+    /**
+     * SA-2b เจ้าของรายการ: ผู้ซื้อเจ้าของออเดอร์ หรือผู้มี store.manage (เส้นนี้ไม่มี middleware สิทธิ์ — ไม่ซ้ำ G18)
+     */
+    private function canAccessOrder(Academy $academy, StoreOrder $order, User $user): bool
+    {
+        return (int) $order->user_id === (int) $user->id
+            || $academy->userCan($user, 'store.manage');
     }
 
     /**

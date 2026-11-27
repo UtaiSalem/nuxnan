@@ -44,7 +44,7 @@ const selectedCurriculum = ref<any>(null)
 
 // Academy Role
 const academyId = ref<number | null>(null)
-const { can, isAdmin, fetchMyRole } = useAcademyRole(academyId)
+const { can, fetchMyRole } = useAcademyRole(academyId)
 
 // Form
 const curriculumForm = ref({
@@ -102,10 +102,6 @@ onMounted(async () => {
       selectedAcademicYear.value = currentYear.toString()
       await fetchMyRole()
       
-      if (!isAdmin.value) {
-        navigateTo(`/academies/${academyName.value}/admin`)
-        return
-      }
       
       await Promise.all([
         fetchCurriculums(),

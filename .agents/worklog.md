@@ -1,5 +1,56 @@
 # Work Log — nuxnan project
 
+## 🟡 2026-11-28 — หน้าจัดการโรงเรียน เฟส 1 โค้ดครบ → PR #58 (รอ review/merge) · drift `students.*` → PR #59
+
+แผน + หลักฐานทั้งหมด: [`.agents/plans/school-admin-improvement.md`](plans/school-admin-improvement.md) (ข้อ 6 ตารางงาน · ข้อ 9 Review Log)
+สเปค: [`SA-2`](school-admin/specs/SA-2-admin-access-backend.spec.md) (backend) · [`SA-1`](school-admin/specs/SA-1-admin-nav-registry.spec.md) (frontend)
+
+### งานที่ทำ
+- **2026-11-23:** วิเคราะห์ทั้งพื้นที่ `/academies/{name}/admin` (ประตู · เมนู · แดชบอร์ด · การโหลด · มือถือ) → เจ้าของเคาะ D1–D9 ตามที่แนะนำ → สเปคเฟส 1 (`87ffc5e9`)
+  - ต้นเรื่อง: ประตูเปลือก (`ui/pages/academies/[name]/admin.vue:313`) ปล่อยแค่เจ้าของ + บทบาทชื่อ `teacher` · 19 หน้าล็อก "เจ้าของเท่านั้น" · ร้านค้า backend ไม่มีด่านสิทธิ์
+  - Codex เขียน SA-2a · Claude ตรวจ + รัน `migrate --path` บน dev (batch 141) แต่ยังไม่ได้ commit
+- **2026-11-28:** Claude ตรวจซ้ำทั้งชุดแล้ว commit **`b883a881`** (6 ไฟล์ `+330 / −0`)
+  - แคตตาล็อกได้ 2 กลุ่มใหม่ `admin` (`admin.access`) · `store` (`store.manage`) — ฝ่ายมอบสองคีย์นี้ไม่ได้
+  - `SYSTEM_ROLES`: `admin.access` ให้ director/admin/teacher/registrar/staff/card_admin/finance_staff (ไม่ให้ owner/student/parent/guest)
+  - migration `2026_11_23_000001_grant_admin_access_permission` — เติมให้บทบาท 7 ชื่อ **รวมบทบาทที่โรงเรียนก๊อปไป** · ข้ามแถว `*` · รันซ้ำไม่เปลี่ยน · `down()` ถอดเฉพาะคีย์นี้
+  - `/my-role` รู้จัก super admin (`is_admin` true · `['*']` · `is_super_admin`) · `GET /academies/{name}` มีธง `canEnterAdmin` ระดับบนสุด (ไม่ใส่ใน `AcademyResource` กัน N+1)
+  - ผลตรวจ: pint ผ่าน · sqlite 10/10 · MySQL **191/191** (27 ไฟล์ที่แตะ my-role/show/SYSTEM_ROLES/แคตตาล็อก + guard/แดชบอร์ด/รายงาน) · `roles-doctor` ไม่ฟ้องคีย์ใหม่
+
+- **2026-11-28 (ต่อ):** ส่ง shard ต่อ — Claude ตรวจ diff + รันเกณฑ์เองทุกตัว
+  - **SA-1a `030628e2`** (agy) registry + fixture + vitest 34/34 · ไฟล์ตรงสเปคทุกตัวอักษร
+  - **SA-2b `223e3bda`** (agy) ร้านค้า `store.manage` 19 เส้น + tenant + เจ้าของออเดอร์/รีวิว · MySQL 18/18 · revert-check ตก 6/8
+  - **SA-1b `70a9e924`** (Codex — agy หมดโควตา Claude อีกรอบ รีเซ็ตราว 5 ชม.) · grep 4 ข้อ = 0 · compile 4 SFC · vitest 34/34
+    · จอจริง 375px บัญชีเจ้าของ: เมนู 35 · เมนูมือถือปิดเองหลังกด · ไม่มีเลื่อนแนวนอน · console ไม่มี error
+  - **SA-1c `2547b8db`** (Codex) ถอดด่านเจ้าของ 19 หน้า · ลบแค่ guard + `isAdmin` ที่ไม่ใช้ · compile 19 · จอเจ้าของ: ผลการเรียน/ห้องเรียน/หลักสูตร/ร้านค้า โหลดปกติ
+  - **SA-1d `d15c0fb9`** (Codex) หน้าบทบาทดึงแคตตาล็อกจริง 30 กลุ่ม · โมดัล 375px มี `admin.access`/`store.manage` · รายการเลื่อนในกล่อง (สเปคบอก `dark:` เดิม 78 แต่จริง 56 → ตอนนี้ 58)
+  - ⇒ **โค้ดเฟส 1 ครบทุก shard แล้ว**
+  - **รีวิวร้านค้า `732f1456`** (Codex · เจอระหว่าง SA-2b) `order_id` ต้องเป็นออเดอร์ของผู้รีวิว · ร้านนี้ · มีสินค้านี้ ไม่งั้น 422 · MySQL 13/13 · revert-check ตก 3/5
+  - **push + PR:** [#58](https://github.com/UtaiSalem/nuxnan/pull/58) = branch นี้ทั้งหมด (Auto-fix เปิด · ไม่มี CI) · ไม่ merge เอง
+  - งานแยก `students.*` drift (session ข้าง) → commit `f9f3a8e7` บน `fix/system-roles-students-keys` (จาก `main`) → [#59](https://github.com/UtaiSalem/nuxnan/pull/59)
+    · เติม 5 บรรทัดใน `SYSTEM_ROLES` + เทสต์อ่าน `ADDED` ของ migration · ไม่ทับกับ #58 merge ลำดับไหนก็ได้ · `roles-doctor` จะ exit 0 เมื่อ merge ครบทั้งสอง
+
+### งานที่ค้างอยู่ (TODO ต่อ)
+- [ ] 🔴 **#58 ยังไม่ได้เปิดจอด้วยบัญชีที่ไม่ใช่เจ้าของ** — ล็อกอิน user 2 (`staff`) **ใน browser pane ของแอป Claude** (ไม่ใช่ Chrome): เมนูต้องเหลือ 9 · พิมพ์ `/admin/gradebook` ต้องเห็นหน้า "ไม่มีสิทธิ์เปิดหน้านี้" ในกรอบ
+- [ ] `npm run build` บน `feat/school-admin-shell-phase1` (เจ้าของรันเอง) · แล้ว review + merge #58 และ #59
+- [ ] production: deploy #58 + `migrate` (SA-2a) **ในรอบเดียวกัน** (`mysqldump` ก่อน) · #59 ไม่มี migration
+- [ ] เฟสถัดไปของแผน: SA-3 admin context + แก้ `useAcademyRole` (Codex) → SA-4 เปลือกใหม่ mobile-first (ข้อ 6 ของแผน)
+- [ ] 🔴 **ลำดับ deploy:** SA-2a ต้องขึ้น (พร้อม migrate) **ก่อนหรือพร้อม** SA-1 — ถ้าหน้าเว็บ SA-1 ขึ้นก่อน ครูจะเข้าแอดมินไม่ได้ · SA-2a ขึ้นเดี่ยว ๆ ได้ไม่มีผลเสีย (หน้าเว็บเดิมไม่อ่านธงใหม่ · super admin เข้าแอดมินได้ตรงกับ backend)
+- [ ] **dev อีกเครื่อง:** หลัง pull รัน `php artisan migrate --path=database/migrations/2026_11_23_000001_grant_admin_access_permission.php` (ห้าม `migrate` เปล่า — ยังมี `2026_11_12_000001` คูปอง Pending)
+- [ ] user 2 (บัญชีทดสอบฝั่งนักเรียน) ถือบทบาท `staff` ใน academy 1 → หลัง SA-1 จะเข้าแอดมินได้ 9 เมนู — ถ้าจะใช้ทดสอบมุมนักเรียนต้องหาบัญชีอื่น
+
+### Context สำคัญ
+- ประตูใหม่ (ทำใน SA-1) = `isAdmin || can('admin.access')` · บทบาท `admin` **ไม่เท่ากับ** `isAdmin` (D3 ข) · ตาราง `academy_admins` ว่างแต่คงไว้
+- ร้านค้า: `store.manage` ไม่มอบให้บทบาทไหนอัตโนมัติ — เจ้าของ/super admin ผ่านเองทาง `userCan`
+- agy: โควตาโมเดล Claude หมดอีกครั้ง 2026-11-28 กลางวัน (รีเซ็ตราว 5 ชม.) — ระหว่างนั้นใช้ Codex `codex exec -s workspace-write` (sandbox ของ Codex รัน grep/vitest ไม่ได้ ต้องรันเกณฑ์เอง)
+- เช็คจอใน browser pane: อย่า reload หน้า — ใช้ router ของแอปนำทาง (reload เคยทำ session หลุด)
+
+### Branch / Git State
+- Branch: `feat/school-admin-shell-phase1` แตกจาก `main` ที่ `4352d37e` · push แล้ว = PR #58 (`732f1456` + commit worklog นี้)
+- `fix/system-roles-students-keys` push แล้ว = PR #59 (อยู่ใน worktree ของ session ข้าง)
+- Untracked: `.agents/plans/ai-course-generation.md` (มีอยู่ก่อน ไม่ได้แตะ)
+
+---
+
 ## 🟡 2026-11-23 — merge #53 + ทดสอบจอจริง · ลบ Phaser หน้าเช็คชื่อ (#57 squash-merge เข้า main แล้ว · build ผ่าน)
 
 ### งานที่ทำในวันนี้ (Claude ตามที่เจ้าของสั่ง)

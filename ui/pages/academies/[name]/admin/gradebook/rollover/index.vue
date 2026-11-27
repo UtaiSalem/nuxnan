@@ -89,7 +89,7 @@ const state = reactive<WizardState>({
   batch: null,
 })
 
-const { isAdmin, fetchMyRole } = useAcademyRole(academyId)
+const { fetchMyRole } = useAcademyRole(academyId)
 const {
   preview,
   plan,
@@ -203,10 +203,6 @@ async function loadAcademy() {
   academyId.value = response.academy.id
   await fetchMyRole()
 
-  if (!isAdmin.value) {
-    await navigateTo(`/academies/${academyName.value}`)
-    return
-  }
 }
 
 async function loadBaseData() {

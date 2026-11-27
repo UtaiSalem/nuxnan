@@ -155,6 +155,8 @@ class AcademyController extends Controller
             'success' => true,
             'academy' => new AcademyResource($academy),
             'isAcademyAdmin' => $isAcademyAdmin,
+            // SA-2a — ปุ่ม "จัดการโรงเรียน" ใช้กฎเดียวกับประตูแอดมิน (isAdmin || admin.access)
+            'canEnterAdmin' => auth()->check() && $academy->userCan(auth()->user(), 'admin.access'),
             'membership' => $membership ? [
                 'id' => $membership->id,
                 'status' => $membership->status,
