@@ -1,6 +1,6 @@
 # หน้าจัดการโรงเรียน (`/academies/{name}/admin`) — วิเคราะห์ + แผนปรับปรุง
 
-> สถานะ: **วิเคราะห์เสร็จ 2026-11-23 · เจ้าของเคาะ D1–D9 ตามที่แนะนำแล้ว (ข้อ 5.1) · สเปคเฟส 1 พร้อมส่ง (ข้อ 6) · ยังไม่ได้ลงมือ**
+> สถานะ: **วิเคราะห์เสร็จ 2026-11-23 · เจ้าของเคาะ D1–D9 ตามที่แนะนำแล้ว (ข้อ 5.1) · เฟส 1: SA-2a เสร็จ + commit แล้ว (`b883a881` · 2026-11-28) · SA-2b / SA-1a–d ยังไม่เริ่ม**
 > วิธีตรวจ: อ่านโค้ดเปลือก `admin.vue` + 73 หน้าใต้ `admin/` + composable สิทธิ์ + route backend ·
 > query DB dev (academy 1) · จำลอง `can()` กับสิทธิ์ของบทบาทระบบจริงใน DB เทียบกับกฎเมนูและด่านของแต่ละหน้า (สคริปต์ node)
 > 🔴 **ยังไม่ได้เปิดจอจริง** (browser pane ยังไม่ได้ล็อกอินตอนวิเคราะห์) — ข้อที่ติดป้าย *(อ่านจากโค้ด)* ต้องยืนยันบนจอก่อนเริ่มเฟสนั้น
@@ -299,7 +299,7 @@
 
 | Step | เฟส | งาน | ผู้ทำ | เกณฑ์ผ่าน | รอ |
 |---|---|---|---|---|---|
-| **SA-2a** | 1 | คีย์ `admin.access` + migration มอบให้ 7 บทบาทฝั่งบุคลากร (รวมบทบาทที่โรงเรียนก๊อป) · `/my-role` รู้จัก super admin · ธง `canEnterAdmin` ใน `show` | Codex/agy (BE) | PHPUnit MySQL 7 เคส · `migrate --path` ไฟล์ตัวเอง · `down()` ทดสอบแล้ว | ✅ สเปคพร้อม |
+| **SA-2a** | 1 | คีย์ `admin.access` + migration มอบให้ 7 บทบาทฝั่งบุคลากร (รวมบทบาทที่โรงเรียนก๊อป) · `/my-role` รู้จัก super admin · ธง `canEnterAdmin` ใน `show` | Codex/agy (BE) | PHPUnit MySQL 7 เคส · `migrate --path` ไฟล์ตัวเอง · `down()` ทดสอบแล้ว | ✅ **เสร็จ** `b883a881` |
 | **SA-2b** | 1 | ร้านค้า: `store.manage` รายเส้น 19 เส้น + tenant ของ product/category/order/review + เจ้าของออเดอร์/รีวิว | Codex/agy (BE) | PHPUnit MySQL 8 เคส · `route:list --path=store -v` | ✅ สเปคพร้อม |
 | **SA-1a** | 1 | registry `ui/utils/academyAdminNav.ts` + fixture + vitest | agy/Codex (FE) | vitest: ประตู 11 บทบาท · section ต่อบทบาทตรงเป๊ะ · 73 หน้าจับคู่ครบ | ✅ สเปคพร้อม |
 | **SA-1b** | 1 | เปลือกใช้ registry + หน้า "ไม่มีสิทธิ์" + ปุ่ม/เมนูลัด/ตัวเลือกแดชบอร์ดใช้กฎเดียว + เมนูมือถือปิดเอง | agy/Codex (FE) | grep + compile SFC + vitest · Claude เปิดจอ 375px ด้วยบัญชีเจ้าของ + ครู | SA-1a SA-2a |
@@ -348,3 +348,26 @@
 - **ประสบการณ์ของครูด้วยบัญชีจริง** — ตาราง V/X ในข้อ 2.2 มาจากการจำลอง ต้องสุ่มเปิดด้วยบัญชีครูอย่างน้อย 3 เมนูที่เป็น X
 - **ขนาด payload** ของ `/api/academies/{name}` ที่ถูกดึงซ้ำ (ต้องล็อกอินจึงวัดได้)
 - **mapping คีย์ของ registry กับ route backend ทีละเมนู** — ทำในสเปคของ SA-1
+
+---
+
+## 9. Review Log
+
+- **2026-11-23 SA-2a ✅ (commit 2026-11-28 = `b883a881`)** — ผู้เขียนโค้ด **Codex** (`codex exec` direct · reasoning high) · Claude ตรวจ
+  - diff: 4 ไฟล์เดิม `+31 / −0` ตรงสเปค (catalog 2 กลุ่ม · `admin.access` ใน SYSTEM_ROLES 7 บทบาท · สาขา super admin ใน `/my-role` · `canEnterAdmin` ใน `show`)
+    + migration `2026_11_23_000001_grant_admin_access_permission` + เทสต์ `AdminAccessPermissionTest` 10 เคส
+  - **หลักฐานที่ Claude รันเอง:** pint ผ่านเฉพาะ 6 ไฟล์ที่แตะ (ทั้งเรพมี 6 ไฟล์เก่าที่ไม่ผ่าน pint อยู่ก่อนแล้ว ไม่เกี่ยวกับงานนี้) ·
+    sqlite 10/10 · **MySQL 104/104 (617 assertions)** รวมชุดกันถอยหลัง 10 ไฟล์ (บทบาท/สิทธิ์/ตารางเรียน/แดชบอร์ด/รายงาน/route guard) ·
+    revert-check: ถอดโค้ด 4 ไฟล์ → เทสต์ใหม่ตก 6/10 (อีก 4 เคสทดสอบตัว migration จึงผ่าน)
+  - Codex **ไม่ได้รัน migrate** (ก่อน/หลังมี Pending เท่าเดิม) · Claude รันบน dev เอง `migrate --path` = batch 141
+    → 7 บทบาทฝั่งบุคลากรได้คีย์ครบ · owner/student/parent/guest ไม่เปลี่ยน · migration คูปอง `2026_11_12_000001` ยัง Pending ไม่ได้แตะ
+  - probe ข้อมูลจริง: ครู → `canEnterAdmin` true · เจ้าหน้าที่ (user 2) → true · นักเรียน → false
+  - ⚠️ บัญชีทดสอบ **user 2 ถือบทบาท `staff`** ใน academy 1 → หลัง SA-1 จะเข้าหน้าจัดการได้ 9 เมนู
+- **2026-11-28 ตรวจซ้ำก่อน commit (Claude)** — โค้ดไม่เปลี่ยนจากรอบ 11-23 (diff `+330 / −0` ใน 6 ไฟล์)
+  - pint 6 ไฟล์ผ่าน · sqlite 10/10 (90 assertions) · `test:db:rebuild --force` แล้ว **MySQL 191/191 (773 assertions · 27 ไฟล์)**
+    = ทุกเทสต์ที่แตะ `/my-role` · `show` · `SYSTEM_ROLES` · แคตตาล็อกสิทธิ์ + route guard / แดชบอร์ด / รายงาน / ตารางเรียน / ฝ่าย
+  - `migrate:status` = Ran batch 141 · DB dev: 7 บทบาทฝั่งบุคลากรมี `admin.access` · owner(`*`)/student/parent/guest ไม่มี · ไม่มีบทบาทไหนถือ `store.manage` · บทบาทที่โรงเรียนก๊อป = 0 แถว
+  - `academy:roles-doctor` (เกณฑ์ข้อนี้ไม่ได้รันในรอบ 11-23): **ขาดในฐาน = 0 ทุกบทบาท** — คีย์ใหม่ตรงกันทั้งโค้ดและฐาน
+    แต่คำสั่ง exit 1 เพราะ **drift เก่าที่ไม่เกี่ยวกับ SA-2a:** director/admin เกินในฐาน 6 คีย์ (`students.create/import/lifecycle/activate_account/export/delete`) · registrar เกิน 2 (`students.manage/delete`)
+    ต้นเหตุ: migration `2026_10_11_000001_grant_student_registry_permissions` (#33) เติมในฐานแต่ไม่ได้เติมใน `SYSTEM_ROLES`
+    ⇒ ติดตั้งใหม่ (`AcademyRoleSeeder` อ่านจาก `SYSTEM_ROLES`) จะไม่ได้คีย์ G4 ของเมนู #15 — **งานแยก** (สเปค SA-2a ห้ามแตะคีย์อื่นในอาเรย์)
