@@ -8,6 +8,7 @@ use App\Models\AcademyRole;
 use App\Models\AcademyStore;
 use App\Models\StoreCategory;
 use App\Models\StoreOrder;
+use App\Models\StoreOrderItem;
 use App\Models\StoreProduct;
 use App\Models\StoreProductReview;
 use App\Models\User;
@@ -313,6 +314,120 @@ class StoreAuthzTest extends TestCase
         $this->getJson("{$base}/orders/my")->assertOk()->assertJsonPath('meta.total', 1);
         $this->getJson("{$base}/categories")->assertOk();
         $this->getJson("{$base}/products/{$product->id}/reviews")->assertOk();
+    }
+
+    public function test_review_rejects_another_users_order_in_the_same_store(): void
+    {
+        [$academy, , $store] = $this->academyWithStore();
+        $reviewer = $this->memberOf($academy);
+        $other = $this->memberOf($academy);
+        $product = $this->productIn($store);
+        $order = $this->orderIn($store, $other);
+        StoreOrderItem::create([
+            'store_order_id' => $order->id,
+            'store_product_id' => $product->id,
+            'product_name' => $product->name,
+        ]);
+        $base = $this->base($academy);
+
+        $this->actingAs($reviewer, 'api');
+        $this->postJson("{$base}/products/{$product->id}/reviews", [
+            'rating' => 5,
+            'order_id' => $order->id,
+        ])->assertUnprocessable()->assertJsonValidationErrors('order_id');
+
+        $this->assertDatabaseCount('store_product_reviews', 0);
+    }
+
+    public function test_review_rejects_own_order_from_another_schools_store(): void
+    {
+        [$academy, , $store] = $this->academyWithStore();
+        [, , $otherStore] = $this->academyWithStore();
+        $reviewer = $this->memberOf($academy);
+        $product = $this->productIn($store);
+        $order = $this->orderIn($otherStore, $reviewer);
+        $base = $this->base($academy);
+
+        $this->actingAs($reviewer, 'api');
+        $this->postJson("{$base}/products/{$product->id}/reviews", [
+            'rating' => 5,
+            'order_id' => $order->id,
+        ])->assertUnprocessable()->assertJsonValidationErrors('order_id');
+
+        $this->assertDatabaseCount('store_product_reviews', 0);
+    }
+
+    public function test_review_rejects_own_order_that_does_not_contain_the_product(): void
+    {
+        [$academy, , $store] = $this->academyWithStore();
+        $reviewer = $this->memberOf($academy);
+        $product = $this->productIn($store);
+        $otherProduct = $this->productIn($store);
+        $order = $this->orderIn($store, $reviewer);
+        StoreOrderItem::create([
+            'store_order_id' => $order->id,
+            'store_product_id' => $otherProduct->id,
+            'product_name' => $otherProduct->name,
+        ]);
+        $base = $this->base($academy);
+
+        $this->actingAs($reviewer, 'api');
+        $this->postJson("{$base}/products/{$product->id}/reviews", [
+            'rating' => 5,
+            'order_id' => $order->id,
+        ])->assertUnprocessable()->assertJson([
+            'success' => false,
+            'message' => 'คำสั่งซื้อนี้ไม่มีสินค้านี้',
+        ]);
+
+        $this->assertDatabaseCount('store_product_reviews', 0);
+    }
+
+    public function test_review_accepts_own_order_containing_the_product_and_saves_order_id(): void
+    {
+        [$academy, , $store] = $this->academyWithStore();
+        $reviewer = $this->memberOf($academy);
+        $product = $this->productIn($store);
+        $order = $this->orderIn($store, $reviewer);
+        StoreOrderItem::create([
+            'store_order_id' => $order->id,
+            'store_product_id' => $product->id,
+            'product_name' => $product->name,
+        ]);
+        $base = $this->base($academy);
+
+        $this->actingAs($reviewer, 'api');
+        $response = $this->postJson("{$base}/products/{$product->id}/reviews", [
+            'rating' => 5,
+            'order_id' => $order->id,
+        ])->assertCreated()->assertJsonPath('success', true);
+
+        $this->assertDatabaseHas('store_product_reviews', [
+            'id' => $response->json('data.id'),
+            'store_product_id' => $product->id,
+            'user_id' => $reviewer->id,
+            'store_order_id' => $order->id,
+        ]);
+    }
+
+    public function test_review_without_order_id_still_works(): void
+    {
+        [$academy, , $store] = $this->academyWithStore();
+        $reviewer = $this->memberOf($academy);
+        $product = $this->productIn($store);
+        $base = $this->base($academy);
+
+        $this->actingAs($reviewer, 'api');
+        $response = $this->postJson("{$base}/products/{$product->id}/reviews", [
+            'rating' => 5,
+        ])->assertCreated()->assertJsonPath('success', true);
+
+        $this->assertDatabaseHas('store_product_reviews', [
+            'id' => $response->json('data.id'),
+            'store_product_id' => $product->id,
+            'user_id' => $reviewer->id,
+            'store_order_id' => null,
+        ]);
     }
 
     // 8. ครบ 19 เส้นที่มี store.manage และเส้นผู้ซื้อไม่มี

@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Api\Learn\Academy;
 use App\Http\Controllers\Controller;
 use App\Models\Academy;
 use App\Models\AcademyStore;
+use App\Models\StoreOrderItem;
 use App\Models\StoreProduct;
 use App\Models\StoreProductReview;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class StoreReviewController extends Controller
 {
@@ -60,13 +62,18 @@ class StoreReviewController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
-        $this->ensureProductInStore($academy, $product);
+        $store = $this->ensureProductInStore($academy, $product);
 
         $request->validate([
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string|max:1000',
-            'order_id' => 'nullable|exists:store_orders,id',
+            'order_id' => ['nullable', Rule::exists('store_orders', 'id')->where('user_id', $user->id)->where('academy_store_id', $store->id)],
         ]);
+
+        if ($request->order_id && ! StoreOrderItem::where('store_order_id', $request->order_id)
+            ->where('store_product_id', $product->id)->exists()) {
+            return response()->json(['success' => false, 'message' => 'คำสั่งซื้อนี้ไม่มีสินค้านี้'], 422);
+        }
 
         // Check if already reviewed
         $existing = StoreProductReview::where('store_product_id', $product->id)
