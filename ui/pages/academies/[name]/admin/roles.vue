@@ -37,70 +37,39 @@ const roleForm = ref({
 const academyId = ref<number | null>(null)
 const { can, isOwner, fetchMyRole } = useAcademyRole(academyId)
 
-// Available permissions
-const permissionGroups = [
-  {
-    name: 'สมาชิก',
-    permissions: [
-      { key: 'members.view', label: 'ดูรายชื่อสมาชิก' },
-      { key: 'members.manage', label: 'จัดการสมาชิก (เชิญ/ลบ/ระงับ)' },
-    ]
-  },
-  {
-    name: 'บทบาท',
-    permissions: [
-      { key: 'roles.view', label: 'ดูบทบาท' },
-      { key: 'roles.manage', label: 'จัดการบทบาท (สร้าง/แก้ไข/ลบ)' },
-    ]
-  },
-  {
-    name: 'คอร์สเรียน',
-    permissions: [
-      { key: 'courses.view', label: 'ดูคอร์ส' },
-      { key: 'courses.create', label: 'สร้างคอร์ส' },
-      { key: 'courses.edit', label: 'แก้ไขคอร์ส' },
-      { key: 'courses.delete', label: 'ลบคอร์ส' },
-    ]
-  },
-  {
-    name: 'กลุ่มเรียน',
-    permissions: [
-      { key: 'groups.view', label: 'ดูกลุ่มเรียน' },
-      { key: 'groups.manage', label: 'จัดการกลุ่มเรียน' },
-    ]
-  },
-  {
-    name: 'ข้อมูลนักเรียน',
-    permissions: [
-      { key: 'students.view', label: 'ดูข้อมูลนักเรียน' },
-      { key: 'students.manage', label: 'จัดการข้อมูลนักเรียน' },
-      { key: 'attendance.view', label: 'ดูข้อมูลการเข้าเรียน' },
-      { key: 'attendance.manage', label: 'บันทึกการเข้าเรียน' },
-      { key: 'grades.view', label: 'ดูผลการเรียน' },
-      { key: 'grades.manage', label: 'บันทึกผลการเรียน' },
-    ]
-  },
-  {
-    name: 'การสื่อสาร',
-    permissions: [
-      { key: 'announcements.view', label: 'ดูประกาศ' },
-      { key: 'announcements.manage', label: 'สร้าง/แก้ไขประกาศ' },
-    ]
-  },
-  {
-    name: 'รายงาน',
-    permissions: [
-      { key: 'reports.view', label: 'ดูรายงาน' },
-    ]
-  },
-  {
-    name: 'ตั้งค่า',
-    permissions: [
-      { key: 'settings.view', label: 'ดูการตั้งค่า' },
-      { key: 'settings.manage', label: 'แก้ไขการตั้งค่า' },
-    ]
-  },
-]
+// Available permissions — SA-1d: ดึงจากแคตตาล็อกจริงของ backend (เดิมฮาร์ดโค้ด 22 คีย์)
+interface PermissionGroup {
+  name: string
+  permissions: { key: string, label: string }[]
+}
+
+const PERMISSION_GROUP_LABELS: Record<string, string> = {
+  admin: 'หน้าจัดการโรงเรียน', members: 'สมาชิก', roles: 'บทบาท', groups: 'กลุ่ม/ฝ่าย/แผนก', academy: 'โรงเรียน',
+  courses: 'คอร์สเรียน', students: 'ข้อมูลนักเรียน', teachers: 'ครู', attendance: 'เช็คชื่อรายวิชา',
+  gradebook: 'สมุดคะแนนรายวิชา', grades: 'ผลการเรียน', assignments: 'งานที่มอบหมาย', schedule: 'ตารางเรียน',
+  finance: 'การเงิน', payments: 'การชำระเงิน', reports: 'รายงาน', announcements: 'ประกาศ', home_visits: 'เยี่ยมบ้าน',
+  messages: 'ข้อความ', children: 'บุตรหลาน (ผู้ปกครอง)', guardians: 'ผู้ปกครอง', staff: 'บุคลากร', settings: 'ตั้งค่า',
+  behavior: 'พฤติกรรม', events: 'กิจกรรม', elections: 'การเลือกตั้ง', sports: 'กีฬาสี',
+  school_attendance: 'การเข้าเรียน (โรงเรียน)', emergency: 'ประกาศฉุกเฉิน', store: 'ร้านค้า',
+}
+
+const permissionGroups = ref<PermissionGroup[]>([])
+const permissionsError = ref(false)
+
+const fetchPermissionCatalog = async () => {
+  permissionsError.value = false
+  try {
+    const response: any = await api.get('/api/academies/permissions/all')
+    const grouped = response?.permissions || {}
+    permissionGroups.value = Object.entries(grouped).map(([group, items]: [string, any]) => ({
+      name: PERMISSION_GROUP_LABELS[group] || group,
+      permissions: (items || []).map((item: any) => ({ key: item.name, label: item.display_name })),
+    }))
+  } catch (err) {
+    console.error('Failed to fetch permission catalog:', err)
+    permissionsError.value = true
+  }
+}
 
 onMounted(async () => {
   try {
@@ -116,6 +85,7 @@ onMounted(async () => {
       }
       
       await fetchRoles()
+      await fetchPermissionCatalog()
     }
   } catch (err) {
     console.error('Failed to load:', err)
@@ -258,7 +228,7 @@ const togglePermission = (permission: string) => {
   }
 }
 
-const toggleAllInGroup = (group: typeof permissionGroups[0]) => {
+const toggleAllInGroup = (group: PermissionGroup) => {
   const allSelected = group.permissions.every(p => roleForm.value.permissions.includes(p.key))
   
   if (allSelected) {
@@ -275,11 +245,11 @@ const toggleAllInGroup = (group: typeof permissionGroups[0]) => {
   }
 }
 
-const isGroupFullySelected = (group: typeof permissionGroups[0]) => {
+const isGroupFullySelected = (group: PermissionGroup) => {
   return group.permissions.every(p => roleForm.value.permissions.includes(p.key))
 }
 
-const isGroupPartiallySelected = (group: typeof permissionGroups[0]) => {
+const isGroupPartiallySelected = (group: PermissionGroup) => {
   const selected = group.permissions.filter(p => roleForm.value.permissions.includes(p.key)).length
   return selected > 0 && selected < group.permissions.length
 }
@@ -563,7 +533,16 @@ const colorOptions = [
             <!-- Permissions -->
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">สิทธิ์การเข้าถึง</label>
-              <div class="space-y-4">
+              <div v-if="permissionsError" class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p class="min-w-0 flex-1 break-words text-sm text-red-600 dark:text-red-400">โหลดรายการสิทธิ์ไม่สำเร็จ</p>
+                <button
+                  @click="fetchPermissionCatalog"
+                  class="min-h-[44px] sm:min-h-0 flex-shrink-0 whitespace-nowrap rounded-lg bg-gray-100 px-4 py-2 text-sm text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                >
+                  ลองใหม่
+                </button>
+              </div>
+              <div class="max-h-[60vh] overflow-y-auto space-y-4">
                 <div 
                   v-for="group in permissionGroups" 
                   :key="group.name"
