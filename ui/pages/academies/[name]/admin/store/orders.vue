@@ -28,7 +28,7 @@ const statusFilter = ref('')
 const search = ref('')
 const currentPage = ref(1)
 
-const { isAdmin, fetchMyRole } = useAcademyRole(academyId)
+const { fetchMyRole } = useAcademyRole(academyId)
 
 const statusOptions = [
   { value: '', label: 'ทุกสถานะ' },
@@ -56,10 +56,6 @@ onMounted(async () => {
     if (response.success) {
       academyId.value = response.academy.id
       await fetchMyRole()
-      if (!isAdmin.value) {
-        navigateTo(`/academies/${academyName.value}/admin`)
-        return
-      }
       await fetchOrders()
     }
   } catch (err) {

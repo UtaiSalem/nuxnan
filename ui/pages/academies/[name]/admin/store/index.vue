@@ -27,7 +27,7 @@ const showCreateModal = ref(false)
 const isSaving = ref(false)
 
 // Academy Role
-const { can, isAdmin, fetchMyRole } = useAcademyRole(academyId)
+const { can, fetchMyRole } = useAcademyRole(academyId)
 
 // Create store form
 const storeForm = ref({
@@ -122,10 +122,6 @@ onMounted(async () => {
       academyId.value = response.academy.id
       await fetchMyRole()
 
-      if (!isAdmin.value) {
-        navigateTo(`/academies/${academyName.value}/admin`)
-        return
-      }
 
       await fetchStoreData()
     }

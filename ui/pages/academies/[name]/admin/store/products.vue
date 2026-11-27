@@ -47,7 +47,7 @@ const form = ref({
   points_price: null as number | null,
 })
 
-const { can, isAdmin, fetchMyRole } = useAcademyRole(academyId)
+const { can, fetchMyRole } = useAcademyRole(academyId)
 
 onMounted(async () => {
   try {
@@ -55,10 +55,6 @@ onMounted(async () => {
     if (response.success) {
       academyId.value = response.academy.id
       await fetchMyRole()
-      if (!isAdmin.value) {
-        navigateTo(`/academies/${academyName.value}/admin`)
-        return
-      }
       await Promise.all([fetchProducts(), fetchCategories()])
     }
   } catch (err) {

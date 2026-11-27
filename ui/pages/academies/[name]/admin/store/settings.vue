@@ -21,7 +21,7 @@ const isLoading = ref(true)
 const isSaving = ref(false)
 const saveMessage = ref('')
 
-const { isAdmin, fetchMyRole } = useAcademyRole(academyId)
+const { fetchMyRole } = useAcademyRole(academyId)
 
 // Form
 const form = ref({
@@ -39,10 +39,6 @@ onMounted(async () => {
     if (response.success) {
       academyId.value = response.academy.id
       await fetchMyRole()
-      if (!isAdmin.value) {
-        navigateTo(`/academies/${academyName.value}/admin`)
-        return
-      }
       await fetchStoreData()
     }
   } catch (err) { console.error(err) }
