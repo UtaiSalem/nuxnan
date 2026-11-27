@@ -5,6 +5,7 @@
  */
 import { Icon } from '@iconify/vue'
 import AcademyAdminForbidden from '~/components/academy/admin/AcademyAdminForbidden.vue'
+import { provideAcademyAdminContext } from '~/composables/useAcademyAdminContext'
 import {
   adminRelativePath,
   canEnterAcademyAdmin,
@@ -31,6 +32,7 @@ const isSidebarOpen = ref(false) // Default to closed on mobile
 
 // Academy Role
 const academyId = ref<number | null>(null)
+const academyRole = useAcademyRole(academyId)
 const {
   myRole,
   roleDisplayName,
@@ -40,12 +42,23 @@ const {
   isOwner,
   isAdmin,
   fetchMyRole
-} = useAcademyRole(academyId)
+} = academyRole
 
 // Provide to child pages so they don't need to resolve academy themselves
 provide('academyId', academyId)
 provide('academyName', academyName)
 provide('academy', academy)
+
+// SA-3 — context เดียวที่มีชนิด (provide เดิม 3 ตัวด้านบนคงไว้ให้ 16 หน้าที่ inject อยู่)
+provideAcademyAdminContext({
+  academy,
+  academyId,
+  academyName,
+  role: academyRole,
+  can,
+  isAdmin,
+  refreshRole: academyRole.refreshRole,
+})
 
 // SA-1 — เมนูและด่านสิทธิ์มาจาก utils/academyAdminNav.ts ที่เดียว
 const permissionCtx = computed(() => ({ isAdmin: isAdmin.value, can }))
