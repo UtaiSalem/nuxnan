@@ -4,6 +4,14 @@
  * หน้า Layout หลักสำหรับ Admin Panel ของโรงเรียน
  */
 import { Icon } from '@iconify/vue'
+import AcademyAdminForbidden from '~/components/academy/admin/AcademyAdminForbidden.vue'
+import {
+  adminRelativePath,
+  canEnterAcademyAdmin,
+  canViewSection,
+  findAdminSection,
+  visibleAdminGroups,
+} from '~/utils/academyAdminNav'
 
 definePageMeta({
   layout: 'main',
@@ -31,7 +39,6 @@ const {
   can,
   isOwner,
   isAdmin,
-  isTeacher,
   fetchMyRole
 } = useAcademyRole(academyId)
 
@@ -40,265 +47,24 @@ provide('academyId', academyId)
 provide('academyName', academyName)
 provide('academy', academy)
 
-// Menu items
-const menuItems = computed(() => [
-  {
-    group: 'ภาพรวม',
-    items: [
-      {
-        name: 'แดชบอร์ด',
-        icon: 'fluent:grid-24-regular',
-        to: `/academies/${academyName.value}/admin`,
-        show: true,
-        exact: true,
-      },
-    ]
-  },
-  {
-    group: 'จัดการผู้ใช้',
-    items: [
-      {
-        name: 'สมาชิก',
-        icon: 'fluent:people-24-regular',
-        to: `/academies/${academyName.value}/admin/members`,
-        show: can('members.view') || can('members.manage'),
-      },
-      {
-        name: 'คำขอเข้าร่วม',
-        icon: 'fluent:person-clock-24-regular',
-        to: `/academies/${academyName.value}/admin/requests`,
-        show: can('members.manage'),
-      },
-      {
-        name: 'บทบาทและสิทธิ์',
-        icon: 'fluent:shield-24-regular',
-        to: `/academies/${academyName.value}/admin/roles`,
-        show: can('members.manage') || can('roles.view'),
-      },
-      {
-        name: 'ลิงก์เชิญสมาชิก',
-        icon: 'fluent:link-24-regular',
-        to: `/academies/${academyName.value}/admin/invite-links`,
-        show: can('members.manage'),
-      },
-      {
-        name: 'แท็กสมาชิก',
-        icon: 'fluent:tag-24-regular',
-        to: `/academies/${academyName.value}/admin/member-tags`,
-        show: can('members.manage'),
-      },
-      {
-        name: 'ผู้ปกครอง',
-        icon: 'fluent:people-community-24-regular',
-        to: `/academies/${academyName.value}/admin/guardians`,
-        show: can('guardians.view') || can('guardians.manage'),
-      },
-    ]
-  },
-  {
-    group: 'การเรียนการสอน',
-    items: [
-      {
-        name: 'คอร์สเรียน',
-        icon: 'fluent:book-24-regular',
-        to: `/academies/${academyName.value}/admin/courses`,
-        show: can('courses.view') || can('courses.manage'),
-      },
-      {
-        name: 'จัดสรรแต้ม', icon: 'fluent:arrow-swap-24-regular',
-        to: `/academies/${academyName.value}/admin/allocations`, show: can('courses.view') || can('courses.manage'),
-      },
-      {
-        name: 'หลักสูตร',
-        icon: 'fluent:book-globe-24-regular',
-        to: `/academies/${academyName.value}/admin/curriculums`,
-        show: can('courses.view'),
-      },
-      {
-        name: 'ห้องเรียน',
-        icon: 'fluent:people-team-24-regular',
-        to: `/academies/${academyName.value}/admin/classrooms`,
-        show: can('groups.view') || can('academy.view'),
-      },
-      {
-        name: 'ฝ่าย/แผนก',
-        icon: 'fluent:organization-24-regular',
-        to: `/academies/${academyName.value}/admin/departments`,
-        show: can('groups.view') || can('academy.view'),
-      },
-      {
-        name: 'ตารางเรียน',
-        icon: 'fluent:calendar-24-regular',
-        to: `/academies/${academyName.value}/admin/schedule`,
-        show: can('schedule.view') || can('academy.view'),
-      },
-      {
-        name: 'โครงคาบเรียน',
-        icon: 'fluent:clock-24-regular',
-        to: `/academies/${academyName.value}/admin/schedule-periods`,
-        show: can('schedule.manage') || can('academy.view'),
-      },
-      {
-        name: 'ภาระงานสอน',
-        icon: 'fluent:people-team-24-regular',
-        to: `/academies/${academyName.value}/admin/schedule-workload`,
-        show: can('schedule.view') || can('academy.view'),
-      },
-      {
-        name: 'สอนแทน / งดคาบ',
-        icon: 'fluent:calendar-edit-24-regular',
-        to: `/academies/${academyName.value}/admin/schedule-exceptions`,
-        show: can('schedule.view') || can('academy.view'),
-      },
-    ]
-  },
-  {
-    group: 'ข้อมูลนักเรียน',
-    items: [
-      {
-        name: 'ทะเบียนนักเรียน',
-        icon: 'fluent:hat-graduation-24-regular',
-        to: `/academies/${academyName.value}/admin/students`,
-        show: can('students.view') || can('students.manage'),
-      },
-      {
-        name: 'บัตรนักเรียน',
-        icon: 'fluent:contact-card-24-regular',
-        to: `/academies/${academyName.value}/admin/student-cards`,
-        show: can('students.view'),
-      },
-      {
-        name: 'คำร้องทำบัตร',
-        icon: 'fluent:clipboard-checkmark-24-regular',
-        to: `/academies/${academyName.value}/admin/student-cards/requests`,
-        show: can('students.cards.request') || can('students.cards.produce'),
-      },
-      {
-        name: 'การเข้าเรียน',
-        icon: 'fluent:clipboard-task-24-regular',
-        to: `/academies/${academyName.value}/admin/school-attendance`,
-        show: can('school_attendance.view') || can('school_attendance.manage'),
-      },
-      {
-        name: 'ผลการเรียน',
-        icon: 'fluent:star-24-regular',
-        to: `/academies/${academyName.value}/admin/gradebook`,
-        show: can('grades.view') || can('grades.manage'),
-      },
-      {
-        name: 'เยี่ยมบ้าน',
-        icon: 'fluent:home-person-24-regular',
-        to: `/academies/${academyName.value}/admin/home-visits`,
-        show: can('home_visits.view') || can('home_visits.manage'),
-      },
-      {
-        name: 'นักเรียนกลุ่มเสี่ยง',
-        icon: 'fluent:warning-24-regular',
-        to: `/academies/${academyName.value}/admin/at-risk`,
-        show: can('students.view'),
-      },
-    ]
-  },
-  {
-    group: 'บุคลากร',
-    items: [
-      {
-        name: 'ข้อมูลบุคลากร',
-        icon: 'fluent:person-board-24-regular',
-        to: `/academies/${academyName.value}/admin/staff`,
-        show: can('staff.view') || can('academy.view'),
-      },
-    ]
-  },
-  {
-    group: 'กิจกรรม & การสื่อสาร',
-    items: [
-      {
-        name: 'ประกาศ',
-        icon: 'fluent:megaphone-24-regular',
-        to: `/academies/${academyName.value}/admin/announcements`,
-        show: can('announcements.view') || can('announcements.manage'),
-      },
-      {
-        name: 'กิจกรรม',
-        icon: 'fluent:calendar-star-24-regular',
-        to: `/academies/${academyName.value}/admin/events`,
-        show: can('announcements.manage') || can('academy.view'),
-      },
-      {
-        name: 'คณะสี (กีฬาสี)',
-        icon: 'fluent:flag-24-regular',
-        to: `/academies/${academyName.value}/admin/house-assignments`,
-        // ต้องตรงกับด่านตรวจในหน้านั้นเอง ไม่งั้นแอดมินที่ไม่ใช่เจ้าของจะเข้าหน้าได้แต่ไม่เห็นเมนู
-        show: isAdmin.value || can('sports.manage'),
-      },
-      {
-        name: 'การเลือกตั้งสภานักเรียน',
-        icon: 'fluent:vote-24-regular',
-        to: `/academies/${academyName.value}/admin/elections`,
-        show: isAdmin.value || can('elections.view') || can('elections.manage'),
-      },
-      {
-        name: 'คะแนนกีฬาสี',
-        icon: 'fluent:trophy-24-regular',
-        to: `/academies/${academyName.value}/admin/sports-scores`,
-        // ด่านตรวจของหน้านั้นยอมให้ sports.view เข้าได้ด้วย เมนูจึงต้องกว้างเท่ากัน
-        show: isAdmin.value || can('sports.view') || can('sports.manage'),
-      },
-    ]
-  },
-  {
-    group: 'ร้านค้า',
-    items: [
-      {
-        name: 'ร้านค้าโรงเรียน',
-        icon: 'fluent:store-24-regular',
-        to: `/academies/${academyName.value}/admin/store`,
-        show: can('settings.manage') || can('academy.view'),
-      },
-    ]
-  },
-  {
-    group: 'รายงาน & สถิติ',
-    items: [
-      {
-        name: 'สถิติและรายงาน',
-        icon: 'fluent:data-bar-horizontal-24-regular',
-        to: `/academies/${academyName.value}/admin/reports`,
-        show: can('reports.view'),
-      },
-      {
-        name: 'ประวัติกิจกรรม',
-        icon: 'fluent:history-24-regular',
-        to: `/academies/${academyName.value}/admin/activity-log`,
-        show: can('reports.view'),
-      },
-      {
-        name: 'รายได้',
-        icon: 'fluent:money-hand-24-regular',
-        to: `/academies/${academyName.value}/admin/revenue`,
-        show: can('finance.view'),
-      },
-    ]
-  },
-  {
-    group: 'ตั้งค่า',
-    items: [
-      {
-        name: 'ระบบบริหารโรงเรียน',
-        icon: 'fluent:building-24-regular',
-        to: `/academies/${academyName.value}/admin/school-management`,
-        show: can('settings.manage'),
-      },
-      {
-        name: 'ตั้งค่าโรงเรียน',
-        icon: 'fluent:settings-24-regular',
-        to: `/academies/${academyName.value}/admin/settings`,
-        show: can('settings.view') || can('settings.manage'),
-      },
-    ]
-  },
-])
+// SA-1 — เมนูและด่านสิทธิ์มาจาก utils/academyAdminNav.ts ที่เดียว
+const permissionCtx = computed(() => ({ isAdmin: isAdmin.value, can }))
+const navGroups = computed(() => visibleAdminGroups(permissionCtx.value))
+const sectionTo = (path: string) =>
+  path ? `/academies/${academyName.value}/admin/${path}` : `/academies/${academyName.value}/admin`
+const currentSection = computed(() => {
+  const rel = adminRelativePath(route.path, academyName.value)
+  return rel === null ? null : findAdminSection(rel)
+})
+// หน้าที่ไม่มีใน registry: ให้เฉพาะ isAdmin (fail closed — เทสต์ SA-1a กันไม่ให้มีหน้าตกหล่น)
+const canViewCurrent = computed(() =>
+  currentSection.value ? canViewSection(currentSection.value, permissionCtx.value) : isAdmin.value
+)
+
+// มือถือ: ปิดเมนูเองหลังเลือก ไม่งั้นเนื้อหาถูกดันลงใต้กริดเมนู
+watch(() => route.fullPath, () => {
+  isSidebarOpen.value = false
+})
 
 // Fetch data
 onMounted(async () => {
@@ -309,8 +75,8 @@ onMounted(async () => {
       academyId.value = response.academy.id
       await fetchMyRole()
       
-      // Check if user has admin access
-      if (!isAdmin.value && !isTeacher.value) {
+      // SA-1 — ประตูเดียว: isAdmin หรือถือ admin.access
+      if (!canEnterAcademyAdmin(permissionCtx.value)) {
         navigateTo(`/academies/${academyName.value}`)
         return
       }
@@ -322,13 +88,6 @@ onMounted(async () => {
     isLoading.value = false
   }
 })
-
-const isActiveRoute = (path: string, exact = false) => {
-  // route.path is percent-encoded for Thai academy names; menu paths are decoded
-  const current = decodeURIComponent(route.path)
-  if (exact) return current === path
-  return current === path || current.startsWith(path + '/')
-}
 
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value
@@ -391,29 +150,23 @@ const toggleSidebar = () => {
       >
         <!-- Navigation (HopeUI sidebar-default style) -->
         <nav class="p-4 space-y-4 max-h-[70vh] lg:max-h-none overflow-y-auto">
-          <div v-for="group in menuItems" :key="group.group" v-show="group.items.some(item => item.show)">
+          <div v-for="group in navGroups" :key="group.id">
             <h3 class="mb-2 px-3 text-[13px] font-normal uppercase tracking-[.18rem] text-gray-900 dark:text-gray-100">
-              {{ group.group }}
+              {{ group.label }}
             </h3>
             <ul class="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1">
-              <li v-for="item in group.items" :key="item.name" v-show="item.show">
+              <li v-for="section in group.sections" :key="section.id">
                 <NuxtLink
-                  :to="item.to"
+                  :to="sectionTo(section.path)"
                   :class="[
-                    'flex items-center gap-2 rounded-lg px-3 py-2.5 min-w-0 transition-all duration-300 ease-in-out',
-                    isActiveRoute(item.to, item.exact)
+                    'flex min-h-[44px] items-center gap-2 rounded-lg px-3 py-2.5 min-w-0 transition-all duration-300 ease-in-out lg:min-h-0',
+                    currentSection?.id === section.id
                       ? 'bg-primary-500 text-white shadow-[0_10px_20px_-10px_rgba(14,165,233,0.6)]'
                       : 'text-gray-600 dark:text-gray-300 hover:bg-primary-500/10 hover:text-primary-600 dark:hover:text-primary-400'
                   ]"
                 >
-                  <Icon :icon="item.icon" class="w-5 h-5 flex-shrink-0" />
-                  <span class="text-sm leading-tight break-words min-w-0">{{ item.name }}</span>
-                  <span 
-                    v-if="item.badge" 
-                    class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full"
-                  >
-                    {{ item.badge }}
-                  </span>
+                  <Icon :icon="section.icon" class="w-5 h-5 flex-shrink-0" />
+                  <span class="text-sm leading-tight break-words min-w-0">{{ section.label }}</span>
                 </NuxtLink>
               </li>
             </ul>
@@ -435,7 +188,8 @@ const toggleSidebar = () => {
       <!-- Main Content -->
       <main class="flex-1 min-w-0">
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-          <NuxtPage />
+          <AcademyAdminForbidden v-if="!canViewCurrent" :section="currentSection" :academy-name="academyName" />
+          <NuxtPage v-else />
         </div>
       </main>
     </div>

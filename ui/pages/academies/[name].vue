@@ -93,6 +93,7 @@ const isLoadingTab = ref(false)
 const error = ref<string | null>(null)
 const currentTab = ref('feed')
 const isAcademyAdmin = ref(false)
+const canEnterAdmin = ref(false)
 const isMemberActionLoading = ref(false)
 const gamificationSummary = ref<any>(null)
 const isGamificationLoading = ref(true)
@@ -410,6 +411,7 @@ const fetchAcademy = async () => {
     if (response.success) {
       academy.value = JSON.parse(JSON.stringify(response.academy))
       isAcademyAdmin.value = response.isAcademyAdmin || false
+      canEnterAdmin.value = response.canEnterAdmin ?? isAcademyAdmin.value
       
       // โรงเรียนส่วนตัวที่ผู้ดูไม่ใช่สมาชิก: endpoint เนื้อหาทุกตัวตอบ 403 อยู่แล้ว อย่ายิงให้เปลือง
       if (response.academy?.is_restricted === true) {
@@ -1346,9 +1348,9 @@ watch(() => academy.value?.id, (id) => {
               
               <!-- Admin Badge & Button -->
               <NuxtLink 
-                v-if="academy.authIsAcademyAdmin" 
+                v-if="canEnterAdmin"
                 :to="`/academies/${academyName}/admin`"
-                class="px-4 py-2 rounded-lg text-sm font-medium bg-vikinger-purple text-white flex items-center gap-2 hover:bg-vikinger-purple/90 transition-colors"
+                class="min-h-[44px] sm:min-h-0 px-4 py-2 rounded-lg text-sm font-medium bg-vikinger-purple text-white flex items-center gap-2 hover:bg-vikinger-purple/90 transition-colors"
               >
                 <Icon icon="fluent:settings-24-regular" class="w-4 h-4" />
                 จัดการโรงเรียน
