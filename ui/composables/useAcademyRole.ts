@@ -3,8 +3,9 @@
  * จัดการบทบาทและสิทธิ์การเข้าถึงในโรงเรียน
  */
 
-import { ref, computed, readonly } from 'vue'
+import { ref, computed, readonly, watch } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 
 // Types
 export interface AcademyRole {
@@ -29,6 +30,22 @@ export interface AcademyRoleState {
   isAdmin: boolean
   isMember: boolean
   memberId: number | null
+}
+
+const ROLE_CACHE_TTL_MS = 60_000
+
+interface RoleCacheEntry {
+  state: AcademyRoleState
+  fetchedAt: number
+}
+
+const roleCache = new Map<string, RoleCacheEntry>()
+const inflight = new Map<string, Promise<AcademyRoleState | null>>()
+
+/** ล้าง cache ทั้งหมด (ใช้ในเทสต์ หรือเมื่อสิทธิ์ของผู้ใช้ปัจจุบันเปลี่ยน) */
+export const clearAcademyRoleCache = () => {
+  roleCache.clear()
+  inflight.clear()
 }
 
 // Role colors for UI
@@ -97,29 +114,55 @@ export const useAcademyRole = (academyId: Ref<number | null>) => {
   /**
    * Fetch current user's role in the academy
    */
-  const fetchMyRole = async () => {
-    if (!academyId.value) return
+  const fetchMyRole = async (options: { force?: boolean } = {}) => {
+    const id = academyId.value
+    if (!id) return
+
+    const userId = useAuthStore().user?.id
+    const key = `${userId ?? 'anon'}:${id}`
+    let request: Promise<AcademyRoleState | null> | undefined
 
     isLoading.value = true
     error.value = null
 
     try {
-      const response: any = await api.get(`/api/academies/${academyId.value}/my-role`)
-      
-      if (response.success) {
-        roleState.value = {
-          role: response.role,
-          permissions: response.permissions || [],
-          isOwner: response.is_owner || false,
-          isAdmin: response.is_admin || false,
-          isMember: response.is_member || false,
-          memberId: response.member_id || null,
-        }
+      const entry = roleCache.get(key)
+      if (!options.force && entry && Date.now() - entry.fetchedAt < ROLE_CACHE_TTL_MS) {
+        roleState.value = { ...entry.state, permissions: [...entry.state.permissions] }
+        return
+      }
+
+      request = options.force ? undefined : inflight.get(key)
+      if (!request) {
+        request = (async (): Promise<AcademyRoleState | null> => {
+          const response: any = await api.get(`/api/academies/${id}/my-role`)
+          if (!response.success) return null
+
+          const state: AcademyRoleState = {
+            role: response.role,
+            permissions: response.permissions || [],
+            isOwner: response.is_owner || false,
+            isAdmin: response.is_admin || false,
+            isMember: response.is_member || false,
+            memberId: response.member_id || null,
+          }
+          roleCache.set(key, { state, fetchedAt: Date.now() })
+          return state
+        })()
+        inflight.set(key, request)
+      }
+
+      const state = await request
+      if (state) {
+        roleState.value = { ...state, permissions: [...state.permissions] }
       }
     } catch (err: any) {
       console.error('Failed to fetch role:', err)
       error.value = err?.data?.message || 'ไม่สามารถโหลดข้อมูลบทบาทได้'
     } finally {
+      if (request && inflight.get(key) === request) {
+        inflight.delete(key)
+      }
       isLoading.value = false
     }
   }
@@ -268,6 +311,7 @@ export const useAcademyRole = (academyId: Ref<number | null>) => {
     
     // Actions
     fetchMyRole,
+    refreshRole: () => fetchMyRole({ force: true }),
     getDashboardRoute,
     resetRole,
   }

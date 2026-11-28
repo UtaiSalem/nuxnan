@@ -420,7 +420,7 @@ const onQRActionComplete = (result) => {
 
 <template>
   <div
-    class="min-h-screen transition-colors duration-300 overflow-x-hidden"
+    class="min-h-screen transition-colors duration-300 overflow-x-clip"
     :class="isDarkMode ? 'bg-vikinger-dark dark' : 'bg-gray-200 light'"
   >
     <!-- ========================================
@@ -1312,7 +1312,8 @@ const onQRActionComplete = (result) => {
        ======================================== -->
       <main
         :class="[
-          'flex-1 min-w-0 min-h-screen transition-all duration-300 overflow-x-hidden',
+          // overflow-x-clip ไม่ใช่ hidden: hidden ทำให้ <main> เป็น scroll container แล้ว position: sticky ข้างในไม่ติด
+          'flex-1 min-w-0 min-h-screen transition-all duration-300 overflow-x-clip',
           isLeftDrawerOpen ? 'lg:pl-80' : 'lg:pl-20',
           hasRight ? 'lg:pr-14 2xl:pr-0' : '',
           enableRightSidebar && isRightDrawerOpen ? 'lg:pr-80' : 'lg:pr-20',
